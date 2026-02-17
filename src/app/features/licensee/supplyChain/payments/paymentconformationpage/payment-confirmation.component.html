@@ -1,77 +1,93 @@
 <div class="container-fluid p-0">
-
-
-
   <!-- Wallet Cards Section -->
   <div class="container-fluid py-4">
-    <!-- Excise/Additional Wallet Card -->
-    <div class="wallet-card mb-4 history-hover" *ngIf="!isBreweryUser" (click)="openWalletHistory('excise')">
-      <div class="wallet-content">
-        <div class="d-flex align-items-center wallet-click" (click)="openWalletHistory('excise')"
-          title="Click to view history" role="button">
-          <i class="fas fa-wallet wallet-icon text-primary"></i>
-          <div>
-            <div class="wallet-title">Excise / Additional Wallet Balance</div>
-            <div class="wallet-amount text-primary">
-              <span class="currency">₹</span>
-              <span>{{ exciseWalletBalance | number:'1.2-2' }}</span>
-            </div>
-            <!-- <span class="view-hint"><i class="bi bi-clock-history me-1"></i>View historys</span> -->
+    <div class="wallet-cards-grid">
+      <!-- Excise / Additional Card -->
+      <div class="wallet-summary-card history-hover" *ngIf="!isBreweryUser" (click)="openWalletHistory('excise')">
+        <div class="wallet-summary-header">
+          <div class="wallet-summary-title-wrap">
+            <span class="wallet-summary-icon text-primary"><i class="bi bi-wallet2"></i></span>
+            <div class="wallet-summary-title">Excise / Additional Wallet</div>
           </div>
+          <span class="wallet-summary-tag">Primary</span>
         </div>
-        <div>
-          <button class="btn btn-outline-success me-2" (click)="openWalletHistory('excise'); $event.stopPropagation()">
-            <i class="bi bi-clock-history me-1"></i>View History
+        <div class="wallet-summary-balance text-primary">
+          <span class="currency">&#8377;</span>{{ exciseWalletBalance | number:'1.2-2' }}
+        </div>
+        <div class="wallet-summary-meta">Available balance for requisition and transit deductions</div>
+      <div class="wallet-summary-actions">
+          <button class="btn btn-outline-success btn-sm" (click)="openWalletHistory('excise'); $event.stopPropagation()">
+            <i class="bi bi-clock-history me-1"></i>History
           </button>
-          <button class="btn btn-primary" (click)="addMoney('excise'); $event.stopPropagation()">
+          <button class="btn btn-primary btn-sm" (click)="addMoney('excise'); $event.stopPropagation()">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Brewery Wallet Card -->
-    <div class="wallet-card mb-4" *ngIf="isBreweryUser">
-      <div class="wallet-content">
-        <div class="d-flex align-items-center">
-          <i class="fas fa-wallet wallet-icon text-primary"></i>
-          <div>
-            <div class="wallet-title">Brewery Wallet Balance</div>
-            <div class="wallet-amount text-primary">
-              <span class="currency">₹</span>
-              <span>{{ breweryWalletBalance | number:'1.2-2' }}</span>
-            </div>
+      <!-- Brewery Card -->
+      <div class="wallet-summary-card" *ngIf="isBreweryUser">
+        <div class="wallet-summary-header">
+          <div class="wallet-summary-title-wrap">
+            <span class="wallet-summary-icon text-primary"><i class="bi bi-wallet2"></i></span>
+            <div class="wallet-summary-title">Brewery Wallet</div>
           </div>
+          <span class="wallet-summary-tag">Primary</span>
         </div>
-        <div>
-          <button class="btn btn-primary" (click)="addMoney('brewery')">
+        <div class="wallet-summary-balance text-primary">
+          <span class="currency">&#8377;</span>{{ breweryWalletBalance | number:'1.2-2' }}
+        </div>
+        <div class="wallet-summary-meta">Available balance for brewery transactions</div>
+        <div class="wallet-summary-actions">
+          <button class="btn btn-primary btn-sm" (click)="addMoney('brewery')">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Education Cess Wallet Card -->
-    <div class="wallet-card mb-4 history-hover" (click)="openWalletHistory('education')">
-      <div class="wallet-content">
-        <div class="d-flex align-items-center wallet-click" (click)="openWalletHistory('education')"
-          title="Click to view history" role="button">
-          <i class="fas fa-wallet wallet-icon text-info"></i>
-          <div>
-            <div class="wallet-title">Education Cess Wallet Balance</div>
-            <div class="wallet-amount text-info">
-              <span class="currency">₹</span>
-              <span>{{ educationCessBalance | number:'1.2-2' }}</span>
-            </div>
-            <!-- <span class="view-hint text-info"><i class="bi bi-clock-history me-1"></i>View history</span> -->
+      <!-- Education Cess Card -->
+      <div class="wallet-summary-card history-hover" (click)="openWalletHistory('education')">
+        <div class="wallet-summary-header">
+          <div class="wallet-summary-title-wrap">
+            <span class="wallet-summary-icon text-info"><i class="bi bi-bank2"></i></span>
+            <div class="wallet-summary-title">Education Cess Wallet</div>
           </div>
+          <span class="wallet-summary-tag">Cess</span>
         </div>
-        <div>
-          <button class="btn btn-outline-success me-2"
-            (click)="openWalletHistory('education'); $event.stopPropagation()">
-            <i class="bi bi-clock-history me-1"></i>View History
+        <div class="wallet-summary-balance text-info">
+          <span class="currency">&#8377;</span>{{ educationCessBalance | number:'1.2-2' }}
+        </div>
+        <div class="wallet-summary-meta">Used for education cess and related fee adjustments</div>
+        <div class="wallet-summary-actions">
+          <button class="btn btn-outline-success btn-sm" (click)="openWalletHistory('education'); $event.stopPropagation()">
+            <i class="bi bi-clock-history me-1"></i>History
           </button>
-          <button class="btn btn-primary" (click)="addMoney('education'); $event.stopPropagation()">
+          <button class="btn btn-primary btn-sm" (click)="addMoney('education'); $event.stopPropagation()">
+            <i class="bi bi-plus-circle me-1"></i>Add Money
+          </button>
+        </div>
+      </div>
+
+      <!-- Hologram Card -->
+      <div class="wallet-summary-card hologram-card history-hover" (click)="openHologramHistory()">
+        <div class="wallet-summary-header">
+          <div class="wallet-summary-title-wrap">
+            <span class="wallet-summary-icon text-warning"><i class="bi bi-shield-check"></i></span>
+            <div class="wallet-summary-title">Hologram</div>
+          </div>
+          <span class="wallet-summary-tag warning">Pending</span>
+        </div>
+        <div class="wallet-summary-balance text-warning">
+          <span class="currency">&#8377;</span>{{ hologramWalletBalance | number:'1.2-2' }}
+        </div>
+        <div class="wallet-summary-meta">
+          {{ getPendingHologramCount() }} pending payment{{ getPendingHologramCount() === 1 ? '' : 's' }} in hologram queue
+        </div>
+        <div class="wallet-summary-actions">
+          <button class="btn btn-outline-success btn-sm" (click)="openHologramHistory(); $event.stopPropagation()">
+            <i class="bi bi-clock-history me-1"></i>History
+          </button>
+          <button class="btn btn-primary btn-sm" (click)="addMoney('hologram'); $event.stopPropagation()">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
         </div>
@@ -522,7 +538,11 @@
       <div class="modal-header">
         <h5 class="modal-title">
           <i class="bi bi-clock-history me-2"></i>
-          {{ selectedWalletForHistory === 'excise' ? 'Excise / Additional' : 'Education Cess' }} Wallet History
+          {{
+            selectedWalletForHistory === 'excise'
+              ? 'Excise / Additional'
+              : (selectedWalletForHistory === 'education' ? 'Education Cess' : 'Hologram')
+          }} Wallet History
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -604,6 +624,15 @@
     </div>
   </div>
 </div>
+
+<app-unified-add-money-modal
+  [context]="selectedAddMoneyContext"
+  [transactionId]="addMoneyTransactionId"
+  [amount]="addMoneyAmount"
+  (amountChange)="addMoneyAmount = $event"
+  (proceed)="proceedUnifiedAddMoney()"
+  (close)="closeUnifiedAddMoneyView()">
+</app-unified-add-money-modal>
 <!-- Payment Confirmation Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
   <div class="modal-dialog modal-lg">

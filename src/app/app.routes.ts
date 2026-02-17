@@ -90,8 +90,8 @@ export const routes: Routes = [
     path: "dev-payment-confirmation",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component"
-      ).then((m) => m.PaymentConfirmationComponent),
+        "./shared/components/payment-wallet-redirect/payment-wallet-redirect.component"
+      ).then((m) => m.PaymentWalletRedirectComponent),
   },
   {
     path: "dev-payment-integrations",

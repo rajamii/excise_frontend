@@ -36,6 +36,7 @@ import { Hologramrequestlevel1Component } from '../licensee/supplyChain/HoloGram
 import { HologramComponent } from '../licensee/supplyChain/HoloGram/hologram/hologram.component';
 import { NewLicenseDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/new-license/new-license-dashboard.component';
 import { RegistrationManagementComponent } from '../licensee/supplyChain/supplychaincomponents/registration-management/registration-management.component';
+import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
 // Officer-specific Components
 import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
@@ -82,6 +83,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     HologramComponent,
     NewLicenseDashboardComponent,
     RegistrationManagementComponent,
+    PaymentConfirmationComponent,
     // Officer-specific Components
     BrandsDetailsComponent,
     HologramMonthlyReportComponent,
@@ -539,6 +541,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'import-permit': 'New Requisition Application',
       'hologram-request-form': 'New Hologram Request',
       'hologram-new': 'New Hologram Procurement',
+      'wallet': 'Payment & Wallet',
 
       // IT Cell Sections
       'itcell-hologram': 'Hologram Management (IT Cell)',
@@ -641,11 +644,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Open wallet dialog
   openWallet(): void {
-    // Navigate to the existing payment confirmation page which has wallet functionality
-    this.router.navigate(['/dev-payment-confirmation'], {
+    this.router.navigate(['/dashboard'], {
       queryParams: {
+        section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
-        source: 'dashboard-requisition'
+        source: 'dashboard-wallet'
       }
     });
   }

@@ -64,6 +64,57 @@ export interface WalletBalanceResponse {
   results: PaymentWalletRow[];
 }
 
+export interface WalletSummaryRow {
+  walletBalanceId: number;
+  licenseeId: string;
+  licenseeName?: string | null;
+  userId?: string | null;
+  moduleType: string;
+  walletType: string;
+  headOfAccount: string;
+  openingBalance: string | number;
+  totalCredit: string | number;
+  totalDebit: string | number;
+  currentBalance: string | number;
+  lastUpdatedAt: string;
+  createdAt: string;
+}
+
+export interface WalletSummaryResponse {
+  licenseeId: string;
+  totalWalletAmount: string | number;
+  count: number;
+  results: WalletSummaryRow[];
+}
+
+export interface WalletTransactionRow {
+  walletTransactionId: number;
+  walletBalance: number;
+  transactionId: string;
+  licenseeId: string;
+  licenseeName?: string | null;
+  userId?: string | null;
+  moduleType: string;
+  walletType: string;
+  headOfAccount: string;
+  entryType: string;
+  transactionType: string;
+  amount: string | number;
+  balanceBefore: string | number;
+  balanceAfter: string | number;
+  referenceNo?: string | null;
+  sourceModule: string;
+  paymentStatus: string;
+  remarks?: string | null;
+  createdAt: string;
+}
+
+export interface WalletTransactionResponse {
+  licenseeId: string;
+  count: number;
+  results: WalletTransactionRow[];
+}
+
 export interface PaymentInitiateItem {
   headOfAccount: string;
   amount: number;

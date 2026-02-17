@@ -39,16 +39,6 @@
       *ngIf="selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()"
       class="supply-chain-content"
       [class.hologram-overview-wrapper]="selectedSupplyChainSection === 'hologram-overview'">
-      <!-- Top Action Bar for Payment & Wallet Button -->
-      <div class="top-action-bar" *ngIf="isLicenseeUser() && selectedSupplyChainSection === 'requisition'">
-        <div class="action-bar-content">
-          <button mat-raised-button color="primary" (click)="openWallet()" class="wallet-button">
-            <mat-icon>account_balance_wallet</mat-icon>
-            Payment & Wallet
-          </button>
-        </div>
-      </div>
-
       <!-- Section Header -->
       <div class="section-header">
         <div class="header-left">
@@ -75,6 +65,7 @@
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
         <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
+        <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'"></app-payment-confirmation>
         <app-registration-management
           *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'salesman-barman-registration'">
         </app-registration-management>

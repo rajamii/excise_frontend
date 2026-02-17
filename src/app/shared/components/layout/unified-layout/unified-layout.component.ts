@@ -371,6 +371,16 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
+  navigateToWalletView(section: string = 'wallet'): void {
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section,
+        tab: 'recharge',
+        source: 'sidenav-wallet'
+      }
+    });
+  }
+
   navigateToLicenseeRegistration(type: 'company' | 'salesman-barman'): void {
     const section =
       type === 'company'
@@ -427,7 +437,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.router.navigate(['/dev-supply-chain']);
         break;
       case 'payments':
-        this.router.navigate(['/dev-payment-confirmation']);
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'recharge',
+            source: 'sidenav-payments'
+          }
+        });
         break;
       case 'payment-receipt':
         this.router.navigate(['/dev-payment-receipt']);
@@ -551,6 +567,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const activeSection = this.resolveSidebarSection(context.section);
     const targetSection = this.resolveSidebarSection(section);
     return context.isBaseDashboardRoute && activeSection === targetSection;
+  }
+
+  isWalletActive(): boolean {
+    return this.isDashboardSectionActive('wallet');
   }
 
   // Check if user is licensee/supply chain

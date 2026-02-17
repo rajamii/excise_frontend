@@ -27,12 +27,16 @@
         <!-- Simple Navigation Menu -->
         <div class="nav-menu">
           <!-- Licensee Navigation -->
-          <div *ngIf="isLicenseeUser()">
+          <div *ngIf="isLicenseeUser()" class="licensee-nav">
             <!-- Dashboard -->
-            <a routerLink="/dashboard" class="nav-item" [class.active]="isDashboardHomeActive()">
+            <a routerLink="/dashboard" class="nav-item dashboard-nav-item" [class.active]="isDashboardHomeActive()">
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
+            <button class="nav-item wallet-nav-item" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
+              <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
+              <span class="nav-text">Wallet</span>
+            </button>
 
             <!-- Apply New License -->
             <button class="nav-item" (click)="navigateToSupplyChain('new-license')" [class.active]="isDashboardSectionActive('new-license')">

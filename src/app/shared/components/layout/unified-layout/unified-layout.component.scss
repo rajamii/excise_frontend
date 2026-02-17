@@ -229,6 +229,23 @@
   background: #ffffff !important;
   padding: 0 !important;
 
+  .licensee-nav {
+    display: flex !important;
+    flex-direction: column !important;
+
+    > .nav-item {
+      order: 3;
+    }
+
+    > .dashboard-nav-item {
+      order: 1;
+    }
+
+    > .wallet-nav-item {
+      order: 2;
+    }
+  }
+
   .nav-item {
     display: flex !important;
     align-items: center !important;

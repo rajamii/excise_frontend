@@ -9,6 +9,131 @@
   overflow: hidden;
 }
 
+.wallet-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.wallet-summary-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.wallet-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  border-color: #cbd5e1;
+}
+
+.wallet-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.wallet-summary-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.wallet-summary-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eef2ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.wallet-summary-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.wallet-summary-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.wallet-summary-tag.warning {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
+.wallet-summary-balance {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.wallet-summary-meta {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.wallet-summary-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hologram-card {
+  background: linear-gradient(145deg, #fffdf5 0%, #fff7ed 100%);
+  border-color: #fed7aa;
+}
+
+.view-hover {
+  cursor: pointer;
+  position: relative;
+}
+
+.view-hover::after {
+  content: 'Click card to open hologram view';
+  position: absolute;
+  left: 1rem;
+  bottom: 0.8rem;
+  font-size: 0.78rem;
+  color: #7c2d12;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  padding: 0.12rem 0.55rem;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.view-hover:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .history-hover {
   cursor: pointer;
   transition: box-shadow .25s ease, transform .15s ease, background .25s ease, border-color .25s ease;
@@ -221,6 +346,18 @@
 
 // Responsive Design
 @media (max-width: 768px) {
+  .wallet-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-summary-card {
+    min-height: 200px;
+  }
+
+  .wallet-summary-balance {
+    font-size: 1.85rem;
+  }
+
   .wallet-card {
     .wallet-amount {
       font-size: 2rem;
@@ -312,4 +449,27 @@
   50% {
     background-color: #FEF3C7;
   }
+}
+
+/* Keep payment modals above all dashboard layers and backdrops clickable */
+:host ::ng-deep #walletHistoryModal,
+:host ::ng-deep #addMoneyModal,
+:host ::ng-deep #paymentModal,
+:host ::ng-deep #transitPaymentModal,
+:host ::ng-deep .modal.show {
+  z-index: 20000 !important;
+  pointer-events: auto !important;
+}
+
+:host ::ng-deep #walletHistoryModal .modal-dialog,
+:host ::ng-deep #addMoneyModal .modal-dialog,
+:host ::ng-deep #paymentModal .modal-dialog,
+:host ::ng-deep #transitPaymentModal .modal-dialog {
+  pointer-events: auto !important;
+}
+
+:host ::ng-deep .modal-backdrop,
+:host ::ng-deep .modal-backdrop.show {
+  z-index: 19990 !important;
+  opacity: 0.45 !important;
 }

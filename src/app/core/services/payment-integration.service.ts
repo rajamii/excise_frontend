@@ -12,6 +12,8 @@ import {
   PaymentTransaction,
   PaymentTransactionListResponse,
   WalletBalanceResponse,
+  WalletSummaryResponse,
+  WalletTransactionResponse,
 } from '../models/payment-integration.model';
 
 @Injectable({
@@ -36,6 +38,24 @@ export class PaymentIntegrationService {
 
   getWalletBalance(licenseeId: string): Observable<WalletBalanceResponse> {
     return this.http.get<WalletBalanceResponse>(`${this.baseUrl}/wallet/${licenseeId}/`);
+  }
+
+  getWalletSummary(licenseeId: string, moduleType?: string): Observable<WalletSummaryResponse> {
+    let params = new HttpParams();
+    if (moduleType) {
+      params = params.set('module_type', moduleType);
+    }
+    return this.http.get<WalletSummaryResponse>(`${this.baseUrl}/wallet/${licenseeId}/summary/`, { params });
+  }
+
+  getWalletRecharge(licenseeId: string, limit = 200): Observable<WalletTransactionResponse> {
+    const params = new HttpParams().set('limit', String(limit));
+    return this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/recharge/`, { params });
+  }
+
+  getWalletHistory(licenseeId: string, limit = 500): Observable<WalletTransactionResponse> {
+    const params = new HttpParams().set('limit', String(limit));
+    return this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/history/`, { params });
   }
 
   initiatePayment(payload: PaymentInitiatePayload): Observable<PaymentInitiateResponse> {

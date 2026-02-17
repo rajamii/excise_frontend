@@ -1,10 +1,17 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
+import { catchError, forkJoin, of } from 'rxjs';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
+import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import {
+  AddMoneyViewContext,
+  AddMoneyWalletType,
+  UnifiedAddMoneyModalComponent
+} from '../../../../../shared/components/unified-add-money-modal/unified-add-money-modal.component';
 
 interface PaymentItem {
   id: string;
@@ -65,15 +72,34 @@ interface HologramItem {
   paymentSlipUploaded?: boolean;
 }
 
+type WalletHistoryType = 'Added' | 'Utilized';
+type WalletHistoryCategory = 'excise' | 'education' | 'hologram';
+
+interface WalletHistoryTransaction {
+  id: string;
+  date: string;
+  type: WalletHistoryType;
+  amount: number;
+  balanceAfter: number;
+  reference: string;
+}
+
+const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
+  excise: '0039-00-105-45-01',
+  brewery: '0038-00-102-45-00',
+  education: '0045-00-112-45-03',
+  hologram: '0039-00-800-45-01'
+};
+
 @Component({
   selector: 'app-payment-confirmation',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UnifiedAddMoneyModalComponent],
   providers: [HologramDataService],
   templateUrl: './payment-confirmation.component.html',
   styleUrls: ['./payment-confirmation.component.scss']
 })
-export class PaymentConfirmationComponent implements OnInit {
+export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
   activeTab = 'requisition';
   isBreweryUser = false;
   showRetryButton = false;
@@ -81,11 +107,18 @@ export class PaymentConfirmationComponent implements OnInit {
   selectedItem: PaymentItem | null = null;
   showMultiTypePaymentModal = false;
   multiTypePaymentItems: HologramItem[] = [];
+  selectedAddMoneyContext: AddMoneyViewContext | null = null;
+  addMoneyTransactionId = '';
+  addMoneyAmount = 0;
+  private movedModalState: Array<{ element: HTMLElement; parent: Node; nextSibling: Node | null }> = [];
 
   // Wallet Balances
-  exciseWalletBalance = 9831806.35;
+  exciseWalletBalance = 0;
   breweryWalletBalance = 0;
-  educationCessBalance = 9998687.78;
+  educationCessBalance = 0;
+  hologramWalletBalance = 0;
+  activeLicenseeId = '';
+  private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
 
   // Transit Data
   transitBillNo = '';
@@ -144,82 +177,24 @@ export class PaymentConfirmationComponent implements OnInit {
     }
   ];
 
-  rechargeData: RechargeItem[] = [
-    {
-      id: '5',
-      transactionType: 'Wallet Recharge',
-      hoa: '0045-00-112-45-03',
-      amount: 10000.00,
-      date: new Date(),
-      status: 'Success'
-    }
-  ];
+  rechargeData: RechargeItem[] = [];
 
-  historyData: HistoryItem[] = [
-    {
-      id: '6',
-      txnId: 'TXN001',
-      userId: 'USER001',
-      type: 'Payment',
-      amount: 500.00,
-      reference: 'REF001',
-      status: 'Success',
-      dateTime: new Date(),
-      licenseeId: 'LIC001'
-    }
-  ];
+  historyData: HistoryItem[] = [];
 
-  hologramData: HologramItem[] = [
-    {
-      id: '7',
-      referenceNo: 'YB/1/BREW/25',
-      companyName: 'Yuksom Breweries Ltd.',
-      totalQuantity: 15.0,
-      hologramFee: 1500.00,
-      hoa: '0039-00-105-45-04',
-      status: 'ApprovedByCommissioner',
-      localQty: 15.0,
-      exportQty: 0.0,
-      defenceQty: 0.0,
-      paymentDate: null
-    },
-    {
-      id: '8',
-      referenceNo: 'YB/2/BREW/25',
-      companyName: 'Yuksom Breweries Ltd.',
-      totalQuantity: 25.5,
-      hologramFee: 2550.00,
-      hoa: '0039-00-105-45-04',
-      status: 'ApprovedByCommissioner',
-      localQty: 20.0,
-      exportQty: 5.5,
-      defenceQty: 0.0,
-      paymentDate: null
-    },
-    {
-      id: '9',
-      referenceNo: 'YB/3/BREW/25',
-      companyName: 'Yuksom Breweries Ltd.',
-      totalQuantity: 10.0,
-      hologramFee: 1000.00,
-      hoa: '0039-00-105-45-04',
-      status: 'Payment Successful',
-      localQty: 10.0,
-      exportQty: 0.0,
-      defenceQty: 0.0,
-      paymentDate: new Date('2025-01-15')
-    }
-  ];
+  hologramData: HologramItem[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private receiptNumberService: ReceiptNumberService,
     private hologramService: HologramDataService,
-    private supplyChainService: SupplyChainService
+    private supplyChainService: SupplyChainService,
+    private paymentIntegrationService: PaymentIntegrationService
   ) { }
 
   ngOnInit(): void {
+    this.loadWalletDataFromBackend();
+
     // Load hologram data from API
     this.loadHologramDataFromApi();
     // Load cancellation data from API
@@ -280,6 +255,280 @@ export class PaymentConfirmationComponent implements OnInit {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Move Bootstrap modals to <body> so backdrop and click handling work correctly
+    // inside the dashboard + sidenav layout.
+    this.attachModalsToBody();
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupModalArtifacts();
+    this.restoreMovedModals();
+  }
+
+  private loadWalletDataFromBackend(): void {
+    const licenseeId = this.resolveActiveLicenseeId();
+    if (!licenseeId) {
+      this.showErrorMessage('Licensee id not found in session. Wallet data cannot be loaded.');
+      return;
+    }
+
+    this.activeLicenseeId = licenseeId;
+    this.exciseWalletBalance = 0;
+    this.educationCessBalance = 0;
+    this.breweryWalletBalance = 0;
+    this.hologramWalletBalance = 0;
+    this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
+    this.rechargeData = [];
+    this.historyData = [];
+    this.exciseWalletTransactions = [];
+    this.educationWalletTransactions = [];
+    this.hologramWalletTransactions = [];
+    this.walletHistoryFiltered = [];
+
+    forkJoin({
+      summary: this.paymentIntegrationService.getWalletSummary(licenseeId),
+      recharge: this.paymentIntegrationService.getWalletRecharge(licenseeId),
+      history: this.paymentIntegrationService.getWalletHistory(licenseeId)
+    }).pipe(
+      catchError((error) => {
+        console.error('Wallet API load failed:', error);
+        this.showErrorMessage('Failed to load wallet data from backend.');
+        this.exciseWalletBalance = 0;
+        this.educationCessBalance = 0;
+        this.breweryWalletBalance = 0;
+        this.hologramWalletBalance = 0;
+        this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
+        this.rechargeData = [];
+        this.historyData = [];
+        this.exciseWalletTransactions = [];
+        this.educationWalletTransactions = [];
+        this.hologramWalletTransactions = [];
+        this.walletHistoryFiltered = [];
+        return of(null);
+      })
+    ).subscribe((response) => {
+      if (!response) {
+        return;
+      }
+
+      this.applyWalletSummary(response.summary);
+      this.applyWalletRecharge(response.recharge);
+      this.applyWalletHistory(response.history);
+    });
+  }
+
+  private resolveActiveLicenseeId(): string {
+    const fromQuery = this.route.snapshot.queryParams['licenseeId'];
+    if (fromQuery) {
+      return String(fromQuery).trim();
+    }
+
+    const fromSession = sessionStorage.getItem('currentUser');
+    if (fromSession) {
+      try {
+        const parsed = JSON.parse(fromSession);
+        return this.pickFirstNonEmpty(parsed, [
+          'licensee_id',
+          'licenseeId',
+          'licensee_id_no',
+          'licenseeIdNo',
+          'username',
+          'userName'
+        ]);
+      } catch (error) {
+        console.error('Invalid currentUser session payload:', error);
+      }
+    }
+
+    return '';
+  }
+
+  private applyWalletSummary(payload: any): void {
+    const rows = this.safeArray(payload?.results);
+
+    this.exciseWalletBalance = 0;
+    this.educationCessBalance = 0;
+    this.breweryWalletBalance = 0;
+    this.hologramWalletBalance = 0;
+    this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
+    this.isBreweryUser = false;
+
+    rows.forEach((row: any) => {
+      const walletType = String(
+        this.pickAny(row, ['wallet_type', 'walletType'], '')
+      ).toLowerCase();
+      const moduleType = String(
+        this.pickAny(row, ['module_type', 'moduleType'], '')
+      ).toLowerCase();
+      const hoa = this.pickAny(row, ['head_of_account', 'headOfAccount'], '');
+      const balance = this.toNumber(this.pickAny(row, ['current_balance', 'currentBalance'], 0));
+      const inferredWalletType = walletType || this.inferWalletTypeFromHoa(String(hoa));
+
+      if (inferredWalletType === 'education_cess') {
+        this.educationCessBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.education = String(hoa);
+        }
+      } else if (inferredWalletType === 'hologram') {
+        this.hologramWalletBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.hologram = String(hoa);
+        }
+      } else if (inferredWalletType === 'brewery' || moduleType === 'brewery') {
+        this.breweryWalletBalance += balance;
+        this.isBreweryUser = true;
+        if (hoa) {
+          this.walletHoaByType.brewery = String(hoa);
+        }
+      } else {
+        this.exciseWalletBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.excise = String(hoa);
+        }
+      }
+    });
+  }
+
+  private applyWalletRecharge(payload: any): void {
+    const rows = this.safeArray(payload?.results);
+
+    this.rechargeData = rows.map((row: any, index: number) => ({
+      id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+      transactionType: this.pickAny(row, ['transaction_type', 'transactionType'], 'Wallet Recharge'),
+      hoa: this.pickAny(row, ['head_of_account', 'headOfAccount'], '-'),
+      amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
+      date: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
+      status: this.pickAny(row, ['payment_status', 'paymentStatus'], 'Success')
+    }));
+  }
+
+  private applyWalletHistory(payload: any): void {
+    const rows = this.safeArray(payload?.results);
+
+    const mappedModalHistory: Array<WalletHistoryTransaction & { walletType: string }> = rows.map((row: any, index: number) => {
+      const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
+      const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], ''));
+      const walletTypeRaw = String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase();
+      const walletType = walletTypeRaw || this.inferWalletTypeFromHoa(hoa);
+      const createdAt = this.pickAny(row, ['created_at', 'createdAt'], new Date().toISOString());
+      const balanceAfter = this.toNumber(this.pickAny(row, ['balance_after', 'balanceAfter'], 0));
+
+      return {
+        id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+        date: String(createdAt).slice(0, 10),
+        type: entryType === 'credit' ? 'Added' : 'Utilized',
+        amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
+        balanceAfter,
+        reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
+        walletType
+      };
+    });
+
+    this.exciseWalletTransactions = mappedModalHistory.filter(item =>
+      item.walletType === 'excise' || item.walletType === 'brewery' || item.walletType === ''
+    );
+    this.educationWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'education_cess');
+    this.hologramWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'hologram');
+
+    if (this.selectedWalletForHistory) {
+      this.applyWalletHistoryFilters();
+    }
+
+    this.historyData = rows.map((row: any, index: number) => {
+      const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
+      return {
+        id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+        txnId: this.pickAny(row, ['transaction_id', 'transactionId'], '-'),
+        userId: this.pickAny(row, ['user_id', 'userId'], '-'),
+        type: entryType === 'credit' ? 'Wallet Recharge' : 'Wallet Utilization',
+        amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
+        reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
+        status: this.pickAny(row, ['payment_status', 'paymentStatus'], 'Success'),
+        dateTime: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
+        licenseeId: this.pickAny(row, ['licensee_id', 'licenseeId'], this.activeLicenseeId || '-')
+      } as HistoryItem;
+    });
+  }
+
+  private pickAny(source: any, keys: string[], fallback: any): any {
+    for (const key of keys) {
+      if (source && source[key] !== undefined && source[key] !== null && source[key] !== '') {
+        return source[key];
+      }
+    }
+    return fallback;
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    const value = this.pickAny(source, keys, '');
+    return String(value || '').trim();
+  }
+
+  private safeArray(value: any): any[] {
+    return Array.isArray(value) ? value : [];
+  }
+
+  private toNumber(value: any): number {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  private toDate(value: any): Date {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? new Date() : date;
+  }
+
+  private inferWalletTypeFromHoa(hoa: string): string {
+    if (hoa === '0045-00-112-45-03') {
+      return 'education_cess';
+    }
+    if (
+      hoa === '0039-00-800-45-01' ||
+      hoa === '0039-00-105-45-04' ||
+      hoa === '0039-80-800-45-01'
+    ) {
+      return 'hologram';
+    }
+    if (hoa === '0038-00-102-45-00') {
+      return 'brewery';
+    }
+    return 'excise';
+  }
+
+  private attachModalsToBody(): void {
+    const modalIds = ['walletHistoryModal', 'paymentModal', 'transitPaymentModal', 'addMoneyModal'];
+
+    for (const modalId of modalIds) {
+      const modalEl = document.getElementById(modalId);
+      if (!modalEl || modalEl.parentNode === document.body) {
+        continue;
+      }
+
+      this.movedModalState.push({
+        element: modalEl,
+        parent: modalEl.parentNode!,
+        nextSibling: modalEl.nextSibling
+      });
+
+      document.body.appendChild(modalEl);
+    }
+  }
+
+  private restoreMovedModals(): void {
+    for (const entry of this.movedModalState.reverse()) {
+      const { element, parent, nextSibling } = entry;
+
+      if (nextSibling && nextSibling.parentNode === parent) {
+        parent.insertBefore(element, nextSibling);
+      } else {
+        parent.appendChild(element);
+      }
+    }
+
+    this.movedModalState = [];
+  }
+
   loadHologramDataFromApi(): void {
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
@@ -302,7 +551,7 @@ export class PaymentConfirmationComponent implements OnInit {
               procurementType: 'Security Hologram', // Default or derived
               totalQuantity: totalQty,
               hologramFee: hologramFee,
-              hoa: '0039-00-105-45-04',
+              hoa: '0039-00-800-45-01',
               status: item.status || '',
               localQty: Number(item.localQty) || 0,
               exportQty: Number(item.exportQty) || 0,
@@ -354,7 +603,7 @@ export class PaymentConfirmationComponent implements OnInit {
   // processHologramPayment(hologramItem: HologramItem): void { ... }
 
   // Wallet history (utilization and additions)
-  selectedWalletForHistory: 'excise' | 'education' | null = null;
+  selectedWalletForHistory: WalletHistoryCategory | null = null;
   walletHistoryFilters = {
     from: '',
     to: '',
@@ -363,20 +612,15 @@ export class PaymentConfirmationComponent implements OnInit {
     maxAmount: ''
   };
 
-  exciseWalletTransactions: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [
-    { id: 'E1', date: '2025-09-20', type: 'Added', amount: 200000.00, balanceAfter: 10000000.00, reference: 'PG-20250920-001' },
-    { id: 'E2', date: '2025-09-21', type: 'Utilized', amount: 1500.00, balanceAfter: 99998500.00, reference: 'TP-BILL001' },
-    { id: 'E3', date: '2025-09-22', type: 'Utilized', amount: 2500.00, balanceAfter: 99996000.00, reference: 'REQUISITION-IBPS/03/EXCISE' }
-  ];
+  exciseWalletTransactions: WalletHistoryTransaction[] = [];
 
-  educationWalletTransactions: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [
-    { id: 'ED1', date: '2025-09-19', type: 'Added', amount: 100000.00, balanceAfter: 10000000.00, reference: 'PG-20250919-111' },
-    { id: 'ED2', date: '2025-09-21', type: 'Utilized', amount: 500.00, balanceAfter: 99999500.00, reference: 'REV-REV/001/2025' }
-  ];
+  educationWalletTransactions: WalletHistoryTransaction[] = [];
 
-  walletHistoryFiltered: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [];
+  hologramWalletTransactions: WalletHistoryTransaction[] = [];
 
-  openWalletHistory(wallet: 'excise' | 'education'): void {
+  walletHistoryFiltered: WalletHistoryTransaction[] = [];
+
+  openWalletHistory(wallet: WalletHistoryCategory): void {
     // Clean any previous artifacts before opening a new modal
     this.cleanupModalArtifacts();
     this.selectedWalletForHistory = wallet;
@@ -384,6 +628,9 @@ export class PaymentConfirmationComponent implements OnInit {
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
     const modalEl = document.getElementById('walletHistoryModal');
     if (modalEl) {
+      if (modalEl.parentNode !== document.body) {
+        document.body.appendChild(modalEl);
+      }
       const modal = new (window as any).bootstrap.Modal(modalEl);
       modal.show();
       // When modal fully hidden, run cleanup in case bootstrap misses anything
@@ -391,8 +638,21 @@ export class PaymentConfirmationComponent implements OnInit {
     }
   }
 
+  openHologramHistory(): void {
+    this.openWalletHistory('hologram');
+  }
+
   getActiveWalletTxns() {
-    return this.selectedWalletForHistory === 'excise' ? this.exciseWalletTransactions : this.educationWalletTransactions;
+    if (this.selectedWalletForHistory === 'excise') {
+      return this.exciseWalletTransactions;
+    }
+    if (this.selectedWalletForHistory === 'education') {
+      return this.educationWalletTransactions;
+    }
+    if (this.selectedWalletForHistory === 'hologram') {
+      return this.hologramWalletTransactions;
+    }
+    return [];
   }
 
   applyWalletHistoryFilters(): void {
@@ -461,6 +721,9 @@ export class PaymentConfirmationComponent implements OnInit {
     // Show payment confirmation modal
     const modal = document.getElementById('paymentModal');
     if (modal) {
+      if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
       const bootstrapModal = new (window as any).bootstrap.Modal(modal);
       bootstrapModal.show();
     }
@@ -507,6 +770,7 @@ export class PaymentConfirmationComponent implements OnInit {
           this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
           item.status = 'Payment Successful'; // Update local status immediately
           this.loadHologramDataFromApi(); // Refresh data
+          this.loadWalletDataFromBackend();
         },
         error: (err) => {
           console.error('Payment failed:', err);
@@ -521,6 +785,7 @@ export class PaymentConfirmationComponent implements OnInit {
           item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
+          this.loadWalletDataFromBackend();
         },
         error: (err) => {
           console.error('Cancellation Payment failed:', err);
@@ -531,6 +796,7 @@ export class PaymentConfirmationComponent implements OnInit {
       // Legacy/Other tabs logic
       item.status = 'Payment Successful';
       this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
+      this.loadWalletDataFromBackend();
     }
   }
 
@@ -547,9 +813,116 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   addMoney(walletType: string): void {
-    console.log('Add money to:', walletType);
-    // Navigate to add money page or show modal
-    this.showInfoMessage('Redirecting to payment gateway...');
+    const normalizedWalletType = this.normalizeAddMoneyWalletType(walletType);
+    if (!normalizedWalletType) {
+      this.showErrorMessage(`Unsupported wallet type: ${walletType}`);
+      return;
+    }
+
+    this.openUnifiedAddMoneyView(normalizedWalletType);
+  }
+
+  private normalizeAddMoneyWalletType(walletType: string): AddMoneyWalletType | null {
+    switch (walletType) {
+      case 'excise':
+      case 'education':
+      case 'hologram':
+      case 'brewery':
+        return walletType;
+      default:
+        return null;
+    }
+  }
+
+  private openUnifiedAddMoneyView(walletType: AddMoneyWalletType): void {
+    this.cleanupModalArtifacts();
+    this.selectedAddMoneyContext = this.getAddMoneyContext(walletType);
+    this.addMoneyTransactionId = this.generateWalletTransactionId(walletType);
+    this.addMoneyAmount = 0;
+
+    const modalEl = document.getElementById('addMoneyModal');
+    if (modalEl) {
+      if (modalEl.parentNode !== document.body) {
+        document.body.appendChild(modalEl);
+      }
+
+      const modal = new (window as any).bootstrap.Modal(modalEl);
+      modal.show();
+      modalEl.addEventListener('hidden.bs.modal', () => this.cleanupModalArtifacts(), { once: true });
+    }
+  }
+
+  private getAddMoneyContext(walletType: AddMoneyWalletType): AddMoneyViewContext {
+    const moduleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+
+    switch (walletType) {
+      case 'excise':
+        return {
+          walletType,
+          moduleLabel: 'Distillery',
+          walletLabel: 'Excise / Additional Wallet',
+          hoa: this.walletHoaByType.excise
+        };
+      case 'brewery':
+        return {
+          walletType,
+          moduleLabel: 'Brewery',
+          walletLabel: 'Brewery Wallet',
+          hoa: this.walletHoaByType.brewery
+        };
+      case 'education':
+        return {
+          walletType,
+          moduleLabel,
+          walletLabel: 'Education Cess Wallet',
+          hoa: this.walletHoaByType.education
+        };
+      case 'hologram':
+        return {
+          walletType,
+          moduleLabel,
+          walletLabel: 'Hologram Wallet',
+          hoa: this.walletHoaByType.hologram
+        };
+      default:
+        return {
+          walletType: 'excise',
+          moduleLabel: 'Distillery',
+          walletLabel: 'Excise / Additional Wallet',
+          hoa: this.walletHoaByType.excise
+        };
+    }
+  }
+
+  private generateWalletTransactionId(walletType: AddMoneyWalletType): string {
+    const prefixByWallet: Record<AddMoneyWalletType, string> = {
+      excise: 'EX',
+      brewery: 'BR',
+      education: 'EC',
+      hologram: 'HG'
+    };
+
+    const timestamp = Date.now().toString();
+    const randomBlock = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    return `BILLDESK${prefixByWallet[walletType]}${timestamp}${randomBlock}`;
+  }
+
+  closeUnifiedAddMoneyView(): void {
+    const modalEl = document.getElementById('addMoneyModal');
+    if (modalEl) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalEl);
+      modal?.hide();
+    }
+  }
+
+  proceedUnifiedAddMoney(): void {
+    if (this.addMoneyAmount <= 0) {
+      this.showErrorMessage('Please enter amount greater than zero.');
+      return;
+    }
+
+    this.showInfoMessage('Recharge request submitted. Wallet balance will refresh from backend after payment success.');
+    this.closeUnifiedAddMoneyView();
   }
 
   downloadDetails(): void {
@@ -633,6 +1006,9 @@ export class PaymentConfirmationComponent implements OnInit {
     this.transitPaymentAgreed = false;
     const modal = document.getElementById('transitPaymentModal');
     if (modal) {
+      if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
       const bootstrapModal = new (window as any).bootstrap.Modal(modal);
       bootstrapModal.show();
     }
@@ -660,6 +1036,7 @@ export class PaymentConfirmationComponent implements OnInit {
 
         // Refresh data
         this.loadTransitData();
+        this.loadWalletDataFromBackend();
       },
       error: (err) => {
         console.error('Payment failed', err);
