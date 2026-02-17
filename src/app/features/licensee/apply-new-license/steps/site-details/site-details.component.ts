@@ -133,7 +133,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       ward: new FormControl({value: storedValues.ward ?? null, disabled: !hasLocation}, [Validators.required]),
       
       businessAddress: new FormControl(storedValues.address ?? null, [Validators.required, Validators.maxLength(500)]),
-      roadName: new FormControl({value: storedValues.road ?? null, disabled: !hasDistrict}, [Validators.required]),
+      roadName: new FormControl({value: storedValues.road ?? null, disabled: !hasSubdivision}, [Validators.required]),
       pinCode: new FormControl(storedValues.pin_code, [
         Validators.required,
         Validators.pattern(PatternConstants.PINCODE)
@@ -176,8 +176,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         
         if (districtId) {
           siteSubdivisionCtrl?.enable();
-          roadNameCtrl?.enable();
-          locationCtrl?.enable();
         } else {
           siteSubdivisionCtrl?.disable();
           roadNameCtrl?.disable();
@@ -190,13 +188,30 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .pipe(takeUntil(this.destroy$))
       .subscribe(subdivisionId => {
         const policeStationCtrl = this.siteDetailsForm.get('policeStation');
+        const roadNameCtrl = this.siteDetailsForm.get('roadName');
+        const wardCtrl = this.siteDetailsForm.get('ward');
+
         if (subdivisionId) {
           policeStationCtrl?.enable();
           this.filterPoliceStations(subdivisionId);
+
+          // ✅ Filter roads and wards by subdivision
+          roadNameCtrl?.enable();
+          wardCtrl?.enable();
+          this.filterRoadsBySubdivision(subdivisionId);
+          this.filterWardsBySubdivision(subdivisionId);
         } else {
           policeStationCtrl?.disable();
           this.sitePoliceStations = [];
           this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
+
+          roadNameCtrl?.disable();
+          this.roadNames = [];
+          this.siteDetailsForm.patchValue({ roadName: null }, { emitEvent: false });
+
+          wardCtrl?.disable();
+          this.wards = [];
+          this.siteDetailsForm.patchValue({ ward: null }, { emitEvent: false });
         }
       });
 
@@ -520,24 +535,25 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
     console.log('🔄 All master data ready — running full session restore cascade');
 
-    // Step 1: District → filter subdivisions, roads, locations
+    // Step 1: District → filter subdivisions + locations
     const districtId = stored.district;
     if (districtId && this.districts.some(d => d.id === districtId)) {
       this.siteDetailsForm.get('siteDistrict')?.setValue(districtId, { emitEvent: false });
       this.filterSubdivisions(districtId);
-      this.filterRoads(districtId);
       this.filterLocations(districtId);
       this.siteDetailsForm.get('siteSubdivision')?.enable();
-      this.siteDetailsForm.get('roadName')?.enable();
-      this.siteDetailsForm.get('location')?.enable();
     }
 
-    // Step 2: Subdivision → filter police stations
+    // Step 2: Subdivision → filter police stations, roads, wards
     const subdivisionId = stored.subdivision;
     if (subdivisionId && this.siteSubdivisions.some(s => s.id === subdivisionId)) {
       this.siteDetailsForm.get('siteSubdivision')?.setValue(subdivisionId, { emitEvent: false });
       this.filterPoliceStations(subdivisionId);
+      this.filterRoadsBySubdivision(subdivisionId);
+      this.filterWardsBySubdivision(subdivisionId);
       this.siteDetailsForm.get('policeStation')?.enable();
+      this.siteDetailsForm.get('roadName')?.enable();
+      this.siteDetailsForm.get('ward')?.enable();
     }
 
     // Step 3: Police Station
@@ -592,15 +608,23 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     if (!districtId) return;
     
     this.filterSubdivisions(districtId);
-    this.filterRoads(districtId);
     this.filterLocations(districtId);
     
+    // Reset subdivision-dependent dropdowns
     this.siteDetailsForm.patchValue({ 
       siteSubdivision: null, 
       policeStation: null,
+      roadName: null,
       location: null,
       ward: null
     }, { emitEvent: false });
+
+    // Disable until subdivision is selected
+    this.siteDetailsForm.get('policeStation')?.disable();
+    this.siteDetailsForm.get('roadName')?.disable();
+    this.siteDetailsForm.get('ward')?.disable();
+    this.roadNames = [];
+    this.wards = [];
   }
 
   private filterSubdivisions(districtId: number): void {
@@ -622,13 +646,18 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.cdr.detectChanges();
   }
 
-  private filterRoads(districtId: number): void {
-    if (!districtId) {
+  // ✅ UPDATED: Filter roads by subdivision (via subdivision's districtCode)
+  private filterRoadsBySubdivision(subdivisionId: number): void {
+    const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
+    if (!subdivision) {
       this.roadNames = [];
       return;
     }
-    const selectedDistrict = this.districts.find(d => d.id === districtId);
-    if (!selectedDistrict) {
+    // Roads are linked to district; use subdivision's districtCode to find the parent district id
+    const parentDistrict = this.districts.find(
+      d => d.districtCode === subdivision.districtCode
+    );
+    if (!parentDistrict) {
       this.roadNames = [];
       return;
     }
@@ -643,12 +672,52 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       } else if ((road as any).district_id !== undefined) {
         roadDistrictId = (road as any).district_id;
       }
-      return roadDistrictId === districtId;
+      return roadDistrictId === parentDistrict.id;
     });
     const current = this.siteDetailsForm.get('roadName')?.value;
     if (current && !this.roadNames.some(r => r.id === current)) {
       this.siteDetailsForm.patchValue({ roadName: null }, { emitEvent: false });
     }
+    console.log('✅ Filtered roads by subdivision:', this.roadNames.length);
+    this.cdr.detectChanges();
+  }
+
+  // ✅ UPDATED: Filter wards by subdivision (via subdivision's districtCode → locations)
+  private filterWardsBySubdivision(subdivisionId: number): void {
+    const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
+    if (!subdivision) {
+      this.wards = [];
+      return;
+    }
+    // Find all locations in the same district as this subdivision
+    const locationCodesInDistrict = this.allLocations
+      .filter(l => l.districtCode === subdivision.districtCode)
+      .map(l => l.locationCode);
+
+    this.wards = this.allWards.filter(
+      ward => locationCodesInDistrict.includes(ward.locationCode)
+    );
+    const current = this.siteDetailsForm.get('ward')?.value;
+    if (current && !this.wards.some(w => w.id === current)) {
+      this.siteDetailsForm.patchValue({ ward: null }, { emitEvent: false });
+    }
+    console.log('✅ Filtered wards by subdivision:', this.wards.length);
+    this.cdr.detectChanges();
+  }
+
+  // Keep old filterRoads for any remaining internal use (e.g. restore)
+  private filterRoads(districtId: number): void {
+    if (!districtId) { this.roadNames = []; return; }
+    const selectedDistrict = this.districts.find(d => d.id === districtId);
+    if (!selectedDistrict) { this.roadNames = []; return; }
+    this.roadNames = this.allRoads.filter(road => {
+      let roadDistrictId: number | undefined;
+      if ((road as any).districtId !== undefined) roadDistrictId = (road as any).districtId;
+      else if (typeof road.district === 'number') roadDistrictId = road.district;
+      else if (road.district && typeof road.district === 'object') roadDistrictId = (road.district as District).id;
+      else if ((road as any).district_id !== undefined) roadDistrictId = (road as any).district_id;
+      return roadDistrictId === districtId;
+    });
     this.cdr.detectChanges();
   }
 
