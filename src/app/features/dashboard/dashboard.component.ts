@@ -8,8 +8,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
@@ -22,6 +23,7 @@ import { ApplicationTableComponent } from '../licensee/licensee-dashboard/applic
 import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../core/services/account.service';
 import Swal from 'sweetalert2';
+import { environment } from '../../../environments/environment';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
@@ -106,6 +108,8 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
+  private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   dashboardConfig!: DashboardConfig;
   currentUser: User | null = null;
@@ -135,6 +139,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
+  private licenseeMenuAccessResolved = false;
+  private showBreweryOrDistilleryMenus = false;
 
   // Professional dashboard enhancements
   previousCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
@@ -149,6 +155,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private unifiedDashboardService: UnifiedDashboardService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private accountService: AccountService,
+    private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router
   ) { }
@@ -184,6 +191,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private handleQueryParams(): void {
     const initialSection = this.route.snapshot.queryParamMap.get('section');
     this.selectedSupplyChainSection = initialSection || null;
+    this.enforceSectionAccess();
 
     // Subscribe to query parameter changes
     this.route.queryParams
@@ -191,6 +199,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(params => {
         const section = params['section'];
         this.selectedSupplyChainSection = section || null;
+        this.enforceSectionAccess();
       });
   }
 
@@ -241,6 +250,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (config) => {
           this.dashboardConfig = config;
+          this.loadLicenseeMenuAccess();
           this.loadDashboardData();
         },
         error: (error) => {
@@ -341,6 +351,132 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   isLicenseeUser(): boolean {
     return this.currentUser?.roleId === 2;
+  }
+
+  canRenderWalletSection(): boolean {
+    if (!this.isLicenseeUser()) {
+      return true;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return true;
+    }
+    return this.showBreweryOrDistilleryMenus;
+  }
+
+  private enforceSectionAccess(): void {
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return;
+    }
+    if (!this.isLicenseeUser()) {
+      return;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return;
+    }
+    if (this.showBreweryOrDistilleryMenus) {
+      return;
+    }
+
+    this.selectedSupplyChainSection = null;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { section: null, tab: null, source: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  private loadLicenseeMenuAccess(): void {
+    if (!this.isLicenseeUser()) {
+      this.licenseeMenuAccessResolved = true;
+      this.showBreweryOrDistilleryMenus = false;
+      return;
+    }
+
+    this.licenseeMenuAccessResolved = false;
+    this.showBreweryOrDistilleryMenus = false;
+
+    forkJoin({
+      licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
+        catchError(() => of([]))
+      ),
+      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(
+        catchError(() => of({ approved: [] }))
+      ),
+      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(
+        catchError(() => of([]))
+      )
+    }).subscribe({
+      next: ({ licenses, approvedPayload, allApplications }) => {
+        const licenseRows = Array.isArray(licenses) ? licenses : [];
+        const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
+        const allRows = Array.isArray(allApplications) ? allApplications : [];
+        const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
+        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll];
+        const hasDistillery = combinedRows.some((item) => this.isDistillery(item));
+        const hasBrewery = combinedRows.some((item) => this.isBrewery(item));
+
+        this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+        this.licenseeMenuAccessResolved = true;
+        this.enforceSectionAccess();
+      },
+      error: () => {
+        this.showBreweryOrDistilleryMenus = false;
+        this.licenseeMenuAccessResolved = true;
+        this.enforceSectionAccess();
+      }
+    });
+  }
+
+  private isApprovedStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+    ).toLowerCase();
+    return stage.includes('approved');
+  }
+
+  private isDistillery(item: any): boolean {
+    const subCategoryId = this.extractSubCategoryId(item);
+    if (subCategoryId === 2) {
+      return true;
+    }
+    const name = this.extractSubCategoryName(item);
+    return name.includes('distiller');
+  }
+
+  private isBrewery(item: any): boolean {
+    const subCategoryId = this.extractSubCategoryId(item);
+    if (subCategoryId === 1) {
+      return true;
+    }
+    const name = this.extractSubCategoryName(item);
+    return name.includes('brew');
+  }
+
+  private extractSubCategoryId(item: any): number {
+    const nested = item?.license_sub_category ?? item?.licenseSubCategory;
+    const raw =
+      item?.license_sub_category_id ??
+      item?.licenseSubCategoryId ??
+      (typeof nested === 'object' ? nested?.id : nested) ??
+      0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private extractSubCategoryName(item: any): string {
+    const nested = item?.license_sub_category ?? item?.licenseSubCategory;
+    const raw =
+      item?.license_sub_category_name ??
+      item?.licenseSubCategoryName ??
+      (typeof nested === 'object'
+        ? (nested?.description ?? nested?.name ?? nested?.label ?? '')
+        : nested ?? '');
+    return String(raw ?? '').toLowerCase();
   }
 
   // Supply Chain Section Handlers

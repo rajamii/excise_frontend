@@ -33,7 +33,7 @@
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
-            <button class="nav-item wallet-nav-item" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
+            <button class="nav-item wallet-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
               <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
               <span class="nav-text">Wallet</span>
             </button>

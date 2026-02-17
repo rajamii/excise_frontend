@@ -65,7 +65,7 @@
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
         <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
-        <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'"></app-payment-confirmation>
+        <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet' && canRenderWalletSection()"></app-payment-confirmation>
         <app-registration-management
           *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'salesman-barman-registration'">
         </app-registration-management>

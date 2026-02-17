@@ -1,12 +1,14 @@
-import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { environment } from '../../../../../../environments/environment';
 import {
   AddMoneyViewContext,
   AddMoneyWalletType,
@@ -84,11 +86,22 @@ interface WalletHistoryTransaction {
   reference: string;
 }
 
+interface MyLicenseRow {
+  license_id?: string;
+  licenseId?: string;
+  license_sub_category_id?: number;
+  licenseSubCategoryId?: number;
+  license_sub_category?: string;
+  licenseSubCategory?: string;
+}
+
+type WalletModuleType = 'distillery' | 'brewery' | '';
+
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
-  excise: '0039-00-105-45-01',
-  brewery: '0038-00-102-45-00',
-  education: '0045-00-112-45-03',
-  hologram: '0039-00-800-45-01'
+  excise: '',
+  brewery: '',
+  education: '',
+  hologram: ''
 };
 
 @Component({
@@ -102,6 +115,7 @@ const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
 export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
   activeTab = 'requisition';
   isBreweryUser = false;
+  walletModuleLabel = 'Distillery';
   showRetryButton = false;
   showTransitPayment = false;
   selectedItem: PaymentItem | null = null;
@@ -118,7 +132,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   educationCessBalance = 0;
   hologramWalletBalance = 0;
   activeLicenseeId = '';
+  private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
+  private resolvedLicenseModuleType: WalletModuleType = '';
   private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
+  private readonly http = inject(HttpClient);
 
   // Transit Data
   transitBillNo = '';
@@ -193,7 +210,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   ) { }
 
   ngOnInit(): void {
-    this.loadWalletDataFromBackend();
+    this.initializeWalletContextAndLoadData();
 
     // Load hologram data from API
     this.loadHologramDataFromApi();
@@ -244,9 +261,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       }
     });
 
-    // Check user type (this would come from a service in real app)
-    this.isBreweryUser = false; // Set based on user session
-
     // Ensure any stale modal/backdrop artifacts are cleaned on navigation
     this.router.events.subscribe(ev => {
       if (ev instanceof NavigationEnd) {
@@ -266,13 +280,38 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.restoreMovedModals();
   }
 
-  private loadWalletDataFromBackend(): void {
-    const licenseeId = this.resolveActiveLicenseeId();
-    if (!licenseeId) {
-      this.showErrorMessage('Licensee id not found in session. Wallet data cannot be loaded.');
+  private initializeWalletContextAndLoadData(): void {
+    const fromQuery = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
+    if (fromQuery) {
+      this.activeLicenseeId = fromQuery;
+      this.applyResolvedModuleType(this.resolvedLicenseModuleType);
+      this.loadWalletDataFromBackend(fromQuery);
       return;
     }
 
+    this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`)
+      .pipe(catchError(() => of([] as MyLicenseRow[])))
+      .subscribe((licenses) => {
+        const rows = Array.isArray(licenses) ? licenses : [];
+        const preferred = this.pickPreferredWalletLicense(rows);
+        const resolvedModuleType = this.resolveModuleTypeFromLicense(preferred);
+        const licenseeId =
+          String(preferred?.license_id ?? preferred?.licenseId ?? '').trim() ||
+          this.resolveActiveLicenseeIdFromSession();
+
+        this.applyResolvedModuleType(resolvedModuleType);
+
+        if (!licenseeId) {
+          this.showErrorMessage('Licensee id not found in profile/session. Wallet data cannot be loaded.');
+          return;
+        }
+
+        this.activeLicenseeId = licenseeId;
+        this.loadWalletDataFromBackend(licenseeId);
+      });
+  }
+
+  private loadWalletDataFromBackend(licenseeId: string): void {
     this.activeLicenseeId = licenseeId;
     this.exciseWalletBalance = 0;
     this.educationCessBalance = 0;
@@ -287,43 +326,41 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.walletHistoryFiltered = [];
 
     forkJoin({
-      summary: this.paymentIntegrationService.getWalletSummary(licenseeId),
-      recharge: this.paymentIntegrationService.getWalletRecharge(licenseeId),
-      history: this.paymentIntegrationService.getWalletHistory(licenseeId)
-    }).pipe(
-      catchError((error) => {
-        console.error('Wallet API load failed:', error);
-        this.showErrorMessage('Failed to load wallet data from backend.');
-        this.exciseWalletBalance = 0;
-        this.educationCessBalance = 0;
-        this.breweryWalletBalance = 0;
-        this.hologramWalletBalance = 0;
-        this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
-        this.rechargeData = [];
-        this.historyData = [];
-        this.exciseWalletTransactions = [];
-        this.educationWalletTransactions = [];
-        this.hologramWalletTransactions = [];
-        this.walletHistoryFiltered = [];
-        return of(null);
-      })
-    ).subscribe((response) => {
-      if (!response) {
-        return;
-      }
-
+      summary: this.paymentIntegrationService.getWalletSummary(licenseeId).pipe(
+        catchError((error) => {
+          console.error('Wallet summary API load failed:', error);
+          return of({ results: [] } as any);
+        })
+      ),
+      recharge: this.paymentIntegrationService.getWalletRecharge(licenseeId).pipe(
+        catchError((error) => {
+          console.error('Wallet recharge API load failed:', error);
+          return of({ results: [] } as any);
+        })
+      ),
+      history: this.paymentIntegrationService.getWalletHistory(licenseeId).pipe(
+        catchError((error) => {
+          console.error('Wallet history API load failed:', error);
+          return of({ results: [] } as any);
+        })
+      )
+    }).subscribe((response) => {
       this.applyWalletSummary(response.summary);
       this.applyWalletRecharge(response.recharge);
       this.applyWalletHistory(response.history);
     });
   }
 
-  private resolveActiveLicenseeId(): string {
-    const fromQuery = this.route.snapshot.queryParams['licenseeId'];
-    if (fromQuery) {
-      return String(fromQuery).trim();
+  private refreshWalletData(): void {
+    const licenseeId = String(this.activeLicenseeId || '').trim();
+    if (licenseeId) {
+      this.loadWalletDataFromBackend(licenseeId);
+      return;
     }
+    this.initializeWalletContextAndLoadData();
+  }
 
+  private resolveActiveLicenseeIdFromSession(): string {
     const fromSession = sessionStorage.getItem('currentUser');
     if (fromSession) {
       try {
@@ -344,15 +381,62 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return '';
   }
 
+  private pickPreferredWalletLicense(rows: MyLicenseRow[]): MyLicenseRow | null {
+    const walletEligible = rows.filter((row) => this.resolveModuleTypeFromLicense(row) !== '');
+    if (walletEligible.length > 0) {
+      return walletEligible[0];
+    }
+    return rows[0] ?? null;
+  }
+
+  private resolveModuleTypeFromLicense(row: MyLicenseRow | null | undefined): WalletModuleType {
+    if (!row) {
+      return '';
+    }
+
+    const subCategoryId = Number(
+      row.license_sub_category_id ??
+      row.licenseSubCategoryId ??
+      0
+    );
+    if (subCategoryId === 2) {
+      return 'distillery';
+    }
+    if (subCategoryId === 1) {
+      return 'brewery';
+    }
+
+    const subCategoryName = String(
+      row.license_sub_category ??
+      row.licenseSubCategory ??
+      ''
+    ).toLowerCase();
+
+    if (subCategoryName.includes('distill')) {
+      return 'distillery';
+    }
+    if (subCategoryName.includes('brew')) {
+      return 'brewery';
+    }
+    return '';
+  }
+
+  private applyResolvedModuleType(moduleType: WalletModuleType): void {
+    this.resolvedLicenseModuleType = moduleType;
+    this.isBreweryUser = moduleType === 'brewery';
+    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+  }
+
   private applyWalletSummary(payload: any): void {
     const rows = this.safeArray(payload?.results);
+    const startsAsBrewery = this.resolvedLicenseModuleType === 'brewery';
 
     this.exciseWalletBalance = 0;
     this.educationCessBalance = 0;
     this.breweryWalletBalance = 0;
     this.hologramWalletBalance = 0;
     this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
-    this.isBreweryUser = false;
+    this.isBreweryUser = startsAsBrewery;
 
     rows.forEach((row: any) => {
       const walletType = String(
@@ -364,6 +448,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const hoa = this.pickAny(row, ['head_of_account', 'headOfAccount'], '');
       const balance = this.toNumber(this.pickAny(row, ['current_balance', 'currentBalance'], 0));
       const inferredWalletType = walletType || this.inferWalletTypeFromHoa(String(hoa));
+      const treatAsBreweryWallet =
+        inferredWalletType === 'brewery' ||
+        moduleType === 'brewery' ||
+        (startsAsBrewery && inferredWalletType === 'excise' && !moduleType);
 
       if (inferredWalletType === 'education_cess') {
         this.educationCessBalance += balance;
@@ -375,7 +463,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         if (hoa) {
           this.walletHoaByType.hologram = String(hoa);
         }
-      } else if (inferredWalletType === 'brewery' || moduleType === 'brewery') {
+      } else if (treatAsBreweryWallet) {
         this.breweryWalletBalance += balance;
         this.isBreweryUser = true;
         if (hoa) {
@@ -388,6 +476,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         }
       }
     });
+
+    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
   }
 
   private applyWalletRecharge(payload: any): void {
@@ -770,7 +860,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
           item.status = 'Payment Successful'; // Update local status immediately
           this.loadHologramDataFromApi(); // Refresh data
-          this.loadWalletDataFromBackend();
+          this.refreshWalletData();
         },
         error: (err) => {
           console.error('Payment failed:', err);
@@ -785,7 +875,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
-          this.loadWalletDataFromBackend();
+          this.refreshWalletData();
         },
         error: (err) => {
           console.error('Cancellation Payment failed:', err);
@@ -796,7 +886,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       // Legacy/Other tabs logic
       item.status = 'Payment Successful';
       this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
-      this.loadWalletDataFromBackend();
+      this.refreshWalletData();
     }
   }
 
@@ -853,21 +943,21 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private getAddMoneyContext(walletType: AddMoneyWalletType): AddMoneyViewContext {
-    const moduleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    const moduleLabel = this.walletModuleLabel;
 
     switch (walletType) {
       case 'excise':
         return {
           walletType,
-          moduleLabel: 'Distillery',
-          walletLabel: 'Excise / Additional Wallet',
+          moduleLabel,
+          walletLabel: 'Excise Duty Wallet',
           hoa: this.walletHoaByType.excise
         };
       case 'brewery':
         return {
           walletType,
-          moduleLabel: 'Brewery',
-          walletLabel: 'Brewery Wallet',
+          moduleLabel,
+          walletLabel: 'Excise Duty Wallet',
           hoa: this.walletHoaByType.brewery
         };
       case 'education':
@@ -887,8 +977,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       default:
         return {
           walletType: 'excise',
-          moduleLabel: 'Distillery',
-          walletLabel: 'Excise / Additional Wallet',
+          moduleLabel,
+          walletLabel: 'Excise Duty Wallet',
           hoa: this.walletHoaByType.excise
         };
     }
@@ -1036,7 +1126,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
         // Refresh data
         this.loadTransitData();
-        this.loadWalletDataFromBackend();
+        this.refreshWalletData();
       },
       error: (err) => {
         console.error('Payment failed', err);

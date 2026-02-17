@@ -372,6 +372,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   navigateToWalletView(section: string = 'wallet'): void {
+    if (this.isLicenseeUser() && !this.showBreweryOrDistilleryMenus) {
+      return;
+    }
+
     this.router.navigate(['/dashboard'], {
       queryParams: {
         section,
