@@ -16,6 +16,7 @@
         <!-- ══ VIEW MODE ══════════════════════════════════════════ -->
         @if (!showEditForm) {
 
+          <!-- Account details -->
           <table>
             <tr><td><strong>First Name:</strong></td>   <td>{{ user.firstName }}</td></tr>
             <tr><td><strong>Middle Name:</strong></td>  <td>{{ user.middleName }}</td></tr>
@@ -38,6 +39,7 @@
                 <span>Licensee Profile</span>
               </div>
               <table>
+                <tr><td><strong>PAN Number:</strong></td>         <td>{{ licenseeProfile.pan_number }}</td></tr>
                 <tr><td><strong>Father's Name:</strong></td>      <td>{{ licenseeProfile.father_name }}</td></tr>
                 <tr><td><strong>Date of Birth:</strong></td>      <td>{{ licenseeProfile.dob }}</td></tr>
                 <tr><td><strong>Gender:</strong></td>             <td>{{ licenseeProfile.gender_display }}</td></tr>
@@ -89,7 +91,7 @@
               </div>
             }
 
-            <!-- Immutable fields -->
+            <!-- ── Immutable fields ───────────────────────────── -->
             <div class="form-section-label">
               <mat-icon>lock</mat-icon>
               Personal Details
@@ -98,6 +100,7 @@
               }
             </div>
 
+            <!-- Father's Name -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Father's Name</mat-label>
               <input matInput formControlName="father_name" placeholder="Enter father's full name" />
@@ -109,9 +112,11 @@
               }
             </mat-form-field>
 
+            <!-- Date of Birth -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Date of Birth</mat-label>
-              <input matInput [matDatepicker]="dobPicker" formControlName="dob" placeholder="YYYY-MM-DD" />
+              <input matInput [matDatepicker]="dobPicker"
+                     formControlName="dob" placeholder="YYYY-MM-DD" />
               <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
               <mat-datepicker #dobPicker></mat-datepicker>
               @if (f['dob'].touched && f['dob'].errors?.['required']) {
@@ -119,6 +124,7 @@
               }
             </mat-form-field>
 
+            <!-- Gender -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Gender</mat-label>
               <mat-select formControlName="gender">
@@ -131,6 +137,7 @@
               }
             </mat-form-field>
 
+            <!-- Nationality -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Nationality</mat-label>
               <input matInput formControlName="nationality" />
@@ -139,13 +146,14 @@
               }
             </mat-form-field>
 
-            <!-- Mutable fields -->
+            <!-- ── Mutable fields ─────────────────────────────── -->
             <div class="form-section-label">
               <mat-icon>edit_note</mat-icon>
               Status Details
               <span class="lock-hint">(can be updated anytime)</span>
             </div>
 
+            <!-- Marital Status -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Marital Status</mat-label>
               <mat-select formControlName="marital_status">
@@ -158,6 +166,7 @@
               }
             </mat-form-field>
 
+            <!-- Residential Status -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Residential Status</mat-label>
               <mat-select formControlName="residential_status">
@@ -170,6 +179,7 @@
               }
             </mat-form-field>
 
+            <!-- Form actions -->
             <div class="form-actions">
               <button mat-stroked-button type="button" (click)="cancelEdit()" [disabled]="isSaving">
                 <mat-icon>cancel</mat-icon>

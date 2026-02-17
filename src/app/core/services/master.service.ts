@@ -20,11 +20,14 @@ export class MasterService {
   
   // Base URL for all master data endpoints
   private readonly BASE_URL = `${this.DJANGO_BASE}/masters/core`;
+
+  // User endpoints (licensee profiles live here)
+  private readonly USER_BASE_URL = `${this.DJANGO_BASE}/auth/users`;
   
   // =========================================================================
   // ENDPOINT URLs
   // =========================================================================
-  private readonly LICENSEE_PROFILE_URL = `${this.BASE_URL}/licensee-profiles`;
+  private readonly LICENSEE_PROFILE_URL = `${this.USER_BASE_URL}/licensee-profiles`;
   private readonly LICENSE_CATEGORY_URL = `${this.BASE_URL}/license-categories`;
   private readonly LICENSE_TYPE_URL = `${this.BASE_URL}/license-types`;
   private readonly STATE_URL = `${this.BASE_URL}/states`;
@@ -56,12 +59,17 @@ export class MasterService {
     return this.http.get(`${this.LICENSEE_PROFILE_URL}/`);
   }
 
+  // ✅ NEW: Get current user's own profile (no ID needed)
+  getMyLicenseeProfile(): Observable<any> {
+    return this.http.get(`${this.LICENSEE_PROFILE_URL}/me/`);
+  }
+
   getLicenseeProfile(id: number): Observable<any> {
     return this.http.get(`${this.LICENSEE_PROFILE_URL}/${id}/`);
   }
 
   createLicenseeProfile(data: any): Observable<any> {
-    return this.http.post(`${this.LICENSEE_PROFILE_URL}/create/`, data);
+    return this.http.post(`${this.LICENSEE_PROFILE_URL}/me/`, data);
   }
 
   updateLicenseeProfile(id: number, data: any): Observable<any> {

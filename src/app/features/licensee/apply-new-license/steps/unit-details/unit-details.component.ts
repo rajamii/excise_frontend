@@ -87,16 +87,18 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
 
     console.log('🔍 Fetching profiles for unit-details auto-fill...');
 
+    // ✅ FIXED: Use getMyLicenseeProfile() to get current user's profile
     forkJoin({
       userProfile:     this.fetchUserProfile(),
-      licenseeProfile: this.masterService.getLicenseeProfiles().pipe(catchError(() => of([])))
+      licenseeProfile: this.masterService.getMyLicenseeProfile().pipe(catchError(() => of(null)))
     })
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: ({ userProfile, licenseeProfile }) => {
-        const lp = Array.isArray(licenseeProfile) && licenseeProfile.length > 0
-          ? licenseeProfile[0] : null;
-        this.fillForm(userProfile, lp);
+        console.log('✅ User profile for unit-details:', userProfile);
+        console.log('✅ Licensee profile for unit-details:', licenseeProfile);
+        
+        this.fillForm(userProfile, licenseeProfile);
       },
       error: (err) => console.error('❌ Unit details auto-fill error:', err)
     });

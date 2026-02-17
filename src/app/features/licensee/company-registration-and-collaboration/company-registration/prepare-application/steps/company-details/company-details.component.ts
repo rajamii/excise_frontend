@@ -111,34 +111,20 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
   // ✅ NEW: Fetch both user profile AND licensee profile in parallel
   // ─────────────────────────────────────────────────────────────────
   private autoFillFromProfiles(): void {
-    const alreadyFilled =
-      this.companyDetailsForm.get('companyEmailId')?.value &&
-      this.companyDetailsForm.get('companyMobileNumber')?.value &&
-      this.companyDetailsForm.get('officeAddress')?.value;
-
-    if (alreadyFilled) {
-      console.log('📋 Company details already filled, skipping auto-fill');
-      return;
-    }
-
     console.log('🔍 Fetching user profile + licensee profile for auto-fill...');
 
-    // Fetch both in parallel; treat errors as null so one failure doesn't block the other
+    // ✅ FIXED: Use getMyLicenseeProfile() to get current user's profile
     forkJoin({
       userProfile:     this.fetchUserProfile(),
-      licenseeProfile: this.masterService.getLicenseeProfiles().pipe(catchError(() => of([])))
+      licenseeProfile: this.masterService.getMyLicenseeProfile().pipe(catchError(() => of(null)))
     })
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: ({ userProfile, licenseeProfile }) => {
-        const lp = Array.isArray(licenseeProfile) && licenseeProfile.length > 0
-          ? licenseeProfile[0]
-          : null;
-
         console.log('✅ User profile:', userProfile);
-        console.log('✅ Licensee profile:', lp);
+        console.log('✅ Licensee profile:', licenseeProfile);
 
-        this.fillForm(userProfile, lp);
+        this.fillForm(userProfile, licenseeProfile);
       },
       error: (err) => console.error('❌ Auto-fill error:', err)
     });
@@ -179,6 +165,12 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
     // ── From licensee profile ──────────────────────────────────────
     if (licensee) {
+      // ✅ Auto-fill PAN from licensee profile
+      if (!this.companyDetailsForm.get('pan')?.value && licensee.panNumber) {
+        fillData.pan = licensee.panNumber;
+        console.log(`✅ Auto-filled PAN: ${licensee.panNumber}`);
+      }
+
       const nationality: string = (licensee.nationality || '').trim().toLowerCase();
 
       // Map nationality → country dropdown
@@ -196,16 +188,18 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       }
 
       // Store licensee profile in sessionStorage so submit step can use it
+      // ✅ FIXED: Use camelCase field names from API response
       sessionStorage.setItem('licenseeProfile', JSON.stringify({
-        father_name:         licensee.father_name,
-        dob:                 licensee.dob,
-        gender:              licensee.gender,
-        gender_display:      licensee.gender_display,
-        nationality:         licensee.nationality,
-        marital_status:      licensee.marital_status,
-        marital_status_display:      licensee.marital_status_display,
-        residential_status:          licensee.residential_status,
-        residential_status_display:  licensee.residential_status_display,
+        fatherName:                licensee.fatherName,
+        dob:                       licensee.dob,
+        gender:                    licensee.gender,
+        genderDisplay:             licensee.genderDisplay,
+        nationality:               licensee.nationality,
+        maritalStatus:             licensee.maritalStatus,
+        maritalStatusDisplay:      licensee.maritalStatusDisplay,
+        residentialStatus:         licensee.residentialStatus,
+        residentialStatusDisplay:  licensee.residentialStatusDisplay,
+        panNumber:                 licensee.panNumber,
       }));
       console.log('✅ Licensee profile saved to sessionStorage');
     }

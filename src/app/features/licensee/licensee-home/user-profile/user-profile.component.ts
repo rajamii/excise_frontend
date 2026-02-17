@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
-import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 
@@ -23,15 +22,16 @@ import { BaseDependency } from '../../../../base/dependency/base.dependency';
 
 /**
  * UserProfileComponent
- * 
- * Dialog component for viewing and editing licensee profiles
- * 
- * Features:
- * - View profile details in read-only mode
- * - Create new licensee profile
- * - Edit existing licensee profile
- * - Form validation
- * - Loading states
+ *
+ * Dialog component for viewing and editing licensee profiles.
+ *
+ * Backend endpoints used:
+ *   GET    /user/licensee-profiles/me/          → load current user's profile
+ *   POST   /user/licensee-profiles/             → create new profile
+ *   PATCH  /user/licensee-profiles/<pk>/update/ → update existing profile
+ *
+ * Immutable fields (locked after first save): pan_number, father_name, dob, gender, nationality
+ * Mutable fields (editable anytime):          marital_status, residential_status
  */
 @Component({
   selector: 'app-user-profile',
@@ -53,90 +53,64 @@ import { BaseDependency } from '../../../../base/dependency/base.dependency';
   styleUrl: './user-profile.component.scss'
 })
 export class UserProfileComponent extends BaseComponent implements OnInit, OnDestroy {
-  
+
   // =========================================================================
   // DEPENDENCY INJECTION
   // =========================================================================
-  
-  private fb = inject(FormBuilder);
+
+  private fb            = inject(FormBuilder);
   private mastersService = inject(MasterService);
-  public dialogRef = inject(MatDialogRef<UserProfileComponent>);
+  public  dialogRef     = inject(MatDialogRef<UserProfileComponent>);
 
   // =========================================================================
-  // PROPERTIES - STATE MANAGEMENT
+  // STATE
   // =========================================================================
 
-  /** Flag indicating component has finished loading initial data */
-  loaded = false;
-
-  /** User account data from auth service */
-  user: any = null;
-
-  /** Licensee profile data */
+  loaded         = false;
+  user: any      = null;
   licenseeProfile: any = null;
 
-  /** Form group for editing profile */
   profileForm!: FormGroup;
-
-  /** Flag to toggle between view and edit mode */
-  showEditForm = false;
-
-  /** Flag to indicate this is a new profile being created */
-  isNewProfile = true;
-
-  /** Loading state when fetching profile */
+  showEditForm  = false;
+  isNewProfile  = true;
   profileLoading = false;
+  isSaving       = false;
+  saveSuccess    = false;
+  saveError      = '';
 
-  /** Loading state during save operation */
-  isSaving = false;
+  resolvedRoleName = 'Licensee';
 
-  /** Success message display flag */
-  saveSuccess = false;
-
-  /** Error message for display */
-  saveError = '';
-
-  /** Subscription management */
   private subscriptions = new Subscription();
 
   // =========================================================================
-  // FORM CONTROL OPTIONS
+  // DROPDOWN OPTIONS  (mirror backend choices)
   // =========================================================================
 
-  /** Options for gender select dropdown */
   genderOptions = [
     { value: 'M', label: 'Male' },
     { value: 'F', label: 'Female' },
     { value: 'O', label: 'Other' }
   ];
 
-  /** Options for marital status select dropdown */
   maritalStatusOptions = [
-    { value: 'SINGLE', label: 'Single' },
-    { value: 'MARRIED', label: 'Married' },
+    { value: 'SINGLE',   label: 'Single' },
+    { value: 'MARRIED',  label: 'Married' },
     { value: 'DIVORCED', label: 'Divorced' },
-    { value: 'WIDOWED', label: 'Widowed' }
+    { value: 'WIDOWED',  label: 'Widowed' }
   ];
 
-  /** Options for residential status select dropdown */
   residentialStatusOptions = [
-    { value: 'RESIDENT', label: 'Resident' },
+    { value: 'RESIDENT',     label: 'Resident' },
     { value: 'NON_RESIDENT', label: 'Non-Resident' },
-    { value: 'OCI', label: 'Overseas Citizen of India' }
+    { value: 'OCI',          label: 'Overseas Citizen of India' }
   ];
-
-  /** Resolved role name for display */
-  resolvedRoleName = 'Licensee';
 
   // =========================================================================
   // CONSTRUCTOR
   // =========================================================================
 
-  constructor(
-    public override baseDependency: BaseDependency
-  ) {
+  constructor(public override baseDependency: BaseDependency) {
     super(baseDependency);
-    console.log('🎨 UserProfileComponent initialized');
   }
 
   // =========================================================================
@@ -157,113 +131,149 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   // FORM INITIALIZATION
   // =========================================================================
 
-  /**
-   * Initialize the edit form with validators
-   * Defines all form controls and their validation rules
-   */
   private initializeForm(): void {
     this.profileForm = this.fb.group({
-      father_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-      dob: ['', Validators.required],
-      gender: ['', Validators.required],
+      // ── Immutable after creation ──────────────────────────────────────────
+      // pan_number is collected at signup and cannot be changed — not in this form
+      father_name: [
+        '',
+        [Validators.required, Validators.minLength(2), Validators.maxLength(100),
+         Validators.pattern(/^[a-zA-Z\s]+$/)]
+      ],
+      dob:         ['', Validators.required],
+      gender:      ['', Validators.required],
       nationality: ['Indian', [Validators.required, Validators.maxLength(50)]],
-      marital_status: ['', Validators.required],
+
+      // ── Mutable anytime ───────────────────────────────────────────────────
+      marital_status:     ['', Validators.required],
       residential_status: ['', Validators.required]
     });
-
-    console.log('📝 Form initialized');
   }
 
   // =========================================================================
   // DATA LOADING
   // =========================================================================
 
-  /**
-   * Load user account data from auth service
-   */
   private loadUserData(): void {
-    const authSub: Subscription = this.accountService.getAuthenticationState().subscribe((account) => {
+    const sub = this.accountService.getAuthenticationState().subscribe(account => {
       if (account) {
         this.user = account;
-        console.log('👤 User data loaded:', this.user);
-        
-      if (account.role) {
+        if (account.role) {
           this.resolvedRoleName = String(account.role);
         }
       }
     });
-
-    this.subscriptions.add(authSub);
+    this.subscriptions.add(sub);
   }
 
   /**
-   * Load licensee profile from backend
-   * Sets loading state and handles success/error cases
+   * Fetch the current user's licensee profile using the /me/ endpoint.
+   * Falls back gracefully when no profile exists yet (404).
    */
   private loadUserProfile(): void {
     this.profileLoading = true;
     this.loaded = false;
 
-    console.log('📥 Loading profile...');
-
-    const profileSub: Subscription = this.mastersService.getLicenseeProfiles().subscribe({
-      next: (profiles: any[]) => {
-        console.log('✅ Profiles loaded:', profiles);
+    // Use getMyLicenseeProfile() → GET /user/licensee-profiles/me/
+    const sub = this.mastersService.getMyLicenseeProfile().subscribe({
+      next: (profile: any) => {
+        console.log('🔍 RAW API RESPONSE:', profile);
+        console.log('📋 Profile fields:', Object.keys(profile || {}));
         
-        if (profiles && profiles.length > 0) {
-          this.licenseeProfile = profiles[0];
-          this.isNewProfile = false;
+        if (profile) {
+          this.licenseeProfile = this.enrichProfileWithDisplayValues(profile);
+          console.log('✨ ENRICHED PROFILE:', this.licenseeProfile);
+          this.isNewProfile    = false;
           this.populateForm();
-          console.log('📋 Profile loaded:', this.licenseeProfile);
         } else {
-          console.log('ℹ️ No profile found - user can create new profile');
           this.isNewProfile = true;
         }
-        
         this.profileLoading = false;
-        this.loaded = true;
+        this.loaded         = true;
       },
       error: (error: any) => {
         console.error('❌ Error loading profile:', error);
-        
-        // If 404, it means no profile exists - that's okay
+        // 404 = no profile yet; anything else is a real error
         if (error.status === 404) {
-          console.log('ℹ️ No profile exists yet (404) - user can create new profile');
           this.isNewProfile = true;
         }
-        
         this.profileLoading = false;
-        this.loaded = true;
+        this.loaded         = true;
       }
     });
-
-    this.subscriptions.add(profileSub);
+    this.subscriptions.add(sub);
   }
 
   /**
-   * Populate the edit form with licensee profile data
+   * Add display values for gender, marital_status, and residential_status
+   * so the template can show human-readable labels.
+   */
+  private enrichProfileWithDisplayValues(profile: any): any {
+    console.log('🔄 Enriching profile with display values...');
+    console.log('  gender:', profile.gender);
+    console.log('  maritalStatus:', profile.maritalStatus);
+    console.log('  residentialStatus:', profile.residentialStatus);
+    console.log('  fatherName:', profile.fatherName);
+    console.log('  panNumber:', profile.panNumber);
+    
+    const enriched = {
+      ...profile,
+      // Use backend field names (camelCase) but also add snake_case aliases for template
+      gender_display: this.getGenderDisplay(profile.gender),
+      marital_status_display: this.getMaritalStatusDisplay(profile.maritalStatus),
+      residential_status_display: this.getResidentialStatusDisplay(profile.residentialStatus),
+      // Add snake_case aliases for other fields
+      father_name: profile.fatherName,
+      pan_number: profile.panNumber,
+      marital_status: profile.maritalStatus,
+      residential_status: profile.residentialStatus
+    };
+    
+    console.log('  → gender_display:', enriched.gender_display);
+    console.log('  → marital_status_display:', enriched.marital_status_display);
+    console.log('  → residential_status_display:', enriched.residential_status_display);
+    console.log('  → father_name:', enriched.father_name);
+    console.log('  → pan_number:', enriched.pan_number);
+    
+    return enriched;
+  }
+
+  private getGenderDisplay(value: string): string {
+    const option = this.genderOptions.find(opt => opt.value === value);
+    return option ? option.label : value || '';
+  }
+
+  private getMaritalStatusDisplay(value: string): string {
+    const option = this.maritalStatusOptions.find(opt => opt.value === value);
+    return option ? option.label : value || '';
+  }
+
+  private getResidentialStatusDisplay(value: string): string {
+    const option = this.residentialStatusOptions.find(opt => opt.value === value);
+    return option ? option.label : value || '';
+  }
+
+  /**
+   * Populate edit form with existing profile data from the backend.
+   * Backend uses camelCase field names (panNumber, fatherName, etc.).
    */
   private populateForm(): void {
-    if (this.licenseeProfile && this.profileForm) {
-      console.log('📝 Populating form with profile:', this.licenseeProfile);
-      
-      this.profileForm.patchValue({
-        father_name: this.licenseeProfile.fatherName || this.licenseeProfile.father_name || '',
-        dob: this.licenseeProfile.dob || '',
-        gender: this.licenseeProfile.gender || '',
-        nationality: this.licenseeProfile.nationality || 'Indian',
-        marital_status: this.licenseeProfile.maritalStatus || this.licenseeProfile.marital_status || '',
-        residential_status: this.licenseeProfile.residentialStatus || this.licenseeProfile.residential_status || ''
-      });
+    if (!this.licenseeProfile || !this.profileForm) return;
 
-      // Disable immutable fields if editing
-      if (!this.isNewProfile) {
-        this.profileForm.get('father_name')?.disable();
-        this.profileForm.get('dob')?.disable();
-        this.profileForm.get('gender')?.disable();
-        this.profileForm.get('nationality')?.disable();
-        console.log('🔒 Immutable fields disabled');
-      }
+    this.profileForm.patchValue({
+      father_name:        this.licenseeProfile.fatherName        ?? '',
+      dob:                this.licenseeProfile.dob                ?? '',
+      gender:             this.licenseeProfile.gender             ?? '',
+      nationality:        this.licenseeProfile.nationality        ?? 'Indian',
+      marital_status:     this.licenseeProfile.maritalStatus     ?? '',
+      residential_status: this.licenseeProfile.residentialStatus ?? ''
+    });
+
+    // Lock immutable fields when editing an existing profile
+    if (!this.isNewProfile) {
+      ['father_name', 'dob', 'gender', 'nationality'].forEach(field => {
+        this.profileForm.get(field)?.disable();
+      });
     }
   }
 
@@ -271,10 +281,6 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   // FORM CONTROL ACCESS
   // =========================================================================
 
-  /**
-   * Getter to access form controls easily in template
-   * Usage: {{ f.father_name.errors }}
-   */
   get f() {
     return this.profileForm.controls;
   }
@@ -283,9 +289,6 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   // DIALOG ACTIONS
   // =========================================================================
 
-  /**
-   * Close the dialog without saving
-   */
   closeDialog(): void {
     this.dialogRef.close();
   }
@@ -294,84 +297,70 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   // EDIT MODE ACTIONS
   // =========================================================================
 
-  /**
-   * Open the edit form and allow user to modify profile
-   */
   openEditForm(): void {
     this.showEditForm = true;
-    this.saveError = '';
-    this.saveSuccess = false;
-    console.log('✏️ Edit form opened');
+    this.saveError    = '';
+    this.saveSuccess  = false;
   }
 
-  /**
-   * Cancel editing and return to view mode
-   * Resets form to original values
-   */
   cancelEdit(): void {
     this.showEditForm = false;
-    this.saveError = '';
-    this.saveSuccess = false;
-    this.populateForm(); // Reset form to user data
-    console.log('❌ Edit cancelled');
+    this.saveError    = '';
+    this.saveSuccess  = false;
+    this.populateForm();
   }
 
   /**
-   * Save profile changes to backend
-   * Validates form and sends update request
+   * Save profile.
+   *   Create → POST   /user/licensee-profiles/
+   *   Update → PATCH  /user/licensee-profiles/<pk>/update/
    */
   saveProfile(): void {
-    console.log('💾 Saving profile...');
-
-    // Validate form before submission
     if (this.profileForm.invalid) {
-      console.warn('⚠️ Form is invalid');
       this.markFormGroupTouched(this.profileForm);
-      this.saveError = 'Please fix all errors before saving';
+      this.saveError = 'Please fix all errors before saving.';
       return;
     }
 
-    this.isSaving = true;
-    this.saveError = '';
+    this.isSaving    = true;
+    this.saveError   = '';
     this.saveSuccess = false;
 
-    const profileData = this.formatPayload();
+    const payload = this.formatPayload();
 
-    console.log('🚀 Submitting profile:', profileData);
+    const save$ = this.isNewProfile
+      ? this.mastersService.createLicenseeProfile(payload)
+      : this.mastersService.patchLicenseeProfile(this.licenseeProfile.id, payload);
 
-    // Call appropriate backend method
-    const saveObservable = this.isNewProfile
-      ? this.mastersService.createLicenseeProfile(profileData)
-      : this.mastersService.updateLicenseeProfile(this.licenseeProfile.id, profileData);
+    const sub = save$.subscribe({
+      next: (response: any) => {
+        this.isSaving        = false;
+        this.saveSuccess     = true;
+        this.licenseeProfile = this.enrichProfileWithDisplayValues(response);
+        this.isNewProfile    = false;
 
-    const saveSub: Subscription = saveObservable.subscribe({
-      next: (response) => {
-        console.log('✅ Profile saved successfully!');
-        
-        this.isSaving = false;
-        this.saveSuccess = true;
-        this.licenseeProfile = response;
-        this.isNewProfile = false;
+        // Lock immutable fields after successful creation
+        ['father_name', 'dob', 'gender', 'nationality'].forEach(field => {
+          this.profileForm.get(field)?.disable();
+        });
 
-        // Disable immutable fields after creation
-        this.profileForm.get('father_name')?.disable();
-        this.profileForm.get('dob')?.disable();
-        this.profileForm.get('gender')?.disable();
-        this.profileForm.get('nationality')?.disable();
-        
-        // Auto-hide success message and close edit form after 2 seconds
         setTimeout(() => {
-          this.saveSuccess = false;
+          this.saveSuccess  = false;
           this.showEditForm = false;
         }, 2000);
       },
-      error: (error) => {
-        console.error('❌ Profile save error:', error);
-        
+      error: (error: any) => {
         this.isSaving = false;
-        
-        if (error.error?.message) {
-          this.saveError = error.error.message;
+
+        // Try to surface the most useful error message from the backend
+        if (error.error && typeof error.error === 'object') {
+          const messages = Object.entries(error.error)
+            .map(([field, msgs]) => {
+              const msgStr = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${field}: ${msgStr}`;
+            })
+            .join('\n');
+          this.saveError = messages || 'Failed to save profile. Please try again.';
         } else if (error.error?.detail) {
           this.saveError = error.error.detail;
         } else {
@@ -380,95 +369,58 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
       }
     });
 
-    this.subscriptions.add(saveSub);
+    this.subscriptions.add(sub);
   }
 
   // =========================================================================
-  // NAVIGATION ACTIONS
+  // NAVIGATION
   // =========================================================================
 
-  /**
-   * Navigate to user's licenses page
-   */
   openMyLicenses(): void {
-    console.log('📋 Opening my licenses...');
     this.dialogRef.close();
     this.router.navigate(['/licensee/my-licenses']);
   }
 
   // =========================================================================
-  // UTILITY METHODS
+  // UTILITIES
   // =========================================================================
 
   /**
-   * Format date to YYYY-MM-DD format for backend
+   * Format Date object to YYYY-MM-DD string for the backend.
    */
   private formatDate(date: any): string {
     if (!date) return '';
-    
-    const d = new Date(date);
-    const year = d.getFullYear();
+    const d     = new Date(date);
+    const year  = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    
+    const day   = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 
   /**
-   * Format form data into payload for backend
-   * Converts snake_case form controls to snake_case for API
+   * Build the request payload using camelCase to match backend API convention.
+   * getRawValue() includes disabled (immutable) fields so they're sent on create.
+   * On update the backend ignores them anyway.
    */
   private formatPayload(): any {
-    const formValue = this.profileForm.getRawValue(); // getRawValue() includes disabled fields
-    
-    const payload = {
-      father_name: formValue.father_name,
-      dob: this.formatDate(formValue.dob),
-      gender: formValue.gender,
-      nationality: formValue.nationality,
-      marital_status: formValue.marital_status,
-      residential_status: formValue.residential_status
+    const v = this.profileForm.getRawValue();
+    return {
+      fatherName:        v.father_name,
+      dob:                this.formatDate(v.dob),
+      gender:             v.gender,
+      nationality:        v.nationality,
+      maritalStatus:     v.marital_status,
+      residentialStatus: v.residential_status
     };
-
-    console.log('📦 Formatted payload:', payload);
-    return payload;
   }
 
-  /**
-   * Mark all form fields as touched to show validation errors
-   */
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
       control?.markAsTouched();
-
       if (control instanceof FormGroup) {
         this.markFormGroupTouched(control);
       }
     });
-  }
-
-  /**
-   * Get display text for gender selection
-   */
-  getGenderDisplay(value: string): string {
-    const option = this.genderOptions.find(opt => opt.value === value);
-    return option ? option.label : value;
-  }
-
-  /**
-   * Get display text for marital status selection
-   */
-  getMaritalStatusDisplay(value: string): string {
-    const option = this.maritalStatusOptions.find(opt => opt.value === value);
-    return option ? option.label : value;
-  }
-
-  /**
-   * Get display text for residential status selection
-   */
-  getResidentialStatusDisplay(value: string): string {
-    const option = this.residentialStatusOptions.find(opt => opt.value === value);
-    return option ? option.label : value;
   }
 }

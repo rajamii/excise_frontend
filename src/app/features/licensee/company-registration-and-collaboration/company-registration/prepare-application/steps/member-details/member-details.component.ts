@@ -88,21 +88,18 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   private autoFillFromProfiles(): void {
     console.log('🔍 Fetching profiles for member-details auto-fill...');
 
+    // ✅ FIXED: Use getMyLicenseeProfile() to get current user's profile
     forkJoin({
       userProfile:     this.fetchUserProfile(),
-      licenseeProfile: this.masterService.getLicenseeProfiles().pipe(catchError(() => of([])))
+      licenseeProfile: this.masterService.getMyLicenseeProfile().pipe(catchError(() => of(null)))
     })
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: ({ userProfile, licenseeProfile }) => {
-        const lp = Array.isArray(licenseeProfile) && licenseeProfile.length > 0
-          ? licenseeProfile[0]
-          : null;
-
         console.log('✅ User profile for member fill:', userProfile);
-        console.log('✅ Licensee profile for member fill:', lp);
+        console.log('✅ Licensee profile for member fill:', licenseeProfile);
 
-        this.fillForm(userProfile, lp);
+        this.fillForm(userProfile, licenseeProfile);
       },
       error: (err) => console.error('❌ Member auto-fill error:', err)
     });
@@ -158,17 +155,18 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       // These are disabled controls – we need to use enable/patchValue/disable cycle
       // OR use getRawValue() which includes disabled fields
 
+      // ✅ FIXED: Use camelCase field names from API response
       // Father's name
-      if (!this.memberDetailsForm.get('fatherName')?.value && licensee.father_name) {
-        fillData.fatherName = licensee.father_name;
+      if (!this.memberDetailsForm.get('fatherName')?.value && licensee.fatherName) {
+        fillData.fatherName = licensee.fatherName;
       }
       // Date of birth
       if (!this.memberDetailsForm.get('dob')?.value && licensee.dob) {
         fillData.dob = licensee.dob;
       }
       // Gender (use display label for readability)
-      if (!this.memberDetailsForm.get('gender')?.value && licensee.gender_display) {
-        fillData.gender = licensee.gender_display;
+      if (!this.memberDetailsForm.get('gender')?.value && licensee.genderDisplay) {
+        fillData.gender = licensee.genderDisplay;
       }
       // Nationality
       if (!this.memberDetailsForm.get('nationality')?.value && licensee.nationality) {

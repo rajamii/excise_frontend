@@ -171,21 +171,18 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
     console.log('🔍 Fetching profiles for applicant-details auto-fill...');
 
+    // ✅ FIXED: Use getMyLicenseeProfile() to get current user's profile
     forkJoin({
       userProfile:     this.fetchUserProfile(),
-      licenseeProfile: this.masterService.getLicenseeProfiles().pipe(catchError(() => of([])))
+      licenseeProfile: this.masterService.getMyLicenseeProfile().pipe(catchError(() => of(null)))
     })
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: ({ userProfile, licenseeProfile }) => {
-        const lp = Array.isArray(licenseeProfile) && licenseeProfile.length > 0
-          ? licenseeProfile[0]
-          : null;
-
         console.log('✅ User profile:', userProfile);
-        console.log('✅ Licensee profile:', lp);
+        console.log('✅ Licensee profile:', licenseeProfile);
 
-        this.fillForm(userProfile, lp);
+        this.fillForm(userProfile, licenseeProfile);
       },
       error: (err) => console.error('❌ Auto-fill error:', err)
     });
@@ -236,10 +233,12 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
     // ── From licensee profile ──────────────────────────────────────
     if (licensee) {
+      // ✅ FIXED: Use camelCase field names from API response
+      
       // Father's / Husband's name
-      if (!this.applicantDetailsForm.get('fatherHusbandName')?.value && licensee.father_name) {
-        fillData.fatherHusbandName = licensee.father_name;
-        console.log('✅ fatherHusbandName ←', licensee.father_name);
+      if (!this.applicantDetailsForm.get('fatherHusbandName')?.value && licensee.fatherName) {
+        fillData.fatherHusbandName = licensee.fatherName;
+        console.log('✅ fatherHusbandName ←', licensee.fatherName);
       }
 
       // Date of birth (already a string like "1994-03-01")
@@ -266,21 +265,27 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       }
 
       // Marital status: licensee stores 'SINGLE'/'MARRIED'/... form uses 'Single'/'Married'/...
-      if (!this.applicantDetailsForm.get('maritalStatus')?.value && licensee.marital_status) {
-        const mapped = MARITAL_MAP[licensee.marital_status];
+      if (!this.applicantDetailsForm.get('maritalStatus')?.value && licensee.maritalStatus) {
+        const mapped = MARITAL_MAP[licensee.maritalStatus];
         if (mapped && this.maritalStatuses.includes(mapped)) {
           fillData.maritalStatus = mapped;
-          console.log(`✅ maritalStatus ← "${licensee.marital_status}" → "${mapped}"`);
+          console.log(`✅ maritalStatus ← "${licensee.maritalStatus}" → "${mapped}"`);
         }
       }
 
       // Residential status: licensee stores 'RESIDENT'/'NON_RESIDENT'/'OCI'
-      if (!this.applicantDetailsForm.get('residentialStatus')?.value && licensee.residential_status) {
-        const mapped = RESIDENTIAL_MAP[licensee.residential_status];
+      if (!this.applicantDetailsForm.get('residentialStatus')?.value && licensee.residentialStatus) {
+        const mapped = RESIDENTIAL_MAP[licensee.residentialStatus];
         if (mapped && this.residentialStatuses.includes(mapped)) {
           fillData.residentialStatus = mapped;
-          console.log(`✅ residentialStatus ← "${licensee.residential_status}" → "${mapped}"`);
+          console.log(`✅ residentialStatus ← "${licensee.residentialStatus}" → "${mapped}"`);
         }
+      }
+
+      // PAN Number
+      if (!this.applicantDetailsForm.get('pan')?.value && licensee.panNumber) {
+        fillData.pan = licensee.panNumber;
+        console.log('✅ PAN ←', licensee.panNumber);
       }
     } else {
       console.warn('⚠️ No licensee profile found — father name, DOB, gender, etc. will not be auto-filled');
