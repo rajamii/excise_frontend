@@ -129,7 +129,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       // ✅ NEW: Form controls for 3 new tables
       locationCategory: new FormControl(storedValues.location_category ?? null, [Validators.required]),
       locationSubcategory: new FormControl({value: storedValues.location_subcategory ?? null, disabled: !hasLocationCategory}, [Validators.required]),
-      location: new FormControl({value: storedValues.location ?? null, disabled: !hasDistrict}, [Validators.required]),
+      location: new FormControl({value: storedValues.location ?? null, disabled: !hasSubdivision}, [Validators.required]),
       ward: new FormControl({value: storedValues.ward ?? null, disabled: !hasLocation}, [Validators.required]),
       
       businessAddress: new FormControl(storedValues.address ?? null, [Validators.required, Validators.maxLength(500)]),
@@ -200,6 +200,16 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           wardCtrl?.enable();
           this.filterRoadsBySubdivision(subdivisionId);
           this.filterWardsBySubdivision(subdivisionId);
+
+          // ✅ Enable Location Name and filter by the subdivision's parent district
+          const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
+          if (subdivision) {
+            const parentDistrict = this.districts.find(d => d.districtCode === subdivision.districtCode);
+            if (parentDistrict?.id != null) {
+              this.filterLocations(parentDistrict.id);
+            }
+          }
+          this.siteDetailsForm.get('location')?.enable();
         } else {
           policeStationCtrl?.disable();
           this.sitePoliceStations = [];
@@ -212,6 +222,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           wardCtrl?.disable();
           this.wards = [];
           this.siteDetailsForm.patchValue({ ward: null }, { emitEvent: false });
+
+          // ✅ Disable Location Name when Subdivision is cleared
+          const locationCtrl = this.siteDetailsForm.get('location');
+          locationCtrl?.disable();
+          this.locations = [];
+          this.siteDetailsForm.patchValue({ location: null }, { emitEvent: false });
         }
       });
 
@@ -535,16 +551,15 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
     console.log('🔄 All master data ready — running full session restore cascade');
 
-    // Step 1: District → filter subdivisions + locations
+    // Step 1: District → filter subdivisions only
     const districtId = stored.district;
     if (districtId && this.districts.some(d => d.id === districtId)) {
       this.siteDetailsForm.get('siteDistrict')?.setValue(districtId, { emitEvent: false });
       this.filterSubdivisions(districtId);
-      this.filterLocations(districtId);
       this.siteDetailsForm.get('siteSubdivision')?.enable();
     }
 
-    // Step 2: Subdivision → filter police stations, roads, wards
+    // Step 2: Subdivision → filter police stations, roads, wards, AND locations
     const subdivisionId = stored.subdivision;
     if (subdivisionId && this.siteSubdivisions.some(s => s.id === subdivisionId)) {
       this.siteDetailsForm.get('siteSubdivision')?.setValue(subdivisionId, { emitEvent: false });
@@ -554,6 +569,15 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       this.siteDetailsForm.get('policeStation')?.enable();
       this.siteDetailsForm.get('roadName')?.enable();
       this.siteDetailsForm.get('ward')?.enable();
+      // ✅ Filter and enable Location Name after Subdivision is restored
+      const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
+      if (subdivision) {
+        const parentDistrict = this.districts.find(d => d.districtCode === subdivision.districtCode);
+        if (parentDistrict?.id != null) {
+          this.filterLocations(parentDistrict.id);
+        }
+      }
+      this.siteDetailsForm.get('location')?.enable();
     }
 
     // Step 3: Police Station
@@ -610,7 +634,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.filterSubdivisions(districtId);
     this.filterLocations(districtId);
     
-    // Reset subdivision-dependent dropdowns
+    // Reset subdivision-dependent dropdowns (location is subdivision-dependent too)
     this.siteDetailsForm.patchValue({ 
       siteSubdivision: null, 
       policeStation: null,
@@ -622,9 +646,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     // Disable until subdivision is selected
     this.siteDetailsForm.get('policeStation')?.disable();
     this.siteDetailsForm.get('roadName')?.disable();
+    this.siteDetailsForm.get('location')?.disable(); // ✅ Location Name disabled until subdivision chosen
     this.siteDetailsForm.get('ward')?.disable();
     this.roadNames = [];
     this.wards = [];
+    this.locations = [];
   }
 
   private filterSubdivisions(districtId: number): void {
@@ -657,7 +683,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     const parentDistrict = this.districts.find(
       d => d.districtCode === subdivision.districtCode
     );
-    if (!parentDistrict) {
+    if (!parentDistrict?.id) {
       this.roadNames = [];
       return;
     }
@@ -672,7 +698,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       } else if ((road as any).district_id !== undefined) {
         roadDistrictId = (road as any).district_id;
       }
-      return roadDistrictId === parentDistrict.id;
+      return roadDistrictId === parentDistrict!.id;
     });
     const current = this.siteDetailsForm.get('roadName')?.value;
     if (current && !this.roadNames.some(r => r.id === current)) {

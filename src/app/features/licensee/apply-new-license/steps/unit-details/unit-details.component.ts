@@ -118,9 +118,9 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // ✅ NEW: Fill contact fields from user + licensee profile
-  //   Note: companyName, PAN, CIN, incorporationDate are company-specific
-  //   and CANNOT be derived from the user/licensee profile — user fills these manually.
+  // ✅ Fill contact fields from user + licensee profile
+  //   PAN is pre-filled from licensee.panNumber (same as applicant-details).
+  //   companyName, CIN, incorporationDate are company-specific and must be entered manually.
   // ─────────────────────────────────────────────────────────────────
   private fillForm(user: any, licensee: any): void {
     const fillData: any = {};
@@ -142,11 +142,12 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     }
 
     // ── From licensee profile ──────────────────────────────────────
-    // The licensee profile has: father_name, dob, gender, nationality,
-    // marital_status, residential_status — none of these map to company fields.
-    // We log it for completeness but don't fill anything new.
+    // The licensee profile contains panNumber which should pre-fill companyPan.
     if (licensee) {
-      console.log('ℹ️ Licensee profile available but no additional company fields to fill:', licensee);
+      if (!this.unitDetailsForm.get('companyPan')?.value && licensee.panNumber) {
+        fillData.companyPan = licensee.panNumber.toUpperCase();
+        console.log('✅ companyPan ←', licensee.panNumber);
+      }
     }
 
     if (Object.keys(fillData).length === 0) {
