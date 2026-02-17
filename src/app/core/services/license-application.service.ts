@@ -608,8 +608,8 @@ export class LicenseApplicationService {
     return this.http.get(`${this.oldLicenseUrl}/${encodedId}/site-detail/`);
   }
 
-  getLocationFee(): Observable<any> {
-    return this.http.get(`${this.oldLicenseUrl}/location-fee/`);
+  getLicenseFee(): Observable<any> {
+    return this.http.get(`${this.oldLicenseUrl}/license-fee/`);
   }
 
   getApplicationMovement(applicationId: string): Observable<any> {
@@ -698,8 +698,8 @@ export class LicenseApplicationService {
     return this.http.get(`${this.newLicenseUrl}/${encodedId}/objections/`);
   }
 
-  getNewLicenseLocationFee(): Observable<any> {
-    return this.http.get(`${this.newLicenseUrl}/location-fee/`);
+  getNewLicenseLicenseFee(): Observable<any> {
+    return this.http.get(`${this.newLicenseUrl}/license-fee/`);
   }
 
   getNewLicenseApplicationMovement(applicationId: string): Observable<any> {
