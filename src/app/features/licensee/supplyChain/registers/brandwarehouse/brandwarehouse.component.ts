@@ -46,6 +46,7 @@ interface PackSizeInfo {
 
 interface GroupedBrandStock {
   brandName: string;
+  licenseId?: string;
   distilleryName: string;
   brandType: string;
   packSizes: { [key: number]: PackSizeInfo };
@@ -89,6 +90,8 @@ export class BrandwarehouseComponent implements OnInit {
 
   // Current distillery context resolved from active user profile.
   private currentDistilleryName = '';
+  private currentLicenseId = '';
+  private currentLicenseType = '';
   private readonly EXCLUDED_BREWERIES: string[] = []; // Show all Sikkim brands including breweries
 
   // Data
@@ -173,6 +176,16 @@ export class BrandwarehouseComponent implements OnInit {
     this.supplyChainProfileService.getProfile().subscribe({
       next: (profileResponse) => {
         const profileData: any = profileResponse?.data || {};
+        this.currentLicenseId = String(
+          profileData?.licenseeId ||
+          profileData?.licensee_id ||
+          ''
+        ).trim();
+        this.currentLicenseType = String(
+          profileData?.licenseType ||
+          profileData?.license_type ||
+          ''
+        ).trim();
         this.currentDistilleryName = String(
           profileData?.manufacturingUnitName ||
           profileData?.manufacturing_unit_name ||
@@ -183,6 +196,8 @@ export class BrandwarehouseComponent implements OnInit {
       },
       error: () => {
         this.currentDistilleryName = '';
+        this.currentLicenseId = '';
+        this.currentLicenseType = '';
         this.initializeSikkimBrands();
         this.loadWarehouseData();
       }
@@ -211,7 +226,7 @@ export class BrandwarehouseComponent implements OnInit {
     this.isLoading = true;
 
     // Load overview first
-    this.brandWarehouseService.getWarehouseOverview().subscribe({
+    this.brandWarehouseService.getWarehouseOverview(this.buildApiFilters()).subscribe({
       next: (overview) => {
         this.warehouseOverview = overview;
       },
@@ -253,26 +268,8 @@ export class BrandwarehouseComponent implements OnInit {
    * TODO: Make this dynamic based on logged-in user's distillery
    */
   private filterByCurrentDistillery(brands: GroupedBrandStock[]): GroupedBrandStock[] {
-    if (!this.currentDistilleryName) {
-      return brands;
-    }
-
-    return brands.filter(brand => {
-      if (!brand.distilleryName) return false;
-
-      const distilleryName = brand.distilleryName.toLowerCase();
-
-      // Check if it belongs to current distillery
-      const belongsToCurrentDistillery = distilleryName.includes(this.currentDistilleryName.toLowerCase());
-
-      // Check if it's a brewery (exclude breweries from distillery dashboard)
-      const isBrewery = this.EXCLUDED_BREWERIES.some(brewery =>
-        distilleryName.includes(brewery.toLowerCase())
-      );
-
-      // Include only if belongs to current distillery AND is not a brewery
-      return belongsToCurrentDistillery && !isBrewery;
-    });
+    // Server-side scoping by mapped license_id is authoritative.
+    return brands;
   }
 
   /**
@@ -281,8 +278,8 @@ export class BrandwarehouseComponent implements OnInit {
   private buildApiFilters(): any {
     const filters: any = {};
 
-    if (this.currentDistilleryName) {
-      filters.distillery_name = this.currentDistilleryName;
+    if (this.currentLicenseId) {
+      filters.license_id = this.currentLicenseId;
     }
 
     if (this.filters.brandName) {
@@ -299,6 +296,43 @@ export class BrandwarehouseComponent implements OnInit {
     }
 
     return filters;
+  }
+
+  private getDisplayEstablishmentName(): string {
+    const fromProfile = String(this.currentDistilleryName || '').trim();
+    if (fromProfile) {
+      return fromProfile;
+    }
+
+    const fromData = String(
+      this.groupedBrandStocks.find((b) => String(b?.distilleryName || '').trim())?.distilleryName || ''
+    ).trim();
+    if (fromData) {
+      return fromData;
+    }
+
+    return 'Assigned Establishment';
+  }
+
+  private inferEstablishmentType(name: string): 'Brewery' | 'Distillery' | 'Establishment' {
+    const haystack = `${this.currentLicenseType} ${name}`.toLowerCase();
+    if (haystack.includes('brew')) {
+      return 'Brewery';
+    }
+    if (haystack.includes('distill')) {
+      return 'Distillery';
+    }
+    return 'Establishment';
+  }
+
+  get inventoryTitle(): string {
+    return `${this.getDisplayEstablishmentName()} - Stock Inventory`;
+  }
+
+  get inventorySubtitle(): string {
+    const establishmentName = this.getDisplayEstablishmentName();
+    const unitType = this.inferEstablishmentType(establishmentName).toLowerCase();
+    return `Monitor and manage ${unitType} brand inventory for ${establishmentName}`;
   }
 
   initializeSampleData(): void {

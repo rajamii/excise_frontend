@@ -59,14 +59,15 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     label: string;
     icon: string;
     hideForSiteAdmin?: boolean;
+    hideForOic?: boolean;
   }> = [
-    { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true },
+    { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
     { section: 'transit', label: 'Transit', icon: 'local_shipping' },
     { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code' },
-    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code' },
+    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
     { section: 'brands', label: 'Brands Details', icon: 'label' },
     { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
@@ -779,8 +780,29 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.currentUser?.roleId === 1;
   }
 
+  isOicUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 7) {
+      return true;
+    }
+
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      this.user?.role?.name ||
+      this.user?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('officerincharge') || normalized === 'oic' || normalized === 'offcierincharge';
+  }
+
   canAccessSection(section: string): boolean {
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      return false;
+    }
+
+    if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license')) {
       return false;
     }
 

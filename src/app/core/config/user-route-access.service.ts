@@ -1,4 +1,5 @@
-  import { inject, isDevMode } from '@angular/core';
+  import { inject, isDevMode, PLATFORM_ID } from '@angular/core';
+  import { isPlatformBrowser } from '@angular/common';
   import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
   import { HttpClient } from '@angular/common/http';
   import { of } from 'rxjs';
@@ -20,7 +21,14 @@ export const UserRouteAccessService: CanActivateFn = (
   const router = inject(Router);
   const stateStorageService = inject(StateStorageService);
   const http = inject(HttpClient);
+  const platformId = inject(PLATFORM_ID);
   const dashboardConfigUrl = `${environment.apiBaseUrl}/auth/roles/dashboard-config/current/`;
+
+  // During server rendering there is no browser storage to resolve auth tokens.
+  // Let the client runtime perform the actual route protection.
+  if (!isPlatformBrowser(platformId)) {
+    return of(true);
+  }
 
     // Attempt to get the current user's account
   return accountService.identity().pipe(

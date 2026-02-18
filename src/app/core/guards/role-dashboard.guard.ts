@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
@@ -17,13 +18,18 @@ export class RoleDashboardGuard implements CanActivate {
     private roleService: RoleService,
     private accountService: AccountService,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return of(true);
+    }
+
     // Always hydrate from backend identity/config to avoid stale session-role permissions.
     return this.accountService.identity().pipe(
       switchMap(accountUser => {

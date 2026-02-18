@@ -469,6 +469,12 @@ export class LoginComponent extends BaseComponent {
       this.accountService.identity(true).subscribe({
         next: (user) => {
           if (user) {
+            const previousUrl = this.stateStorgeService.getUrl();
+            if (previousUrl && previousUrl !== '/login') {
+              this.stateStorgeService.clearUrl();
+              this.router.navigateByUrl(previousUrl);
+              return;
+            }
             this.redirectBasedOnRole(user.role?.id);
           } else {
             alert('Failed to fetch user details. Please log in again.');

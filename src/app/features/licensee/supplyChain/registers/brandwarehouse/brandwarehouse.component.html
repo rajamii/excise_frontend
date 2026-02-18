@@ -6,9 +6,9 @@
       <div class="title-section">
         <h1 class="warehouse-title">
           <i class="bi bi-house-gear"></i>
-          Sikkim Distillery - Stock Inventory
+          {{ inventoryTitle }}
         </h1>
-        <p class="warehouse-subtitle">Monitor and manage all Sikkim brand inventory (Distilleries)</p>
+        <p class="warehouse-subtitle">{{ inventorySubtitle }}</p>
       </div>
       <div class="header-actions">
         <button class="btn btn-outline" (click)="refreshData()" [disabled]="isLoading">
