@@ -114,6 +114,41 @@ export class LoginComponent extends BaseComponent {
           });
         }, 100);
       }
+
+      if (params['inactive']) {
+        setTimeout(() => {
+          Swal.fire({
+            title: 'We Miss You',
+            html: `
+              <div class="inactive-logout-content">
+                <div class="inactive-alien-wrap" aria-hidden="true">
+                  <span class="inactive-alien-head"></span>
+                  <span class="inactive-alien-eye inactive-alien-eye-left"></span>
+                  <span class="inactive-alien-eye inactive-alien-eye-right"></span>
+                  <span class="inactive-alien-mouth"></span>
+                  <span class="inactive-alien-antenna"></span>
+                  <span class="inactive-alien-tear"></span>
+                </div>
+                <p class="inactive-logout-message">
+                  Your session ended due to inactivity.<br/>Come back, Commander.
+                </p>
+              </div>
+            `,
+            confirmButtonText: 'OK',
+            buttonsStyling: false,
+            customClass: {
+              popup: 'inactive-logout-popup',
+              title: 'inactive-logout-title',
+              confirmButton: 'inactive-logout-confirm'
+            }
+          });
+
+          this.router.navigate([], {
+            queryParams: { inactive: null },
+            queryParamsHandling: 'merge',
+          });
+        }, 100);
+      }
     });
     this.fetchDistricts();
   }
