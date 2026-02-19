@@ -122,8 +122,8 @@
           <select class="form-control input-field" [(ngModel)]="formData.brand" (change)="onBrandChange()"
             [disabled]="isLocked">
             <option value="">-- Select Brand --</option>
-            <option *ngFor="let brand of brandOptions" [value]="brand">
-              {{ brand }}
+            <option *ngFor="let brand of brandOptions" [value]="brand.brandName">
+              {{ brand.label }}
             </option>
           </select>
         </div>

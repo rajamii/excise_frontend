@@ -8,7 +8,7 @@ import { AccountService } from './account.service';
   providedIn: 'root'
 })
 export class InactivityService {
-  private readonly inactivityLimitMs = 2 * 60 * 1000; // 2 minutes
+  private readonly inactivityLimitMs = 5 * 60 * 1000; // 5 minutes
   private readonly warningDurationMs = 30 * 1000; // Final 30-second countdown
   private readonly warningLeadMs = this.inactivityLimitMs - this.warningDurationMs;
   private readonly activityEvents: Array<keyof WindowEventMap> = [

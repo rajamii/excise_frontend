@@ -106,6 +106,8 @@ export class LoginComponent extends BaseComponent {
             title: 'Session Expired',
             text: 'Your session has expired. Please log in again.',
             confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
           });
 
           this.router.navigate([], {
@@ -135,6 +137,8 @@ export class LoginComponent extends BaseComponent {
               </div>
             `,
             confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
             buttonsStyling: false,
             customClass: {
               popup: 'inactive-logout-popup',

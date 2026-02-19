@@ -86,13 +86,17 @@ export class SupplyChainService {
       .pipe(map((response: any) => response.data || []));
   }
 
-  getLiquorBrands(): Observable<{ brandName: string; sizes: number[] }[]> {
+  getLiquorBrands(distilleryName?: string): Observable<{ brandName: string; sizes: number[] }[]> {
+    let params = new HttpParams();
+    if (distilleryName) params = params.set('distillery', distilleryName);
+
     return this.http
       .get<{
         success?: boolean;
         data?: { brandName: string; sizes: number[] }[];
       }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`
+        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`,
+        { params }
       )
       .pipe(map((response: any) => response.data || []));
   }
@@ -383,10 +387,14 @@ export class SupplyChainService {
     );
   }
 
-  getBrandWarehouseStock(distilleryName: string, brandName?: string): Observable<any[]> {
+  getBrandWarehouseStock(distilleryName?: string, brandName?: string, licenseId?: string): Observable<any[]> {
     const params: any = {};
     if (distilleryName) params.distillery_name = distilleryName;
     if (brandName) params.brand_name = brandName;
+    const normalizedLicenseId = String(licenseId || '').trim();
+    if (normalizedLicenseId.startsWith('NA/') || normalizedLicenseId.startsWith('NLI/')) {
+      params.license_id = normalizedLicenseId;
+    }
 
     console.log('getBrandWarehouseStock called with params:', params);
 

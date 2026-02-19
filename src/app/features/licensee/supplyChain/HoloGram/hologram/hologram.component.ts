@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HologramDataService, HologramProcurement } from '../../services/hologram-data.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface HologramFormData {
   refNo: string;
@@ -21,6 +22,9 @@ interface HologramFormData {
   styleUrls: ['./hologram.component.scss']
 })
 export class HologramComponent {
+  private readonly refPrefix = 'NHP';
+  private readonly refDistrictCode = '1101';
+
   Math = Math;
   currentYear = new Date().getFullYear();
   errorMessage = '';
@@ -39,11 +43,12 @@ export class HologramComponent {
 
 
   private hologramService = inject(HologramDataService);
+  private supplyChainProfileService = inject(SupplyChainProfileService);
 
   formData: HologramFormData = {
     refNo: '',
     date: '',
-    companyName: 'Sikkim Distillery',
+    companyName: '',
     // Prefill sample data so the user can see how inputs look
     localQtyLakh: 0,
     exportQtyLakh: 0,
@@ -56,7 +61,8 @@ export class HologramComponent {
     this.isBrowser = isPlatformBrowser(platformId);
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
-    this.generateRefNumber();
+    this.loadLicenseeEstablishmentName();
+    this.loadInitialReferenceNumber();
 
     // If a ref is provided, load and show its preview
     if (this.isBrowser) {
@@ -79,39 +85,82 @@ export class HologramComponent {
     }
   }
 
-  generateRefNumber(): void {
-    const seq = this.getNextSequenceNumber();
-    const yy = String(new Date().getFullYear()).slice(-2);
-    // Sequential reference number starting at 1, not incremented until submit
-    this.formData.refNo = `YB/${seq}/BREW/${yy}`;
+  private getFinancialYear(referenceDate: Date = new Date()): string {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth() + 1;
+    return month >= 4
+      ? `${year}-${String(year + 1).slice(-2)}`
+      : `${year - 1}-${String(year).slice(-2)}`;
   }
 
-  private getNextSequenceNumber(): number {
-    const key = 'hologramRefSeqNext';
-    const raw = this.isBrowser ? localStorage.getItem(key) : null;
-    const parsed = raw ? parseInt(raw, 10) : 1;
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  private getReferencePrefix(financialYear: string): string {
+    return `${this.refPrefix}/${this.refDistrictCode}/${financialYear}`;
   }
 
-  private incrementSequenceNumber(): void {
-    if (!this.isBrowser) return;
-    const key = 'hologramRefSeqNext';
-    const curr = this.getNextSequenceNumber();
-    localStorage.setItem(key, String(curr + 1));
+  private extractSequenceNumber(referenceNo: string, expectedPrefix: string): number {
+    const value = String(referenceNo || '').trim();
+    if (!value.startsWith(`${expectedPrefix}/`)) {
+      return 0;
+    }
+
+    const sequenceText = value.split('/').pop() || '';
+    const sequence = Number.parseInt(sequenceText, 10);
+    return Number.isFinite(sequence) && sequence > 0 ? sequence : 0;
+  }
+
+  private loadInitialReferenceNumber(): void {
+    const financialYear = this.getFinancialYear();
+    const expectedPrefix = this.getReferencePrefix(financialYear);
+
+    this.hologramService.getProcurements().subscribe({
+      next: (items: HologramProcurement[]) => {
+        let maxSequence = 0;
+        for (const item of items || []) {
+          const anyItem = item as any;
+          const refNo = String(anyItem?.refNo || anyItem?.ref_no || '').trim();
+          maxSequence = Math.max(maxSequence, this.extractSequenceNumber(refNo, expectedPrefix));
+        }
+
+        this.formData.refNo = `${expectedPrefix}/${String(maxSequence + 1).padStart(4, '0')}`;
+      },
+      error: () => {
+        this.formData.refNo = `${expectedPrefix}/0001`;
+      }
+    });
+  }
+
+  private loadLicenseeEstablishmentName(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (response) => {
+        const profile = response?.data as any;
+        const establishmentName = String(
+          profile?.manufacturingUnitName ||
+          profile?.manufacturing_unit_name ||
+          ''
+        ).trim();
+
+        if (establishmentName) {
+          this.formData.companyName = establishmentName;
+        }
+      },
+      error: () => {
+        // Keep field empty if profile fetch fails; validation will block submission.
+      }
+    });
   }
 
   clearForm(): void {
-    // Reset fields without advancing sequence; regenerate current next ref no
+    // Reset fields and refresh reference number from API.
     const today = new Date();
     this.formData = {
       refNo: '',
       date: today.toISOString().split('T')[0],
-      companyName: this.formData.companyName || 'Yuksom Breweries Ltd.',
+      companyName: this.formData.companyName,
       localQtyLakh: null,
       exportQtyLakh: null,
       defenceQtyLakh: null
     };
-    this.generateRefNumber();
+    this.loadInitialReferenceNumber();
     this.errorMessage = '';
     this.showPreview = false;
     this.submittedData = undefined;
@@ -182,7 +231,7 @@ export class HologramComponent {
       return false;
     }
     if (!this.formData.companyName?.trim()) {
-      this.errorMessage = 'Please enter company name';
+      this.errorMessage = 'Establishment name is not available in your licensee profile';
       return false;
     }
 
@@ -227,8 +276,18 @@ export class HologramComponent {
 
     this.hologramService.createProcurement(payload).subscribe({
       next: (res) => {
+        const anyRes = res as any;
+        const responseRefNo = String(anyRes?.refNo || anyRes?.ref_no || this.formData.refNo).trim();
+        const responseCompanyName = String(
+          anyRes?.licenseeName ||
+          anyRes?.licensee_name ||
+          anyRes?.manufacturingUnit ||
+          anyRes?.manufacturing_unit ||
+          this.formData.companyName
+        ).trim();
+
         // Prepare success modal data
-        this.submittedRefNo = res.refNo || this.formData.refNo;
+        this.submittedRefNo = responseRefNo;
         this.submittedQuantity = this.totalQtyLakh;
         this.submittedAmount = (this.totalQtyLakh * 0.15).toFixed(2);
         this.submittedTime = new Date().toLocaleString('en-IN');
@@ -240,7 +299,8 @@ export class HologramComponent {
         // Use response refNo if available, or fallback
         this.submittedData = {
           ...this.formData,
-          refNo: res.refNo || this.formData.refNo
+          refNo: responseRefNo,
+          companyName: responseCompanyName || this.formData.companyName
         };
         this.isSubmitted = true;
         this.showSuccessMessage = true;

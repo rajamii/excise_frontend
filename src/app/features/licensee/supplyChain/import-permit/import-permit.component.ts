@@ -503,11 +503,9 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
         const mapped = this.normalizeAndDedupeDistilleries(distilleries || []);
 
         if (mapped.length === 0) {
-          this.distilleries = [];
-          this.isLoading = false;
-          this.accessMessage =
-            'No mapped distillery found for your account. Please verify supply-chain profile or license mapping.';
-          this.changeDetector.detectChanges();
+          // Fallback: if strict mapping returns no rows, load full master list
+          // so users can still select a source distillery.
+          this.loadAllDistilleriesFallback();
           return;
         }
 
@@ -519,6 +517,31 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
       error: () => {
         this.distilleries = [];
         this.isLoading = false;
+        this.changeDetector.detectChanges();
+      },
+    });
+  }
+
+  private loadAllDistilleriesFallback(): void {
+    this.SupplyChainService.getDistilleries().subscribe({
+      next: (allDistilleries) => {
+        const fallbackList = this.normalizeAndDedupeDistilleries(allDistilleries || []);
+        this.distilleries = fallbackList;
+        this.isLoading = false;
+
+        if (fallbackList.length > 0) {
+          this.accessMessage = '';
+        } else {
+          this.accessMessage =
+            'No distillery master data available. Please contact administrator.';
+        }
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.distilleries = [];
+        this.isLoading = false;
+        this.accessMessage =
+          'No mapped distillery found for your account. Please verify supply-chain profile or license mapping.';
         this.changeDetector.detectChanges();
       },
     });

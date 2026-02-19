@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { SupplyChainService } from '../services/supplychain.service';
 import { DistRow, LiquorRates } from '../models/supply-chain.models';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
+import { SupplyChainProfileService } from '../../../../core/services/supply-chain-profile.service';
 
 interface FormData {
   billNo: string;
@@ -31,6 +32,11 @@ interface Product {
   exFactoryPrice?: number;
   manufacturingUnitName?: string;
   bottleType?: string;
+}
+
+interface BrandOption {
+  label: string;
+  brandName: string;
 }
 
 @Component({
@@ -74,11 +80,14 @@ export class TransitPermitComponent implements OnInit {
   distributors: DistRow[] = [];
   uniqueDistributorNames: string[] = [];
   availableDepotAddresses: string[] = [];
-  brandOptions: string[] = [];
+  brandOptions: BrandOption[] = [];
   sizeOptions: string[] = [];
   bottleTypes: { id: number; bottleType: string }[] = [];
   /* vehicleNumbers: string[] = []; */
   private brandsData: { brandName: string; sizes: number[] }[] = [];
+  private warehouseCatalogData: any[] = [];
+  private activeLicenseId: string = '';
+  private resolvedLicenseId: string = '';
 
   // New properties for stock logic
   private brandMlConversionData: any[] = [];
@@ -104,7 +113,8 @@ export class TransitPermitComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     @Inject(PLATFORM_ID) platformId: Object,
-    private supplyChainService: SupplyChainService
+    private supplyChainService: SupplyChainService,
+    private supplyChainProfileService: SupplyChainProfileService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
 
@@ -160,11 +170,7 @@ export class TransitPermitComponent implements OnInit {
       }
     });
 
-    // Fetch Brands - We might fetch this later based on stock, or keep as fallback
-    this.supplyChainService.getLiquorBrands().subscribe(data => {
-      this.brandsData = data;
-      this.brandOptions = data.map(b => b.brandName);
-    });
+    this.loadEstablishmentScopedBrands();
 
     // Fetch Bottle Types
     this.supplyChainService.getBottleTypes().subscribe(data => {
@@ -174,6 +180,106 @@ export class TransitPermitComponent implements OnInit {
 
     // Fetch Brand ML Conversion Data
     this.loadMlConversionData();
+  }
+
+  private loadEstablishmentScopedBrands(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (response: any) => {
+        const profile = response?.data as any;
+        this.activeLicenseId = String(
+          profile?.licenseeId ||
+          profile?.licensee_id ||
+          ''
+        ).trim();
+        this.resolvedLicenseId = this.toValidLicenseId(this.activeLicenseId);
+        this.loadBrandWarehouseCatalog();
+      },
+      error: () => {
+        this.activeLicenseId = '';
+        this.resolvedLicenseId = '';
+        this.loadBrandWarehouseCatalog();
+      }
+    });
+  }
+
+  private toValidLicenseId(value: string): string {
+    const normalized = String(value || '').trim();
+    if (normalized.startsWith('NA/') || normalized.startsWith('NLI/')) {
+      return normalized;
+    }
+    return '';
+  }
+
+  private loadBrandWarehouseCatalog(): void {
+    this.supplyChainService.getBrandWarehouseStock(
+      undefined,
+      undefined,
+      this.resolvedLicenseId || undefined
+    ).subscribe({
+      next: (data) => {
+        this.warehouseCatalogData = data || [];
+        this.brandWarehouseData = data || [];
+        this.rebuildBrandCatalogFromWarehouse();
+      },
+      error: (error) => {
+        console.error('Failed to load establishment-scoped warehouse brands', error);
+        this.warehouseCatalogData = [];
+        this.brandWarehouseData = [];
+        this.brandsData = [];
+        this.brandOptions = [];
+      }
+    });
+  }
+
+  private rebuildBrandCatalogFromWarehouse(): void {
+    const sizesByBrand = new Map<string, Set<number>>();
+    const options: BrandOption[] = [];
+
+    this.warehouseCatalogData.forEach((entry: any) => {
+      const brandName = this.getWarehouseBrandName(entry);
+      const capacitySize = this.getWarehouseCapacitySize(entry);
+      const exciseDuty = this.getWarehouseExciseDuty(entry);
+
+      if (!brandName || !capacitySize) return;
+
+      if (!sizesByBrand.has(brandName)) {
+        sizesByBrand.set(brandName, new Set<number>());
+      }
+      sizesByBrand.get(brandName)!.add(capacitySize);
+
+      options.push({
+        brandName,
+        label: brandName
+      });
+    });
+
+    this.brandsData = Array.from(sizesByBrand.entries())
+      .map(([brandName, sizes]) => ({
+        brandName,
+        sizes: Array.from(sizes).sort((a, b) => a - b)
+      }))
+      .sort((a, b) => a.brandName.localeCompare(b.brandName));
+
+    this.brandOptions = options.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  private getWarehouseBrandName(entry: any): string {
+    return String(entry?.brandDetails || entry?.brand_details || '').trim();
+  }
+
+  private getWarehouseCapacitySize(entry: any): number {
+    const value = Number(entry?.capacitySize ?? entry?.capacity_size ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private getWarehouseCurrentStock(entry: any): number {
+    const value = Number(entry?.currentStock ?? entry?.current_stock ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private getWarehouseExciseDuty(entry: any): number {
+    const value = Number(entry?.exciseDutyRsPerCase ?? entry?.excise_duty_rs_per_case ?? 0);
+    return Number.isFinite(value) ? value : 0;
   }
 
   loadMlConversionData(): void {
@@ -230,9 +336,8 @@ export class TransitPermitComponent implements OnInit {
   onDistributorChange(): void {
     if (!this.formData.soleDistributor) {
       this.availableDepotAddresses = [];
-      // Clear stock data when distributor is cleared
       this.selectedBrandStockSummary = [];
-      this.brandWarehouseData = [];
+      this.brandWarehouseData = [...this.warehouseCatalogData];
       this.availableStockPieces = 0;
       this.conversionFactor = 0;
       this.currentStockStatus = '';
@@ -247,26 +352,6 @@ export class TransitPermitComponent implements OnInit {
       this.formData.depotAddress = this.availableDepotAddresses[0];
     } else {
       this.formData.depotAddress = '';
-    }
-
-    // Check if there is an onDepotAddressChange method needed or just simple binding
-
-    // Fetch Warehouse Stock for this distributor
-    if (this.formData.soleDistributor) {
-      // Fetch ALL stock temporarily to debug mismatch between Distributor name and Distillery name in DB
-      this.supplyChainService.getBrandWarehouseStock('').subscribe(data => {
-        console.log(`Stock Data Received (ALL):`, data);
-        this.brandWarehouseData = data;
-
-        // Update brand options based on available stock
-        // Filter unique brands from warehouse data
-        const warehouseBrands = [...new Set(data.map(item => item.brand_details))].filter(b => !!b);
-        if (warehouseBrands.length > 0) {
-          this.brandOptions = warehouseBrands;
-        }
-        // If no stock data, maybe fallback to getLiquorBrands? 
-        // For now, let's assume if distributor has stock, we use that.
-      });
     }
   }
 
@@ -288,29 +373,29 @@ export class TransitPermitComponent implements OnInit {
     const selectedBrandBasic = this.brandsData.find(b => b.brandName === this.formData.brand);
     console.log('selectedBrandBasic:', selectedBrandBasic);
 
-    // FETCH STOCK SPECIFICALLY FOR THIS BRAND
-    console.log('Fetching specific stock for brand:', this.formData.brand);
-    // Pass empty distillery name to ignore that filter, and pass brand name
-    this.supplyChainService.getBrandWarehouseStock('', this.formData.brand).subscribe(data => {
-      console.log('Stock Data for Brand (raw response):', data);
-      this.brandWarehouseData = data;
-
-      // Log each entry to see what we got - USE CAMELCASE FIELD NAMES
-      data.forEach((entry, index) => {
-        console.log(`Entry ${index}:`, {
-          brandDetails: entry.brandDetails,
-          capacitySize: entry.capacitySize,
-          currentStock: entry.currentStock,
-          status: entry.status
-        });
+    // Fetch fresh stock for selected brand within active establishment scope.
+    this.supplyChainService
+      .getBrandWarehouseStock(
+        undefined,
+        this.formData.brand,
+        this.resolvedLicenseId || undefined
+      )
+      .subscribe({
+        next: (data) => {
+          console.log('Stock Data for Brand (raw response):', data);
+          this.brandWarehouseData = data || [];
+          this.updateStockSummary(selectedBrandBasic);
+        },
+        error: (error) => {
+          console.error('Error fetching brand warehouse stock:', error);
+          const searchBrand = this.formData.brand.toLowerCase().trim();
+          this.brandWarehouseData = this.warehouseCatalogData.filter((item: any) => {
+            const dbBrand = this.getWarehouseBrandName(item).toLowerCase().trim();
+            return dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+          });
+          this.updateStockSummary(selectedBrandBasic);
+        }
       });
-
-      // After fetching, update the summary logic
-      this.updateStockSummary(selectedBrandBasic);
-    }, error => {
-      console.error('Error fetching brand warehouse stock:', error);
-      this.selectedBrandStockSummary = [];
-    });
   }
 
   updateStockSummary(selectedBrandBasic: any): void {
@@ -320,10 +405,9 @@ export class TransitPermitComponent implements OnInit {
     console.log('updateStockSummary called with brand:', this.formData.brand);
     console.log('brandWarehouseData:', this.brandWarehouseData);
 
-    // Check if we have any data - USE CAMELCASE FIELD NAMES
     const warehouseEntries = this.brandWarehouseData.filter(item => {
-      if (!item.brandDetails) return false;
-      const dbBrand = item.brandDetails.toLowerCase().trim();
+      const dbBrand = this.getWarehouseBrandName(item).toLowerCase().trim();
+      if (!dbBrand) return false;
       const matches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
       console.log(`Comparing "${dbBrand}" with "${searchBrand}": ${matches}`);
       return matches;
@@ -335,11 +419,9 @@ export class TransitPermitComponent implements OnInit {
       // Use all defined sizes for the brand as the base
       this.sizeOptions = selectedBrandBasic.sizes.map((s: number) => s.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
 
-      // Generate summary for ALL sizes - USE CAMELCASE FIELD NAMES
       this.selectedBrandStockSummary = selectedBrandBasic.sizes.map((size: number) => {
-        // Check if we have stock for this size
-        const stockEntry = warehouseEntries.find(we => we.capacitySize === size);
-        const pieces = stockEntry ? (stockEntry.currentStock || 0) : 0;
+        const stockEntry = warehouseEntries.find(we => this.getWarehouseCapacitySize(we) === size);
+        const pieces = stockEntry ? this.getWarehouseCurrentStock(stockEntry) : 0;
 
         console.log(`Size ${size}ml: stockEntry=`, stockEntry, `pieces=${pieces}`);
 
@@ -354,13 +436,14 @@ export class TransitPermitComponent implements OnInit {
       }).sort((a: any, b: any) => a.size - b.size);
 
     } else {
-      // Fallback if brand not found in basic list - USE CAMELCASE FIELD NAMES
       if (warehouseEntries.length > 0) {
-        this.sizeOptions = warehouseEntries.map(item => item.capacitySize.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
+        this.sizeOptions = warehouseEntries
+          .map(item => this.getWarehouseCapacitySize(item).toString())
+          .sort((a: any, b: any) => parseInt(a) - parseInt(b));
 
         this.selectedBrandStockSummary = warehouseEntries.map(entry => {
-          const size = entry.capacitySize;
-          const pieces = entry.currentStock || 0;
+          const size = this.getWarehouseCapacitySize(entry);
+          const pieces = this.getWarehouseCurrentStock(entry);
           const conv = this.brandMlConversionData.find(c => c.ml === size);
           const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
           const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
@@ -412,21 +495,22 @@ export class TransitPermitComponent implements OnInit {
       return;
     }
 
-    // 2. Get Available Stock - use loose matching for brand name - USE CAMELCASE FIELD NAMES
+    // 2. Get Available Stock - use loose matching for brand name.
     const searchBrand = this.formData.brand.toLowerCase().trim();
     const stockEntry = this.brandWarehouseData.find(x => {
-      if (!x.brandDetails) return false;
-      const dbBrand = x.brandDetails.toLowerCase().trim();
+      const dbBrand = this.getWarehouseBrandName(x).toLowerCase().trim();
+      if (!dbBrand) return false;
       const brandMatches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
-      const sizeMatches = x.capacitySize === sizeMl;
-      console.log(`Checking: "${dbBrand}" vs "${searchBrand}" (${brandMatches}) and ${x.capacitySize} vs ${sizeMl} (${sizeMatches})`);
+      const capacitySize = this.getWarehouseCapacitySize(x);
+      const sizeMatches = capacitySize === sizeMl;
+      console.log(`Checking: "${dbBrand}" vs "${searchBrand}" (${brandMatches}) and ${capacitySize} vs ${sizeMl} (${sizeMatches})`);
       return brandMatches && sizeMatches;
     });
 
     console.log('Stock entry found:', stockEntry);
 
     if (stockEntry) {
-      this.availableStockPieces = stockEntry.currentStock || 0;
+      this.availableStockPieces = this.getWarehouseCurrentStock(stockEntry);
       console.log('Available stock pieces:', this.availableStockPieces);
       const approxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
       this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${approxCases} case${approxCases !== 1 ? 's' : ''})`;
