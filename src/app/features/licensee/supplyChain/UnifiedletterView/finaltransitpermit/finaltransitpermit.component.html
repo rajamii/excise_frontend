@@ -1,0 +1,529 @@
+<div class="toolbar">
+    <button mat-raised-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon> Back
+    </button>
+    
+    <div class="color-options">
+        <label>Background Color:</label>
+        <mat-radio-group [(ngModel)]="selectedColor" (change)="onColorChange()">
+            <mat-radio-button value="white">White</mat-radio-button>
+            <mat-radio-button value="yellow">Yellow</mat-radio-button>
+        </mat-radio-group>
+    </div>
+    
+    <button mat-raised-button color="primary" (click)="printPermit()">
+        <mat-icon>print</mat-icon> Print All 4 Bills
+    </button>
+</div>
+
+<div class="permit-container" *ngIf="permitData" [ngClass]="{'yellow-bg': selectedColor === 'yellow'}">
+    
+    <!-- Bill 1: Original -->
+    <div class="permit-page">
+        <div class="permit-content">
+            <div class="bill-type">ORIGINAL</div>
+            
+            <div class="header">
+                <div class="form-number">FORM - IV</div>
+                <h1>Government of Sikkim</h1>
+                <h2>Excise Department</h2>
+                <h3>(See rule 9 (2))</h3>
+                <h1>TRANSPORT PASS (For the Distributor)</h1>
+            </div>
+
+            <div class="permit-info-grid">
+                <div class="left-col">
+                    <div class="info-item">
+                        <label>Permit No:</label>
+                        <span>{{ permitData.bill_no }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Date:</label>
+                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Licensee:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
+                    </div>
+                </div>
+
+                <div class="right-col">
+                    <div class="info-item">
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Vehicle No:</label>
+                        <span>{{ permitData.vehicle_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Issue Date:</label>
+                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="liquor-table-container">
+                <h3>Details of Foreign Liquor & Country Liquor Issued:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sl. No.</th>
+                            <th>Brand Name</th>
+                            <th>Batch No.</th>
+                            <th>Size (ml)</th>
+                            <th>Strength</th>
+                            <th>Quantity (Cases)</th>
+                            <th>Total Bottles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let brand of permitData.brands; let i = index">
+                            <td class="text-center">{{ i + 1 }}</td>
+                            <td>{{ brand.brand }}</td>
+                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
+                            <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
+                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
+                            <td class="text-center">{{ brand.cases }}</td>
+                            <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" class="text-right">Total:</td>
+                            <td class="text-center">{{ getTotalCases() }}</td>
+                            <td class="text-center">-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="amount-words">
+                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
+            </div>
+
+            <div class="terms-section">
+                <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
+                    (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
+                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
+
+                <ol class="terms-list">
+                    <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
+                        not be broken in transit.</li>
+                    <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
+                    </li>
+                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
+                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    </li>
+                </ol>
+
+                <div class="place-line">
+                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                </div>
+
+                <div class="date-bottom">
+                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                </div>
+            </div>
+
+            <div class="footer-signatures">
+                <div class="seal-section">
+                    <!-- Seal Removed as per request -->
+                </div>
+
+                <div class="signature-section">
+                    <div class="signature-line"></div>
+                    <div class="designation">Assistant Commissioner</div>
+                    <div class="dept">Excise Department</div>
+                    <div class="gov">Government of Sikkim</div>
+                    <div class="role-label">Signature of Officer-in-Charge.</div>
+                </div>
+            </div>
+
+           
+        </div>
+    </div>
+
+    <!-- Bill 2: Duplicate -->
+    <div class="permit-page">
+        <div class="permit-content">
+            <div class="bill-type">DUPLICATE</div>
+            
+            <div class="header">
+                <div class="form-number">FORM - IV</div>
+                <h1>Government of Sikkim</h1>
+                <h2>Excise Department</h2>
+                <h3>(See rule 9 (2))</h3>
+                <h1>TRANSPORT PASS (For the Distributor)</h1>
+            </div>
+
+            <div class="permit-info-grid">
+                <div class="left-col">
+                    <div class="info-item">
+                        <label>Permit No:</label>
+                        <span>{{ permitData.bill_no }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Date:</label>
+                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Licensee:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
+                    </div>
+                </div>
+
+                <div class="right-col">
+                    <div class="info-item">
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Vehicle No:</label>
+                        <span>{{ permitData.vehicle_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Issue Date:</label>
+                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="liquor-table-container">
+                <h3>Details of Foreign Liquor & Country Liquor Issued:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sl. No.</th>
+                            <th>Brand Name</th>
+                            <th>Batch No.</th>
+                            <th>Size (ml)</th>
+                            <th>Strength</th>
+                            <th>Quantity (Cases)</th>
+                            <th>Total Bottles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let brand of permitData.brands; let i = index">
+                            <td class="text-center">{{ i + 1 }}</td>
+                            <td>{{ brand.brand }}</td>
+                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
+                            <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
+                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
+                            <td class="text-center">{{ brand.cases }}</td>
+                            <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" class="text-right">Total:</td>
+                            <td class="text-center">{{ getTotalCases() }}</td>
+                            <td class="text-center">-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="amount-words">
+                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
+            </div>
+
+            <div class="terms-section">
+                <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
+                    (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
+                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
+
+                <ol class="terms-list">
+                    <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
+                        not be broken in transit.</li>
+                    <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
+                    </li>
+                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
+                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    </li>
+                </ol>
+
+                <div class="place-line">
+                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                </div>
+
+                <div class="date-bottom">
+                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                </div>
+            </div>
+
+            <div class="footer-signatures">
+                <div class="seal-section">
+                    <!-- Seal Removed as per request -->
+                </div>
+
+                <div class="signature-section">
+                    <div class="signature-line"></div>
+                    <div class="designation">Assistant Commissioner</div>
+                    <div class="dept">Excise Department</div>
+                    <div class="gov">Government of Sikkim</div>
+                    <div class="role-label">Signature of Officer-in-Charge.</div>
+                </div>
+            </div>
+
+           
+        </div>
+    </div>
+
+    <!-- Bill 3: Triplicate -->
+    <div class="permit-page">
+        <div class="permit-content">
+            <div class="bill-type">TRIPLICATE</div>
+            
+            <div class="header">
+                <div class="form-number">FORM - IV</div>
+                <h1>Government of Sikkim</h1>
+                <h2>Excise Department</h2>
+                <h3>(See rule 9 (2))</h3>
+                <h1>TRANSPORT PASS (For the Distributor)</h1>
+            </div>
+
+            <div class="permit-info-grid">
+                <div class="left-col">
+                    <div class="info-item">
+                        <label>Permit No:</label>
+                        <span>{{ permitData.bill_no }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Date:</label>
+                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Licensee:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
+                    </div>
+                </div>
+
+                <div class="right-col">
+                    <div class="info-item">
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Vehicle No:</label>
+                        <span>{{ permitData.vehicle_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Issue Date:</label>
+                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="liquor-table-container">
+                <h3>Details of Foreign Liquor & Country Liquor Issued:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sl. No.</th>
+                            <th>Brand Name</th>
+                            <th>Batch No.</th>
+                            <th>Size (ml)</th>
+                            <th>Strength</th>
+                            <th>Quantity (Cases)</th>
+                            <th>Total Bottles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let brand of permitData.brands; let i = index">
+                            <td class="text-center">{{ i + 1 }}</td>
+                            <td>{{ brand.brand }}</td>
+                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
+                            <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
+                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
+                            <td class="text-center">{{ brand.cases }}</td>
+                            <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" class="text-right">Total:</td>
+                            <td class="text-center">{{ getTotalCases() }}</td>
+                            <td class="text-center">-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="amount-words">
+                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
+            </div>
+
+            <div class="terms-section">
+                <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
+                    (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
+                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
+
+                <ol class="terms-list">
+                    <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
+                        not be broken in transit.</li>
+                    <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
+                    </li>
+                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
+                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    </li>
+                </ol>
+
+                <div class="place-line">
+                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                </div>
+
+                <div class="date-bottom">
+                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                </div>
+            </div>
+
+            <div class="footer-signatures">
+                <div class="seal-section">
+                    <!-- Seal Removed as per request -->
+                </div>
+
+                <div class="signature-section">
+                    <div class="signature-line"></div>
+                    <div class="designation">Assistant Commissioner</div>
+                    <div class="dept">Excise Department</div>
+                    <div class="gov">Government of Sikkim</div>
+                    <div class="role-label">Signature of Officer-in-Charge.</div>
+                </div>
+            </div>
+
+           
+        </div>
+    </div>
+
+    <!-- Bill 4: Quadruplicate -->
+    <div class="permit-page">
+        <div class="permit-content">
+            <div class="bill-type">QUADRUPLICATE</div>
+            
+            <div class="header">
+                <div class="form-number">FORM - IV</div>
+                <h1>Government of Sikkim</h1>
+                <h2>Excise Department</h2>
+                <h3>(See rule 9 (2))</h3>
+                <h1>TRANSPORT PASS (For the Distributor)</h1>
+            </div>
+
+            <div class="permit-info-grid">
+                <div class="left-col">
+                    <div class="info-item">
+                        <label>Permit No:</label>
+                        <span>{{ permitData.bill_no }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Date:</label>
+                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Licensee:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
+                    </div>
+                </div>
+
+                <div class="right-col">
+                    <div class="info-item">
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Vehicle No:</label>
+                        <span>{{ permitData.vehicle_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Issue Date:</label>
+                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="liquor-table-container">
+                <h3>Details of Foreign Liquor & Country Liquor Issued:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sl. No.</th>
+                            <th>Brand Name</th>
+                            <th>Batch No.</th>
+                            <th>Size (ml)</th>
+                            <th>Strength</th>
+                            <th>Quantity (Cases)</th>
+                            <th>Total Bottles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let brand of permitData.brands; let i = index">
+                            <td class="text-center">{{ i + 1 }}</td>
+                            <td>{{ brand.brand }}</td>
+                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
+                            <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
+                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
+                            <td class="text-center">{{ brand.cases }}</td>
+                            <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" class="text-right">Total:</td>
+                            <td class="text-center">{{ getTotalCases() }}</td>
+                            <td class="text-center">-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="amount-words">
+                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
+            </div>
+
+            <div class="terms-section">
+                <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
+                    (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
+                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
+
+                <ol class="terms-list">
+                    <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
+                        not be broken in transit.</li>
+                    <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
+                    </li>
+                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
+                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    </li>
+                </ol>
+
+                <div class="place-line">
+                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                </div>
+
+                <div class="date-bottom">
+                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                </div>
+            </div>
+
+            <div class="footer-signatures">
+                <div class="seal-section">
+                    <!-- Seal Removed as per request -->
+                </div>
+
+                <div class="signature-section">
+                    <div class="signature-line"></div>
+                    <div class="designation">Assistant Commissioner</div>
+                    <div class="dept">Excise Department</div>
+                    <div class="gov">Government of Sikkim</div>
+                    <div class="role-label">Signature of Officer-in-Charge.</div>
+                </div>
+            </div>
+
+          
+        </div>
+    </div>
+</div>
+
+<div class="loading-state" *ngIf="!permitData">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading permit details...</p>
+</div>

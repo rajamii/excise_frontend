@@ -1108,7 +1108,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         console.log('Payment successful', response);
         this.showSuccessMessage('Payment successful! Forwarded to Officer in Charge.');
         alert('Payment successful! Forwarded to Officer in Charge.');
-        this.transitBillStatus = 'PaymentSuccessfulandForwardedToOfficerincharge';
+        this.transitBillStatus = String(
+          response?.data?.status ||
+          response?.status ||
+          this.transitBillStatus ||
+          ''
+        );
 
         // Update wallet balance locally
         this.educationCessBalance -= this.transitEducationCess;

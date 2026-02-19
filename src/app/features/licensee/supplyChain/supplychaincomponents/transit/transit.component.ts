@@ -108,12 +108,11 @@ export class TransitComponent implements OnInit {
    * Returns the backend status directly for display
    * No mapping - just like requisition/revalidation components
    */
-  private mapBackendStatusToDisplayStatus(backendStatus: string): string {
+  private mapBackendStatusToDisplayStatus(backendStatus: string, currentStageDescription?: string): string {
+    const stageDescription = String(currentStageDescription || '').trim();
+    if (stageDescription) return stageDescription;
     const value = String(backendStatus || '').trim();
     if (!value) return 'Pending';
-    if (value === 'PaymentSuccessfulandForwardedToOfficerincharge') {
-      return 'Payment Successful - Forwarded to OIC';
-    }
     return value;
   }
 
@@ -141,7 +140,10 @@ export class TransitComponent implements OnInit {
 
           // Get the status from backend - support both camelCase and snake_case
           const backendStatus = item.status || '';
-          const displayStatus = this.mapBackendStatusToDisplayStatus(backendStatus);
+          const displayStatus = this.mapBackendStatusToDisplayStatus(
+            backendStatus,
+            item.current_stage_description || item.currentStageDescription
+          );
 
           // Calculate duties for this row (supporting both casings)
           const excise = parseFloat(item.exciseDutyRsPerCase || item.excise_duty_rs_per_case || '0');

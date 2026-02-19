@@ -30,6 +30,7 @@ import { RequisitionComponent } from '../licensee/supplyChain/supplychaincompone
 import { RevalidationComponent } from '../licensee/supplyChain/supplychaincomponents/revalidation/revalidation.component';
 import { CancellationComponent } from '../licensee/supplyChain/supplychaincomponents/cancellation/cancellation.component';
 import { TransitComponent } from '../licensee/supplyChain/supplychaincomponents/transit/transit.component';
+import { OicTransitPermitComponent } from '../licensee/supplyChain/supplychaincomponents/oic-transit-permit/oic-transit-permit.component';
 import { HologramprocurementComponent } from '../licensee/supplyChain/supplychaincomponents/hologramprocurement/hologramprocurement.component';
 import { HologramrequestComponent } from '../licensee/supplyChain/supplychaincomponents/hologramrequest/hologramrequest.component';
 import { TransitPermitComponent } from '../licensee/supplyChain/transit-permit/transit-permit.component';
@@ -77,6 +78,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     RevalidationComponent,
     CancellationComponent,
     TransitComponent,
+    OicTransitPermitComponent,
     HologramprocurementComponent,
     HologramrequestComponent,
     TransitPermitComponent,

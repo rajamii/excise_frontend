@@ -129,6 +129,13 @@ export const routes: Routes = [
       ).then((m) => m.LocalSalesRegisterComponent),
   },
   {
+    path: "dev-final-transit-permit-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finaltransitpermit/finaltransitpermit.component"
+      ).then((m) => m.FinaltransitpermitComponent),
+  },
+  {
     path: "dev-payment-receipt",
     loadComponent: () =>
       import(

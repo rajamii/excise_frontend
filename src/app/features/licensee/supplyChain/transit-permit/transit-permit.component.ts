@@ -76,7 +76,7 @@ interface StockDeductionPreview {
 })
 export class TransitPermitComponent implements OnInit {
   formData: FormData = {
-    billNo: 'TRP/2/EXCISE',
+    billNo: 'TRP/01/EXCISE',
     soleDistributor: 'M/s Karma Chopel Bhutia',
     date: '',
     depotAddress: '',
@@ -174,7 +174,7 @@ export class TransitPermitComponent implements OnInit {
       }
     }
 
-    // Generate next sequential bill number
+    // Show next bill number in UI (backend remains source-of-truth on submit).
     this.generateNextBillNumber();
   }
 
@@ -781,6 +781,10 @@ export class TransitPermitComponent implements OnInit {
     // Call backend
     this.supplyChainService.submitTransitPermit(payload).subscribe({
       next: (response) => {
+        const generatedBillNo = String(response?.bill_no || response?.billNo || '').trim();
+        if (generatedBillNo) {
+          this.formData.billNo = generatedBillNo;
+        }
         // Mark as submitted and locked
         this.isSubmitted = true;
         this.isLocked = true;
@@ -790,7 +794,7 @@ export class TransitPermitComponent implements OnInit {
 
         // Open payment receipt from actual wallet deduction transaction context.
         this.router.navigate(['/dev-payment-receipt'], {
-          queryParams: { billNo: this.formData.billNo }
+          queryParams: { billNo: generatedBillNo || this.formData.billNo }
         });
 
         // Optional: Navigate or reset
@@ -992,46 +996,22 @@ export class TransitPermitComponent implements OnInit {
       next: (permits: any[]) => {
         let maxSequence = 0;
 
-        // Check backend data
         if (permits && permits.length > 0) {
-          permits.forEach(p => {
-            const billNo = p.bill_no || p.billNo; // Backend uses bill_no
-            if (billNo && billNo.startsWith('TRP/')) {
-              const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
-              if (match) {
-                const sequence = parseInt(match[1], 10);
-                if (sequence > maxSequence) {
-                  maxSequence = sequence;
-                }
-              }
+          permits.forEach((p: any) => {
+            const billNo = String(p.bill_no || p.billNo || '').trim().toUpperCase();
+            const match = billNo.match(/^TRP\/0*(\d+)\/EXCISE$/);
+            if (match) {
+              const sequence = parseInt(match[1], 10);
+              if (sequence > maxSequence) maxSequence = sequence;
             }
           });
         }
 
-        // Check localStorage as fallback/supplement (optional, but good if mixed usage)
-        if (this.isBrowser) {
-          const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-          transitList.forEach((permit: any) => {
-            const billNo = permit.billNo;
-            if (billNo && billNo.startsWith('TRP/')) {
-              const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
-              if (match) {
-                const sequence = parseInt(match[1], 10);
-                if (sequence > maxSequence) {
-                  maxSequence = sequence;
-                }
-              }
-            }
-          });
-        }
-
-        // Set next sequence
-        this.formData.billNo = `TRP/${maxSequence + 1}/EXCISE`;
+        const next = maxSequence + 1;
+        this.formData.billNo = `TRP/${String(next).padStart(2, '0')}/EXCISE`;
       },
-      error: (err) => {
-        console.error('Failed to fetch permits for bill number generation', err);
-        // Fallback to basic logic or previous localStorage logic if API fails
-        this.formData.billNo = `TRP/${Math.floor(Math.random() * 10000)}/EXCISE`; // Temporary fallback to avoid collision if offline
+      error: () => {
+        this.formData.billNo = 'TRP/01/EXCISE';
       }
     });
   }

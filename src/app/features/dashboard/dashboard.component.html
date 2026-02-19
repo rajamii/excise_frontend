@@ -81,7 +81,7 @@
         <app-itcell *ngIf="selectedSupplyChainSection === 'process-flow'"></app-itcell>
 
         <!-- Officer in Charge specific sections -->
-        <app-transit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-transit>
+        <app-oic-transit-permit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-oic-transit-permit>
 
         <!-- Import the actual components for officer sections -->
         <app-brands-details *ngIf="selectedSupplyChainSection === 'brands'"></app-brands-details>

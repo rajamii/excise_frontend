@@ -128,7 +128,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     // Filter by status
     if (filters.status && filters.status !== 'All Status') {
       filtered = filtered.filter(permit => {
-        const status = permit.status.toLowerCase();
+        const status = String(permit.status_label || permit.status || '').toLowerCase();
         const statusCode = permit.status_code;
 
         if (filters.status === 'PENDING') {
@@ -179,52 +179,13 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
   }
 
   onView(element: GroupedTransitPermit): void {
-    console.log('View clicked for:', element);
-
-    // Save the transit permit data to localStorage for the letter view to access
-    const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-
-    // Check if this permit already exists in localStorage
-    const existingIndex = transitList.findIndex((r: any) => r.billNo === element.bill_no);
-
-    // Prepare the transit data with all brand details
-    const transitData = {
-      billNo: element.bill_no,
-      bill_no: element.bill_no,
-      refNo: element.bill_no,
-      date: element.date,
-      submissionDate: element.date,
-      soleDistributor: element.sole_distributor_name,
-      sole_distributor_name: element.sole_distributor_name,
-      depotAddress: element.depot_address,
-      depot_address: element.depot_address,
-      vehicleNumber: element.vehicle_number,
-      vehicle_number: element.vehicle_number,
-      status: element.status,
-      status_code: element.status_code,
-      totalAmount: element.total_amount,
-      total_amount: element.total_amount,
-      brands: element.brands,
-      created_at: element.created_at,
-      updated_at: element.updated_at
-    };
-
-    if (existingIndex >= 0) {
-      // Update existing entry
-      transitList[existingIndex] = transitData;
-    } else {
-      // Add new entry
-      transitList.push(transitData);
-    }
-
-    // Save back to localStorage
-    localStorage.setItem('transitPermitRequests', JSON.stringify(transitList));
-
-    // Navigate to transit permit letter view with reference number and source
-    this.router.navigate(['/dev-transit-permit-letter-view'], {
+    const permitId = element?.brands?.[0]?.id;
+    this.router.navigate(['/supply-chain-view'], {
       queryParams: {
+        id: permitId,
         ref: element.bill_no,
-        source: 'oic-dashboard'
+        type: 'transit',
+        source: 'officer-in-charge'
       }
     });
   }
@@ -249,13 +210,20 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
       // Get the first brand's ID to perform action
       const permitId = element.brands[0].id;
       this.transitPermitService.performAction(permitId, 'APPROVE').subscribe({
-        next: (response) => {
+        next: (_response) => {
+          const approvedPermitData = {
+            ...element,
+            status: 'TransitPermitSucessfulyApproved',
+            status_code: 'TRP_03'
+          };
+          localStorage.setItem('finalTransitPermitData', JSON.stringify(approvedPermitData));
           this.snackBar.open('Transit permit approved successfully', 'Close', { duration: 3000 });
           this.loadTransitPermits();
+          this.router.navigate(['/dev-final-transit-permit-view']);
         },
         error: (error) => {
           console.error('Error approving transit permit:', error);
-          this.snackBar.open('Error approving transit permit', 'Close', { duration: 3000 });
+          this.snackBar.open('Error approving transit permit: ' + (error.error?.message || error.message), 'Close', { duration: 5000 });
         }
       });
     }
@@ -332,26 +300,35 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
 
   getStatusClass(statusCode: string): string {
     // Handle both status_code and status string
-    if (statusCode === 'TRP_02' || statusCode.toLowerCase().includes('payment')) {
+    if (statusCode === 'TRP_02' || String(statusCode || '').toLowerCase().includes('payment')) {
       return 'status-pending';
-    } else if (statusCode === 'TRP_03' || statusCode.toLowerCase().includes('approved')) {
+    } else if (statusCode === 'TRP_03' || String(statusCode || '').toLowerCase().includes('approved')) {
       return 'status-approved';
-    } else if (statusCode === 'TRP_04' || statusCode.toLowerCase().includes('cancelled') || statusCode.toLowerCase().includes('rejected')) {
+    } else if (
+      statusCode === 'TRP_04' ||
+      String(statusCode || '').toLowerCase().includes('cancelled') ||
+      String(statusCode || '').toLowerCase().includes('rejected')
+    ) {
       return 'status-rejected';
     }
     return '';
   }
 
-  getStatusLabel(statusCode: string): string {
-    // Handle both status_code and status string
-    if (statusCode === 'TRP_02' || statusCode.toLowerCase().includes('payment')) {
-      return 'PAYMENT SUCCESSFUL & FORWARDED';
-    } else if (statusCode === 'TRP_03' || statusCode.toLowerCase().includes('approved')) {
-      return 'APPROVED';
-    } else if (statusCode === 'TRP_04' || statusCode.toLowerCase().includes('cancelled') || statusCode.toLowerCase().includes('rejected')) {
-      return 'REJECTED';
+  getStatusLabel(element: GroupedTransitPermit): string {
+    const dynamicLabel = String(element?.status_label || '').trim();
+    if (dynamicLabel) {
+      return dynamicLabel;
     }
-    return statusCode;
+    const statusCode = String(element?.status_code || '').trim();
+    const status = String(element?.status || '').trim();
+    return dynamicLabel || status || statusCode || 'N/A';
+  }
+
+  getStatusIcon(element: GroupedTransitPermit): string {
+    const value = String(element?.status_code || element?.status_label || element?.status || '').toLowerCase();
+    if (value.includes('approved') || value === 'trp_03') return 'check_circle';
+    if (value.includes('rejected') || value.includes('cancelled') || value === 'trp_04') return 'cancel';
+    return 'schedule';
   }
 
   formatDate(dateString: string): string {
