@@ -6,6 +6,7 @@ import { SupplyChainService } from '../services/supplychain.service';
 import { DistRow, LiquorRates } from '../models/supply-chain.models';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 import { SupplyChainProfileService } from '../../../../core/services/supply-chain-profile.service';
+import { PaymentIntegrationService } from '../../../../core/services/payment-integration.service';
 
 interface FormData {
   billNo: string;
@@ -37,6 +38,22 @@ interface Product {
 interface BrandOption {
   label: string;
   brandName: string;
+}
+
+interface WalletDeductionPreview {
+  walletType: 'excise' | 'education_cess';
+  label: string;
+  before: number;
+  deduction: number;
+  after: number;
+}
+
+interface StockDeductionPreview {
+  brand: string;
+  size: number;
+  currentPieces: number;
+  deductionPieces: number;
+  remainingPieces: number;
 }
 
 @Component({
@@ -97,6 +114,13 @@ export class TransitPermitComponent implements OnInit {
   currentStockStatus: string = '';
   stockError: string | null = null;
   paymentAgreed: boolean = false; // For payment confirmation modal
+  walletPreviews: WalletDeductionPreview[] = [];
+  stockPreviews: StockDeductionPreview[] = [];
+  paymentConfirmAgreed = false;
+  loadingPaymentPreview = false;
+  paymentPreviewError = '';
+  private paymentPreviewWatchdog: any = null;
+  paymentDeductionPopupVisible = false;
 
   // Stock Summary Box
   selectedBrandStockSummary: { size: number, pieces: number, approxCases: number }[] = [];
@@ -114,7 +138,8 @@ export class TransitPermitComponent implements OnInit {
     private route: ActivatedRoute,
     @Inject(PLATFORM_ID) platformId: Object,
     private supplyChainService: SupplyChainService,
-    private supplyChainProfileService: SupplyChainProfileService
+    private supplyChainProfileService: SupplyChainProfileService,
+    private paymentIntegrationService: PaymentIntegrationService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
 
@@ -210,6 +235,22 @@ export class TransitPermitComponent implements OnInit {
     return '';
   }
 
+  private resolveEffectiveLicenseIdForPayment(): string {
+    const fromProfile = this.toValidLicenseId(this.resolvedLicenseId || this.activeLicenseId);
+    if (fromProfile) {
+      return fromProfile;
+    }
+
+    const rows = Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : [];
+    for (const row of rows) {
+      const candidate = this.toValidLicenseId(String(row?.licenseId || row?.license_id || '').trim());
+      if (candidate) {
+        return candidate;
+      }
+    }
+    return '';
+  }
+
   private loadBrandWarehouseCatalog(): void {
     this.supplyChainService.getBrandWarehouseStock(
       undefined,
@@ -219,6 +260,12 @@ export class TransitPermitComponent implements OnInit {
       next: (data) => {
         this.warehouseCatalogData = data || [];
         this.brandWarehouseData = data || [];
+        if (!this.resolvedLicenseId) {
+          const inferred = this.resolveEffectiveLicenseIdForPayment();
+          if (inferred) {
+            this.resolvedLicenseId = inferred;
+          }
+        }
         this.rebuildBrandCatalogFromWarehouse();
       },
       error: (error) => {
@@ -491,7 +538,7 @@ export class TransitPermitComponent implements OnInit {
     // If conversion factor is still 0, show error
     if (this.conversionFactor === 0) {
       console.error('Conversion factor is 0! Available conversion data:', this.brandMlConversionData);
-      this.currentStockStatus = 'Unable to calculate. Conversion data not loaded.';
+      this.currentStockStatus = `No pieces-per-case mapping found for ${sizeMl}ml in master table.`;
       return;
     }
 
@@ -741,6 +788,11 @@ export class TransitPermitComponent implements OnInit {
         // Show success message
         alert('Transit Permit Application submitted successfully!');
 
+        // Open payment receipt from actual wallet deduction transaction context.
+        this.router.navigate(['/dev-payment-receipt'], {
+          queryParams: { billNo: this.formData.billNo }
+        });
+
         // Optional: Navigate or reset
       },
       error: (error) => {
@@ -774,21 +826,165 @@ export class TransitPermitComponent implements OnInit {
   }
 
   acceptDeclaration(): void {
-    // Proceed with submission
-    this.submitApplication();
+    this.paymentConfirmAgreed = false;
+    this.paymentPreviewError = '';
+    this.startPaymentPreviewLoading();
+    this.buildStockDeductionPreview();
+    this.loadWalletDeductionPreviewAndOpenModal();
+  }
 
-    // Manually close modal if we assume submission trigger started (or move this inside submitApplication subscription)
-    // Looking at submitApplication, it has an alert.
-    // Ideally we should close modal ONLY if validation passes.
+  private startPaymentPreviewLoading(): void {
+    this.loadingPaymentPreview = true;
+    if (this.paymentPreviewWatchdog) {
+      clearTimeout(this.paymentPreviewWatchdog);
+    }
+    this.paymentPreviewWatchdog = setTimeout(() => {
+      if (!this.loadingPaymentPreview) return;
+      this.loadingPaymentPreview = false;
+      this.paymentPreviewError = 'Wallet information is taking too long to load. Please try again.';
+      this.validationErrors = [this.paymentPreviewError];
+    }, 10000);
+  }
 
-    if (this.validationErrors.length === 0) {
-      const closeBtn = document.getElementById('closeModalBtn');
-      if (closeBtn) closeBtn.click();
+  private stopPaymentPreviewLoading(): void {
+    this.loadingPaymentPreview = false;
+    if (this.paymentPreviewWatchdog) {
+      clearTimeout(this.paymentPreviewWatchdog);
+      this.paymentPreviewWatchdog = null;
     }
   }
 
   cancelDeclaration(): void {
     console.log('Declaration cancelled');
+  }
+
+  private loadWalletDeductionPreviewAndOpenModal(): void {
+    const licenseId = this.resolveEffectiveLicenseIdForPayment();
+    if (!licenseId) {
+      this.stopPaymentPreviewLoading();
+      this.paymentPreviewError = 'Approved license not found in profile. Please switch to approved unit/profile first.';
+      this.validationErrors = [this.paymentPreviewError];
+      return;
+    }
+
+    const exciseDeduction = this.getTotalExciseDuty() + this.getTotalAdditionalExcise();
+    const educationDeduction = this.getTotalEducationCess();
+
+    this.paymentIntegrationService.getWalletSummary(licenseId).subscribe({
+      next: (res: any) => {
+        const rows = Array.isArray(res?.results) ? res.results : [];
+
+        const exciseRow = rows.find((r: any) => String(r.walletType || r.wallet_type || '').toLowerCase() === 'excise');
+        const educationRow = rows.find((r: any) => String(r.walletType || r.wallet_type || '').toLowerCase() === 'education_cess');
+
+        const exciseBefore = Number(exciseRow?.currentBalance ?? exciseRow?.current_balance ?? 0);
+        const educationBefore = Number(educationRow?.currentBalance ?? educationRow?.current_balance ?? 0);
+
+        this.walletPreviews = [
+          {
+            walletType: 'excise',
+            label: 'Excise Wallet (includes Additional Excise)',
+            before: exciseBefore,
+            deduction: exciseDeduction,
+            after: exciseBefore - exciseDeduction
+          },
+          {
+            walletType: 'education_cess',
+            label: 'Education Cess Wallet',
+            before: educationBefore,
+            deduction: educationDeduction,
+            after: educationBefore - educationDeduction
+          }
+        ];
+
+        const insuff = this.walletPreviews.find(w => w.after < 0);
+        this.paymentPreviewError = insuff
+          ? `Insufficient ${insuff.label}. Add wallet balance before proceeding.`
+          : '';
+        this.validationErrors = this.paymentPreviewError ? [this.paymentPreviewError] : [];
+
+        this.stopPaymentPreviewLoading();
+        this.openPaymentModalAfterDeclarationClose();
+      },
+      error: (err) => {
+        this.stopPaymentPreviewLoading();
+        this.paymentPreviewError = 'Unable to fetch wallet balances for deduction preview.';
+        this.validationErrors = [this.paymentPreviewError];
+      }
+    });
+  }
+
+  private openPaymentModalAfterDeclarationClose(): void {
+    // Close declaration popup and show a simple, non-animated custom popup.
+    const closeBtn = document.getElementById('closeModalBtn');
+    if (closeBtn) {
+      closeBtn.click();
+    }
+    this.paymentDeductionPopupVisible = true;
+  }
+
+  private buildStockDeductionPreview(): void {
+    const grouped = new Map<string, StockDeductionPreview>();
+    const catalog = Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : [];
+
+    for (const product of this.products) {
+      const sizeMl = Number(product.size || 0);
+      if (!product.brand || !sizeMl) continue;
+
+      const conversion = this.brandMlConversionData.find((x: any) => Number(x.ml) === sizeMl);
+      const piecesPerCase = Number(conversion?.pieces_in_case ?? conversion?.piecesInCase ?? 0);
+      const requiredPieces = piecesPerCase > 0 ? Number(product.cases || 0) * piecesPerCase : 0;
+
+      const matchedEntry = catalog.find((entry: any) => {
+        const entryBrand = this.getWarehouseBrandName(entry).toLowerCase().trim();
+        const productBrand = String(product.brand).toLowerCase().trim();
+        const brandMatch = entryBrand === productBrand || entryBrand.includes(productBrand) || productBrand.includes(entryBrand);
+        return brandMatch && this.getWarehouseCapacitySize(entry) === sizeMl;
+      });
+
+      const currentPieces = matchedEntry ? this.getWarehouseCurrentStock(matchedEntry) : 0;
+      const key = `${String(product.brand).toLowerCase().trim()}::${sizeMl}`;
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          brand: product.brand,
+          size: sizeMl,
+          currentPieces,
+          deductionPieces: requiredPieces,
+          remainingPieces: currentPieces - requiredPieces
+        });
+      } else {
+        const row = grouped.get(key)!;
+        row.deductionPieces += requiredPieces;
+        row.remainingPieces = row.currentPieces - row.deductionPieces;
+      }
+    }
+
+    this.stockPreviews = Array.from(grouped.values()).sort((a, b) => {
+      if (a.brand === b.brand) return a.size - b.size;
+      return a.brand.localeCompare(b.brand);
+    });
+  }
+
+  proceedWithWalletAndStockDeduction(): void {
+    if (!this.paymentConfirmAgreed) return;
+    if (this.paymentPreviewError) return;
+    if (this.walletPreviews.some(w => w.after < 0)) return;
+    if (this.stockPreviews.some(s => s.remainingPieces < 0)) return;
+    this.paymentDeductionPopupVisible = false;
+    this.submitApplication();
+  }
+
+  closePaymentDeductionPopup(): void {
+    this.paymentDeductionPopupVisible = false;
+  }
+
+  canProceedWithDeduction(): boolean {
+    if (!this.paymentConfirmAgreed) return false;
+    if (!!this.paymentPreviewError) return false;
+    if (this.walletPreviews.some(w => w.after < 0)) return false;
+    if (this.stockPreviews.some(s => s.remainingPieces < 0)) return false;
+    return true;
   }
 
   private generateNextBillNumber(): void {

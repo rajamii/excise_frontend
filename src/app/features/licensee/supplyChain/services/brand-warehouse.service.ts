@@ -72,6 +72,18 @@ export class BrandWarehouseService {
 
     constructor(private http: HttpClient) { }
 
+    private normalizeValidLicenseId(value?: string): string {
+        const normalized = String(value || '').trim();
+        if (
+            normalized.startsWith('NA/') ||
+            normalized.startsWith('NLI/') ||
+            normalized.startsWith('LA/')
+        ) {
+            return normalized;
+        }
+        return '';
+    }
+
     /**
      * Get brands grouped by brand name with all pack sizes
      */
@@ -85,7 +97,8 @@ export class BrandWarehouseService {
         let params = new HttpParams();
 
         if (filters) {
-            if (filters.license_id) params = params.set('license_id', filters.license_id);
+            const normalizedLicenseId = this.normalizeValidLicenseId(filters.license_id);
+            if (normalizedLicenseId) params = params.set('license_id', normalizedLicenseId);
             if (filters.distillery_name) params = params.set('distillery_name', filters.distillery_name);
             if (filters.brand_type) params = params.set('brand_type', filters.brand_type);
             if (filters.status) params = params.set('status', filters.status);
@@ -201,7 +214,8 @@ export class BrandWarehouseService {
         let params = new HttpParams();
 
         if (filters) {
-            if (filters.license_id) params = params.set('license_id', filters.license_id);
+            const normalizedLicenseId = this.normalizeValidLicenseId(filters.license_id);
+            if (normalizedLicenseId) params = params.set('license_id', normalizedLicenseId);
             if (filters.distillery_name) params = params.set('distillery_name', filters.distillery_name);
             if (filters.brand_type) params = params.set('brand_type', filters.brand_type);
             if (filters.status) params = params.set('status', filters.status);

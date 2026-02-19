@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface Transaction {
   id: string;
@@ -38,63 +40,36 @@ export class PaymentReceiptComponent implements OnInit {
   paymentDateTime = new Date();
   selectedTransactionId = '';
   transactionMessage = '';
+  billNo = '';
+  activeLicenseeId = '';
 
-  // Sample transactions data
-  transactions: Transaction[] = [
-    {
-      id: '1',
-      transactionId: 'BILLDESK000000000000000000584',
-      amount: 1.00,
-      payerId: '01/2025/0012',
-      category: 'Import Permit Fee',
-      responseId: 'RES001234567890',
-      paymentDate: new Date('2025-09-03T15:23:26'),
-      paymentMethod: 'Direct Banking',
-      status: 'Success'
-    },
-    {
-      id: '2',
-      transactionId: 'BILLDESK000000000000000000585',
-      amount: 500.00,
-      payerId: '01/2025/0013',
-      category: 'Excise Duty',
-      responseId: 'RES001234567891',
-      paymentDate: new Date('2025-09-03T14:15:30'),
-      paymentMethod: 'Net Banking',
-      status: 'Success'
-    }
-  ];
+  transactions: Transaction[] = [];
 
   // Current receipt data
   receiptData: ReceiptData = {
-    payerId: '01/2025/0012',
-    transactionId: 'BILLDESK000000000000000000584',
-    category: 'Import Permit Fee',
-    transactionAmount: 1.00,
-    responseId: 'RES001234567890',
-    paymentDate: new Date('2025-09-03T15:23:26'),
-    amountPaid: 1.00,
-    paymentMethod: 'Direct Banking'
+    payerId: '-',
+    transactionId: '-',
+    category: 'Transit Permit Payment',
+    transactionAmount: 0,
+    responseId: '-',
+    paymentDate: new Date(),
+    amountPaid: 0,
+    paymentMethod: 'Wallet'
   };
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private paymentIntegrationService: PaymentIntegrationService,
+    private supplyChainProfileService: SupplyChainProfileService
   ) {}
 
   ngOnInit(): void {
     // Check for query parameters
     this.route.queryParams.subscribe(params => {
-      if (params['transactionId']) {
-        this.selectedTransactionId = params['transactionId'];
-        this.loadTransactionData(params['transactionId']);
-      } else {
-        // Load default transaction (first one)
-        if (this.transactions.length > 0) {
-          this.selectedTransactionId = this.transactions[0].id;
-          this.loadTransactionData(this.transactions[0].id);
-        }
-      }
+      this.selectedTransactionId = String(params['transactionId'] || '').trim();
+      this.billNo = String(params['billNo'] || '').trim();
+      this.loadLiveReceiptData();
     });
 
     // Set current date/time
@@ -129,6 +104,103 @@ export class PaymentReceiptComponent implements OnInit {
         this.transactionMessage = 'Your payment has been processed successfully. Please keep this receipt for your records.';
       }
     }
+  }
+
+  private loadLiveReceiptData(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (profileRes: any) => {
+        const profile = profileRes?.data || {};
+        this.activeLicenseeId = String(profile.licensee_id || profile.licenseeId || '').trim();
+        if (!this.activeLicenseeId) {
+          this.paymentStatus = 'Status: Payment Data Unavailable';
+          this.transactionMessage = 'Active license/profile not found. Unable to fetch wallet transaction receipt.';
+          return;
+        }
+        this.fetchWalletHistoryAndBuildReceipt();
+      },
+      error: () => {
+        this.paymentStatus = 'Status: Payment Data Unavailable';
+        this.transactionMessage = 'Unable to load profile. Please login again and retry.';
+      }
+    });
+  }
+
+  private fetchWalletHistoryAndBuildReceipt(): void {
+    this.paymentIntegrationService.getWalletHistory(this.activeLicenseeId, 500).subscribe({
+      next: (res: any) => {
+        const rows = Array.isArray(res?.results) ? res.results : [];
+        const transitRows = rows.filter((row: any) =>
+          String(row.source_module || row.sourceModule || '').toLowerCase() === 'transit_permit'
+        );
+
+        if (this.billNo) {
+          const billRows = transitRows.filter((row: any) =>
+            String(row.reference_no || row.referenceNo || '').trim() === this.billNo
+          );
+
+          if (billRows.length > 0) {
+            const totalPaid = billRows.reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
+            const latest = billRows.sort((a: any, b: any) => {
+              const aTime = new Date(a.created_at || a.createdAt || 0).getTime();
+              const bTime = new Date(b.created_at || b.createdAt || 0).getTime();
+              return bTime - aTime;
+            })[0];
+
+            this.receiptData = {
+              payerId: this.activeLicenseeId,
+              transactionId: `TP-${this.billNo}`,
+              category: 'Transit Permit Wallet Deduction',
+              transactionAmount: totalPaid,
+              responseId: String(latest.transaction_id || latest.transactionId || latest.wallet_transaction_id || '-'),
+              paymentDate: new Date(latest.created_at || latest.createdAt || new Date()),
+              amountPaid: totalPaid,
+              paymentMethod: 'Wallet'
+            };
+
+            this.transactions = billRows.map((row: any, idx: number) => ({
+              id: String(row.wallet_transaction_id || row.walletTransactionId || `${idx + 1}`),
+              transactionId: String(row.transaction_id || row.transactionId || `TP-${this.billNo}`),
+              amount: Number(row.amount || 0),
+              payerId: this.activeLicenseeId,
+              category: String(row.wallet_type || row.walletType || 'wallet').toUpperCase(),
+              responseId: String(row.reference_no || row.referenceNo || this.billNo),
+              paymentDate: new Date(row.created_at || row.createdAt || new Date()),
+              paymentMethod: 'Wallet',
+              status: 'Success'
+            }));
+
+            this.paymentStatus = 'Status: Payment Successful';
+            this.transactionMessage = `Payment completed for transit permit ${this.billNo}. Application forwarded to Officer In-Charge for approval.`;
+            return;
+          }
+        }
+
+        this.transactions = transitRows.map((row: any, idx: number) => ({
+          id: String(row.wallet_transaction_id || row.walletTransactionId || `${idx + 1}`),
+          transactionId: String(row.transaction_id || row.transactionId || `TP-${idx + 1}`),
+          amount: Number(row.amount || 0),
+          payerId: String(row.licensee_id || row.licenseeId || this.activeLicenseeId),
+          category: String(row.wallet_type || row.walletType || 'wallet').toUpperCase(),
+          responseId: String(row.reference_no || row.referenceNo || '-'),
+          paymentDate: new Date(row.created_at || row.createdAt || new Date()),
+          paymentMethod: 'Wallet',
+          status: 'Success'
+        }));
+
+        if (this.transactions.length > 0) {
+          const selected = this.selectedTransactionId || this.transactions[0].id;
+          this.selectedTransactionId = selected;
+          this.loadTransactionData(selected);
+        } else {
+          this.paymentStatus = 'Status: Payment Data Unavailable';
+          this.transactionMessage = 'No transit wallet payment transaction found for this profile.';
+        }
+      },
+      error: () => {
+        this.paymentStatus = 'Status: Payment Data Unavailable';
+        this.transactionMessage = 'Unable to load wallet history for receipt.';
+      }
+    });
   }
 
   printReceipt(): void {
@@ -172,6 +244,8 @@ export class PaymentReceiptComponent implements OnInit {
 
   backToHome(): void {
     // Navigate back to payment confirmation page
-    this.router.navigate(['/dev-payment-confirmation']);
+    this.router.navigate(['/dashboard'], {
+      queryParams: { section: 'transit' }
+    });
   }
 }

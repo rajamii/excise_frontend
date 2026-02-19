@@ -109,8 +109,12 @@ export class TransitComponent implements OnInit {
    * No mapping - just like requisition/revalidation components
    */
   private mapBackendStatusToDisplayStatus(backendStatus: string): string {
-    // Return backend status directly, just like requisition component
-    return backendStatus || 'Pending';
+    const value = String(backendStatus || '').trim();
+    if (!value) return 'Pending';
+    if (value === 'PaymentSuccessfulandForwardedToOfficerincharge') {
+      return 'Payment Successful - Forwarded to OIC';
+    }
+    return value;
   }
 
   loadTransitData(): void {
@@ -298,7 +302,7 @@ export class TransitComponent implements OnInit {
     // Since we removed priority, we can base urgency on status or other criteria
     // For now, let's count items that need immediate attention (PENDING status)
     return this.filteredTransitData.filter(item =>
-      item.status === 'PENDING' || item.status === 'Ready for Payment'
+      item.status === 'PENDING'
     ).length;
   }
 

@@ -144,7 +144,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   transitExciseDuty = 0;
   transitAdditionalExcise = 0;
   transitItemCount = 0;
-  transitBillStatus = 'Ready for Payment';
+  transitBillStatus = '';
   transitId: string = '';
   transitPaymentAgreed = false; // Added for modal agreement
 
@@ -179,20 +179,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
   ];
 
-  transitData: TransitItem[] = [
-    {
-      id: '4',
-      billNumber: 'BILL001',
-      serialNo: 'SER001',
-      quantity: 100,
-      portions: 10,
-      nips: 'NIPS001',
-      licenseeId: 'LIC001',
-      status: 'Ready for Payment',
-      paymentDate: null,
-      totalAmount: 1500.00
-    }
-  ];
+  transitData: TransitItem[] = [];
 
   rechargeData: RechargeItem[] = [];
 
@@ -1031,7 +1018,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   loadTransitData(): void {
-    this.showTransitPayment = true;
+    this.showTransitPayment = false;
 
     // Fetch from backend to get the ID and current status
     this.supplyChainService.getTransitPermits(this.transitBillNo).subscribe({
@@ -1064,16 +1051,19 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
           this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
           this.transitItemCount = 1;
+          this.showTransitPayment = String(found.status || '').trim() === 'Ready for Payment';
         } else {
           console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
           alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
 
-          // Fallback to sample/params if not found (e.g. before backend sync) or handle error
-          this.transitTotalAmount = 1500.00; // Default dummy
+          this.transitData = [];
+          this.transitTotalAmount = 0;
         }
       },
       error: (err) => {
         console.error('Error fetching transit permits:', err);
+        this.transitData = [];
+        this.showTransitPayment = false;
         alert('Failed to load transit permit details. Please try again.');
       }
     });

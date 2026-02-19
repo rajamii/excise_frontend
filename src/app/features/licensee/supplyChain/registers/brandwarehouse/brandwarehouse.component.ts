@@ -91,6 +91,7 @@ export class BrandwarehouseComponent implements OnInit {
   // Current distillery context resolved from active user profile.
   private currentDistilleryName = '';
   private currentLicenseId = '';
+  private resolvedLicenseId = '';
   private currentLicenseType = '';
   private readonly EXCLUDED_BREWERIES: string[] = []; // Show all Sikkim brands including breweries
 
@@ -181,6 +182,7 @@ export class BrandwarehouseComponent implements OnInit {
           profileData?.licensee_id ||
           ''
         ).trim();
+        this.resolvedLicenseId = this.toValidLicenseId(this.currentLicenseId);
         this.currentLicenseType = String(
           profileData?.licenseType ||
           profileData?.license_type ||
@@ -197,11 +199,20 @@ export class BrandwarehouseComponent implements OnInit {
       error: () => {
         this.currentDistilleryName = '';
         this.currentLicenseId = '';
+        this.resolvedLicenseId = '';
         this.currentLicenseType = '';
         this.initializeSikkimBrands();
         this.loadWarehouseData();
       }
     });
+  }
+
+  private toValidLicenseId(value: string): string {
+    const normalized = String(value || '').trim();
+    if (normalized.startsWith('NA/') || normalized.startsWith('NLI/') || normalized.startsWith('LA/')) {
+      return normalized;
+    }
+    return '';
   }
 
   /**
@@ -278,8 +289,10 @@ export class BrandwarehouseComponent implements OnInit {
   private buildApiFilters(): any {
     const filters: any = {};
 
-    if (this.currentLicenseId) {
-      filters.license_id = this.currentLicenseId;
+    // Only pass explicit license_id when it is a real issued/app license format.
+    // Otherwise rely on backend user-scope resolution (OIC assignment/profile mapping).
+    if (this.resolvedLicenseId) {
+      filters.license_id = this.resolvedLicenseId;
     }
 
     if (this.filters.brandName) {

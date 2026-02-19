@@ -131,9 +131,7 @@ export class LoginComponent extends BaseComponent {
                   <span class="inactive-alien-antenna"></span>
                   <span class="inactive-alien-tear"></span>
                 </div>
-                <p class="inactive-logout-message">
-                  Your session ended due to inactivity.<br/>Come back, Commander.
-                </p>
+               
               </div>
             `,
             confirmButtonText: 'OK',
