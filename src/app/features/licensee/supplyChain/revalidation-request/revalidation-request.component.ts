@@ -121,9 +121,9 @@ export class RevalidationRequestComponent implements OnInit {
         // Success
         this.showMessage('Revalidation request submitted successfully!', 'success');
 
-        // Navigate back to the list after a short delay
+        // Navigate back to the dashboard revalidation section after a short delay
         setTimeout(() => {
-          this.router.navigate(['/licensee/supply-chain'], { queryParams: { tab: 'revalidation' } });
+          this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });
         }, 1500);
       },
       error: (error) => {
