@@ -210,7 +210,7 @@
                 [item]="item"
                 [itemType]="'requisition'"
                 [context]="getUserContext()"
-                [includeActions]="['VIEW','PAY']"
+                [includeActions]="['VIEW']"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
             </td>
@@ -310,3 +310,4 @@
   </div>
 </div>
 <div class="modal-backdrop fade show" *ngIf="isCancellationModalOpen"></div>
+

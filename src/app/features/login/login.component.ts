@@ -131,7 +131,9 @@ export class LoginComponent extends BaseComponent {
                   <span class="inactive-alien-antenna"></span>
                   <span class="inactive-alien-tear"></span>
                 </div>
-               
+                <p class="inactive-logout-message">
+                  Your session timed out due to inactivity. Please log in again.
+                </p>
               </div>
             `,
             confirmButtonText: 'OK',

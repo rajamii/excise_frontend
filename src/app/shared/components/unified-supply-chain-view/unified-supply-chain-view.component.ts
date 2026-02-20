@@ -295,7 +295,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     currentStageName: ['currentStageName', 'current_stage_name'],
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
                     distilleryName: ['liftedFromDistilleryName', 'lifted_from_distillery_name', 'distillery_name', 'distilleryName'],
-                    brAmount: ['totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number', 'br_amount', 'brAmount'],
+                    brAmount: ['paymentAmount', 'payment_amount', 'br_amount', 'brAmount', 'totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number'],
                     quantity: ['totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number', 'quantity'],
                     numberOfPermits: ['requisitonNumberOfPermits', 'requisition_number_of_permits', 'number_of_permits', 'numberOfPermits'],
                     purpose: ['purposeName', 'purpose_name', 'branchPurpose', 'branch_purpose', 'purpose'],

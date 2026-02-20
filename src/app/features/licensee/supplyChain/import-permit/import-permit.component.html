@@ -57,6 +57,18 @@
 
               <div class="row mb-4">
                 <div class="col-md-6">
+                  <label class="form-label">Price / BL:</label>
+                  <input type="text" class="form-control" [value]="selectedPricePerBl | number:'1.2-2'" readonly />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Payable Amount:</label>
+                  <input type="text" class="form-control fw-bold text-success"
+                    [value]="calculatedPayableAmount | number:'1.2-2'" readonly />
+                </div>
+              </div>
+
+              <div class="row mb-4">
+                <div class="col-md-6">
                   <label class="form-label">Bulk Spirit Type:</label>
                   <div class="position-relative">
                     <select #spiritTypeSelect class="form-select" [(ngModel)]="formData.bulkSpiritType"

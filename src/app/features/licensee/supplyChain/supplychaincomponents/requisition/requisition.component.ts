@@ -158,7 +158,7 @@ export class RequisitionComponent implements OnInit {
             submissionDate: formattedDate,
             distilleryName: item.liftedFromDistilleryName || item.lifted_from_distillery_name || item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
             status: item.status || 'PENDING',
-            amount: item.amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
+            amount: item.amount || item.paymentAmount || item.payment_amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
             currentStageName:

@@ -97,6 +97,8 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   errorMessage = '';
   refNoError = '';
   calculatedTotal = 0;
+  calculatedPayableAmount = 0;
+  selectedPricePerBl = 0;
   bulkSpiritKindType = '';
   selectedDistilleryState = '';
   currentYear = new Date().getFullYear();
@@ -423,6 +425,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   calculateTotal(): void {
     this.calculatedTotal =
       (this.formData.quantity || 0) * (this.formData.numberOfPermits || 0);
+    this.calculatedPayableAmount = this.calculatedTotal * this.selectedPricePerBl;
   }
 
   /**
@@ -432,6 +435,8 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     if (!this.formData.bulkSpiritType) {
       this.formData.strengthTo = '';
       this.bulkSpiritKindType = '';
+      this.selectedPricePerBl = 0;
+      this.calculateTotal();
       return;
     }
 
@@ -447,9 +452,15 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
       this.formData.strengthTo = selectedType.strength || '';
       this.bulkSpiritKindType =
         selectedType.bulkSpiritKindType || '';
+      const rawPrice = (selectedType as any).priceBl ?? (selectedType as any).price_bl ?? 0;
+      const parsedPrice = Number(rawPrice);
+      this.selectedPricePerBl = Number.isFinite(parsedPrice) ? parsedPrice : 0;
+      this.calculateTotal();
     } else {
       this.formData.strengthTo = '';
       this.bulkSpiritKindType = '';
+      this.selectedPricePerBl = 0;
+      this.calculateTotal();
     }
   }
 
