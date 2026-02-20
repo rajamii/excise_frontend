@@ -41,7 +41,7 @@ export interface ActionButtonConfig {
     MatTooltipModule
   ],
   template: `
-    <div class="action-buttons-container">
+    <div class="action-buttons-container" [class.table-mode]="displayMode === 'table'">
       <!-- DETAILED VIEW MODE: Primary Action Buttons for all users -->
       <ng-container *ngIf="displayMode === 'detailed'">
         <ng-container *ngFor="let button of getPrimaryActionButtons()">
@@ -59,20 +59,12 @@ export interface ActionButtonConfig {
 
       <!-- TABLE MODE: All buttons as icons OR DETAILED MODE: Secondary Action Buttons -->
       <ng-container *ngFor="let button of getDisplayButtons()">
-        <a
-          *ngIf="button.action === 'VIEW'"
-          class="action-icon-link"
-          [ngClass]="'action-color-' + button.color"
-          [attr.href]="getViewHref()"
-          [attr.title]="button.tooltip">
-          <mat-icon>{{ button.icon }}</mat-icon>
-        </a>
-        <button 
-          *ngIf="button.action !== 'VIEW'"
-          mat-icon-button 
+        <button
+          mat-icon-button
           type="button"
           [color]="button.color"
-          [matTooltip]="button.tooltip"
+          [matTooltip]="button.tooltip || getButtonTooltip(button)"
+          [attr.title]="button.tooltip || getButtonTooltip(button)"
           (click)="onActionClick(button)">
           <mat-icon>{{ button.icon }}</mat-icon>
         </button>
@@ -87,6 +79,11 @@ export interface ActionButtonConfig {
       align-items: center;
       justify-content: center;
       flex-wrap: wrap;
+    }
+
+    .action-buttons-container.table-mode {
+      gap: 6px;
+      flex-wrap: nowrap;
     }
 
     .action-btn {
@@ -129,6 +126,24 @@ export interface ActionButtonConfig {
         width: 20px;
         height: 20px;
       }
+    }
+
+    .action-buttons-container.table-mode .action-icon-link {
+      width: 32px;
+      height: 32px;
+    }
+
+    .action-buttons-container.table-mode button[mat-icon-button] {
+      min-width: 32px;
+      width: 32px;
+      height: 32px;
+    }
+
+    .action-buttons-container.table-mode mat-icon {
+      font-size: 18px !important;
+      width: 18px !important;
+      height: 18px !important;
+      line-height: 18px;
     }
 
     .action-color-primary { color: #1976d2; }
@@ -288,9 +303,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
    * MAIN ACTION HANDLER - All button logic centralized here
    */
   onActionClick(button: ActionButtonConfig): void {
-    const normalizedAction = (button?.action || '').toString().trim().toUpperCase();
+    const normalizedAction = this.normalizeActionName(button?.action);
     const normalizedButton: ActionButtonConfig = { ...button, action: normalizedAction };
-    console.log('🔧 UNIFIED BUTTONS: Action clicked:', normalizedButton.action);
 
     // Handle confirmation if required
     if (normalizedButton.requiresConfirmation) {
@@ -346,6 +360,9 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
       case 'VIEW':
         this.handleViewAction();
+        break;
+      case 'VIEW_SLIP':
+        this.handleViewSlipAction();
         break;
 
       default:
@@ -450,6 +467,46 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     });
   }
 
+  private handleViewSlipAction(): void {
+    const targetUrl = this.getSlipHref();
+    if (typeof window !== 'undefined') {
+      window.location.assign(targetUrl);
+      return;
+    }
+    this.unifiedActionsService.executeAction('VIEW_SLIP', this.item, this.itemType, this.context).subscribe({
+      next: () => {},
+      error: (error: any) => {
+        console.error('VIEW_SLIP action failed:', error);
+      }
+    });
+  }
+
+  public getSlipHref(): string {
+    const id = this.item?.id ?? this.item?.['pk'] ?? '';
+    const ref =
+      this.item?.referenceNo ??
+      this.item?.['refNo'] ??
+      this.item?.['ourRefNo'] ??
+      this.item?.['our_ref_no'] ??
+      this.item?.['billNo'] ??
+      this.item?.['bill_no'] ??
+      '';
+
+    const params = new URLSearchParams();
+    if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
+    if (this.itemType) params.set('type', String(this.itemType));
+    params.set('section', String(this.itemType || 'transit'));
+    if (ref) {
+      params.set('refNo', String(ref));
+      params.set('ref', String(ref));
+      params.set('referenceNo', String(ref));
+      if (this.itemType === 'transit') params.set('billNo', String(ref));
+    }
+    params.set('source', this.context || 'dashboard');
+    const query = params.toString();
+    return query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+  }
+
   public getViewHref(): string {
     const ref =
       this.item?.referenceNo ??
@@ -506,7 +563,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   private normalizeActionList(list: string[] | null | undefined): string[] {
     if (!Array.isArray(list)) return [];
     return list
-      .map(action => String(action).toUpperCase().trim())
+      .map(action => this.normalizeActionName(action))
       .filter(action => !!action);
   }
 
@@ -524,6 +581,16 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         icon: 'visibility',
         color: 'primary',
         tooltip: 'View Details'
+      });
+    }
+
+    if (include.includes('VIEW_SLIP') && !result.some(config => config.action === 'VIEW_SLIP')) {
+      result.push({
+        action: 'VIEW_SLIP',
+        label: 'View Slip',
+        icon: 'receipt',
+        color: 'primary',
+        tooltip: 'View Payment Slip'
       });
     }
 
@@ -551,15 +618,21 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
   private normalizeActionConfig(config: any): ActionButtonConfig {
     const rawAction = config?.action ?? config?.Action ?? config?.action_name ?? config?.actionName;
-    const action = rawAction ? String(rawAction).toUpperCase().trim() : '';
-    const label = config?.label ?? config?.Label ?? this.toTitleCase(action);
-    const icon = config?.icon ?? config?.Icon ?? 'arrow_forward';
+    const action = this.normalizeActionName(rawAction);
+    let label = config?.label ?? config?.Label ?? this.toTitleCase(action);
+    let icon = config?.icon ?? config?.Icon ?? 'arrow_forward';
     const color = config?.color ?? config?.Color ?? 'primary';
-    const tooltip = config?.tooltip ?? config?.Tooltip ?? (label ? `${label} Application` : 'Perform Action');
+    let tooltip = config?.tooltip ?? config?.Tooltip ?? (label ? `${label} Application` : 'Perform Action');
     const requiresConfirmation = config?.requiresConfirmation ?? config?.requires_confirmation ?? false;
     const confirmationMessage = config?.confirmationMessage ?? config?.confirmation_message;
     const transitionId = config?.transitionId ?? config?.transition_id;
     const toStageId = config?.toStageId ?? config?.to_stage_id ?? config?.targetStage ?? config?.target_stage;
+
+    if (this.isSlipAction(action)) {
+      label = 'View Slip';
+      icon = 'receipt';
+      tooltip = 'View Payment Slip';
+    }
 
     return {
       action,
@@ -580,5 +653,56 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       .replace(/_/g, ' ')
       .toLowerCase()
       .replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  private normalizeActionName(action: any): string {
+    const normalized = String(action || '').toUpperCase().trim().replace(/[\s-]+/g, '_');
+    if (!normalized) return '';
+    switch (normalized) {
+      case 'VIEWSLIP':
+      case 'VIEWPAYMENTSLIP':
+      case 'VIEW_PAYMENTSLIP':
+      case 'VIEW_PAY_SLIP':
+      case 'PAYMENTSLIP':
+      case 'PAY_SLIP':
+      case 'SLIP_VIEW':
+      case 'SUBMITPAYSLIP':
+      case 'APPROVEPAYSLIP':
+      case 'REJECTPAYSLIP':
+        return 'VIEW_SLIP';
+      case 'VIEWAPPLICATION':
+      case 'VIEW_DETAILS':
+      case 'VIEWDETAILS':
+        return 'VIEW';
+      default:
+        return normalized;
+    }
+  }
+
+  onActionButtonClick(button: ActionButtonConfig, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    this.onActionClick(button);
+  }
+
+  private isSlipAction(action: any): boolean {
+    const token = String(action || '').toUpperCase().trim().replace(/[\s-]+/g, '_');
+    if (!token) return false;
+    return token.includes('PAYSLIP') || token.includes('PAY_SLIP') || token === 'VIEW_SLIP' || token === 'VIEWSLIP';
+  }
+
+  isSlipButton(button: ActionButtonConfig | null | undefined): boolean {
+    if (!button) return false;
+    if (this.isSlipAction(button.action)) return true;
+    const icon = String(button.icon || '').toLowerCase();
+    return icon.includes('receipt');
+  }
+
+  getButtonTooltip(button: ActionButtonConfig | null | undefined): string {
+    if (!button) return '';
+    if (button.tooltip) return button.tooltip;
+    if (this.isSlipAction(button.action)) return 'View Payment Slip';
+    if (button.label) return button.label;
+    return this.toTitleCase(this.normalizeActionName(button.action));
   }
 }
