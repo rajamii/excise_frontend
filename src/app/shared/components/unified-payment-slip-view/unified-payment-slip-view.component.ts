@@ -1,0 +1,428 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, forkJoin, of } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
+
+interface TransitPermitRow {
+  id: number;
+  bill_no: string;
+  date: string;
+  sole_distributor_name: string;
+  depot_address: string;
+  vehicle_number: string;
+  licensee_id: string;
+  status: string;
+  status_code: string;
+  brand: string;
+  size_ml: number;
+  cases: number;
+  bottles_per_case: number;
+  bottle_type: string;
+  total_excise_duty: number;
+  total_education_cess: number;
+  total_additional_excise: number;
+  total_amount: number;
+}
+
+interface TpCancellationRow {
+  id: number;
+  reference_no: string;
+  cancellation_date: string;
+  cancelled_by: string;
+  quantity_cases: number;
+  quantity_bottles: number;
+  amount_refunded: number;
+  reason: string;
+  permit_date: string;
+  destination: string;
+  vehicle_no: string;
+  depot_address: string;
+  brand_name: string;
+}
+
+interface RequisitionSlipRow {
+  id: number;
+  reference_no: string;
+  submission_date: string;
+  distillery_name: string;
+  status: string;
+  quantity_bl: number;
+  number_of_permits: number;
+  purpose: string;
+  amount: number;
+}
+
+@Component({
+  selector: 'app-unified-payment-slip-view',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './unified-payment-slip-view.component.html',
+  styleUrl: './unified-payment-slip-view.component.scss'
+})
+export class UnifiedPaymentSlipViewComponent implements OnInit {
+  isLoading = true;
+  errorMessage = '';
+  pageTitle = 'Unified Payment Slip';
+
+  moduleType = '';
+  applicationId = '';
+  referenceNo = '';
+  source = '';
+  backSection = '';
+  transitRows: TransitPermitRow[] = [];
+  cancellationRows: TpCancellationRow[] = [];
+  requisitionRow: RequisitionSlipRow | null = null;
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private supplyChainService: SupplyChainService,
+    private http: HttpClient
+  ) {}
+
+  ngOnInit(): void {
+    const q = this.route.snapshot.queryParams || {};
+
+    console.log('🔍 PAYMENT SLIP VIEW: Query params received:', q);
+
+    this.moduleType = String(q['type'] || q['module'] || 'transit').trim().toLowerCase();
+    this.applicationId = String(q['id'] || '').trim();
+    this.referenceNo = String(q['billNo'] || q['referenceNo'] || q['refNo'] || q['ref'] || '').trim();
+    this.source = String(q['source'] || '').trim();
+    this.backSection = String(q['section'] || q['fromSection'] || '').trim().toLowerCase();
+    this.pageTitle = this.moduleType === 'transit' ? 'Transit Payment Slip' : `${this.toTitle(this.moduleType)} Payment Slip`;
+
+    console.log('🔍 PAYMENT SLIP VIEW: Parsed params:', {
+      moduleType: this.moduleType,
+      applicationId: this.applicationId,
+      referenceNo: this.referenceNo,
+      source: this.source
+    });
+
+    if (!this.referenceNo && !this.applicationId) {
+      console.error('❌ PAYMENT SLIP VIEW: Missing reference number and application ID');
+      this.errorMessage = 'Reference number or application ID is required to view payment slip.';
+      this.isLoading = false;
+      return;
+    }
+
+    if (this.moduleType === 'requisition') {
+      console.log('🔍 PAYMENT SLIP VIEW: Loading requisition slip...');
+      this.loadRequisitionSlip();
+      return;
+    }
+
+    console.log('🔍 PAYMENT SLIP VIEW: Loading transit/cancellation data...');
+
+    const cancellationUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/tp-cancellations/`;
+
+    forkJoin({
+      transit: this.supplyChainService.getTransitPermits(this.referenceNo).pipe(catchError(() => of([]))),
+      cancellations: this.http.get<any>(cancellationUrl, {
+        params: { reference_no: this.referenceNo }
+      }).pipe(catchError(() => of({ results: [] })))
+    }).subscribe({
+      next: ({ transit, cancellations }) => {
+        const transitRows = Array.isArray(transit) ? transit : [];
+        this.transitRows = transitRows.map((row: any) => ({
+          id: Number(row.id || 0),
+          bill_no: String(row.bill_no || row.billNo || ''),
+          date: String(row.date || ''),
+          sole_distributor_name: String(row.sole_distributor_name || row.soleDistributorName || ''),
+          depot_address: String(row.depot_address || row.depotAddress || ''),
+          vehicle_number: String(row.vehicle_number || row.vehicleNumber || ''),
+          licensee_id: String(row.licensee_id || row.licenseeId || ''),
+          status: String(row.status || ''),
+          status_code: String(row.status_code || row.statusCode || ''),
+          brand: String(row.brand || ''),
+          size_ml: Number(row.size_ml || row.sizeMl || 0),
+          cases: Number(row.cases || 0),
+          bottles_per_case: Number(row.bottles_per_case || row.bottlesPerCase || 0),
+          bottle_type: String(row.bottle_type || row.bottleType || ''),
+          total_excise_duty: Number(row.total_excise_duty || row.totalExciseDuty || 0),
+          total_education_cess: Number(row.total_education_cess || row.totalEducationCess || 0),
+          total_additional_excise: Number(row.total_additional_excise || row.totalAdditionalExcise || 0),
+          total_amount: Number(row.total_amount || row.totalAmount || 0),
+        }));
+
+        const cancellationList = Array.isArray(cancellations?.results) ? cancellations.results : [];
+        const fallbackTransitAmounts = this.transitRows.map((row) => Number(row.total_amount || 0));
+        let transitFallbackIndex = 0;
+
+        this.cancellationRows = cancellationList.map((row: any) => ({
+          id: Number(row.id || 0),
+          reference_no: String(row.reference_no || row.permit_no || this.referenceNo || ''),
+          cancellation_date: String(row.cancellation_date || row.created_at || ''),
+          cancelled_by: String(row.cancelled_by || row.cancelledBy || 'Officer In-Charge'),
+          quantity_cases: Number(
+            row.quantity_cases ||
+            row.quantityCases ||
+            this.findMatchedTransitRow(String(row.brand_name || row.brandName || ''), Number(row.quantity_cases || row.quantityCases || 0))?.cases ||
+            0
+          ),
+          quantity_bottles: Number(
+            row.quantity_bottles ||
+            row.quantityBottles ||
+            row.bottles_reversed ||
+            row.bottlesReversed ||
+            0
+          ),
+          amount_refunded: this.resolveRowRefundAmount(
+            row,
+            fallbackTransitAmounts,
+            () => transitFallbackIndex++
+          ),
+          reason: String(row.reason || row.remarks || ''),
+          permit_date: String(row.permit_date || row.permitDate || ''),
+          destination: String(row.destination || ''),
+          vehicle_no: String(row.vehicle_no || row.vehicleNo || ''),
+          depot_address: String(row.depot_address || row.depotAddress || ''),
+          brand_name: this.resolveBrandName(row),
+        }));
+
+        if (!this.transitRows.length && !this.cancellationRows.length) {
+          this.errorMessage = `No transit/cancellation records found for reference ${this.referenceNo}.`;
+        }
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  goBack(): void {
+    const section = this.resolveBackSection();
+    this.router.navigate(['/dashboard'], {
+      queryParams: { section }
+    });
+  }
+
+  printSlip(): void {
+    window.print();
+  }
+
+  get transitSummary() {
+    if (this.moduleType === 'requisition') {
+      const amount = Number(this.requisitionRow?.amount || 0);
+      return { total: amount, excise: amount, cess: 0, addl: 0 };
+    }
+
+    const total = this.transitRows.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
+    const excise = this.transitRows.reduce((sum, row) => sum + Number(row.total_excise_duty || 0), 0);
+    const cess = this.transitRows.reduce((sum, row) => sum + Number(row.total_education_cess || 0), 0);
+    const addl = this.transitRows.reduce((sum, row) => sum + Number(row.total_additional_excise || 0), 0);
+    return { total, excise, cess, addl };
+  }
+
+  get totalCases(): number {
+    if (this.moduleType === 'requisition') {
+      return Number(this.requisitionRow?.number_of_permits || 0);
+    }
+    return this.transitRows.reduce((sum, row) => sum + Number(row.cases || 0), 0);
+  }
+
+  get currentStatus(): string {
+    if (this.moduleType === 'requisition') {
+      return String(this.requisitionRow?.status || '').trim() || 'N/A';
+    }
+    const status = String(this.transitRows[0]?.status || '').trim();
+    return status || 'N/A';
+  }
+
+  get isRefundCase(): boolean {
+    if (this.moduleType === 'requisition') {
+      return false;
+    }
+    if (this.cancellationRows.length > 0) return true;
+    const status = this.currentStatus.toLowerCase();
+    return status.includes('rejected') || status.includes('cancelled') || status.includes('refund');
+  }
+
+  get refundAmountTotal(): number {
+    if (this.moduleType === 'requisition') {
+      return Number(this.requisitionRow?.amount || 0);
+    }
+    const explicitRefund = this.cancellationRows.reduce((sum, row) => sum + Number(row.amount_refunded || 0), 0);
+    if (explicitRefund > 0) return explicitRefund;
+    return this.isRefundCase ? Number(this.transitSummary.total || 0) : 0;
+  }
+
+  get statusClass(): string {
+    const value = this.currentStatus.toLowerCase();
+    if (value.includes('approved')) return 'approved';
+    if (value.includes('rejected') || value.includes('cancelled') || value.includes('refund')) return 'rejected';
+    if (value.includes('payment') || value.includes('pending')) return 'pending';
+    return 'neutral';
+  }
+
+  private resolveRowRefundAmount(
+    row: any,
+    fallbackTransitAmounts: number[],
+    nextIndex: () => number
+  ): number {
+    const explicitAmount = this.toNumber(
+      row.amount_refunded ??
+      row.amountRefunded ??
+      row.refund_amount ??
+      row.refunded_amount
+    );
+    if (explicitAmount > 0) return explicitAmount;
+
+    const matched = this.findMatchedTransitRow(
+      String(row.brand_name || row.brandName || ''),
+      Number(row.quantity_cases || row.quantityCases || 0)
+    );
+    if (matched && Number(matched.total_amount || 0) > 0) return Number(matched.total_amount || 0);
+
+    const fallback = fallbackTransitAmounts[nextIndex()] || 0;
+    return Number(fallback || 0);
+  }
+
+  private resolveBrandName(row: any): string {
+    const fromRow = String(row.brand_name || row.brandName || '').trim();
+    if (fromRow) return fromRow;
+    const matched = this.findMatchedTransitRow('', Number(row.quantity_cases || row.quantityCases || 0));
+    return String(matched?.brand || '-');
+  }
+
+  private findMatchedTransitRow(brandName: string, cases: number): TransitPermitRow | undefined {
+    const normalizedBrand = this.normalizeText(brandName);
+    const byBrand = normalizedBrand
+      ? this.transitRows.find((row) => this.normalizeText(row.brand).includes(normalizedBrand))
+      : undefined;
+    if (byBrand) return byBrand;
+    if (cases > 0) return this.transitRows.find((row) => Number(row.cases || 0) === cases);
+    return undefined;
+  }
+
+  private normalizeText(value: string): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private toNumber(value: any): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  private toTitle(value: string): string {
+    return String(value || '')
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, (m) => m.toUpperCase());
+  }
+
+  private resolveBackSection(): string {
+    const moduleToSection: Record<string, string> = {
+      requisition: 'requisition',
+      revalidation: 'revalidation',
+      cancellation: 'cancellation',
+      transit: 'transit'
+    };
+
+    if (this.backSection && Object.values(moduleToSection).includes(this.backSection)) {
+      return this.backSection;
+    }
+
+    const moduleSection = moduleToSection[this.moduleType];
+    if (moduleSection) return moduleSection;
+
+    const sourceSection = String(this.source || '').trim().toLowerCase();
+    if (sourceSection && Object.values(moduleToSection).includes(sourceSection)) {
+      return sourceSection;
+    }
+
+    return 'transit';
+  }
+
+  private loadRequisitionSlip(): void {
+    console.log('🔍 REQUISITION SLIP: Starting load with:', {
+      applicationId: this.applicationId,
+      referenceNo: this.referenceNo
+    });
+
+    const detailUrl = this.applicationId
+      ? `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${encodeURIComponent(this.applicationId)}/`
+      : '';
+
+    console.log('🔍 REQUISITION SLIP: Detail URL:', detailUrl);
+
+    const detail$ = detailUrl
+      ? this.http.get<any>(detailUrl).pipe(
+          catchError((error) => {
+            console.error('❌ REQUISITION SLIP: Detail fetch error:', error);
+            return of(null);
+          })
+        )
+      : of(null);
+
+    const listUrl = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/`;
+    const listParams = this.referenceNo ? { our_ref_no: this.referenceNo } : undefined;
+    console.log('🔍 REQUISITION SLIP: List URL:', listUrl, 'Params:', listParams);
+
+    const list$ = this.http.get<{results?: any[]}>(listUrl, {
+      params: listParams
+    }).pipe(
+      catchError((error) => {
+        console.error('❌ REQUISITION SLIP: List fetch error:', error);
+        return of(null);
+      })
+    );
+
+    forkJoin({ detail: detail$, list: list$ }).subscribe({
+      next: ({ detail, list }) => {
+        console.log('🔍 REQUISITION SLIP: API responses:', { detail, list });
+
+        const typedList = list as {results?: any[]} | null;
+        const listItems = Array.isArray(typedList) ? typedList : (Array.isArray(typedList?.results) ? typedList.results : []);
+        console.log('🔍 REQUISITION SLIP: List items:', listItems);
+
+        const byRef = listItems.find((item: any) => {
+          const itemRef = String(item?.ourRefNo || item?.our_ref_no || item?.referenceNo || item?.ref_no || '').trim();
+          console.log('🔍 REQUISITION SLIP: Comparing refs:', itemRef, 'vs', this.referenceNo);
+          return itemRef === this.referenceNo;
+        });
+
+        console.log('🔍 REQUISITION SLIP: Found by ref:', byRef);
+
+        const row = detail || byRef || listItems[0] || null;
+
+        console.log('🔍 REQUISITION SLIP: Selected row:', row);
+
+        if (!row) {
+          this.errorMessage = `No requisition record found for reference ${this.referenceNo || this.applicationId}.`;
+          console.error('❌ REQUISITION SLIP: No data found');
+          this.isLoading = false;
+          return;
+        }
+
+        this.requisitionRow = {
+          id: Number(row.id || 0),
+          reference_no: String(row.ourRefNo || row.our_ref_no || row.referenceNo || row.ref_no || this.referenceNo || ''),
+          submission_date: String(row.submissionDate || row.submission_date || row.date || row.created_at || ''),
+          distillery_name: String(row.liftedFromDistilleryName || row.lifted_from_distillery_name || row.distilleryName || row.distillery_name || '-'),
+          status: String(row.status || '-'),
+          quantity_bl: Number(row.totalbl || row.total_bl || row.quantity || 0),
+          number_of_permits: Number(row.numberOfPermits || row.number_of_permits || 1),
+          purpose: String(row.purpose || '-'),
+          amount: Number(row.amount || row.totalAmount || row.total_amount || row.totalbl || 0)
+        };
+
+        console.log('✅ REQUISITION SLIP: Loaded successfully:', this.requisitionRow);
+
+        if (!this.referenceNo) {
+          this.referenceNo = this.requisitionRow.reference_no;
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('❌ REQUISITION SLIP: Fatal error:', error);
+        this.errorMessage = 'Unable to load requisition payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+}

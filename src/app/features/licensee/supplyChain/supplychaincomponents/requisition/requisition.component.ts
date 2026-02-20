@@ -18,6 +18,9 @@ interface TableData {
   amount: string;
   workflowId?: number;
   currentStage?: number;
+  currentStageName?: string;
+  statusCode?: string;
+  canInitiateCancellation?: boolean;
   commissionerStatus?: string;
   forwardedToCommissioner?: boolean;
   canCancel?: boolean;
@@ -31,6 +34,9 @@ interface TableData {
   viaRoute?: string;
   checkpostEntry?: string;
   purpose?: string;
+  paymentStatus?: string;
+  paymentId?: string;
+  paymentDate?: string;
 }
 
 @Component({
@@ -155,6 +161,15 @@ export class RequisitionComponent implements OnInit {
             amount: item.amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+            currentStageName:
+              item.current_stage_name ||
+              item.currentStageName ||
+              (typeof item.current_stage === 'string' ? item.current_stage : '') ||
+              '',
+            statusCode: item.status_code || item.statusCode || '',
+            canInitiateCancellation: Boolean(
+              item.can_initiate_cancellation ?? item.canInitiateCancellation ?? false
+            ),
             commissionerStatus: item.commissionerStatus || item.commissioner_status,
             forwardedToCommissioner: item.forwardedToCommissioner || item.forwarded_to_commissioner || false,
             canCancel: item.canCancel || item.can_cancel || false,
@@ -168,7 +183,10 @@ export class RequisitionComponent implements OnInit {
             liftedFrom: item.liftedFrom || item.lifted_from,
             viaRoute: item.viaRoute || item.via_route,
             checkpostEntry: item.checkpostEntry || item.checkpost_entry,
-            purpose: item.purpose
+            purpose: item.purpose,
+            paymentStatus: item.paymentStatus || item.payment_status || '',
+            paymentId: item.paymentId || item.payment_id || item.transactionId || item.transaction_id || '',
+            paymentDate: item.paymentDate || item.payment_date || ''
           };
         });
 
@@ -318,6 +336,95 @@ export class RequisitionComponent implements OnInit {
   shouldShowPermitSlip(item: TableData): boolean {
     return item.status.toLowerCase().includes('approved') ||
       item.status.toLowerCase().includes('issued');
+  }
+
+  canShowRequisitionPaymentSlip(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stageName = this.normalizeStageToken(item?.currentStageName);
+    const statusCode = this.normalizeStageToken(item?.statusCode);
+    const paymentStatus = this.normalizeStageToken(item?.paymentStatus);
+    const canCancel = Boolean(item?.canInitiateCancellation || item?.canCancel);
+    const hasPaymentRef = Boolean(item?.paymentId || item?.paymentDate);
+
+    if (canCancel) return true;
+    if (statusCode === 'rq09') return true;
+
+    const postSlipStageMarkers = [
+      'forwardedpayslip',
+      'approvedpayslip',
+      'rejectedpayslip',
+      'approved'
+    ];
+
+    const combined = `${status} ${stageName} ${paymentStatus}`;
+    if (postSlipStageMarkers.some(marker => combined.includes(marker))) return true;
+    if (hasPaymentRef) return true;
+
+    return false;
+  }
+
+  openRequisitionSlip(item: TableData, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const id = item?.id;
+    const refNo = String(item?.referenceNo || '').trim();
+    const queryParams = {
+      id: id || undefined,
+      type: 'requisition',
+      refNo: refNo || undefined,
+      ref: refNo || undefined,
+      referenceNo: refNo || undefined,
+      source: this.getUserContext()
+    };
+
+    console.log('[REQUISITION] Slip click', { id, refNo, queryParams, status: item?.status, stage: item?.currentStageName });
+
+    if (this.isBrowser) {
+      const params = new URLSearchParams();
+      if (queryParams.id) params.set('id', String(queryParams.id));
+      if (queryParams.type) params.set('type', String(queryParams.type));
+      if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+      if (queryParams.ref) params.set('ref', String(queryParams.ref));
+      if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
+      if (queryParams.source) params.set('source', String(queryParams.source));
+      const query = params.toString();
+      const target = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      console.log('[REQUISITION] Direct slip target:', target);
+      window.location.assign(target);
+      return;
+    }
+
+    this.router.navigate(['/payment-slip-view'], { queryParams })
+      .then((ok) => {
+        if (ok) return;
+        if (!this.isBrowser) return;
+        const params = new URLSearchParams();
+        if (queryParams.id) params.set('id', String(queryParams.id));
+        if (queryParams.type) params.set('type', String(queryParams.type));
+        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+        if (queryParams.ref) params.set('ref', String(queryParams.ref));
+        if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
+        if (queryParams.source) params.set('source', String(queryParams.source));
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      })
+      .catch(() => {
+        if (!this.isBrowser) return;
+        const params = new URLSearchParams();
+        if (queryParams.id) params.set('id', String(queryParams.id));
+        if (queryParams.type) params.set('type', String(queryParams.type));
+        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+        if (queryParams.ref) params.set('ref', String(queryParams.ref));
+        if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
+        if (queryParams.source) params.set('source', String(queryParams.source));
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      });
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   viewSlip(item: TableData): void {

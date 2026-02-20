@@ -136,6 +136,13 @@ export const routes: Routes = [
       ).then((m) => m.FinaltransitpermitComponent),
   },
   {
+    path: "payment-slip-view",
+    loadComponent: () =>
+      import(
+        "./shared/components/unified-payment-slip-view/unified-payment-slip-view.component"
+      ).then((m) => m.UnifiedPaymentSlipViewComponent),
+  },
+  {
     path: "dev-payment-receipt",
     loadComponent: () =>
       import(

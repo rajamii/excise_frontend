@@ -238,19 +238,29 @@ export class WorkflowActionService {
         tooltip = 'Approve this application';
         requiresConfirmation = true;
       } else if (stageName.includes('payment')) {
-        action = 'FORWARD';
-        label = 'Forward';
-        icon = 'arrow_forward';
+        action = 'PAY';
+        label = 'Pay';
+        icon = 'payment';
         color = 'primary';
-        tooltip = 'Forward for payment';
+        tooltip = 'Proceed to payment';
         requiresConfirmation = true;
       } else {
-        action = 'APPROVE';
-        label = 'Approve';
-        icon = 'check_circle';
-        color = 'success';
-        tooltip = `Move to ${stage?.name || 'next stage'}`;
-        requiresConfirmation = true;
+        const stageText = String(stage?.name || '').toLowerCase();
+        if (stageText.includes('pay') || stageText.includes('payment')) {
+          action = 'PAY';
+          label = 'Pay';
+          icon = 'payment';
+          color = 'primary';
+          tooltip = 'Proceed to payment';
+          requiresConfirmation = true;
+        } else {
+          action = 'APPROVE';
+          label = 'Approve';
+          icon = 'check_circle';
+          color = 'success';
+          tooltip = `Move to ${stage?.name || 'next stage'}`;
+          requiresConfirmation = true;
+        }
       }
 
       return {
