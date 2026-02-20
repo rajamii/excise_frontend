@@ -50,7 +50,7 @@ interface RequisitionSlipRow {
   distillery_name: string;
   status: string;
   quantity_bl: number;
-  number_of_permits: number;
+  number_of_permits: string | number;
   purpose: string;
   amount: number;
 }
@@ -219,9 +219,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     return { total, excise, cess, addl };
   }
 
-  get totalCases(): number {
+  get totalCases(): number | string {
     if (this.moduleType === 'requisition') {
-      return Number(this.requisitionRow?.number_of_permits || 0);
+      // Return the string value directly (permit numbers sequence)
+      return this.requisitionRow?.number_of_permits || '0';
     }
     return this.transitRows.reduce((sum, row) => sum + Number(row.cases || 0), 0);
   }
@@ -406,8 +407,16 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           distillery_name: String(row.liftedFromDistilleryName || row.lifted_from_distillery_name || row.distilleryName || row.distillery_name || '-'),
           status: String(row.status || '-'),
           quantity_bl: Number(row.totalbl || row.total_bl || row.quantity || 0),
-          number_of_permits: Number(row.numberOfPermits || row.number_of_permits || 1),
-          purpose: String(row.purpose || '-'),
+          number_of_permits: String(
+            row.details_permits_number || 
+            row.detailsPermitsNumber || 
+            row.requisiton_number_of_permits || 
+            row.requisitonNumberOfPermits || 
+            row.numberOfPermits || 
+            row.number_of_permits || 
+            '1'
+          ),
+          purpose: String(row.purpose_name || row.purposeName || row.purpose || '-'),
           amount: Number(row.amount || row.totalAmount || row.total_amount || row.totalbl || 0)
         };
 

@@ -51,7 +51,7 @@
       
       // Percentage-based column widths for even distribution
       .sl-no {
-        width: 6%;
+        width: 5%;
         text-align: center;
       }
       
@@ -60,11 +60,11 @@
       }
       
       .submission-date {
-        width: 11%;
+        width: 12%;
       }
       
       .distillery-name {
-        width: 18%;
+        width: 25%;
       }
       
       .status {
@@ -72,7 +72,9 @@
       }
       
       .amount {
-        width: 10%;
+        width: 12%;
+        text-align: right;
+        padding-right: 1rem !important;
       }
       
       .priority {
@@ -81,7 +83,8 @@
       }
       
       .actions {
-        width: 20%;
+        width: 11%;
+        text-align: center;
       }
     }
     
@@ -498,13 +501,15 @@
     }
 
     .actions {
-      min-width: 120px;
-      width: auto;
+      text-align: center;
       position: relative;
       overflow: visible !important;
+      padding: 0.75rem 0.5rem !important;
       
       app-unified-action-buttons {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         position: relative;
         z-index: 10;
         pointer-events: auto;

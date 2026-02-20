@@ -8,7 +8,7 @@ import { AccountService } from './account.service';
   providedIn: 'root'
 })
 export class InactivityService {
-  private readonly inactivityLimitMs = 5 * 60 * 1000; // 5 minutes
+  private readonly inactivityLimitMs = 4 * 60 * 1000; // 1 minute
   private readonly warningDurationMs = 30 * 1000; // Final 30-second countdown
   private readonly warningLeadMs = this.inactivityLimitMs - this.warningDurationMs;
   private readonly activityEvents: Array<keyof WindowEventMap> = [
@@ -135,7 +135,7 @@ export class InactivityService {
             </div>
           </div>
           <p class="idle-timeout-message">
-            You seem away. UFO is taking off from Sikkim in:
+            You have been inactive. For your security, you will be logged out in:
           </p>
           <div class="idle-timeout-countdown" id="idle-countdown">00:30</div>
           <div class="idle-timeout-progress">

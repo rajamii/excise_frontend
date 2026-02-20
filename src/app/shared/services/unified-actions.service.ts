@@ -99,6 +99,9 @@ export class UnifiedActionsService {
       case 'VIEW_SLIP':
         return this.handleViewSlipAction(item, itemType, context);
 
+      case 'VIEW_PAYMENT_SLIP':
+        return this.handleViewPaymentSlipAction(item, itemType, context);
+
       case 'DOWNLOAD':
         return this.handleDownloadAction(item, itemType);
 
@@ -568,6 +571,49 @@ export class UnifiedActionsService {
     return of({
       success: false,
       message: `No slip route defined for ${itemType}`
+    });
+  }
+
+  private handleViewPaymentSlipAction(item: any, itemType: string, context?: string): Observable<ActionResult> {
+    // Navigate to unified payment slip view
+    const queryParams = {
+      id: item.id,
+      type: itemType,
+      refNo: item.referenceNo,
+      ref: item.referenceNo,
+      referenceNo: item.referenceNo,
+      source: context || 'dashboard'
+    };
+
+    this.router.navigate(['/payment-slip-view'], {
+      queryParams
+    }).then((ok) => {
+      if (!ok && typeof window !== 'undefined') {
+        const params = new URLSearchParams();
+        Object.entries(queryParams).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.set(key, String(value));
+          }
+        });
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      }
+    }).catch(() => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams();
+        Object.entries(queryParams).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.set(key, String(value));
+          }
+        });
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      }
+    });
+
+    return of({
+      success: true,
+      message: `Navigated to payment slip view`
     });
   }
 

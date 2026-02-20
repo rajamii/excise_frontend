@@ -284,19 +284,30 @@ export class RequisitionComponent implements OnInit {
 
   getActionIncludeList(item: TableData): string[] {
     const actions = ['VIEW'];
-    const shouldShow = this.shouldShowCommissionerPermitSlip(item);
+    
+    // WORKFLOW LOGIC:
+    // 1. After licensee pays → Show "View Payment Slip" for everyone (licensee, permit section, commissioner)
+    // 2. After commissioner approves (final stage) → Show BOTH "View Payment Slip" AND "View Permit Slip" for commissioner
+    
+    const hasPayment = this.hasPaymentBeenMade(item);
+    const isFinalApproved = this.isCommissionerFinalApproval(item);
     
     console.log('🔍 getActionIncludeList:', {
       itemId: item.id,
       refNo: item.referenceNo,
       status: item.status,
-      currentStageName: item.currentStageName,
-      currentStageIsFinal: item.currentStageIsFinal,
-      isCommissioner: this.isCommissioner(),
-      shouldShowSlip: shouldShow
+      hasPayment,
+      isFinalApproved,
+      isCommissioner: this.isCommissioner()
     });
     
-    if (shouldShow) {
+    // Show "View Payment Slip" after payment is made (for all roles)
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    // Show "View Permit Slip" only for commissioner after final approval
+    if (isFinalApproved && this.isCommissioner()) {
       actions.push('VIEW_SLIP');
     }
     
@@ -304,30 +315,72 @@ export class RequisitionComponent implements OnInit {
     return actions;
   }
 
-  shouldShowCommissionerPermitSlip(item: TableData): boolean {
-    // Show permit slip for commissioners when:
-    // 1. Stage is marked as final, OR
-    // 2. Status indicates approval/completion, OR
-    // 3. Current stage name indicates approval/completion
-    if (!this.isCommissioner()) {
-      return false;
-    }
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
+    const paymentStatus = (item.paymentStatus || '').toLowerCase();
     
-    const status = (item.status || '').toLowerCase();
-    const stageName = (item.currentStageName || '').toLowerCase();
+    // Payment indicators
+    const hasPaymentId = Boolean(item.paymentId || item.paymentDate);
+    const statusIndicatesPayment = status.includes('paid') || 
+                                   status.includes('payment') ||
+                                   status.includes('payslip') ||
+                                   status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   stageName.includes('paid') ||
+                                   stageName.includes('payment') ||
+                                   stageName.includes('payslip') ||
+                                   stageName.includes('forwarded') ||
+                                   paymentStatus.includes('success') ||
+                                   paymentStatus.includes('completed');
+    
+    console.log('🔍 hasPaymentBeenMade check:', {
+      status,
+      stageName,
+      hasPaymentId,
+      statusIndicatesPayment,
+      result: hasPaymentId || statusIndicatesPayment
+    });
+    
+    return hasPaymentId || statusIndicatesPayment;
+  }
+
+  isCommissionerFinalApproval(item: TableData): boolean {
+    // Check if commissioner has given final approval
     const isFinalStage = Boolean(item.currentStageIsFinal);
-    const isApproved = status.includes('approved') || status.includes('issued') || status.includes('complete') ||
-                       stageName.includes('approved') || stageName.includes('issued') || stageName.includes('complete');
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
     
-    console.log('🔍 shouldShowCommissionerPermitSlip check:', {
+    // Final approval indicators
+    const isApprovedStatus = status === 'approved' || 
+                             status.includes('approvedbycommissioner') ||
+                             status.includes('commissionerapproved');
+    
+    const isFullyCompleted = status.includes('issued') || 
+                             status.includes('complete') ||
+                             stageName.includes('issued') || 
+                             stageName.includes('complete');
+    
+    console.log('🔍 isCommissionerFinalApproval check:', {
       status,
       stageName,
       isFinalStage,
-      isApproved,
-      result: isFinalStage || isApproved
+      isApprovedStatus,
+      isFullyCompleted,
+      result: (isFinalStage && (isFullyCompleted || isApprovedStatus)) || isApprovedStatus
     });
     
-    return isFinalStage || isApproved;
+    // Show permit slip if:
+    // 1. Final stage AND (completed OR approved), OR
+    // 2. Status is explicitly "APPROVED" (commissioner approved)
+    return (isFinalStage && (isFullyCompleted || isApprovedStatus)) || isApprovedStatus;
+  }
+
+  shouldShowCommissionerPermitSlip(item: TableData): boolean {
+    // DEPRECATED: Use isCommissionerFinalApproval instead
+    // Keeping for backward compatibility
+    return this.isCommissionerFinalApproval(item);
   }
 
   viewRequisitionApplication(item: TableData): void {

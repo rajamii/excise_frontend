@@ -66,7 +66,8 @@ export interface ActionButtonConfig {
           [matTooltip]="button.tooltip || getButtonTooltip(button)"
           [attr.title]="button.tooltip || getButtonTooltip(button)"
           [attr.data-action]="button.action"
-          (click)="onActionButtonClick(button, $event)">
+          (click)="onActionButtonClick(button, $event)"
+          (mousedown)="onActionButtonClick(button, $event)">
           <mat-icon>{{ button.icon }}</mat-icon>
         </button>
       </ng-container>
@@ -77,16 +78,17 @@ export interface ActionButtonConfig {
     .action-buttons-container {
       display: flex;
       flex-direction: row;
-      gap: 8px;
+      gap: 4px;
       align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       position: relative;
       z-index: 10;
+      min-height: 40px;
     }
 
     .action-buttons-container.table-mode {
-      gap: 6px;
+      gap: 4px;
       flex-wrap: nowrap;
     }
 
@@ -106,19 +108,45 @@ export interface ActionButtonConfig {
     }
 
     button[mat-icon-button] {
-      min-width: 40px;
-      width: 40px;
-      height: 40px;
+      min-width: 36px;
+      width: 36px;
+      height: 36px;
       pointer-events: auto !important;
       cursor: pointer !important;
       position: relative;
       z-index: 1;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+        transform: scale(1.1);
+      }
       
       mat-icon {
         font-size: 20px;
         width: 20px;
         height: 20px;
         pointer-events: none;
+      }
+    }
+
+    /* Responsive adjustments for mobile */
+    @media (max-width: 768px) {
+      .action-buttons-container {
+        gap: 2px;
+        min-height: 36px;
+      }
+      
+      button[mat-icon-button] {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
       }
     }
 
@@ -145,16 +173,16 @@ export interface ActionButtonConfig {
     }
 
     .action-buttons-container.table-mode button[mat-icon-button] {
-      min-width: 32px;
-      width: 32px;
-      height: 32px;
+      min-width: 36px;
+      width: 36px;
+      height: 36px;
     }
 
     .action-buttons-container.table-mode mat-icon {
-      font-size: 18px !important;
-      width: 18px !important;
-      height: 18px !important;
-      line-height: 18px;
+      font-size: 20px !important;
+      width: 20px !important;
+      height: 20px !important;
+      line-height: 20px;
     }
 
     .action-color-primary { color: #1976d2; }
@@ -375,6 +403,9 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       case 'VIEW_SLIP':
         this.handleViewSlipAction();
         break;
+      case 'VIEW_PAYMENT_SLIP':
+        this.handleViewPaymentSlipAction();
+        break;
 
       default:
         this.handleGenericAction(button);
@@ -470,26 +501,81 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   }
 
   private handleViewAction(): void {
-    // Handle VIEW using the service - it will navigate properly
-    this.unifiedActionsService.executeAction('VIEW', this.item, this.itemType, this.context).subscribe({
-      error: (error: any) => {
-        console.error('VIEW action failed:', error);
-      }
-    });
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW action');
+    
+    // Force navigation directly using window.location for reliability
+    const ref = this.item?.referenceNo ?? this.item?.['refNo'] ?? '';
+    const id = this.item?.id ?? this.item?.['pk'] ?? '';
+    
+    const queryParams: any = {
+      id: id || undefined,
+      ref: ref || undefined,
+      type: this.itemType,
+      source: this.context || 'licensee'
+    };
+    
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value));
+        }
+      });
+      const query = params.toString();
+      const url = query ? `/supply-chain-view?${query}` : '/supply-chain-view';
+      console.log('🚀 NAVIGATE to view:', url);
+      
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
   }
 
   private handleViewSlipAction(): void {
     console.log('🔧 UNIFIED BUTTONS: Handling VIEW_SLIP action for item:', this.item);
     
-    // Use the service to handle navigation properly, just like VIEW does
-    this.unifiedActionsService.executeAction('VIEW_SLIP', this.item, this.itemType, this.context).subscribe({
-      next: () => {
-        console.log('🔧 UNIFIED BUTTONS: VIEW_SLIP action completed');
-      },
-      error: (error: any) => {
-        console.error('VIEW_SLIP action failed:', error);
-      }
-    });
+    // Force navigation directly using window.location for reliability
+    const url = this.getSlipHref();
+    console.log('🚀 NAVIGATE to slip:', url);
+    
+    if (typeof window !== 'undefined') {
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
+  }
+
+  private handleViewPaymentSlipAction(): void {
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW_PAYMENT_SLIP action for item:', this.item);
+    
+    // Force navigation directly using window.location for reliability
+    const queryParams = {
+      id: this.item.id,
+      type: this.itemType,
+      refNo: this.item.referenceNo,
+      ref: this.item.referenceNo,
+      referenceNo: this.item.referenceNo,
+      source: this.context || 'dashboard'
+    };
+    
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value));
+        }
+      });
+      const query = params.toString();
+      const url = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      console.log('🚀 NAVIGATE to payment slip:', url);
+      
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
   }
 
   public getSlipHref(): string {
@@ -632,6 +718,17 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       });
     }
 
+    if (include.includes('VIEW_PAYMENT_SLIP') && !result.some(config => config.action === 'VIEW_PAYMENT_SLIP')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW_PAYMENT_SLIP fallback');
+      result.push({
+        action: 'VIEW_PAYMENT_SLIP',
+        label: 'View Payment Slip',
+        icon: 'receipt_long',
+        color: 'primary',
+        tooltip: 'View Payment Slip'
+      });
+    }
+
     if (include.length) {
       result = result.filter(config => include.includes(config.action));
     }
@@ -671,6 +768,12 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       label = this.getSlipButtonLabel();
       icon = 'receipt';
       tooltip = this.getSlipButtonTooltip();
+    }
+
+    if (action === 'VIEW_PAYMENT_SLIP') {
+      label = 'View Payment Slip';
+      icon = 'receipt_long';
+      tooltip = 'View Payment Slip';
     }
 
     return {
@@ -726,9 +829,18 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       button
     });
     
-    event?.preventDefault();
-    event?.stopPropagation();
-    this.onActionClick(button);
+    // CRITICAL: Stop event propagation to prevent parent handlers from interfering
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    }
+    
+    // Use setTimeout to defer execution to next event loop cycle
+    // This allows Angular's change detection to complete first
+    setTimeout(() => {
+      this.onActionClick(button);
+    }, 0);
   }
 
   logButtonInteraction(eventType: string, button: ActionButtonConfig): void {
