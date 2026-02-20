@@ -19,6 +19,7 @@ interface TableData {
   workflowId?: number;
   currentStage?: number;
   currentStageName?: string;
+  currentStageIsFinal?: boolean;
   statusCode?: string;
   canInitiateCancellation?: boolean;
   commissionerStatus?: string;
@@ -166,6 +167,11 @@ export class RequisitionComponent implements OnInit {
               item.currentStageName ||
               (typeof item.current_stage === 'string' ? item.current_stage : '') ||
               '',
+            currentStageIsFinal: Boolean(
+              item.current_stage_is_final ??
+              item.currentStageIsFinal ??
+              false
+            ),
             statusCode: item.status_code || item.statusCode || '',
             canInitiateCancellation: Boolean(
               item.can_initiate_cancellation ?? item.canInitiateCancellation ?? false
@@ -274,6 +280,54 @@ export class RequisitionComponent implements OnInit {
       return true;
     }
     return false;
+  }
+
+  getActionIncludeList(item: TableData): string[] {
+    const actions = ['VIEW'];
+    const shouldShow = this.shouldShowCommissionerPermitSlip(item);
+    
+    console.log('🔍 getActionIncludeList:', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      currentStageName: item.currentStageName,
+      currentStageIsFinal: item.currentStageIsFinal,
+      isCommissioner: this.isCommissioner(),
+      shouldShowSlip: shouldShow
+    });
+    
+    if (shouldShow) {
+      actions.push('VIEW_SLIP');
+    }
+    
+    console.log('🔍 Final actions array:', actions);
+    return actions;
+  }
+
+  shouldShowCommissionerPermitSlip(item: TableData): boolean {
+    // Show permit slip for commissioners when:
+    // 1. Stage is marked as final, OR
+    // 2. Status indicates approval/completion, OR
+    // 3. Current stage name indicates approval/completion
+    if (!this.isCommissioner()) {
+      return false;
+    }
+    
+    const status = (item.status || '').toLowerCase();
+    const stageName = (item.currentStageName || '').toLowerCase();
+    const isFinalStage = Boolean(item.currentStageIsFinal);
+    const isApproved = status.includes('approved') || status.includes('issued') || status.includes('complete') ||
+                       stageName.includes('approved') || stageName.includes('issued') || stageName.includes('complete');
+    
+    console.log('🔍 shouldShowCommissionerPermitSlip check:', {
+      status,
+      stageName,
+      isFinalStage,
+      isApproved,
+      result: isFinalStage || isApproved
+    });
+    
+    return isFinalStage || isApproved;
   }
 
   viewRequisitionApplication(item: TableData): void {

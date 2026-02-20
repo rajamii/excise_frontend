@@ -65,7 +65,8 @@ export interface ActionButtonConfig {
           [color]="button.color"
           [matTooltip]="button.tooltip || getButtonTooltip(button)"
           [attr.title]="button.tooltip || getButtonTooltip(button)"
-          (click)="onActionClick(button)">
+          [attr.data-action]="button.action"
+          (click)="onActionButtonClick(button, $event)">
           <mat-icon>{{ button.icon }}</mat-icon>
         </button>
       </ng-container>
@@ -75,10 +76,13 @@ export interface ActionButtonConfig {
   styles: [`
     .action-buttons-container {
       display: flex;
-      gap: 12px;
+      flex-direction: row;
+      gap: 8px;
       align-items: center;
       justify-content: center;
       flex-wrap: wrap;
+      position: relative;
+      z-index: 10;
     }
 
     .action-buttons-container.table-mode {
@@ -90,6 +94,8 @@ export interface ActionButtonConfig {
       min-width: 120px;
       height: 40px;
       font-weight: 500;
+      pointer-events: auto !important;
+      cursor: pointer !important;
       
       mat-icon {
         margin-right: 8px;
@@ -103,11 +109,16 @@ export interface ActionButtonConfig {
       min-width: 40px;
       width: 40px;
       height: 40px;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      position: relative;
+      z-index: 1;
       
       mat-icon {
         font-size: 20px;
         width: 20px;
         height: 20px;
+        pointer-events: none;
       }
     }
 
@@ -459,7 +470,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   }
 
   private handleViewAction(): void {
-    // Handle VIEW directly so it works across all roles/pages
+    // Handle VIEW using the service - it will navigate properly
     this.unifiedActionsService.executeAction('VIEW', this.item, this.itemType, this.context).subscribe({
       error: (error: any) => {
         console.error('VIEW action failed:', error);
@@ -468,13 +479,13 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   }
 
   private handleViewSlipAction(): void {
-    const targetUrl = this.getSlipHref();
-    if (typeof window !== 'undefined') {
-      window.location.assign(targetUrl);
-      return;
-    }
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW_SLIP action for item:', this.item);
+    
+    // Use the service to handle navigation properly, just like VIEW does
     this.unifiedActionsService.executeAction('VIEW_SLIP', this.item, this.itemType, this.context).subscribe({
-      next: () => {},
+      next: () => {
+        console.log('🔧 UNIFIED BUTTONS: VIEW_SLIP action completed');
+      },
       error: (error: any) => {
         console.error('VIEW_SLIP action failed:', error);
       }
@@ -495,7 +506,6 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const params = new URLSearchParams();
     if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
     if (this.itemType) params.set('type', String(this.itemType));
-    params.set('section', String(this.itemType || 'transit'));
     if (ref) {
       params.set('refNo', String(ref));
       params.set('ref', String(ref));
@@ -504,7 +514,25 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     }
     params.set('source', this.context || 'dashboard');
     const query = params.toString();
-    return query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+
+    const routeByType: Record<string, string> = {
+      requisition: '/dev-final-requisition-letters',
+      revalidation: '/dev-revalidation-permit-slip',
+      transit: '/dev-final-transit-permit-view',
+      hologram: '/dev-payslip'
+    };
+    const route = routeByType[String(this.itemType || '').toLowerCase()] || '/payment-slip-view';
+    const finalUrl = query ? `${route}?${query}` : route;
+    
+    console.log('🔧 UNIFIED BUTTONS: getSlipHref ->', {
+      itemType: this.itemType,
+      id,
+      ref,
+      route,
+      finalUrl
+    });
+    
+    return finalUrl;
   }
 
   public getViewHref(): string {
@@ -571,10 +599,19 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const include = this.normalizeActionList(this.includeActions);
     const exclude = this.normalizeActionList(this.excludeActions);
 
+    console.log('🔧 UNIFIED BUTTONS: getFilteredConfigs ->', {
+      includeActions: this.includeActions,
+      normalizedInclude: include,
+      excludeActions: this.excludeActions,
+      normalizedExclude: exclude,
+      availableActionConfigs: this.availableActionConfigs
+    });
+
     let result = [...this.availableActionConfigs];
 
     // If includeActions specifies VIEW but backend didn't return it, add a safe fallback.
     if (include.includes('VIEW') && !result.some(config => config.action === 'VIEW')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW fallback');
       result.push({
         action: 'VIEW',
         label: 'View',
@@ -585,12 +622,13 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     }
 
     if (include.includes('VIEW_SLIP') && !result.some(config => config.action === 'VIEW_SLIP')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW_SLIP fallback');
       result.push({
         action: 'VIEW_SLIP',
-        label: 'View Slip',
+        label: this.getSlipButtonLabel(),
         icon: 'receipt',
         color: 'primary',
-        tooltip: 'View Payment Slip'
+        tooltip: this.getSlipButtonTooltip()
       });
     }
 
@@ -613,6 +651,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       deduped.push(config);
     }
 
+    console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', deduped);
     return deduped;
   }
 
@@ -629,9 +668,9 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const toStageId = config?.toStageId ?? config?.to_stage_id ?? config?.targetStage ?? config?.target_stage;
 
     if (this.isSlipAction(action)) {
-      label = 'View Slip';
+      label = this.getSlipButtonLabel();
       icon = 'receipt';
-      tooltip = 'View Payment Slip';
+      tooltip = this.getSlipButtonTooltip();
     }
 
     return {
@@ -680,15 +719,48 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   }
 
   onActionButtonClick(button: ActionButtonConfig, event?: Event): void {
+    console.log('🖱️ BUTTON CLICKED!', {
+      action: button.action,
+      label: button.label,
+      event: event?.type,
+      button
+    });
+    
     event?.preventDefault();
     event?.stopPropagation();
     this.onActionClick(button);
+  }
+
+  logButtonInteraction(eventType: string, button: ActionButtonConfig): void {
+    console.log(`🖱️ Button ${eventType}:`, button.action, button.label);
+    if (eventType === 'mouseenter') {
+      console.log('  ✅ Mouse is OVER the button!');
+    }
+  }
+
+  forceNavigateToSlip(): void {
+    console.log('🚀 FORCE NAVIGATE TO SLIP!');
+    const url = this.getSlipHref();
+    console.log('🚀 Navigating to:', url);
+    if (typeof window !== 'undefined') {
+      window.location.href = url;
+    }
   }
 
   private isSlipAction(action: any): boolean {
     const token = String(action || '').toUpperCase().trim().replace(/[\s-]+/g, '_');
     if (!token) return false;
     return token.includes('PAYSLIP') || token.includes('PAY_SLIP') || token === 'VIEW_SLIP' || token === 'VIEWSLIP';
+  }
+
+  private getSlipButtonLabel(): string {
+    const permitTypes = new Set(['requisition', 'revalidation', 'transit']);
+    return permitTypes.has(String(this.itemType || '').toLowerCase()) ? 'View Permit Slip' : 'View Slip';
+  }
+
+  private getSlipButtonTooltip(): string {
+    const permitTypes = new Set(['requisition', 'revalidation', 'transit']);
+    return permitTypes.has(String(this.itemType || '').toLowerCase()) ? 'View Permit Slip' : 'View Payment Slip';
   }
 
   isSlipButton(button: ActionButtonConfig | null | undefined): boolean {
@@ -701,7 +773,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   getButtonTooltip(button: ActionButtonConfig | null | undefined): string {
     if (!button) return '';
     if (button.tooltip) return button.tooltip;
-    if (this.isSlipAction(button.action)) return 'View Payment Slip';
+    if (this.isSlipAction(button.action)) return this.getSlipButtonTooltip();
     if (button.label) return button.label;
     return this.toTitleCase(this.normalizeActionName(button.action));
   }

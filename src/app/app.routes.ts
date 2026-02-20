@@ -136,6 +136,13 @@ export const routes: Routes = [
       ).then((m) => m.FinaltransitpermitComponent),
   },
   {
+    path: "dev-final-requisition-letters",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finalrequistionletters/finalrequistionletters/finalrequistionletters.component"
+      ).then((m) => m.FinalrequistionlettersComponent),
+  },
+  {
     path: "payment-slip-view",
     loadComponent: () =>
       import(

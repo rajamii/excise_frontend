@@ -204,13 +204,13 @@
                 {{ getPriority(item) | uppercase }}
               </span>
             </td>
-            <td class="actions">
+            <td class="actions" (click)="$event.stopPropagation()" style="position: relative; z-index: 1000;">
               <!-- Unified Action Buttons Component -->
               <app-unified-action-buttons
                 [item]="item"
                 [itemType]="'requisition'"
                 [context]="getUserContext()"
-                [includeActions]="['VIEW']"
+                [includeActions]="getActionIncludeList(item)"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
             </td>

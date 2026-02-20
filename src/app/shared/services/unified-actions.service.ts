@@ -525,18 +525,43 @@ export class UnifiedActionsService {
       'hologram': '/dev-payslip'
     };
 
-    const route = slipRoutes[itemType];
+    const normalizedType = String(itemType || '').toLowerCase();
+    const route = slipRoutes[normalizedType];
     if (route) {
+      const queryParams = {
+        ref: item.referenceNo,
+        source: context || 'dashboard'
+      };
+
       this.router.navigate([route], {
-        queryParams: {
-          ref: item.referenceNo,
-          source: context || 'dashboard'
+        queryParams
+      }).then((ok) => {
+        if (!ok && typeof window !== 'undefined') {
+          const params = new URLSearchParams();
+          Object.entries(queryParams).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+              params.set(key, String(value));
+            }
+          });
+          const query = params.toString();
+          window.location.href = query ? `${route}?${query}` : route;
+        }
+      }).catch(() => {
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams();
+          Object.entries(queryParams).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+              params.set(key, String(value));
+            }
+          });
+          const query = params.toString();
+          window.location.href = query ? `${route}?${query}` : route;
         }
       });
 
       return of({
         success: true,
-        message: `Navigated to ${itemType} slip view`
+        message: `Navigated to ${normalizedType} slip view`
       });
     }
 

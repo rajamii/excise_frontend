@@ -9,12 +9,13 @@
   .table-wrapper {
     width: 100%;
     overflow-x: auto;
+    overflow-y: visible;
     border: none !important;
     box-shadow: none !important;
     
-    // On large screens, no horizontal scroll needed
+    // On large screens, allow horizontal scroll if needed
     @media (min-width: 992px) {
-      overflow-x: visible;
+      overflow-x: auto;
     }
     
     // Show scrollbar on small screens
@@ -329,7 +330,7 @@
     background: white;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
+    overflow: visible;
   }
 
   .register-header-bar {
@@ -497,7 +498,18 @@
     }
 
     .actions {
-      min-width: 280px;
+      min-width: 120px;
+      width: auto;
+      position: relative;
+      overflow: visible !important;
+      
+      app-unified-action-buttons {
+        display: block;
+        position: relative;
+        z-index: 10;
+        pointer-events: auto;
+        overflow: visible !important;
+      }
       
       .action-buttons {
         display: flex;
