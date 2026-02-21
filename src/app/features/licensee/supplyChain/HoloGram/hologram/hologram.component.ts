@@ -2,8 +2,10 @@ import { Component, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { HologramDataService, HologramProcurement } from '../../services/hologram-data.service';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
+import { environment } from '../../../../../../environments/environment';
 
 interface HologramFormData {
   refNo: string;
@@ -44,6 +46,7 @@ export class HologramComponent {
 
   private hologramService = inject(HologramDataService);
   private supplyChainProfileService = inject(SupplyChainProfileService);
+  private http = inject(HttpClient);
 
   formData: HologramFormData = {
     refNo: '',
@@ -133,18 +136,65 @@ export class HologramComponent {
     this.supplyChainProfileService.getProfile().subscribe({
       next: (response) => {
         const profile = response?.data as any;
-        const establishmentName = String(
+        let establishmentName = String(
           profile?.manufacturingUnitName ||
           profile?.manufacturing_unit_name ||
           ''
         ).trim();
 
-        if (establishmentName) {
+        // Fallback: Try to get from license if profile doesn't have it
+        if (!establishmentName) {
+          // Try to get from user's license
+          this.http.get<any>(`${environment.apiBaseUrl}/masters/license/me/`).subscribe({
+            next: (licenses: any[]) => {
+              if (licenses && licenses.length > 0) {
+                const license = licenses[0];
+                establishmentName = String(
+                  license?.establishment_name ||
+                  license?.establishmentName ||
+                  license?.licensee_name ||
+                  license?.licenseeName ||
+                  'Manufacturing Unit'
+                ).trim();
+                
+                if (establishmentName) {
+                  this.formData.companyName = establishmentName;
+                }
+              }
+            },
+            error: () => {
+              // If all fails, use a default
+              this.formData.companyName = 'Manufacturing Unit';
+            }
+          });
+        } else {
           this.formData.companyName = establishmentName;
         }
       },
       error: () => {
-        // Keep field empty if profile fetch fails; validation will block submission.
+        // Fallback: Try to get from license
+        this.http.get<any>(`${environment.apiBaseUrl}/masters/license/me/`).subscribe({
+          next: (licenses: any[]) => {
+            if (licenses && licenses.length > 0) {
+              const license = licenses[0];
+              const establishmentName = String(
+                license?.establishment_name ||
+                license?.establishmentName ||
+                license?.licensee_name ||
+                license?.licenseeName ||
+                'Manufacturing Unit'
+              ).trim();
+              
+              if (establishmentName) {
+                this.formData.companyName = establishmentName;
+              }
+            }
+          },
+          error: () => {
+            // Keep field empty if all fetches fail
+            this.formData.companyName = 'Manufacturing Unit';
+          }
+        });
       }
     });
   }
