@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupplyChainService } from '../../licensee/supplyChain/services/supplychain.service';
 import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
+import { HologramDataService } from '../../licensee/supplyChain/services/hologram-data.service';
 import { AccountService } from '../../../core/services/account.service';
 import { DashboardStatisticsComponent } from '../../../shared/components/dashboard-statistics/dashboard-statistics.component';
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
@@ -181,6 +182,7 @@ export class CommissionerDashboardComponent implements OnInit {
   private router = inject(Router);
   private enaRequisitionService = inject(EnaRequisitionService);
   private supplyChainService = inject(SupplyChainService);
+  private hologramDataService = inject(HologramDataService);
   private unifiedActionsService = inject(UnifiedActionsService);
 
   // Data properties
@@ -195,6 +197,8 @@ export class CommissionerDashboardComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
+    console.log('🎯 Commissioner Dashboard (role-components) initialized');
+    console.log('📊 Loading all applications for Commissioner review...');
     this.loadAllApplications();
   }
 
@@ -309,8 +313,46 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   loadHolograms(): void {
-    // Placeholder for hologram loading
-    this.updateApplications('hologram', []);
+    console.log('🔍 Commissioner Dashboard: Loading hologram procurements...');
+    this.hologramDataService.getProcurements().subscribe({
+      next: (data: any[]) => {
+        console.log('📦 Commissioner Dashboard: Received hologram data:', data);
+        const holograms: CommissionerData[] = data
+          .filter((item: any) => {
+            const shouldInclude = this.requiresCommissionerReview(item.status);
+            console.log(`  - ${item.refNo}: status="${item.status}", include=${shouldInclude}`);
+            return shouldInclude;
+          })
+          .map((item: any) => ({
+            id: item.id,
+            referenceNo: item.refNo || item.ref_no || `HOL-${item.id}`,
+            submissionDate: this.formatDate(item.date || item.created_at),
+            distilleryName: item.licenseeName || item.licensee_name || item.manufacturingUnit || item.manufacturing_unit || 'N/A',
+            status: item.status || 'PENDING',
+            amount: this.calculateHologramAmount(item).toString(),
+            type: 'hologram',
+            allowedActions: item.allowedActions || item.allowed_actions || [],
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+          }));
+        
+        console.log(`✅ Commissioner Dashboard: Mapped ${holograms.length} hologram applications`);
+        this.updateApplications('hologram', holograms);
+      },
+      error: (error) => {
+        console.error('❌ Commissioner Dashboard: Error loading holograms:', error);
+      }
+    });
+  }
+
+  private calculateHologramAmount(item: any): number {
+    const localQty = Number(item.localQty || item.local_qty || 0);
+    const exportQty = Number(item.exportQty || item.export_qty || 0);
+    const defenceQty = Number(item.defenceQty || item.defence_qty || 0);
+    const total = localQty + exportQty + defenceQty;
+    // Rate is 0.15 rupees per hologram piece
+    return total * 0.15;
   }
 
   private requiresCommissionerReview(status: string): boolean {
@@ -318,7 +360,10 @@ export class CommissionerDashboardComponent implements OnInit {
     return statusLower.includes('forwarded') || 
            statusLower.includes('commissioner') || 
            statusLower.includes('pending_commissioner') ||
-           statusLower.includes('under_commissioner_review');
+           statusLower.includes('under_commissioner_review') ||
+           statusLower.includes('pending') ||
+           statusLower.includes('submitted') ||
+           statusLower.includes('approved_by');
   }
 
   private updateApplications(type: string, newApplications: CommissionerData[]): void {
