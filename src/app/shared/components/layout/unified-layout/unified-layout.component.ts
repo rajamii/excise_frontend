@@ -61,6 +61,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     hideForSiteAdmin?: boolean;
     hideForOic?: boolean;
     hideForCommissioner?: boolean;
+    showOnlyForOic?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description' },
@@ -72,6 +73,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
     { section: 'brands', label: 'Brands Details', icon: 'label' },
     { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
+    { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
     { section: 'hologram-register', label: 'Hologram Registers', icon: 'qr_code', hideForCommissioner: true },
     { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', hideForCommissioner: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
@@ -403,7 +405,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // For all officer roles, navigate to dashboard with section parameter
     // This keeps the unified layout and sidebar open
     
-    if (section === 'itcell-hologram') {
+    if (section === 'hologram-inventory') {
+      // Navigate to the hologram overview page
+      this.router.navigate(['/dev-hologram-overview']);
+    } else if (section === 'itcell-hologram') {
       // For IT Cell hologram procurement, navigate with tab parameter to show the hologram tab
       this.router.navigate(['/dashboard'], { 
         queryParams: { section: section, tab: 'hologram' } 
@@ -820,6 +825,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
+    // Allow hologram-inventory for OIC users only
+    if (section === 'hologram-inventory' && this.isOicUser()) {
+      return true;
+    }
+
     if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license' || section === 'hologram')) {
       return false;
     }
@@ -850,6 +860,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'transit-applications': ['transit_permit', 'transit'],
       'brands': ['brand', 'brands'],
       'monthly-hologram-statement': ['hologram_monthly', 'monthly_hologram', 'hologram_statement'],
+      'hologram-inventory': ['hologram_inventory', 'hologram_overview', 'hologram'],
       'hologram-register': ['hologram_register', 'hologram'],
       'hologram-daily-entry': ['hologram_daily', 'hologram'],
       'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],
