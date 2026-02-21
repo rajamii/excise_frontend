@@ -187,7 +187,28 @@ export class ManageComponent extends BaseComponent implements OnInit {
           this.dialogRef.close(true);
         },
         error: (err: any) => {
-          Swal.fire('Error', err.error?.message || 'Failed to save user.', 'error');
+          let message = err?.error?.message || err?.error?.detail || '';
+          const backendError = err?.error;
+
+          if (!message && backendError) {
+            if (typeof backendError === 'string') {
+              message = backendError;
+            } else if (typeof backendError === 'object') {
+              const fieldMessages = Object.entries(backendError)
+                .map(([field, value]) => {
+                  const text = Array.isArray(value) ? value.join(', ') : String(value);
+                  return `${field}: ${text}`;
+                })
+                .join('\n');
+              message = fieldMessages;
+            }
+          }
+
+          if (!message) {
+            message = 'Failed to save user.';
+          }
+
+          Swal.fire('Error', message, 'error');
         },
       });
     });
