@@ -67,7 +67,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
     { section: 'transit', label: 'Transit', icon: 'local_shipping', hideForCommissioner: true },
-    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code' },
+    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
     { section: 'brands', label: 'Brands Details', icon: 'label' },
@@ -820,7 +820,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license')) {
+    if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license' || section === 'hologram')) {
       return false;
     }
 
