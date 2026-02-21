@@ -38,6 +38,8 @@ interface TableData {
   paymentStatus?: string;
   paymentId?: string;
   paymentDate?: string;
+  hasActiveRevalidation?: boolean;
+  has_active_revalidation?: boolean;
 }
 
 @Component({
@@ -192,7 +194,9 @@ export class RequisitionComponent implements OnInit {
             purpose: item.purpose,
             paymentStatus: item.paymentStatus || item.payment_status || '',
             paymentId: item.paymentId || item.payment_id || item.transactionId || item.transaction_id || '',
-            paymentDate: item.paymentDate || item.payment_date || ''
+            paymentDate: item.paymentDate || item.payment_date || '',
+            hasActiveRevalidation: Boolean(item.hasActiveRevalidation || item.has_active_revalidation || false),
+            has_active_revalidation: Boolean(item.has_active_revalidation || false)
           };
         });
 
@@ -288,9 +292,11 @@ export class RequisitionComponent implements OnInit {
     // WORKFLOW LOGIC:
     // 1. After licensee pays → Show "View Payment Slip" for everyone (licensee, permit section, commissioner)
     // 2. After commissioner approves (final stage) → Show BOTH "View Payment Slip" AND "View Permit Slip" for commissioner
+    // 3. For approved requisitions → Show "Cancel" button (if no active revalidation/cancellation)
     
     const hasPayment = this.hasPaymentBeenMade(item);
     const isFinalApproved = this.isCommissionerFinalApproval(item);
+    const canCancel = this.canCancelRequisition(item);
     
     console.log('🔍 getActionIncludeList:', {
       itemId: item.id,
@@ -298,6 +304,7 @@ export class RequisitionComponent implements OnInit {
       status: item.status,
       hasPayment,
       isFinalApproved,
+      canCancel,
       isCommissioner: this.isCommissioner()
     });
     
@@ -311,8 +318,43 @@ export class RequisitionComponent implements OnInit {
       actions.push('VIEW_SLIP');
     }
     
+    // Show "Cancel" button for approved requisitions (if allowed)
+    if (canCancel) {
+      actions.push('REQUEST_CANCELLATION');
+    }
+    
     console.log('🔍 Final actions array:', actions);
     return actions;
+  }
+
+  canCancelRequisition(item: TableData): boolean {
+    // Check if cancellation is allowed for this requisition
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const isFinalApproved = this.isCommissionerFinalApproval(item);
+    
+    // Must be approved first
+    if (!isFinalApproved) {
+      console.log('🔍 canCancelRequisition: Not approved yet');
+      return false;
+    }
+    
+    // Check if already cancelled or cancellation in progress
+    const isCancelled = status.includes('cancel') || status.includes('cancelled');
+    if (isCancelled) {
+      console.log('🔍 canCancelRequisition: Already cancelled or in progress');
+      return false;
+    }
+    
+    // Check if there's an active revalidation
+    // This would need to be checked via backend API or item property
+    const hasActiveRevalidation = item['hasActiveRevalidation'] || item['has_active_revalidation'];
+    if (hasActiveRevalidation) {
+      console.log('🔍 canCancelRequisition: Active revalidation in progress');
+      return false;
+    }
+    
+    console.log('🔍 canCancelRequisition: Cancellation allowed');
+    return true;
   }
 
   hasPaymentBeenMade(item: TableData): boolean {
@@ -321,29 +363,32 @@ export class RequisitionComponent implements OnInit {
     const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
     const paymentStatus = (item.paymentStatus || '').toLowerCase();
     
-    // Payment indicators
+    // Payment indicators - ONLY show after licensee has actually paid
     const hasPaymentId = Boolean(item.paymentId || item.paymentDate);
-    const statusIndicatesPayment = status.includes('paid') || 
+    
+    // Status must explicitly indicate payment was made
+    const statusIndicatesPayment = status.includes('payslip') ||
                                    status.includes('payment') ||
-                                   status.includes('payslip') ||
-                                   status.includes('forwarded') ||
-                                   status.includes('approved') ||
-                                   stageName.includes('paid') ||
-                                   stageName.includes('payment') ||
                                    stageName.includes('payslip') ||
-                                   stageName.includes('forwarded') ||
+                                   stageName.includes('payment') ||
                                    paymentStatus.includes('success') ||
                                    paymentStatus.includes('completed');
+    
+    // Special case: If it's approved/final stage, payment must have been made earlier
+    const isFinalStage = Boolean(item.currentStageIsFinal);
+    const isApproved = status.includes('approved') || status.includes('issued') || status.includes('complete');
+    const paymentMadeInEarlierStage = isFinalStage && isApproved;
     
     console.log('🔍 hasPaymentBeenMade check:', {
       status,
       stageName,
       hasPaymentId,
       statusIndicatesPayment,
-      result: hasPaymentId || statusIndicatesPayment
+      paymentMadeInEarlierStage,
+      result: hasPaymentId || statusIndicatesPayment || paymentMadeInEarlierStage
     });
     
-    return hasPaymentId || statusIndicatesPayment;
+    return hasPaymentId || statusIndicatesPayment || paymentMadeInEarlierStage;
   }
 
   isCommissionerFinalApproval(item: TableData): boolean {
@@ -352,29 +397,37 @@ export class RequisitionComponent implements OnInit {
     const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
     const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
     
-    // Final approval indicators
+    // STRICT CHECK: Must be explicitly marked as final stage by backend
+    // Don't rely on status alone - backend must set currentStageIsFinal = true
+    if (!isFinalStage) {
+      console.log('🔍 isCommissionerFinalApproval: NOT final stage', {
+        status,
+        stageName,
+        isFinalStage
+      });
+      return false;
+    }
+    
+    // Final approval indicators (only checked if isFinalStage is true)
     const isApprovedStatus = status === 'approved' || 
                              status.includes('approvedbycommissioner') ||
-                             status.includes('commissionerapproved');
-    
-    const isFullyCompleted = status.includes('issued') || 
+                             status.includes('commissionerapproved') ||
+                             status.includes('issued') || 
                              status.includes('complete') ||
                              stageName.includes('issued') || 
-                             stageName.includes('complete');
+                             stageName.includes('complete') ||
+                             stageName.includes('approved');
     
     console.log('🔍 isCommissionerFinalApproval check:', {
       status,
       stageName,
       isFinalStage,
       isApprovedStatus,
-      isFullyCompleted,
-      result: (isFinalStage && (isFullyCompleted || isApprovedStatus)) || isApprovedStatus
+      result: isFinalStage && isApprovedStatus
     });
     
-    // Show permit slip if:
-    // 1. Final stage AND (completed OR approved), OR
-    // 2. Status is explicitly "APPROVED" (commissioner approved)
-    return (isFinalStage && (isFullyCompleted || isApprovedStatus)) || isApprovedStatus;
+    // Must be BOTH final stage AND approved status
+    return isFinalStage && isApprovedStatus;
   }
 
   shouldShowCommissionerPermitSlip(item: TableData): boolean {

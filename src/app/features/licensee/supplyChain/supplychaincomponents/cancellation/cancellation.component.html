@@ -183,7 +183,7 @@
                 [item]="item"
                 [itemType]="'cancellation'"
                 [context]="getUserContext()"
-                [includeActions]="['VIEW']"
+                [includeActions]="getActionIncludeList(item)"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
             </td>

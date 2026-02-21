@@ -55,6 +55,32 @@ interface RequisitionSlipRow {
   amount: number;
 }
 
+interface RevalidationSlipRow {
+  id: number;
+  reference_no: string;
+  submission_date: string;
+  distillery_name: string;
+  status: string;
+  quantity_bl: number;
+  permit_numbers: string;
+  original_permit_date: string;
+  expiry_date: string;
+  revalidation_fee: number;
+}
+
+interface CancellationSlipRow {
+  id: number;
+  reference_no: string;
+  cancellation_date: string;
+  distillery_name: string;
+  status: string;
+  original_requisition_ref: string;
+  cancelled_permit_numbers: string;
+  total_permits_cancelled: number;
+  refund_amount: number;
+  reason: string;
+}
+
 @Component({
   selector: 'app-unified-payment-slip-view',
   standalone: true,
@@ -75,6 +101,8 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   transitRows: TransitPermitRow[] = [];
   cancellationRows: TpCancellationRow[] = [];
   requisitionRow: RequisitionSlipRow | null = null;
+  revalidationRow: RevalidationSlipRow | null = null;
+  cancellationRow: CancellationSlipRow | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -112,6 +140,18 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     if (this.moduleType === 'requisition') {
       console.log('🔍 PAYMENT SLIP VIEW: Loading requisition slip...');
       this.loadRequisitionSlip();
+      return;
+    }
+
+    if (this.moduleType === 'revalidation') {
+      console.log('🔍 PAYMENT SLIP VIEW: Loading revalidation slip...');
+      this.loadRevalidationSlip();
+      return;
+    }
+
+    if (this.moduleType === 'cancellation') {
+      console.log('🔍 PAYMENT SLIP VIEW: Loading cancellation slip...');
+      this.loadCancellationSlip();
       return;
     }
 
@@ -211,6 +251,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       const amount = Number(this.requisitionRow?.amount || 0);
       return { total: amount, excise: amount, cess: 0, addl: 0 };
     }
+    if (this.moduleType === 'revalidation') {
+      const amount = Number(this.revalidationRow?.revalidation_fee || 1000);
+      return { total: amount, excise: amount, cess: 0, addl: 0 };
+    }
+    if (this.moduleType === 'cancellation') {
+      const amount = Number(this.cancellationRow?.refund_amount || 0);
+      return { total: amount, excise: amount, cess: 0, addl: 0 };
+    }
 
     const total = this.transitRows.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
     const excise = this.transitRows.reduce((sum, row) => sum + Number(row.total_excise_duty || 0), 0);
@@ -224,6 +272,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       // Return the string value directly (permit numbers sequence)
       return this.requisitionRow?.number_of_permits || '0';
     }
+    if (this.moduleType === 'revalidation') {
+      // Return the permit numbers for revalidation
+      return this.revalidationRow?.permit_numbers || '0';
+    }
+    if (this.moduleType === 'cancellation') {
+      // Return the total permits cancelled
+      return this.cancellationRow?.total_permits_cancelled || 0;
+    }
     return this.transitRows.reduce((sum, row) => sum + Number(row.cases || 0), 0);
   }
 
@@ -231,13 +287,22 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     if (this.moduleType === 'requisition') {
       return String(this.requisitionRow?.status || '').trim() || 'N/A';
     }
+    if (this.moduleType === 'revalidation') {
+      return String(this.revalidationRow?.status || '').trim() || 'N/A';
+    }
+    if (this.moduleType === 'cancellation') {
+      return String(this.cancellationRow?.status || '').trim() || 'N/A';
+    }
     const status = String(this.transitRows[0]?.status || '').trim();
     return status || 'N/A';
   }
 
   get isRefundCase(): boolean {
-    if (this.moduleType === 'requisition') {
+    if (this.moduleType === 'requisition' || this.moduleType === 'revalidation') {
       return false;
+    }
+    if (this.moduleType === 'cancellation') {
+      return true; // Cancellations are always refund cases
     }
     if (this.cancellationRows.length > 0) return true;
     const status = this.currentStatus.toLowerCase();
@@ -247,6 +312,12 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   get refundAmountTotal(): number {
     if (this.moduleType === 'requisition') {
       return Number(this.requisitionRow?.amount || 0);
+    }
+    if (this.moduleType === 'revalidation') {
+      return Number(this.revalidationRow?.revalidation_fee || 1000);
+    }
+    if (this.moduleType === 'cancellation') {
+      return Number(this.cancellationRow?.refund_amount || 0);
     }
     const explicitRefund = this.cancellationRows.reduce((sum, row) => sum + Number(row.amount_refunded || 0), 0);
     if (explicitRefund > 0) return explicitRefund;
@@ -430,6 +501,188 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       error: (error) => {
         console.error('❌ REQUISITION SLIP: Fatal error:', error);
         this.errorMessage = 'Unable to load requisition payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadRevalidationSlip(): void {
+    console.log('🔍 REVALIDATION SLIP: Starting load with:', {
+      applicationId: this.applicationId,
+      referenceNo: this.referenceNo
+    });
+
+    const detailUrl = this.applicationId
+      ? `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${encodeURIComponent(this.applicationId)}/`
+      : '';
+
+    console.log('🔍 REVALIDATION SLIP: Detail URL:', detailUrl);
+
+    const detail$ = detailUrl
+      ? this.http.get<any>(detailUrl).pipe(
+          catchError((error) => {
+            console.error('❌ REVALIDATION SLIP: Detail fetch error:', error);
+            return of(null);
+          })
+        )
+      : of(null);
+
+    const listUrl = `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`;
+    const listParams = this.referenceNo ? { our_ref_no: this.referenceNo } : undefined;
+    console.log('🔍 REVALIDATION SLIP: List URL:', listUrl, 'Params:', listParams);
+
+    const list$ = this.http.get<{results?: any[]}>(listUrl, {
+      params: listParams
+    }).pipe(
+      catchError((error) => {
+        console.error('❌ REVALIDATION SLIP: List fetch error:', error);
+        return of(null);
+      })
+    );
+
+    forkJoin({ detail: detail$, list: list$ }).subscribe({
+      next: ({ detail, list }) => {
+        console.log('🔍 REVALIDATION SLIP: API responses:', { detail, list });
+
+        const typedList = list as {results?: any[]} | null;
+        const listItems = Array.isArray(typedList) ? typedList : (Array.isArray(typedList?.results) ? typedList.results : []);
+        console.log('🔍 REVALIDATION SLIP: List items:', listItems);
+
+        const byRef = listItems.find((item: any) => {
+          const itemRef = String(item?.ourRefNo || item?.our_ref_no || item?.referenceNo || item?.ref_no || '').trim();
+          console.log('🔍 REVALIDATION SLIP: Comparing refs:', itemRef, 'vs', this.referenceNo);
+          return itemRef === this.referenceNo;
+        });
+
+        console.log('🔍 REVALIDATION SLIP: Found by ref:', byRef);
+
+        const row = detail || byRef || listItems[0] || null;
+
+        console.log('🔍 REVALIDATION SLIP: Selected row:', row);
+
+        if (!row) {
+          this.errorMessage = `No revalidation record found for reference ${this.referenceNo || this.applicationId}.`;
+          console.error('❌ REVALIDATION SLIP: No data found');
+          this.isLoading = false;
+          return;
+        }
+
+        this.revalidationRow = {
+          id: Number(row.id || 0),
+          reference_no: String(row.ourRefNo || row.our_ref_no || row.referenceNo || row.ref_no || this.referenceNo || ''),
+          submission_date: String(row.revalidationDate || row.revalidation_date || row.submissionDate || row.submission_date || row.date || row.created_at || ''),
+          distillery_name: String(row.liftedFromDistilleryName || row.lifted_from_distillery_name || row.distilleryName || row.distillery_name || '-'),
+          status: String(row.status || '-'),
+          quantity_bl: Number(row.totalbl || row.total_bl || row.quantity || 0),
+          permit_numbers: String(row.details_permits_number || row.detailsPermitsNumber || row.permitNumbers || row.permit_numbers || '-'),
+          original_permit_date: String(row.requisitionDate || row.requisition_date || row.originalPermitDate || row.original_permit_date || ''),
+          expiry_date: String(row.expiryDate || row.expiry_date || row.revalidationDate || row.revalidation_date || ''),
+          revalidation_fee: 1000 // Fixed revalidation fee
+        };
+
+        console.log('✅ REVALIDATION SLIP: Loaded successfully:', this.revalidationRow);
+
+        if (!this.referenceNo) {
+          this.referenceNo = this.revalidationRow.reference_no;
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('❌ REVALIDATION SLIP: Fatal error:', error);
+        this.errorMessage = 'Unable to load revalidation payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadCancellationSlip(): void {
+    console.log('🔍 CANCELLATION SLIP: Starting load with:', {
+      applicationId: this.applicationId,
+      referenceNo: this.referenceNo
+    });
+
+    const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`;
+    let params: any = {};
+
+    if (this.applicationId) {
+      params = { id: this.applicationId };
+    } else if (this.referenceNo) {
+      params = { our_ref_no: this.referenceNo };
+    }
+
+    console.log('🔍 CANCELLATION SLIP: Fetching from:', url, 'with params:', params);
+
+    this.http.get<any>(url, { params }).pipe(
+      catchError(err => {
+        console.error('❌ CANCELLATION SLIP: HTTP error:', err);
+        return of(null);
+      })
+    ).subscribe({
+      next: (response) => {
+        console.log('🔍 CANCELLATION SLIP: Raw response:', response);
+
+        if (!response) {
+          this.errorMessage = 'No cancellation data received from server.';
+          this.isLoading = false;
+          return;
+        }
+
+        let data: any[] = [];
+        if (Array.isArray(response)) {
+          data = response;
+        } else if (response.results && Array.isArray(response.results)) {
+          data = response.results;
+        } else if (response.data && Array.isArray(response.data)) {
+          data = response.data;
+        } else {
+          data = [response];
+        }
+
+        console.log('🔍 CANCELLATION SLIP: Parsed data array:', data);
+
+        let row: any = null;
+        if (this.applicationId) {
+          row = data.find((r: any) => String(r.id) === String(this.applicationId));
+        } else if (this.referenceNo) {
+          row = data.find((r: any) => 
+            String(r.ourRefNo || r.our_ref_no || r.referenceNo || r.ref_no || '').trim().toUpperCase() === 
+            String(this.referenceNo).trim().toUpperCase()
+          );
+        }
+
+        if (!row && data.length > 0) {
+          row = data[0];
+        }
+
+        if (!row) {
+          this.errorMessage = 'Cancellation record not found.';
+          this.isLoading = false;
+          return;
+        }
+
+        this.cancellationRow = {
+          id: Number(row.id || 0),
+          reference_no: String(row.ourRefNo || row.our_ref_no || row.referenceNo || row.ref_no || this.referenceNo || ''),
+          cancellation_date: String(row.cancellationDate || row.cancellation_date || row.submissionDate || row.submission_date || row.date || row.created_at || ''),
+          distillery_name: String(row.branchName || row.branch_name || row.distilleryName || row.distillery_name || '-'),
+          status: String(row.status || '-'),
+          original_requisition_ref: String(row.originalRequisitionRef || row.original_requisition_ref || '-'),
+          cancelled_permit_numbers: String(row.cancelledPermitNumber || row.cancelled_permit_number || '-'),
+          total_permits_cancelled: Number(row.permitNocount || row.permit_nocount || 0),
+          refund_amount: Number(row.totalCancellationAmount || row.total_cancellation_amount || 0),
+          reason: String(row.cancellationReason || row.cancellation_reason || 'Cancellation Request')
+        };
+
+        console.log('✅ CANCELLATION SLIP: Loaded successfully:', this.cancellationRow);
+
+        if (!this.referenceNo) {
+          this.referenceNo = this.cancellationRow.reference_no;
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('❌ CANCELLATION SLIP: Fatal error:', error);
+        this.errorMessage = 'Unable to load cancellation payment slip details.';
         this.isLoading = false;
       }
     });

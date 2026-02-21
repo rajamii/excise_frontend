@@ -1026,6 +1026,35 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         });
     }
 
+    getIncludeActionsForDetailView(): string[] | null {
+        if (!this.applicationData) {
+            return null;
+        }
+
+        const actions: string[] = [];
+
+        // For requisitions, check if cancel button should be shown
+        if (this.applicationType === 'requisition') {
+            const status = (this.applicationData.status || '').toLowerCase();
+            const currentStageName = (this.applicationData.currentStageName || '').toLowerCase();
+            
+            // Check if it's approved (final stage)
+            const isApproved = status.includes('approved') || 
+                             currentStageName.includes('approved') ||
+                             status === 'approved';
+            
+            // Check if not already cancelled
+            const isCancelled = status.includes('cancel') || currentStageName.includes('cancel');
+            
+            // For licensee users, show cancel button if approved and not cancelled
+            if (this.getUserContext() === 'licensee' && isApproved && !isCancelled) {
+                actions.push('REQUEST_CANCELLATION');
+            }
+        }
+
+        return actions.length > 0 ? actions : null;
+    }
+
     // Type check methods for template
     isRequisition(): boolean { return this.applicationType === 'requisition'; }
     isRevalidation(): boolean { return this.applicationType === 'revalidation'; }

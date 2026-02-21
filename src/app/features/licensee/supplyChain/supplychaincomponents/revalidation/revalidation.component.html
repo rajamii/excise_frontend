@@ -187,7 +187,7 @@
                   [item]="item"
                   [itemType]="'revalidation'"
                   [context]="getUserContext()"
-                  [includeActions]="['VIEW']"
+                  [includeActions]="getActionIncludeList(item)"
                   (actionClicked)="onUnifiedAction($event)">
                 </app-unified-action-buttons>
               </td>

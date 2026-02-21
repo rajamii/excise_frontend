@@ -344,7 +344,50 @@ export class TransitComponent implements OnInit {
   }
 
   getTransitIncludeActions(item: TableData): string[] {
-    return ['VIEW'];
+    const actions = ['VIEW'];
+    
+    // Show payment slip after payment is made
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getTransitIncludeActions:', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      statusCode: item.statusCode,
+      hasPayment
+    });
+    
+    // Show "View Payment Slip" after payment is made
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    console.log('🔍 Final transit actions array:', actions);
+    return actions;
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed for transit
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
+    
+    // Payment indicators for transit
+    // After payment, status changes to forwarded, approved, or specific status codes
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('paymentsuccessful') ||
+                                   status.includes('paid') ||
+                                   statusCode === 'TRP_03' ||
+                                   statusCode === 'TRP_04';
+    
+    console.log('🔍 hasPaymentBeenMade (transit):', {
+      status: item.status,
+      statusCode: item.statusCode,
+      normalizedStatus: status,
+      statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
   }
 
   canShowPaymentSlip(item: TableData): boolean {

@@ -265,13 +265,16 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     }
 
     const payload = {
-      referenceNo: this.referenceNo,
-      permitNumbers: this.newlySelectedPermits,
-      licenseeId: this.currentLicenseeId,
+      reference_no: this.referenceNo,
+      permit_numbers: this.newlySelectedPermits,
+      licensee_id: this.currentLicenseeId,
     };
+
+    console.log('🔧 Submitting cancellation with payload:', payload);
 
     this.supplyChainService.submitCancellation(payload).subscribe({
       next: (response: any) => {
+        console.log('✅ Cancellation submitted successfully:', response);
         this.showSuccessModal = true;
         this.successMessage = response.message;
         // Refresh data to show updated status
@@ -279,8 +282,15 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         this.newlySelectedPermits = [];
       },
       error: (error) => {
-        console.error('Error submitting cancellation:', error);
-        this.errorMessage = 'Failed to submit cancellation.';
+        console.error('❌ Error submitting cancellation:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error,
+          message: error.message
+        });
+        this.errorMessage = 'Failed to submit cancellation: ' + (error.error?.error || error.error?.message || error.message);
+        alert(this.errorMessage);
       },
     });
   }
@@ -289,7 +299,15 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   // getLicenseeIdFromSession()...
 
   redirectToDashboard() {
-    this.close.emit();
+    this.showSuccessModal = false;
+    // Navigate to dashboard cancellation section and force reload
+    this.router.navigate(['/dashboard'], { 
+      queryParams: { section: 'cancellation' },
+      queryParamsHandling: 'merge'
+    }).then(() => {
+      // Force page reload to ensure data is refreshed
+      window.location.reload();
+    });
   }
 
   goBack() {

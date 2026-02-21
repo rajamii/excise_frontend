@@ -1070,4 +1070,47 @@ export class CancellationComponent implements OnInit {
       default: return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
     }
   }
+
+  // Action include list for unified action buttons
+  getActionIncludeList(item: TableData): string[] {
+    const actions = ['VIEW'];
+    
+    // For cancellation, show payment slip after payment is made
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getActionIncludeList (cancellation):', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      hasPayment
+    });
+    
+    // Show "View Payment Slip" after payment is made
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    console.log('🔍 Final actions array:', actions);
+    return actions;
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed for cancellation
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Payment indicators for cancellation
+    // After submission and payment, status changes to forwarded or approved
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('payslip') ||
+                                   status.includes('paid');
+    
+    console.log('🔍 hasPaymentBeenMade (cancellation):', {
+      status: item.status,
+      normalizedStatus: status,
+      statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
+  }
 }

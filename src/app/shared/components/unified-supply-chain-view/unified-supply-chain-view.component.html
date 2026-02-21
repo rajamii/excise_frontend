@@ -932,6 +932,7 @@
             [itemType]="applicationType"
             [context]="getUserContext()"
             [excludeActions]="['VIEW']"
+            [includeActions]="getIncludeActionsForDetailView()"
             [displayMode]="'detailed'"
             (actionClicked)="onUnifiedAction($event)">
         </app-unified-action-buttons>

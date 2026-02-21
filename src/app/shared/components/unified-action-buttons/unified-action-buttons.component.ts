@@ -469,12 +469,6 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       cancelButtonColor: '#6c757d'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: 'Cancellation Requested',
-          text: 'Your cancellation request has been submitted successfully.',
-          icon: 'success',
-          confirmButtonText: 'OK'
-        });
         this.actionClicked.emit({ action: 'REQUEST_CANCELLATION', item: this.item });
       }
     });
@@ -726,6 +720,17 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         icon: 'receipt_long',
         color: 'primary',
         tooltip: 'View Payment Slip'
+      });
+    }
+
+    if (include.includes('REQUEST_CANCELLATION') && !result.some(config => config.action === 'REQUEST_CANCELLATION')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding REQUEST_CANCELLATION fallback');
+      result.push({
+        action: 'REQUEST_CANCELLATION',
+        label: 'Request Cancellation',
+        icon: 'cancel',
+        color: 'warn',
+        tooltip: 'Request Cancellation'
       });
     }
 

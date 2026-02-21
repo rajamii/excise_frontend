@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
@@ -440,8 +440,141 @@ export class UnifiedActionsService {
   }
 
   private handleRequestCancellationAction(item: any, itemType: string): Observable<ActionResult> {
-    // Reuse cancellation navigation
-    return this.handleCancelAction(item, itemType);
+    if (itemType !== 'requisition') {
+      return this.handleCancelAction(item, itemType);
+    }
+
+    const referenceNo = this.getItemReferenceNo(item);
+    if (!referenceNo) {
+      return of({
+        success: false,
+        message: 'Reference number is required to submit cancellation'
+      });
+    }
+
+    const requisitionId = item?.id ? String(item.id) : '';
+    const submit$ = requisitionId
+      ? this.enaRequisitionService.getRequisitionById(requisitionId).pipe(
+          switchMap((requisition: any) => this.submitCancellationFromRequisition(referenceNo, requisition, item))
+        )
+      : this.submitCancellationFromRequisition(referenceNo, null, item);
+
+    return submit$.pipe(
+      map((response: any) => {
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'cancellation',
+            ref: referenceNo,
+            type: 'requisition'
+          }
+        });
+
+        return {
+          success: true,
+          message: response?.message || 'Cancellation request submitted successfully'
+        };
+      }),
+      catchError((error: any) => {
+        const message =
+          error?.error?.details
+            ? `Cancellation failed: ${JSON.stringify(error.error.details)}`
+            : error?.error?.error ||
+              error?.error?.message ||
+              error?.message ||
+              'Failed to submit cancellation request';
+
+        return of({
+          success: false,
+          message
+        });
+      })
+    );
+  }
+
+  private submitCancellationFromRequisition(referenceNo: string, requisition: any, fallbackItem: any): Observable<any> {
+    const payload = this.buildCancellationPayload(referenceNo, requisition, fallbackItem);
+    if (!Array.isArray(payload.permit_numbers) || payload.permit_numbers.length === 0) {
+      return throwError(() => new Error('No permit numbers available to submit cancellation'));
+    }
+    return this.supplyChainService.submitCancellation(payload);
+  }
+
+  private buildCancellationPayload(referenceNo: string, requisition: any, fallbackItem: any): any {
+    const source = requisition || {};
+    const fallback = fallbackItem || {};
+
+    const permitNumbers = this.extractPermitNumbers(source, fallback);
+    const licenseeId =
+      this.extractFirstNonEmpty(source, ['licenseeId', 'licensee_id']) ||
+      this.extractFirstNonEmpty(fallback, ['licenseeId', 'licensee_id']) ||
+      '';
+
+    const payload: any = {
+      reference_no: referenceNo,
+      permit_numbers: permitNumbers
+    };
+
+    if (licenseeId) {
+      payload.licensee_id = String(licenseeId).trim();
+    }
+
+    return payload;
+  }
+
+  private extractPermitNumbers(source: any, fallback: any): string[] {
+    const sequence =
+      this.extractFirstNonEmpty(source, ['detailsPermitsNumber', 'details_permits_number']) ||
+      this.extractFirstNonEmpty(fallback, ['detailsPermitsNumber', 'details_permits_number']);
+
+    if (sequence) {
+      const parsed = String(sequence)
+        .split(',')
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0);
+      if (parsed.length > 0) {
+        return parsed;
+      }
+    }
+
+    const countRaw =
+      this.extractFirstNonEmpty(source, [
+        'requisitonNumberOfPermits',
+        'requisiton_number_of_permits',
+        'numberOfPermits',
+        'number_of_permits'
+      ]) ||
+      this.extractFirstNonEmpty(fallback, [
+        'requisitonNumberOfPermits',
+        'requisiton_number_of_permits',
+        'numberOfPermits',
+        'number_of_permits'
+      ]);
+
+    const count = Number(countRaw);
+    if (!Number.isFinite(count) || count <= 0) {
+      return [];
+    }
+
+    const generated: string[] = [];
+    for (let i = 1; i <= count; i++) {
+      generated.push(String(i));
+    }
+    return generated;
+  }
+
+  private extractFirstNonEmpty(source: any, keys: string[]): string {
+    if (!source) return '';
+    for (const key of keys) {
+      const value = source[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return String(value);
+      }
+    }
+    return '';
+  }
+
+  private getItemReferenceNo(item: any): string {
+    return this.extractFirstNonEmpty(item, ['referenceNo', 'refNo', 'ourRefNo', 'our_ref_no', 'billNo', 'bill_no']);
   }
 
   private handleSubmitPaySlipAction(item: any, itemType: string): Observable<ActionResult> {
