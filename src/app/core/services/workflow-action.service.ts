@@ -237,30 +237,17 @@ export class WorkflowActionService {
         color = 'success';
         tooltip = 'Approve this application';
         requiresConfirmation = true;
-      } else if (stageName.includes('payment')) {
-        action = 'PAY';
-        label = 'Pay';
-        icon = 'payment';
-        color = 'primary';
-        tooltip = 'Proceed to payment';
-        requiresConfirmation = true;
       } else {
-        const stageText = String(stage?.name || '').toLowerCase();
-        if (stageText.includes('pay') || stageText.includes('payment')) {
-          action = 'PAY';
-          label = 'Pay';
-          icon = 'payment';
-          color = 'primary';
-          tooltip = 'Proceed to payment';
-          requiresConfirmation = true;
-        } else {
-          action = 'APPROVE';
-          label = 'Approve';
-          icon = 'check_circle';
-          color = 'success';
-          tooltip = `Move to ${stage?.name || 'next stage'}`;
-          requiresConfirmation = true;
-        }
+        // IMPORTANT: Don't infer PAY from stage name (e.g. "payment_pending").
+        // Action must come explicitly from workflow transition action.
+        // Otherwise commissioner/officer stages that forward to payment stage
+        // get wrongly shown as "Pay" instead of "Approve".
+        action = 'APPROVE';
+        label = 'Approve';
+        icon = 'check_circle';
+        color = 'success';
+        tooltip = `Move to ${stage?.name || 'next stage'}`;
+        requiresConfirmation = true;
       }
 
       return {
