@@ -21,6 +21,20 @@
       opacity: 0.9;
       margin: 0;
     }
+
+    .establishment-chip {
+      margin-top: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #ffffff;
+      border-radius: 999px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
     
     .header-actions {
       .btn {

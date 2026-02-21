@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { Subscription } from 'rxjs';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface HologramRoll {
   id: number;
@@ -156,6 +157,9 @@ interface ChartFilters {
 })
 export class HologramoveriewComponent implements OnInit, OnDestroy {
   activeTab: string = 'rolls';
+  establishmentName: string = '';
+  establishmentLicenseeId: string = '';
+  establishmentDisplay: string = '';
 
   rollsData: HologramRoll[] = [];
   filteredRollsData: HologramRoll[] = []; // Filtered rolls data
@@ -251,9 +255,15 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     { value: '2022', label: '2022' }
   ];
 
-  constructor(private route: ActivatedRoute, private router: Router, private hologramService: HologramDataService) { }
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private hologramService: HologramDataService,
+    private profileService: SupplyChainProfileService
+  ) { }
 
   ngOnInit() {
+    this.loadEstablishmentInfo();
     this.loadAllData();
 
     // Subscribe to request updates from other components
@@ -342,6 +352,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
         // Also sync to localStorage for offline capability
         localStorage.setItem('hologramOverviewRolls', JSON.stringify(this.rollsData));
+        this.resolveEstablishmentFromRolls(this.rollsData);
 
         // Apply filters after loading
         this.applyRollsFilters();
@@ -368,6 +379,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         });
 
         this.applyRollsFilters();
+        this.resolveEstablishmentFromRolls(this.rollsData);
 
         // Generate available data from rolls (even in fallback mode)
         this.loadAvailableData();
@@ -375,6 +387,100 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         console.log('⚠️ Using localStorage fallback:', this.rollsData.length, 'rolls');
       }
     });
+  }
+
+  private loadEstablishmentInfo(): void {
+    this.profileService.getProfile().subscribe({
+      next: (response) => {
+        const data = response?.data;
+        if (!data) {
+          return;
+        }
+
+        this.establishmentName = (data.manufacturingUnitName || '').toString().trim();
+        this.establishmentLicenseeId = (data.licenseeId || '').toString().trim();
+        this.updateEstablishmentDisplay();
+      },
+      error: () => {
+        // Fallback from login payload if profile endpoint is unavailable
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+          return;
+        }
+
+        try {
+          const user = JSON.parse(storedUser);
+          this.establishmentName = (
+            user?.manufacturingUnitName ||
+            user?.manufacturing_unit_name ||
+            user?.establishmentName ||
+            this.establishmentName
+          ).toString().trim();
+          this.establishmentLicenseeId = (
+            user?.licenseeId ||
+            user?.licensee_id ||
+            this.establishmentLicenseeId
+          ).toString().trim();
+          this.updateEstablishmentDisplay();
+        } catch {
+          // no-op
+        }
+      }
+    });
+  }
+
+  private resolveEstablishmentFromRolls(rolls: any[]): void {
+    if (!Array.isArray(rolls) || !rolls.length) {
+      return;
+    }
+
+    const firstRollWithNames = rolls.find((roll: any) =>
+      roll?.manufacturing_unit ||
+      roll?.manufacturingUnit ||
+      roll?.licensee_name ||
+      roll?.licenseeName
+    );
+    const firstRollWithLicense = rolls.find((roll: any) =>
+      roll?.licensee_code || roll?.licenseeCode || roll?.license_id || roll?.licenseId
+    );
+
+    if (!this.establishmentName && firstRollWithNames) {
+      this.establishmentName = (
+        firstRollWithNames.manufacturing_unit ||
+        firstRollWithNames.manufacturingUnit ||
+        firstRollWithNames.licensee_name ||
+        firstRollWithNames.licenseeName ||
+        ''
+      ).toString().trim();
+    }
+
+    if (!this.establishmentLicenseeId && firstRollWithLicense) {
+      this.establishmentLicenseeId = (
+        firstRollWithLicense.licensee_code ||
+        firstRollWithLicense.licenseeCode ||
+        firstRollWithLicense.license_id ||
+        firstRollWithLicense.licenseId ||
+        ''
+      ).toString().trim();
+    }
+
+    this.updateEstablishmentDisplay();
+  }
+
+  private updateEstablishmentDisplay(): void {
+    if (this.establishmentName && this.establishmentLicenseeId) {
+      this.establishmentDisplay = `${this.establishmentName} (${this.establishmentLicenseeId})`;
+      return;
+    }
+    if (this.establishmentName) {
+      this.establishmentDisplay = this.establishmentName;
+      return;
+    }
+    if (this.establishmentLicenseeId) {
+      this.establishmentDisplay = this.establishmentLicenseeId;
+      return;
+    }
+    this.establishmentDisplay = '';
   }
 
   loadAvailableData() {
