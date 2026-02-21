@@ -60,19 +60,20 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     icon: string;
     hideForSiteAdmin?: boolean;
     hideForOic?: boolean;
+    hideForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
-    { section: 'transit', label: 'Transit', icon: 'local_shipping' },
+    { section: 'transit', label: 'Transit', icon: 'local_shipping', hideForCommissioner: true },
     { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code' },
-    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true },
+    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
     { section: 'brands', label: 'Brands Details', icon: 'label' },
     { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
-    { section: 'hologram-register', label: 'Hologram Registers', icon: 'qr_code' },
-    { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today' },
+    { section: 'hologram-register', label: 'Hologram Registers', icon: 'qr_code', hideForCommissioner: true },
+    { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', hideForCommissioner: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
     { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
@@ -797,12 +798,33 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('officerincharge') || normalized === 'oic' || normalized === 'offcierincharge';
   }
 
+  isCommissionerUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 10) {
+      return true;
+    }
+
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      this.user?.role?.name ||
+      this.user?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('commissioner');
+  }
+
   canAccessSection(section: string): boolean {
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
       return false;
     }
 
     if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license')) {
+      return false;
+    }
+
+    if (this.isCommissionerUser() && (section === 'itcell-hologram' || section === 'hologram-register' || section === 'hologram-daily-entry' || section === 'transit')) {
       return false;
     }
 

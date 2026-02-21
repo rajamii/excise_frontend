@@ -114,15 +114,15 @@
           </thead>
           <tbody>
             <tr>
-              <td>{{ revalidationRow?.reference_no }}</td>
-              <td>{{ revalidationRow?.submission_date ? (revalidationRow?.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
-              <td>{{ revalidationRow?.distillery_name }}</td>
-              <td>{{ revalidationRow?.status }}</td>
-              <td>{{ revalidationRow?.quantity_bl }}</td>
-              <td>{{ revalidationRow?.permit_numbers }}</td>
-              <td>{{ revalidationRow?.original_permit_date ? (revalidationRow?.original_permit_date | date:'dd-MM-yyyy') : '-' }}</td>
-              <td>{{ revalidationRow?.expiry_date ? (revalidationRow?.expiry_date | date:'dd-MM-yyyy') : '-' }}</td>
-              <td>&#8377;{{ revalidationRow?.revalidation_fee | number:'1.2-2' }}</td>
+              <td>{{ revalidationRow.reference_no }}</td>
+              <td>{{ revalidationRow.submission_date ? (revalidationRow.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ revalidationRow.distillery_name }}</td>
+              <td>{{ revalidationRow.status }}</td>
+              <td>{{ revalidationRow.quantity_bl }}</td>
+              <td>{{ revalidationRow.permit_numbers }}</td>
+              <td>{{ revalidationRow.original_permit_date ? (revalidationRow.original_permit_date | date:'dd-MM-yyyy') : '-' }}</td>
+              <td>{{ revalidationRow.expiry_date ? (revalidationRow.expiry_date | date:'dd-MM-yyyy') : '-' }}</td>
+              <td>&#8377;{{ revalidationRow.revalidation_fee | number:'1.2-2' }}</td>
             </tr>
           </tbody>
         </table>
@@ -148,15 +148,15 @@
           </thead>
           <tbody>
             <tr>
-              <td>{{ cancellationRow?.reference_no }}</td>
-              <td>{{ cancellationRow?.cancellation_date ? (cancellationRow?.cancellation_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
-              <td>{{ cancellationRow?.distillery_name }}</td>
-              <td>{{ cancellationRow?.status }}</td>
-              <td>{{ cancellationRow?.original_requisition_ref }}</td>
-              <td>{{ cancellationRow?.cancelled_permit_numbers }}</td>
-              <td>{{ cancellationRow?.total_permits_cancelled }}</td>
-              <td>&#8377;{{ cancellationRow?.refund_amount | number:'1.2-2' }}</td>
-              <td>{{ cancellationRow?.reason }}</td>
+              <td>{{ cancellationRow.reference_no }}</td>
+              <td>{{ cancellationRow.cancellation_date ? (cancellationRow.cancellation_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ cancellationRow.distillery_name }}</td>
+              <td>{{ cancellationRow.status }}</td>
+              <td>{{ cancellationRow.original_requisition_ref }}</td>
+              <td>{{ cancellationRow.cancelled_permit_numbers }}</td>
+              <td>{{ cancellationRow.total_permits_cancelled }}</td>
+              <td>&#8377;{{ cancellationRow.refund_amount | number:'1.2-2' }}</td>
+              <td>{{ cancellationRow.reason }}</td>
             </tr>
           </tbody>
         </table>

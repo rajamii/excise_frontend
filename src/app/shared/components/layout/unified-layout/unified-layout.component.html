@@ -136,7 +136,7 @@
             <ng-container *ngFor="let item of officerSectionItems">
               <button
                 class="nav-item"
-                *ngIf="(!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForOic || !isOicUser()) && canAccessSection(item.section)"
+                *ngIf="(!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForOic || !isOicUser()) && (!item.hideForCommissioner || !isCommissionerUser()) && canAccessSection(item.section)"
                 (click)="navigateToSection(item.section)"
                 [class.active]="isDashboardSectionActive(item.section)">
                 <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
