@@ -406,6 +406,9 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       case 'VIEW_PAYMENT_SLIP':
         this.handleViewPaymentSlipAction();
         break;
+      case 'VIEW_PERMIT_SLIP':
+        this.handleViewPermitSlipAction();
+        break;
 
       default:
         this.handleGenericAction(button);
@@ -572,6 +575,48 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     }
   }
 
+  private handleViewPermitSlipAction(): void {
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW_PERMIT_SLIP action for item:', this.item);
+    
+    // Determine the correct view path based on itemType
+    let viewPath = '';
+    
+    if (this.itemType === 'revalidation') {
+      viewPath = '/unified-letter-view/revalidation';
+    } else if (this.itemType === 'cancellation') {
+      viewPath = '/unified-letter-view/cancellation';
+    } else if (this.itemType === 'requisition') {
+      viewPath = '/unified-letter-view/requisition';
+    } else {
+      console.error('Unknown itemType for permit slip:', this.itemType);
+      return;
+    }
+    
+    const queryParams = {
+      id: this.item.id,
+      ref: this.item.referenceNo,
+      refNo: this.item.referenceNo,
+      source: this.context || 'dashboard'
+    };
+    
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value));
+        }
+      });
+      const query = params.toString();
+      const url = query ? `${viewPath}?${query}` : viewPath;
+      console.log('🚀 NAVIGATE to permit slip:', url);
+      
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
+  }
+
   public getSlipHref(): string {
     const id = this.item?.id ?? this.item?.['pk'] ?? '';
     const ref =
@@ -720,6 +765,17 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         icon: 'receipt_long',
         color: 'primary',
         tooltip: 'View Payment Slip'
+      });
+    }
+
+    if (include.includes('VIEW_PERMIT_SLIP') && !result.some(config => config.action === 'VIEW_PERMIT_SLIP')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW_PERMIT_SLIP fallback');
+      result.push({
+        action: 'VIEW_PERMIT_SLIP',
+        label: 'View Permit Slip',
+        icon: 'description',
+        color: 'success',
+        tooltip: 'View Permit Slip'
       });
     }
 

@@ -22,6 +22,7 @@ interface TableData {
   allowedActions?: string[]; // Dynamic actions from backend
   workflowId?: number;
   currentStage?: number;
+  currentStageIsFinal?: boolean | string; // Indicates if current stage is final approval
   allowedActionConfigs?: any[];
 }
 
@@ -466,12 +467,20 @@ export class RevalidationComponent implements OnInit {
       itemId: item.id,
       refNo: item.referenceNo,
       status: item.status,
-      hasPayment
+      hasPayment,
+      allowedActions: item.allowedActions,
+      isCommissioner: this.isCommissioner()
     });
     
     // Show "View Payment Slip" after payment is made (₹1000 deducted)
     if (hasPayment) {
       actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    // Trust backend for VIEW_PERMIT_SLIP action
+    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
+      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+      actions.push('VIEW_PERMIT_SLIP');
     }
     
     console.log('🔍 Final actions array:', actions);
@@ -497,6 +506,33 @@ export class RevalidationComponent implements OnInit {
     });
     
     return statusIndicatesPayment;
+  }
+
+  canViewPermitSlip(item: TableData): boolean {
+    // Only commissioner can view permit slip at final approved stage
+    if (!this.isCommissioner()) {
+      return false;
+    }
+    
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const currentStageIsFinal = item.currentStageIsFinal === true || item.currentStageIsFinal === 'true';
+    
+    // Check if it's at final approved stage
+    // For revalidation, show permit slip when forwarded to commissioner OR approved by commissioner
+    const isFinalApproved = (status.includes('approved') && currentStageIsFinal) ||
+                           status.includes('approvedrevalidationbycommissioner') ||
+                           status.includes('forwardedrevalidationtocommissioner') || // Show for commissioner review
+                           status.includes('finalapproved');
+    
+    console.log('🔍 canViewPermitSlip (revalidation):', {
+      status: item.status,
+      normalizedStatus: status,
+      currentStageIsFinal,
+      isFinalApproved,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    return isFinalApproved;
   }
 
 }

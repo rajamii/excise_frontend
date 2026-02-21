@@ -1082,12 +1082,20 @@ export class CancellationComponent implements OnInit {
       itemId: item.id,
       refNo: item.referenceNo,
       status: item.status,
-      hasPayment
+      hasPayment,
+      allowedActions: item.allowedActions,
+      isCommissioner: this.isCommissioner()
     });
     
     // Show "View Payment Slip" after payment is made
     if (hasPayment) {
       actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    // Trust backend for VIEW_PERMIT_SLIP action
+    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
+      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+      actions.push('VIEW_PERMIT_SLIP');
     }
     
     console.log('🔍 Final actions array:', actions);
@@ -1112,5 +1120,31 @@ export class CancellationComponent implements OnInit {
     });
     
     return statusIndicatesPayment;
+  }
+
+  canViewPermitSlip(item: TableData): boolean {
+    // Only commissioner can view permit slip at final approved stage
+    if (!this.isCommissioner()) {
+      return false;
+    }
+    
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Check if it's at final approved stage
+    // For cancellation, show permit slip when forwarded to commissioner OR approved by commissioner
+    const isFinalApproved = status.includes('approvedcancellationbycommissioner') ||
+                           status.includes('approvedcancellationpayslipbycommissioner') ||
+                           status.includes('forwardedcancellationtocommissioner') || // Show for commissioner review
+                           status.includes('forwardedcancellationpaysliptocommissioner') || // Show for payment slip review
+                           status.includes('finalapproved');
+    
+    console.log('🔍 canViewPermitSlip (cancellation):', {
+      status: item.status,
+      normalizedStatus: status,
+      isFinalApproved,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    return isFinalApproved;
   }
 }

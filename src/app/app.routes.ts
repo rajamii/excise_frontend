@@ -150,6 +150,27 @@ export const routes: Routes = [
       ).then((m) => m.UnifiedPaymentSlipViewComponent),
   },
   {
+    path: "unified-letter-view/cancellation",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/unifiedfinalletterview/unifiedfinalletterview.component"
+      ).then((m) => m.UnifiedfinalletterviewComponent),
+  },
+  {
+    path: "unified-letter-view/revalidation",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/unifiedfinalletterview/unifiedfinalletterview.component"
+      ).then((m) => m.UnifiedfinalletterviewComponent),
+  },
+  {
+    path: "unified-letter-view/requisition",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finalrequistionletters/finalrequistionletters/finalrequistionletters.component"
+      ).then((m) => m.FinalrequistionlettersComponent),
+  },
+  {
     path: "dev-payment-receipt",
     loadComponent: () =>
       import(
