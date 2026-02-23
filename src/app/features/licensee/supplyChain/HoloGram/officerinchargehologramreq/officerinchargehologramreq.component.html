@@ -607,9 +607,8 @@
                                     </td>
                                     <td>
                                         <div class="input-group input-group-sm" style="width: 120px;">
-                                            <input type="number" class="form-control" [value]="allocation.quantity"
-                                                (input)="onAllocationQuantityChange(allocation, $event)" min="1"
-                                                [max]="allocation.quantity + allocation.remainingInCartoon">
+                                            <input type="text" class="form-control" [value]="allocation.quantity"
+                                                readonly disabled>
                                             <span class="input-group-text">units</span>
                                         </div>
                                     </td>
