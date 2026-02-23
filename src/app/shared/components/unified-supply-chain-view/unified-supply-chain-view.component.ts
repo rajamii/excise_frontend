@@ -429,7 +429,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
                     distilleryName: ['manufacturingUnit', 'manufacturing_unit', 'licenseeName', 'licensee_name'],
                     brAmount: ['paymentAmount', 'payment_amount', 'total_amount', 'totalAmount'],
-                    quantity: ['localQty', 'exportQty', 'defenceQty', 'total_requested_quantity']
+                    quantity: ['total_requested_quantity', 'localQty', 'local_qty', 'exportQty', 'export_qty', 'defenceQty', 'defence_qty']
                 }
             },
             'new-license': {
@@ -829,11 +829,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 break;
                 
             case 'hologram':
-                mappedData['localQty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['localQty', 'local_qty']));
-                mappedData['exportQty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['exportQty', 'export_qty']));
-                mappedData['defenceQty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['defenceQty', 'defence_qty']));
-                mappedData['totalQty'] = (mappedData['localQty'] || 0) + (mappedData['exportQty'] || 0) + (mappedData['defenceQty'] || 0);
-                mappedData['paymentAmount'] = this.parseNumericValue(this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount']));
+                mappedData['localQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['requested_local_qty', 'localQty', 'local_qty'])
+                );
+                mappedData['exportQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['requested_export_qty', 'exportQty', 'export_qty'])
+                );
+                mappedData['defenceQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['requested_defence_qty', 'defenceQty', 'defence_qty'])
+                );
+                mappedData['totalQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['total_requested_quantity']),
+                    (mappedData['localQty'] || 0) + (mappedData['exportQty'] || 0) + (mappedData['defenceQty'] || 0)
+                );
+                mappedData['quantity'] = mappedData['totalQty'];
+                mappedData['paymentAmount'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount']),
+                    (mappedData['totalQty'] || 0) * 0.15
+                );
+                if (!mappedData['brAmount']) {
+                    mappedData['brAmount'] = mappedData['paymentAmount'];
+                }
                 break;
             case 'new-license':
                 mappedData['distilleryName'] =
