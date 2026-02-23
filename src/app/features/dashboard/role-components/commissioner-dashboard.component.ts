@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -18,6 +18,10 @@ interface CommissionerData {
   status: string;
   amount: string;
   type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
+  localQtyLakh?: number;
+  exportQtyLakh?: number;
+  defenceQtyLakh?: number;
+  totalQtyLakh?: number;
   allowedActions?: string[];
   allowedActionConfigs?: any[];
   workflowId?: number;
@@ -35,6 +39,173 @@ interface CommissionerData {
   ],
   template: `
     <div class="commissioner-dashboard">
+      <ng-container *ngIf="embeddedHologramOnly; else fullDashboard">
+        <div class="hologram-register-table">
+          <div class="register-container">
+            <div class="register-header-bar">
+              <h5 class="register-table-title">
+                <i class="bi bi-table me-2"></i>
+                Hologram Procurement Applications
+              </h5>
+              <div class="register-info">
+                <span class="entries-count">{{ filteredApplications.length }} Applications</span>
+              </div>
+            </div>
+
+            <div class="table-responsive" *ngIf="filteredApplications.length > 0">
+              <table class="table register-table">
+                <thead>
+                  <tr>
+                    <th class="sl-no">Sl. No.</th>
+                    <th class="ref-number">Ref. No</th>
+                    <th class="submission-date">Date</th>
+                    <th class="company-name">Company</th>
+                    <th class="total-qty">Total Qty</th>
+                    <th class="status">Status</th>
+                    <th class="actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let application of getPaged(); let i = index" class="register-row">
+                    <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                    <td class="ref-number">{{ application.referenceNo }}</td>
+                    <td class="submission-date">{{ application.submissionDate }}</td>
+                    <td class="company-name">{{ application.distilleryName }}</td>
+                    <td class="total-qty">
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="qty-value total">{{ application.totalQtyLakh || 0 | number:'1.1-1' }}</span>
+                        <button
+                          type="button"
+                          class="btn btn-outline-info details-btn"
+                          title="View Quantity Breakdown"
+                          (click)="openHologramQtyDetails(application)">
+                          <i class="bi bi-info-circle me-1"></i>Details
+                        </button>
+                      </div>
+                    </td>
+                    <td class="status">
+                      <span class="status-badge" [ngClass]="getStatusClass(application.status)">
+                        {{ application.status }}
+                      </span>
+                    </td>
+                    <td class="actions actions-cell">
+                      <app-unified-action-buttons
+                        [item]="application"
+                        [itemType]="'hologram'"
+                        [context]="'commissioner'"
+                        [displayMode]="'table'"
+                        [includeActions]="['VIEW']"
+                        (actionClicked)="onUnifiedAction($event)">
+                      </app-unified-action-buttons>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="empty-state" *ngIf="filteredApplications.length === 0">
+              <div class="empty-icon"><i class="bi bi-journal-x"></i></div>
+              <h5 class="empty-title">No Hologram Applications Found</h5>
+              <p class="empty-message">No hologram applications are available for review.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="holo-popup-backdrop" *ngIf="selectedHologramDetails" (click)="closeHologramQtyDetails()">
+          <div class="holo-popup-card" (click)="$event.stopPropagation()">
+            <div class="holo-popup-header">
+              <div class="holo-popup-title">
+                <i class="bi bi-eye me-2"></i>Hologram Request Details
+              </div>
+              <button type="button" class="holo-popup-close" (click)="closeHologramQtyDetails()">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div class="holo-popup-body" *ngIf="selectedHologramDetails as d">
+              <div class="holo-tags">
+                <span class="holo-tag ref">Ref: {{ d.referenceNo }}</span>
+                <span class="holo-tag date">Date: {{ d.submissionDate }}</span>
+                <span class="holo-tag company">{{ d.distilleryName }}</span>
+              </div>
+
+              <div class="holo-grid">
+                <div class="holo-panel">
+                  <div class="holo-panel-title series">Series</div>
+                  <table class="table table-sm mb-0">
+                    <tbody>
+                      <tr>
+                        <td>Local</td>
+                        <td class="text-end fw-bold">{{ d.localQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                      </tr>
+                      <tr>
+                        <td class="fw-bold">Total</td>
+                        <td class="text-end fw-bold text-primary">{{ d.totalQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="holo-panel">
+                  <div class="holo-panel-title payment"><i class="bi bi-currency-rupee me-1"></i>Payment Calculation</div>
+                  <table class="table table-sm mb-2">
+                    <thead>
+                      <tr>
+                        <th>Payment Type</th>
+                        <th class="text-end">Rate</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <div class="fw-bold">Wallet Payment</div>
+                          <div class="text-muted small">(Online Payment - After Approval)</div>
+                        </td>
+                        <td class="text-end">&#8377;0.15</td>
+                        <td class="text-end">{{ d.totalQtyLakh || 0 | number:'1.0-0' }}</td>
+                        <td class="text-end fw-bold text-success">&#8377;{{ getHologramPopupAmount(d) | number:'1.2-2' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="alert alert-info py-2 mb-0 small">
+                    <i class="bi bi-info-circle me-1"></i><strong>Payment Process:</strong>
+                    <ol class="mb-0 mt-1">
+                      <li>Review and approve the hologram application</li>
+                      <li>After approval, supply chain user can make wallet payment (&#8377;0.15/hologram)</li>
+                      <li>Payment will be processed online from Excise/Additional Wallet Balance</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
+              <div class="holo-bottom-grid">
+                <div class="holo-bottom-panel">
+                  <h6 class="text-primary mb-2"><i class="bi bi-info-circle me-1"></i>Status Information</h6>
+                  <p class="mb-1"><strong>Current Status:</strong>
+                    <span class="badge bg-primary ms-1">{{ d.status }}</span>
+                  </p>
+                  <p class="mb-0"><strong>Submitted Date:</strong> {{ d.submissionDate }}</p>
+                </div>
+                <div class="holo-bottom-panel">
+                  <h6 class="text-success mb-2"><i class="bi bi-clipboard-check me-1"></i>Additional Information</h6>
+                  <p class="mb-0">Verified and approved by IT Cell. Upload slip enabled for supply chain user.</p>
+                </div>
+              </div>
+
+              <div class="text-end mt-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="closeHologramQtyDetails()">
+                  <i class="bi bi-x-circle me-1"></i>Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </ng-container>
+
+      <ng-template #fullDashboard>
       <!-- Dashboard Statistics -->
       <app-dashboard-statistics
         [statistics]="getDashboardStatistics()"
@@ -77,7 +248,6 @@ interface CommissionerData {
                     [item]="application"
                     [itemType]="application.type"
                     [context]="'commissioner'"
-                    [includeActions]="['VIEW','PAY']"
                     (actionClicked)="onUnifiedAction($event)">
                   </app-unified-action-buttons>
                 </td>
@@ -112,6 +282,7 @@ interface CommissionerData {
         <h5>No {{ selectedApplicationType | titlecase }} Applications Found</h5>
         <p>There are no {{ selectedApplicationType }} applications requiring commissioner review at this time.</p>
       </div>
+      </ng-template>
     </div>
   `,
   styles: [`
@@ -121,6 +292,113 @@ interface CommissionerData {
 
     .data-table-section {
       margin-top: 2rem;
+    }
+
+    .register-container {
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+
+    .register-header-bar {
+      background: linear-gradient(135deg, #1f2937 0%, #334155 100%);
+      color: #fff;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .register-table-title {
+      margin: 0;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .entries-count {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .register-table th,
+    .register-table td {
+      vertical-align: middle;
+      font-size: 0.95rem;
+      border-color: #dbe2ea;
+    }
+
+    .qty-value.total {
+      color: #059669;
+      font-weight: 700;
+    }
+
+    .actions-cell {
+      min-width: 140px;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .details-btn { padding: 2px 8px; font-size: 0.8rem; }
+
+    .holo-popup-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.45);
+      z-index: 1200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .holo-popup-card {
+      width: min(940px, 96vw);
+      max-height: 92vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    }
+
+    .holo-popup-header {
+      background: #1f6fe5;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+    }
+
+    .holo-popup-title { font-weight: 700; }
+    .holo-popup-close {
+      border: 0;
+      background: transparent;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .holo-popup-body { padding: 14px; }
+    .holo-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .holo-tag { border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; font-weight: 600; color: #fff; }
+    .holo-tag.ref { background: #6b7280; }
+    .holo-tag.date { background: #22b8cf; }
+    .holo-tag.company { background: #22a06b; }
+
+    .holo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .holo-panel { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #fff; }
+    .holo-panel-title { padding: 8px 12px; font-weight: 700; }
+    .holo-panel-title.series { background: #d5ede3; color: #0f766e; }
+    .holo-panel-title.payment { background: #ffca2c; color: #1f2937; }
+
+    .holo-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .holo-bottom-panel { background: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #edf2f7; }
+
+    @media (max-width: 900px) {
+      .holo-grid, .holo-bottom-grid { grid-template-columns: 1fr; }
     }
 
     .table-container {
@@ -177,6 +455,8 @@ interface CommissionerData {
   `]
 })
 export class CommissionerDashboardComponent implements OnInit {
+  @Input() embeddedHologramOnly = false;
+
   // Services
   public accountService = inject(AccountService);
   private router = inject(Router);
@@ -193,13 +473,19 @@ export class CommissionerDashboardComponent implements OnInit {
   // Pagination
   currentPage: number = 1;
   pageSize: number = 10;
+  selectedHologramDetails: CommissionerData | null = null;
 
   constructor() {}
 
   ngOnInit(): void {
     console.log('🎯 Commissioner Dashboard (role-components) initialized');
-    console.log('📊 Loading all applications for Commissioner review...');
-    this.loadAllApplications();
+    if (this.embeddedHologramOnly) {
+      this.selectedApplicationType = 'hologram';
+      this.loadHolograms();
+    } else {
+      console.log('📊 Loading all applications for Commissioner review...');
+      this.loadAllApplications();
+    }
   }
 
   loadAllApplications(): void {
@@ -331,6 +617,13 @@ export class CommissionerDashboardComponent implements OnInit {
             status: item.status || 'PENDING',
             amount: this.calculateHologramAmount(item).toString(),
             type: 'hologram',
+            localQtyLakh: Number(item.localQty || item.local_qty || 0),
+            exportQtyLakh: Number(item.exportQty || item.export_qty || 0),
+            defenceQtyLakh: Number(item.defenceQty || item.defence_qty || 0),
+            totalQtyLakh:
+              Number(item.localQty || item.local_qty || 0) +
+              Number(item.exportQty || item.export_qty || 0) +
+              Number(item.defenceQty || item.defence_qty || 0),
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             workflowId: item.workflow || item.workflow_id || item.workflowId,
@@ -441,7 +734,9 @@ export class CommissionerDashboardComponent implements OnInit {
           if (result.message) {
             alert(result.message);
           }
-          if (['APPROVE', 'REJECT', 'EXTEND', 'ISSUE'].includes(event.action)) {
+          if (this.embeddedHologramOnly) {
+            this.loadHolograms();
+          } else if (['APPROVE', 'REJECT', 'EXTEND', 'ISSUE', 'FORWARD', 'ASSIGN_CARTONS', 'COMPLETE'].includes((event.action || '').toUpperCase())) {
             this.loadAllApplications();
           }
         } else {
@@ -453,6 +748,19 @@ export class CommissionerDashboardComponent implements OnInit {
         alert(`Action failed: ${error.message || 'Unknown error'}`);
       }
     });
+  }
+
+  openHologramQtyDetails(application: CommissionerData): void {
+    this.selectedHologramDetails = application;
+  }
+
+  closeHologramQtyDetails(): void {
+    this.selectedHologramDetails = null;
+  }
+
+  getHologramPopupAmount(application: CommissionerData): number {
+    const qty = Number(application?.totalQtyLakh || 0);
+    return qty * 0.15;
   }
 
   // Utility methods

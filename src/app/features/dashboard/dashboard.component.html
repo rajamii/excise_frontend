@@ -63,7 +63,11 @@
         <app-revalidation *ngIf="selectedSupplyChainSection === 'revalidation'"></app-revalidation>
         <app-cancellation *ngIf="selectedSupplyChainSection === 'cancellation'"></app-cancellation>
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
-        <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
+        <app-commissioner-dashboard
+          *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId === 10"
+          [embeddedHologramOnly]="true"></app-commissioner-dashboard>
+        <app-hologramprocurement
+          *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId !== 10"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
         <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet' && canRenderWalletSection()"></app-payment-confirmation>
         <app-registration-management

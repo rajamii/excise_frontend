@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
+import { Component, Inject, Input, PLATFORM_ID, OnInit } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
@@ -82,6 +82,7 @@ export interface CommissionerTableData {
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
 export class CommissionerDashboardComponent implements OnInit {
+  @Input() embeddedHologramOnly = false;
   Math = Math;
   activeTab = "requisition"; // Start with requisition tab as default
   private isBrowser = false;
@@ -218,11 +219,20 @@ export class CommissionerDashboardComponent implements OnInit {
     this.filteredRevalidationData = []; // Will be populated by fetchRevalidationData
     this.filteredHologramData = [];
 
+    if (this.embeddedHologramOnly) {
+      this.setActiveTab('hologram');
+    }
+
     // Check for tab query parameter
-    if (this.isBrowser) {
+    if (this.isBrowser && !this.embeddedHologramOnly) {
       const tab = this.route.snapshot.queryParamMap.get('tab');
       if (tab) {
         this.setActiveTab(tab);
+      } else {
+        const section = this.route.snapshot.queryParamMap.get('section');
+        if (section === 'hologram') {
+          this.setActiveTab('hologram');
+        }
       }
 
       // Load overdue hologram entries

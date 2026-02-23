@@ -52,7 +52,7 @@
 
             <div class="application-content p-4">
                 <!-- Common Information Section (All Types) -->
-                <div class="row mb-4">
+                <div class="row mb-4" *ngIf="!isHologram()">
                     <div class="col-md-6">
                         <div class="info-card">
                             <h6 class="text-primary mb-2">Application Details</h6>
@@ -520,114 +520,126 @@
                     </div>
                 </div>
                 }
-
                 <!-- ========== HOLOGRAM DETAILS SECTION ========== -->
                 @if (isHologram()) {
                 <div class="section-card mb-4">
-                    <h5 class="section-title">Hologram Procurement Details</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Reference No</td>
-                                    <td>{{ applicationData.referenceNo }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Submission Date</td>
-                                    <td>{{ applicationData.submissionDate | date: "dd-MM-yyyy" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Manufacturing Unit</td>
-                                    <td>{{ applicationData.distilleryName }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Hologram Type</td>
-                                    <td>{{ applicationData.hologramType }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Payment Amount</td>
-                                    <td class="text-success fw-bold">₹{{ applicationData.paymentAmount }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    <h5 class="section-title">Hologram Request Details</h5>
 
-                <div class="section-card mb-4">
-                    <h5 class="section-title">Quantity Breakdown</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-primary">
-                                <tr>
-                                    <th>Type</th>
-                                    <th>Quantity</th>
-                                    <th>Rate (₹ per unit)</th>
-                                    <th>Amount (₹)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @if (applicationData.localQty && applicationData.localQty > 0) {
-                                <tr>
-                                    <td>Local</td>
-                                    <td>{{ applicationData.localQty }}</td>
-                                    <td>0.15</td>
-                                    <td>{{ (applicationData.localQty * 0.15).toFixed(2) }}</td>
-                                </tr>
-                                }
-                                @if (applicationData.exportQty && applicationData.exportQty > 0) {
-                                <tr>
-                                    <td>Export</td>
-                                    <td>{{ applicationData.exportQty }}</td>
-                                    <td>0.15</td>
-                                    <td>{{ (applicationData.exportQty * 0.15).toFixed(2) }}</td>
-                                </tr>
-                                }
-                                @if (applicationData.defenceQty && applicationData.defenceQty > 0) {
-                                <tr>
-                                    <td>Defence</td>
-                                    <td>{{ applicationData.defenceQty }}</td>
-                                    <td>0.15</td>
-                                    <td>{{ (applicationData.defenceQty * 0.15).toFixed(2) }}</td>
-                                </tr>
-                                }
-                                <tr class="table-success">
-                                    <td class="fw-bold">Total</td>
-                                    <td class="fw-bold">{{ applicationData.totalQty }}</td>
-                                    <td>0.15</td>
-                                    <td class="fw-bold">₹{{ applicationData.paymentAmount }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="mb-3 d-flex flex-wrap gap-2">
+                        <span class="badge bg-secondary">Ref: {{ applicationData.referenceNo }}</span>
+                        <span class="badge bg-info">Date: {{ applicationData.submissionDate | date: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" }}</span>
+                        <span class="badge bg-success">{{ applicationData.distilleryName }}</span>
                     </div>
-                </div>
 
-                @if (applicationData.hologramSeriesStart && applicationData.hologramSeriesEnd) {
-                <div class="section-card mb-4">
-                    <h5 class="section-title">Serial Range Information</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Series Start</td>
-                                    <td>{{ applicationData.hologramSeriesStart }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Series End</td>
-                                    <td>{{ applicationData.hologramSeriesEnd }}</td>
-                                </tr>
-                                @if (applicationData.cartoonNumber) {
-                                <tr>
-                                    <td class="fw-semibold bg-light">Carton Numbers</td>
-                                    <td>{{ applicationData.cartoonNumber }}</td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
+                    <div class="row g-3">
+                        <div class="col-lg-5">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-header bg-success-subtle py-2 fw-bold text-success">Series</div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm mb-0">
+                                        <tbody>
+                                            @if ((applicationData.localQty || 0) > 0) {
+                                            <tr>
+                                                <td class="ps-3">Local</td>
+                                                <td class="text-end pe-3 fw-bold">{{ applicationData.localQty | number:'1.0-0' }} pieces</td>
+                                            </tr>
+                                            }
+                                            @if ((applicationData.exportQty || 0) > 0) {
+                                            <tr>
+                                                <td class="ps-3">Export</td>
+                                                <td class="text-end pe-3 fw-bold">{{ applicationData.exportQty | number:'1.0-0' }} pieces</td>
+                                            </tr>
+                                            }
+                                            @if ((applicationData.defenceQty || 0) > 0) {
+                                            <tr>
+                                                <td class="ps-3">Defence</td>
+                                                <td class="text-end pe-3 fw-bold">{{ applicationData.defenceQty | number:'1.0-0' }} pieces</td>
+                                            </tr>
+                                            }
+                                            <tr class="border-top">
+                                                <td class="ps-3 fw-bold">Total</td>
+                                                <td class="text-end pe-3 fw-bold text-primary">{{ (applicationData.totalQty || 0) | number:'1.0-0' }} pieces</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-7">
+                            <div class="card border-warning h-100">
+                                <div class="card-header bg-warning py-2 fw-bold">
+                                    <i class="bi bi-currency-rupee me-1"></i>Payment Calculation
+                                </div>
+                                <div class="card-body p-2">
+                                    <table class="table table-sm mb-2">
+                                        <thead>
+                                            <tr>
+                                                <th>Payment Type</th>
+                                                <th class="text-end">Rate</th>
+                                                <th class="text-end">Qty</th>
+                                                <th class="text-end">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <strong>Wallet Payment</strong>
+                                                    <div class="text-muted small">(Online Payment - After Approval)</div>
+                                                </td>
+                                                <td class="text-end">&#8377;0.15</td>
+                                                <td class="text-end">{{ (applicationData.totalQty || 0) | number:'1.0-0' }}</td>
+                                                <td class="text-end fw-bold text-success">&#8377;{{ ((applicationData.totalQty || 0) * 0.15) | number:'1.2-2' }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="alert alert-info py-2 mb-0 small">
+                                        <i class="bi bi-info-circle me-1"></i><strong>Payment Process:</strong>
+                                        <ol class="mb-0 mt-1">
+                                            <li>Review and approve the hologram application</li>
+                                            <li>After approval, supply chain user can make wallet payment (&#8377;0.15/hologram)</li>
+                                            <li>Payment will be processed online from Excise/Additional Wallet Balance</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body py-2">
+                                    <h6 class="text-primary mb-2"><i class="bi bi-info-circle me-1"></i>Status Information</h6>
+                                    <p class="mb-1"><strong>Current Status:</strong>
+                                        <span [ngClass]="getStatusBadgeClass(applicationData.status)" class="ms-1">{{ getFormattedStatus(applicationData.status) }}</span>
+                                    </p>
+                                    <p class="mb-0"><strong>Submitted Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body py-2">
+                                    <h6 class="text-success mb-2"><i class="bi bi-clipboard-check me-1"></i>Additional Information</h6>
+                                    <p class="mb-0">Verified and approved by IT Cell. Upload slip enabled for supply chain user.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="no-print d-flex justify-content-center mt-3">
+                        <app-unified-action-buttons
+                            [item]="applicationData"
+                            [itemType]="applicationType"
+                            [context]="getUserContext()"
+                            [excludeActions]="['VIEW']"
+                            [displayMode]="'detailed'"
+                            (actionClicked)="onUnifiedAction($event)">
+                        </app-unified-action-buttons>
                     </div>
                 </div>
                 }
-                }
-
                 @if (isNewLicense()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Applicant Information</h5>
@@ -922,12 +934,12 @@
     
         </div>
          <!-- Print Button -->
-                <div class="no-print d-flex justify-content-center mt-2">
+                <div class="no-print d-flex justify-content-center mt-2" *ngIf="!isHologram()">
                     <button class="btn btn-primary btn-lg" (click)="printApplication()">
                         <i class="bi bi-printer me-2"></i>Print Application
                     </button>
                 </div>
-        <app-unified-action-buttons
+        <app-unified-action-buttons *ngIf="!isHologram()"
             [item]="applicationData"
             [itemType]="applicationType"
             [context]="getUserContext()"
@@ -946,3 +958,4 @@
     </div>
     
 </div>
+
