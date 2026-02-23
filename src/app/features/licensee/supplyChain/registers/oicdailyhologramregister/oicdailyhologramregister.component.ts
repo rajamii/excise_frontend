@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
+import { BrandWarehouseService } from '../../services/brand-warehouse.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 import { forkJoin, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
@@ -68,6 +70,7 @@ interface RollInput {
 interface RegisterEntry {
   id: string;
   requestId?: number; // Optional link to original request
+  licenseId?: string;
   referenceNo: string;
   rollRange: string;
   dates: {
@@ -152,18 +155,23 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
   // Liquor brands and sizes for dropdowns
   liquorBrands: Array<{ brandName: string, sizes: number[] }> = [];
   availableBottleSizesMap: Map<string, number[]> = new Map();
+  private currentScopedLicenseId: string = '';
 
   constructor(
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private hologramService: HologramDataService
+    private hologramService: HologramDataService,
+    private brandWarehouseService: BrandWarehouseService,
+    private supplyChainProfileService: SupplyChainProfileService
   ) { }
 
   ngOnInit(): void {
     console.log('🔵 Daily Register Component: ngOnInit called');
-    this.loadViewState();
-    this.loadApprovedEntries();
-    this.loadLiquorBrandsData();
+	    this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
+	    this.loadViewState();
+	    this.resolveProfileScopedLicenseId();
+	    this.loadApprovedEntries();
+	    this.loadLiquorBrandsData();
 
     // Subscribe to request updates from other components (e.g., when officer approves a request)
     this.requestUpdateSubscription = this.hologramService.requestUpdate$.subscribe(() => {
@@ -586,6 +594,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
           return {
             id: req.id,
             requestId: req.id, // CRITICAL: Populate requestId for backend linking
+            licenseId: String(req.license_id || req.licenseId || req.licensee_id || req.licenseeId || '').trim(),
             // Robust mapping for Reference Number: try all common variations
             referenceNo: reqRef || `REQ-${req.id}` || 'N/A',
             rollRange: allocatedRanges.map((r: any) => r.cartoonNumber).join(', '),
@@ -710,6 +719,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
             standaloneEntries.push({
               id: firstSaved.id || `standalone_${refKey}`,
               requestId: firstSaved.hologram_request || null,
+              licenseId: String(firstSaved.license_id || firstSaved.licenseId || firstSaved.licensee_id || firstSaved.licenseeId || '').trim(),
               referenceNo: firstSaved.reference_no || firstSaved.referenceNo || refKey,
               rollRange: lockedRolls.map((r: any) => r.cartoonNumber).join(', '),
               dates: {
@@ -845,29 +855,168 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
    * Load liquor brands and sizes from the backend API
    * Fetches Sikkim distillery brands for dropdown population
    */
-  loadLiquorBrandsData(): void {
-    this.hologramService.getLiquorBrandsAndSizes().subscribe({
-      next: (brands) => {
-        this.liquorBrands = brands;
-        // Build a map for quick lookup of sizes by brand name
-        this.availableBottleSizesMap.clear();
-        brands.forEach(brand => {
-          this.availableBottleSizesMap.set(brand.brandName, brand.sizes);
+  loadLiquorBrandsData(licenseIdOverride?: string): void {
+    const scopedLicense = String(
+      licenseIdOverride ||
+      this.selectedEntryForRollsView?.licenseId ||
+      this.currentScopedLicenseId ||
+      ''
+    ).trim();
+    this.brandWarehouseService.getBrandWarehouses().subscribe({
+      next: (rows) => {
+        // If scoped license is available, narrow client-side with aliases.
+        // If not, trust backend auth scoping and use returned rows as-is.
+        const allowedLicenses = new Set(this.expandLicenseAliases(scopedLicense));
+        const scopedRows = !scopedLicense
+          ? (rows || [])
+          : (rows || []).filter((row: any) => {
+            const rowLicense = String(row.license_id || row.licenseId || '').trim();
+            if (!rowLicense) return false;
+            return this.expandLicenseAliases(rowLicense).some((alias) => allowedLicenses.has(alias));
+          });
+
+        const effectiveRows = scopedRows.length > 0 ? scopedRows : (rows || []);
+        const selectedType = this.normalizeHologramTypeToken(this.selectedHologramType);
+        const typeFilteredRows = effectiveRows.filter((row: any) => {
+          const rowType = this.normalizeHologramTypeToken(row.brand_type || row.brandType || '');
+          return rowType === selectedType;
         });
-        console.log('✅ Loaded liquor brands:', this.liquorBrands.length);
+
+        const grouped = new Map<string, Set<number>>();
+        typeFilteredRows.forEach((row: any) => {
+          const brandName = String(
+            row.brand_details ||
+            row.brandDetails ||
+            row.liquor_data_details?.brand_name ||
+            row.liquorDataDetails?.brandName ||
+            ''
+          ).trim();
+          const rawSize = row.capacity_size ?? row.capacitySize;
+          const size = Number(rawSize);
+          if (!brandName || Number.isNaN(size) || size <= 0) return;
+
+          if (!grouped.has(brandName)) grouped.set(brandName, new Set<number>());
+          grouped.get(brandName)!.add(size);
+        });
+
+        const brands = Array.from(grouped.entries())
+          .map(([brandName, sizes]) => ({
+            brandName,
+            sizes: Array.from(sizes).sort((a, b) => a - b)
+          }))
+          .sort((a, b) => a.brandName.localeCompare(b.brandName));
+
+        this.liquorBrands = brands;
+        this.availableBottleSizesMap.clear();
+        brands.forEach((brand) => this.availableBottleSizesMap.set(brand.brandName, brand.sizes));
+        console.log('? Loaded license-scoped brand warehouse brands:', this.liquorBrands.length, 'for', scopedLicense, 'type', selectedType);
       },
       error: (err) => {
-        console.error('❌ Error loading liquor brands:', err);
-        // Continue with empty brands array - component will still work with manual input as fallback
+        console.error('? Error loading license-scoped brand warehouse brands:', err);
+        this.liquorBrands = [];
+        this.availableBottleSizesMap.clear();
       }
     });
   }
 
-  /**
-   * Get available bottle sizes for a selected brand
-   * Used to populate the bottle size dropdown when a brand is selected
-   * Handles both string brand names and brand objects with brandName property
-   */
+  private resolveCurrentScopedLicenseId(): string {
+    if (typeof window === 'undefined') return '';
+
+    const sources = [
+      sessionStorage.getItem('currentUser'),
+      localStorage.getItem('currentUser'),
+      sessionStorage.getItem('user'),
+      localStorage.getItem('user')
+    ];
+
+    for (const raw of sources) {
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const resolved = this.extractLicenseId(parsed);
+        if (resolved) return resolved;
+      } catch {
+        // Ignore non-JSON payloads
+      }
+    }
+    return '';
+  }
+
+  private extractLicenseId(payload: any): string {
+    if (!payload || typeof payload !== 'object') return '';
+
+    const direct = this.pickFirstNonEmpty(payload, [
+      'license_id', 'licenseId',
+      'licensee_id', 'licenseeId'
+    ]);
+    if (direct) return direct;
+
+    const nestedCandidates = [
+      payload.user,
+      payload.profile,
+      payload.supply_chain_profile,
+      payload.supplyChainProfile,
+      payload.oic_assignment,
+      payload.oicAssignment,
+      payload.assignment
+    ];
+    for (const nested of nestedCandidates) {
+      const nestedId = this.extractLicenseId(nested);
+      if (nestedId) return nestedId;
+    }
+
+    return '';
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    for (const key of keys) {
+      const value = source?.[key];
+      const normalized = String(value ?? '').trim();
+      if (normalized) return normalized;
+    }
+    return '';
+  }
+
+  private resolveProfileScopedLicenseId(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (profileResponse: any) => {
+        const profileData = profileResponse?.data || {};
+        const fromProfile = String(
+          profileData?.licenseeId ||
+          profileData?.licensee_id ||
+          profileData?.licenseId ||
+          profileData?.license_id ||
+          ''
+        ).trim();
+        if (fromProfile && fromProfile !== this.currentScopedLicenseId) {
+          this.currentScopedLicenseId = fromProfile;
+          this.loadLiquorBrandsData(fromProfile);
+        }
+      },
+      error: () => {
+        // Keep storage/request-based fallback
+      }
+    });
+  }
+
+  private expandLicenseAliases(licenseId: string): string[] {
+    const normalized = String(licenseId || '').trim();
+    if (!normalized) return [];
+
+    const aliases = [normalized];
+    if (normalized.startsWith('NLI/')) aliases.push(`NA/${normalized.slice(4)}`);
+    if (normalized.startsWith('NA/')) aliases.push(`NLI/${normalized.slice(3)}`);
+    return aliases;
+  }
+
+  private normalizeHologramTypeToken(value: string): 'LOCAL' | 'EXPORT' | 'DEFENCE' {
+    const token = String(value || '').trim().toUpperCase();
+    if (token === 'DEFENSE') return 'DEFENCE';
+    if (token === 'EXPORT') return 'EXPORT';
+    if (token === 'DEFENCE') return 'DEFENCE';
+    return 'LOCAL';
+  }
+
   getBottleSizesForBrand(brandDetails: string | { brandName: string;[key: string]: any }): number[] {
     // Extract brand name from either string or object
     const brandName = typeof brandDetails === 'string'
@@ -981,6 +1130,11 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
 
   onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
     this.selectedHologramType = type;
+    // Type switch must reset currently opened roll panel to prevent cross-type carry-over.
+    this.selectedEntryForRollsView = null;
+    this.liquorBrands = [];
+    this.availableBottleSizesMap.clear();
+    this.loadLiquorBrandsData();
     this.loadFilteredData();
     this.currentPage = 1;
   }
@@ -1004,13 +1158,23 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
    * View rolls for a specific entry
    */
   viewRollsForEntry(entry: RegisterEntry): void {
+    const entryType = this.normalizeHologramTypeToken(entry.hologramType || 'LOCAL');
+    const selectedType = this.normalizeHologramTypeToken(this.selectedHologramType || 'LOCAL');
+    if (entryType !== selectedType) {
+      this.selectedEntryForRollsView = null;
+      this.liquorBrands = [];
+      this.availableBottleSizesMap.clear();
+      return;
+    }
+
     console.log('📦 Viewing rolls for entry:', entry);
     console.log('📦 Locked rolls:', this.getLockedRollsForEntry(entry));
     console.log('📦 Current selected roll:', this.getCurrentSelectedRoll(entry));
     console.log('📦 Available rolls:', this.getAvailableRollsForEntry(entry));
 
-    this.selectedEntryForRollsView = entry;
-    this.cdr.detectChanges();
+	    this.selectedEntryForRollsView = entry;
+	    this.loadLiquorBrandsData(entry.licenseId);
+	    this.cdr.detectChanges();
 
     // Scroll to the rolls section
     setTimeout(() => {
