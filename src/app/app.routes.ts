@@ -306,8 +306,8 @@ export const routes: Routes = [
     path: "dev-hologram-request-list",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/supplychaincomponents/hologramrequest/hologramrequest.component"
-      ).then((m) => m.HologramrequestComponent),
+        "./features/licensee/supplyChain/HoloGram/officerinchargehologramreq/officerinchargehologramreq.component"
+      ).then((m) => m.OfficerinchargehologramreqComponent),
   },
   {
     path: "dev/monthlyhologramstatement-oic",

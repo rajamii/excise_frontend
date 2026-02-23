@@ -7,6 +7,7 @@ import { HologramDataService, HologramRequest as ApiHologramRequest } from '../.
 interface HologramRequest {
   id: string;
   referenceNo: string;
+  licenseId?: string;
   submissionDate: string;
   usageDate: string; // Date when holograms will be used in factory
   submittedBy: string;
@@ -133,8 +134,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   // Rolls Assigned Modal
   showRollsModal = false;
   selectedRequestForRolls: HologramRequest | null = null;
+  private currentScopedLicenseId = '';
 
   ngOnInit() {
+    this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
+    console.log('Resolved OIC license scope for request list:', this.currentScopedLicenseId || '(not found)');
     this.loadHologramRequests();
   }
 
@@ -146,7 +150,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('Loading hologram requests from API...');
     this.hologramService.getRequests().subscribe({
       next: (data) => {
-        this.hologramRequests = data.map((req: any) => {
+        const scopedData = this.filterByCurrentLicense(data);
+        this.hologramRequests = scopedData.map((req: any) => {
           // Use RAW status from backend - NO MAPPING
           const rawStatus = req.status || 'PENDING';
           console.log(`Ref: ${req.refNo}, Status: ${rawStatus}, Actions: ${req.allowed_actions}`);
@@ -155,6 +160,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
             id: `HR${req.id}`,
             originalId: req.id,
             referenceNo: req.refNo || 'N/A',
+            licenseId: String(req.license_id || req.licenseId || '').trim(),
             submissionDate: req.submissionDate || new Date().toISOString(),
             usageDate: req.usageDate || new Date().toISOString(),
             submittedBy: req.licenseeName || 'Unknown',
@@ -199,7 +205,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // 2. Fallback: Explicitly allow for 'APPROVED BY PERMIT SECTION' and 'SUBMITTED'
     // This handles cases where role-mapping might fail but status is correct
     const s = (request.status || '').toUpperCase();
-    if (s === 'APPROVED BY PERMIT SECTION' || s === 'SUBMITTED' || s === 'PENDING') return true;
+    if (s === 'APPROVED BY OIC' || s === 'IN USE' || s === 'IN_USE' || s === 'SUBMITTED' || s === 'PENDING') return true;
 
     return false;
   }
@@ -210,7 +216,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     // Fallback for SUBMITTED/PENDING
     const s = (request.status || '').toUpperCase();
-    if (s === 'APPROVED BY PERMIT SECTION' || s === 'SUBMITTED' || s === 'PENDING') return true;
+    if (s === 'APPROVED BY OIC' || s === 'IN USE' || s === 'IN_USE' || s === 'SUBMITTED' || s === 'PENDING') return true;
 
     return false;
   }
@@ -725,11 +731,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     this.hologramService.getRollsDetails().subscribe({
       next: (rolls: any[]) => {
-        console.log(`Fetched ${rolls.length} rolls details`);
+        const scopedRolls = this.filterByCurrentLicense(rolls);
+        console.log(`Fetched ${rolls.length} rolls details, scoped to ${scopedRolls.length}`);
 
         const inventoryItems: HologramInventory[] = [];
 
-        for (const roll of rolls) {
+        for (const roll of scopedRolls) {
           // Basic validation
           if (!roll.carton_number && !roll.cartonNumber) continue;
 
@@ -850,9 +857,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         requests: this.hologramService.getRequests()
       }).subscribe({
         next: ({ rolls, requests }) => {
+          const scopedRolls = this.filterByCurrentLicense(rolls);
           const inventoryItems: HologramInventory[] = [];
           
-          for (const roll of rolls) {
+          for (const roll of scopedRolls) {
             if (!roll.carton_number && !roll.cartonNumber) continue;
             
             const uniqueId = roll.id || Math.random();
@@ -951,6 +959,88 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           observer.error(err);
         }
       });
+    });
+  }
+
+  private resolveCurrentScopedLicenseId(): string {
+    if (typeof window === 'undefined') return '';
+
+    const sources = [
+      sessionStorage.getItem('currentUser'),
+      localStorage.getItem('currentUser'),
+      sessionStorage.getItem('user'),
+      localStorage.getItem('user')
+    ];
+
+    for (const raw of sources) {
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const resolved = this.extractLicenseId(parsed);
+        if (resolved) return resolved;
+      } catch {
+        // Ignore non-JSON payloads
+      }
+    }
+    return '';
+  }
+
+  private extractLicenseId(payload: any): string {
+    if (!payload || typeof payload !== 'object') return '';
+
+    const direct = this.pickFirstNonEmpty(payload, [
+      'license_id', 'licenseId',
+      'licensee_id', 'licenseeId'
+    ]);
+    if (direct) return direct;
+
+    const nestedCandidates = [
+      payload.user,
+      payload.profile,
+      payload.supply_chain_profile,
+      payload.supplyChainProfile,
+      payload.oic_assignment,
+      payload.oicAssignment,
+      payload.assignment
+    ];
+    for (const nested of nestedCandidates) {
+      const nestedId = this.extractLicenseId(nested);
+      if (nestedId) return nestedId;
+    }
+
+    return '';
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    for (const key of keys) {
+      const value = source?.[key];
+      const normalized = String(value ?? '').trim();
+      if (normalized) return normalized;
+    }
+    return '';
+  }
+
+  private expandLicenseAliases(licenseId: string): string[] {
+    const normalized = String(licenseId || '').trim();
+    if (!normalized) return [];
+    const aliases = [normalized];
+    if (normalized.startsWith('NLI/')) aliases.push(`NA/${normalized.slice(4)}`);
+    if (normalized.startsWith('NA/')) aliases.push(`NLI/${normalized.slice(3)}`);
+    return aliases;
+  }
+
+  private filterByCurrentLicense<T = any>(rows: T[]): T[] {
+    const scopedLicense = String(this.currentScopedLicenseId || '').trim();
+    if (!scopedLicense) return rows || [];
+
+    const allowed = new Set(this.expandLicenseAliases(scopedLicense));
+    return (rows || []).filter((row: any) => {
+      const rowLicense = this.pickFirstNonEmpty(row, [
+        'license_id', 'licenseId',
+        'licensee_id', 'licenseeId'
+      ]);
+      if (!rowLicense) return false;
+      return this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
     });
   }
 
