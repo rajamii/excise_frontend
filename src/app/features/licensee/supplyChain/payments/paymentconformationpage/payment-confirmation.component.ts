@@ -838,6 +838,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         next: (res) => {
           this.showSuccessMessage(`Payment of Rs ${item.amount} processed successfully.`);
           item.status = String(res?.status || 'Payment Completed');
+          const deducted = Number(res?.wallet_deduction?.amount ?? item.amount ?? 0);
+          const balanceAfter = Number(res?.wallet_deduction?.balance_after ?? (this.getSelectedWalletBalance() - deducted));
+          const txnId = String(res?.wallet_deduction?.transaction_id || 'N/A');
+          alert(
+            `Payment successful.\n\n` +
+            `Deducted Amount: Rs ${deducted.toFixed(2)}\n` +
+            `Remaining Wallet Balance: Rs ${balanceAfter.toFixed(2)}\n` +
+            `Transaction ID: ${txnId}`
+          );
           this.loadHologramDataFromApi();
           this.refreshWalletData();
         },
@@ -1142,6 +1151,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   showInfoMessage(message: string): void {
     // Implementation for info toast/alert
     console.log('Info:', message);
+  }
+
+  getSelectedWalletBalance(): number {
+    return this.activeTab === 'hologram' ? this.hologramWalletBalance : this.educationCessBalance;
+  }
+
+  getSelectedWalletBalanceAfterDeduction(): number {
+    const amount = Number(this.selectedItem?.amount || 0);
+    return Math.max(0, this.getSelectedWalletBalance() - amount);
   }
 
   // Hologram payment methods
