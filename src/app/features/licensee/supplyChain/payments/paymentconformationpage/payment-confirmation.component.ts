@@ -620,6 +620,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           .map(item => {
             const totalQty = (Number(item.localQty) || 0) + (Number(item.exportQty) || 0) + (Number(item.defenceQty) || 0);
             const hologramFee = totalQty * 0.15; // Example fee calculation
+            const paymentDetails: any = (item as any).paymentDetails || (item as any).payment_details || {};
+            const paidAt = paymentDetails?.paid_at ? new Date(paymentDetails.paid_at) : null;
 
             return {
               id: item.id?.toString() || '',
@@ -633,7 +635,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               localQty: Number(item.localQty) || 0,
               exportQty: Number(item.exportQty) || 0,
               defenceQty: Number(item.defenceQty) || 0,
-              paymentDate: null // Backend doesn't send this yet, or we need to derive
+              paymentDate: paidAt
             } as HologramItem;
           });
       },
@@ -809,8 +811,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   confirmPayment(): void {
     if (!this.selectedItem) return;
 
-    // Check if sufficient balance
-    if (this.educationCessBalance < this.selectedItem.amount) {
+    const isHologramPayment = this.activeTab === 'hologram';
+    const availableBalance = isHologramPayment ? this.hologramWalletBalance : this.educationCessBalance;
+    if (availableBalance < this.selectedItem.amount) {
       this.showInsufficientBalanceAlert();
       return;
     }
@@ -825,40 +828,31 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       bootstrapModal?.hide();
     }
   }
-
   processPayment(item: PaymentItem): void {
-    // Simulate payment processing
     console.log('Processing payment for:', item.referenceNo);
 
-    // Update wallet balance (Client-side simulation)
-    this.educationCessBalance -= item.amount;
-
-    // Check if it's a hologram item (by existing in hologramData or id format)
-    // In this component, we might be paying generic PaymentItem or HologramItem
-    // If activeTab is hologram, we use API
-
     if (this.activeTab === 'hologram') {
-      // Call API
-      // Item ID is the procurement ID
       const procurementId = Number(item.id);
 
       this.hologramService.performAction('procurement', procurementId, 'pay', 'Payment Completed via Wallet').subscribe({
         next: (res) => {
-          this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
-          item.status = 'Payment Successful'; // Update local status immediately
-          this.loadHologramDataFromApi(); // Refresh data
+          this.showSuccessMessage(`Payment of Rs ${item.amount} processed successfully.`);
+          item.status = String(res?.status || 'Payment Completed');
+          this.loadHologramDataFromApi();
           this.refreshWalletData();
         },
         error: (err) => {
           console.error('Payment failed:', err);
-          alert('Payment failed API call');
+          const errorMessage = err?.error?.error || err?.error?.detail || err?.message || 'Payment failed API call';
+          this.showErrorMessage(errorMessage);
+          alert(errorMessage);
         }
       });
     } else if (this.activeTab === 'cancellation') {
       // Cancellation Payment Logic
       this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee').subscribe({
         next: (res) => {
-          this.showSuccessMessage(`Cancellation Payment of ₹${item.amount} processed successfully!`);
+          this.showSuccessMessage(`Cancellation Payment of Rs ${item.amount} processed successfully!`);
           item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
@@ -872,11 +866,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     } else {
       // Legacy/Other tabs logic
       item.status = 'Payment Successful';
-      this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
+      this.showSuccessMessage(`Payment of Rs ${item.amount} processed successfully!`);
       this.refreshWalletData();
     }
   }
-
   updateHologramPaymentStatus(refNo: string, procurementType?: string): void {
     // Legacy method using localStorage - removed for API based flow.
     console.warn("updateHologramPaymentStatus called but implementation removed for API transition.");
@@ -1206,17 +1199,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     const totalAmount = this.multiTypePaymentItems.reduce((sum, item) => sum + item.hologramFee, 0);
 
-    // Check if sufficient balance
-    if (totalAmount > this.getTotalWalletBalance()) {
+    if (totalAmount > this.hologramWalletBalance) {
       this.closeMultiTypePaymentModal();
       this.showInsufficientBalanceAlert();
       return;
     }
 
-    // Confirm payment for all types
     const confirmed = confirm(
       `You are about to pay for ${this.multiTypePaymentItems.length} types under reference ${this.multiTypePaymentItems[0].referenceNo}.\n\n` +
-      `Total Amount: ₹${totalAmount.toFixed(2)}\n\n` +
+      `Total Amount: Rs ${totalAmount.toFixed(2)}\n\n` +
       `A single payment slip will be generated for all types.\n\n` +
       `Do you want to proceed?`
     );
@@ -1225,43 +1216,24 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    // Process payment for all types
-    let successCount = 0;
-    this.multiTypePaymentItems.forEach(item => {
-      try {
-        // Update wallet balance
-        this.educationCessBalance -= item.hologramFee;
-
-        // Update item status
-        item.status = 'Payment Successful';
-        item.paymentDate = new Date();
-
-        // Update the specific hologram application in localStorage
-        this.updateHologramPaymentStatus(item.referenceNo, item.procurementType);
-
-        successCount++;
-        console.log(`✅ Payment completed for ${item.referenceNo} - ${item.procurementType}`);
-      } catch (error) {
-        console.error(`❌ Failed to process payment for ${item.referenceNo} - ${item.procurementType}:`, error);
-      }
-    });
-
-    // Create unified payment transaction record
-    this.createUnifiedPaymentTransaction(this.multiTypePaymentItems);
-
-    // Close modal
-    this.closeMultiTypePaymentModal();
-
-    // Show success message
-    this.showSuccessMessage(
-      `Successfully processed payment for ${successCount} types totaling ₹${totalAmount.toFixed(2)}!\n\n` +
-      `A single unified payment slip has been generated for reference ${this.multiTypePaymentItems[0].referenceNo}.`
+    const paymentRequests = this.multiTypePaymentItems.map(item =>
+      this.hologramService.performAction('procurement', Number(item.id), 'pay', 'Payment Completed via Wallet')
     );
 
-    // Reload hologram data
-    this.loadHologramDataFromApi();
+    forkJoin(paymentRequests).subscribe({
+      next: () => {
+        this.closeMultiTypePaymentModal();
+        this.showSuccessMessage(`Successfully processed payment totaling Rs ${totalAmount.toFixed(2)}.`);
+        this.loadHologramDataFromApi();
+        this.refreshWalletData();
+      },
+      error: (err) => {
+        const errorMessage = err?.error?.error || err?.error?.detail || err?.message || 'Multi-type payment failed';
+        this.showErrorMessage(errorMessage);
+        alert(errorMessage);
+      }
+    });
   }
-
   // Create unified payment transaction for multiple types
   private createUnifiedPaymentTransaction(items: HologramItem[]): void {
     // NOTE: This unified part is complex to map to single PerformAction if backend doesn't support batch.
@@ -1321,3 +1293,4 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return this.hologramData.filter(item => this.canPayHologram(item)).length;
   }
 }
+

@@ -103,6 +103,8 @@ export class HologramprocurementComponent implements OnInit {
 
           // Check if there's edit history
           const hasEditHistory = (item as any).editHistory || (item as any).edit_history;
+          const normalizedPaymentStatus = String((item as any).paymentStatus || (item as any).payment_status || '').toLowerCase();
+          const isWalletPaid = normalizedPaymentStatus === 'completed' || normalizedPaymentStatus === 'success';
 
           return {
             ...item,
@@ -115,7 +117,7 @@ export class HologramprocurementComponent implements OnInit {
             localQtyLakh: requestedLocal,  // FIXED: Original requested quantity
             exportQtyLakh: requestedExport, // FIXED: Original requested quantity
             defenceQtyLakh: requestedDefence, // FIXED: Original requested quantity
-            paymentCompleted: item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
+            paymentCompleted: isWalletPaid || item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
             editedByCommissioner: !!hasEditHistory,
             editHistory: hasEditHistory || undefined,
             companyName: item.manufacturingUnit || item.licenseeName || '', // Map to companyName
