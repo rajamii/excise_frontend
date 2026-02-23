@@ -9,6 +9,7 @@ import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { environment } from '../../../../../../environments/environment';
+import Swal from 'sweetalert2';
 import {
   AddMoneyViewContext,
   AddMoneyWalletType,
@@ -51,6 +52,7 @@ interface HistoryItem {
   txnId: string;
   userId: string;
   type: string;
+  paymentFor: string;
   amount: number;
   reference: string;
   status: string;
@@ -514,11 +516,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.historyData = rows.map((row: any, index: number) => {
       const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
+      const paymentFor = this.resolvePaymentForType(row);
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
         txnId: this.pickAny(row, ['transaction_id', 'transactionId'], '-'),
         userId: this.pickAny(row, ['user_id', 'userId'], '-'),
         type: entryType === 'credit' ? 'Wallet Recharge' : 'Wallet Utilization',
+        paymentFor,
         amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
         reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
         status: this.pickAny(row, ['payment_status', 'paymentStatus'], 'Success'),
@@ -526,6 +530,32 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         licenseeId: this.pickAny(row, ['licensee_id', 'licenseeId'], this.activeLicenseeId || '-')
       } as HistoryItem;
     });
+  }
+
+  private resolvePaymentForType(row: any): string {
+    const sourceModule = String(this.pickAny(row, ['source_module', 'sourceModule'], '')).toLowerCase();
+    const txnId = String(this.pickAny(row, ['transaction_id', 'transactionId'], '')).toUpperCase();
+    const reference = String(this.pickAny(row, ['reference_no', 'referenceNo'], '')).toUpperCase();
+
+    if (sourceModule.includes('hologram_procurement') || txnId.startsWith('HGP-')) {
+      return 'Hologram Procurement';
+    }
+    if (sourceModule.includes('cancellation') || txnId.startsWith('CAN-') || reference.startsWith('CAN/')) {
+      return 'Cancellation';
+    }
+    if (sourceModule.includes('revalidation') || txnId.startsWith('REV-') || reference.startsWith('REV/')) {
+      return 'Revalidation';
+    }
+    if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
+      return 'Transit';
+    }
+    if (sourceModule.includes('requisition') || txnId.startsWith('REQ-') || reference.startsWith('NHP/')) {
+      return 'Requisition';
+    }
+    if (sourceModule.includes('wallet')) {
+      return 'Wallet Recharge';
+    }
+    return 'Other';
   }
 
   private pickAny(source: any, keys: string[], fallback: any): any {
@@ -841,12 +871,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           const deducted = Number(res?.wallet_deduction?.amount ?? item.amount ?? 0);
           const balanceAfter = Number(res?.wallet_deduction?.balance_after ?? (this.getSelectedWalletBalance() - deducted));
           const txnId = String(res?.wallet_deduction?.transaction_id || 'N/A');
-          alert(
-            `Payment successful.\n\n` +
-            `Deducted Amount: Rs ${deducted.toFixed(2)}\n` +
-            `Remaining Wallet Balance: Rs ${balanceAfter.toFixed(2)}\n` +
-            `Transaction ID: ${txnId}`
-          );
+          Swal.fire({
+            icon: 'success',
+            title: 'Payment Successful',
+            html:
+              `<div style="text-align:left">` +
+              `<div><strong>Deducted Amount:</strong> Rs ${deducted.toFixed(2)}</div>` +
+              `<div><strong>Remaining Wallet Balance:</strong> Rs ${balanceAfter.toFixed(2)}</div>` +
+              `<div><strong>Transaction ID:</strong> ${txnId}</div>` +
+              `</div>`,
+            confirmButtonText: 'OK'
+          });
           this.loadHologramDataFromApi();
           this.refreshWalletData();
         },

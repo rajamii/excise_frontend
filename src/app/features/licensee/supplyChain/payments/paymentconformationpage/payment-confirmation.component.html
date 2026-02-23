@@ -402,7 +402,7 @@
       </div>
 
       <!-- Hologram Payment Summary -->
-      <div class="row mt-4" *ngIf="hologramData.length > 0">
+      <div class="row mt-4" *ngIf="hologramData.length > 0 && getPendingHologramCount() > 0">
         <div class="col-md-6">
           <div class="card border-primary">
             <div class="card-header bg-primary text-white">
@@ -481,6 +481,7 @@
               <th>Txn ID</th>
               <th>User ID</th>
               <th>Type</th>
+              <th>Payment For</th>
               <th>Amount</th>
               <th>Reference</th>
               <th>Status</th>
@@ -494,6 +495,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.userId }}</td>
               <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
               <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td>
@@ -575,7 +577,8 @@
               <tr>
                 <th>Date</th>
                 <th>Type</th>
-                <th>Amount</th>
+              <th>Payment For</th>
+              <th>Amount</th>
                 <th>Balance After</th>
                 <th>Reference</th>
               </tr>
@@ -880,4 +883,6 @@
     </div>
   </div>
 </div>
+
+
 
