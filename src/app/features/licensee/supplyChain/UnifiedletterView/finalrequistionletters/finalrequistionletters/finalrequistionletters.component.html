@@ -9,6 +9,9 @@
     </button>
   </div>
 
+  <div class="alert alert-info" *ngIf="isLoading">Loading requisition letter...</div>
+  <div class="alert alert-danger" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</div>
+
   <!-- Letter Content -->
   <div class="main">
     <div class="letter-header">
@@ -28,7 +31,7 @@
     <div class="flex">
       <div>
         No.
-        <span class="bold-text">{{ letterData.letterNo }}</span>/Excise
+        <span class="bold-text">{{ letterData.letterNo }}</span>
       </div>
       <div>
         Date:
@@ -213,7 +216,7 @@
       
       <!-- Copy Type Header -->
       <div class="copy-number">
-        {{ permit.letterNo }}/Excise - {{ permit.copyType }}
+        {{ permit.letterNo }} - {{ permit.copyType }}
       </div>
 
       <!-- Permit Content -->
@@ -229,7 +232,7 @@
 
         <div class="flex">
           <div>
-            No. <span class="bold-text">{{ permit.letterNo }}</span>/Excise
+            No. <span class="bold-text">{{ permit.letterNo }}</span>
           </div>
           <div>
             Date: <span class="bold-text">{{ permit.letterDate }}</span>
