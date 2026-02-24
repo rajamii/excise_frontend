@@ -1110,6 +1110,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       return null;
     }
 
+    const referenceNo = range.referenceNo || range.reference_no || 'N/A';
+    let resolvedBrand = range.brandDetails || range.brand_details || range.brand_name || '';
+    if (!resolvedBrand || resolvedBrand === 'N/A') {
+      resolvedBrand = this.getFallbackBrandByReference(referenceNo);
+    }
+    resolvedBrand = this.sanitizeBrandName(resolvedBrand);
+
     return {
       fromSerial,
       toSerial,
@@ -1118,13 +1125,39 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       description: (range.description || (status === 'AVAILABLE' ? 'Available for production use' : '')).toString(),
       usedDate: range.usedDate || range.used_date,
       damageDate: range.damageDate || range.damage_date,
-      referenceNo: range.referenceNo || range.reference_no || 'N/A',
+      referenceNo,
       productionLine: range.productionLine || range.production_line || 'N/A',
       damageReason: range.damageReason || range.damage_reason,
       reportedBy: range.reportedBy || range.reported_by,
-      brandDetails: range.brandDetails || range.brand_details || range.brand_name || '',
+      brandDetails: resolvedBrand || '',
       bottleSize: range.bottleSize || range.bottle_size || ''
     };
+  }
+
+  private getFallbackBrandByReference(referenceNo: string): string {
+    if (!referenceNo || referenceNo === 'N/A') return '';
+
+    const issuedEntry = this.issuedData.find(item =>
+      item.referenceNo === referenceNo || item.requestReference === referenceNo
+    );
+    if (issuedEntry?.brandName && issuedEntry.brandName !== 'N/A') {
+      return this.sanitizeBrandName(issuedEntry.brandName);
+    }
+
+    const historyEntry = this.historyData.find(item => item.requestReference === referenceNo);
+    if (historyEntry?.brandName && historyEntry.brandName !== 'N/A') {
+      return this.sanitizeBrandName(historyEntry.brandName);
+    }
+
+    return '';
+  }
+
+  private sanitizeBrandName(name: string): string {
+    if (!name) return '';
+    let value = String(name).trim();
+    value = value.replace(/\s*-\s*M\/s\s*Sikkim\s*Distilleries\s*Ltd\.?$/i, '');
+    value = value.replace(/\s*M\/s\s*Sikkim\s*Distilleries\s*Ltd\.?$/i, '');
+    return value.trim();
   }
 
   applySerialFilters(): void {
