@@ -6,6 +6,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { MasterService } from '../../../../../core/services/master.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { AccountService } from '../../../../../core/services/account.service';
 import { District } from '../../../../../core/models/district.model';
 import { Road } from '../../../../../core/models/road.model';
 import { Subdivision } from '../../../../../core/models/subdivision.model';
@@ -59,6 +60,9 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   @Output() readonly back = new EventEmitter<void>();
 
   private destroy$ = new Subject<void>();
+  private prefillDistrictCode: number | null = null;
+  private prefillSubdivisionCode: number | null = null;
+  private prefillApplied = false;
 
   errorMessages = {
     siteDistrict: signal(''),
@@ -82,6 +86,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     private fb: FormBuilder,
     private masterService: MasterService,
     private licenseApplicationService: LicenseApplicationService,
+    private accountService: AccountService,
     private cdr: ChangeDetectorRef
   ) {
     const storedValues: any = this.getFromSessionStorage();
@@ -123,6 +128,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
   ngOnInit() {
     console.log('🚀 SiteDetailsComponent initialized');
+    this.captureUserLocationForPrefill();
     this.loadMasterData();
     this.restoreDocuments();
 
@@ -155,6 +161,96 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
         }
       });
+  }
+
+  private captureUserLocationForPrefill(): void {
+    const existingDistrict = this.siteDetailsForm.get('siteDistrict')?.value;
+    const existingSubdivision = this.siteDetailsForm.get('siteSubdivision')?.value;
+    if (existingDistrict || existingSubdivision) {
+      return;
+    }
+
+    let profile: any = this.accountService.getCurrentUser();
+
+    if (!profile) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          profile = JSON.parse(storedUser);
+        } catch (_e) {
+          profile = null;
+        }
+      }
+    }
+
+    if (profile) {
+      this.readPrefillCodesFromProfile(profile);
+      return;
+    }
+
+    this.accountService.identity(true).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (user) => {
+        if (user) this.readPrefillCodesFromProfile(user);
+      },
+      error: (err) => {
+        console.error('Failed to fetch profile for district/subdivision prefill:', err);
+      }
+    });
+  }
+
+  private readPrefillCodesFromProfile(profile: any): void {
+    const districtCode =
+      profile?.district?.code ??
+      profile?.district?.districtCode ??
+      profile?.districtCode ??
+      profile?.district_code ??
+      null;
+
+    const subdivisionCode =
+      profile?.subdivision?.code ??
+      profile?.subdivision?.subdivisionCode ??
+      profile?.subdivisionCode ??
+      profile?.subdivision_code ??
+      null;
+
+    this.prefillDistrictCode = districtCode !== null ? Number(districtCode) : null;
+    this.prefillSubdivisionCode = subdivisionCode !== null ? Number(subdivisionCode) : null;
+  }
+
+  private tryApplyUserLocationPrefill(): void {
+    if (this.prefillApplied) return;
+    if (!this.prefillDistrictCode) return;
+    if (!this.districts.length || !this.allSubdivisions.length) return;
+
+    const district = this.districts.find(d => d.districtCode === this.prefillDistrictCode);
+    if (!district) return;
+    if (typeof district.id !== 'number') return;
+
+    const siteDistrictCtrl = this.siteDetailsForm.get('siteDistrict');
+    const siteSubdivisionCtrl = this.siteDetailsForm.get('siteSubdivision');
+    const roadNameCtrl = this.siteDetailsForm.get('roadName');
+    const policeStationCtrl = this.siteDetailsForm.get('policeStation');
+
+    siteDistrictCtrl?.setValue(district.id, { emitEvent: false });
+    siteSubdivisionCtrl?.enable({ emitEvent: false });
+    roadNameCtrl?.enable({ emitEvent: false });
+
+    this.filterSubdivisions(district.id);
+    this.filterRoads(district.id);
+
+    if (this.prefillSubdivisionCode) {
+      const subdivision = this.siteSubdivisions.find(s => s.subdivisionCode === this.prefillSubdivisionCode);
+      if (subdivision) {
+        if (typeof subdivision.id !== 'number') return;
+        siteSubdivisionCtrl?.setValue(subdivision.id, { emitEvent: false });
+        policeStationCtrl?.enable({ emitEvent: false });
+        this.filterPoliceStations(subdivision.id);
+      }
+    }
+
+    this.prefillApplied = true;
+    this.saveToSessionStorage();
+    this.cdr.detectChanges();
   }
 
   ngOnDestroy() {
@@ -224,6 +320,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         if (storedDistrictId) {
           this.onDistrictChange(storedDistrictId);
         }
+        this.tryApplyUserLocationPrefill();
       },
       error: (err) => console.error('Failed to load districts', err)
     });
@@ -239,6 +336,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         if (storedDistrictId && this.districts.length > 0) {
           this.filterSubdivisions(storedDistrictId);
         }
+        this.tryApplyUserLocationPrefill();
       },
       error: (err) => console.error('Failed to load subdivisions', err)
     });

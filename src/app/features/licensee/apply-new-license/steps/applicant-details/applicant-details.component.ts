@@ -9,6 +9,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 interface DocumentUpload {
   name: string;
@@ -72,6 +73,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private licenseSrv: LicenseApplicationService,
+    private accountService: AccountService,
     private cdr: ChangeDetectorRef
   ) {
     const stored = this.getFromSessionStorage();
@@ -130,6 +132,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.restoreDocuments();
     this.validateAge();
+    this.autoFillFromUserProfile();
   }
 
   ngOnDestroy(): void {
@@ -200,6 +203,89 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     sessionStorage.setItem('applicantDetailsData', JSON.stringify(raw));
   }
 
+  private autoFillFromUserProfile(): void {
+    // If everything important is already filled, do not override user-entered values.
+    if (this.hasPrimaryApplicantFields()) {
+      return;
+    }
+
+    let userProfile: any = this.accountService.getCurrentUser();
+
+    if (!userProfile) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          userProfile = JSON.parse(storedUser);
+        } catch (_e) {
+          userProfile = null;
+        }
+      }
+    }
+
+    if (userProfile) {
+      this.fillMissingFieldsFromProfile(userProfile);
+      return;
+    }
+
+    // Last fallback: fetch current user profile from backend.
+    this.accountService.identity(true).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (profile) => {
+        if (profile) {
+          this.fillMissingFieldsFromProfile(profile);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to fetch current user profile for applicant auto-fill:', err);
+      }
+    });
+  }
+
+  private hasPrimaryApplicantFields(): boolean {
+    const raw = this.applicantDetailsForm.getRawValue();
+    return !!(
+      raw.firstName &&
+      raw.lastName &&
+      raw.applicantMobileNumber &&
+      raw.email &&
+      raw.presentAddress
+    );
+  }
+
+  private fillMissingFieldsFromProfile(profile: any): void {
+    const raw = this.applicantDetailsForm.getRawValue();
+    const patch: any = {};
+
+    const firstName = profile?.firstName || profile?.first_name || '';
+    const middleName = profile?.middleName || profile?.middle_name || '';
+    const lastName = profile?.lastName || profile?.last_name || '';
+    const phone = profile?.phoneNumber || profile?.phone_number || '';
+    const email = profile?.email || '';
+    const address = profile?.address || '';
+    const pan = profile?.panNumber || profile?.pan_number || profile?.pan || '';
+
+    if (!raw.firstName && firstName) patch.firstName = firstName;
+    if (!raw.middleName && middleName) patch.middleName = middleName;
+    if (!raw.lastName && lastName) patch.lastName = lastName;
+    if (!raw.applicantMobileNumber && phone) patch.applicantMobileNumber = String(phone);
+    if (!raw.email && email) patch.email = email;
+    if (!raw.presentAddress && address) patch.presentAddress = address;
+    if (!raw.permanentAddress && address) patch.permanentAddress = address;
+    if (!raw.pan && pan) patch.pan = String(pan).toUpperCase();
+
+    // Default values that help user proceed faster if blank.
+    if (!raw.nationality) patch.nationality = 'Indian';
+    if (!raw.maritalStatus) patch.maritalStatus = 'Single';
+    if (!raw.residentialStatus) patch.residentialStatus = 'Resident';
+
+    if (Object.keys(patch).length === 0) {
+      return;
+    }
+
+    this.applicantDetailsForm.patchValue(patch, { emitEvent: true });
+    this.updateAllErrorMessages();
+    this.cdr.detectChanges();
+  }
+
   /* --------------------------------------------------------------- */
   /* -------------------------- DOCUMENTS -------------------------- */
   /* --------------------------------------------------------------- */
@@ -267,6 +353,12 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
   areRequiredDocumentsUploaded(): boolean {
     return this.documents.filter(d => d.required).every(d => d.file !== null);
+  }
+
+  getMissingRequiredDocuments(): string[] {
+    return this.documents
+      .filter(d => d.required && !d.file)
+      .map(d => d.label);
   }
 
   /* --------------------------------------------------------------- */
@@ -341,7 +433,11 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
         .forEach(k => this.applicantDetailsForm.get(k)?.markAsTouched());
 
       if (!this.areRequiredDocumentsUploaded()) {
-        alert('Please upload all required documents before proceeding.');
+        const missingDocs = this.getMissingRequiredDocuments();
+        const docMsg = missingDocs.length
+          ? `\nMissing documents:\n- ${missingDocs.join('\n- ')}`
+          : '';
+        alert(`Please upload all required documents before proceeding.${docMsg}`);
       }
     }
   }

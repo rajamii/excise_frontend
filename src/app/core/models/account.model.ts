@@ -9,6 +9,7 @@ export class Account {
   lastName!: string;
   email!: string;
   phoneNumber!: string;
+  panNumber?: string;
   district?: District;
   subdivision?: Subdivision;
   address!: string;
