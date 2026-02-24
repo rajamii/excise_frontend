@@ -724,13 +724,21 @@ hanced Tab styling with better visibility
 // Filter buttons
 .btn-outline-primary {
   border-color: #10b981;
-  color: #10b981;
-  background-color: white;
+  color: white;
+  background-color: #10b981;
   
-  &:hover {
-    background-color: #10b981 !important;
+  &:hover:not(:disabled) {
+    background-color: white !important;
     border-color: #10b981;
-    color: white !important;
+    color: #10b981 !important;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+    color: #9ca3af;
   }
 }
 
