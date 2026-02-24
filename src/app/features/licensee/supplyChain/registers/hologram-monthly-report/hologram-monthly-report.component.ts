@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface StatementRow {
   rowType: 'ARRIVAL' | 'UTILIZATION' | 'SUMMARY';
@@ -95,10 +96,12 @@ export class HologramMonthlyReportComponent implements OnInit {
   statementRows: StatementRow[] = [];
   approvedEntriesCount: number = 0;
   isLoading: boolean = false;
+  establishmentLine: string = '';
 
   constructor(
     private router: Router,
-    private hologramService: HologramDataService
+    private hologramService: HologramDataService,
+    private supplyChainProfileService: SupplyChainProfileService
   ) {}
 
   ngOnInit(): void {
@@ -113,8 +116,24 @@ export class HologramMonthlyReportComponent implements OnInit {
       type: this.selectedHologramType
     });
 
+    this.loadProfileHeaderLine();
+
     // Load data
     this.loadMonthlyReport();
+  }
+
+  private loadProfileHeaderLine(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (response) => {
+        const profile = response?.data;
+        const unitName = (profile?.manufacturingUnitName || '').trim();
+        const address = (profile?.address || '').trim();
+        this.establishmentLine = [unitName, address].filter(Boolean).join(' | ');
+      },
+      error: () => {
+        this.establishmentLine = '';
+      }
+    });
   }
 
   /**
