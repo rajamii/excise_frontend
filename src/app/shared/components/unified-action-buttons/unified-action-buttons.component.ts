@@ -417,18 +417,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
   private handleWorkflowAction(button: ActionButtonConfig): void {
     console.log(`🔧 UNIFIED BUTTONS: Executing workflow action: ${button.action}`);
-
-    // Call backend service to execute workflow action
-    // For now, show success message
-    Swal.fire({
-      title: 'Action Completed',
-      text: `${button.label} action has been executed successfully.`,
-      icon: 'success',
-      confirmButtonText: 'OK'
-    }).then(() => {
-      // Emit event to parent for any additional handling
-      this.actionClicked.emit({ action: button.action, item: this.item });
-    });
+    // Real success/failure is handled in parent after API response.
+    this.actionClicked.emit({ action: button.action, item: this.item });
   }
 
   private handlePaymentAction(): void {
@@ -951,3 +941,4 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     return this.toTitleCase(this.normalizeActionName(button.action));
   }
 }
+

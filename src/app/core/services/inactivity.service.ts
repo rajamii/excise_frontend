@@ -1,6 +1,7 @@
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 import { AccountService } from './account.service';
 
@@ -31,7 +32,8 @@ export class InactivityService {
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private accountService: AccountService,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog
   ) {}
 
   startWatching(): void {
@@ -242,6 +244,7 @@ export class InactivityService {
 
     this.isLoggingOut = true;
     this.stopWatching();
+    this.dialog.closeAll();
     this.accountService.clearAppData();
     void this.router.navigate(['/login'], {
       queryParams: { inactive: true }

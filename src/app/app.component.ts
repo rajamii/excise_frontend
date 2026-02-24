@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, NavigationEnd, RouterOutlet, ActivatedRoute } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { HeaderComponent } from './layouts/header/header.component';
 import { FooterComponent } from './layouts/footer/footer.component';
 import { CarouselComponent } from "./layouts/landing/carousel/carousel.component";
@@ -30,6 +31,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private accountService = inject(AccountService);
   private inactivityService = inject(InactivityService);
+  private dialog = inject(MatDialog);
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
@@ -48,6 +50,9 @@ export class AppComponent implements OnInit, OnDestroy {
           return;
         }
 
+        // Ensure stale dialogs from previous protected screens are removed
+        // when session expires and app navigates to login.
+        this.dialog.closeAll();
         this.inactivityService.stopWatching();
       });
   }

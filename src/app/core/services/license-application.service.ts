@@ -10,6 +10,7 @@ export class LicenseApplicationService {
 
   private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocumentsSubject = new BehaviorSubject<Map<string, File>>(new Map());
@@ -621,12 +622,12 @@ export class LicenseApplicationService {
 
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
   }
 
   updateSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.put(`${this.oldLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
   }
 
   searchApplications(filters: any): Observable<any> {
@@ -742,12 +743,12 @@ export class LicenseApplicationService {
 
   submitNewLicenseSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
   }
 
   updateNewLicenseSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.put(`${this.newLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
   }
 
   searchNewLicenseApplications(filters: any): Observable<any> {

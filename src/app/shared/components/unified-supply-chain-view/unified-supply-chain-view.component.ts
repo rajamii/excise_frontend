@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 
 // Services
@@ -12,9 +13,11 @@ import { SupplyChainService } from '../../../features/licensee/supplyChain/servi
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
 import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
+import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
+import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
 
 // Constants
 import { 
@@ -271,7 +274,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private hologramDataService: HologramDataService,
         private companyRegistrationService: CompanyRegistrationService,
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
+        private licenseApplicationService: LicenseApplicationService,
         private unifiedActionsService: UnifiedActionsService,
+        private dialog: MatDialog,
         private snackBar: MatSnackBar,
         @Inject(PLATFORM_ID) platformId: Object
     ) {
@@ -1015,6 +1020,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();
 
+        if (action === 'APPROVE') {
+            this.handleApproveWithDynamicPrechecks(event.item, context);
+            return;
+        }
+
         this.unifiedActionsService.executeAction(action, event.item, this.applicationType, context).subscribe({
             next: (result: any) => {
                 const isSuccess = result?.success !== false;
@@ -1040,6 +1050,201 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
             }
         });
+    }
+
+    private handleApproveWithDynamicPrechecks(item: any, context: UserContext): void {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+            this.snackBar.open('Application ID not found for site enquiry.', 'Close', { duration: 4000 });
+            return;
+        }
+
+        this.http.get<any[]>(`${environment.apiBaseUrl}/auth/${encodeURIComponent(applicationId)}/next-stages/`).subscribe({
+            next: (stages: any[]) => {
+                if (this.hasApproveSiteEnquiryRequirement(stages)) {
+                    this.openSiteEnquiryAndApprove(item, context, applicationId);
+                    return;
+                }
+
+                this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                    next: (result: any) => {
+                        const isSuccess = result?.success !== false;
+                        if (isSuccess) {
+                            if (result.message) {
+                                this.snackBar.open(result.message, 'Close', { duration: 3000 });
+                            }
+                            const currentId = this.applicationData?.id?.toString() || '';
+                            const currentRef = this.applicationData?.referenceNo || '';
+                            this.loadApplicationData(currentRef, currentId);
+                        } else {
+                            this.snackBar.open(result?.message || 'Action failed', 'Close', { duration: 4000 });
+                        }
+                    },
+                    error: (error: any) => {
+                        this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
+                    }
+                });
+            },
+            error: () => {
+                if (this.isCurrentStageSiteEnquiry()) {
+                    this.openSiteEnquiryAndApprove(item, context, applicationId);
+                    return;
+                }
+                this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                    next: (result: any) => {
+                        const isSuccess = result?.success !== false;
+                        if (isSuccess) {
+                            if (result.message) {
+                                this.snackBar.open(result.message, 'Close', { duration: 3000 });
+                            }
+                            const currentId = this.applicationData?.id?.toString() || '';
+                            const currentRef = this.applicationData?.referenceNo || '';
+                            this.loadApplicationData(currentRef, currentId);
+                        } else {
+                            this.snackBar.open(result?.message || 'Action failed', 'Close', { duration: 4000 });
+                        }
+                    },
+                    error: (error: any) => {
+                        this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
+                    }
+                });
+            }
+        });
+    }
+
+    private hasApproveSiteEnquiryRequirement(stages: any[]): boolean {
+        if (this.applicationType !== 'new-license') {
+            return false;
+        }
+        if (this.isCurrentStageSiteEnquiry()) {
+            return true;
+        }
+        if (!Array.isArray(stages) || stages.length === 0) {
+            return false;
+        }
+        return stages.some((stage: any) => {
+            const stageName = String(stage?.name || '').toLowerCase();
+            if (stageName.includes('site enquiry') || stageName.includes('site_enquiry') || stageName.includes('site-enquiry')) {
+                return this.isApproveLikeStage(stage);
+            }
+            return this.isApproveLikeStage(stage) && this.isSiteEnquiryCondition(stage?.condition);
+        });
+    }
+
+    private isApproveLikeStage(stage: any): boolean {
+        const action = String(stage?.action || '').toUpperCase().trim();
+        const name = String(stage?.name || '').toLowerCase();
+        if (action === 'APPROVE' || action === 'FORWARD') {
+            return true;
+        }
+        return name.includes('approved') || name.includes('payment');
+    }
+
+    private isSiteEnquiryCondition(condition: any): boolean {
+        if (!condition || typeof condition !== 'object') {
+            return false;
+        }
+
+        if (condition['site_enquiry_required'] === true || condition['requires_site_enquiry'] === true) {
+            return true;
+        }
+
+        const requiredForm = String(condition['required_form'] || condition['pre_approval_form'] || '').toLowerCase();
+        if (requiredForm === 'site_enquiry' || requiredForm === 'site-enquiry') {
+            return true;
+        }
+
+        const gate = String(condition['approval_gate'] || condition['gate'] || '').toLowerCase();
+        return gate === 'site_enquiry' || gate === 'site-enquiry';
+    }
+
+    private isCurrentStageSiteEnquiry(): boolean {
+        if (this.applicationType !== 'new-license') {
+            return false;
+        }
+        const stageName = String(
+            this.applicationData?.currentStageName ??
+            (this.applicationData as any)?.current_stage_name ??
+            this.applicationData?.status ??
+            ''
+        ).toLowerCase();
+
+        return stageName.includes('site enquiry') || stageName.includes('site_enquiry') || stageName.includes('site-enquiry');
+    }
+
+    private openSiteEnquiryAndApprove(item: any, context: UserContext, applicationId: string): void {
+        const submitSiteEnquiry$ =
+            this.applicationType === 'new-license'
+                ? (formData: FormData) => this.licenseApplicationService.submitNewLicenseSiteEnquiryData(applicationId, formData)
+                : (formData: FormData) => this.licenseApplicationService.submitSiteEnquiryData(applicationId, formData);
+
+        const dialogRef = this.dialog.open(SiteEnquiryFormDialogComponent, {
+            width: '980px',
+            maxWidth: '98vw',
+            disableClose: true,
+            data: { applicationId }
+        });
+
+        dialogRef.afterClosed().subscribe((result: { formData: FormData } | null) => {
+            if (!result?.formData) {
+                return;
+            }
+
+            submitSiteEnquiry$(result.formData).subscribe({
+                next: () => {
+                    this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                        next: (approveResult: any) => {
+                            const isSuccess = approveResult?.success !== false;
+                            if (isSuccess) {
+                                this.snackBar.open('Site enquiry submitted and application approved.', 'Close', { duration: 3500 });
+                                const currentId = this.applicationData?.id?.toString() || '';
+                                const currentRef = this.applicationData?.referenceNo || '';
+                                this.loadApplicationData(currentRef, currentId);
+                                return;
+                            }
+                            this.snackBar.open(approveResult?.message || 'Approval failed after site enquiry submit.', 'Close', { duration: 4500 });
+                        },
+                        error: (error: any) => {
+                            this.snackBar.open(error?.message || 'Approval failed after site enquiry submit.', 'Close', { duration: 4500 });
+                        }
+                    });
+                },
+                error: (error: any) => {
+                    const message = error?.error?.detail || error?.error?.message || 'Failed to submit site enquiry form.';
+                    if (String(message).toLowerCase().includes('already submitted')) {
+                        this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                            next: (approveResult: any) => {
+                                const isSuccess = approveResult?.success !== false;
+                                if (isSuccess) {
+                                    this.snackBar.open('Existing site enquiry found. Application approved.', 'Close', { duration: 3500 });
+                                    const currentId = this.applicationData?.id?.toString() || '';
+                                    const currentRef = this.applicationData?.referenceNo || '';
+                                    this.loadApplicationData(currentRef, currentId);
+                                    return;
+                                }
+                                this.snackBar.open(approveResult?.message || 'Approval failed.', 'Close', { duration: 4500 });
+                            },
+                            error: (approveError: any) => {
+                                this.snackBar.open(approveError?.message || 'Approval failed.', 'Close', { duration: 4500 });
+                            }
+                        });
+                        return;
+                    }
+                    this.snackBar.open(message, 'Close', { duration: 4500 });
+                }
+            });
+        });
+    }
+
+    private getWorkflowApplicationId(item: any): string {
+        return String(
+            item?.application_id ??
+            item?.applicationId ??
+            item?.referenceNo ??
+            item?.refNo ??
+            item?.id ??
+            ''
+        ).trim();
     }
 
     getIncludeActionsForDetailView(): string[] | null {
