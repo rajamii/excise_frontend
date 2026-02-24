@@ -76,14 +76,8 @@
 
     <!-- Action Buttons -->
     <div class="d-flex gap-3 mb-4">
-      <button class="btn btn-success" (click)="downloadDetails()">
-        <i class="bi bi-download me-1"></i>Download Details
-      </button>
       <button class="btn btn-warning" *ngIf="showRetryButton" (click)="retryPayment()">
         <i class="bi bi-arrow-clockwise me-1"></i>Retry Payment
-      </button>
-      <button class="btn btn-secondary" (click)="returnToApplication()">
-        <i class="bi bi-arrow-left me-1"></i>Return to Application
       </button>
     </div>
 
@@ -479,21 +473,18 @@
           <thead class="table-success">
             <tr>
               <th>Txn ID</th>
-              <th>User ID</th>
               <th>Type</th>
               <th>Payment For</th>
               <th>Amount</th>
               <th>Reference</th>
               <th>Status</th>
               <th>Date/Time</th>
-              <th>Licensee ID</th>
             </tr>
           </thead>
           <tbody>
             @for (item of historyData; track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
-              <td>{{ item.userId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
               <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
@@ -502,7 +493,6 @@
                 <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
               </td>
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
-              <td>{{ item.licenseeId }}</td>
             </tr>
             }
           </tbody>
@@ -590,12 +580,13 @@
                   <span class="badge"
                     [ngClass]="{ 'bg-success': t.type==='Added', 'bg-danger': t.type==='Utilized' }">{{ t.type }}</span>
                 </td>
+                <td>{{ t.paymentFor || '-' }}</td>
                 <td class="text-end">₹{{ t.amount | number:'1.2-2' }}</td>
                 <td class="text-end">₹{{ t.balanceAfter | number:'1.2-2' }}</td>
                 <td>{{ t.reference }}</td>
               </tr>
               <tr *ngIf="walletHistoryFiltered.length === 0">
-                <td colspan="5" class="text-center text-muted">No transactions found</td>
+                <td colspan="6" class="text-center text-muted">No transactions found</td>
               </tr>
             </tbody>
           </table>

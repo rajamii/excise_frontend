@@ -60,15 +60,23 @@ export interface ActionButtonConfig {
       <!-- TABLE MODE: All buttons as icons OR DETAILED MODE: Secondary Action Buttons -->
       <ng-container *ngFor="let button of getDisplayButtons()">
         <button
-          mat-icon-button
+          class="action-icon-btn"
+          [class.variant-view]="getButtonVariant(button) === 'view'"
+          [class.variant-slip]="getButtonVariant(button) === 'slip'"
           type="button"
-          [color]="button.color"
           [matTooltip]="button.tooltip || getButtonTooltip(button)"
           [attr.title]="button.tooltip || getButtonTooltip(button)"
           [attr.data-action]="button.action"
+          [attr.data-variant]="getButtonVariant(button)"
+          [attr.style]="getButtonInlineStyle(button)"
+          [style.background]="getButtonBackground(button)"
+          [style.border-radius]="'16px'"
+          [style.min-width]="'56px'"
+          [style.width]="'56px'"
+          [style.height]="'56px'"
           (click)="onActionButtonClick(button, $event)"
           (mousedown)="onActionButtonClick(button, $event)">
-          <mat-icon>{{ button.icon }}</mat-icon>
+          <mat-icon [style.color]="getIconColor(button)">{{ button.icon }}</mat-icon>
         </button>
       </ng-container>
 
@@ -78,7 +86,7 @@ export interface ActionButtonConfig {
     .action-buttons-container {
       display: flex;
       flex-direction: row;
-      gap: 4px;
+      gap: 12px;
       align-items: center;
       justify-content: center;
       flex-wrap: nowrap;
@@ -88,16 +96,24 @@ export interface ActionButtonConfig {
     }
 
     .action-buttons-container.table-mode {
-      gap: 4px;
+      gap: 10px;
       flex-wrap: nowrap;
     }
 
     .action-btn {
       min-width: 120px;
       height: 40px;
-      font-weight: 500;
+      font-weight: 600;
       pointer-events: auto !important;
       cursor: pointer !important;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      }
       
       mat-icon {
         margin-right: 8px;
@@ -107,100 +123,233 @@ export interface ActionButtonConfig {
       }
     }
 
-    button[mat-icon-button] {
-      min-width: 36px;
-      width: 36px;
-      height: 36px;
+    /* Base icon button styles */
+    .action-icon-btn {
+      min-width: 56px !important;
+      width: 56px !important;
+      height: 56px !important;
       pointer-events: auto !important;
       cursor: pointer !important;
       position: relative;
       z-index: 1;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.04);
-        transform: scale(1.1);
-      }
-      
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        pointer-events: none;
-      }
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      border-radius: 16px !important;
+      border: none !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+      overflow: visible !important;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    }
+
+    .action-icon-btn.variant-view {
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+    }
+
+    .action-icon-btn.variant-slip {
+      background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%) !important;
+    }
+
+    .action-icon-btn:hover {
+      transform: translateY(-3px) !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .action-icon-btn:active {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .action-icon-btn mat-icon {
+      font-size: 26px !important;
+      width: 26px !important;
+      height: 26px !important;
+      pointer-events: none;
+    }
+
+    ::ng-deep button[mat-icon-button] {
+      min-width: 56px !important;
+      width: 56px !important;
+      height: 56px !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      border-radius: 16px !important;
+      border: none !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+      overflow: visible !important;
+    }
+
+    ::ng-deep button[mat-icon-button]:hover {
+      transform: translateY(-3px) !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    ::ng-deep button[mat-icon-button]:active {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    ::ng-deep button[mat-icon-button] .mat-mdc-button-persistent-ripple,
+    ::ng-deep button[mat-icon-button] .mat-mdc-button-ripple {
+      border-radius: 16px !important;
+    }
+
+    ::ng-deep button[mat-icon-button] mat-icon {
+      font-size: 26px !important;
+      width: 26px !important;
+      height: 26px !important;
+      pointer-events: none;
+    }
+
+    /* View Button - Light Blue Background */
+    ::ng-deep button[mat-icon-button][data-variant="view"],
+    ::ng-deep button[mat-icon-button][data-variant="view"] .mdc-button__label {
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+    }
+
+    ::ng-deep button[mat-icon-button][data-variant="view"] mat-icon {
+      color: #1976d2 !important;
+    }
+
+    ::ng-deep button[mat-icon-button][data-variant="view"]:hover,
+    ::ng-deep button[mat-icon-button][data-variant="view"]:hover .mdc-button__label {
+      background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%) !important;
+    }
+
+    /* Slip Buttons - Yellow Background */
+    ::ng-deep button[mat-icon-button][data-variant="slip"],
+    ::ng-deep button[mat-icon-button][data-variant="slip"] .mdc-button__label {
+      background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%) !important;
+    }
+
+    ::ng-deep button[mat-icon-button][data-variant="slip"] mat-icon {
+      color: #f9a825 !important;
+    }
+
+    ::ng-deep button[mat-icon-button][data-variant="slip"]:hover,
+    ::ng-deep button[mat-icon-button][data-variant="slip"]:hover .mdc-button__label {
+      background: linear-gradient(135deg, #ffecb3 0%, #ffe082 100%) !important;
+    }
+
+    /* Success Actions - Light Green Background */
+    ::ng-deep button[mat-icon-button][color="success"],
+    ::ng-deep button[mat-icon-button][color="success"] .mdc-button__label {
+      background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="success"] mat-icon {
+      color: #388e3c !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="success"]:hover,
+    ::ng-deep button[mat-icon-button][color="success"]:hover .mdc-button__label {
+      background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%) !important;
+    }
+
+    /* Danger/Warn Actions - Light Red Background */
+    ::ng-deep button[mat-icon-button][color="warn"],
+    ::ng-deep button[mat-icon-button][color="danger"],
+    ::ng-deep button[mat-icon-button][color="warn"] .mdc-button__label,
+    ::ng-deep button[mat-icon-button][color="danger"] .mdc-button__label {
+      background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="warn"] mat-icon,
+    ::ng-deep button[mat-icon-button][color="danger"] mat-icon {
+      color: #d32f2f !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="warn"]:hover,
+    ::ng-deep button[mat-icon-button][color="danger"]:hover,
+    ::ng-deep button[mat-icon-button][color="warn"]:hover .mdc-button__label,
+    ::ng-deep button[mat-icon-button][color="danger"]:hover .mdc-button__label {
+      background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%) !important;
+    }
+
+    /* Info Actions - Light Cyan Background */
+    ::ng-deep button[mat-icon-button][color="info"],
+    ::ng-deep button[mat-icon-button][color="info"] .mdc-button__label {
+      background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%) !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="info"] mat-icon {
+      color: #0097a7 !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="info"]:hover,
+    ::ng-deep button[mat-icon-button][color="info"]:hover .mdc-button__label {
+      background: linear-gradient(135deg, #b2ebf2 0%, #80deea 100%) !important;
+    }
+
+    /* Accent Actions - Light Purple Background */
+    ::ng-deep button[mat-icon-button][color="accent"],
+    ::ng-deep button[mat-icon-button][color="accent"] .mdc-button__label {
+      background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%) !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="accent"] mat-icon {
+      color: #7b1fa2 !important;
+    }
+
+    ::ng-deep button[mat-icon-button][color="accent"]:hover,
+    ::ng-deep button[mat-icon-button][color="accent"]:hover .mdc-button__label {
+      background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%) !important;
     }
 
     /* Responsive adjustments for mobile */
     @media (max-width: 768px) {
       .action-buttons-container {
-        gap: 2px;
+        gap: 8px;
         min-height: 36px;
       }
+
+      .action-icon-btn {
+        min-width: 48px !important;
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+      }
+
+      .action-icon-btn mat-icon {
+        font-size: 22px !important;
+        width: 22px !important;
+        height: 22px !important;
+      }
       
-      button[mat-icon-button] {
-        min-width: 32px;
-        width: 32px;
-        height: 32px;
-        
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-        }
+      ::ng-deep button[mat-icon-button] {
+        min-width: 48px !important;
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
       }
-    }
-
-    .action-icon-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      text-decoration: none;
-      cursor: pointer;
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+      
+      ::ng-deep button[mat-icon-button] mat-icon {
+        font-size: 22px !important;
+        width: 22px !important;
+        height: 22px !important;
       }
-    }
-
-    .action-buttons-container.table-mode .action-icon-link {
-      width: 32px;
-      height: 32px;
-    }
-
-    .action-buttons-container.table-mode button[mat-icon-button] {
-      min-width: 36px;
-      width: 36px;
-      height: 36px;
-    }
-
-    .action-buttons-container.table-mode mat-icon {
-      font-size: 20px !important;
-      width: 20px !important;
-      height: 20px !important;
-      line-height: 20px;
     }
 
     .action-color-primary { color: #1976d2; }
-    .action-color-success { color: #28a745; }
-    .action-color-warning { color: #f59e0b; }
-    .action-color-danger { color: #dc3545; }
-    .action-color-info { color: #17a2b8; }
-    .action-color-warn { color: #dc3545; }
-    .action-color-accent { color: #7c3aed; }
+    .action-color-success { color: #388e3c; }
+    .action-color-warning { color: #f57c00; }
+    .action-color-danger { color: #d32f2f; }
+    .action-color-info { color: #0097a7; }
+    .action-color-warn { color: #d32f2f; }
+    .action-color-accent { color: #7b1fa2; }
 
-    /* Color overrides for better visibility */
+    /* Color overrides for raised buttons */
     .mat-mdc-raised-button.mat-success {
-      background-color: #28a745;
+      background-color: #388e3c;
       color: white;
     }
 
     .mat-mdc-raised-button.mat-danger {
-      background-color: #dc3545;
+      background-color: #d32f2f;
       color: white;
     }
   `]
@@ -634,7 +783,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       requisition: '/dev-final-requisition-letters',
       revalidation: '/dev-revalidation-permit-slip',
       transit: '/dev-final-transit-permit-view',
-      hologram: '/dev-payslip'
+      hologram: '/payment-slip-view'
     };
     const route = routeByType[String(this.itemType || '').toLowerCase()] || '/payment-slip-view';
     const finalUrl = query ? `${route}?${query}` : route;
@@ -929,8 +1078,13 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   isSlipButton(button: ActionButtonConfig | null | undefined): boolean {
     if (!button) return false;
     if (this.isSlipAction(button.action)) return true;
+    const combinedText = `${button.label || ''} ${button.tooltip || ''}`.toLowerCase();
+    if (combinedText.includes('slip')) return true;
+    if (combinedText.includes('payment') && combinedText.includes('view')) return true;
+    if (combinedText.includes('permit') && combinedText.includes('slip')) return true;
+
     const icon = String(button.icon || '').toLowerCase();
-    return icon.includes('receipt');
+    return icon.includes('receipt') || icon.includes('description') || icon.includes('assignment');
   }
 
   getButtonTooltip(button: ActionButtonConfig | null | undefined): string {
@@ -939,6 +1093,82 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     if (this.isSlipAction(button.action)) return this.getSlipButtonTooltip();
     if (button.label) return button.label;
     return this.toTitleCase(this.normalizeActionName(button.action));
+  }
+
+  getButtonBackground(button: ActionButtonConfig): string {
+    const variant = this.getButtonVariant(button);
+    if (variant === 'slip') {
+      return 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)';
+    }
+    if (variant === 'view') {
+      return 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+    }
+
+    const color = button.color || 'primary';
+    const action = button.action || '';
+    
+    switch (color) {
+      case 'primary':
+        return 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+      case 'warning':
+        return 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)';
+      case 'success':
+        return 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)';
+      case 'warn':
+      case 'danger':
+        return 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
+      case 'info':
+        return 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)';
+      case 'accent':
+        return 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)';
+      default:
+        return 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+    }
+  }
+
+  getIconColor(button: ActionButtonConfig): string {
+    const variant = this.getButtonVariant(button);
+    if (variant === 'slip') {
+      return '#f9a825';
+    }
+    if (variant === 'view') {
+      return '#1976d2';
+    }
+
+    const color = button.color || 'primary';
+
+    switch (color) {
+      case 'primary':
+        return '#1976d2';
+      case 'warning':
+        return '#f9a825';
+      case 'success':
+        return '#388e3c';
+      case 'warn':
+      case 'danger':
+        return '#d32f2f';
+      case 'info':
+        return '#0097a7';
+      case 'accent':
+        return '#7b1fa2';
+      default:
+        return '#1976d2';
+    }
+  }
+
+  getButtonVariant(button: ActionButtonConfig | null | undefined): 'slip' | 'view' | 'default' {
+    if (!button) return 'default';
+    if (this.isSlipButton(button)) return 'slip';
+
+    const normalizedAction = this.normalizeActionName(button.action);
+    if (normalizedAction === 'VIEW') return 'view';
+
+    return 'default';
+  }
+
+  getButtonInlineStyle(button: ActionButtonConfig): string {
+    const background = this.getButtonBackground(button);
+    return `background: ${background} !important; background-color: transparent !important; border-radius: 16px !important; min-width: 56px !important; width: 56px !important; height: 56px !important;`;
   }
 }
 

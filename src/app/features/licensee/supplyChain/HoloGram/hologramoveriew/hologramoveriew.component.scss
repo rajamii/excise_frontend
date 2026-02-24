@@ -724,11 +724,21 @@ hanced Tab styling with better visibility
 // Filter buttons
 .btn-outline-primary {
   border-color: #10b981;
-  color: #10b981;
+  color: white;
+  background-color: #10b981;
   
-  &:hover {
-    background-color: #10b981;
+  &:hover:not(:disabled) {
+    background-color: white !important;
     border-color: #10b981;
+    color: #10b981 !important;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+    color: #9ca3af;
   }
 }
 
@@ -1851,6 +1861,67 @@ Details Modal Styling
 
 .modal.show .modal-dialog {
   animation: modalFadeIn 0.3s ease-out;
+}
+
+/* Issued History - Brands popup */
+.history-brands-modal {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.history-brands-dialog {
+  margin: 0 auto;
+  width: min(1120px, 96vw);
+}
+
+.history-brands-content {
+  border: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+}
+
+.history-brands-header {
+  background: linear-gradient(135deg, #0f6bd8 0%, #1f7aec 100%);
+  padding: 0.9rem 1.1rem;
+}
+
+.history-brands-body {
+  padding: 0.85rem;
+  background: #f8fafc;
+}
+
+.history-brands-table {
+  margin-bottom: 0;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+
+  thead th {
+    background: #eef4ff;
+    color: #41546f;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  tbody td {
+    vertical-align: middle;
+  }
+}
+
+.history-brands-tfoot th {
+  background: #f0fdf4;
+  font-weight: 800;
+}
+
+.history-brands-footer {
+  padding: 0.7rem 1rem;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
 }
 
 // Hover effects for interactive elements

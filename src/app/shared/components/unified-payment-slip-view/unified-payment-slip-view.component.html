@@ -21,6 +21,7 @@
         <article class="summary-card total">
           <p class="label">
             {{ moduleType === 'requisition' ? 'Total Requisition Amount' : 
+               moduleType === 'hologram' ? 'Total Hologram Amount' :
                moduleType === 'cancellation' ? 'Total Cancellation Amount' : 
                'Total Transit Amount' }}
           </p>
@@ -29,6 +30,7 @@
         <article class="summary-card refund">
           <p class="label">
             {{ moduleType === 'requisition' ? 'Payable Amount' : 
+               moduleType === 'hologram' ? 'Wallet Paid Amount' :
                moduleType === 'cancellation' ? 'Refund Amount' : 
                'Refund Amount' }}
           </p>
@@ -37,6 +39,7 @@
         <article class="summary-card neutral">
           <p class="label">
             {{ moduleType === 'requisition' ? 'No. of Permits' : 
+               moduleType === 'hologram' ? 'Total Holograms' :
                moduleType === 'cancellation' ? 'Permits Cancelled' : 
                'Total Cases' }}
           </p>
@@ -57,10 +60,50 @@
         <div class="row" *ngIf="moduleType === 'cancellation'"><label>Original Requisition</label><span>{{ cancellationRow?.original_requisition_ref || '-' }}</span></div>
         <div class="row" *ngIf="moduleType === 'cancellation'"><label>Cancelled Permits</label><span>{{ cancellationRow?.cancelled_permit_numbers || '-' }}</span></div>
         <div class="row" *ngIf="moduleType === 'cancellation'"><label>Cancellation Reason</label><span>{{ cancellationRow?.reason || '-' }}</span></div>
-        <div class="row" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation'"><label>Excise Duty</label><span>&#8377;{{ transitSummary.excise | number:'1.2-2' }}</span></div>
-        <div class="row" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation'"><label>Education Cess</label><span>&#8377;{{ transitSummary.cess | number:'1.2-2' }}</span></div>
-        <div class="row" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation'"><label>Additional Excise</label><span>&#8377;{{ transitSummary.addl | number:'1.2-2' }}</span></div>
+        <div class="row" *ngIf="moduleType === 'hologram'"><label>Distillery</label><span>{{ hologramRow?.distillery_name || '-' }}</span></div>
+        <div class="row" *ngIf="moduleType === 'hologram'"><label>Local Qty</label><span>{{ hologramRow?.local_qty || 0 }}</span></div>
+        <div class="row" *ngIf="moduleType === 'hologram' && (hologramRow?.export_qty || 0) > 0"><label>Export Qty</label><span>{{ hologramRow?.export_qty || 0 }}</span></div>
+        <div class="row" *ngIf="moduleType === 'hologram' && (hologramRow?.defence_qty || 0) > 0"><label>Defence Qty</label><span>{{ hologramRow?.defence_qty || 0 }}</span></div>
+        <div class="row" *ngIf="moduleType === 'hologram'"><label>Payment Status</label><span>{{ hologramRow?.payment_status || '-' }}</span></div>
+        <div class="row" *ngIf="moduleType === 'hologram'"><label>Transaction ID</label><span>{{ hologramRow?.payment_details?.wallet_history?.[0]?.transaction_id || '-' }}</span></div>
+        <div class="row" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram'"><label>Excise Duty</label><span>&#8377;{{ transitSummary.excise | number:'1.2-2' }}</span></div>
+        <div class="row" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram'"><label>Education Cess</label><span>&#8377;{{ transitSummary.cess | number:'1.2-2' }}</span></div>
+        <div class="row" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram'"><label>Additional Excise</label><span>&#8377;{{ transitSummary.addl | number:'1.2-2' }}</span></div>
       </section>
+    </div>
+
+    <div *ngIf="!isLoading && moduleType === 'hologram' && hologramRow" class="section">
+      <h3>Hologram Payment Details</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Date</th>
+              <th>Distillery</th>
+              <th>Status</th>
+              <th>Local</th>
+              <th>Export</th>
+              <th>Defence</th>
+              <th>Total Qty</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ hologramRow.reference_no }}</td>
+              <td>{{ hologramRow.submission_date ? (hologramRow.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ hologramRow.distillery_name }}</td>
+              <td>{{ hologramRow.status }}</td>
+              <td>{{ hologramRow.local_qty }}</td>
+              <td>{{ hologramRow.export_qty }}</td>
+              <td>{{ hologramRow.defence_qty }}</td>
+              <td>{{ hologramRow.total_qty }}</td>
+              <td>&#8377;{{ hologramRow.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div *ngIf="!isLoading && moduleType === 'requisition' && requisitionRow" class="section">

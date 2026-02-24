@@ -26,6 +26,23 @@ interface CommissionerData {
   allowedActionConfigs?: any[];
   workflowId?: number;
   currentStage?: number;
+  payment_details?: any;
+  editHistory?: {
+    editedBy?: string;
+    editedDate?: string;
+    originalQuantities?: { local?: number; export?: number; defence?: number; total?: number };
+    updatedQuantities?: { local?: number; export?: number; defence?: number; total?: number };
+    originalPayment?: number;
+    updatedPayment?: number;
+  };
+  edit_history?: {
+    editedBy?: string;
+    editedDate?: string;
+    originalQuantities?: { local?: number; export?: number; defence?: number; total?: number };
+    updatedQuantities?: { local?: number; export?: number; defence?: number; total?: number };
+    originalPayment?: number;
+    updatedPayment?: number;
+  };
 }
 
 @Component({
@@ -136,14 +153,54 @@ interface CommissionerData {
                     <tbody>
                       <tr>
                         <td>Local</td>
-                        <td class="text-end fw-bold">{{ d.localQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                        <td class="text-end fw-bold" *ngIf="!isHologramEditMode">{{ d.localQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                        <td class="text-end fw-bold" *ngIf="isHologramEditMode">
+                          <input
+                            type="number"
+                            min="0"
+                            class="form-control form-control-sm text-end d-inline-block"
+                            style="max-width: 140px;"
+                            [(ngModel)]="hologramEditForm.localQty">
+                        </td>
+                      </tr>
+                      <tr *ngIf="(d.exportQtyLakh || 0) > 0">
+                        <td>Export</td>
+                        <td class="text-end fw-bold" *ngIf="!isHologramEditMode">{{ d.exportQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                        <td class="text-end fw-bold" *ngIf="isHologramEditMode">
+                          <input
+                            type="number"
+                            min="0"
+                            class="form-control form-control-sm text-end d-inline-block"
+                            style="max-width: 140px;"
+                            [(ngModel)]="hologramEditForm.exportQty">
+                        </td>
+                      </tr>
+                      <tr *ngIf="(d.defenceQtyLakh || 0) > 0">
+                        <td>Defence</td>
+                        <td class="text-end fw-bold" *ngIf="!isHologramEditMode">{{ d.defenceQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                        <td class="text-end fw-bold" *ngIf="isHologramEditMode">
+                          <input
+                            type="number"
+                            min="0"
+                            class="form-control form-control-sm text-end d-inline-block"
+                            style="max-width: 140px;"
+                            [(ngModel)]="hologramEditForm.defenceQty">
+                        </td>
                       </tr>
                       <tr>
                         <td class="fw-bold">Total</td>
-                        <td class="text-end fw-bold text-primary">{{ d.totalQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                        <td class="text-end fw-bold text-primary" *ngIf="!isHologramEditMode">{{ d.totalQtyLakh || 0 | number:'1.0-0' }} pieces</td>
+                        <td class="text-end fw-bold text-primary" *ngIf="isHologramEditMode">{{ getEditedHologramTotal() | number:'1.0-0' }} pieces</td>
                       </tr>
                     </tbody>
                   </table>
+                  <div class="px-2 pb-2" *ngIf="hologramEditSummary">
+                    <div class="alert alert-warning py-2 mb-0 small">
+                      <strong>Commissioner Change Summary:</strong><br>
+                      Qty: {{ hologramEditSummary.beforeQty | number:'1.0-0' }} -> {{ hologramEditSummary.afterQty | number:'1.0-0' }}<br>
+                      Amount: ₹{{ hologramEditSummary.beforeAmount | number:'1.2-2' }} -> ₹{{ hologramEditSummary.afterAmount | number:'1.2-2' }}
+                    </div>
+                  </div>
                 </div>
 
                 <div class="holo-panel">
@@ -167,8 +224,21 @@ interface CommissionerData {
                         <td class="text-end">{{ d.totalQtyLakh || 0 | number:'1.0-0' }}</td>
                         <td class="text-end fw-bold text-success">&#8377;{{ getHologramPopupAmount(d) | number:'1.2-2' }}</td>
                       </tr>
+                      <tr *ngIf="hologramEditSummary">
+                        <td><span class="fw-bold text-warning">Before Edit</span></td>
+                        <td class="text-end">&#8377;0.15</td>
+                        <td class="text-end">{{ hologramEditSummary.beforeQty | number:'1.0-0' }}</td>
+                        <td class="text-end fw-bold text-warning">&#8377;{{ hologramEditSummary.beforeAmount | number:'1.2-2' }}</td>
+                      </tr>
+                      <tr *ngIf="hologramEditSummary">
+                        <td><span class="fw-bold text-success">After Edit</span></td>
+                        <td class="text-end">&#8377;0.15</td>
+                        <td class="text-end">{{ hologramEditSummary.afterQty | number:'1.0-0' }}</td>
+                        <td class="text-end fw-bold text-success">&#8377;{{ hologramEditSummary.afterAmount | number:'1.2-2' }}</td>
+                      </tr>
                     </tbody>
                   </table>
+                  
                   <div class="alert alert-info py-2 mb-0 small">
                     <i class="bi bi-info-circle me-1"></i><strong>Payment Process:</strong>
                     <ol class="mb-0 mt-1">
@@ -195,6 +265,27 @@ interface CommissionerData {
               </div>
 
               <div class="text-end mt-3">
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm me-2"
+                  *ngIf="canEditHologramDetails(d) && !isHologramEditMode"
+                  (click)="startHologramEdit(d, $event)">
+                  <i class="bi bi-pencil-square me-1"></i>Edit Quantity
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-success btn-sm me-2"
+                  *ngIf="isHologramEditMode"
+                  (click)="saveHologramEdit(d)">
+                  <i class="bi bi-check2-circle me-1"></i>Save Changes
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-warning btn-sm me-2"
+                  *ngIf="isHologramEditMode"
+                  (click)="cancelHologramEdit()">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i>Cancel Edit
+                </button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" (click)="closeHologramQtyDetails()">
                   <i class="bi bi-x-circle me-1"></i>Close
                 </button>
@@ -474,6 +565,13 @@ export class CommissionerDashboardComponent implements OnInit {
   currentPage: number = 1;
   pageSize: number = 10;
   selectedHologramDetails: CommissionerData | null = null;
+  isHologramEditMode = false;
+  hologramEditForm: { localQty: number; exportQty: number; defenceQty: number } = {
+    localQty: 0,
+    exportQty: 0,
+    defenceQty: 0
+  };
+  hologramEditSummary: { beforeQty: number; afterQty: number; beforeAmount: number; afterAmount: number } | null = null;
 
   constructor() {}
 
@@ -514,7 +612,9 @@ export class CommissionerDashboardComponent implements OnInit {
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+            editHistory: item.editHistory || item.edit_history || null,
+            edit_history: item.edit_history || item.editHistory || null
           }));
         
         this.updateApplications('requisition', requisitions);
@@ -539,7 +639,9 @@ export class CommissionerDashboardComponent implements OnInit {
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+            editHistory: item.editHistory || item.edit_history || null,
+            edit_history: item.edit_history || item.editHistory || null
           }));
         
         this.updateApplications('revalidation', revalidations);
@@ -564,7 +666,10 @@ export class CommissionerDashboardComponent implements OnInit {
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+            payment_details: item.payment_details || null,
+            editHistory: item.editHistory || item.edit_history || item?.payment_details?.edit_history || null,
+            edit_history: item.edit_history || item.editHistory || item?.payment_details?.edit_history || null
           }));
         
         this.updateApplications('cancellation', cancellations);
@@ -599,16 +704,15 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   loadHolograms(): void {
-    console.log('🔍 Commissioner Dashboard: Loading hologram procurements...');
+    console.log('Commissioner Dashboard: Loading hologram procurements...');
     this.hologramDataService.getProcurements().subscribe({
-      next: (data: any[]) => {
-        console.log('📦 Commissioner Dashboard: Received hologram data:', data);
-        const holograms: CommissionerData[] = data
-          .filter((item: any) => {
-            const shouldInclude = this.requiresCommissionerReview(item.status);
-            console.log(`  - ${item.refNo}: status="${item.status}", include=${shouldInclude}`);
-            return shouldInclude;
-          })
+      next: (response: any) => {
+        console.log('Commissioner Dashboard: Received hologram data:', response);
+        const rows: any[] = Array.isArray(response)
+          ? response
+          : (response?.results || response?.data || []);
+
+        const holograms: CommissionerData[] = rows
           .map((item: any) => ({
             id: item.id,
             referenceNo: item.refNo || item.ref_no || `HOL-${item.id}`,
@@ -627,18 +731,20 @@ export class CommissionerDashboardComponent implements OnInit {
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+            payment_details: item.payment_details || null,
+            editHistory: item.editHistory || item.edit_history || item?.payment_details?.edit_history || null,
+            edit_history: item.edit_history || item.editHistory || item?.payment_details?.edit_history || null
           }));
-        
-        console.log(`✅ Commissioner Dashboard: Mapped ${holograms.length} hologram applications`);
+
+        console.log(`Commissioner Dashboard: Mapped ${holograms.length} hologram applications`);
         this.updateApplications('hologram', holograms);
       },
       error: (error) => {
-        console.error('❌ Commissioner Dashboard: Error loading holograms:', error);
+        console.error('Commissioner Dashboard: Error loading holograms:', error);
       }
     });
   }
-
   private calculateHologramAmount(item: any): number {
     const localQty = Number(item.localQty || item.local_qty || 0);
     const exportQty = Number(item.exportQty || item.export_qty || 0);
@@ -752,10 +858,132 @@ export class CommissionerDashboardComponent implements OnInit {
 
   openHologramQtyDetails(application: CommissionerData): void {
     this.selectedHologramDetails = application;
+    this.isHologramEditMode = false;
+    const edit =
+      application?.editHistory ||
+      application?.edit_history ||
+      application?.payment_details?.edit_history ||
+      null;
+    if (edit?.originalQuantities && edit?.updatedQuantities) {
+      this.hologramEditSummary = {
+        beforeQty: Number(edit.originalQuantities.total || 0),
+        afterQty: Number(edit.updatedQuantities.total || 0),
+        beforeAmount: Number(edit.originalPayment || 0),
+        afterAmount: Number(edit.updatedPayment || 0)
+      };
+    } else {
+      this.hologramEditSummary = null;
+    }
   }
 
   closeHologramQtyDetails(): void {
     this.selectedHologramDetails = null;
+    this.isHologramEditMode = false;
+  }
+
+  canEditHologramDetails(application: CommissionerData): boolean {
+    const status = String(application?.status || '').toLowerCase();
+    const isFinalized =
+      status.includes('approved by commissioner') ||
+      status.includes('cartoon assigned') ||
+      status.includes('payment completed') ||
+      status.includes('rejected') ||
+      status.includes('arrived');
+    return !isFinalized;
+  }
+
+  private parseQty(value: any): number {
+    const parsed = Number(String(value ?? 0).replace(/,/g, '').trim());
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  }
+
+  startHologramEdit(application: CommissionerData | null | undefined, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const target = application || this.selectedHologramDetails;
+    if (!target) return;
+
+    this.isHologramEditMode = true;
+    this.hologramEditForm = {
+      localQty: this.parseQty(target.localQtyLakh),
+      exportQty: this.parseQty(target.exportQtyLakh),
+      defenceQty: this.parseQty(target.defenceQtyLakh)
+    };
+  }
+
+  cancelHologramEdit(): void {
+    this.isHologramEditMode = false;
+  }
+
+  getEditedHologramTotal(): number {
+    return Number(this.hologramEditForm.localQty || 0) +
+           Number(this.hologramEditForm.exportQty || 0) +
+           Number(this.hologramEditForm.defenceQty || 0);
+  }
+
+  saveHologramEdit(application: CommissionerData): void {
+    const resolvedId = Number(
+      application?.id ||
+      this.allApplications.find(a => a.referenceNo === application?.referenceNo)?.id ||
+      this.filteredApplications.find(a => a.referenceNo === application?.referenceNo)?.id
+    );
+    if (!resolvedId || Number.isNaN(resolvedId)) {
+      alert('Unable to resolve request id for edit.');
+      return;
+    }
+
+    const localQty = Number(this.hologramEditForm.localQty);
+    const exportQty = Number(this.hologramEditForm.exportQty);
+    const defenceQty = Number(this.hologramEditForm.defenceQty);
+
+    if ([localQty, exportQty, defenceQty].some(v => Number.isNaN(v) || v < 0)) {
+      alert('Invalid quantities. Please enter non-negative numbers only.');
+      return;
+    }
+
+    this.hologramDataService.updateProcurementQuantities(
+      resolvedId,
+      localQty,
+      exportQty,
+      defenceQty
+    ).subscribe({
+      next: (res: any) => {
+        const beforeQty = Number(application.totalQtyLakh || 0);
+        const afterQty = localQty + exportQty + defenceQty;
+        const beforeAmount = this.getHologramPopupAmount(application);
+        const afterAmount = afterQty * 0.15;
+
+        this.hologramEditSummary = { beforeQty, afterQty, beforeAmount, afterAmount };
+        application.editHistory = {
+          editedBy: res?.edited_by || 'Commissioner',
+          editedDate: res?.updated_at || new Date().toISOString(),
+          originalQuantities: res?.original_quantities || { total: beforeQty },
+          updatedQuantities: res?.updated_quantities || { total: afterQty },
+          originalPayment: beforeAmount,
+          updatedPayment: afterAmount
+        };
+        application.edit_history = application.editHistory;
+
+        application.localQtyLakh = localQty;
+        application.exportQtyLakh = exportQty;
+        application.defenceQtyLakh = defenceQty;
+        application.totalQtyLakh = afterQty;
+        application.amount = afterAmount.toFixed(2);
+
+        this.allApplications = this.allApplications.map(a =>
+          a.referenceNo === application.referenceNo ? { ...a, ...application } : a
+        );
+        this.filteredApplications = this.filteredApplications.map(a =>
+          a.referenceNo === application.referenceNo ? { ...a, ...application } : a
+        );
+
+        this.isHologramEditMode = false;
+      },
+      error: (err: any) => {
+        console.error('Error updating hologram quantities:', err);
+        alert(err?.error?.error || 'Failed to update hologram quantities.');
+      }
+    });
   }
 
   getHologramPopupAmount(application: CommissionerData): number {
@@ -797,3 +1025,4 @@ export class CommissionerDashboardComponent implements OnInit {
     }
   }
 }
+

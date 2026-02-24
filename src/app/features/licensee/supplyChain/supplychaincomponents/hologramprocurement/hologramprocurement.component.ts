@@ -359,10 +359,14 @@ export class HologramprocurementComponent implements OnInit {
   }
 
   viewPaymentSlip(item: HologramRow): void {
-    this.router.navigate(['/dev-payslip'], {
+    this.router.navigate(['/payment-slip-view'], {
       queryParams: {
+        id: item.id,
+        type: 'hologram',
+        refNo: item.refNo,
         ref: item.refNo,
-        type: 'HOLOGRAM'
+        referenceNo: item.refNo,
+        source: 'licensee'
       }
     });
   }

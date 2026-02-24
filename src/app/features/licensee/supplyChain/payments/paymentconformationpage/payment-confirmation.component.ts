@@ -86,6 +86,7 @@ interface WalletHistoryTransaction {
   amount: number;
   balanceAfter: number;
   reference: string;
+  paymentFor?: string;
 }
 
 interface MyLicenseRow {
@@ -492,6 +493,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const walletType = walletTypeRaw || this.inferWalletTypeFromHoa(hoa);
       const createdAt = this.pickAny(row, ['created_at', 'createdAt'], new Date().toISOString());
       const balanceAfter = this.toNumber(this.pickAny(row, ['balance_after', 'balanceAfter'], 0));
+      const paymentFor = this.resolvePaymentForType(row);
 
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
@@ -500,6 +502,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
         balanceAfter,
         reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
+        paymentFor,
         walletType
       };
     });

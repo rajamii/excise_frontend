@@ -54,6 +54,7 @@ interface GroupedBrandStock {
   totalCapacity: number;
   totalUtilized: number;
   lastUpdated: string;
+  isNew?: boolean;
   overallStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'OVERSTOCKED';
 }
 
@@ -99,6 +100,7 @@ export class BrandwarehouseComponent implements OnInit {
   groupedBrandStocks: GroupedBrandStock[] = [];
   filteredStocks: GroupedBrandStock[] = [];
   paginatedStocks: GroupedBrandStock[] = [];
+  newlyUpdatedStocks: GroupedBrandStock[] = [];
   warehouseOverview: WarehouseOverview = {
     totalBrands: 0,
     totalCapacity: 0,
@@ -135,6 +137,7 @@ export class BrandwarehouseComponent implements OnInit {
   showTransitPermitsModal = false;
   showLastEntriesModal = false;
   showProductionModal = false;
+  showNewUpdatesModal = false;
   isLoadingProduction = false;
   isLoadingLastEntries = false;
   adjustmentQuantity = 0;
@@ -455,7 +458,46 @@ export class BrandwarehouseComponent implements OnInit {
       return matchesBrand && matchesType && matchesStatus && matchesStockLevel;
     });
 
+    // Priority ordering: newly updated first, then latest updated time
+    this.filteredStocks.sort((a, b) => {
+      const aPriority = this.isRecentlyUpdatedStock(a) ? 1 : 0;
+      const bPriority = this.isRecentlyUpdatedStock(b) ? 1 : 0;
+      if (bPriority !== aPriority) return bPriority - aPriority;
+
+      const aTs = new Date(a.lastUpdated || 0).getTime() || 0;
+      const bTs = new Date(b.lastUpdated || 0).getTime() || 0;
+      return bTs - aTs;
+    });
+
+    this.newlyUpdatedStocks = this.filteredStocks
+      .filter(stock => this.isRecentlyUpdatedStock(stock) && (stock.totalStock || 0) > 0)
+      .slice(0, 8);
+
     this.updatePagination();
+  }
+
+  isRecentlyUpdatedStock(stock: GroupedBrandStock): boolean {
+    if (!stock) return false;
+    if (stock.isNew === true) return true;
+    const updatedTs = new Date(stock.lastUpdated || 0).getTime();
+    if (!updatedTs) return false;
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    return (Date.now() - updatedTs) <= oneDayMs;
+  }
+
+  getNewUpdateTag(stock: GroupedBrandStock): string {
+    if (!stock) return '';
+    if (stock.isNew === true) return 'NEW';
+    return 'UPDATED';
+  }
+
+  getVisibleNewlyUpdatedStocks(): GroupedBrandStock[] {
+    return (this.newlyUpdatedStocks || []).slice(0, 5);
+  }
+
+  getHiddenNewUpdatesCount(): number {
+    const total = (this.newlyUpdatedStocks || []).length;
+    return total > 5 ? total - 5 : 0;
   }
 
   checkStockLevel(stock: GroupedBrandStock): boolean {
