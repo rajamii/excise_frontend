@@ -658,14 +658,18 @@ export class UnifiedActionsService {
       'requisition': '/dev-final-requisition-letters',
       'revalidation': '/dev-revalidation-permit-slip',
       'transit': '/dev-final-transit-permit-view',
-      'hologram': '/dev-payslip'
+      'hologram': '/payment-slip-view'
     };
 
     const normalizedType = String(itemType || '').toLowerCase();
     const route = slipRoutes[normalizedType];
     if (route) {
       const queryParams = {
+        id: item.id,
+        type: normalizedType,
+        refNo: item.referenceNo,
         ref: item.referenceNo,
+        referenceNo: item.referenceNo,
         source: context || 'dashboard'
       };
 

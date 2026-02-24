@@ -644,7 +644,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       requisition: '/dev-final-requisition-letters',
       revalidation: '/dev-revalidation-permit-slip',
       transit: '/dev-final-transit-permit-view',
-      hologram: '/dev-payslip'
+      hologram: '/payment-slip-view'
     };
     const route = routeByType[String(this.itemType || '').toLowerCase()] || '/payment-slip-view';
     const finalUrl = query ? `${route}?${query}` : route;

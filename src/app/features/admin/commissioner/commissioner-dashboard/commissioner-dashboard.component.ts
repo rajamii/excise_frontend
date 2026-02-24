@@ -49,6 +49,8 @@ export interface CommissionerTableData {
   uploadedTypes?: string[];
   requiredTypes?: string[];
   slipDetails?: { [key: string]: any };
+  paymentStatus?: string;
+  paymentDetails?: any;
   // Edit tracking fields
   editedByCommissioner?: boolean;
   editHistory?: {
@@ -285,6 +287,8 @@ export class CommissionerDashboardComponent implements OnInit {
             totalQtyLakh: Number(item.localQty) + Number(item.exportQty) + Number(item.defenceQty),
             hologramType: 'Security Hologram',
             allowedActions: item.allowedActions || item.allowed_actions || [],
+            paymentStatus: item.paymentStatus || item.payment_status || item?.paymentDetails?.payment_status || item?.payment_details?.payment_status || '',
+            paymentDetails: item.paymentDetails || item.payment_details || null,
             editHistory: item.editHistory || item.edit_history || null
           };
         });
@@ -844,24 +848,27 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Check if payment is completed for hologram (ALL types with same ref must be paid)
   isPaymentCompleted(item: CommissionerTableData): boolean {
-    if (!this.isBrowser) return false;
-
-    // Check if ALL applications with the same reference number have payment completed
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const sameRefApplications = applications.filter((app: any) => app.refNo === item.referenceNo);
-
-    if (sameRefApplications.length === 0) return false;
-
-    // All applications with this ref must have paymentCompleted = true
-    return sameRefApplications.every((app: any) => app.paymentCompleted === true);
+    const paymentStatus = String((item as any).paymentStatus || '').toLowerCase();
+    const stageStatus = String(item.status || '').toLowerCase();
+    return (
+      paymentStatus.includes('completed') ||
+      paymentStatus.includes('paid') ||
+      paymentStatus.includes('success') ||
+      stageStatus.includes('payment completed') ||
+      stageStatus.includes('carton assigned') ||
+      stageStatus.includes('forwarded to commissioner')
+    );
   }
 
   // View payment slip for completed payments
   viewPaymentSlip(item: CommissionerTableData): void {
-    this.router.navigate(['/dev-payslip'], {
+    this.router.navigate(['/payment-slip-view'], {
       queryParams: {
+        id: item.id,
+        type: 'hologram',
+        refNo: item.referenceNo,
         ref: item.referenceNo,
-        type: 'HOLOGRAM',
+        referenceNo: item.referenceNo,
         source: 'commissioner-dashboard'
       }
     });

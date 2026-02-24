@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
+import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
 
 interface TransitPermitRow {
   id: number;
@@ -81,6 +82,21 @@ interface CancellationSlipRow {
   reason: string;
 }
 
+interface HologramSlipRow {
+  id: number;
+  reference_no: string;
+  submission_date: string;
+  distillery_name: string;
+  status: string;
+  local_qty: number;
+  export_qty: number;
+  defence_qty: number;
+  total_qty: number;
+  amount: number;
+  payment_status: string;
+  payment_details: any;
+}
+
 @Component({
   selector: 'app-unified-payment-slip-view',
   standalone: true,
@@ -103,12 +119,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   requisitionRow: RequisitionSlipRow | null = null;
   revalidationRow: RevalidationSlipRow | null = null;
   cancellationRow: CancellationSlipRow | null = null;
+  hologramRow: HologramSlipRow | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private supplyChainService: SupplyChainService,
-    private http: HttpClient
+    private http: HttpClient,
+    private hologramDataService: HologramDataService
   ) {}
 
   ngOnInit(): void {
@@ -152,6 +170,12 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     if (this.moduleType === 'cancellation') {
       console.log('🔍 PAYMENT SLIP VIEW: Loading cancellation slip...');
       this.loadCancellationSlip();
+      return;
+    }
+
+    if (this.moduleType === 'hologram') {
+      console.log('🔍 PAYMENT SLIP VIEW: Loading hologram slip...');
+      this.loadHologramSlip();
       return;
     }
 
@@ -259,6 +283,15 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       const amount = Number(this.cancellationRow?.refund_amount || 0);
       return { total: amount, excise: amount, cess: 0, addl: 0 };
     }
+    if (this.moduleType === 'hologram') {
+      const amount = Number(
+        this.hologramRow?.payment_details?.total_amount ??
+        this.hologramRow?.payment_details?.wallet_payment ??
+        this.hologramRow?.amount ??
+        0
+      );
+      return { total: amount, excise: amount, cess: 0, addl: 0 };
+    }
 
     const total = this.transitRows.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
     const excise = this.transitRows.reduce((sum, row) => sum + Number(row.total_excise_duty || 0), 0);
@@ -280,6 +313,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       // Return the total permits cancelled
       return this.cancellationRow?.total_permits_cancelled || 0;
     }
+    if (this.moduleType === 'hologram') {
+      return this.hologramRow?.total_qty || 0;
+    }
     return this.transitRows.reduce((sum, row) => sum + Number(row.cases || 0), 0);
   }
 
@@ -292,6 +328,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     }
     if (this.moduleType === 'cancellation') {
       return String(this.cancellationRow?.status || '').trim() || 'N/A';
+    }
+    if (this.moduleType === 'hologram') {
+      return String(this.hologramRow?.status || this.hologramRow?.payment_status || '').trim() || 'N/A';
     }
     const status = String(this.transitRows[0]?.status || '').trim();
     return status || 'N/A';
@@ -318,6 +357,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     }
     if (this.moduleType === 'cancellation') {
       return Number(this.cancellationRow?.refund_amount || 0);
+    }
+    if (this.moduleType === 'hologram') {
+      return Number(
+        this.hologramRow?.payment_details?.total_amount ??
+        this.hologramRow?.payment_details?.wallet_payment ??
+        this.hologramRow?.amount ??
+        0
+      );
     }
     const explicitRefund = this.cancellationRows.reduce((sum, row) => sum + Number(row.amount_refunded || 0), 0);
     if (explicitRefund > 0) return explicitRefund;
@@ -392,7 +439,8 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       requisition: 'requisition',
       revalidation: 'revalidation',
       cancellation: 'cancellation',
-      transit: 'transit'
+      transit: 'transit',
+      hologram: 'hologram'
     };
 
     if (this.backSection && Object.values(moduleToSection).includes(this.backSection)) {
@@ -408,6 +456,58 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     }
 
     return 'transit';
+  }
+
+  private loadHologramSlip(): void {
+    this.hologramDataService.getProcurements().subscribe({
+      next: (rows: any[]) => {
+        const list = Array.isArray(rows) ? rows : [];
+        const row = list.find((r: any) => {
+          const idMatch = this.applicationId && String(r?.id) === String(this.applicationId);
+          const ref = String(r?.refNo || r?.ref_no || '').trim().toUpperCase();
+          const refNeed = String(this.referenceNo || '').trim().toUpperCase();
+          const refMatch = !!refNeed && ref === refNeed;
+          return idMatch || refMatch;
+        });
+
+        if (!row) {
+          this.errorMessage = `No hologram payment record found for reference ${this.referenceNo || this.applicationId}.`;
+          this.isLoading = false;
+          return;
+        }
+
+        const local = Number(row?.localQty ?? row?.local_qty ?? 0);
+        const exportQty = Number(row?.exportQty ?? row?.export_qty ?? 0);
+        const defence = Number(row?.defenceQty ?? row?.defence_qty ?? 0);
+        const total = local + exportQty + defence;
+        const paymentDetails = row?.paymentDetails || row?.payment_details || {};
+        const amount = Number(paymentDetails?.total_amount ?? paymentDetails?.wallet_payment ?? total * 0.15);
+
+        this.hologramRow = {
+          id: Number(row?.id || 0),
+          reference_no: String(row?.refNo || row?.ref_no || this.referenceNo || ''),
+          submission_date: String(row?.date || row?.created_at || ''),
+          distillery_name: String(row?.licenseeName || row?.licensee_name || row?.manufacturingUnit || row?.manufacturing_unit || '-'),
+          status: String(row?.status || '-'),
+          local_qty: local,
+          export_qty: exportQty,
+          defence_qty: defence,
+          total_qty: total,
+          amount,
+          payment_status: String(row?.paymentStatus || row?.payment_status || paymentDetails?.payment_status || '-'),
+          payment_details: paymentDetails
+        };
+
+        if (!this.referenceNo) {
+          this.referenceNo = this.hologramRow.reference_no;
+        }
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load hologram payment slip details.';
+        this.isLoading = false;
+      }
+    });
   }
 
   private loadRequisitionSlip(): void {

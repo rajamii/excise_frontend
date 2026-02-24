@@ -76,14 +76,8 @@
 
     <!-- Action Buttons -->
     <div class="d-flex gap-3 mb-4">
-      <button class="btn btn-success" (click)="downloadDetails()">
-        <i class="bi bi-download me-1"></i>Download Details
-      </button>
       <button class="btn btn-warning" *ngIf="showRetryButton" (click)="retryPayment()">
         <i class="bi bi-arrow-clockwise me-1"></i>Retry Payment
-      </button>
-      <button class="btn btn-secondary" (click)="returnToApplication()">
-        <i class="bi bi-arrow-left me-1"></i>Return to Application
       </button>
     </div>
 

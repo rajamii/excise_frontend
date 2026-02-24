@@ -109,6 +109,8 @@ export class ITCELLComponent implements OnInit {
           exportQtyLakh: Number(item.exportQty),
           defenceQtyLakh: Number(item.defenceQty),
           status: item.status, // Uses status name from backend
+          paymentStatus: item.paymentStatus || item.payment_status || item?.paymentDetails?.payment_status || item?.payment_details?.payment_status || '',
+          paymentDetails: item.paymentDetails || item.payment_details || null,
           allowedActions: item.allowedActions || [],
           // Include edit history
           editedByCommissioner: !!(item.editHistory || item.edit_history),
@@ -324,13 +326,30 @@ export class ITCELLComponent implements OnInit {
   }
 
   isPaymentCompleted(hologram: any): boolean {
-    return hologram.paymentStatus === 'Verify' || hologram.status === 'Payment Completed';
+    const paymentStatus = String(hologram?.paymentStatus || '').toLowerCase();
+    const stageStatus = String(hologram?.status || '').toLowerCase();
+    return (
+      paymentStatus.includes('completed') ||
+      paymentStatus.includes('paid') ||
+      paymentStatus.includes('success') ||
+      stageStatus.includes('payment completed') ||
+      stageStatus.includes('carton assigned') ||
+      stageStatus.includes('forwarded to commissioner')
+    );
   }
 
   viewPaymentSlip(hologram: any): void {
-    console.log('View payment slip for:', hologram.refNo);
-    // TODO: Implement actual slip viewing logic (e.g., open a modal or download PDF)
-    alert(`Payment slip for ${hologram.refNo} would open here.`);
+    this.router.navigate(['/payment-slip-view'], {
+      queryParams: {
+        id: hologram.id,
+        type: 'hologram',
+        refNo: hologram.refNo,
+        ref: hologram.refNo,
+        referenceNo: hologram.refNo,
+        source: 'itcell',
+        section: 'itcell-hologram'
+      }
+    });
   }
 
   calculateWalletPayment(hologram: any): number {
