@@ -725,10 +725,12 @@ hanced Tab styling with better visibility
 .btn-outline-primary {
   border-color: #10b981;
   color: #10b981;
+  background-color: white;
   
   &:hover {
-    background-color: #10b981;
+    background-color: #10b981 !important;
     border-color: #10b981;
+    color: white !important;
   }
 }
 
