@@ -704,16 +704,15 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   loadHolograms(): void {
-    console.log('🔍 Commissioner Dashboard: Loading hologram procurements...');
+    console.log('Commissioner Dashboard: Loading hologram procurements...');
     this.hologramDataService.getProcurements().subscribe({
-      next: (data: any[]) => {
-        console.log('📦 Commissioner Dashboard: Received hologram data:', data);
-        const holograms: CommissionerData[] = data
-          .filter((item: any) => {
-            const shouldInclude = this.requiresCommissionerReview(item.status);
-            console.log(`  - ${item.refNo}: status="${item.status}", include=${shouldInclude}`);
-            return shouldInclude;
-          })
+      next: (response: any) => {
+        console.log('Commissioner Dashboard: Received hologram data:', response);
+        const rows: any[] = Array.isArray(response)
+          ? response
+          : (response?.results || response?.data || []);
+
+        const holograms: CommissionerData[] = rows
           .map((item: any) => ({
             id: item.id,
             referenceNo: item.refNo || item.ref_no || `HOL-${item.id}`,
@@ -734,16 +733,15 @@ export class CommissionerDashboardComponent implements OnInit {
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
           }));
-        
-        console.log(`✅ Commissioner Dashboard: Mapped ${holograms.length} hologram applications`);
+
+        console.log(`Commissioner Dashboard: Mapped ${holograms.length} hologram applications`);
         this.updateApplications('hologram', holograms);
       },
       error: (error) => {
-        console.error('❌ Commissioner Dashboard: Error loading holograms:', error);
+        console.error('Commissioner Dashboard: Error loading holograms:', error);
       }
     });
   }
-
   private calculateHologramAmount(item: any): number {
     const localQty = Number(item.localQty || item.local_qty || 0);
     const exportQty = Number(item.exportQty || item.export_qty || 0);
