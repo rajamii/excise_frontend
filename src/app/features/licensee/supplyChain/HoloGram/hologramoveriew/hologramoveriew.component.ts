@@ -127,10 +127,21 @@ interface HistoryHologram {
   qtyUsed: number; // Quantity used in production
   qtyDamaged: number; // Quantity damaged/wasted
   qtyLeftover: number; // Quantity left over (available - used - damaged)
+  brandDetailsList?: HistoryBrandDetail[];
   status: 'COMPLETED' | 'CANCELLED';
   completionDate: string; // When the daily register was approved
   officer?: string; // Officer who approved
   hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+}
+
+interface HistoryBrandDetail {
+  brandName: string;
+  bottleSize: string;
+  cartonNumber: string;
+  serialRanges: string;
+  qtyUsed: number;
+  qtyDamaged: number;
+  qtyLeftover: number;
 }
 
 interface ChartFilters {
@@ -166,6 +177,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   availableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
+  showHistoryBrandsModal: boolean = false;
+  selectedHistoryForBrands: HistoryHologram | null = null;
 
   // Subscription management
   private requestUpdateSubscription?: Subscription;
@@ -830,13 +843,58 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             if (!approvedAt) {
               approvalStatus = entry.approval_status || entry.approvalStatus || 'PENDING';
               approvedAt = entry.approved_at || entry.approvedAt || new Date().toISOString();
-              approvedBy = entry.approved_by_name || entry.approvedByName || 'Pending';
+              approvedBy = this.pickDisplayOfficer(
+                entry.approved_by_name,
+                entry.approvedByName,
+                entry.updated_by_name,
+                entry.updatedByName,
+                entry.created_by_name,
+                entry.createdByName,
+                entry.approved_by,
+                entry.updated_by,
+                entry.created_by,
+                this.getCurrentUsername()
+              );
               hologramType = entry.hologram_type || entry.hologramType || 'LOCAL';
             }
           });
 
           // Calculate leftover: total allocated - used - damaged
           const qtyLeftover = totalQty - totalUsed - totalDamaged;
+          const brandDetailsList: HistoryBrandDetail[] = requestEntries.map((entry: any) => {
+            const issuedQty = Number(entry.issued_qty || entry.issuedQty || 0);
+            const damagedQty = Number(entry.wastage_qty || entry.wastageQty || 0);
+            const allocatedQty = Number(entry.hologram_qty || entry.hologramQty || 0);
+
+            const issuedRanges = entry.issued_ranges || entry.issuedRanges || [];
+            const wastageRanges = entry.wastage_ranges || entry.wastageRanges || [];
+
+            const issuedRangeText = Array.isArray(issuedRanges)
+              ? issuedRanges
+                .map((range: any) => `${range.fromSerial || range.from_serial || ''}-${range.toSerial || range.to_serial || ''}`)
+                .filter((txt: string) => txt !== '-')
+                .join(', ')
+              : '';
+
+            const wastageRangeText = Array.isArray(wastageRanges)
+              ? wastageRanges
+                .map((range: any) => `${range.fromSerial || range.from_serial || ''}-${range.toSerial || range.to_serial || ''}`)
+                .filter((txt: string) => txt !== '-')
+                .join(', ')
+              : '';
+
+            const serialRanges = [issuedRangeText, wastageRangeText].filter(Boolean).join(' | ') || 'N/A';
+
+            return {
+              brandName: this.sanitizeBrandName(entry.brand_details || entry.brandDetails || 'Not Used'),
+              bottleSize: entry.bottle_size || entry.bottleSize || 'N/A',
+              cartonNumber: entry.cartoon_number || entry.cartoonNumber || entry.roll_range || entry.rollRange || 'N/A',
+              serialRanges,
+              qtyUsed: issuedQty,
+              qtyDamaged: damagedQty,
+              qtyLeftover: Math.max(0, allocatedQty - issuedQty - damagedQty)
+            };
+          });
 
           // Build comma-separated strings
           const cartoonNumberStr = cartoonNumbers.length > 0 ? cartoonNumbers.join(', ') : 'N/A';
@@ -876,6 +934,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             qtyUsed: totalUsed,
             qtyDamaged: totalDamaged,
             qtyLeftover: qtyLeftover,
+            brandDetailsList,
             status: status,
             completionDate: approvedAt,
             officer: approvedBy,
@@ -1158,6 +1217,27 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     value = value.replace(/\s*-\s*M\/s\s*Sikkim\s*Distilleries\s*Ltd\.?$/i, '');
     value = value.replace(/\s*M\/s\s*Sikkim\s*Distilleries\s*Ltd\.?$/i, '');
     return value.trim();
+  }
+
+  private getCurrentUsername(): string {
+    try {
+      const raw = localStorage.getItem('currentUser');
+      if (!raw) return '';
+      const user = JSON.parse(raw);
+      return user?.username || user?.userName || user?.name || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private pickDisplayOfficer(...candidates: any[]): string {
+    for (const raw of candidates) {
+      const value = (raw ?? '').toString().trim();
+      if (!value) continue;
+      if (value.toLowerCase() === 'pending') continue;
+      return value;
+    }
+    return 'Pending';
   }
 
   applySerialFilters(): void {
@@ -2136,6 +2216,16 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
 
   getCompletedCount(): number {
     return this.issuedData.filter(item => item.status === 'COMPLETED').length;
+  }
+
+  openHistoryBrandsModal(history: HistoryHologram): void {
+    this.selectedHistoryForBrands = history;
+    this.showHistoryBrandsModal = true;
+  }
+
+  closeHistoryBrandsModal(): void {
+    this.showHistoryBrandsModal = false;
+    this.selectedHistoryForBrands = null;
   }
 
   getTotalIssuedQuantity(): number {
