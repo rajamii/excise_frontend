@@ -137,6 +137,7 @@ export class BrandwarehouseComponent implements OnInit {
   showTransitPermitsModal = false;
   showLastEntriesModal = false;
   showProductionModal = false;
+  showNewUpdatesModal = false;
   isLoadingProduction = false;
   isLoadingLastEntries = false;
   adjustmentQuantity = 0;
@@ -488,6 +489,15 @@ export class BrandwarehouseComponent implements OnInit {
     if (!stock) return '';
     if (stock.isNew === true) return 'NEW';
     return 'UPDATED';
+  }
+
+  getVisibleNewlyUpdatedStocks(): GroupedBrandStock[] {
+    return (this.newlyUpdatedStocks || []).slice(0, 5);
+  }
+
+  getHiddenNewUpdatesCount(): number {
+    const total = (this.newlyUpdatedStocks || []).length;
+    return total > 5 ? total - 5 : 0;
   }
 
   checkStockLevel(stock: GroupedBrandStock): boolean {

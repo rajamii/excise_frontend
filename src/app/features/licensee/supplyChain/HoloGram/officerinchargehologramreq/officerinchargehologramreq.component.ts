@@ -198,25 +198,34 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   // Helper Methods for Dynamic Workflow
   canIssue(request: any): boolean {
+    // Never show action buttons once request moves past pending-review stage.
+    if (this.mapStatusToCategory(request?.status) !== 'PENDING') {
+      return false;
+    }
+
     // 1. Check Dynamic Actions (Backend)
     const actions = request.allowedActions || [];
     if (actions.includes('issue') || actions.includes('approve')) return true;
 
-    // 2. Fallback: Explicitly allow for 'APPROVED BY PERMIT SECTION' and 'SUBMITTED'
-    // This handles cases where role-mapping might fail but status is correct
+    // 2. Fallback: allow only initial pending states
     const s = (request.status || '').toUpperCase();
-    if (s === 'APPROVED BY OIC' || s === 'IN USE' || s === 'IN_USE' || s === 'SUBMITTED' || s === 'PENDING') return true;
+    if (s === 'SUBMITTED' || s === 'PENDING') return true;
 
     return false;
   }
 
   canReject(request: any): boolean {
+    // Never show action buttons once request moves past pending-review stage.
+    if (this.mapStatusToCategory(request?.status) !== 'PENDING') {
+      return false;
+    }
+
     const actions = request.allowedActions || [];
     if (actions.includes('reject')) return true;
 
-    // Fallback for SUBMITTED/PENDING
+    // Fallback for initial pending states only
     const s = (request.status || '').toUpperCase();
-    if (s === 'APPROVED BY OIC' || s === 'IN USE' || s === 'IN_USE' || s === 'SUBMITTED' || s === 'PENDING') return true;
+    if (s === 'SUBMITTED' || s === 'PENDING') return true;
 
     return false;
   }

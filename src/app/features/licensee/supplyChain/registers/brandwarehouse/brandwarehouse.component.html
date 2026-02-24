@@ -112,11 +112,18 @@
         <i class="bi bi-stars"></i>
         Newly Updated from Daily Entry
       </h3>
-      <span class="new-updates-count">{{ newlyUpdatedStocks.length }} brand(s)</span>
+      <div class="new-updates-actions">
+        <span class="new-updates-count">{{ newlyUpdatedStocks.length }} brand(s)</span>
+        <button type="button" class="btn btn-outline btn-sm" *ngIf="getHiddenNewUpdatesCount() > 0"
+          (click)="showNewUpdatesModal = true">
+          <i class="bi bi-list-ul"></i>
+          More Details (+{{ getHiddenNewUpdatesCount() }})
+        </button>
+      </div>
     </div>
 
     <div class="new-updates-list">
-      <button type="button" class="new-update-chip" *ngFor="let stock of newlyUpdatedStocks"
+      <button type="button" class="new-update-chip" *ngFor="let stock of getVisibleNewlyUpdatedStocks()"
         (click)="viewBrandDetails(stock)">
         <span class="chip-tag">{{ getNewUpdateTag(stock) }}</span>
         <span class="chip-name">{{ stock.brandName }}</span>
@@ -356,6 +363,44 @@
         Next
         <i class="bi bi-chevron-right"></i>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Newly Updated Brands Timeline Modal -->
+<div class="modal-overlay" *ngIf="showNewUpdatesModal" (click)="showNewUpdatesModal = false">
+  <div class="modal-content new-updates-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-stars"></i>
+        Updated Brands Timeline
+      </h2>
+      <button class="modal-close" (click)="showNewUpdatesModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="new-updates-timeline">
+        <div class="timeline-row" *ngFor="let stock of newlyUpdatedStocks; let i = index">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-box">
+            <div class="timeline-main">
+              <span class="chip-tag">{{ getNewUpdateTag(stock) }}</span>
+              <strong>{{ stock.brandName }}</strong>
+            </div>
+            <div class="timeline-meta">
+              <span>{{ stock.totalStock | number }} units</span>
+              <span>{{ stock.lastUpdated | date:'dd-MMM-yyyy HH:mm' }}</span>
+              <span>{{ stock.overallStatus.replace('_', ' ') }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="showNewUpdatesModal = false">Close</button>
     </div>
   </div>
 </div>
