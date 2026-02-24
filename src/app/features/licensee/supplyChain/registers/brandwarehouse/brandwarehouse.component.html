@@ -105,6 +105,26 @@
     </div>
   </div>
 
+  <!-- Newly Updated from Hologram Daily Entry -->
+  <div class="new-updates-strip" *ngIf="newlyUpdatedStocks.length > 0">
+    <div class="new-updates-header">
+      <h3>
+        <i class="bi bi-stars"></i>
+        Newly Updated from Daily Entry
+      </h3>
+      <span class="new-updates-count">{{ newlyUpdatedStocks.length }} brand(s)</span>
+    </div>
+
+    <div class="new-updates-list">
+      <button type="button" class="new-update-chip" *ngFor="let stock of newlyUpdatedStocks"
+        (click)="viewBrandDetails(stock)">
+        <span class="chip-tag">{{ getNewUpdateTag(stock) }}</span>
+        <span class="chip-name">{{ stock.brandName }}</span>
+        <span class="chip-meta">{{ stock.totalStock | number }} units</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Filters Section -->
   <div class="filters-section">
     <div class="filters-header">
@@ -152,7 +172,7 @@
           <option value="">All Levels</option>
           <option value="HIGH">High (80%+)</option>
           <option value="MEDIUM">Medium (40-80%)</option>
-          <option value="LOW">Low (<40%)< /option>
+          <option value="LOW">Low (&lt;40%)</option>
         </select>
       </div>
 
@@ -196,6 +216,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let brand of paginatedStocks; let i = index" class="table-row"
+            [class.new-updated-row]="isRecentlyUpdatedStock(brand)"
             [class.low-stock-row]="brand.overallStatus === 'LOW_STOCK'"
             [class.out-stock-row]="brand.overallStatus === 'OUT_OF_STOCK'"
             [class.over-stock-row]="brand.overallStatus === 'OVERSTOCKED'">
@@ -203,7 +224,12 @@
             <!-- Brand Details -->
             <td class="brand-details-cell">
               <div class="brand-info">
-                <div class="brand-name">{{ brand.brandName }}</div>
+                <div class="brand-name">
+                  {{ brand.brandName }}
+                  <span class="new-update-inline-tag" *ngIf="isRecentlyUpdatedStock(brand)">
+                    {{ getNewUpdateTag(brand) }}
+                  </span>
+                </div>
                 <div class="brand-meta">
                   <span class="distillery-name">{{ brand.distilleryName }}</span>
                   <span class="separator">•</span>

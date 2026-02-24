@@ -148,7 +148,7 @@ export class BrandWarehouseService {
                             totalStock: 0,
                             totalCapacity: 0,
                             totalUtilized: 0,
-                            lastUpdated: new Date().toISOString(),
+                            lastUpdated: brand.updatedAt || brand.updated_at || brand.createdAt || brand.created_at || new Date().toISOString(),
                             overallStatus: 'OUT_OF_STOCK',
                             isNew: false
                         });
@@ -185,6 +185,16 @@ export class BrandWarehouseService {
                     // Update NEW status
                     if (isNew) {
                         groupedBrand.isNew = true;
+                    }
+
+                    // Keep most recent update timestamp in grouped row
+                    const incomingUpdatedAt = brand.updatedAt || brand.updated_at || brand.createdAt || brand.created_at;
+                    if (incomingUpdatedAt) {
+                        const currentTs = new Date(groupedBrand.lastUpdated).getTime() || 0;
+                        const incomingTs = new Date(incomingUpdatedAt).getTime() || 0;
+                        if (incomingTs > currentTs) {
+                            groupedBrand.lastUpdated = incomingUpdatedAt;
+                        }
                     }
                 });
 
