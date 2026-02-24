@@ -1026,33 +1026,55 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   // Serial Details Modal Methods
   openSerialDetailsModal(availableData: AvailableHologram): void {
-    // Refresh data to ensure we have the latest information
-    console.log('🔍 Opening serial details modal for:', availableData.cartoonNumber);
-    
-    // Generate detailed serial numbers data
-    this.selectedSerialData = this.generateSerialNumbersData(availableData);
-    this.serialViewMode = 'all';
-    this.currentSerialPage = 1;
-    this.clearSerialFilters();
-    this.brandReferenceNoSuggestions = [];
-    this.brandNameSuggestions = [];
-    this.showSerialDetailsModal = true;
+    console.log('Opening serial details modal for:', availableData.cartoonNumber);
 
-    // Log the generated data for debugging
-    console.log('📊 Generated serial data:', this.selectedSerialData);
-    if (this.selectedSerialData?.serialRanges) {
-      console.log('📋 Serial ranges:', this.selectedSerialData.serialRanges.length);
-      this.selectedSerialData.serialRanges.forEach((range, index) => {
-        console.log(`Range ${index + 1}:`, {
-          status: range.status,
-          fromSerial: range.fromSerial,
-          toSerial: range.toSerial,
-          count: range.count,
-          brandDetails: range.brandDetails,
-          referenceNo: range.referenceNo
-        });
-      });
+    const selectedRoll = this.rollsData.find(roll =>
+      roll.cartoonNumber === availableData.cartoonNumber &&
+      roll.type === availableData.type
+    );
+
+    const openModalWithData = (mappedRanges?: SerialRange[]) => {
+      const generated = this.generateSerialNumbersData(availableData);
+
+      if (mappedRanges && mappedRanges.length > 0) {
+        generated.serialRanges = mappedRanges;
+        generated.availableCount = mappedRanges
+          .filter(r => r.status === 'AVAILABLE')
+          .reduce((sum, r) => sum + (r.count || 0), 0);
+        generated.usedCount = mappedRanges
+          .filter(r => r.status === 'USED')
+          .reduce((sum, r) => sum + (r.count || 0), 0);
+        generated.damagedCount = mappedRanges
+          .filter(r => r.status === 'DAMAGED')
+          .reduce((sum, r) => sum + (r.count || 0), 0);
+      }
+
+      this.selectedSerialData = generated;
+      this.serialViewMode = 'all';
+      this.currentSerialPage = 1;
+      this.clearSerialFilters();
+      this.brandReferenceNoSuggestions = [];
+      this.brandNameSuggestions = [];
+      this.showSerialDetailsModal = true;
+    };
+
+    if (!selectedRoll?.id) {
+      openModalWithData();
+      return;
     }
+
+    this.hologramService.getSerialRanges(selectedRoll.id).subscribe({
+      next: (response: any) => {
+        const responseRanges = Array.isArray(response?.ranges) ? response.ranges : [];
+        const mappedRanges = responseRanges
+          .map((range: any) => this.mapApiSerialRange(range))
+          .filter((range: SerialRange | null): range is SerialRange => !!range);
+        openModalWithData(mappedRanges);
+      },
+      error: () => {
+        openModalWithData();
+      }
+    });
   }
 
   closeSerialDetailsModal(): void {
@@ -1068,6 +1090,40 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       brandReferenceNo: '',
       brandName: '',
       qty: null
+    };
+  }
+
+  private mapApiSerialRange(range: any): SerialRange | null {
+    if (!range) return null;
+
+    const statusRaw = (range.status || '').toString().toUpperCase().trim();
+    const status = (['AVAILABLE', 'USED', 'DAMAGED'].includes(statusRaw)
+      ? statusRaw
+      : 'AVAILABLE') as 'AVAILABLE' | 'USED' | 'DAMAGED';
+
+    const fromSerial = (range.fromSerial ?? range.from_serial ?? '').toString();
+    const toSerial = (range.toSerial ?? range.to_serial ?? '').toString();
+    const countRaw = Number(range.count ?? 0);
+    const count = Number.isFinite(countRaw) ? countRaw : 0;
+
+    if (!fromSerial || !toSerial) {
+      return null;
+    }
+
+    return {
+      fromSerial,
+      toSerial,
+      count,
+      status,
+      description: (range.description || (status === 'AVAILABLE' ? 'Available for production use' : '')).toString(),
+      usedDate: range.usedDate || range.used_date,
+      damageDate: range.damageDate || range.damage_date,
+      referenceNo: range.referenceNo || range.reference_no || 'N/A',
+      productionLine: range.productionLine || range.production_line || 'N/A',
+      damageReason: range.damageReason || range.damage_reason,
+      reportedBy: range.reportedBy || range.reported_by,
+      brandDetails: range.brandDetails || range.brand_details || range.brand_name || '',
+      bottleSize: range.bottleSize || range.bottle_size || ''
     };
   }
 
