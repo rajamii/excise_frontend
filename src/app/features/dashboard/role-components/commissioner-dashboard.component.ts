@@ -731,7 +731,10 @@ export class CommissionerDashboardComponent implements OnInit {
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+            payment_details: item.payment_details || null,
+            editHistory: item.editHistory || item.edit_history || item?.payment_details?.edit_history || null,
+            edit_history: item.edit_history || item.editHistory || item?.payment_details?.edit_history || null
           }));
 
         console.log(`Commissioner Dashboard: Mapped ${holograms.length} hologram applications`);
@@ -880,10 +883,13 @@ export class CommissionerDashboardComponent implements OnInit {
 
   canEditHologramDetails(application: CommissionerData): boolean {
     const status = String(application?.status || '').toLowerCase();
-    return !status.includes('approved by commissioner') &&
-           !status.includes('rejected') &&
-           !status.includes('payment completed') &&
-           !status.includes('arrived');
+    const isFinalized =
+      status.includes('approved by commissioner') ||
+      status.includes('cartoon assigned') ||
+      status.includes('payment completed') ||
+      status.includes('rejected') ||
+      status.includes('arrived');
+    return !isFinalized;
   }
 
   private parseQty(value: any): number {
