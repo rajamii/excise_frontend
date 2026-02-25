@@ -38,6 +38,7 @@ interface ThirdLetterData {
   strength: string;
   strengthValue: string;
   importFrom: string;
+  viaRoute: string;
 }
 
 interface PermitData {
@@ -105,6 +106,7 @@ export class FinalrequistionlettersComponent implements OnInit {
     strength: "",
     strengthValue: "",
     importFrom: "",
+    viaRoute: "",
   };
 
   permitData: PermitData = {
@@ -271,6 +273,35 @@ export class FinalrequistionlettersComponent implements OnInit {
       ""
     );
     const liftedFrom = this.pickValue(row, ["lifted_from", "liftedFrom"], "");
+    const liftedFromAddress = this.pickValue(row, ["via_route", "viaRoute", "lifted_from", "liftedFrom"], "");
+    const viaRoute = this.pickValue(row, ["via_route", "viaRoute", "route"], "");
+    const thirdLetterFromRaw = this.pickValue(
+      row,
+      [
+        "from_party",
+        "fromParty",
+        "import_from",
+        "importFrom",
+        "lifted_from_address",
+        "liftedFromAddress",
+        "source_address",
+        "sourceAddress",
+        "lifted_from",
+        "liftedFrom",
+      ],
+      ""
+    );
+    const thirdLetterImportFrom = this.composeFromText(
+      liftedFromDistilleryName,
+      thirdLetterFromRaw || liftedFrom,
+      state
+    );
+    const importDistilleryAddress =
+      liftedFromDistilleryName &&
+      liftedFrom &&
+      liftedFromDistilleryName.toLowerCase() === liftedFrom.toLowerCase()
+        ? ""
+        : liftedFrom;
 
     this.letterData = {
       letterNo: refNo,
@@ -285,7 +316,12 @@ export class FinalrequistionlettersComponent implements OnInit {
       letterNo: refNo,
       letterDate: requisitionDate,
       liftedFromDistilleryName,
-      liftedFrom,
+      liftedFrom:
+        liftedFromAddress &&
+        liftedFromDistilleryName &&
+        liftedFromAddress.toLowerCase() === liftedFromDistilleryName.toLowerCase()
+          ? ""
+          : liftedFromAddress,
       state,
       requisitionNumberOfPermits: permitDisplay,
       permitDated: approvalDate,
@@ -302,7 +338,8 @@ export class FinalrequistionlettersComponent implements OnInit {
       importTo: this.pickValue(row, ["totalbl"], ""),
       strength: this.pickValue(row, ["strength"], ""),
       strengthValue: this.pickValue(row, ["bulk_spirit_type", "bulkSpiritType"], ""),
-      importFrom: state,
+      importFrom: thirdLetterImportFrom,
+      viaRoute,
     };
 
     this.permitData = {
@@ -311,7 +348,7 @@ export class FinalrequistionlettersComponent implements OnInit {
       letterDate: requisitionDate,
       branchName: issuedTo,
       importDistilleryName: liftedFromDistilleryName,
-      importDistilleryAddress: liftedFrom,
+      importDistilleryAddress,
       importFrom: state,
       branchPurpose: this.pickValue(row, ["branch_purpose", "branchPurpose"], ""),
       displayTotalENA: this.pickValue(row, ["totalbl"], ""),
@@ -475,6 +512,20 @@ export class FinalrequistionlettersComponent implements OnInit {
     if (tokens.length === 0) return "";
     if (tokens.length === 1) return tokens[0];
     return `${tokens[0]} to ${tokens[tokens.length - 1]}`;
+  }
+
+  private composeFromText(name: string, address: string, fallbackState: string): string {
+    const n = String(name || "").trim();
+    const a = String(address || "").trim();
+    const s = String(fallbackState || "").trim();
+
+    if (n && a) {
+      if (n.toLowerCase() === a.toLowerCase()) return n;
+      return `${n}, ${a}`;
+    }
+    if (n) return n;
+    if (a) return a;
+    return s;
   }
 
   printLetter(): void {
@@ -693,7 +744,7 @@ export class FinalrequistionlettersComponent implements OnInit {
     for (let copyTypeIndex = 0; copyTypeIndex < 4; copyTypeIndex++) {
       // For each permit number (1, 2, 3, etc.)
       for (let permitNumber = 0; permitNumber < numberOfPermits; permitNumber++) {
-        const currentRefNo = permitNumber === 0 ? baseRefNo : this.incrementReferenceNumber(baseRefNo, permitNumber);
+        const currentRefNo = baseRefNo;
         
         permitCopies.push({
           ...this.permitData,
@@ -708,22 +759,6 @@ export class FinalrequistionlettersComponent implements OnInit {
     }
 
     return permitCopies;
-  }
-
-  private incrementReferenceNumber(baseRefNo: string, increment: number): string {
-    if (!baseRefNo) return baseRefNo;
-
-    const refNo = baseRefNo.replace(/\/excise$/i, "");
-    const match = refNo.match(/(\d+)(\D*)$/);
-
-    if (!match) return refNo;
-
-    const number = parseInt(match[1], 10);
-    const suffix = match[2];
-    const prefix = refNo.substring(0, refNo.length - match[0].length);
-    const paddingLength = match[1].length;
-
-    return prefix + (number + increment).toString().padStart(paddingLength, "0") + suffix;
   }
 }
 

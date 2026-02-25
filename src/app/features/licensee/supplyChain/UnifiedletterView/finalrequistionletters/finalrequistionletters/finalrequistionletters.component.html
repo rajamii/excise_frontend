@@ -110,7 +110,7 @@
         To,<br />
         The Excise Officer-in-Charge,<br />
         <span class="bold-text">{{ secondLetterData.liftedFromDistilleryName }}</span><br />
-        <span class="bold-text">{{ secondLetterData.liftedFrom }}</span><br />
+        <span class="bold-text" *ngIf="secondLetterData.liftedFrom">{{ secondLetterData.liftedFrom }}</span><br *ngIf="secondLetterData.liftedFrom" />
         <span class="bold-text">{{ secondLetterData.state }}</span>.
       </p>
 
@@ -187,8 +187,8 @@
         <span class="bold-text underline">{{ thirdLetterData.issuedTo }}</span> to import
         <span class="bold-text">{{ thirdLetterData.importTo }} BL</span> of Grain ENA having strength
         (<span class="bold-text">{{ thirdLetterData.strength }}</span>) (Strength Value:
-        {{ thirdLetterData.strengthValue }}) from
-        <span class="bold-text">{{ thirdLetterData.importFrom }}</span>.
+        <span class="bold-text">{{ thirdLetterData.strengthValue }}</span>) from
+        <span class="bold-text">{{ thirdLetterData.importFrom }}</span> via route <span class="bold-text">{{ thirdLetterData.viaRoute }}</span>.
       </p>
     </div>
 
@@ -247,8 +247,8 @@
           <span class="bold-text">{{ permit.branchAddress }}</span> is/are hereby authorized to import the under 
           mentioned description and quantity of duty-paid Indian Made Foreign Liquor/ Foreign Liquors from outside India/ 
           Rectified Spirit/ Extra Neutral Alcohol/ Beer and Methylated Spirit from district of 
-          <span class="bold-text">{{ permit.importDistilleryName }}</span>, 
-          <span class="bold-text">{{ permit.importDistilleryAddress }}</span> in the state of 
+          <span class="bold-text">{{ permit.importDistilleryName }}</span><span *ngIf="permit.importDistilleryAddress">, </span>
+          <span class="bold-text" *ngIf="permit.importDistilleryAddress">{{ permit.importDistilleryAddress }}</span> in the state of 
           <span class="bold-text">{{ permit.importFrom }}</span> to their premises at 
           <span class="bold-text">{{ permit.branchAddress1 }}</span> for the purpose of 
           <span class="bold-text">{{ permit.branchPurpose }}</span>.
