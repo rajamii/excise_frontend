@@ -1,6 +1,11 @@
 import { Component, OnInit } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { Router, ActivatedRoute } from "@angular/router";
+import { HttpClient } from "@angular/common/http";
+import { environment } from "../../../../../../../environments/environment";
+import { EnaRequisitionService } from "../../../../../../core/services/ena-requisition.service";
+import { forkJoin, of, Observable } from "rxjs";
+import { catchError, map, switchMap } from "rxjs/operators";
 
 interface ForwardingLetterData {
   letterNo: string;
@@ -54,6 +59,11 @@ interface PermitData {
   branchAddress2: string;
   branchOfficer: string;
   numberOfPermits: number;
+}
+
+interface LicenseMeRow {
+  establishment_name?: string;
+  establishmentName?: string;
 }
 
 @Component({
@@ -123,10 +133,14 @@ export class FinalrequistionlettersComponent implements OnInit {
   // Dynamic back button properties
   backButtonText: string = "Back to Permit Section Dashboard";
   backRoute: string = "/app-permit-section";
+  isLoading: boolean = false;
+  errorMessage: string = "";
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
+    private http: HttpClient,
+    private enaRequisitionService: EnaRequisitionService,
   ) {}
 
   ngOnInit(): void {
@@ -135,13 +149,8 @@ export class FinalrequistionlettersComponent implements OnInit {
     
     // Get data from query parameters or route state
     this.route.queryParams.subscribe((params) => {
-      if (params["ref"]) {
-        this.loadForwardingLetterData(params["ref"]);
-      }
+      this.loadForwardingLetterData(params["ref"], params["id"]);
     });
-
-    // Load sample data for now
-    this.loadSampleData();
   }
 
   private setBackButtonBasedOnSource(): void {
@@ -164,82 +173,308 @@ export class FinalrequistionlettersComponent implements OnInit {
     });
   }
 
-  private loadForwardingLetterData(referenceNo: string): void {
-    // TODO: Replace with actual API call
-    console.log("Loading forwarding letter data for:", referenceNo);
+  private loadForwardingLetterData(referenceNo?: string, requisitionId?: string): void {
+    this.isLoading = true;
+    this.errorMessage = "";
+
+    const requisition$ = requisitionId
+      ? this.enaRequisitionService.getRequisitionById(String(requisitionId))
+      : this.enaRequisitionService.getRequisitions();
+
+    const establishmentName$ = this.http
+      .get<LicenseMeRow[]>(`${environment.apiBaseUrl}/masters/license/me/`)
+      .pipe(
+        map((rows) => {
+          const list = Array.isArray(rows) ? rows : [];
+          const first = list[0] || {};
+          return String(first.establishment_name || first.establishmentName || "").trim();
+        }),
+        catchError(() => of(""))
+      );
+
+    forkJoin({
+      requisitionResponse: requisition$,
+      establishmentName: establishmentName$,
+    }).subscribe({
+      next: ({ requisitionResponse, establishmentName }) => {
+        const row = this.pickRequisitionRow(requisitionResponse, referenceNo, requisitionId);
+        if (!row) {
+          this.errorMessage = "No requisition data found for this letter.";
+          this.isLoading = false;
+          return;
+        }
+
+        this.resolveIssuedToName(row, establishmentName).subscribe({
+          next: (issuedToName) => {
+            this.mapRequisitionToLetter(row, issuedToName);
+            this.isLoading = false;
+          },
+          error: () => {
+            this.mapRequisitionToLetter(row, establishmentName || "-");
+            this.isLoading = false;
+          },
+        });
+      },
+      error: () => {
+        this.errorMessage = "Failed to load requisition letter data.";
+        this.isLoading = false;
+      },
+    });
   }
 
-  private loadSampleData(): void {
-    // Sample data - replace with actual API data
+  private pickRequisitionRow(response: any, referenceNo?: string, requisitionId?: string): any | null {
+    const idValue = String(requisitionId || "").trim();
+    if (idValue && response && typeof response === "object" && !Array.isArray(response)) {
+      return response;
+    }
+
+    let list: any[] = [];
+    if (Array.isArray(response)) {
+      list = response;
+    } else if (Array.isArray(response?.results)) {
+      list = response.results;
+    } else if (Array.isArray(response?.data)) {
+      list = response.data;
+    }
+
+    if (!list.length) return null;
+
+    const ref = String(referenceNo || "").trim().toUpperCase();
+    if (ref) {
+      return (
+        list.find(
+          (item) =>
+            String(item?.our_ref_no || item?.ourRefNo || item?.referenceNo || item?.ref_no || "")
+              .trim()
+              .toUpperCase() === ref
+        ) || null
+      );
+    }
+
+    return list[0];
+  }
+
+  private mapRequisitionToLetter(row: any, establishmentName: string): void {
+    const refNo = this.pickValue(row, ["our_ref_no", "ourRefNo", "referenceNo", "ref_no"], "_________");
+    const requisitionDate = this.formatDate(
+      this.pickValue(row, ["requisition_date", "requisitionDate", "created_at"], "")
+    );
+    const approvalDate = this.formatDate(this.pickValue(row, ["approval_date", "approvalDate"], ""));
+    const state = this.pickValue(row, ["state"], "");
+    const permitRaw = this.pickValue(row, ["details_permits_number", "detailsPermitsNumber"], "");
+    const permitDisplay = this.formatPermitRange(permitRaw);
+    const permitTokens = this.splitPermitTokens(permitRaw);
+    const issuedTo = establishmentName || "-";
+    const liftedFromDistilleryName = this.pickValue(
+      row,
+      ["lifted_from_distillery_name", "liftedFromDistilleryName"],
+      ""
+    );
+    const liftedFrom = this.pickValue(row, ["lifted_from", "liftedFrom"], "");
+
     this.letterData = {
-      letterNo: "EXC/2024/001",
-      letterDate: new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
-      liftedFromState: "West Bengal",
-      permitFrom: "IP/2024/001, IP/2024/002",
-      permitDate: "15/01/2024",
-      issuedTo: "Sikkim Distilleries Ltd",
+      letterNo: refNo,
+      letterDate: requisitionDate,
+      liftedFromState: state,
+      permitFrom: permitDisplay,
+      permitDate: approvalDate,
+      issuedTo,
     };
 
     this.secondLetterData = {
-      letterNo: "EXC/2024/002",
-      letterDate: new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
-      liftedFromDistilleryName: "Mount Distilleries Ltd",
-      liftedFrom: "Kalimpong",
-      state: "West Bengal",
-      requisitionNumberOfPermits: "IP/2024/003, IP/2024/004",
-      permitDated: "20/01/2024",
-      issuedTo: "Sikkim Distilleries Ltd",
-      stateName: "West Bengal",
+      letterNo: refNo,
+      letterDate: requisitionDate,
+      liftedFromDistilleryName,
+      liftedFrom,
+      state,
+      requisitionNumberOfPermits: permitDisplay,
+      permitDated: approvalDate,
+      issuedTo,
+      stateName: state,
     };
 
     this.thirdLetterData = {
-      letterNo: "EXC/2024/003",
-      letterDate: new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
-      permitFrom: "IP/2024/005, IP/2024/006",
-      permitDated: "25/01/2024",
-      issuedTo: "Sikkim Distilleries Ltd",
-      importTo: "500",
-      strength: "96.5%",
-      strengthValue: "Extra Neutral Alcohol",
-      importFrom: "West Bengal",
+      letterNo: refNo,
+      letterDate: requisitionDate,
+      permitFrom: permitDisplay,
+      permitDated: approvalDate,
+      issuedTo,
+      importTo: this.pickValue(row, ["totalbl"], ""),
+      strength: this.pickValue(row, ["strength"], ""),
+      strengthValue: this.pickValue(row, ["bulk_spirit_type", "bulkSpiritType"], ""),
+      importFrom: state,
     };
 
     this.permitData = {
-      letterNo: "EXC/2024/004",
-      letterDate: new Date().toLocaleDateString("en-GB", {
+      ...this.permitData,
+      letterNo: refNo,
+      letterDate: requisitionDate,
+      branchName: issuedTo,
+      importDistilleryName: liftedFromDistilleryName,
+      importDistilleryAddress: liftedFrom,
+      importFrom: state,
+      branchPurpose: this.pickValue(row, ["branch_purpose", "branchPurpose"], ""),
+      displayTotalENA: this.pickValue(row, ["totalbl"], ""),
+      strengthTo: this.pickValue(row, ["strength"], ""),
+      route: this.pickValue(row, ["via_route", "viaRoute"], ""),
+      branchAddress2: this.pickValue(row, ["check_post_name", "checkPostName"], ""),
+      numberOfPermits:
+        permitTokens.length ||
+        Number(this.pickValue(row, ["requisiton_number_of_permits", "number_of_permits", "numberOfPermits"], 1)),
+    };
+  }
+
+  private resolveIssuedToName(row: any, meEstablishmentName: string): Observable<string> {
+    const direct = String(meEstablishmentName || "").trim();
+    if (direct) {
+      return of(direct);
+    }
+
+    const requisitionLicenseeId = this.pickValue(row, ["licensee_id", "licenseeId"], "");
+    const candidates = this.buildLicenseIdCandidates(requisitionLicenseeId);
+    if (!candidates.length) {
+      return of("-");
+    }
+
+    return this.fetchEstablishmentByLicenseCandidates(candidates);
+  }
+
+  private fetchEstablishmentByLicenseCandidates(candidates: string[]): Observable<string> {
+    const [current, ...rest] = candidates;
+    if (!current) {
+      return of("-");
+    }
+
+    const encoded = encodeURIComponent(current);
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}/masters/license/detail/${encoded}/`)
+      .pipe(
+        map((resp) => this.extractEstablishmentFromLicenseDetail(resp)),
+        switchMap((name) => {
+          const resolved = String(name || "").trim();
+          if (resolved.startsWith("__SOURCE_APP__:")) {
+            const sourceApplicationId = resolved.replace("__SOURCE_APP__:", "").trim();
+            return this.fetchFromSourceApplicationId(sourceApplicationId);
+          }
+          if (!resolved || resolved === "-") {
+            if (!rest.length) {
+              return of("-");
+            }
+            return this.fetchEstablishmentByLicenseCandidates(rest);
+          }
+          return of(resolved || "-");
+        }),
+        catchError(() => {
+          if (!rest.length) {
+            return of("-");
+          }
+          return this.fetchEstablishmentByLicenseCandidates(rest);
+        })
+      );
+  }
+
+  private fetchFromSourceApplicationId(sourceApplicationId: string): Observable<string> {
+    const appId = String(sourceApplicationId || "").trim();
+    if (!appId) {
+      return of("-");
+    }
+
+    const encoded = encodeURIComponent(appId);
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encoded}/`)
+      .pipe(
+        map((resp) => {
+          const value =
+            resp?.establishment_name ||
+            resp?.establishmentName ||
+            resp?.applicationData?.establishmentName ||
+            resp?.application_data?.establishment_name ||
+            "";
+          return String(value || "").trim() || "-";
+        }),
+        catchError(() => {
+          return of("-");
+        })
+      );
+  }
+
+  private extractEstablishmentFromLicenseDetail(resp: any): string {
+    const appData = resp?.application_data || resp?.applicationData || {};
+    const value =
+      appData?.establishment_name ||
+      appData?.establishmentName ||
+      appData?.licensee_name ||
+      appData?.licenseeName ||
+      resp?.establishment_name ||
+      resp?.establishmentName ||
+      "";
+
+    const direct = String(value || "").trim();
+    if (direct) {
+      return direct;
+    }
+
+    const sourceApplicationId =
+      resp?.source_application_id ||
+      resp?.sourceApplicationId ||
+      "";
+
+    // Return marker; caller can run the sourceApplicationId fallback request.
+    return String(sourceApplicationId || "").trim()
+      ? `__SOURCE_APP__:${String(sourceApplicationId).trim()}`
+      : "-";
+  }
+
+  private buildLicenseIdCandidates(licenseId: string): string[] {
+    const base = String(licenseId || "").trim();
+    if (!base) return [];
+
+    const out: string[] = [base];
+    if (base.startsWith("NLI/")) {
+      out.push(`NA/${base.slice(4)}`);
+    } else if (base.startsWith("NA/")) {
+      out.push(`NLI/${base.slice(3)}`);
+    }
+    return Array.from(new Set(out));
+  }
+
+  private pickValue(row: any, keys: string[], fallback: any = ""): any {
+    for (const key of keys) {
+      const value = row?.[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        return String(value).trim();
+      }
+    }
+    return fallback;
+  }
+
+  private formatDate(value: any): string {
+    if (!value) return "";
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-      }),
-      branchName: "Sikkim Distilleries Ltd",
-      branchAddress: "Rangpo, East Sikkim",
-      importDistilleryName: "Mount Distilleries Ltd",
-      importDistilleryAddress: "Kalimpong",
-      importFrom: "West Bengal",
-      branchAddress1: "Rangpo Check Post",
-      branchPurpose: "Manufacturing of IMFL",
-      displayTotalENA: "500",
-      strengthFrom: "95",
-      strengthTo: "96.5",
-      importPassFee: "25000",
-      brNumber: "BR/2024/001/15-01-2024",
-      route: "Siliguri-Rangpo",
-      branchAddress2: "Rangpo Check Post",
-      branchOfficer: "Excise Inspector, Rangpo",
-      numberOfPermits: 3, // This will generate 12 total copies (3 permits × 4 copies each)
-    };
+      });
+    } catch {
+      return String(value);
+    }
+  }
+
+  private splitPermitTokens(value: string): string[] {
+    return String(value || "")
+      .split(",")
+      .map((token) => token.trim())
+      .filter((token) => token.length > 0);
+  }
+
+  private formatPermitRange(value: string): string {
+    const tokens = this.splitPermitTokens(value);
+    if (tokens.length === 0) return "";
+    if (tokens.length === 1) return tokens[0];
+    return `${tokens[0]} to ${tokens[tokens.length - 1]}`;
   }
 
   printLetter(): void {
@@ -478,7 +713,7 @@ export class FinalrequistionlettersComponent implements OnInit {
   private incrementReferenceNumber(baseRefNo: string, increment: number): string {
     if (!baseRefNo) return baseRefNo;
 
-    const refNo = baseRefNo.replace("/Excise", "");
+    const refNo = baseRefNo.replace(/\/excise$/i, "");
     const match = refNo.match(/(\d+)(\D*)$/);
 
     if (!match) return refNo;
@@ -491,3 +726,4 @@ export class FinalrequistionlettersComponent implements OnInit {
     return prefix + (number + increment).toString().padStart(paddingLength, "0") + suffix;
   }
 }
+
