@@ -1359,7 +1359,220 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     printApplication(): void {
-        window.print();
+        const printSection = document.getElementById('applicationPrintSection');
+        if (!printSection) {
+            console.error('Print section not found');
+            alert('Print section not found. Please try again.');
+            return;
+        }
+
+        // Clone the print section to modify image paths
+        const clonedSection = printSection.cloneNode(true) as HTMLElement;
+        
+        // Get the base URL for absolute paths
+        const baseUrl = window.location.origin;
+        
+        // Update all image src attributes to use absolute URLs
+        const images = clonedSection.querySelectorAll('img');
+        images.forEach(img => {
+            const src = img.getAttribute('src');
+            if (src && !src.startsWith('http')) {
+                img.setAttribute('src', `${baseUrl}/${src}`);
+            }
+        });
+
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) {
+            alert('Please allow popups to print');
+            return;
+        }
+
+        const appTitle = this.getApplicationTitle();
+
+        const styles = `
+            <style>
+                @page {
+                    size: A4 portrait;
+                    margin: 10mm;
+                }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 12px;
+                    line-height: 1.4;
+                    color: #000;
+                }
+                .card {
+                    border: 3px solid #2563eb !important;
+                    border-radius: 8px;
+                    padding: 12mm;
+                    box-shadow: none !important;
+                }
+                .application-header {
+                    text-align: center;
+                    margin-bottom: 15px;
+                    padding-bottom: 12px;
+                    border-bottom: 2px solid #2563eb;
+                }
+                .dept-seal {
+                    height: 60px;
+                    width: auto;
+                    filter: invert(1) brightness(0.2);
+                }
+                .d-flex {
+                    display: flex;
+                }
+                .align-items-center {
+                    align-items: center;
+                }
+                .justify-content-center {
+                    justify-content: center;
+                }
+                .gap-3 {
+                    gap: 12px;
+                }
+                .mb-2 {
+                    margin-bottom: 8px;
+                }
+                .mb-3 {
+                    margin-bottom: 12px;
+                }
+                .mb-4 {
+                    margin-bottom: 16px;
+                }
+                .fw-bold {
+                    font-weight: bold;
+                }
+                .fs-4 {
+                    font-size: 18px;
+                }
+                .fs-5 {
+                    font-size: 16px;
+                }
+                .text-primary {
+                    color: #2563eb;
+                }
+                .text-center {
+                    text-align: center;
+                }
+                .mt-2 {
+                    margin-top: 8px;
+                }
+                .p-4 {
+                    padding: 16px;
+                }
+                .row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    margin: 0 -8px;
+                }
+                .col-md-6 {
+                    flex: 0 0 50%;
+                    max-width: 50%;
+                    padding: 0 8px;
+                }
+                .col-md-12 {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                    padding: 0 8px;
+                }
+                .info-card {
+                    background: #f8f9fa;
+                    padding: 12px;
+                    border-radius: 6px;
+                    margin-bottom: 12px;
+                    border: 1px solid #e5e7eb;
+                }
+                h6 {
+                    font-size: 13px;
+                    font-weight: bold;
+                    margin-bottom: 8px;
+                }
+                p {
+                    margin-bottom: 6px;
+                    font-size: 11px;
+                }
+                strong {
+                    font-weight: bold;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 8px;
+                    font-size: 10px;
+                }
+                th {
+                    background: #2563eb;
+                    color: white;
+                    padding: 6px 4px;
+                    text-align: left;
+                    font-weight: bold;
+                    font-size: 9px;
+                }
+                td {
+                    padding: 5px 4px;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 10px;
+                }
+                tr:last-child td {
+                    border-bottom: none;
+                }
+                .badge {
+                    display: inline-block;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                    font-size: 9px;
+                    font-weight: bold;
+                }
+                .bg-success {
+                    background-color: #10b981;
+                    color: white;
+                }
+                .bg-warning {
+                    background-color: #f59e0b;
+                    color: white;
+                }
+                .bg-danger {
+                    background-color: #ef4444;
+                    color: white;
+                }
+                .bg-info {
+                    background-color: #3b82f6;
+                    color: white;
+                }
+                .no-print {
+                    display: none !important;
+                }
+            </style>
+        `;
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>${appTitle}</title>
+                    <meta charset="utf-8">
+                    ${styles}
+                </head>
+                <body>
+                    ${clonedSection.outerHTML}
+                </body>
+            </html>
+        `);
+
+        printWindow.document.close();
+        
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        }, 500);
     }
 
 }
