@@ -319,7 +319,7 @@
 }
 
 .table-container {
-  overflow-x: auto;
+  overflow-x: visible;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   border: 1px solid #e5e7eb;
@@ -329,19 +329,22 @@
   width: 100%;
   border-collapse: collapse;
   background: white;
+  table-layout: fixed;
   
   thead {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     
     th {
-      padding: 12px 10px;
+      padding: 10px 6px;
       text-align: left;
-      font-size: 12px;
+      font-size: 10px;
       font-weight: 700;
       color: white;
       text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
       border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
   }
   
@@ -359,27 +362,32 @@
     }
     
     td {
-      padding: 10px;
-      font-size: 12px;
+      padding: 8px 6px;
+      font-size: 11px;
       color: #374151;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      vertical-align: top;
       
       &.amount-cell {
         font-weight: 700;
         color: #059669;
-        font-size: 13px;
+        font-size: 12px;
       }
     }
   }
 }
 
 .table-status {
-  padding: 4px 10px;
+  padding: 3px 8px;
   background: #dbeafe;
   color: #1e40af;
-  border-radius: 12px;
-  font-size: 11px;
+  border-radius: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
+  display: inline-block;
+  word-break: break-word;
 }
 
 // Official Footer
