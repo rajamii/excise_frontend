@@ -155,13 +155,13 @@
     <!-- Additional Filters Row -->
     <div class="row g-3 mt-2">
       <div class="col-md-3">
-        <label class="form-label small">Distillery</label>
+        <label class="form-label small">Distillery/Brewery</label>
         <select class="form-select form-select-sm" 
                 [(ngModel)]="filters.distillery" 
                 (change)="applyFilters()">
-          <option value="">All Distilleries</option>
+          <option value="">All Distilleries/Breweries</option>
           <option *ngFor="let distillery of distilleries" [value]="distillery">
-            {{ distillery }}
+            {{ getDistilleryOptionLabel(distillery) }}
           </option>
         </select>
       </div>

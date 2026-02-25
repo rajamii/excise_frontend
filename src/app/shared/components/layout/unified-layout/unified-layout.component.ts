@@ -62,12 +62,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     hideForOic?: boolean;
     hideForCommissioner?: boolean;
     showOnlyForOic?: boolean;
+    showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
-    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true },
+    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
+    { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
     { section: 'transit', label: 'Transit', icon: 'local_shipping', hideForCommissioner: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
@@ -856,6 +858,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'cancellation': ['ena_cancellation', 'cancellation'],
       'transit': ['transit_permit', 'transit'],
       'hologram': ['hologram_procurement', 'hologram_request', 'hologram'],
+      'commissioner-hologram-working-records': ['daily_hologram', 'hologram_daily', 'daily_register', 'hologram_register', 'hologram'],
       'itcell-hologram': ['hologram_procurement', 'itcell_hologram', 'it_cell', 'hologram'],
       'transit-applications': ['transit_permit', 'transit'],
       'brands': ['brand', 'brands'],

@@ -66,6 +66,9 @@
         <app-commissioner-dashboard
           *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId === 10"
           [embeddedHologramOnly]="true"></app-commissioner-dashboard>
+        <app-dailyhologramrecordregister
+          *ngIf="selectedSupplyChainSection === 'commissioner-hologram-working-records' && currentUser?.roleId === 10">
+        </app-dailyhologramrecordregister>
         <app-hologramprocurement
           *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId !== 10"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>

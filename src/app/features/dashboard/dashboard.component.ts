@@ -49,6 +49,7 @@ import { OicdailyhologramregisterComponent } from '../licensee/supplyChain/regis
 import { BrandwarehouseComponent } from '../licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component';
 import { ITCELLComponent } from '../admin/it-cell/itcell.component';
 import { HologramoveriewComponent } from '../licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component';
+import { DailyhologramrecordregisterComponent } from '../admin/commissioner/dailyhologramrecordregister/dailyhologramrecordregister.component';
 
 // Role-specific Dashboard Components
 import { PermitSectionDashboardComponent } from './role-components/permit-section-dashboard.component';
@@ -96,6 +97,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     BrandwarehouseComponent,
     ITCELLComponent,
     HologramoveriewComponent,
+    DailyhologramrecordregisterComponent,
     // Role-specific Dashboard Components
     PermitSectionDashboardComponent,
     CommissionerDashboard,
@@ -666,6 +668,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'cancellation': 'Cancellation Management',
       'transit': 'Transit Management',
       'hologram': 'Hologram Procurement',
+      'commissioner-hologram-working-records': 'Hologram Working Records',
       'hologram-request': 'Hologram Request',
       'company-registration': 'Company Registration',
       'salesman-barman-registration': 'Salesman/Barman Registration',
