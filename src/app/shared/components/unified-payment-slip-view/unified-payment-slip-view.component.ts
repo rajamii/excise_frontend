@@ -267,7 +267,297 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   printSlip(): void {
-    window.print();
+    const printContent = document.querySelector('.slip-card');
+    if (!printContent) {
+      console.error('Print content not found');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      alert('Please allow popups to print');
+      return;
+    }
+
+    const styles = `
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 12mm;
+        }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 11px;
+          line-height: 1.5;
+          color: #000;
+        }
+        .slip-card {
+          padding: 12mm;
+          border: 3px solid #2563eb;
+          border-radius: 8px;
+        }
+        .official-header {
+          margin-bottom: 12px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #2563eb;
+        }
+        .header-content {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 8px;
+        }
+        .govt-seal {
+          width: 70px;
+          height: 70px;
+        }
+        .title-section {
+          flex: 1;
+          text-align: center;
+        }
+        .govt-name {
+          font-size: 18px;
+          font-weight: 800;
+          margin-bottom: 3px;
+        }
+        .dept-name {
+          font-size: 15px;
+          font-weight: 700;
+          margin-bottom: 5px;
+        }
+        .dept-address, .dept-contact {
+          font-size: 10px;
+          color: #666;
+          margin-bottom: 2px;
+        }
+        .slip-title-section {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+        .slip-title {
+          font-size: 20px;
+          font-weight: 700;
+        }
+        .status-badge {
+          padding: 5px 12px;
+          border-radius: 14px;
+          font-size: 10px;
+          font-weight: 600;
+          background: #10b981;
+          color: white;
+        }
+        .source-badge {
+          padding: 3px 8px;
+          background: #f3f4f6;
+          border-radius: 8px;
+          font-size: 9px;
+          color: #6b7280;
+        }
+        .summary-section {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-bottom: 15px;
+        }
+        .summary-card {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px;
+          border-radius: 8px;
+          border: 2px solid #e5e7eb;
+        }
+        .primary-card { 
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+          border-color: #3b82f6;
+        }
+        .success-card { 
+          background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+          border-color: #10b981;
+        }
+        .info-card { 
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-color: #f59e0b;
+        }
+        .card-icon {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+          font-weight: 700;
+          border-radius: 8px;
+          background: white;
+        }
+        .card-label {
+          font-size: 8px;
+          font-weight: 600;
+          text-transform: uppercase;
+          color: #666;
+          margin-bottom: 4px;
+        }
+        .card-value {
+          font-size: 18px;
+          font-weight: 800;
+        }
+        .info-section {
+          margin-bottom: 15px;
+        }
+        .section-title {
+          font-size: 15px;
+          font-weight: 700;
+          margin-bottom: 8px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #2563eb;
+          color: #1f2937;
+        }
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          background: #f9fafb;
+          padding: 10px;
+          border-radius: 6px;
+          border: 2px solid #e5e7eb;
+        }
+        .info-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px;
+          background: white;
+          border-radius: 4px;
+          border: 1px solid #e5e7eb;
+        }
+        .info-label {
+          font-size: 9px;
+          font-weight: 600;
+          text-transform: uppercase;
+          color: #666;
+        }
+        .info-value {
+          font-size: 10px;
+          font-weight: 600;
+          text-align: right;
+        }
+        .info-value.amount {
+          color: #059669;
+          font-size: 12px;
+        }
+        .module-badge {
+          padding: 3px 8px;
+          background: #2563eb;
+          color: white;
+          border-radius: 8px;
+          font-size: 9px;
+          font-weight: 600;
+        }
+        .details-section {
+          margin-bottom: 15px;
+        }
+        .table-container {
+          border-radius: 6px;
+          border: 2px solid #2563eb;
+          overflow: hidden;
+        }
+        .modern-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .modern-table thead {
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+        .modern-table th {
+          padding: 8px 6px;
+          font-size: 8px;
+          font-weight: 700;
+          color: white;
+          text-transform: uppercase;
+          text-align: left;
+          border-right: 1px solid rgba(255,255,255,0.2);
+        }
+        .modern-table th:last-child {
+          border-right: none;
+        }
+        .modern-table td {
+          padding: 6px;
+          font-size: 9px;
+          border-bottom: 1px solid #e5e7eb;
+          border-right: 1px solid #f3f4f6;
+          word-wrap: break-word;
+        }
+        .modern-table td:last-child {
+          border-right: none;
+        }
+        .modern-table tr:last-child td {
+          border-bottom: none;
+        }
+        .modern-table tbody tr:hover {
+          background-color: #f9fafb;
+        }
+        .amount-cell {
+          font-weight: 700;
+          color: #059669;
+          font-size: 10px;
+        }
+        .table-status {
+          padding: 2px 6px;
+          background: #dbeafe;
+          color: #1e40af;
+          border-radius: 8px;
+          font-size: 7px;
+          font-weight: 600;
+          display: inline-block;
+        }
+        .official-footer {
+          margin-top: 15px;
+          padding-top: 10px;
+          border-top: 2px solid #e5e7eb;
+          text-align: center;
+        }
+        .footer-text {
+          font-size: 9px;
+          color: #666;
+          margin: 3px 0;
+        }
+        .no-print {
+          display: none !important;
+        }
+      </style>
+    `;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Slip - ${this.referenceNo}</title>
+          <meta charset="utf-8">
+          ${styles}
+        </head>
+        <body>
+          ${printContent.outerHTML}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   }
 
   get transitSummary() {

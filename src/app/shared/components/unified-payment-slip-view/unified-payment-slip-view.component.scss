@@ -511,33 +511,186 @@
 
 // Print Styles
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+  
   .slip-wrap {
-    background: white;
-    padding: 0;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
   }
   
   .a4-sheet {
-    box-shadow: none;
-    border-radius: 0;
-    max-width: 100%;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    page-break-after: avoid !important;
   }
   
   .slip-card {
-    padding: 20px;
+    padding: 8mm !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .official-header {
+    margin-bottom: 8px !important;
+  }
+  
+  .header-content {
+    margin-bottom: 6px !important;
+  }
+  
+  .govt-seal {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  .govt-name {
+    font-size: 16px !important;
+  }
+  
+  .dept-name {
+    font-size: 14px !important;
+  }
+  
+  .dept-address, .dept-contact {
+    font-size: 10px !important;
+  }
+  
+  .slip-title-section {
+    margin-bottom: 8px !important;
+    padding-bottom: 6px !important;
+  }
+  
+  .slip-title {
+    font-size: 18px !important;
+  }
+  
+  .summary-section {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .summary-card {
+    padding: 8px !important;
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .card-icon {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+  
+  .card-label {
+    font-size: 8px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .card-value {
+    font-size: 16px !important;
+  }
+  
+  .info-section {
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .section-title {
+    font-size: 14px !important;
+    margin-bottom: 6px !important;
+    padding-bottom: 4px !important;
+  }
+  
+  .info-grid {
+    padding: 8px !important;
+    gap: 6px !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .info-item {
+    padding: 6px !important;
+  }
+  
+  .info-label {
+    font-size: 9px !important;
+  }
+  
+  .info-value {
+    font-size: 10px !important;
+  }
+  
+  .details-section {
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .table-container {
+    box-shadow: none !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .modern-table {
+    page-break-inside: avoid !important;
+    
+    thead th {
+      padding: 6px 4px !important;
+      font-size: 8px !important;
+      background: #2563eb !important;
+      -webkit-print-color-adjust: exact !important;
+    }
+    
+    tbody td {
+      padding: 5px 4px !important;
+      font-size: 9px !important;
+    }
+    
+    .amount-cell {
+      font-size: 10px !important;
+    }
+  }
+  
+  .table-status {
+    font-size: 7px !important;
+    padding: 2px 6px !important;
+  }
+  
+  .official-footer {
+    margin-top: 8px !important;
+    padding-top: 8px !important;
+  }
+  
+  .footer-text {
+    font-size: 9px !important;
   }
   
   .no-print {
     display: none !important;
   }
   
-  .summary-card,
-  .info-item,
-  .table-container {
-    box-shadow: none;
-    page-break-inside: avoid;
-  }
-  
-  .details-section {
-    page-break-inside: avoid;
+  // Force single page
+  .slip-card > * {
+    page-break-inside: avoid !important;
   }
 }
