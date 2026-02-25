@@ -450,6 +450,30 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     this.loadDailyRegisterEntries();
   }
 
+  isSlaBreached(entry: DailyRegisterEntry): boolean {
+    return !!entry.isOverdue || (entry.status === 'COMPLETED' && entry.completedOnTime === false);
+  }
+
+  getCompletedOnTimeLabel(entry: DailyRegisterEntry): string {
+    if (entry.status !== 'COMPLETED') {
+      return '-';
+    }
+    if (entry.completedOnTime === true) {
+      return 'Yes';
+    }
+    if (entry.completedOnTime === false) {
+      return 'No';
+    }
+    return '-';
+  }
+
+  getCompletedOnTimeClass(entry: DailyRegisterEntry): string {
+    if (entry.status !== 'COMPLETED') {
+      return 'bg-secondary text-white';
+    }
+    return entry.completedOnTime === true ? 'bg-success text-white' : 'bg-danger text-white';
+  }
+
   clearAllData() {
     if (confirm('Are you sure you want to clear all register data? This will remove all entries.')) {
       // This would need a backend endpoint to clear data
@@ -463,7 +487,14 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     }
     
     if (entry.status === 'COMPLETED') {
-      return 'Completed';
+      if (entry.completedOnTime === false) {
+        return entry.completionTime
+          ? `Completed Late (saved ${entry.completionTime})`
+          : 'Completed Late';
+      }
+      return entry.completionTime
+        ? `Completed On Time (saved ${entry.completionTime})`
+        : 'Completed';
     }
 
     return entry.timeRemaining || 'No deadline set';
@@ -475,6 +506,9 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     }
     
     if (entry.status === 'COMPLETED') {
+      if (entry.completedOnTime === false) {
+        return 'text-danger fw-bold';
+      }
       return 'text-success';
     }
 
@@ -519,5 +553,21 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       }
       return total + rangesCount;
     }, 0);
+  }
+
+  getBrandAllocatedQty(brand: any): number {
+    return Number(brand?.allocatedQty ?? brand?.quantity ?? 0);
+  }
+
+  getBrandIssuedQty(brand: any): number {
+    return Number(brand?.issuedQty ?? brand?.quantity ?? 0);
+  }
+
+  getBrandWastageQty(brand: any): number {
+    return Number(brand?.wastageQty ?? 0);
+  }
+
+  getBrandSavedAt(brand: any): string {
+    return String(brand?.savedAt || '');
   }
 }

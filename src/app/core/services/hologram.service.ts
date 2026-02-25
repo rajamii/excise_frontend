@@ -27,6 +27,12 @@ export interface DailyRegisterEntry {
     brandCode?: string;
     bottleSize: string;
     quantity: number;
+    allocatedQty?: number;
+    issuedQty?: number;
+    wastageQty?: number;
+    damageReason?: string;
+    rollRange?: string;
+    savedAt?: string;
     usageDate: string;
     rollsAssigned?: Array<{
       rollId?: number;
