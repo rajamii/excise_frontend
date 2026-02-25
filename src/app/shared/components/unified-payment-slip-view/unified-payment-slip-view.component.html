@@ -1,6 +1,9 @@
 <div class="slip-wrap">
   <div class="a4-sheet">
     <div class="slip-card">
+    <!-- Watermark -->
+    <div class="watermark">SIKKIM EXCISE</div>
+    
     <!-- Official Header with Logo -->
     <header class="official-header">
       <div class="header-content">
@@ -386,18 +389,18 @@
       <p class="footer-text">This is a computer-generated document. No signature is required.</p>
       <p class="footer-text">For any queries, please contact Sikkim Excise Department</p>
     </div>
-
-    <!-- Action Buttons -->
-    <div class="action-buttons no-print">
-      <button type="button" class="btn btn-print" (click)="printSlip()">
-        <i class="bi bi-printer"></i>
-        Print Slip
-      </button>
-      <button type="button" class="btn btn-back" (click)="goBack()">
-        <i class="bi bi-arrow-left"></i>
-        Back to Dashboard
-      </button>
-    </div>
   </div>
+  </div>
+  
+  <!-- Action Buttons - Outside the page layout -->
+  <div class="action-buttons no-print">
+    <button type="button" class="btn btn-print" (click)="printSlip()">
+      <i class="bi bi-printer"></i>
+      Print Slip
+    </button>
+    <button type="button" class="btn btn-back" (click)="goBack()">
+      <i class="bi bi-arrow-left"></i>
+      Back to Dashboard
+    </button>
   </div>
 </div>

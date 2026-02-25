@@ -302,6 +302,37 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           padding: 12mm;
           border: 3px solid #2563eb;
           border-radius: 8px;
+          position: relative;
+        }
+        .watermark {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 0;
+          overflow: hidden;
+        }
+        .watermark::before {
+          content: 'SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE\\ASIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE  SIKKIM EXCISE';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          font-size: 14px;
+          font-weight: 700;
+          color: rgba(37, 99, 235, 0.12);
+          white-space: pre-line;
+          line-height: 4.5;
+          text-align: left;
+          letter-spacing: 2px;
+          padding: 10px;
+        }
+        .slip-card > *:not(.watermark) {
+          position: relative;
+          z-index: 1;
         }
         .official-header {
           margin-bottom: 12px;
