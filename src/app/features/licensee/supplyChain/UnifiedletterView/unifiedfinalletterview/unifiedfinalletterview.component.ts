@@ -482,25 +482,33 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     // Check source parameter for navigation
     const source = this.route.snapshot.queryParamMap.get('source');
     
-    if (source === 'commissioner-dashboard') {
-      this.router.navigate(['/dev-commissioner-dashboard']);
+    if (source === 'commissioner') {
+      // Navigate to commissioner dashboard with appropriate section
+      const section = this.letterType === 'revalidation' ? 'revalidation' : 'cancellation';
+      this.router.navigate(['/dashboard'], { queryParams: { section } });
+    } else if (source === 'licensee') {
+      // Navigate to licensee dashboard with appropriate section
+      const section = this.letterType === 'revalidation' ? 'revalidation' : 'cancellation';
+      this.router.navigate(['/dashboard'], { queryParams: { section } });
     } else if (source === 'permit-section') {
       this.router.navigate(['/app-permit-section']);
     } else {
-      // Default: go back to supply chain
-      this.router.navigate(['/dev-supply-chain']);
+      // Default: go back to dashboard
+      this.router.navigate(['/dashboard']);
     }
   }
 
   getBackButtonText(): string {
     const source = this.route.snapshot.queryParamMap.get('source');
     
-    if (source === 'commissioner-dashboard') {
-      return 'Back to Commissioner Dashboard';
+    if (source === 'commissioner') {
+      return 'Back to Comm. Dashboard';
+    } else if (source === 'licensee') {
+      return 'Back to Dashboard';
     } else if (source === 'permit-section') {
       return 'Back to Permit Section';
     } else {
-      return 'Back to Supply Chain';
+      return 'Back to Dashboard';
     }
   }
 
