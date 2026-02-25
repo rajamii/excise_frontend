@@ -354,6 +354,41 @@ export class HologramprocurementComponent implements OnInit {
     });
   }
 
+  shouldShowMakePayment(item: HologramRow): boolean {
+    const status = String(item.status || '').toLowerCase().replace(/\s+/g, '');
+    return (
+      (status.includes('approvedbycommissioner') || status.includes('commissionerapproved')) &&
+      !item.paymentCompleted
+    );
+  }
+
+  navigateToWalletRecharge(item: HologramRow, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const queryParams = {
+      section: 'wallet',
+      tab: 'hologram',
+      source: 'hologram-procurement',
+      refNo: item.refNo,
+      action: 'makePayment'
+    };
+
+    this.router.navigate(['/dashboard'], {
+      queryParams
+    }).then((ok) => {
+      if (!ok && this.isBrowser) {
+        const target = `/dashboard?section=wallet&tab=hologram&source=hologram-procurement&refNo=${encodeURIComponent(String(item.refNo || ''))}&action=makePayment`;
+        window.location.assign(target);
+      }
+    }).catch(() => {
+      if (this.isBrowser) {
+        const target = `/dashboard?section=wallet&tab=hologram&source=hologram-procurement&refNo=${encodeURIComponent(String(item.refNo || ''))}&action=makePayment`;
+        window.location.assign(target);
+      }
+    });
+  }
+
   calculatePaymentAmount(hologram: HologramRow): number {
     const totalQty = this.getHologramTotal(hologram);
     return totalQty * 0.15;

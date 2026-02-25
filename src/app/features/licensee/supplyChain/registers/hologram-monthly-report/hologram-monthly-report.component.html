@@ -9,7 +9,7 @@
             <div class="col">
               <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturings Units - {{
                 getCurrentHologramTypeDisplay() }}</h1>
-              <p class="mb-0 small text-muted">{{ establishmentLine || 'Assigned Manufacturing Unit' }}</p>
+              <p class="mb-0 small text-muted">{{ establishmentLine || (commissionerMode ? 'All Manufacturing Units' : 'Assigned Manufacturing Unit') }}</p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
@@ -65,6 +65,19 @@
                 <div class="alert alert-info py-1 px-2 mb-0 small">
                   {{ getCurrentHologramTypeDisplay() }}
                 </div>
+              </div>
+
+              <!-- Commissioner Manufacturing Unit Dropdown -->
+              <div *ngIf="commissionerMode">
+                <label class="form-label small mb-1">Distillery/Brewery</label>
+                <select class="form-select form-select-sm"
+                  [(ngModel)]="selectedManufacturingUnit"
+                  (ngModelChange)="onManufacturingUnitChange()">
+                  <option value="">All Distillery/Brewery Units</option>
+                  <option *ngFor="let unit of manufacturingUnits" [value]="unit">
+                    {{ unit }}
+                  </option>
+                </select>
               </div>
             </div>
 
@@ -310,7 +323,7 @@
                           </strong>
                         </div>
                         <div class="d-flex flex-wrap gap-2">
-                          @for (carton of row.meta.cartonRanges; track carton.cartoonNumber) {
+                          @for (carton of row.meta.cartonRanges; track carton.cartoonNumber + '_' + carton.fromSerial + '_' + carton.toSerial + '_' + carton.quantity) {
                             <div class="badge bg-success bg-opacity-10 border border-success text-dark p-2" 
                                  style="font-size: 0.75rem; min-width: 150px;">
                               <div class="fw-bold text-success mb-1">
@@ -570,7 +583,7 @@
                                       </span>
                                     </div>
                                     <div class="ranges-list d-flex flex-wrap gap-2">
-                                      @for (range of brand.allRanges; track range.from + range.to) {
+                                      @for (range of brand.allRanges; track range.from + '_' + range.to + '_' + range.qty + '_' + $index) {
                                         <div class="range-item bg-light border rounded px-2 py-1"
                                              [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                              style="font-family: 'Courier New', monospace; font-size: 0.75rem;">

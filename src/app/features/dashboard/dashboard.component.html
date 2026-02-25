@@ -64,11 +64,14 @@
         <app-cancellation *ngIf="selectedSupplyChainSection === 'cancellation'"></app-cancellation>
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
         <app-commissioner-dashboard
-          *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId === 10"
+          *ngIf="selectedSupplyChainSection === 'hologram' && isCommissionerUser()"
           [embeddedHologramOnly]="true"></app-commissioner-dashboard>
         <app-dailyhologramrecordregister
-          *ngIf="selectedSupplyChainSection === 'commissioner-hologram-working-records' && currentUser?.roleId === 10">
+          *ngIf="selectedSupplyChainSection === 'commissioner-hologram-working-records' && isCommissionerUser()">
         </app-dailyhologramrecordregister>
+        <app-hologram-monthly-report
+          *ngIf="selectedSupplyChainSection === 'commissioner-monthly-view-details' && isCommissionerUser()">
+        </app-hologram-monthly-report>
         <app-hologramprocurement
           *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId !== 10"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>

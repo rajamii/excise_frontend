@@ -357,6 +357,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.currentUser?.roleId === 2;
   }
 
+  isCommissionerUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || 0);
+    if (roleId === 10) {
+      return true;
+    }
+
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('commissioner');
+  }
+
   canRenderWalletSection(): boolean {
     if (!this.isLicenseeUser()) {
       return true;
@@ -669,6 +684,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'transit': 'Transit Management',
       'hologram': 'Hologram Procurement',
       'commissioner-hologram-working-records': 'Hologram Working Records',
+      'commissioner-monthly-view-details': 'Monthly View Details',
       'hologram-request': 'Hologram Request',
       'company-registration': 'Company Registration',
       'salesman-barman-registration': 'Salesman/Barman Registration',

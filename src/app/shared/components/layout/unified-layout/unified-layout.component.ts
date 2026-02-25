@@ -68,8 +68,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'requisition', label: 'Requisition', icon: 'description' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
-    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
+    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
+    { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     { section: 'transit', label: 'Transit', icon: 'local_shipping', hideForCommissioner: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
@@ -840,6 +841,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
+    // Keep commissioner procurement tab visible even if DB navigation tokens are incomplete.
+    if (this.isCommissionerUser() && section === 'hologram') {
+      return true;
+    }
+
     const sectionRouteToken = String(section || '').trim().toLowerCase();
     if (this.dbNavigationRoutes.has(sectionRouteToken)) {
       return true;
@@ -859,6 +865,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'transit': ['transit_permit', 'transit'],
       'hologram': ['hologram_procurement', 'hologram_request', 'hologram'],
       'commissioner-hologram-working-records': ['daily_hologram', 'hologram_daily', 'daily_register', 'hologram_register', 'hologram'],
+      'commissioner-monthly-view-details': ['hologram_monthly', 'monthly_hologram', 'hologram_statement', 'hologram'],
       'itcell-hologram': ['hologram_procurement', 'itcell_hologram', 'it_cell', 'hologram'],
       'transit-applications': ['transit_permit', 'transit'],
       'brands': ['brand', 'brands'],
