@@ -342,12 +342,20 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         .header-content {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 10px;
           margin-bottom: 8px;
+          justify-content: center;
+          max-width: 500px;
+          margin-left: auto;
+          margin-right: auto;
         }
         .govt-seal {
-          width: 70px;
-          height: 70px;
+          width: 60px;
+          height: 60px;
+          filter: invert(1) brightness(0.2);
+        }
+        .title-section {
+          text-align: left;
         }
         .title-section {
           flex: 1;
