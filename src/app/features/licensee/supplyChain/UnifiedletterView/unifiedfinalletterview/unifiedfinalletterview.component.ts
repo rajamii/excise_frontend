@@ -525,115 +525,159 @@ export class UnifiedfinalletterviewComponent implements OnInit {
       return;
     }
 
-    const printable = printSection.innerHTML;
-    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map(el => (el as HTMLElement).outerHTML)
-      .join('');
+    // Clone the print section to modify image paths
+    const clonedSection = printSection.cloneNode(true) as HTMLElement;
+    
+    // Get the base URL for absolute paths
+    const baseUrl = window.location.origin;
+    
+    // Update all image src attributes to use absolute URLs
+    const images = clonedSection.querySelectorAll('img');
+    images.forEach(img => {
+      const src = img.getAttribute('src');
+      if (src && !src.startsWith('http')) {
+        img.setAttribute('src', `${baseUrl}/${src}`);
+      }
+    });
 
-    const win = window.open('', '_blank', 'width=1200,height=1600,scrollbars=yes,resizable=yes');
-    if (!win) {
-      alert('Pop-up blocked. Please allow pop-ups for this site to enable printing.');
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      alert('Please allow popups to print');
       return;
     }
 
     const letterNumber = this.cancellationLetterData?.letterNumber || 'Unknown';
     const letterTitle = this.letterType === 'revalidation' ? 'Revalidation Final Letter' : 'Cancellation Final Letter';
-    
-    win.document.open();
-    win.document.write(`<!doctype html>
+
+    const styles = `
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 12mm;
+        }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body {
+          font-family: 'Times New Roman', serif;
+          font-size: 14px;
+          line-height: 1.6;
+          color: #000;
+        }
+        .final-letter-container {
+          padding: 15mm;
+          max-width: 100%;
+          border: 3px solid #2563eb;
+          border-radius: 8px;
+        }
+        .letter-header {
+          text-align: center;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 3px double #000;
+        }
+        .seal-container {
+          margin-bottom: 15px;
+        }
+        .govt-seal {
+          height: 70px;
+          width: auto;
+          filter: invert(1) brightness(0.2);
+          display: block;
+          margin: 0 auto;
+        }
+        .dept-title {
+          font-size: 18px;
+          font-weight: bold;
+          margin: 8px 0 5px 0;
+          letter-spacing: 1px;
+        }
+        .dept-subtitle {
+          font-size: 16px;
+          font-weight: bold;
+          margin: 5px 0;
+        }
+        .dept-address {
+          font-size: 12px;
+          margin: 5px 0;
+        }
+        .dept-contact {
+          font-size: 11px;
+          margin-top: 5px;
+        }
+        .dept-contact div {
+          display: inline;
+          margin: 0 5px;
+        }
+        .letter-meta {
+          display: flex;
+          justify-content: space-between;
+          margin: 20px 0;
+          font-size: 14px;
+        }
+        .letter-number, .letter-date {
+          font-weight: bold;
+        }
+        .addressee-section {
+          margin: 25px 0;
+        }
+        .to-line {
+          margin-bottom: 10px;
+          font-weight: bold;
+        }
+        .addressee-details {
+          margin-left: 40px;
+          line-height: 1.8;
+        }
+        .addressee-name, .company-name {
+          font-weight: bold;
+        }
+        .subject-section {
+          margin: 25px 0;
+        }
+        .subject-line {
+          font-weight: bold;
+          text-decoration: underline;
+        }
+        .letter-body {
+          margin: 30px 0;
+          text-align: justify;
+          line-height: 1.8;
+        }
+        .body-text {
+          text-indent: 50px;
+        }
+        .no-print {
+          display: none !important;
+        }
+      </style>
+    `;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
           <title>${letterTitle} - ${letterNumber}</title>
           <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
           ${styles}
-          <style>
-            @page { 
-              size: A4; 
-              margin: 15mm; 
-            }
-            * {
-              box-sizing: border-box;
-            }
-            html, body { 
-              background: #fff !important; 
-              font-family: 'Times New Roman', serif;
-              line-height: 1.4;
-              color: #000 !important;
-              margin: 0;
-              padding: 0;
-              width: 100%;
-              height: auto;
-              overflow-x: hidden;
-              font-size: 14px !important;
-            }
-            .no-print { 
-              display: none !important; 
-            }
-            .final-letter-container { 
-              width: 100% !important;
-              max-width: none !important;
-              padding: 0;
-              margin: 0;
-            }
-            .letter-header {
-              text-align: center;
-              margin-bottom: 20px;
-            }
-            .govt-seal {
-              height: 60px !important;
-              width: auto !important;
-              margin-bottom: 10px;
-            }
-            .dept-title {
-              font-size: 18px !important;
-              font-weight: bold !important;
-              margin: 5px 0 !important;
-            }
-            .dept-subtitle {
-              font-size: 16px !important;
-              font-weight: bold !important;
-              margin: 5px 0 !important;
-            }
-            .dept-address {
-              font-size: 12px !important;
-              margin: 3px 0 !important;
-            }
-            .letter-number {
-              text-align: left;
-              margin: 20px 0;
-              font-size: 14px !important;
-            }
-            .letter-date {
-              text-align: right;
-              margin-top: -30px;
-              font-size: 14px !important;
-            }
-            .letter-body {
-              margin: 30px 0 50px 0;
-              text-align: justify;
-              line-height: 1.6;
-            }
-            .subject-line {
-              font-weight: bold !important;
-              text-decoration: underline;
-              margin: 20px 0;
-            }
-          </style>
         </head>
         <body>
-          <div class="final-letter-container">
-            ${printable}
-          </div>
+          ${clonedSection.outerHTML}
         </body>
-      </html>`);
-    win.document.close();
+      </html>
+    `);
 
-    // Wait for content to load before printing
+    printWindow.document.close();
+    
     setTimeout(() => {
-      win.focus();
-      win.print();
-    }, 1000);
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   }
 
   downloadFinalLetter(): void {

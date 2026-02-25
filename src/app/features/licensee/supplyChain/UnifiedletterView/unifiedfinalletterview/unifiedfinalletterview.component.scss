@@ -65,7 +65,7 @@
 .govt-seal {
   height: 80px;
   width: auto;
-  filter: grayscale(100%);
+  filter: invert(1) brightness(0.2);
 }
 
 .dept-title {
@@ -248,6 +248,7 @@
   
   .govt-seal {
     height: 60px;
+    filter: invert(1) brightness(0.2);
   }
   
   .dept-title {
@@ -319,6 +320,7 @@
   
   .govt-seal {
     height: 60px;
+    filter: invert(1) brightness(0.2);
   }
   
   .dept-title {
