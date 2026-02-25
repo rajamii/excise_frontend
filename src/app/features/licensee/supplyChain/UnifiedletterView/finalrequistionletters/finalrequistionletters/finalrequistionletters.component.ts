@@ -131,8 +131,8 @@ export class FinalrequistionlettersComponent implements OnInit {
   copyNames: string[] = ["ORIGINAL", "DUPLICATE", "TRIPLICATE", "QUADRUPLICATE"];
 
   // Dynamic back button properties
-  backButtonText: string = "Back to Permit Section Dashboard";
-  backRoute: string = "/app-permit-section";
+  backButtonText: string = "Back to Dashboard";
+  backRoute: string = "/dashboard";
   isLoading: boolean = false;
   errorMessage: string = "";
 
@@ -154,21 +154,20 @@ export class FinalrequistionlettersComponent implements OnInit {
   }
 
   private setBackButtonBasedOnSource(): void {
-    // Check the current URL or referrer to determine source
-    const currentUrl = window.location.href;
-    const referrer = document.referrer;
-    
     // Check query parameters for source
     this.route.queryParams.subscribe((params) => {
       const source = params['source'];
       
-      if (source === 'commissioner' || referrer.includes('dev-commissioner-dashboard') || currentUrl.includes('source=commissioner')) {
-        this.backButtonText = "Back to Commissioner Dashboard";
-        this.backRoute = "/dev-commissioner-dashboard";
-      } else {
-        // Default to permit section dashboard
-        this.backButtonText = "Back to Permit Section Dashboard";
+      if (source === 'commissioner') {
+        this.backButtonText = "Back to Dashboard";
+        this.backRoute = "/dashboard?section=requisition";
+      } else if (source === 'permit-section') {
+        this.backButtonText = "Back to Dashboard";
         this.backRoute = "/app-permit-section";
+      } else {
+        // Default to licensee dashboard
+        this.backButtonText = "Back to Dashboard";
+        this.backRoute = "/dashboard";
       }
     });
   }
@@ -680,7 +679,21 @@ export class FinalrequistionlettersComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate([this.backRoute]);
+    // Parse the backRoute to handle query parameters
+    if (this.backRoute.includes('?')) {
+      const [path, queryString] = this.backRoute.split('?');
+      const queryParams: any = {};
+      
+      // Parse query string into object
+      queryString.split('&').forEach(param => {
+        const [key, value] = param.split('=');
+        queryParams[key] = value;
+      });
+      
+      this.router.navigate([path], { queryParams });
+    } else {
+      this.router.navigate([this.backRoute]);
+    }
   }
 
   generatePermitCopies(): any[] {
