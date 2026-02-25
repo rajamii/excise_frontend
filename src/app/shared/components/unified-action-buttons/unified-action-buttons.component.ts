@@ -930,8 +930,13 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     }
   }
 
-  getButtonVariant(button: ActionButtonConfig | null | undefined): 'slip' | 'view' | 'default' {
+  getButtonVariant(button: ActionButtonConfig | null | undefined): 'slip' | 'view' | 'payment-slip' | 'default' {
     if (!button) return 'default';
+    
+    // Check if it's specifically a payment slip
+    if (button.action === 'VIEW_PAYMENT_SLIP') return 'payment-slip';
+    
+    // Check if it's a permit slip
     if (this.isSlipButton(button)) return 'slip';
 
     const normalizedAction = this.normalizeActionName(button.action);
