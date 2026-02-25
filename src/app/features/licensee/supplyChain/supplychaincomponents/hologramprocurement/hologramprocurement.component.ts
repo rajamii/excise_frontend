@@ -341,23 +341,6 @@ export class HologramprocurementComponent implements OnInit {
     this.router.navigate(["/dev-hologram"]);
   }
 
-  navigateToPaymentPage(hologram: HologramRow): void {
-    if (!this.isPaymentEnabled(hologram)) {
-      alert('Payment is pending Commissioner approval.');
-      return;
-    }
-
-    // In API version, we might redirect to a payment page with ID
-    this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: {
-        tab: 'hologram',
-        refNo: hologram.refNo,
-        action: 'makePayment',
-        id: hologram.id // backend ID
-      }
-    });
-  }
-
   viewPaymentSlip(item: HologramRow): void {
     this.router.navigate(['/payment-slip-view'], {
       queryParams: {
@@ -369,16 +352,6 @@ export class HologramprocurementComponent implements OnInit {
         source: 'licensee'
       }
     });
-  }
-
-  // Payment methods
-  isPaymentEnabled(item: HologramRow): boolean {
-    const actions = (item.allowed_actions || item.allowedActions || []).map(a => String(a).toLowerCase());
-    if (actions.includes('pay')) {
-      return true;
-    }
-    // Backward compatibility fallback
-    return item.status === 'Approved by Commissioner';
   }
 
   calculatePaymentAmount(hologram: HologramRow): number {
@@ -408,7 +381,7 @@ export class HologramprocurementComponent implements OnInit {
     // In real implementation, payment is handled via payment gateway or separate flow.
     // For now, we can maybe call an API to mark it?
     // Or just show alert that "This is testing only"
-    alert('In API mode, please use the Make Payment button to proceed with transaction.');
+    alert('In API mode, please use the Submit Payment button inside View Details.');
   }
 
   // Clear data methods (for testing)

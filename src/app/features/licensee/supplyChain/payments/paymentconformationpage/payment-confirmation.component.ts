@@ -96,6 +96,9 @@ interface MyLicenseRow {
   licenseSubCategoryId?: number;
   license_sub_category?: string;
   licenseSubCategory?: string;
+  status?: string;
+  stage_name?: string;
+  stageName?: string;
 }
 
 type WalletModuleType = 'distillery' | 'brewery' | '';
@@ -139,6 +142,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private resolvedLicenseModuleType: WalletModuleType = '';
   private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
   private readonly http = inject(HttpClient);
+  private readonly distilleryTabs = new Set([
+    'requisition',
+    'revalidation',
+    'cancellation',
+    'transit',
+    'hologram',
+    'recharge',
+    'history'
+  ]);
+  private readonly breweryTabs = new Set(['transit', 'hologram', 'recharge', 'history']);
 
   // Transit Data
   transitBillNo = '';
@@ -202,26 +215,21 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   ngOnInit(): void {
     this.initializeWalletContextAndLoadData();
 
-    // Load hologram data from API
-    this.loadHologramDataFromApi();
-    // Load cancellation data from API
-    this.loadCancellationDataFromApi();
-
     // Get query parameters
     this.route.queryParams.subscribe(params => {
       if (params['billNo']) {
         this.transitBillNo = params['billNo'];
-        this.activeTab = 'transit';
+        this.setActiveTab('transit');
         this.loadTransitData();
       }
       if (params['tab']) {
-        this.activeTab = params['tab'];
+        this.setActiveTab(params['tab']);
       }
       // Handle hologram payment navigation
       if (params['refNo'] && params['action'] === 'makePayment') {
         // Only default to hologram if no tab is specified or if tab is hologram
         if (!params['tab'] || params['tab'] === 'hologram') {
-          this.activeTab = 'hologram';
+          this.setActiveTab('hologram');
 
           // Optionally highlight or scroll to the specific hologram item
           setTimeout(() => {
@@ -274,8 +282,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const fromQuery = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
     if (fromQuery) {
       this.activeLicenseeId = fromQuery;
-      this.applyResolvedModuleType(this.resolvedLicenseModuleType);
+      this.resolveAndApplyModuleTypeForLicense(fromQuery);
       this.loadWalletDataFromBackend(fromQuery);
+      this.refreshModuleTabData();
       return;
     }
 
@@ -298,7 +307,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
         this.activeLicenseeId = licenseeId;
         this.loadWalletDataFromBackend(licenseeId);
+        this.refreshModuleTabData();
       });
+  }
+
+  private refreshModuleTabData(): void {
+    this.loadHologramDataFromApi();
+    this.loadCancellationDataFromApi();
   }
 
   private loadWalletDataFromBackend(licenseeId: string): void {
@@ -373,10 +388,58 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private pickPreferredWalletLicense(rows: MyLicenseRow[]): MyLicenseRow | null {
     const walletEligible = rows.filter((row) => this.resolveModuleTypeFromLicense(row) !== '');
+    const approvedWalletEligible = walletEligible.filter((row) => this.isApprovedLicenseRow(row));
+    if (approvedWalletEligible.length > 0) {
+      return approvedWalletEligible[0];
+    }
     if (walletEligible.length > 0) {
       return walletEligible[0];
     }
     return rows[0] ?? null;
+  }
+
+  private resolveAndApplyModuleTypeForLicense(licenseeId: string): void {
+    const normalizedId = String(licenseeId || '').trim().toLowerCase();
+    if (!normalizedId) {
+      this.applyResolvedModuleType(this.resolvedLicenseModuleType);
+      return;
+    }
+
+    this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`)
+      .pipe(catchError(() => of([] as MyLicenseRow[])))
+      .subscribe((licenses) => {
+        const rows = Array.isArray(licenses) ? licenses : [];
+        const matching = rows.find((row) => {
+          const rowId = String(row.license_id ?? row.licenseId ?? '').trim().toLowerCase();
+          return !!rowId && rowId === normalizedId;
+        });
+
+        if (matching) {
+          this.applyResolvedModuleType(this.resolveModuleTypeFromLicense(matching));
+          return;
+        }
+
+        const fallback = this.pickPreferredWalletLicense(rows);
+        this.applyResolvedModuleType(this.resolveModuleTypeFromLicense(fallback));
+      });
+  }
+
+  private isApprovedLicenseRow(row: MyLicenseRow | null | undefined): boolean {
+    if (!row) {
+      return false;
+    }
+
+    const status = String(row.status || '').toLowerCase();
+    const stage = String(row.stage_name ?? row.stageName ?? '').toLowerCase();
+    if (!status && !stage) {
+      return false;
+    }
+
+    return (
+      status.includes('approved') ||
+      stage.includes('approved') ||
+      stage.includes('license issued')
+    );
   }
 
   private resolveModuleTypeFromLicense(row: MyLicenseRow | null | undefined): WalletModuleType {
@@ -415,6 +478,31 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.resolvedLicenseModuleType = moduleType;
     this.isBreweryUser = moduleType === 'brewery';
     this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.ensureActiveTabAllowed();
+  }
+
+  canShowTab(tab: string): boolean {
+    const set = this.isBreweryUser ? this.breweryTabs : this.distilleryTabs;
+    return set.has(tab);
+  }
+
+  private ensureActiveTabAllowed(): void {
+    if (this.canShowTab(this.activeTab)) {
+      return;
+    }
+    this.activeTab = this.isBreweryUser ? 'transit' : 'requisition';
+  }
+
+  private isForActiveLicense(item: any): boolean {
+    const active = String(this.activeLicenseeId || '').trim().toLowerCase();
+    if (!active) return true;
+
+    const candidate = String(
+      this.pickAny(item, ['licensee_id', 'licenseeId', 'license_id', 'licenseId', 'user_id', 'userId'], '')
+    ).trim().toLowerCase();
+
+    if (!candidate) return true;
+    return candidate === active;
   }
 
   private applyWalletSummary(payload: any): void {
@@ -468,6 +556,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     });
 
     this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.ensureActiveTabAllowed();
   }
 
   private applyWalletRecharge(payload: any): void {
@@ -649,6 +738,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // Backend "Approved by Commissioner" -> "Payment Pending" effectively
 
         this.hologramData = data
+          .filter(item => this.isForActiveLicense(item))
           .filter(item => item.status === 'Approved by Commissioner' || item.status === 'Payment Completed')
           .map(item => {
             const totalQty = (Number(item.localQty) || 0) + (Number(item.exportQty) || 0) + (Number(item.defenceQty) || 0);
@@ -682,8 +772,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         console.log('Fetched Cancellation Data:', data);
         // Map backend data to PaymentItem interface
         this.cancellationData = data.filter(item =>
+          this.isForActiveLicense(item) && (
           item.status === 'ApprovedCancellationByCommissioner' ||
           item.status === 'ForwardedCancellationPaySLipToCommissioner'
+          )
         ).map(item => ({
           id: item.id,
           referenceNo: item.ourRefNo || item.our_ref_no,
@@ -801,7 +893,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   setActiveTab(tab: string): void {
-    this.activeTab = tab;
+    const requested = String(tab || '').trim();
+    if (!requested) {
+      return;
+    }
+    if (!this.canShowTab(requested)) {
+      this.ensureActiveTabAllowed();
+      return;
+    }
+    this.activeTab = requested;
   }
 
   getStatusClass(status: string): string {
