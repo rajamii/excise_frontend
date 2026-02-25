@@ -313,7 +313,7 @@
   <div class="modal-dialog modal-xl">
     <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
       <!-- Modern Header with Gradient -->
-      <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 1.5rem;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%); color: white; border: none; padding: 1.5rem;">
         <div class="d-flex align-items-center">
           <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
             <i class="bi bi-file-earmark-text" style="font-size: 24px;"></i>
@@ -329,10 +329,10 @@
         <!-- Summary Cards -->
         <div class="row g-3 mb-4">
           <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-left: 4px solid #667eea !important;">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
               <div class="card-body p-3">
                 <div class="d-flex align-items-center">
-                  <i class="bi bi-building" style="font-size: 28px; color: #667eea; margin-right: 12px;"></i>
+                  <i class="bi bi-building" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
                   <div>
                     <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Distillery</small>
                     <strong style="font-size: 14px; color: #2d3748;">{{ selectedEntry.distilleryName }}</strong>
@@ -342,10 +342,10 @@
             </div>
           </div>
           <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-left: 4px solid #10b981 !important;">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
               <div class="card-body p-3">
                 <div class="d-flex align-items-center">
-                  <i class="bi bi-tag" style="font-size: 28px; color: #10b981; margin-right: 12px;"></i>
+                  <i class="bi bi-tag" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
                   <div>
                     <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Hologram Type</small>
                     <strong style="font-size: 14px; color: #2d3748;">{{ selectedEntry.hologramType }}</strong>
@@ -355,10 +355,10 @@
             </div>
           </div>
           <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-left: 4px solid #f59e0b !important;">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
               <div class="card-body p-3">
                 <div class="d-flex align-items-center">
-                  <i class="bi bi-box-seam" style="font-size: 28px; color: #f59e0b; margin-right: 12px;"></i>
+                  <i class="bi bi-box-seam" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
                   <div>
                     <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Quantity</small>
                     <strong style="font-size: 14px; color: #2d3748;">{{ selectedEntry.quantity | number:'1.0-0' }}</strong>
@@ -368,10 +368,10 @@
             </div>
           </div>
           <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-left: 4px solid #3b82f6 !important;">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
               <div class="card-body p-3">
                 <div class="d-flex align-items-center">
-                  <i class="bi bi-check-circle" style="font-size: 28px; color: #3b82f6; margin-right: 12px;"></i>
+                  <i class="bi bi-check-circle" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
                   <div>
                     <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Status</small>
                     <span class="badge" [class]="getStatusClass(selectedEntry.status)" style="font-size: 12px;">
@@ -445,15 +445,15 @@
               <table class="table table-hover mb-0" style="border-radius: 8px; overflow: hidden;">
                 <thead>
                   <tr>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">#</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Brand</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Bottle Size</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Assigned</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Used</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Damaged</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Rolls</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Serial Ranges</th>
-                    <th style="background-color: #667eea !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Saved At</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">#</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Brand</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Bottle Size</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Assigned</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Used</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Damaged</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Rolls</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Serial Ranges</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Saved At</th>
                   </tr>
                 </thead>
                 <tbody>
