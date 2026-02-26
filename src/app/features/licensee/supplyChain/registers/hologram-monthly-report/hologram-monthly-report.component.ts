@@ -49,6 +49,7 @@ interface StatementRow {
   }>;
   meta?: {
     referenceNo?: string;
+    transactionDateTime?: string;
     cartoonNumber?: string;
     serialRange?: string;
     notes?: string;
@@ -586,6 +587,7 @@ export class HologramMonthlyReportComponent implements OnInit {
             closingBalance: runningBalance,
             meta: {
               referenceNo: refNo,
+              transactionDateTime: transaction.timestamp.toISOString(),
               cartonRanges: cartonRanges,
               notes: `Received ${arrivalAmount} holograms in ${cartonRanges.length} roll(s)`,
               isLastInGroup: true,
@@ -898,6 +900,7 @@ export class HologramMonthlyReportComponent implements OnInit {
             wastageDetails: wastageDetails.length > 0 ? wastageDetails : undefined,
             meta: {
               referenceNo: refNo,
+              transactionDateTime: transaction.timestamp.toISOString(),
               cartoonNumber: firstEntry.cartoon_number || firstEntry.cartoonNumber,
               serialRange: (firstEntry.issued_from || firstEntry.issuedFrom) && (firstEntry.issued_to || firstEntry.issuedTo)
                 ? `${firstEntry.issued_from || firstEntry.issuedFrom}-${firstEntry.issued_to || firstEntry.issuedTo}`

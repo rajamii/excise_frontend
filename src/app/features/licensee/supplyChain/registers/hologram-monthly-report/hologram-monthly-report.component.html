@@ -291,18 +291,25 @@
                   <!-- Skip all summary rows - month summary is shown above the table -->
                 } @else if (row.rowType === 'ARRIVAL') {
                 <tr [ngClass]="getRowClass(row)">
-                  <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
-                    {{ row.label }}
+                  <td class="p-2 align-middle fw-bold monthly-entry-meta-cell">
+                    <div class="monthly-entry-meta">
+                    <div class="monthly-entry-title">{{ row.label }}</div>
+                    @if (row.meta?.transactionDateTime) {
+                    <small class="d-block text-secondary fw-semibold monthly-entry-time">
+                      <i class="bi bi-clock-history me-1"></i>{{ row.meta?.transactionDateTime | date:'dd MMM yyyy, hh:mm a' }}
+                    </small>
+                    }
                     @if (row.meta && row.meta.referenceNo) {
-                    <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-info fw-bold monthly-entry-ref">
                       Ref: {{ row.meta.referenceNo }}
                     </small>
                     }
                     @if (row.meta && row.meta.notes) {
-                    <small class="d-block text-success fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-success fw-semibold monthly-entry-note">
                       {{ row.meta.notes }}
                     </small>
                     }
+                    </div>
                   </td>
                   <td colspan="2" class="text-center p-2 align-middle" style="font-size: 0.875rem;">
                     <div class="d-flex align-items-center justify-content-center gap-2">
@@ -381,23 +388,30 @@
                 } @else {
                 <!-- Utilization/Wastage Rows -->
                 <tr [ngClass]="getRowClass(row)" [class.border-bottom-0]="!row.meta?.isLastInGroup">
-                  <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
-                    {{ row.label }}
+                  <td class="p-2 align-middle fw-bold monthly-entry-meta-cell">
+                    <div class="monthly-entry-meta">
+                    <div class="monthly-entry-title">{{ row.label }}</div>
+                    @if (row.meta?.transactionDateTime) {
+                    <small class="d-block text-secondary fw-semibold monthly-entry-time">
+                      <i class="bi bi-clock-history me-1"></i>{{ row.meta?.transactionDateTime | date:'dd MMM yyyy, hh:mm a' }}
+                    </small>
+                    }
                     @if (row.meta?.referenceNo && row.label) {
-                    <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-info fw-bold monthly-entry-ref">
                       Ref: {{ row.meta?.referenceNo }}
                     </small>
                     }
                     @if (row.meta?.entryCount && (row.meta?.entryCount ?? 0) > 1) {
-                      <small class="d-block text-primary fw-semibold" style="font-size: 0.7rem;">
+                      <small class="d-block text-primary fw-semibold monthly-entry-note">
                         <i class="bi bi-layers me-1"></i>{{ row.meta?.entryCount }} entries
                       </small>
                     }
                     @if (row.meta?.isNotInUse) {
-                    <small class="d-block text-warning fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-warning fw-semibold monthly-entry-note">
                       <i class="bi bi-pause-circle me-1"></i>Not In Use
                     </small>
                     }
+                    </div>
                     @if (getAssignedRollsRanges(row); as rollsRanges) {
                       @if (rollsRanges.length > 0) {
                         <div class="ranges-assigned-box mt-2 p-2 border rounded bg-light">
@@ -785,8 +799,13 @@
                       <div class="d-flex flex-column w-100">
                         <div class="text-end">
                           <span class="fs-5 text-success fw-bold">{{ row.closingBalance | number }}</span>
+                          @if (row.meta?.transactionDateTime) {
+                            <small class="text-secondary fw-semibold d-block mt-1" style="font-size: 0.65rem;">
+                              <i class="bi bi-clock-history me-1"></i>{{ row.meta?.transactionDateTime | date:'dd MMM yyyy, hh:mm a' }}
+                            </small>
+                          }
                           @if (row.meta?.referenceNo) {
-                            <small class="text-info fw-semibold d-block mt-1" style="font-size: 0.65rem;">Ref: {{ row.meta?.referenceNo }}</small>
+                            <small class="text-info fw-bold d-block mt-1" style="font-size: 0.78rem;">Ref: {{ row.meta?.referenceNo }}</small>
                           }
                         </div>
                         @if (row.meta && row.meta.isLastInGroup && row.meta.openingBalanceForGroup !== undefined) {
