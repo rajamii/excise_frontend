@@ -448,60 +448,93 @@
 <div class="modal fade" *ngIf="isArrivalViewModalOpen" [class.show]="isArrivalViewModalOpen"
   [style.display]="isArrivalViewModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">BL Details</h5>
-        <button type="button" class="btn-close" (click)="closeArrivalViewModal()" aria-label="Close"></button>
+    <div class="modal-content bl-details-modal">
+      <div class="modal-header bl-details-header">
+        <div class="header-content">
+          <i class="bi bi-file-earmark-text-fill header-icon"></i>
+          <div>
+            <h5 class="modal-title">BL Details</h5>
+            <p class="modal-subtitle">Bulk Liter Requisition Information</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeArrivalViewModal()" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="row g-3 mb-3">
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">Reference No.</label>
-            <input class="form-control" [value]="selectedArrivalRequisition?.referenceNo || '-'" readonly>
+      <div class="modal-body bl-details-body">
+        <div class="info-cards-grid mb-4">
+          <div class="info-card">
+            <div class="info-card-icon ref-icon">
+              <i class="bi bi-hash"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Reference No.</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.referenceNo || '-' }}</div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">Licensee ID</label>
-            <input class="form-control" [value]="selectedArrivalRequisition?.licenseeId || '-'" readonly>
+          <div class="info-card">
+            <div class="info-card-icon licensee-icon">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Licensee ID</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.licenseeId || '-' }}</div>
+            </div>
           </div>
         </div>
 
-        <div class="arrival-summary-panel mb-3">
-          <div class="summary-item">
-            <span class="summary-label">Total Tankers</span>
-            <span class="summary-value">{{ arrivalViewTankerCount }}</span>
+        <div class="summary-stats-grid mb-4">
+          <div class="stat-card tanker-stat">
+            <div class="stat-icon">
+              <i class="bi bi-truck"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ arrivalViewTankerCount }}</div>
+              <div class="stat-label">Total Tankers</div>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">Total Bulk Liter</span>
-            <span class="summary-value">{{ arrivalViewTotalBulkLiter | number:'1.2-2' }}</span>
+          <div class="stat-card liter-stat">
+            <div class="stat-icon">
+              <i class="bi bi-droplet-fill"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ arrivalViewTotalBulkLiter | number:'1.2-2' }}</div>
+              <div class="stat-label">Total Bulk Liter</div>
+            </div>
           </div>
         </div>
 
-        <div class="table-responsive border rounded p-2" *ngIf="arrivalViewEntries.length > 0">
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th style="width: 80px;">#</th>
-                <th>Tanker Number</th>
-                <th>Bulk Liter</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of arrivalViewEntries; let i = index">
-                <td>{{ i + 1 }}</td>
-                <td>{{ row.tanker_no }}</td>
-                <td>{{ row.bulk_liter || 0 | number:'1.2-2' }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="tanker-details-section" *ngIf="arrivalViewEntries.length > 0">
+          <div class="section-header">
+            <i class="bi bi-list-ul"></i>
+            <h6 class="section-title">Tanker Details</h6>
+          </div>
+          <div class="table-container">
+            <table class="table bl-details-table mb-0">
+              <thead>
+                <tr>
+                  <th class="text-center" style="width: 80px;">#</th>
+                  <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
+                  <th class="text-end"><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of arrivalViewEntries; let i = index">
+                  <td class="text-center serial-col">{{ i + 1 }}</td>
+                  <td class="tanker-col">{{ row.tanker_no }}</td>
+                  <td class="text-end liter-col">{{ row.bulk_liter || 0 | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div *ngIf="arrivalViewErrorMessage" class="alert alert-warning mb-0 py-2">
-          {{ arrivalViewErrorMessage }}
+        <div *ngIf="arrivalViewErrorMessage" class="alert alert-warning d-flex align-items-center mb-0">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <span>{{ arrivalViewErrorMessage }}</span>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" (click)="closeArrivalViewModal()">
-          Close
+      <div class="modal-footer bl-details-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeArrivalViewModal()">
+          <i class="bi bi-x-circle me-2"></i>Close
         </button>
       </div>
     </div>
