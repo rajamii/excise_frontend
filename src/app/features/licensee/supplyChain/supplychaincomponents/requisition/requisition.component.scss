@@ -109,7 +109,7 @@
 // Requisition Register Styles
 .requisition-register-header {
   .top-action-row {
-    margin-top: 0;
+    position: static;
     margin-bottom: 0.5rem !important;
   }
 
@@ -135,7 +135,6 @@
   // Responsive design
   @media (max-width: 768px) {
     .top-action-row {
-      margin-top: 0;
       margin-bottom: 1rem !important;
     }
 
