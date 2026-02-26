@@ -163,6 +163,7 @@ export class HologramdetailsComponent implements OnInit {
             firstDetailWithArrival?.processedAt ||
             firstDetailWithArrival?.processed_at ||
             null;
+          const backendPaymentCompleted = this.resolvePaymentCompleted(p as any);
 
           return {
             id: p.id!,
@@ -182,7 +183,7 @@ export class HologramdetailsComponent implements OnInit {
             carton_details: rawDetails,
             supplyChainData: {
               ...p,
-              paymentCompleted: true
+              paymentCompleted: backendPaymentCompleted
             }
           };
         });
@@ -340,6 +341,11 @@ export class HologramdetailsComponent implements OnInit {
     // 3. Status is NOT 'ARRIVED', 'Cartoon Assigned' or 'Completed' (already processed)
     //    UNLESS data is missing (cartonNumber is empty/null/-)
 
+    // Hard gate: allow update only after payment completion.
+    if (!this.isPaymentCompleted(record)) {
+      return false;
+    }
+
     const status = record.status;
     if (status === 'ARRIVED' || status === 'Cartoon Assigned' || status === 'Completed') {
       const hasDetails = record.carton_details && record.carton_details.length > 0;
@@ -372,6 +378,17 @@ export class HologramdetailsComponent implements OnInit {
       // Check if paymentCompleted flag is set
       if (record.supplyChainData.paymentCompleted === true) {
         // console.log(`  ✅ Payment completed (from supplyChainData)`);
+        return true;
+      }
+
+      const paymentStatus = String(
+        record.supplyChainData.paymentStatus ||
+        record.supplyChainData.payment_status ||
+        record.supplyChainData?.paymentDetails?.payment_status ||
+        record.supplyChainData?.payment_details?.payment_status ||
+        ''
+      ).toLowerCase().trim();
+      if (paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid') {
         return true;
       }
     }
@@ -408,6 +425,25 @@ export class HologramdetailsComponent implements OnInit {
 
     // console.log(`  ❌ Payment NOT completed - button should be DISABLED`);
     return false;
+  }
+
+  private resolvePaymentCompleted(procurement: any): boolean {
+    if (!procurement) {
+      return false;
+    }
+    if (procurement.paymentCompleted === true) {
+      return true;
+    }
+
+    const paymentStatus = String(
+      procurement.paymentStatus ||
+      procurement.payment_status ||
+      procurement?.paymentDetails?.payment_status ||
+      procurement?.payment_details?.payment_status ||
+      ''
+    ).toLowerCase().trim();
+
+    return paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid';
   }
 
   // Track locked carton number and suffix counter

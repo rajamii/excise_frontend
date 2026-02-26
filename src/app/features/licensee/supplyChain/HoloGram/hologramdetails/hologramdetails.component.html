@@ -201,9 +201,9 @@
                                     <!-- Disabled Button for Pending Arrival without Payment Slip -->
                                     @if (record.status === 'PENDING_ARRIVAL' && !canUpdateRecord(record)) {
                                     <button class="btn btn-warning btn-sm" disabled
-                                        title="Waiting for Payment Slip Upload from Supply Chain">
+                                        title="Pending Arrival - payment is not completed yet">
                                         <i class="bi bi-receipt me-1"></i>
-                                        <span class="d-none d-lg-inline">Pending Slip</span>
+                                        <span class="d-none d-lg-inline">Pending Arrival</span>
                                         <span class="d-lg-none">Pending</span>
                                     </button>
                                     }
@@ -218,13 +218,15 @@
                                     </button>
                                     }
 
-                                    <!-- Status Badge -->
+                                    <!-- Status Badge (hide for pending arrival to avoid duplicate label under action buttons) -->
+                                    @if (record.status !== 'PENDING_ARRIVAL') {
                                     <span class="badge ms-1" [class]="getStatusClass(record.status)">
                                         <i [class]="getStatusIcon(record.status)" class="me-1"></i>
                                         <span class="d-none d-md-inline">{{ getStatusLabel(record.status) }}</span>
                                         <span class="d-md-none">{{ getStatusLabel(record.status).substring(0, 3)
                                             }}</span>
                                     </span>
+                                    }
                                 </div>
                             </td>
                         </tr>
