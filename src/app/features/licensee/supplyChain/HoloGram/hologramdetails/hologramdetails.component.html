@@ -332,6 +332,7 @@
                                     </label>
                                     <input type="text" class="form-control" placeholder="e.g., A1"
                                         [(ngModel)]="currentCarton.cartoonNumber" [readonly]="lockedCartonNumber !== ''"
+                                        (input)="onCartonInputChange()"
                                         [class.bg-light]="lockedCartonNumber !== ''">
                                     @if (!lockedCartonNumber) {
                                     <div class="form-text">Enter the carton/box number - it will be locked after first
@@ -370,7 +371,7 @@
                                         From Serial Number <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control font-monospace" placeholder="e.g., 1"
-                                        [(ngModel)]="currentCarton.fromSerial" (input)="calculateCurrentCartonCount()">
+                                        [(ngModel)]="currentCarton.fromSerial" (input)="onSerialInputChange()">
                                     <div class="form-text">Starting serial number from hologram roll</div>
                                 </div>
 
@@ -380,7 +381,7 @@
                                         To Serial Number <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control font-monospace" placeholder="e.g., 5000"
-                                        [(ngModel)]="currentCarton.toSerial" (input)="calculateCurrentCartonCount()">
+                                        [(ngModel)]="currentCarton.toSerial" (input)="onSerialInputChange()">
                                     <div class="form-text">Ending serial number from hologram roll</div>
                                 </div>
 

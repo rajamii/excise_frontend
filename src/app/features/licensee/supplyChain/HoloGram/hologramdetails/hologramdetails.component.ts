@@ -474,6 +474,62 @@ export class HologramdetailsComponent implements OnInit {
     } else {
       this.currentCarton.numberOfHolograms = 0;
     }
+
+    this.validateCurrentCartonRealtime();
+  }
+
+  onCartonInputChange(): void {
+    this.validateCurrentCartonRealtime();
+  }
+
+  onSerialInputChange(): void {
+    this.calculateCurrentCartonCount();
+  }
+
+  private validateCurrentCartonRealtime(): void {
+    if (this.isArrivalQuantityCompleted()) {
+      this.serialRangeValidationError = '';
+      return;
+    }
+
+    const fromSerial = (this.currentCarton.fromSerial || '').trim();
+    const toSerial = (this.currentCarton.toSerial || '').trim();
+
+    if (this.lockedCartonNumber) {
+      if (!fromSerial || !toSerial) {
+        if (this.serialRangeValidationError.toLowerCase().includes('serial range is already entered')) {
+          this.serialRangeValidationError = '';
+        }
+        return;
+      }
+
+      const duplicateCheck = this.findDuplicateCartonOrRange(this.lockedCartonNumber, fromSerial, toSerial);
+      if (duplicateCheck && duplicateCheck.toLowerCase().includes('serial range')) {
+        this.serialRangeValidationError = duplicateCheck;
+      } else if (this.serialRangeValidationError.toLowerCase().includes('serial range is already entered')) {
+        this.serialRangeValidationError = '';
+      }
+      return;
+    }
+
+    const cartonText = (this.currentCarton.cartoonNumber || '').trim();
+    if (!cartonText) {
+      if (this.serialRangeValidationError.toLowerCase().includes('carton number already exists')) {
+        this.serialRangeValidationError = '';
+      }
+      return;
+    }
+
+    const duplicateCheck = this.findDuplicateCartonOrRange(cartonText, fromSerial, toSerial);
+
+    if (duplicateCheck && duplicateCheck.toLowerCase().includes('carton number')) {
+      this.serialRangeValidationError = duplicateCheck;
+      return;
+    }
+
+    if (this.serialRangeValidationError.toLowerCase().includes('carton number already exists')) {
+      this.serialRangeValidationError = '';
+    }
   }
 
   // Helper to get suffix letter (a, b, c, ... z, aa, ab, etc.)
@@ -505,6 +561,16 @@ export class HologramdetailsComponent implements OnInit {
     }
     if (this.currentCarton.numberOfHolograms <= 0) {
       alert('Invalid hologram count. Please check serial numbers.');
+      return;
+    }
+
+    const candidateBaseCarton = (this.lockedCartonNumber || this.currentCarton.cartoonNumber || '').trim();
+    const candidateFrom = (this.currentCarton.fromSerial || '').trim();
+    const candidateTo = (this.currentCarton.toSerial || '').trim();
+    const duplicateCheck = this.findDuplicateCartonOrRange(candidateBaseCarton, candidateFrom, candidateTo);
+    if (duplicateCheck) {
+      this.serialRangeValidationError = duplicateCheck;
+      alert(duplicateCheck);
       return;
     }
 
@@ -585,6 +651,10 @@ export class HologramdetailsComponent implements OnInit {
       return total + (carton.numberOfHolograms || 0);
     }, 0);
 
+    if (this.isArrivalQuantityCompleted()) {
+      this.serialRangeValidationError = '';
+    }
+
     // Update validation error for final confirmation
     this.updateFinalValidation();
   }
@@ -598,6 +668,10 @@ export class HologramdetailsComponent implements OnInit {
 
   // Check if can save current carton
   canSaveCurrentCarton(): boolean {
+    if (this.isArrivalQuantityCompleted()) {
+      return false;
+    }
+
     const types = this.getAvailableHologramTypes();
     // Only require type selection if multiple types are available
     const typeValid = types.length <= 1 || this.currentCarton.type.trim() !== '';
@@ -608,6 +682,13 @@ export class HologramdetailsComponent implements OnInit {
       this.currentCarton.numberOfHolograms > 0 &&
       typeValid &&
       this.serialRangeValidationError === ''; // Don't allow save if there's a validation error
+  }
+
+  private isArrivalQuantityCompleted(): boolean {
+    if (!this.selectedRecordForUpdate) {
+      return false;
+    }
+    return this.totalCalculatedHolograms >= this.selectedRecordForUpdate.numberOfHolograms;
   }
 
   extractSerialNumber(serial: string): number | null {
@@ -658,7 +739,11 @@ export class HologramdetailsComponent implements OnInit {
           },
           error: (err) => {
             console.error('Error assigning cartons:', err);
-            alert('Failed to save carton details. Please try again.');
+            const backendMessage =
+              err?.error?.detail ||
+              err?.error?.message ||
+              (typeof err?.error === 'string' ? err.error : '');
+            alert(backendMessage || 'Failed to save carton details. Please try again.');
           }
         });
     }
@@ -786,7 +871,100 @@ export class HologramdetailsComponent implements OnInit {
       return false;
     }
 
+    // Final duplicate guard before submit (covers any missed entry-level checks)
+    for (const carton of this.savedCartons) {
+      const msg = this.findDuplicateCartonOrRange(
+        carton.baseCartoonNumber || carton.cartoonNumber,
+        carton.fromSerial,
+        carton.toSerial,
+        true
+      );
+      if (msg) {
+        this.serialRangeValidationError = msg;
+        alert(msg);
+        return false;
+      }
+    }
+
     return true;
+  }
+
+  private normalizeCartonKey(value: string): string {
+    const text = String(value || '').trim().toLowerCase();
+    if (!text) {
+      return '';
+    }
+    const clean = this.getCleanCartoonNumber(text).replace(/\([a-z]+\)$/i, '').trim();
+    return clean.replace(/\s+/g, '');
+  }
+
+  private normalizeSerialKey(value: string): string {
+    const text = String(value || '').trim();
+    if (!text) {
+      return '';
+    }
+    const match = text.match(/\d+/);
+    if (match) {
+      return String(parseInt(match[0], 10));
+    }
+    return text.toLowerCase();
+  }
+
+  private findDuplicateCartonOrRange(baseCarton: string, fromSerial: string, toSerial: string, skipSavedCartonCheck: boolean = false): string | null {
+    const selectedId = this.selectedRecordForUpdate?.id;
+    const targetCartonKey = this.normalizeCartonKey(baseCarton);
+    const targetFrom = this.normalizeSerialKey(fromSerial);
+    const targetTo = this.normalizeSerialKey(toSerial);
+
+    // Check payload-level duplicates inside current modal list
+    if (!skipSavedCartonCheck) {
+      for (const saved of this.savedCartons) {
+        const savedCartonKey = this.normalizeCartonKey(saved.baseCartoonNumber || saved.cartoonNumber || '');
+        const savedFrom = this.normalizeSerialKey(saved.fromSerial || '');
+        const savedTo = this.normalizeSerialKey(saved.toSerial || '');
+        if (savedCartonKey && targetCartonKey && savedCartonKey === targetCartonKey && !this.lockedCartonNumber) {
+          return 'Carton number already exists. Please use a different carton number.';
+        }
+        if (savedFrom && savedTo && targetFrom && targetTo && savedFrom === targetFrom && savedTo === targetTo) {
+          return 'This serial range is already entered before. Please use another range.';
+        }
+      }
+    }
+
+    // Check previously saved records in the same OIC dashboard context (same unit scope)
+    for (const record of this.hologramRecords || []) {
+      if (!record || record.id === selectedId) {
+        continue;
+      }
+      const details = Array.isArray(record.carton_details) ? record.carton_details : [];
+      if (details.length > 0) {
+        for (const detail of details) {
+          const existingCarton = this.normalizeCartonKey(
+            detail?.baseCartoonNumber || detail?.cartoonNumber || detail?.cartoon_number || detail?.carton_number || ''
+          );
+          const existingFrom = this.normalizeSerialKey(detail?.fromSerial || detail?.from_serial || '');
+          const existingTo = this.normalizeSerialKey(detail?.toSerial || detail?.to_serial || '');
+          if (existingCarton && targetCartonKey && existingCarton === targetCartonKey && !this.lockedCartonNumber) {
+            return 'Carton number already exists for this OIC/Distillery context. Try another carton number.';
+          }
+          if (existingFrom && existingTo && targetFrom && targetTo && existingFrom === targetFrom && existingTo === targetTo) {
+            return 'This serial range is already entered before. Please use another range.';
+          }
+        }
+      } else {
+        const existingCarton = this.normalizeCartonKey(record.cartoonNumber || '');
+        const existingFrom = this.normalizeSerialKey(record.fromSerial || '');
+        const existingTo = this.normalizeSerialKey(record.toSerial || '');
+        if (existingCarton && targetCartonKey && existingCarton === targetCartonKey && !this.lockedCartonNumber) {
+          return 'Carton number already exists for this OIC/Distillery context. Try another carton number.';
+        }
+        if (existingFrom && existingTo && targetFrom && targetTo && existingFrom === targetFrom && existingTo === targetTo) {
+          return 'This serial range is already entered before. Please use another range.';
+        }
+      }
+    }
+
+    return null;
   }
 
   closeUpdateModal() {
@@ -1341,4 +1519,5 @@ export class HologramdetailsComponent implements OnInit {
 
 
 }
+
 
