@@ -1,8 +1,17 @@
 <!-- Requisition Register Header -->
 <div class="requisition-register-header">
   <div class="d-flex justify-content-between align-items-center mb-4">
-
-
+    <div></div>
+    <div class="header-actions d-flex gap-2" *ngIf="canViewArrivalSummary()">
+      <button type="button" class="btn btn-sm all-bulk-record-btn" (click)="openArrivalSummaryModal()">
+        <i class="bi bi-clipboard-data me-1"></i>
+        All Bulk Detail Record
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" (click)="navigateTo('import-permit')">
+        <i class="bi bi-plus-circle me-1"></i>
+        New Requisition
+      </button>
+    </div>
   </div>
 
   <!-- Summary Cards -->
@@ -500,3 +509,120 @@
 </div>
 <div class="modal-backdrop fade show" *ngIf="isArrivalViewModalOpen"></div>
 
+<!-- All Bulk Detail Record Modal -->
+<div class="modal fade" *ngIf="isArrivalSummaryModalOpen" [class.show]="isArrivalSummaryModalOpen"
+  [style.display]="isArrivalSummaryModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">All Bulk Detail Record</h5>
+        <button type="button" class="btn-close" (click)="closeArrivalSummaryModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Date Filter</label>
+            <input
+              type="date"
+              class="form-control"
+              [(ngModel)]="arrivalSummaryDateFilter"
+              (change)="onArrivalSummaryDateFilterChange()">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Month Filter</label>
+            <input
+              type="month"
+              class="form-control"
+              [(ngModel)]="arrivalSummaryMonthFilter"
+              (change)="onArrivalSummaryMonthFilterChange()">
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-outline-secondary w-100" type="button"
+              (click)="arrivalSummaryDateFilter=''; arrivalSummaryMonthFilter=''; applyArrivalSummaryFilters()">
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        <div class="arrival-summary-panel mb-3">
+          <div class="summary-item">
+            <span class="summary-label">Entries</span>
+            <span class="summary-value">{{ filteredArrivalDetailsRows.length }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Total BL (Filtered)</span>
+            <span class="summary-value">
+              {{ getFilteredArrivalTotalBulkLiter() | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="table-responsive border rounded p-2 mb-3" *ngIf="getArrivalSummaryMonthlyRows().length > 0">
+          <h6 class="mb-2">Monthly BL Summary</h6>
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Entries</th>
+                <th>Total Tankers</th>
+                <th>Total BL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of getArrivalSummaryMonthlyRows()">
+                <td>{{ row.monthLabel }}</td>
+                <td>{{ row.entries }}</td>
+                <td>{{ row.totalTankers }}</td>
+                <td>{{ row.totalBulkLiter | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-responsive border rounded p-2" *ngIf="filteredArrivalDetailsRows.length > 0">
+          <h6 class="mb-2">Arrival Entries</h6>
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 60px;">#</th>
+                <th>Date</th>
+                <th>Ref. No</th>
+                <th>Distillery</th>
+                <th>Tankers</th>
+                <th>Requested Qty</th>
+                <th>Total BL</th>
+                <th>Tanker Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of filteredArrivalDetailsRows; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ formatArrivalDate(row.arrivalDate) }}</td>
+                <td>{{ row.referenceNo }}</td>
+                <td>{{ row.distilleryName || '-' }}</td>
+                <td>{{ row.tankerCount }}</td>
+                <td>{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
+                <td>{{ row.totalBulkLiter | number:'1.2-2' }}</td>
+                <td class="arrival-tanker-cell">{{ formatTankerDetailsShort(row.tankerDetails) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-info mb-0" *ngIf="!isArrivalSummaryLoading && filteredArrivalDetailsRows.length === 0 && !arrivalSummaryErrorMessage">
+          No BL details found for selected filters.
+        </div>
+
+        <div class="alert alert-warning mb-0" *ngIf="arrivalSummaryErrorMessage">
+          {{ arrivalSummaryErrorMessage }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeArrivalSummaryModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="isArrivalSummaryModalOpen"></div>

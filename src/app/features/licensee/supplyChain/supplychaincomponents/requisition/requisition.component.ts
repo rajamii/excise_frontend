@@ -56,6 +56,27 @@ interface TankerArrivalEntry {
   bulk_liter: number | null;
 }
 
+interface ArrivalDetailsRow {
+  id: number;
+  requisitionId: number;
+  referenceNo: string;
+  licenseeId: string;
+  tankerCount: number;
+  tankerDetails: TankerArrivalEntry[];
+  totalBulkLiter: number;
+  arrivalDate: string;
+  requestedTotalQuantity: number;
+  distilleryName: string;
+}
+
+interface ArrivalMonthSummaryRow {
+  monthKey: string;
+  monthLabel: string;
+  totalBulkLiter: number;
+  totalTankers: number;
+  entries: number;
+}
+
 @Component({
   selector: 'app-requisition',
   standalone: true,
@@ -100,6 +121,13 @@ export class RequisitionComponent implements OnInit {
   arrivalViewTankerCount: number = 0;
   arrivalViewTotalBulkLiter: number = 0;
   arrivalViewEntries: TankerArrivalEntry[] = [];
+  isArrivalSummaryModalOpen: boolean = false;
+  isArrivalSummaryLoading: boolean = false;
+  arrivalSummaryErrorMessage: string = '';
+  arrivalSummaryDateFilter: string = '';
+  arrivalSummaryMonthFilter: string = '';
+  allArrivalDetailsRows: ArrivalDetailsRow[] = [];
+  filteredArrivalDetailsRows: ArrivalDetailsRow[] = [];
 
   // Pagination
   currentPage: number = 1;
@@ -520,6 +548,189 @@ export class RequisitionComponent implements OnInit {
     return this.isCommissionerFinalApproval(item) && Boolean(item.hasArrivalDetails);
   }
 
+  canViewArrivalSummary(): boolean {
+    return !this.isCommissioner() && !this.isPermitSection();
+  }
+
+  openArrivalSummaryModal(): void {
+    this.isArrivalSummaryModalOpen = true;
+    this.isArrivalSummaryLoading = true;
+    this.arrivalSummaryErrorMessage = '';
+    this.arrivalSummaryDateFilter = '';
+    this.arrivalSummaryMonthFilter = '';
+    this.allArrivalDetailsRows = [];
+    this.filteredArrivalDetailsRows = [];
+
+    this.enaRequisitionService.getAllRequisitionArrivalDetails().subscribe({
+      next: (response: any) => {
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        this.allArrivalDetailsRows = rows.map((row: any) => this.mapArrivalSummaryRow(row));
+        this.applyArrivalSummaryFilters();
+        this.isArrivalSummaryLoading = false;
+      },
+      error: () => {
+        this.isArrivalSummaryLoading = false;
+        this.arrivalSummaryErrorMessage = 'Unable to load BL details summary.';
+      }
+    });
+  }
+
+  closeArrivalSummaryModal(): void {
+    this.isArrivalSummaryModalOpen = false;
+    this.isArrivalSummaryLoading = false;
+    this.arrivalSummaryErrorMessage = '';
+    this.arrivalSummaryDateFilter = '';
+    this.arrivalSummaryMonthFilter = '';
+    this.allArrivalDetailsRows = [];
+    this.filteredArrivalDetailsRows = [];
+  }
+
+  onArrivalSummaryDateFilterChange(): void {
+    this.applyArrivalSummaryFilters();
+  }
+
+  onArrivalSummaryMonthFilterChange(): void {
+    this.applyArrivalSummaryFilters();
+  }
+
+  applyArrivalSummaryFilters(): void {
+    const dateFilter = (this.arrivalSummaryDateFilter || '').trim();
+    const monthFilter = (this.arrivalSummaryMonthFilter || '').trim();
+
+    this.filteredArrivalDetailsRows = this.allArrivalDetailsRows.filter((row) => {
+      const date = this.parseDate(row.arrivalDate);
+      if (!date) {
+        // If no valid date exists, still keep row when no date/month filter is applied.
+        return !dateFilter && !monthFilter;
+      }
+      const dayToken = this.toIsoDay(date);
+      const monthToken = this.toIsoMonth(date);
+      if (dateFilter && dayToken !== dateFilter) {
+        return false;
+      }
+      if (monthFilter && monthToken !== monthFilter) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  getArrivalSummaryMonthlyRows(): ArrivalMonthSummaryRow[] {
+    const bucket: Record<string, ArrivalMonthSummaryRow> = {};
+    for (const row of this.filteredArrivalDetailsRows) {
+      const date = this.parseDate(row.arrivalDate);
+      if (!date) {
+        continue;
+      }
+      const monthKey = this.toIsoMonth(date);
+      if (!bucket[monthKey]) {
+        bucket[monthKey] = {
+          monthKey,
+          monthLabel: date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+          totalBulkLiter: 0,
+          totalTankers: 0,
+          entries: 0
+        };
+      }
+      bucket[monthKey].totalBulkLiter += Number(row.totalBulkLiter || 0);
+      bucket[monthKey].totalTankers += Number(row.tankerCount || 0);
+      bucket[monthKey].entries += 1;
+    }
+
+    return Object.values(bucket).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }
+
+  getFilteredArrivalTotalBulkLiter(): number {
+    return this.filteredArrivalDetailsRows.reduce((sum, row) => sum + (Number(row.totalBulkLiter || 0)), 0);
+  }
+
+  formatArrivalDate(value: string): string {
+    const date = this.parseDate(value);
+    if (!date) {
+      return '-';
+    }
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  formatTankerDetailsShort(rows: TankerArrivalEntry[]): string {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return '-';
+    }
+    return rows
+      .map((r) => `${String(r?.tanker_no || '').trim()}: ${Number(r?.bulk_liter || 0).toFixed(2)}`)
+      .join(', ');
+  }
+
+  private mapArrivalSummaryRow(row: any): ArrivalDetailsRow {
+    const tankerDetailsRaw =
+      row?.tanker_details ??
+      row?.tankerDetails ??
+      row?.details ??
+      [];
+
+    let tankerDetailsList: any[] = [];
+    if (Array.isArray(tankerDetailsRaw)) {
+      tankerDetailsList = tankerDetailsRaw;
+    } else if (typeof tankerDetailsRaw === 'string') {
+      try {
+        const parsed = JSON.parse(tankerDetailsRaw);
+        tankerDetailsList = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        tankerDetailsList = [];
+      }
+    }
+
+    const tankerDetails: TankerArrivalEntry[] = tankerDetailsList.map((item: any) => ({
+      tanker_no: String(item?.tanker_no ?? item?.tankerNo ?? ''),
+      bulk_liter: Number(item?.bulk_liter ?? item?.bulkLiter ?? 0) || 0
+    }));
+
+    return {
+      id: Number(row?.id ?? 0) || 0,
+      requisitionId: Number(row?.requisition_id ?? row?.requisitionId ?? row?.requisition ?? 0) || 0,
+      referenceNo: String(
+        row?.reference_no ??
+        row?.referenceNo ??
+        row?.our_ref_no ??
+        row?.ourRefNo ??
+        ''
+      ),
+      licenseeId: String(row?.licensee_id ?? row?.licenseeId ?? ''),
+      tankerCount: Number(row?.tanker_count ?? row?.tankerCount ?? tankerDetails.length ?? 0) || 0,
+      tankerDetails,
+      totalBulkLiter: Number(
+        row?.total_bulk_liter ??
+        row?.totalBulkLiter ??
+        row?.total_bl ??
+        row?.totalbl ??
+        0
+      ) || 0,
+      arrivalDate: String(
+        row?.arrival_date ??
+        row?.arrivalDate ??
+        row?.updated_at ??
+        row?.updatedAt ??
+        row?.created_at ??
+        row?.createdAt ??
+        ''
+      ),
+      requestedTotalQuantity: Number(
+        row?.requisition_total_quantity ??
+        row?.requisitionTotalQuantity ??
+        row?.requested_total_quantity ??
+        row?.requestedTotalQuantity ??
+        row?.requisition?.totalbl ??
+        0
+      ) || 0,
+      distilleryName: String(
+        row?.distillery_name ??
+        row?.distilleryName ??
+        row?.requisition?.lifted_from_distillery_name ??
+        ''
+      )
+    };
+  }
+
   openArrivalModal(item: TableData): void {
     if (!item.id) {
       alert('Unable to update arrival: requisition id is missing.');
@@ -591,18 +802,32 @@ export class RequisitionComponent implements OnInit {
 
     this.enaRequisitionService.getRequisitionArrivalDetails(item.id).subscribe({
       next: (response: any) => {
-        const data = response?.data;
+        const raw = response?.data ?? response;
+        const data = raw?.data ?? raw;
         if (!data) {
           this.arrivalViewErrorMessage = 'No arrival details found for this requisition.';
           return;
         }
-        const entries = Array.isArray(data.tanker_details) ? data.tanker_details : [];
+
+        const entriesRaw = data?.tanker_details ?? data?.tankerDetails ?? [];
+        let entries: any[] = [];
+        if (Array.isArray(entriesRaw)) {
+          entries = entriesRaw;
+        } else if (typeof entriesRaw === 'string') {
+          try {
+            const parsed = JSON.parse(entriesRaw);
+            entries = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            entries = [];
+          }
+        }
+
         this.arrivalViewEntries = entries.map((row: any) => ({
-          tanker_no: String(row?.tanker_no || ''),
-          bulk_liter: Number(row?.bulk_liter || 0) || 0
+          tanker_no: String(row?.tanker_no ?? row?.tankerNo ?? ''),
+          bulk_liter: Number(row?.bulk_liter ?? row?.bulkLiter ?? 0) || 0
         }));
-        this.arrivalViewTankerCount = Number(data.tanker_count || this.arrivalViewEntries.length || 0);
-        this.arrivalViewTotalBulkLiter = Number(data.total_bulk_liter || 0) || 0;
+        this.arrivalViewTankerCount = Number(data?.tanker_count ?? data?.tankerCount ?? this.arrivalViewEntries.length ?? 0) || 0;
+        this.arrivalViewTotalBulkLiter = Number(data?.total_bulk_liter ?? data?.totalBulkLiter ?? data?.totalbl ?? 0) || 0;
       },
       error: () => {
         this.arrivalViewErrorMessage = 'Unable to load BL details.';
@@ -847,6 +1072,19 @@ export class RequisitionComponent implements OnInit {
     }
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private toIsoDay(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private toIsoMonth(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
   }
 
   private formatDisplayDate(date: Date): string {

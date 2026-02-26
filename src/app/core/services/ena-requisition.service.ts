@@ -85,6 +85,12 @@ export class EnaRequisitionService {
       .pipe(catchError(this.handleError));
   }
 
+  getAllRequisitionArrivalDetails(): Observable<any> {
+    return this.http
+      .get(`${this.apiUrl}arrival-bulk-liter-details/`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   saveRequisitionArrivalDetails(
     id: number,
     payload: { tanker_count: number; tanker_details: Array<{ tanker_no: string; bulk_liter: number }> }
