@@ -222,6 +222,20 @@
                 [includeActions]="getActionIncludeList(item)"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
+              <button
+                *ngIf="canUpdateArrival(item)"
+                type="button"
+                class="btn btn-sm mt-2 arrival-update-btn"
+                (click)="openArrivalModal(item)">
+                Update Arrival
+              </button>
+              <button
+                *ngIf="canViewArrivalDetails(item)"
+                type="button"
+                class="btn btn-sm mt-2 arrival-view-btn"
+                (click)="openArrivalViewModal(item)">
+                View BL Details
+              </button>
             </td>
           </tr>
           }
@@ -319,4 +333,170 @@
   </div>
 </div>
 <div class="modal-backdrop fade show" *ngIf="isCancellationModalOpen"></div>
+
+<!-- Arrival Update Modal -->
+<div class="modal fade" *ngIf="isArrivalModalOpen" [class.show]="isArrivalModalOpen"
+  [style.display]="isArrivalModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Update Arrival Details</h5>
+        <button type="button" class="btn-close" (click)="closeArrivalModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Reference No.</label>
+            <input class="form-control" [value]="selectedArrivalRequisition?.referenceNo || '-'" readonly>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Licensee ID</label>
+            <input class="form-control" [value]="selectedArrivalRequisition?.licenseeId || '-'" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Total Tankers</label>
+            <input
+              type="number"
+              class="form-control"
+              min="1"
+              [(ngModel)]="arrivalTankerCount"
+              (change)="onArrivalTankerCountChange()">
+          </div>
+          <div class="col-md-8 d-flex align-items-end">
+            <div class="text-muted small">Fill tanker-wise arrival details below.</div>
+          </div>
+        </div>
+
+        <div class="table-responsive border rounded p-2">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 80px;">#</th>
+                <th>Tanker Number</th>
+                <th>Bulk Liter</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of arrivalEntries; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <input
+                    class="form-control form-control-sm"
+                    [(ngModel)]="row.tanker_no"
+                    placeholder="Enter tanker number">
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="form-control form-control-sm"
+                    min="0.01"
+                    step="0.01"
+                    [(ngModel)]="row.bulk_liter"
+                    placeholder="Enter bulk liter">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="arrivalErrorMessage" class="alert alert-danger mt-3 mb-0 py-2">
+          {{ arrivalErrorMessage }}
+        </div>
+
+        <div class="arrival-summary-panel mt-3">
+          <div class="summary-item">
+            <span class="summary-label">Requested Total Quantity</span>
+            <span class="summary-value">{{ getArrivalAllowedBulkLiter() | number:'1.2-2' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Entered Total Bulk Liter</span>
+            <span class="summary-value"
+              [class.text-danger]="getArrivalAllowedBulkLiter() > 0 && getArrivalTotalBulkLiter() > getArrivalAllowedBulkLiter()">
+              {{ getArrivalTotalBulkLiter() | number:'1.2-2' }}
+            </span>
+          </div>
+          <div class="summary-status"
+            [class.match]="isArrivalTotalMatchingRequested()"
+            [class.mismatch]="!isArrivalTotalMatchingRequested()">
+            {{ isArrivalTotalMatchingRequested() ? 'Matched' : 'Must match exactly to enable save' }}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeArrivalModal()" [disabled]="isArrivalSaving">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" (click)="saveArrivalDetails()" [disabled]="!canSaveArrivalDetails()">
+          {{ isArrivalSaving ? 'Saving...' : 'Save Arrival Details' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="isArrivalModalOpen"></div>
+
+<!-- Arrival BL View Modal -->
+<div class="modal fade" *ngIf="isArrivalViewModalOpen" [class.show]="isArrivalViewModalOpen"
+  [style.display]="isArrivalViewModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">BL Details</h5>
+        <button type="button" class="btn-close" (click)="closeArrivalViewModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Reference No.</label>
+            <input class="form-control" [value]="selectedArrivalRequisition?.referenceNo || '-'" readonly>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Licensee ID</label>
+            <input class="form-control" [value]="selectedArrivalRequisition?.licenseeId || '-'" readonly>
+          </div>
+        </div>
+
+        <div class="arrival-summary-panel mb-3">
+          <div class="summary-item">
+            <span class="summary-label">Total Tankers</span>
+            <span class="summary-value">{{ arrivalViewTankerCount }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Total Bulk Liter</span>
+            <span class="summary-value">{{ arrivalViewTotalBulkLiter | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="table-responsive border rounded p-2" *ngIf="arrivalViewEntries.length > 0">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 80px;">#</th>
+                <th>Tanker Number</th>
+                <th>Bulk Liter</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of arrivalViewEntries; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ row.tanker_no }}</td>
+                <td>{{ row.bulk_liter || 0 | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="arrivalViewErrorMessage" class="alert alert-warning mb-0 py-2">
+          {{ arrivalViewErrorMessage }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeArrivalViewModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="isArrivalViewModalOpen"></div>
 

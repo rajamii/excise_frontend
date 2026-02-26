@@ -44,6 +44,16 @@ interface TableData {
   paymentDate?: string;
   hasActiveRevalidation?: boolean;
   has_active_revalidation?: boolean;
+  licenseeId?: string;
+  requestedTotalQuantity?: number;
+  hasArrivalDetails?: boolean;
+  arrivalTankerCount?: number;
+  arrivalTotalBulkLiter?: number;
+}
+
+interface TankerArrivalEntry {
+  tanker_no: string;
+  bulk_liter: number | null;
 }
 
 @Component({
@@ -79,6 +89,17 @@ export class RequisitionComponent implements OnInit {
   isCancellationModalOpen: boolean = false;
   selectedRequisition: TableData | null = null;
   selectedRequisitionRef: string = '';
+  isArrivalModalOpen: boolean = false;
+  isArrivalSaving: boolean = false;
+  selectedArrivalRequisition: TableData | null = null;
+  arrivalErrorMessage: string = '';
+  arrivalTankerCount: number = 1;
+  arrivalEntries: TankerArrivalEntry[] = [];
+  isArrivalViewModalOpen: boolean = false;
+  arrivalViewErrorMessage: string = '';
+  arrivalViewTankerCount: number = 0;
+  arrivalViewTotalBulkLiter: number = 0;
+  arrivalViewEntries: TankerArrivalEntry[] = [];
 
   // Pagination
   currentPage: number = 1;
@@ -209,7 +230,19 @@ export class RequisitionComponent implements OnInit {
             paymentId: item.paymentId || item.payment_id || item.transactionId || item.transaction_id || '',
             paymentDate: item.paymentDate || item.payment_date || '',
             hasActiveRevalidation: Boolean(item.hasActiveRevalidation || item.has_active_revalidation || false),
-            has_active_revalidation: Boolean(item.has_active_revalidation || false)
+            has_active_revalidation: Boolean(item.has_active_revalidation || false),
+            licenseeId: item.licensee_id || item.licenseeId || '',
+            requestedTotalQuantity: Number(
+              item.totalbl ??
+              item.total_bl ??
+              item.quantity ??
+              item.totalQuantity ??
+              item.total_quantity ??
+              0
+            ) || 0,
+            hasArrivalDetails: Boolean(item.has_arrival_details || item.hasArrivalDetails || false),
+            arrivalTankerCount: Number(item.arrival_tanker_count || item.arrivalTankerCount || 0) || 0,
+            arrivalTotalBulkLiter: Number(item.arrival_total_bulk_liter || item.arrivalTotalBulkLiter || 0) || 0
           };
         });
 
@@ -471,6 +504,268 @@ export class RequisitionComponent implements OnInit {
     this.isCancellationModalOpen = false;
     this.selectedRequisition = null;
     this.selectedRequisitionRef = '';
+  }
+
+  canUpdateArrival(item: TableData): boolean {
+    if (this.isCommissioner() || this.isPermitSection()) {
+      return false;
+    }
+    return this.isCommissionerFinalApproval(item) && !Boolean(item.hasArrivalDetails);
+  }
+
+  canViewArrivalDetails(item: TableData): boolean {
+    if (this.isCommissioner() || this.isPermitSection()) {
+      return false;
+    }
+    return this.isCommissionerFinalApproval(item) && Boolean(item.hasArrivalDetails);
+  }
+
+  openArrivalModal(item: TableData): void {
+    if (!item.id) {
+      alert('Unable to update arrival: requisition id is missing.');
+      return;
+    }
+
+    this.selectedArrivalRequisition = item;
+    this.arrivalErrorMessage = '';
+    this.arrivalTankerCount = 1;
+    this.arrivalEntries = [{ tanker_no: '', bulk_liter: null }];
+    this.isArrivalModalOpen = true;
+
+    this.enaRequisitionService.getRequisitionArrivalDetails(item.id).subscribe({
+      next: (response: any) => {
+        const data = response?.data;
+        if (!data) {
+          return;
+        }
+
+        const entries = Array.isArray(data.tanker_details) ? data.tanker_details : [];
+        const tankerCount = Number(data.tanker_count || entries.length || 1);
+
+        this.arrivalTankerCount = tankerCount > 0 ? tankerCount : 1;
+        this.arrivalEntries = entries.length
+          ? entries.map((row: any) => ({
+              tanker_no: String(row?.tanker_no || ''),
+              bulk_liter: Number(row?.bulk_liter || 0) || null
+            }))
+          : [{ tanker_no: '', bulk_liter: null }];
+
+        this.syncArrivalEntriesLength();
+      },
+      error: (error: any) => {
+        const status = Number(error?.status || 0);
+        if (status === 404) {
+          // No previous data saved yet; keep empty form.
+          return;
+        }
+        if (status === 403) {
+          this.arrivalErrorMessage = 'You are not allowed to view existing arrival details for this requisition.';
+          return;
+        }
+        // For transient/server setup issues, keep popup usable without showing a blocking warning.
+        console.warn('Arrival details preload failed', { status, error });
+      }
+    });
+  }
+
+  closeArrivalModal(): void {
+    this.isArrivalModalOpen = false;
+    this.isArrivalSaving = false;
+    this.selectedArrivalRequisition = null;
+    this.arrivalErrorMessage = '';
+    this.arrivalTankerCount = 1;
+    this.arrivalEntries = [];
+  }
+
+  openArrivalViewModal(item: TableData): void {
+    if (!item.id) {
+      alert('Unable to view arrival details: requisition id is missing.');
+      return;
+    }
+    this.selectedArrivalRequisition = item;
+    this.arrivalViewErrorMessage = '';
+    this.arrivalViewTankerCount = 0;
+    this.arrivalViewTotalBulkLiter = 0;
+    this.arrivalViewEntries = [];
+    this.isArrivalViewModalOpen = true;
+
+    this.enaRequisitionService.getRequisitionArrivalDetails(item.id).subscribe({
+      next: (response: any) => {
+        const data = response?.data;
+        if (!data) {
+          this.arrivalViewErrorMessage = 'No arrival details found for this requisition.';
+          return;
+        }
+        const entries = Array.isArray(data.tanker_details) ? data.tanker_details : [];
+        this.arrivalViewEntries = entries.map((row: any) => ({
+          tanker_no: String(row?.tanker_no || ''),
+          bulk_liter: Number(row?.bulk_liter || 0) || 0
+        }));
+        this.arrivalViewTankerCount = Number(data.tanker_count || this.arrivalViewEntries.length || 0);
+        this.arrivalViewTotalBulkLiter = Number(data.total_bulk_liter || 0) || 0;
+      },
+      error: () => {
+        this.arrivalViewErrorMessage = 'Unable to load BL details.';
+      }
+    });
+  }
+
+  closeArrivalViewModal(): void {
+    this.isArrivalViewModalOpen = false;
+    this.arrivalViewErrorMessage = '';
+    this.arrivalViewTankerCount = 0;
+    this.arrivalViewTotalBulkLiter = 0;
+    this.arrivalViewEntries = [];
+    this.selectedArrivalRequisition = null;
+  }
+
+  onArrivalTankerCountChange(): void {
+    if (!Number.isFinite(this.arrivalTankerCount)) {
+      this.arrivalTankerCount = 1;
+    }
+    this.arrivalTankerCount = Math.max(1, Math.floor(this.arrivalTankerCount));
+    this.syncArrivalEntriesLength();
+  }
+
+  private syncArrivalEntriesLength(): void {
+    while (this.arrivalEntries.length < this.arrivalTankerCount) {
+      this.arrivalEntries.push({ tanker_no: '', bulk_liter: null });
+    }
+    while (this.arrivalEntries.length > this.arrivalTankerCount) {
+      this.arrivalEntries.pop();
+    }
+  }
+
+  getArrivalTotalBulkLiter(): number {
+    return this.arrivalEntries.reduce((sum, row) => {
+      const liters = Number(row.bulk_liter || 0);
+      return sum + (Number.isFinite(liters) ? liters : 0);
+    }, 0);
+  }
+
+  getArrivalAllowedBulkLiter(): number {
+    return Number(this.selectedArrivalRequisition?.requestedTotalQuantity || 0);
+  }
+
+  private hasValidArrivalRows(): boolean {
+    if (this.arrivalTankerCount <= 0 || this.arrivalEntries.length !== this.arrivalTankerCount) {
+      return false;
+    }
+    return this.arrivalEntries.every((row) => {
+      const tankerNo = String(row.tanker_no || '').trim();
+      const liters = Number(row.bulk_liter || 0);
+      return Boolean(tankerNo) && Number.isFinite(liters) && liters > 0;
+    });
+  }
+
+  isArrivalTotalMatchingRequested(): boolean {
+    const allowed = this.getArrivalAllowedBulkLiter();
+    if (allowed <= 0) {
+      return false;
+    }
+    const entered = this.getArrivalTotalBulkLiter();
+    return Math.abs(entered - allowed) < 0.0001;
+  }
+
+  canSaveArrivalDetails(): boolean {
+    if (this.isArrivalSaving) {
+      return false;
+    }
+    if (!this.selectedArrivalRequisition?.id) {
+      return false;
+    }
+    return this.hasValidArrivalRows() && this.isArrivalTotalMatchingRequested();
+  }
+
+  saveArrivalDetails(): void {
+    if (!this.selectedArrivalRequisition?.id) {
+      this.arrivalErrorMessage = 'Unable to save arrival details: requisition id is missing.';
+      return;
+    }
+
+    if (this.arrivalTankerCount <= 0) {
+      this.arrivalErrorMessage = 'Tanker count must be greater than 0.';
+      return;
+    }
+
+    const normalizedRows = this.arrivalEntries.map((row, index) => ({
+      tanker_no: String(row.tanker_no || '').trim(),
+      bulk_liter: Number(row.bulk_liter || 0),
+      row: index + 1
+    }));
+
+    const invalidRow = normalizedRows.find((row) => !row.tanker_no || !Number.isFinite(row.bulk_liter) || row.bulk_liter <= 0);
+    if (invalidRow) {
+      this.arrivalErrorMessage = `Please enter valid tanker number and bulk liter for tanker ${invalidRow.row}.`;
+      return;
+    }
+
+    const enteredTotalBulkLiter = normalizedRows.reduce((sum, row) => sum + row.bulk_liter, 0);
+    const allowedBulkLiter = this.getArrivalAllowedBulkLiter();
+    if (allowedBulkLiter > 0 && enteredTotalBulkLiter > allowedBulkLiter) {
+      this.arrivalErrorMessage =
+        `Entered total bulk liter (${enteredTotalBulkLiter.toFixed(2)}) cannot exceed requested total quantity (${allowedBulkLiter.toFixed(2)}).`;
+      return;
+    }
+    if (allowedBulkLiter > 0 && Math.abs(enteredTotalBulkLiter - allowedBulkLiter) >= 0.0001) {
+      this.arrivalErrorMessage =
+        `Entered total bulk liter (${enteredTotalBulkLiter.toFixed(2)}) must exactly match requested total quantity (${allowedBulkLiter.toFixed(2)}).`;
+      return;
+    }
+
+    const payload = {
+      tanker_count: this.arrivalTankerCount,
+      tanker_details: normalizedRows.map((row) => ({
+        tanker_no: row.tanker_no,
+        bulk_liter: row.bulk_liter
+      }))
+    };
+
+    this.isArrivalSaving = true;
+    this.arrivalErrorMessage = '';
+
+    this.enaRequisitionService.saveRequisitionArrivalDetails(this.selectedArrivalRequisition.id, payload).subscribe({
+      next: () => {
+        this.isArrivalSaving = false;
+        const savedReqId = this.selectedArrivalRequisition?.id;
+        const enteredTotalBulkLiter = this.getArrivalTotalBulkLiter();
+        const enteredTankerCount = this.arrivalTankerCount;
+        if (savedReqId) {
+          this.requisitionData = this.requisitionData.map((row) =>
+            row.id === savedReqId
+              ? {
+                  ...row,
+                  hasArrivalDetails: true,
+                  arrivalTankerCount: enteredTankerCount,
+                  arrivalTotalBulkLiter: enteredTotalBulkLiter
+                }
+              : row
+          );
+          this.filteredRequisitionData = this.filteredRequisitionData.map((row) =>
+            row.id === savedReqId
+              ? {
+                  ...row,
+                  hasArrivalDetails: true,
+                  arrivalTankerCount: enteredTankerCount,
+                  arrivalTotalBulkLiter: enteredTotalBulkLiter
+                }
+              : row
+          );
+        }
+        alert('Arrival details saved successfully.');
+        this.closeArrivalModal();
+        this.loadData();
+      },
+      error: (error: any) => {
+        this.isArrivalSaving = false;
+        const apiMessage =
+          error?.error?.message ||
+          error?.error?.tanker_details?.[0] ||
+          error?.error?.tanker_details ||
+          error?.message;
+        this.arrivalErrorMessage = apiMessage || 'Failed to save arrival details.';
+      }
+    });
   }
 
   clearFilters(): void {
