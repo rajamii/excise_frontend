@@ -359,7 +359,8 @@ export class HologramMonthlyReportComponent implements OnInit {
         monthKey,
         dailyRows || [],
         rollsArray || [],
-        procurementRows || []
+        procurementRows || [],
+        commissionerOverviewEntries || []
       );
       
       // Set overview summary
@@ -675,7 +676,9 @@ export class HologramMonthlyReportComponent implements OnInit {
               }
             }
 
-            const assignmentKey = `${rollLabel}|${from}-${to}`;
+            // OIC: keep same roll in one box even if multiple partial ranges are used.
+            // Commissioner: keep roll+range key to preserve per-assignment color mapping.
+            const assignmentKey = this.commissionerMode ? `${rollLabel}|${from}-${to}` : rollLabel;
 
             if (!rollAssignmentMap.has(assignmentKey)) {
               rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
@@ -1407,7 +1410,7 @@ export class HologramMonthlyReportComponent implements OnInit {
         for (const assigned of assignedRolls) {
           const range = `${assigned.fromSerial || '-'}-${assigned.toSerial || '-'}`;
           const rollLabel = String(assigned.rollLabel || 'Unknown').trim() || 'Unknown';
-          const rawAssignmentKey = `${rollLabel}|${range}`;
+          const rawAssignmentKey = this.commissionerMode ? `${rollLabel}|${range}` : rollLabel;
           const rollName = this.getRollDisplayName(rollLabel);
           if (!assignmentIndexByKey.has(rawAssignmentKey)) {
             assignmentIndexByKey.set(rawAssignmentKey, nextIndex++);
@@ -1439,7 +1442,7 @@ export class HologramMonthlyReportComponent implements OnInit {
           for (const fallback of fallbackRanges) {
             const range = `${String(fallback.fromSerial || '').trim() || '-'}-${String(fallback.toSerial || '').trim() || '-'}`;
             const fallbackRollLabel = String(fallback.rollLabel || rawAssignmentKey || 'Unknown').trim() || 'Unknown';
-            const fallbackAssignmentKey = `${fallbackRollLabel}|${range}`;
+            const fallbackAssignmentKey = this.commissionerMode ? `${fallbackRollLabel}|${range}` : fallbackRollLabel;
             const fallbackRollName = this.getRollDisplayName(fallbackRollLabel);
             if (!assignmentIndexByKey.has(fallbackAssignmentKey)) {
               assignmentIndexByKey.set(fallbackAssignmentKey, nextIndex++);
@@ -1466,7 +1469,7 @@ export class HologramMonthlyReportComponent implements OnInit {
 
       for (const b of bounds) {
         const range = `${b.from || '-'}-${b.to || '-'}`;
-        const assignmentKey = `${rawAssignmentKey}|${range}`;
+        const assignmentKey = this.commissionerMode ? `${rawAssignmentKey}|${range}` : rawAssignmentKey;
         if (!assignmentIndexByKey.has(assignmentKey)) {
           assignmentIndexByKey.set(assignmentKey, nextIndex++);
         }
@@ -1529,9 +1532,9 @@ export class HologramMonthlyReportComponent implements OnInit {
         : null;
       const rangeKey = `${String(firstRange?.from ?? '').trim() || '-'}-${String(firstRange?.to ?? '').trim() || '-'}`;
       const explicitKey = String(detail.rollAssignmentKey || '').trim();
-      const groupKey = explicitKey.includes('|')
-        ? explicitKey
-        : `${detail.rollName}|${rangeKey}`;
+      const groupKey = this.commissionerMode
+        ? (explicitKey.includes('|') ? explicitKey : `${detail.rollName}|${rangeKey}`)
+        : (explicitKey || detail.rollName);
       const rollDisplayName = this.getRollDisplayName(detail.rollName);
       
       if (!rollsMap.has(groupKey)) {
@@ -2507,7 +2510,8 @@ export class HologramMonthlyReportComponent implements OnInit {
     monthKey: string,
     dailyRows: any[],
     rollsRows: any[],
-    procurementRows: any[]
+    procurementRows: any[],
+    commissionerOverviewEntries: any[] = []
   ): number {
     const arrivalByMonth = new Map<string, number>();
 
@@ -2550,6 +2554,35 @@ export class HologramMonthlyReportComponent implements OnInit {
       // Use procurement as fallback for months where rolls are not available.
       if (!arrivalByMonth.has(procurementMonthKey)) {
         arrivalByMonth.set(procurementMonthKey, qty);
+      }
+    }
+
+    // Commissioner fallback: when rolls/procurement are unavailable for prior months,
+    // use dashboard overview monthly quantity so previous month closing carries forward
+    // as opening balance for the selected month.
+    for (const overviewEntry of commissionerOverviewEntries || []) {
+      const entryMonthKey = this.getMonthKeyFromAnyDate(
+        overviewEntry?.usageDate || overviewEntry?.submissionDate || ''
+      );
+      if (!entryMonthKey || entryMonthKey >= monthKey) {
+        continue;
+      }
+
+      const entryType = String(overviewEntry?.hologramType || 'LOCAL').toUpperCase();
+      if (entryType !== this.selectedHologramType) {
+        continue;
+      }
+      if (!this.matchesSelectedManufacturingUnit(overviewEntry)) {
+        continue;
+      }
+
+      const qty = Number(overviewEntry?.quantity || 0);
+      if (qty <= 0) {
+        continue;
+      }
+
+      if (!arrivalByMonth.has(entryMonthKey)) {
+        arrivalByMonth.set(entryMonthKey, qty);
       }
     }
 
