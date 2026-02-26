@@ -347,96 +347,137 @@
 <div class="modal fade" *ngIf="isArrivalModalOpen" [class.show]="isArrivalModalOpen"
   [style.display]="isArrivalModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Update Arrival Details</h5>
-        <button type="button" class="btn-close" (click)="closeArrivalModal()" aria-label="Close"></button>
+    <div class="modal-content arrival-update-modal">
+      <div class="modal-header arrival-update-header">
+        <div class="header-content">
+          <i class="bi bi-truck-front-fill header-icon"></i>
+          <div>
+            <h5 class="modal-title">Update Arrival Details</h5>
+            <p class="modal-subtitle">Enter tanker-wise arrival information</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeArrivalModal()" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="row g-3 mb-3">
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">Reference No.</label>
-            <input class="form-control" [value]="selectedArrivalRequisition?.referenceNo || '-'" readonly>
+      <div class="modal-body arrival-update-body">
+        <div class="info-cards-grid mb-4">
+          <div class="info-card">
+            <div class="info-card-icon ref-icon-arrival">
+              <i class="bi bi-hash"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Reference No.</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.referenceNo || '-' }}</div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">Licensee ID</label>
-            <input class="form-control" [value]="selectedArrivalRequisition?.licenseeId || '-'" readonly>
+          <div class="info-card">
+            <div class="info-card-icon licensee-icon-arrival">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Licensee ID</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.licenseeId || '-' }}</div>
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Total Tankers</label>
+        </div>
+
+        <div class="tanker-count-section mb-4">
+          <div class="count-input-wrapper">
+            <label class="form-label">
+              <i class="bi bi-truck me-2"></i>
+              <span class="fw-semibold">Total Tankers</span>
+            </label>
             <input
               type="number"
-              class="form-control"
+              class="form-control tanker-count-input"
               min="1"
               [(ngModel)]="arrivalTankerCount"
               (change)="onArrivalTankerCountChange()">
           </div>
-          <div class="col-md-8 d-flex align-items-end">
-            <div class="text-muted small">Fill tanker-wise arrival details below.</div>
+          <div class="helper-text">
+            <i class="bi bi-info-circle me-1"></i>
+            Fill tanker-wise arrival details below
           </div>
         </div>
 
-        <div class="table-responsive border rounded p-2">
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th style="width: 80px;">#</th>
-                <th>Tanker Number</th>
-                <th>Bulk Liter</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of arrivalEntries; let i = index">
-                <td>{{ i + 1 }}</td>
-                <td>
-                  <input
-                    class="form-control form-control-sm"
-                    [(ngModel)]="row.tanker_no"
-                    placeholder="Enter tanker number">
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    class="form-control form-control-sm"
-                    min="0.01"
-                    step="0.01"
-                    [(ngModel)]="row.bulk_liter"
-                    placeholder="Enter bulk liter">
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="tanker-entry-section mb-4">
+          <div class="section-header">
+            <i class="bi bi-list-check"></i>
+            <h6 class="section-title">Tanker Entry Details</h6>
+          </div>
+          <div class="table-container">
+            <table class="table arrival-table mb-0">
+              <thead>
+                <tr>
+                  <th class="text-center" style="width: 80px;">#</th>
+                  <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
+                  <th><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of arrivalEntries; let i = index">
+                  <td class="text-center serial-col">{{ i + 1 }}</td>
+                  <td>
+                    <input
+                      class="form-control form-control-sm tanker-input"
+                      [(ngModel)]="row.tanker_no"
+                      placeholder="Enter tanker number">
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm liter-input"
+                      min="0.01"
+                      step="0.01"
+                      [(ngModel)]="row.bulk_liter"
+                      placeholder="Enter bulk liter">
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div *ngIf="arrivalErrorMessage" class="alert alert-danger mt-3 mb-0 py-2">
-          {{ arrivalErrorMessage }}
+        <div *ngIf="arrivalErrorMessage" class="alert alert-danger d-flex align-items-center mb-3">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <span>{{ arrivalErrorMessage }}</span>
         </div>
 
-        <div class="arrival-summary-panel mt-3">
-          <div class="summary-item">
-            <span class="summary-label">Requested Total Quantity</span>
-            <span class="summary-value">{{ getArrivalAllowedBulkLiter() | number:'1.2-2' }}</span>
+        <div class="arrival-summary-card">
+          <div class="summary-row">
+            <div class="summary-item">
+              <i class="bi bi-clipboard-check summary-icon"></i>
+              <div class="summary-content">
+                <span class="summary-label">Requested Total Quantity</span>
+                <span class="summary-value requested">{{ getArrivalAllowedBulkLiter() | number:'1.2-2' }}</span>
+              </div>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-item">
+              <i class="bi bi-calculator summary-icon"></i>
+              <div class="summary-content">
+                <span class="summary-label">Entered Total Bulk Liter</span>
+                <span class="summary-value entered"
+                  [class.text-danger]="getArrivalAllowedBulkLiter() > 0 && getArrivalTotalBulkLiter() > getArrivalAllowedBulkLiter()">
+                  {{ getArrivalTotalBulkLiter() | number:'1.2-2' }}
+                </span>
+              </div>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">Entered Total Bulk Liter</span>
-            <span class="summary-value"
-              [class.text-danger]="getArrivalAllowedBulkLiter() > 0 && getArrivalTotalBulkLiter() > getArrivalAllowedBulkLiter()">
-              {{ getArrivalTotalBulkLiter() | number:'1.2-2' }}
-            </span>
-          </div>
-          <div class="summary-status"
+          <div class="validation-status"
             [class.match]="isArrivalTotalMatchingRequested()"
             [class.mismatch]="!isArrivalTotalMatchingRequested()">
-            {{ isArrivalTotalMatchingRequested() ? 'Matched' : 'Must match exactly to enable save' }}
+            <i class="bi" [class.bi-check-circle-fill]="isArrivalTotalMatchingRequested()" 
+               [class.bi-exclamation-circle-fill]="!isArrivalTotalMatchingRequested()"></i>
+            {{ isArrivalTotalMatchingRequested() ? 'Quantities Matched - Ready to Save' : 'Must match exactly to enable save' }}
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" (click)="closeArrivalModal()" [disabled]="isArrivalSaving">
-          Cancel
+      <div class="modal-footer arrival-update-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeArrivalModal()" [disabled]="isArrivalSaving">
+          <i class="bi bi-x-circle me-2"></i>Cancel
         </button>
-        <button type="button" class="btn btn-primary" (click)="saveArrivalDetails()" [disabled]="!canSaveArrivalDetails()">
-          {{ isArrivalSaving ? 'Saving...' : 'Save Arrival Details' }}
+        <button type="button" class="btn btn-success save-btn" (click)="saveArrivalDetails()" [disabled]="!canSaveArrivalDetails()">
+          <i class="bi bi-check-circle me-2"></i>{{ isArrivalSaving ? 'Saving...' : 'Save Arrival Details' }}
         </button>
       </div>
     </div>
