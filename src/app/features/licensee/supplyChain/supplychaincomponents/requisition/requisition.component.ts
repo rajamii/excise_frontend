@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -84,7 +84,7 @@ interface ArrivalMonthSummaryRow {
   templateUrl: './requisition.component.html',
   styleUrls: ['./requisition.component.scss']
 })
-export class RequisitionComponent implements OnInit {
+export class RequisitionComponent implements OnInit, OnDestroy {
   Math = Math;
   private isBrowser = false;
 
@@ -128,6 +128,7 @@ export class RequisitionComponent implements OnInit {
   arrivalSummaryMonthFilter: string = '';
   allArrivalDetailsRows: ArrivalDetailsRow[] = [];
   filteredArrivalDetailsRows: ArrivalDetailsRow[] = [];
+  private sidebarGuardTimer: ReturnType<typeof setInterval> | null = null;
 
   // Pagination
   currentPage: number = 1;
@@ -139,7 +140,13 @@ export class RequisitionComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.cleanupSidebarLockState();
     this.loadData();
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupSidebarLockState();
+    this.setBulkRecordModalMode(false);
   }
 
   // Unified action handler
@@ -553,6 +560,8 @@ export class RequisitionComponent implements OnInit {
   }
 
   openArrivalSummaryModal(): void {
+    this.closeSidebarIfOpen();
+    this.setBulkRecordModalMode(true);
     this.isArrivalSummaryModalOpen = true;
     this.isArrivalSummaryLoading = true;
     this.arrivalSummaryErrorMessage = '';
@@ -575,6 +584,74 @@ export class RequisitionComponent implements OnInit {
     });
   }
 
+  private closeSidebarIfOpen(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+    // Unified layout close button for left sidebar.
+    const closeBtn = document.querySelector(
+      'app-unified-layout .clean-sidenav .user-profile .close-btn'
+    ) as HTMLButtonElement | null;
+    if (closeBtn) {
+      closeBtn.click();
+    }
+  }
+
+  private setBulkRecordModalMode(isOpen: boolean): void {
+    if (!this.isBrowser) {
+      return;
+    }
+    const className = 'bulk-record-modal-open';
+    if (isOpen) {
+      document.body.classList.add(className);
+      this.ensureSidebarClosed();
+      if (this.sidebarGuardTimer) {
+        clearInterval(this.sidebarGuardTimer);
+      }
+      this.sidebarGuardTimer = setInterval(() => {
+        if (!this.isArrivalSummaryModalOpen) {
+          return;
+        }
+        this.ensureSidebarClosed();
+      }, 300);
+    } else {
+      document.body.classList.remove(className);
+      if (this.sidebarGuardTimer) {
+        clearInterval(this.sidebarGuardTimer);
+        this.sidebarGuardTimer = null;
+      }
+      this.cleanupSidebarLockState();
+    }
+  }
+
+  private ensureSidebarClosed(): void {
+    const sidenav = document.querySelector('app-unified-layout .clean-sidenav') as HTMLElement | null;
+    const isOpened = Boolean(sidenav?.classList.contains('mat-drawer-opened'));
+    if (!isOpened) {
+      return;
+    }
+    const closeBtn = document.querySelector(
+      'app-unified-layout .clean-sidenav .user-profile .close-btn'
+    ) as HTMLButtonElement | null;
+    if (closeBtn) {
+      closeBtn.click();
+    }
+  }
+
+  private cleanupSidebarLockState(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+    document.body.classList.remove('bulk-record-modal-open');
+    const sidenav = document.querySelector('app-unified-layout .clean-sidenav') as HTMLElement | null;
+    if (!sidenav) {
+      return;
+    }
+    sidenav.style.removeProperty('display');
+    sidenav.style.removeProperty('visibility');
+    sidenav.style.removeProperty('pointer-events');
+  }
+
   closeArrivalSummaryModal(): void {
     this.isArrivalSummaryModalOpen = false;
     this.isArrivalSummaryLoading = false;
@@ -583,6 +660,7 @@ export class RequisitionComponent implements OnInit {
     this.arrivalSummaryMonthFilter = '';
     this.allArrivalDetailsRows = [];
     this.filteredArrivalDetailsRows = [];
+    this.setBulkRecordModalMode(false);
   }
 
   onArrivalSummaryDateFilterChange(): void {

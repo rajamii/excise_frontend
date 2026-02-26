@@ -586,113 +586,159 @@
 <!-- All Bulk Detail Record Modal -->
 <div class="modal fade" *ngIf="isArrivalSummaryModalOpen" [class.show]="isArrivalSummaryModalOpen"
   [style.display]="isArrivalSummaryModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+  <div class="modal-dialog modal-xl modal-dialog-centered all-bulk-record-modal" role="document">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">All Bulk Detail Record</h5>
-        <button type="button" class="btn-close" (click)="closeArrivalSummaryModal()" aria-label="Close"></button>
+      <div class="modal-header all-bulk-header">
+        <div class="header-content">
+          <i class="bi bi-clipboard-data header-icon"></i>
+          <div class="header-text">
+            <h5 class="modal-title">All Bulk Detail Record</h5>
+            <p class="modal-subtitle">View and filter all bulk liquor arrival details</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeArrivalSummaryModal()" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="row g-3 mb-3">
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Date Filter</label>
-            <input
-              type="date"
-              class="form-control"
-              [(ngModel)]="arrivalSummaryDateFilter"
-              (change)="onArrivalSummaryDateFilterChange()">
+      <div class="modal-body all-bulk-body">
+        <!-- Filter Section -->
+        <div class="filter-section">
+          <div class="filter-header">
+            <i class="bi bi-funnel"></i>
+            <h6>Filter Options</h6>
           </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Month Filter</label>
-            <input
-              type="month"
-              class="form-control"
-              [(ngModel)]="arrivalSummaryMonthFilter"
-              (change)="onArrivalSummaryMonthFilterChange()">
-          </div>
-          <div class="col-md-4 d-flex align-items-end">
-            <button class="btn btn-outline-secondary w-100" type="button"
-              (click)="arrivalSummaryDateFilter=''; arrivalSummaryMonthFilter=''; applyArrivalSummaryFilters()">
-              Clear Filters
-            </button>
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label class="filter-label">
+                <i class="bi bi-calendar-event"></i>
+                Date Filter
+              </label>
+              <input
+                type="date"
+                class="form-control"
+                [(ngModel)]="arrivalSummaryDateFilter"
+                (change)="onArrivalSummaryDateFilterChange()">
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">
+                <i class="bi bi-calendar3"></i>
+                Month Filter
+              </label>
+              <input
+                type="month"
+                class="form-control"
+                [(ngModel)]="arrivalSummaryMonthFilter"
+                (change)="onArrivalSummaryMonthFilterChange()">
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-outline-secondary" type="button"
+                (click)="arrivalSummaryDateFilter=''; arrivalSummaryMonthFilter=''; applyArrivalSummaryFilters()">
+                <i class="bi bi-x-circle me-1"></i>
+                Clear Filters
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="arrival-summary-panel mb-3">
-          <div class="summary-item">
-            <span class="summary-label">Entries</span>
-            <span class="summary-value">{{ filteredArrivalDetailsRows.length }}</span>
+        <!-- Results Summary -->
+        <div class="results-summary">
+          <div class="summary-info">
+            <i class="bi bi-list-check"></i>
+            <div class="summary-text">
+              <div class="summary-label">Entries</div>
+              <div class="summary-value"><span class="highlight">{{ filteredArrivalDetailsRows.length }}</span></div>
+            </div>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">Total BL (Filtered)</span>
-            <span class="summary-value">
-              {{ getFilteredArrivalTotalBulkLiter() | number:'1.2-2' }}
-            </span>
+          <div class="total-bl">
+            <i class="bi bi-droplet-fill"></i>
+            <div class="total-content">
+              <div class="total-label">Total BL (Filtered)</div>
+              <div class="total-value">{{ getFilteredArrivalTotalBulkLiter() | number:'1.2-2' }}</div>
+            </div>
           </div>
         </div>
 
-        <div class="table-responsive border rounded p-2 mb-3" *ngIf="getArrivalSummaryMonthlyRows().length > 0">
-          <h6 class="mb-2">Monthly BL Summary</h6>
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Entries</th>
-                <th>Total Tankers</th>
-                <th>Total BL</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of getArrivalSummaryMonthlyRows()">
-                <td>{{ row.monthLabel }}</td>
-                <td>{{ row.entries }}</td>
-                <td>{{ row.totalTankers }}</td>
-                <td>{{ row.totalBulkLiter | number:'1.2-2' }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Monthly BL Summary -->
+        <div class="monthly-summary-section" *ngIf="getArrivalSummaryMonthlyRows().length > 0">
+          <div class="section-header">
+            <i class="bi bi-calendar2-month"></i>
+            <h6 class="section-title">Monthly BL Summary</h6>
+          </div>
+          <div class="table-responsive">
+            <table class="table monthly-summary-table mb-0">
+              <thead>
+                <tr>
+                  <th class="month-col"><i class="bi bi-calendar"></i> Month</th>
+                  <th><i class="bi bi-list-ol"></i> Entries</th>
+                  <th><i class="bi bi-truck"></i> Total Tankers</th>
+                  <th><i class="bi bi-droplet"></i> Total BL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of getArrivalSummaryMonthlyRows()">
+                  <td class="month-col">{{ row.monthLabel }}</td>
+                  <td class="entries-col">{{ row.entries }}</td>
+                  <td class="tankers-col">{{ row.totalTankers }}</td>
+                  <td class="bl-col">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="table-responsive border rounded p-2" *ngIf="filteredArrivalDetailsRows.length > 0">
-          <h6 class="mb-2">Arrival Entries</h6>
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th style="width: 60px;">#</th>
-                <th>Date</th>
-                <th>Ref. No</th>
-                <th>Distillery</th>
-                <th>Tankers</th>
-                <th>Requested Qty</th>
-                <th>Total BL</th>
-                <th>Tanker Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of filteredArrivalDetailsRows; let i = index">
-                <td>{{ i + 1 }}</td>
-                <td>{{ formatArrivalDate(row.arrivalDate) }}</td>
-                <td>{{ row.referenceNo }}</td>
-                <td>{{ row.distilleryName || '-' }}</td>
-                <td>{{ row.tankerCount }}</td>
-                <td>{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
-                <td>{{ row.totalBulkLiter | number:'1.2-2' }}</td>
-                <td class="arrival-tanker-cell">{{ formatTankerDetailsShort(row.tankerDetails) }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Arrival Entries -->
+        <div class="arrival-entries-section" *ngIf="filteredArrivalDetailsRows.length > 0">
+          <div class="section-header">
+            <div class="header-left">
+              <i class="bi bi-table"></i>
+              <h6 class="section-title">Arrival Entries</h6>
+            </div>
+            <span class="entries-badge">{{ filteredArrivalDetailsRows.length }} Entries</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table arrival-entries-table mb-0">
+              <thead>
+                <tr>
+                  <th class="serial-col"><i class="bi bi-hash"></i> #</th>
+                  <th class="date-col"><i class="bi bi-calendar-date"></i> Date</th>
+                  <th class="ref-col"><i class="bi bi-file-text"></i> Ref. No</th>
+                  <th class="distillery-col"><i class="bi bi-building"></i> Distillery</th>
+                  <th><i class="bi bi-truck"></i> Tankers</th>
+                  <th><i class="bi bi-box"></i> Requested Qty</th>
+                  <th><i class="bi bi-droplet-fill"></i> Total BL</th>
+                  <th><i class="bi bi-info-circle"></i> Tanker Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of filteredArrivalDetailsRows; let i = index">
+                  <td class="serial-col">{{ i + 1 }}</td>
+                  <td class="date-col">{{ formatArrivalDate(row.arrivalDate) }}</td>
+                  <td class="ref-col">{{ row.referenceNo }}</td>
+                  <td class="distillery-col">{{ row.distilleryName || '-' }}</td>
+                  <td class="tankers-col">{{ row.tankerCount }}</td>
+                  <td class="requested-col">{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
+                  <td class="bl-col">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
+                  <td class="tanker-details-col">{{ formatTankerDetailsShort(row.tankerDetails) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="alert alert-info mb-0" *ngIf="!isArrivalSummaryLoading && filteredArrivalDetailsRows.length === 0 && !arrivalSummaryErrorMessage">
-          No BL details found for selected filters.
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!isArrivalSummaryLoading && filteredArrivalDetailsRows.length === 0 && !arrivalSummaryErrorMessage">
+          <i class="bi bi-inbox empty-icon"></i>
+          <h6 class="empty-title">No Records Found</h6>
+          <p class="empty-message">No BL details found for selected filters. Try adjusting your filter criteria.</p>
         </div>
 
-        <div class="alert alert-warning mb-0" *ngIf="arrivalSummaryErrorMessage">
-          {{ arrivalSummaryErrorMessage }}
+        <!-- Alert Messages -->
+        <div class="alert alert-warning" *ngIf="arrivalSummaryErrorMessage">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ arrivalSummaryErrorMessage }}</span>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" (click)="closeArrivalSummaryModal()">
+      <div class="modal-footer all-bulk-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeArrivalSummaryModal()">
+          <i class="bi bi-x-lg"></i>
           Close
         </button>
       </div>
