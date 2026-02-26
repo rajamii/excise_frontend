@@ -73,7 +73,6 @@
                 <select class="form-select form-select-sm"
                   [(ngModel)]="selectedManufacturingUnit"
                   (ngModelChange)="onManufacturingUnitChange()">
-                  <option value="">All Distillery/Brewery Units</option>
                   <option *ngFor="let unit of manufacturingUnits" [value]="unit">
                     {{ unit }}
                   </option>

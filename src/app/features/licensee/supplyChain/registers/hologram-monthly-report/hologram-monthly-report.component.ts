@@ -273,7 +273,9 @@ export class HologramMonthlyReportComponent implements OnInit {
         const rollType = (roll.type || 'LOCAL').toString().toUpperCase();
         const matchesUnit = this.matchesSelectedManufacturingUnit(roll);
         const rollRef = this.extractReferenceNo(roll);
-        const matchesSelectedRefs = selectedUnitRefs.size === 0 || selectedUnitRefs.has(rollRef);
+        // IMPORTANT: when a commissioner unit is selected, do not treat empty selected refs as a match.
+        // Otherwise, all arrivals bypass the unit filter and appear for every unit.
+        const matchesSelectedRefs = selectedUnitRefs.size > 0 && selectedUnitRefs.has(rollRef);
         const matchesUnitOrRef =
           this.commissionerMode && this.selectedManufacturingUnit
             ? (matchesUnit || matchesSelectedRefs)
@@ -316,30 +318,8 @@ export class HologramMonthlyReportComponent implements OnInit {
         }
       }
 
-      if (this.commissionerMode && this.selectedManufacturingUnit && filteredEntries.length === 0 && arrivals.length === 0) {
-        const fallbackEntries = (dailyRows || []).filter((entry: any) => {
-          const entryDate = entry.usage_date || entry.usageDate || '';
-          const entryMonthKey = this.getMonthKeyFromAnyDate(entryDate);
-          const entryType = (entry.hologram_type || entry.hologramType || 'LOCAL').toString().toUpperCase();
-          const approvalStatus = entry.approval_status || entry.approvalStatus || '';
-          return entryMonthKey === monthKey &&
-            entryType === this.selectedHologramType &&
-            this.matchesApprovalStatus(approvalStatus);
-        });
-
-        const fallbackArrivals = (rollsArray || []).filter((roll: any) => {
-          const receivedDate = roll.received_date || roll.receivedDate || '';
-          const rollMonthKey = this.getMonthKeyFromAnyDate(receivedDate);
-          const rollType = (roll.type || 'LOCAL').toString().toUpperCase();
-          return rollMonthKey === monthKey && rollType === this.selectedHologramType;
-        });
-
-        if (fallbackEntries.length > 0 || fallbackArrivals.length > 0) {
-          console.warn('Commissioner unit filter fallback applied due missing unit mapping fields:', this.selectedManufacturingUnit);
-          effectiveEntries = fallbackEntries;
-          effectiveArrivals = fallbackArrivals;
-        }
-      }
+      // Do not fallback to unfiltered data when a commissioner unit is selected.
+      // Monthly details must strictly follow the selected Distillery/Brewery dropdown.
       
       console.log(`📦 Filtered ${effectiveArrivals.length} arrivals for ${monthKey} ${this.selectedHologramType}`);
       
@@ -1779,8 +1759,10 @@ export class HologramMonthlyReportComponent implements OnInit {
     ]);
 
     this.manufacturingUnits = Array.from(merged).sort((a, b) => a.localeCompare(b));
-    if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
-      this.selectedManufacturingUnit = '';
+    if (!this.selectedManufacturingUnit && this.manufacturingUnits.length > 0) {
+      this.selectedManufacturingUnit = this.manufacturingUnits[0];
+    } else if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
+      this.selectedManufacturingUnit = this.manufacturingUnits[0] || '';
     }
   }
 
@@ -1797,8 +1779,10 @@ export class HologramMonthlyReportComponent implements OnInit {
     ]);
 
     this.manufacturingUnits = Array.from(merged).sort((a, b) => a.localeCompare(b));
-    if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
-      this.selectedManufacturingUnit = '';
+    if (!this.selectedManufacturingUnit && this.manufacturingUnits.length > 0) {
+      this.selectedManufacturingUnit = this.manufacturingUnits[0];
+    } else if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
+      this.selectedManufacturingUnit = this.manufacturingUnits[0] || '';
     }
   }
 
