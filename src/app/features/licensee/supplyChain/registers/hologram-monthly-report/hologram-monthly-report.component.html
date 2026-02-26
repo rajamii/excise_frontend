@@ -455,7 +455,7 @@
                                        [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                        style="font-size: 0.85rem;">
                                     <i class="bi bi-box-seam me-2"></i>
-                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollIndex + 1 }}
                                   </div>
                                   <span class="badge bg-secondary" style="font-size: 0.75rem;">
                                     {{ rollGroup.brands.length }} Brand{{ rollGroup.brands.length > 1 ? 's' : '' }}
@@ -488,7 +488,9 @@
                                         <span class="text-muted" style="font-size: 0.75rem;">
                                           <i class="bi bi-cup-straw me-1"></i>{{ brand.bottleSize }}
                                         </span>
-                                        <span class="text-primary fw-semibold" style="font-size: 0.75rem;">
+                                        <span class="fw-semibold"
+                                              [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                              style="font-size: 0.75rem;">
                                           <i class="bi bi-calculator me-1"></i>{{ brand.totalQty | number }} units
                                         </span>
                                       </div>
@@ -518,7 +520,7 @@
                                        [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                        style="font-size: 0.8rem;">
                                     <i class="bi bi-box-seam me-1"></i>
-                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollIndex + 1 }}
                                   </div>
                                   <div class="brands-count-badge bg-white border px-2 py-1 rounded"
                                        [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
@@ -569,7 +571,9 @@
                                       </div>
                                     </div>
                                     <div class="brand-total">
-                                      <span class="badge bg-primary text-white fw-bold" style="font-size: 0.75rem;">
+                                      <span class="badge text-white fw-bold"
+                                            [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                            style="font-size: 0.75rem;">
                                         {{ brand.totalQty | number }} units
                                       </span>
                                     </div>
@@ -649,7 +653,7 @@
                                          [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                          style="font-size: 0.8rem;">
                                       <i class="bi bi-box-seam me-1"></i>
-                                      Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                      Roll {{ rollGroup.rollName }} - Assignment #{{ rollIndex + 1 }}
                                     </div>
                                     <div class="brands-count-badge bg-white border px-2 py-1 rounded"
                                          [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
@@ -660,7 +664,9 @@
                                     </div>
                                   </div>
                                   <div class="roll-stats">
-                                    <span class="badge bg-danger text-white fw-bold px-3 py-2" style="font-size: 0.85rem;">
+                                    <span class="badge text-white fw-bold px-3 py-2"
+                                          [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                          style="font-size: 0.85rem;">
                                       <i class="bi bi-exclamation-triangle me-1"></i>
                                       {{ rollGroup.totalQty | number }} damaged
                                     </span>
@@ -699,7 +705,9 @@
                                           </div>
                                         </div>
                                         <div class="brand-total">
-                                          <span class="badge bg-danger text-white fw-bold" style="font-size: 0.75rem;">
+                                          <span class="badge text-white fw-bold"
+                                                [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                                style="font-size: 0.75rem;">
                                             {{ brand.totalQty | number }} damaged
                                           </span>
                                         </div>
@@ -715,11 +723,11 @@
                                         <div class="ranges-list d-flex flex-wrap gap-2">
                                           @for (range of brand.allRanges; track range.from + range.to + range.qty) {
                                             @if (range.qty > 0) {
-                                              <div class="range-item bg-light border border-danger rounded px-2 py-1"
+                                              <div class="range-item bg-light border rounded px-2 py-1"
                                                    [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                                    style="font-family: 'Courier New', monospace; font-size: 0.75rem;">
                                                 <div class="range-display text-center">
-                                                  <div class="fw-bold text-danger">
+                                                  <div class="fw-bold" [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)">
                                                     {{ range.from }} → {{ range.to }}
                                                   </div>
                                                   <div class="small text-muted">Damaged: {{ range.qty | number }}</div>

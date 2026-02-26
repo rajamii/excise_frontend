@@ -673,34 +673,47 @@ export class HologramMonthlyReportComponent implements OnInit {
           // Also track brands per roll assignment for numbering (Brand 1, Brand 2, etc.)
           const brandsPerAssignment = new Map<string, Map<string, number>>();
           
-          // First pass: identify all unique roll assignments (by roll name only, NOT by serial ranges)
-          // This ensures all brands from the same roll get the same color
-          allEntries.forEach((e: any) => {
-            const rollName = this.resolveEntryRollName(e);
-            
-            // Create assignment key using ONLY roll name (not serial ranges)
-            // This ensures all brands from the same roll assignment get the same color
-            const assignmentKey = rollName;
-            
+          const getAssignmentInfo = (rollLabelRaw: any, fromRaw: any, toRaw: any, brandName: string, entry?: any) => {
+            let rollLabel = String(rollLabelRaw || 'Unknown').trim() || 'Unknown';
+            let from = String(fromRaw || '').trim() || '-';
+            let to = String(toRaw || '').trim() || '-';
+
+            // If used/damaged range is empty, align color key with actual assigned roll range for this entry.
+            if ((from === '-' && to === '-') && entry) {
+              const assignedRolls = this.getAssignedRollsForEntry(entry);
+              if (assignedRolls.length > 0) {
+                const requestedIndex = Number(entry?.brand_index ?? entry?.brandIndex ?? 0);
+                const selectedAssigned =
+                  Number.isInteger(requestedIndex) && requestedIndex >= 0 && requestedIndex < assignedRolls.length
+                    ? assignedRolls[requestedIndex]
+                    : assignedRolls[0];
+                if (selectedAssigned) {
+                  rollLabel = String(selectedAssigned.rollLabel || rollLabel).trim() || rollLabel;
+                  from = String(selectedAssigned.fromSerial || '').trim() || from;
+                  to = String(selectedAssigned.toSerial || '').trim() || to;
+                }
+              }
+            }
+
+            const assignmentKey = `${rollLabel}|${from}-${to}`;
+
             if (!rollAssignmentMap.has(assignmentKey)) {
               rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
               brandsPerAssignment.set(assignmentKey, new Map<string, number>());
             }
-            
-            // Track unique brands within this assignment
-            const brandName = e.brand_details || e.brandDetails || '-';
+
             const brandsMap = brandsPerAssignment.get(assignmentKey)!;
             if (!brandsMap.has(brandName)) {
-              brandsMap.set(brandName, brandsMap.size + 1); // Brand number (1, 2, 3...)
+              brandsMap.set(brandName, brandsMap.size + 1);
             }
-          });
-          
-          console.log(`🎨 Created ${rollAssignmentMap.size} unique roll assignments for color coding:`, 
-            Array.from(rollAssignmentMap.entries()).map(([key, index]) => ({ 
-              key, 
-              index,
-              brands: Array.from(brandsPerAssignment.get(key)?.entries() || []).map(([brand, num]) => ({ brand, num }))
-            })));
+
+            return {
+              rollName: rollLabel,
+              assignmentKey,
+              assignmentIndex: rollAssignmentMap.get(assignmentKey) ?? 0,
+              brandNumber: brandsMap.get(brandName) ?? 1
+            };
+          };
           
           // Process each entry to extract roll and brand details
           allEntries.forEach((e: any) => {
@@ -708,11 +721,6 @@ export class HologramMonthlyReportComponent implements OnInit {
             const brandName = e.brand_details || e.brandDetails || '-';
             const bottleSize = e.bottle_size || e.bottleSize || '-';
             
-            // Create assignment key using ONLY roll name (not serial ranges)
-            // This ensures all brands from the same roll assignment get the same color
-            const assignmentKey = rollName;
-            const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
-            const brandNumber = brandsPerAssignment.get(assignmentKey)?.get(brandName) ?? 1;
             let hasUtilizationDetail = false;
             
             // Handle issued ranges
@@ -733,16 +741,20 @@ export class HologramMonthlyReportComponent implements OnInit {
                     }
                   }
                   
+                  const resolved = getAssignmentInfo(rollName, fromSerial, toSerial, brandName, e);
+                  const resolvedBounds = this.getRangeBoundsFromAssignmentKey(resolved.assignmentKey);
+                  const displayFrom = String(fromSerial || '').trim() || resolvedBounds.from;
+                  const displayTo = String(toSerial || '').trim() || resolvedBounds.to;
                   utilizationDetails.push({
-                    rollName: rollName,
-                    rollAssignmentKey: assignmentKey, // Use the assignment key (roll name only)
-                    rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
-                    brandNumber: brandNumber, // Use the pre-calculated brand number
+                    rollName: resolved.rollName,
+                    rollAssignmentKey: resolved.assignmentKey,
+                    rollAssignmentIndex: resolved.assignmentIndex,
+                    brandNumber: resolved.brandNumber,
                     brandName: brandName,
                     bottleSize: bottleSize,
                     ranges: [{
-                      from: fromSerial,
-                      to: toSerial,
+                      from: displayFrom,
+                      to: displayTo,
                       qty: issuedQty
                     }]
                   });
@@ -753,12 +765,13 @@ export class HologramMonthlyReportComponent implements OnInit {
               // Fallback to single range
               const fromSerial = e.issued_from || e.issuedFrom || '';
               const toSerial = e.issued_to || e.issuedTo || '';
+              const resolved = getAssignmentInfo(rollName, fromSerial, toSerial, brandName, e);
               
               utilizationDetails.push({
-                rollName: rollName,
-                rollAssignmentKey: assignmentKey, // Use the assignment key (roll name only)
-                rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
-                brandNumber: brandNumber, // Use the pre-calculated brand number
+                rollName: resolved.rollName,
+                rollAssignmentKey: resolved.assignmentKey,
+                rollAssignmentIndex: resolved.assignmentIndex,
+                brandNumber: resolved.brandNumber,
                 brandName: brandName,
                 bottleSize: bottleSize,
                 ranges: [{
@@ -772,16 +785,19 @@ export class HologramMonthlyReportComponent implements OnInit {
               const fallbackRanges = this.getFallbackIssuedRangesFromEntry(e);
               if (fallbackRanges.length > 0) {
                 fallbackRanges.forEach((range: any) => {
+                  const fromSerial = range.fromSerial || '';
+                  const toSerial = range.toSerial || '';
+                  const resolved = getAssignmentInfo(range.rollLabel || rollName, fromSerial, toSerial, brandName, e);
                   utilizationDetails.push({
-                    rollName: rollName,
-                    rollAssignmentKey: assignmentKey,
-                    rollAssignmentIndex: assignmentIndex,
-                    brandNumber: brandNumber,
+                    rollName: resolved.rollName,
+                    rollAssignmentKey: resolved.assignmentKey,
+                    rollAssignmentIndex: resolved.assignmentIndex,
+                    brandNumber: resolved.brandNumber,
                     brandName: brandName,
                     bottleSize: bottleSize,
                     ranges: [{
-                      from: range.fromSerial || '',
-                      to: range.toSerial || '',
+                      from: fromSerial,
+                      to: toSerial,
                       qty: Number(range.quantity || 0)
                     }]
                   });
@@ -797,12 +813,13 @@ export class HologramMonthlyReportComponent implements OnInit {
               const from = parsedEntryRange.from || '-';
               const to = parsedEntryRange.to || '-';
               const qty = Number(e.issued_qty || e.issuedQty || 0);
+              const resolved = getAssignmentInfo(rollName, from, to, brandName, e);
 
               utilizationDetails.push({
-                rollName: rollName,
-                rollAssignmentKey: assignmentKey,
-                rollAssignmentIndex: assignmentIndex,
-                brandNumber: brandNumber,
+                rollName: resolved.rollName,
+                rollAssignmentKey: resolved.assignmentKey,
+                rollAssignmentIndex: resolved.assignmentIndex,
+                brandNumber: resolved.brandNumber,
                 brandName: brandName,
                 bottleSize: bottleSize,
                 ranges: [{
@@ -831,16 +848,20 @@ export class HologramMonthlyReportComponent implements OnInit {
                     }
                   }
                   
+                  const resolved = getAssignmentInfo(rollName, fromSerial, toSerial, brandName, e);
+                  const resolvedBounds = this.getRangeBoundsFromAssignmentKey(resolved.assignmentKey);
+                  const displayFrom = String(fromSerial || '').trim() || resolvedBounds.from;
+                  const displayTo = String(toSerial || '').trim() || resolvedBounds.to;
                   wastageDetails.push({
-                    rollName: rollName,
-                    rollAssignmentKey: assignmentKey, // Use the assignment key (roll name only)
-                    rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
-                    brandNumber: brandNumber, // Use the pre-calculated brand number
+                    rollName: resolved.rollName,
+                    rollAssignmentKey: resolved.assignmentKey,
+                    rollAssignmentIndex: resolved.assignmentIndex,
+                    brandNumber: resolved.brandNumber,
                     brandName: brandName,
                     bottleSize: bottleSize,
                     ranges: [{
-                      from: fromSerial,
-                      to: toSerial,
+                      from: displayFrom,
+                      to: displayTo,
                       qty: wastageQty
                     }]
                   });
@@ -850,12 +871,13 @@ export class HologramMonthlyReportComponent implements OnInit {
               // Fallback to single range
               const fromSerial = e.wastage_from || e.wastageFrom || '';
               const toSerial = e.wastage_to || e.wastageTo || '';
+              const resolved = getAssignmentInfo(rollName, fromSerial, toSerial, brandName, e);
               
               wastageDetails.push({
-                rollName: rollName,
-                rollAssignmentKey: assignmentKey, // Use the assignment key (roll name only)
-                rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
-                brandNumber: brandNumber, // Use the pre-calculated brand number
+                rollName: resolved.rollName,
+                rollAssignmentKey: resolved.assignmentKey,
+                rollAssignmentIndex: resolved.assignmentIndex,
+                brandNumber: resolved.brandNumber,
                 brandName: brandName,
                 bottleSize: bottleSize,
                 ranges: [{
@@ -1280,6 +1302,22 @@ export class HologramMonthlyReportComponent implements OnInit {
     return lightColors[rollIndex % lightColors.length];
   }
 
+  private getRangeBoundsFromAssignmentKey(assignmentKey: string): { from: string; to: string } {
+    const text = String(assignmentKey || '').trim();
+    if (!text) {
+      return { from: '-', to: '-' };
+    }
+    const pipeIndex = text.indexOf('|');
+    const rangePart = pipeIndex >= 0 ? text.slice(pipeIndex + 1) : '';
+    const dashIndex = rangePart.indexOf('-');
+    if (dashIndex < 0) {
+      return { from: '-', to: '-' };
+    }
+    const from = String(rangePart.slice(0, dashIndex) || '').trim() || '-';
+    const to = String(rangePart.slice(dashIndex + 1) || '').trim() || '-';
+    return { from, to };
+  }
+
   /**
    * Get unique rolls count from utilization or wastage details
    * Only count rolls that actually have quantity > 0
@@ -1384,6 +1422,27 @@ export class HologramMonthlyReportComponent implements OnInit {
     let nextIndex = 0;
 
     for (const entry of entries || []) {
+      const assignedRolls = this.getAssignedRollsForEntry(entry);
+      if (assignedRolls.length > 0) {
+        for (const assigned of assignedRolls) {
+          const range = `${assigned.fromSerial || '-'}-${assigned.toSerial || '-'}`;
+          const rollLabel = String(assigned.rollLabel || 'Unknown').trim() || 'Unknown';
+          const rawAssignmentKey = `${rollLabel}|${range}`;
+          const rollName = this.getRollDisplayName(rollLabel);
+          if (!assignmentIndexByKey.has(rawAssignmentKey)) {
+            assignmentIndexByKey.set(rawAssignmentKey, nextIndex++);
+          }
+          const assignmentIndex = assignmentIndexByKey.get(rawAssignmentKey) ?? 0;
+          const key = rawAssignmentKey;
+          if (seen.has(key)) {
+            continue;
+          }
+          seen.add(key);
+          results.push({ rollName, range, rollAssignmentIndex: assignmentIndex });
+        }
+        continue;
+      }
+
       const rawAssignmentKey = String(this.resolveEntryRollName(entry) || 'Unknown').trim() || 'Unknown';
       const rollName = this.getRollDisplayName(rawAssignmentKey);
       if (!assignmentIndexByKey.has(rawAssignmentKey)) {
@@ -1396,9 +1455,29 @@ export class HologramMonthlyReportComponent implements OnInit {
 
       if (bounds.length === 0) {
         const fallbackRanges = this.getFallbackIssuedRangesFromEntry(entry);
-        bounds = fallbackRanges
-          .map((r) => ({ from: String(r.fromSerial || ''), to: String(r.toSerial || '') }))
-          .filter((r) => r.from || r.to);
+        if (fallbackRanges.length > 0) {
+          for (const fallback of fallbackRanges) {
+            const range = `${String(fallback.fromSerial || '').trim() || '-'}-${String(fallback.toSerial || '').trim() || '-'}`;
+            const fallbackRollLabel = String(fallback.rollLabel || rawAssignmentKey || 'Unknown').trim() || 'Unknown';
+            const fallbackAssignmentKey = `${fallbackRollLabel}|${range}`;
+            const fallbackRollName = this.getRollDisplayName(fallbackRollLabel);
+            if (!assignmentIndexByKey.has(fallbackAssignmentKey)) {
+              assignmentIndexByKey.set(fallbackAssignmentKey, nextIndex++);
+            }
+            const fallbackAssignmentIndex = assignmentIndexByKey.get(fallbackAssignmentKey) ?? 0;
+            const key = fallbackAssignmentKey;
+            if (seen.has(key)) {
+              continue;
+            }
+            seen.add(key);
+            results.push({
+              rollName: fallbackRollName,
+              range,
+              rollAssignmentIndex: fallbackAssignmentIndex
+            });
+          }
+          continue;
+        }
       }
 
       if (bounds.length === 0) {
@@ -1407,7 +1486,12 @@ export class HologramMonthlyReportComponent implements OnInit {
 
       for (const b of bounds) {
         const range = `${b.from || '-'}-${b.to || '-'}`;
-        const key = `${rawAssignmentKey}|${range}`;
+        const assignmentKey = `${rawAssignmentKey}|${range}`;
+        if (!assignmentIndexByKey.has(assignmentKey)) {
+          assignmentIndexByKey.set(assignmentKey, nextIndex++);
+        }
+        const assignmentIndex = assignmentIndexByKey.get(assignmentKey) ?? 0;
+        const key = `${assignmentKey}|${range}`;
         if (seen.has(key)) {
           continue;
         }
@@ -1456,16 +1540,27 @@ export class HologramMonthlyReportComponent implements OnInit {
         allRanges: Array<{ from: string; to: string; qty: number }>;
       }>;
     }>();
+    const assignmentIndexByGroupKey = new Map<string, number>();
+    let nextGroupIndex = 0;
     
     utilizationDetails.forEach(detail => {
-      // Use rollAssignmentKey if available, otherwise fall back to rollName
-      const groupKey = detail.rollAssignmentKey || detail.rollName;
+      const firstRange = Array.isArray(detail.ranges) && detail.ranges.length > 0
+        ? detail.ranges[0]
+        : null;
+      const rangeKey = `${String(firstRange?.from ?? '').trim() || '-'}-${String(firstRange?.to ?? '').trim() || '-'}`;
+      const explicitKey = String(detail.rollAssignmentKey || '').trim();
+      const groupKey = explicitKey.includes('|')
+        ? explicitKey
+        : `${detail.rollName}|${rangeKey}`;
       const rollDisplayName = this.getRollDisplayName(detail.rollName);
       
       if (!rollsMap.has(groupKey)) {
+        if (!assignmentIndexByGroupKey.has(groupKey)) {
+          assignmentIndexByGroupKey.set(groupKey, nextGroupIndex++);
+        }
         rollsMap.set(groupKey, {
           rollName: rollDisplayName,
-          rollAssignmentIndex: detail.rollAssignmentIndex || 0,
+          rollAssignmentIndex: assignmentIndexByGroupKey.get(groupKey) ?? 0,
           brands: new Map()
         });
       }
@@ -1839,13 +1934,18 @@ export class HologramMonthlyReportComponent implements OnInit {
             : (brandWastageQty > 0 ? [{ fromSerial: '-', toSerial: '-', quantity: brandWastageQty }] : []);
 
         const firstIssued = effectiveIssuedRanges[0] || { fromSerial: '', toSerial: '' };
-        const assignedRolls = [
+        const assignedRollsRaw = [
           ...this.normalizeRangeArray(brand?.rollsAssigned),
           ...this.normalizeRangeArray(brand?.rolls_assigned),
           ...this.normalizeRangeArray(brand?.rollAssignments),
           ...this.normalizeRangeArray(brand?.assignedRolls)
         ];
+        const assignedRolls =
+          assignedRollsRaw.length > 0
+            ? assignedRollsRaw
+            : this.buildCommissionerAssignedRollsFromBrand(brand, effectiveIssuedRanges, brandIssuedQty);
         const firstRoll = assignedRolls.length > 0 ? assignedRolls[0] : null;
+        const rollRangeText = String(brand?.rollRange || brand?.roll_range || '').trim();
         const normalizedBrandName = String(
           brand?.brandCode ||
           brand?.brand ||
@@ -1886,11 +1986,91 @@ export class HologramMonthlyReportComponent implements OnInit {
           brandDetails: normalizedBrandName,
           bottle_size: normalizedBottleSize,
           bottleSize: normalizedBottleSize,
+          rolls_assigned: assignedRolls,
+          rollsAssigned: assignedRolls,
+          roll_range: rollRangeText,
+          rollRange: rollRangeText,
           cartoon_number: firstRoll?.cartoonNumber || firstRoll?.cartoon_number || firstRoll?.rollNumber || firstRoll?.roll_number || '',
           cartoonNumber: firstRoll?.cartoonNumber || firstRoll?.cartoon_number || firstRoll?.rollNumber || firstRoll?.roll_number || ''
         };
       });
     });
+  }
+
+  private buildCommissionerAssignedRollsFromBrand(
+    brand: any,
+    effectiveIssuedRanges: Array<{ fromSerial: string; toSerial: string; quantity: number }>,
+    fallbackQty: number
+  ): any[] {
+    const rollRangeText = String(brand?.rollRange || brand?.roll_range || '').trim();
+    const parsedBounds = this.extractAllSerialBounds({ rollRange: rollRangeText, roll_range: rollRangeText });
+    const rollLabelFromText = this.extractRollLabelFromText(rollRangeText);
+    const fallbackLabel = String(
+      brand?.rollNumber ||
+      brand?.roll_number ||
+      brand?.cartoonNumber ||
+      brand?.cartoon_number ||
+      ''
+    ).trim();
+    const rollLabel = rollLabelFromText || fallbackLabel || 'Unknown';
+
+    if (parsedBounds.length > 0) {
+      return parsedBounds.map((bound) => {
+        const fromSerial = String(bound?.from || '').trim();
+        const toSerial = String(bound?.to || '').trim();
+        let quantity = Number(fallbackQty || 0);
+        if (!quantity && fromSerial && toSerial) {
+          const fromNo = Number(fromSerial);
+          const toNo = Number(toSerial);
+          if (Number.isFinite(fromNo) && Number.isFinite(toNo) && toNo >= fromNo) {
+            quantity = (toNo - fromNo) + 1;
+          }
+        }
+        return {
+          rollNumber: rollLabel,
+          cartoonNumber: rollLabel,
+          fromSerial,
+          toSerial,
+          quantity
+        };
+      });
+    }
+
+    if (effectiveIssuedRanges.length > 0) {
+      return effectiveIssuedRanges.map((range) => ({
+        rollNumber: rollLabel,
+        cartoonNumber: rollLabel,
+        fromSerial: String(range?.fromSerial || '').trim(),
+        toSerial: String(range?.toSerial || '').trim(),
+        quantity: Number(range?.quantity || 0)
+      }));
+    }
+
+    if (rollLabel !== 'Unknown') {
+      return [{
+        rollNumber: rollLabel,
+        cartoonNumber: rollLabel,
+        fromSerial: '',
+        toSerial: '',
+        quantity: Number(fallbackQty || 0)
+      }];
+    }
+
+    return [];
+  }
+
+  private extractRollLabelFromText(text: string): string {
+    const raw = String(text || '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    const match = raw.match(/^(.+?)\s*(?:-|–|—|->|→|to)\s*\d+\s*(?:-|–|—|->|→|to)\s*\d+/i);
+    if (!match) {
+      return '';
+    }
+
+    return String(match[1] || '').replace(/[-:]+$/, '').trim();
   }
 
   private extractFirstSerialRange(brands: any[]): { from: string; to: string } {
@@ -1935,9 +2115,104 @@ export class HologramMonthlyReportComponent implements OnInit {
       return direct;
     }
 
+    const assignedRoll = this.getAssignedRollsForEntry(entry)[0];
+    if (assignedRoll?.rollLabel) {
+      return String(assignedRoll.rollLabel).trim();
+    }
+
     const fallbackRanges = this.getFallbackIssuedRangesFromEntry(entry);
     const firstLabel = String(fallbackRanges?.[0]?.rollLabel || '').trim();
     return firstLabel || 'Unknown';
+  }
+
+  private getAssignedRollsForEntry(entry: any): Array<{
+    rollLabel: string;
+    fromSerial: string;
+    toSerial: string;
+    quantity: number;
+  }> {
+    const extractFromItems = (items: any[]): Array<{
+      rollLabel: string;
+      fromSerial: string;
+      toSerial: string;
+      quantity: number;
+    }> => {
+      const rows: Array<{ rollLabel: string; fromSerial: string; toSerial: string; quantity: number }> = [];
+      for (const item of items || []) {
+        const rollLabel = String(
+          item?.rollNumber ||
+          item?.roll_number ||
+          item?.cartoonNumber ||
+          item?.cartoon_number ||
+          item?.carton_number ||
+          item?.rollName ||
+          item?.roll_name ||
+          ''
+        ).trim();
+
+        const parsedBounds = this.extractAllSerialBounds(item);
+        const safeBounds = parsedBounds.length > 0 ? parsedBounds : [{ from: '', to: '' }];
+        for (const parsed of safeBounds) {
+          const fromSerial = String(parsed?.from || '').trim();
+          const toSerial = String(parsed?.to || '').trim();
+          let quantity = Number(item?.quantity ?? item?.qty ?? item?.count ?? item?.totalCount ?? item?.total_count ?? 0);
+          if (!quantity && fromSerial && toSerial) {
+            const fromNo = Number(fromSerial);
+            const toNo = Number(toSerial);
+            if (Number.isFinite(fromNo) && Number.isFinite(toNo) && toNo >= fromNo) {
+              quantity = (toNo - fromNo) + 1;
+            }
+          }
+          if (rollLabel || fromSerial || toSerial || quantity > 0) {
+            rows.push({ rollLabel, fromSerial, toSerial, quantity });
+          }
+        }
+      }
+      return rows;
+    };
+
+    const directRolls = [
+      ...this.normalizeRangeArray(entry?.rollsAssigned),
+      ...this.normalizeRangeArray(entry?.rolls_assigned),
+      ...this.normalizeRangeArray(entry?.rollsUsed),
+      ...this.normalizeRangeArray(entry?.rolls_used),
+      ...this.normalizeRangeArray(entry?.rollAssignments),
+      ...this.normalizeRangeArray(entry?.assignedRolls)
+    ];
+
+    let resolvedRolls = extractFromItems(directRolls);
+
+    if (resolvedRolls.length === 0) {
+      const brands = this.normalizeRangeArray(entry?.brandsEntered);
+      const requestedIndex = Number(entry?.brand_index ?? entry?.brandIndex ?? -1);
+      const brandName = String(entry?.brand_details || entry?.brandDetails || '').trim().toLowerCase();
+      const indexedBrand = Number.isInteger(requestedIndex) && requestedIndex >= 0 && requestedIndex < brands.length
+        ? brands[requestedIndex]
+        : null;
+      const matchedBrand = indexedBrand || brands.find((b: any) => {
+        const name = String(b?.brandCode || b?.brand || b?.brandName || b?.brand_name || '').trim().toLowerCase();
+        return !!name && (!!brandName ? name === brandName : true);
+      });
+      const brandRolls = matchedBrand
+        ? [
+            ...this.normalizeRangeArray(matchedBrand?.rollsAssigned),
+            ...this.normalizeRangeArray(matchedBrand?.rolls_assigned),
+            ...this.normalizeRangeArray(matchedBrand?.rollAssignments),
+            ...this.normalizeRangeArray(matchedBrand?.assignedRolls)
+          ]
+        : [];
+      resolvedRolls = extractFromItems(brandRolls);
+    }
+
+    const dedup = new Map<string, { rollLabel: string; fromSerial: string; toSerial: string; quantity: number }>();
+    resolvedRolls.forEach((r) => {
+      const key = `${r.rollLabel}|${r.fromSerial}|${r.toSerial}|${r.quantity}`;
+      if (!dedup.has(key)) {
+        dedup.set(key, r);
+      }
+    });
+
+    return Array.from(dedup.values());
   }
 
   private getFallbackIssuedRangesFromEntry(entry: any): Array<{
@@ -1962,8 +2237,19 @@ export class HologramMonthlyReportComponent implements OnInit {
       return !!name && (!!brandName ? name === brandName : true);
     }) || brands[0];
 
+    const assignedRolls = this.getAssignedRollsForEntry(entry);
     const ranges = this.getBrandRanges(matchedBrand);
     if (ranges.length > 0) {
+      if (assignedRolls.length > 0) {
+        return ranges.map((r) => {
+          const matched = assignedRolls.find((roll) =>
+            (!roll.fromSerial || roll.fromSerial === r.fromSerial) &&
+            (!roll.toSerial || roll.toSerial === r.toSerial)
+          ) || assignedRolls[0];
+          return { ...r, rollLabel: matched?.rollLabel || '' };
+        });
+      }
+
       const firstRoll = this.normalizeRangeArray(matchedBrand?.rollsAssigned)[0] || this.normalizeRangeArray(matchedBrand?.rolls_assigned)[0];
       const rollLabel = String(firstRoll?.rollNumber || firstRoll?.roll_number || firstRoll?.cartoonNumber || firstRoll?.cartoon_number || '').trim();
       return ranges.map((r) => ({ ...r, rollLabel }));
@@ -1972,14 +2258,22 @@ export class HologramMonthlyReportComponent implements OnInit {
     const first = this.extractFirstSerialRange([matchedBrand]);
     if (first.from || first.to) {
       const qty = Number(entry?.issued_qty || entry?.issuedQty || 0);
-      const firstRoll = this.normalizeRangeArray(matchedBrand?.rollsAssigned)[0] || this.normalizeRangeArray(matchedBrand?.rolls_assigned)[0];
-      const rollLabel = String(firstRoll?.rollNumber || firstRoll?.roll_number || firstRoll?.cartoonNumber || firstRoll?.cartoon_number || '').trim();
+      const rollLabel = String(assignedRolls[0]?.rollLabel || '').trim();
       return [{
         fromSerial: first.from || '',
         toSerial: first.to || '',
         quantity: qty > 0 ? qty : 0,
         rollLabel
       }];
+    }
+
+    if (assignedRolls.length > 0) {
+      return assignedRolls.map((roll) => ({
+        fromSerial: roll.fromSerial || '',
+        toSerial: roll.toSerial || '',
+        quantity: Number(roll.quantity || 0),
+        rollLabel: roll.rollLabel || ''
+      }));
     }
 
     return [];
@@ -2069,6 +2363,18 @@ export class HologramMonthlyReportComponent implements OnInit {
           if (fromSerial || toSerial || quantity > 0) {
             ranges.push({ fromSerial, toSerial, quantity });
           }
+        }
+      }
+    }
+
+    if (ranges.length === 0) {
+      const parsedFromBrand = this.extractAllSerialBounds(brand);
+      for (const parsed of parsedFromBrand) {
+        const fromSerial = String(parsed?.from || '').trim();
+        const toSerial = String(parsed?.to || '').trim();
+        const quantity = normalizeRangeQuantity(fromSerial, toSerial, brand?.issuedQty ?? brand?.quantity ?? 0);
+        if (fromSerial || toSerial || quantity > 0) {
+          ranges.push({ fromSerial, toSerial, quantity });
         }
       }
     }
