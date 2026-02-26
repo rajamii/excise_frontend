@@ -556,7 +556,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   canViewArrivalSummary(): boolean {
-    return !this.isCommissioner() && !this.isPermitSection();
+    const isLicensee = this.accountService.hasAnyRole([
+      'licensee',
+      'Licensee',
+      'license user',
+      'license_user'
+    ]);
+    return isLicensee && !this.isCommissioner();
   }
 
   openArrivalSummaryModal(): void {

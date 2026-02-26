@@ -108,6 +108,11 @@
 
 // Requisition Register Styles
 .requisition-register-header {
+  .top-action-row {
+    margin-top: 0;
+    margin-bottom: 0.5rem !important;
+  }
+
   .register-title {
     font-size: 1.5rem;
     font-weight: 600;
@@ -129,6 +134,11 @@
 
   // Responsive design
   @media (max-width: 768px) {
+    .top-action-row {
+      margin-top: 0;
+      margin-bottom: 1rem !important;
+    }
+
     .d-flex {
       flex-direction: column;
       gap: 1rem;

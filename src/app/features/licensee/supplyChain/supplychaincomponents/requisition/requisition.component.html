@@ -1,15 +1,10 @@
 <!-- Requisition Register Header -->
 <div class="requisition-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div></div>
+  <div class="d-flex justify-content-end align-items-center mb-3 top-action-row">
     <div class="header-actions d-flex gap-2" *ngIf="canViewArrivalSummary()">
       <button type="button" class="btn btn-sm all-bulk-record-btn" (click)="openArrivalSummaryModal()">
         <i class="bi bi-clipboard-data me-1"></i>
         All Bulk Detail Record
-      </button>
-      <button type="button" class="btn btn-primary btn-sm" (click)="navigateTo('import-permit')">
-        <i class="bi bi-plus-circle me-1"></i>
-        New Requisition
       </button>
     </div>
   </div>
