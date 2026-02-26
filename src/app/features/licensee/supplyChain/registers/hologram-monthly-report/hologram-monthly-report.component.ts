@@ -1380,15 +1380,16 @@ export class HologramMonthlyReportComponent implements OnInit {
   private buildAssignedRollRangesFromEntries(entries: any[]): Array<{ rollName: string; range: string; rollAssignmentIndex: number }> {
     const results: Array<{ rollName: string; range: string; rollAssignmentIndex: number }> = [];
     const seen = new Set<string>();
-    const assignmentIndexByRoll = new Map<string, number>();
+    const assignmentIndexByKey = new Map<string, number>();
     let nextIndex = 0;
 
     for (const entry of entries || []) {
-      const rollName = this.getRollDisplayName(this.resolveEntryRollName(entry) || 'Unknown');
-      if (!assignmentIndexByRoll.has(rollName)) {
-        assignmentIndexByRoll.set(rollName, nextIndex++);
+      const rawAssignmentKey = String(this.resolveEntryRollName(entry) || 'Unknown').trim() || 'Unknown';
+      const rollName = this.getRollDisplayName(rawAssignmentKey);
+      if (!assignmentIndexByKey.has(rawAssignmentKey)) {
+        assignmentIndexByKey.set(rawAssignmentKey, nextIndex++);
       }
-      const assignmentIndex = assignmentIndexByRoll.get(rollName) ?? 0;
+      const assignmentIndex = assignmentIndexByKey.get(rawAssignmentKey) ?? 0;
 
       const entryBounds = this.extractAllSerialBounds(entry);
       let bounds = entryBounds;
@@ -1406,7 +1407,7 @@ export class HologramMonthlyReportComponent implements OnInit {
 
       for (const b of bounds) {
         const range = `${b.from || '-'}-${b.to || '-'}`;
-        const key = `${rollName}|${range}`;
+        const key = `${rawAssignmentKey}|${range}`;
         if (seen.has(key)) {
           continue;
         }
