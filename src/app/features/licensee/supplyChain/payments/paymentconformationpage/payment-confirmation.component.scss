@@ -107,6 +107,54 @@
   border-color: #fed7aa;
 }
 
+.excise-card {
+  background: linear-gradient(145deg, #f7fbff 0%, #eef4ff 100%);
+  border-color: #bfd8ff;
+
+  .wallet-summary-icon {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .wallet-summary-tag {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+  }
+
+  .wallet-summary-balance {
+    color: #1d4ed8;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
+.education-card {
+  background: linear-gradient(145deg, #f2fffb 0%, #ebfff8 100%);
+  border-color: #a7f3d0;
+
+  .wallet-summary-icon {
+    background: #ccfbf1;
+    color: #0f766e;
+  }
+
+  .wallet-summary-tag {
+    background: #ccfbf1;
+    border-color: #99f6e4;
+    color: #115e59;
+  }
+
+  .wallet-summary-balance {
+    color: #0e7490;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
 .view-hover {
   cursor: pointer;
   position: relative;
