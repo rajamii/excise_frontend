@@ -177,7 +177,12 @@
           <tr class="register-row">
             <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td class="ref-number">
-              <span class="ref-text">{{ item.referenceNo }}</span>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="ref-text">{{ item.referenceNo }}</span>
+                @if (isRevalidationApprovedByCommissioner(item)) {
+                  <span class="badge revalidated-badge">REVALIDATED</span>
+                }
+              </div>
             </td>
             <td class="submission-date">
               <span class="date-text">{{ item.submissionDate }}</span>

@@ -8,11 +8,15 @@ import { SupplyChainService } from '../../services/supplychain.service';
 import { CancellationRequestComponent } from '../../cancellation-request/cancellation-request.component';
 import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 interface TableData {
   id?: number;
   referenceNo: string;
   submissionDate: string;
+  submissionDateRaw?: string;
+  approvalDateRaw?: string;
   distilleryName: string;
   status: string;
   amount: string;
@@ -63,6 +67,7 @@ export class RequisitionComponent implements OnInit {
   // Data properties
   requisitionData: TableData[] = [];
   filteredRequisitionData: TableData[] = [];
+  private revalidationApprovedDateByRef: Record<string, string> = {};
 
   // Filter properties
   requisitionDateFilter: string = '';
@@ -127,8 +132,12 @@ export class RequisitionComponent implements OnInit {
   loadData(): void {
     console.log('DEBUG: Loading requisition data...');
 
-    this.enaRequisitionService.getRequisitions().subscribe({
-      next: (response: any) => {
+    forkJoin({
+      requisitions: this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))),
+      revalidations: this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])))
+    }).subscribe({
+      next: ({ requisitions, revalidations }: { requisitions: any; revalidations: any[] }) => {
+        const response = requisitions;
         console.log('DEBUG: Raw requisition response:', response);
 
         // Handle array, DRF paginated `{ results }`, and `{ data }` envelopes.
@@ -140,6 +149,8 @@ export class RequisitionComponent implements OnInit {
         } else if (response?.data && Array.isArray(response.data)) {
           data = response.data;
         }
+
+        this.revalidationApprovedDateByRef = this.buildRevalidationApprovedDateIndex(revalidations || []);
 
         this.requisitionData = (data || []).map((item: any) => {
           // Format date properly
@@ -159,6 +170,8 @@ export class RequisitionComponent implements OnInit {
             id: item.id,
             referenceNo: item.ourRefNo || item.our_ref_no || item.referenceNo || item.ref_no || 'N/A',
             submissionDate: formattedDate,
+            submissionDateRaw: dateVal || '',
+            approvalDateRaw: item.approvalDate || item.approval_date || '',
             distilleryName: item.liftedFromDistilleryName || item.lifted_from_distillery_name || item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
             status: item.status || 'PENDING',
             amount: item.amount || item.paymentAmount || item.payment_amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
@@ -213,6 +226,7 @@ export class RequisitionComponent implements OnInit {
         // Show empty state or error message
         this.requisitionData = [];
         this.filteredRequisitionData = [];
+        this.revalidationApprovedDateByRef = {};
       }
     });
   }
@@ -496,6 +510,96 @@ export class RequisitionComponent implements OnInit {
   shouldShowPermitSlip(item: TableData): boolean {
     return item.status.toLowerCase().includes('approved') ||
       item.status.toLowerCase().includes('issued');
+  }
+
+  isRevalidationApprovedByCommissioner(item: TableData): boolean {
+    const refKey = this.normalizeRefToken(item.referenceNo);
+    return Boolean(refKey && this.revalidationApprovedDateByRef[refKey]);
+  }
+
+  getRevalidationExtensionRange(item: TableData): string {
+    if (!this.isRevalidationApprovedByCommissioner(item)) {
+      return '-';
+    }
+
+    const refKey = this.normalizeRefToken(item.referenceNo);
+    const fromDate =
+      this.parseDate(item.approvalDateRaw) ||
+      this.parseDate(this.revalidationApprovedDateByRef[refKey]) ||
+      this.parseDate(item.submissionDateRaw) ||
+      this.parseDate(item.submissionDate);
+
+    if (!fromDate) {
+      return '-';
+    }
+
+    const toDate = new Date(fromDate);
+    toDate.setDate(toDate.getDate() + 45);
+    return `${this.formatDisplayDate(fromDate)} to ${this.formatDisplayDate(toDate)}`;
+  }
+
+  private parseDate(value: string | undefined): Date | null {
+    if (!value) {
+      return null;
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private formatDisplayDate(date: Date): string {
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).replace(/ /g, '-');
+  }
+
+  private buildRevalidationApprovedDateIndex(rows: any[]): Record<string, string> {
+    const index: Record<string, string> = {};
+    for (const row of rows || []) {
+      const status = this.normalizeStageToken(row?.status);
+      const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
+      const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
+      const approved =
+        status.includes('approvedrevalidationbycommissioner') ||
+        stageName.includes('approvedrevalidationbycommissioner') ||
+        statusCode === 'rv09';
+
+      if (!approved) {
+        continue;
+      }
+
+      const rawRef =
+        row?.our_ref_no ||
+        row?.ourRefNo ||
+        row?.referenceNo ||
+        row?.ref_no ||
+        '';
+      const refKey = this.normalizeRefToken(rawRef);
+      if (!refKey) {
+        continue;
+      }
+
+      const approvedOn =
+        row?.approved_at ||
+        row?.approvedAt ||
+        row?.updated_at ||
+        row?.updatedAt ||
+        row?.revalidation_date ||
+        row?.revalidationDate ||
+        row?.created_at ||
+        row?.createdAt ||
+        '';
+
+      if (approvedOn) {
+        index[refKey] = approvedOn;
+      }
+    }
+    return index;
+  }
+
+  private normalizeRefToken(value: any): string {
+    return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
   }
 
   canShowRequisitionPaymentSlip(item: TableData): boolean {

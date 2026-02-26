@@ -206,6 +206,11 @@
             text-align: center;
           }
 
+          &.revalidation-extension {
+            width: 200px;
+            text-align: center;
+          }
+
           &.amount {
             width: 140px;
             text-align: center;
@@ -324,6 +329,16 @@
                 font-weight: 700;
                 color: #059669;
                 font-size: 1rem;
+              }
+            }
+
+            &.revalidation-extension {
+              text-align: center;
+
+              .date-text {
+                font-weight: 600;
+                color: #1f2937;
+                font-size: 0.85rem;
               }
             }
 

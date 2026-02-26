@@ -56,7 +56,7 @@
       }
       
       .ref-number {
-        width: 12%;
+        width: 14%;
       }
       
       .submission-date {
@@ -430,6 +430,17 @@
         font-weight: 600;
         color: #495057;
         display: block;
+      }
+
+      .revalidated-badge {
+        background: #ffe8cc;
+        color: #b45309;
+        border: 1px solid #f5c58a;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        border-radius: 999px;
+        padding: 0.2rem 0.45rem;
       }
     }
 
