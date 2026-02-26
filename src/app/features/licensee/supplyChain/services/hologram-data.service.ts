@@ -41,6 +41,8 @@ export interface HologramProcurement {
   workflow?: number;
   currentStage?: number;
   carton_details?: any[];
+  arrivalDate?: string;
+  arrival_date?: string;
   editHistory?: {
     editedBy: string;
     editedDate: string;

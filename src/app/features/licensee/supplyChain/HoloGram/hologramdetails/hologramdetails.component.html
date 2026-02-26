@@ -608,8 +608,9 @@
                         </div>
                         <div class="info-card modern-card">
                             <div class="card-label">ARRIVAL DATE:</div>
-                            <div class="card-value">{{ selectedRecordForRollDetails.arrivedDate ?
-                                (selectedRecordForRollDetails.arrivedDate | date:'dd MMM yyyy') : 'Not arrived yet' }}
+                            <div class="card-value">{{ getActualArrivalDate({}, selectedRecordForRollDetails) === 'Pending'
+                                ? 'Not arrived yet'
+                                : getActualArrivalDate({}, selectedRecordForRollDetails) }}
                             </div>
                         </div>
                         <div class="info-card modern-card">

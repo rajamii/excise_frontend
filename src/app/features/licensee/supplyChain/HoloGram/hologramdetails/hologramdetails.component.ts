@@ -149,6 +149,20 @@ export class HologramdetailsComponent implements OnInit {
           // Backend might send `carton_details` as a list of assigned cartons.
           // For the main table, we show summary or specific fields.
           // If status is ARRIVED, we might want to show details.
+          const firstDetailWithArrival = Array.isArray(rawDetails)
+            ? rawDetails.find((d: any) => d?.arrivedDate || d?.arrived_date || d?.arrival_date || d?.processedAt || d?.processed_at)
+            : null;
+          const resolvedArrivalDate =
+            (p as any).arrival_date ||
+            (p as any).arrivalDate ||
+            (p as any).arrival_processed_date ||
+            (p as any).updated_at ||
+            firstDetailWithArrival?.arrivedDate ||
+            firstDetailWithArrival?.arrived_date ||
+            firstDetailWithArrival?.arrival_date ||
+            firstDetailWithArrival?.processedAt ||
+            firstDetailWithArrival?.processed_at ||
+            null;
 
           return {
             id: p.id!,
@@ -163,7 +177,7 @@ export class HologramdetailsComponent implements OnInit {
             remarks: p.remarks || `Hologram procurement (${pType})`,
             status: internalStatus,
             approvedDate: p.date,
-            arrivedDate: (p as any).updated_at,
+            arrivedDate: resolvedArrivalDate,
             procurementType: pType,
             carton_details: rawDetails,
             supplyChainData: {
@@ -1348,7 +1362,8 @@ export class HologramdetailsComponent implements OnInit {
       fromSerial: detail.fromSerial || detail.from_serial || 'N/A',
       toSerial: detail.toSerial || detail.to_serial || 'N/A',
       quantity: this.calculateQuantityFromSerials(detail.fromSerial || detail.from_serial, detail.toSerial || detail.to_serial),
-      type: detail.type || this.getHologramType(record)
+      type: detail.type || this.getHologramType(record),
+      arrivedDate: detail.arrivedDate || detail.arrived_date || detail.arrival_date || detail.processedAt || detail.processed_at || null
     }));
   }
 
@@ -1401,40 +1416,35 @@ export class HologramdetailsComponent implements OnInit {
 
   // Get the actual date when officer saved the arrival details
   getActualArrivalDate(roll: any, record: HologramRecord): string {
-    // First check if there's a specific arrival date for this roll/carton
-    if (roll.arrivedDate) {
-      return new Date(roll.arrivedDate).toLocaleDateString('en-GB', {
+    const formatDateTime = (value: any): string => {
+      return new Date(value).toLocaleString('en-GB', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
       });
+    };
+
+    // First check if there's a specific arrival date for this roll/carton
+    if (roll.arrivedDate) {
+      return formatDateTime(roll.arrivedDate);
     }
 
     // Check if there's a general arrival date for the record (when officer saved)
     if (record.arrivedDate) {
-      return new Date(record.arrivedDate).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+      return formatDateTime(record.arrivedDate);
     }
 
     // Check for updated_at timestamp (when the record was last updated by officer)
     if (record.supplyChainData?.updated_at) {
-      return new Date(record.supplyChainData.updated_at).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+      return formatDateTime(record.supplyChainData.updated_at);
     }
 
     // Check for any timestamp indicating when the arrival was processed
     if (record.supplyChainData?.arrival_processed_date) {
-      return new Date(record.supplyChainData.arrival_processed_date).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+      return formatDateTime(record.supplyChainData.arrival_processed_date);
     }
 
     // If no specific date found, return pending
