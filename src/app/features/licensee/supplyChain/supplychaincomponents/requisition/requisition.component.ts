@@ -517,6 +517,14 @@ export class RequisitionComponent implements OnInit {
     return Boolean(refKey && this.revalidationApprovedDateByRef[refKey]);
   }
 
+  getCommissionerApprovalDate(item: TableData): string {
+    if (!this.isCommissionerFinalApproval(item)) {
+      return '-';
+    }
+    const approvedDate = this.parseDate(item.approvalDateRaw);
+    return approvedDate ? this.formatDisplayDate(approvedDate) : '-';
+  }
+
   getRevalidationExtensionRange(item: TableData): string {
     if (!this.isRevalidationApprovedByCommissioner(item)) {
       return '-';

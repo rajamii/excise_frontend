@@ -165,6 +165,7 @@
             <th class="sl-no">Sl. No{{ isCommissioner() ? '.' : 's.' }}</th>
             <th class="ref-number">Ref. No</th>
             <th class="submission-date">{{ isCommissioner() ? 'Submission Date' : 'App. Sub. Date' }}</th>
+            <th class="approval-date">Approval Date</th>
             <th class="distillery-name">{{ isCommissioner() ? 'Licensee Name' : 'Distillery Name' }}</th>
             <th class="status">Status</th>
             <th class="amount">{{ isCommissioner() ? 'Amount' : 'Imp. Pass Fee Amt.' }}</th>
@@ -186,6 +187,9 @@
             </td>
             <td class="submission-date">
               <span class="date-text">{{ item.submissionDate }}</span>
+            </td>
+            <td class="approval-date">
+              <span class="date-text">{{ getCommissionerApprovalDate(item) }}</span>
             </td>
             <td class="distillery-name">
               <span class="company-name">{{ item.distilleryName }}</span>

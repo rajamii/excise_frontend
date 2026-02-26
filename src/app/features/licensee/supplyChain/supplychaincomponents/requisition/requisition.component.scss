@@ -60,15 +60,19 @@
       }
       
       .submission-date {
-        width: 12%;
+        width: 11%;
+      }
+
+      .approval-date {
+        width: 11%;
       }
       
       .distillery-name {
-        width: 25%;
+        width: 22%;
       }
       
       .status {
-        width: 15%;
+        width: 13%;
       }
       
       .amount {
@@ -445,6 +449,13 @@
     }
 
     .submission-date {
+      .date-text {
+        color: #6c757d;
+        display: block;
+      }
+    }
+
+    .approval-date {
       .date-text {
         color: #6c757d;
         display: block;
