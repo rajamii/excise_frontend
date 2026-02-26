@@ -128,314 +128,174 @@
         <table class="table table-hover table-bordered">
           <thead class="table-success">
             <tr>
-              <th>Reference Number</th>
-              <th>BR Amount</th>
-              <th>HOA</th>
+              <th>Txn ID</th>
+              <th>Type</th>
+              <th>Payment For</th>
+              <th>Amount</th>
+              <th>Reference</th>
               <th>Status</th>
-              <th>Action</th>
+              <th>Date/Time</th>
             </tr>
           </thead>
           <tbody>
-            @for (item of requisitionData; track item.id) {
+            @for (item of getPaymentTransactionsFor('requisition'); track item.id) {
             <tr>
-              <td>{{ item.referenceNo }}</td>
-              <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
-              <td>{{ item.hoa }}</td>
-              <td>
-                <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
-              </td>
-              <td>
-                <button class="btn btn-success btn-sm" *ngIf="canPay(item)" (click)="payItem(item)">
-                  <i class="bi bi-credit-card me-1"></i>Pay
-                </button>
-              </td>
+              <td>{{ item.txnId }}</td>
+              <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
+              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td>{{ item.reference }}</td>
+              <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
+            }
+            @if (getPaymentTransactionsFor('requisition').length === 0) {
+            <tr><td colspan="7" class="text-center text-muted py-4">No requisition wallet payment transactions found.</td></tr>
             }
           </tbody>
         </table>
       </div>
       }
-
       <!-- Revalidation Tab -->
       @if (activeTab === 'revalidation') {
       <div class="table-responsive">
         <table class="table table-hover table-bordered">
           <thead class="table-success">
             <tr>
-              <th>Reference Number</th>
-              <th>BR Amount</th>
-              <th>HOA</th>
+              <th>Txn ID</th>
+              <th>Type</th>
+              <th>Payment For</th>
+              <th>Amount</th>
+              <th>Reference</th>
               <th>Status</th>
-              <th>Action</th>
+              <th>Date/Time</th>
             </tr>
           </thead>
           <tbody>
-            @for (item of revalidationData; track item.id) {
+            @for (item of getPaymentTransactionsFor('revalidation'); track item.id) {
             <tr>
-              <td>{{ item.referenceNo }}</td>
-              <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
-              <td>{{ item.hoa }}</td>
-              <td>
-                <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
-              </td>
-              <td>
-                <button class="btn btn-success btn-sm" *ngIf="canPay(item)" (click)="payItem(item)">
-                  <i class="bi bi-credit-card me-1"></i>Pay
-                </button>
-              </td>
+              <td>{{ item.txnId }}</td>
+              <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
+              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td>{{ item.reference }}</td>
+              <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
+            }
+            @if (getPaymentTransactionsFor('revalidation').length === 0) {
+            <tr><td colspan="7" class="text-center text-muted py-4">No revalidation wallet payment transactions found.</td></tr>
             }
           </tbody>
         </table>
       </div>
       }
-
       <!-- Cancellation Tab -->
       @if (activeTab === 'cancellation') {
       <div class="table-responsive">
         <table class="table table-hover table-bordered">
           <thead class="table-success">
             <tr>
-              <th>Reference Number</th>
-              <th>BR Amount</th>
-              <th>HOA</th>
+              <th>Txn ID</th>
+              <th>Type</th>
+              <th>Payment For</th>
+              <th>Amount</th>
+              <th>Reference</th>
               <th>Status</th>
-              <th>Action</th>
+              <th>Date/Time</th>
             </tr>
           </thead>
           <tbody>
-            @for (item of cancellationData; track item.id) {
+            @for (item of getPaymentTransactionsFor('cancellation'); track item.id) {
             <tr>
-              <td>{{ item.referenceNo }}</td>
-              <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
-              <td>{{ item.hoa }}</td>
-              <td>
-                <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
-              </td>
-              <td>
-                <button class="btn btn-success btn-sm" *ngIf="canPay(item)" (click)="payItem(item)">
-                  <i class="bi bi-credit-card me-1"></i>Pay
-                </button>
-              </td>
+              <td>{{ item.txnId }}</td>
+              <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
+              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td>{{ item.reference }}</td>
+              <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
+            }
+            @if (getPaymentTransactionsFor('cancellation').length === 0) {
+            <tr><td colspan="7" class="text-center text-muted py-4">No cancellation wallet payment transactions found.</td></tr>
             }
           </tbody>
         </table>
       </div>
       }
-
       <!-- Transit Permit Tab -->
       @if (activeTab === 'transit') {
-      <div class="alert alert-info mb-3" *ngIf="transitBillNo">
-        <h5><i class="bi bi-info-circle me-2"></i>Transit Permit Data</h5>
-        <p class="mb-0">Showing data for Bill No: <strong>{{ transitBillNo }}</strong></p>
-      </div>
-
       <div class="table-responsive">
         <table class="table table-hover table-bordered">
           <thead class="table-success">
             <tr>
-              <th>Bill No</th>
-              <th>Serial No</th>
-              <th>Quantity</th>
-              <th>Portions</th>
-              <th>NIPS</th>
-              <th>Licensee ID</th>
+              <th>Txn ID</th>
+              <th>Type</th>
+              <th>Payment For</th>
+              <th>Amount</th>
+              <th>Reference</th>
               <th>Status</th>
-              <th>Payment Date</th>
-              <th>Total Bill Amount</th>
-              <th>Action</th>
+              <th>Date/Time</th>
             </tr>
           </thead>
           <tbody>
-            @for (item of transitData; track item.id) {
+            @for (item of getPaymentTransactionsFor('transit'); track item.id) {
             <tr>
-              <td>{{ item.billNumber }}</td>
-              <td>{{ item.serialNo }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ item.portions }}</td>
-              <td>{{ item.nips }}</td>
-              <td>{{ item.licenseeId }}</td>
-              <td>
-                <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
-              </td>
-              <td>{{ item.paymentDate | date:'dd-MMM-yyyy HH:mm:ss' }}</td>
-              <td class="text-end">₹{{ item.totalAmount | number:'1.2-2' }}</td>
-              <td>
-                <button class="btn btn-sm btn-success" *ngIf="item.status === 'Ready for Payment'"
-                  (click)="payAllTransit()">
-                  <i class="bi bi-credit-card me-1"></i>Pay
-                </button>
-                <span *ngIf="item.status !== 'Ready for Payment'" class="text-muted">-</span>
-              </td>
+              <td>{{ item.txnId }}</td>
+              <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
+              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td>{{ item.reference }}</td>
+              <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
+            }
+            @if (getPaymentTransactionsFor('transit').length === 0) {
+            <tr><td colspan="7" class="text-center text-muted py-4">No transit wallet payment transactions found.</td></tr>
             }
           </tbody>
         </table>
       </div>
-
-      <!-- Transit Payment Section -->
-      <div class="row mt-4" *ngIf="showTransitPayment">
-        <div class="col-md-6">
-          <div class="card border-primary">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Bill Summary</h5>
-            </div>
-            <div class="card-body">
-              <div class="d-flex justify-content-between mb-3">
-                <span class="fw-bold">Total Amount (All Heads):</span>
-                <span class="h4 text-primary">₹{{ transitTotalAmount | number:'1.2-2' }}</span>
-              </div>
-              <div class="d-flex justify-content-between mb-3">
-                <span class="fw-bold">Education Cess Total:</span>
-                <span class="h5 text-info">₹{{ transitEducationCess | number:'1.2-2' }}</span>
-              </div>
-              <div class="d-flex justify-content-between mb-3">
-                <span class="fw-bold">Excise Duty Total:</span>
-                <span class="h5 text-warning">₹{{ transitExciseDuty | number:'1.2-2' }}</span>
-              </div>
-              <div class="d-flex justify-content-between mb-3">
-                <span class="fw-bold">Additional Excise Duty Total:</span>
-                <span class="h5 text-danger">₹{{ transitAdditionalExcise | number:'1.2-2' }}</span>
-              </div>
-              <div class="d-flex justify-content-between mb-3">
-                <span class="fw-bold">Number of Items:</span>
-                <span class="h5 text-secondary">{{ transitItemCount }}</span>
-              </div>
-              <div class="d-flex justify-content-between">
-                <span class="fw-bold">Bill Status:</span>
-                <span class="badge bg-success">{{ transitBillStatus }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card border-success">
-            <div class="card-header bg-success text-white">
-              <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Action</h5>
-            </div>
-            <div class="card-body text-center">
-              <p class="text-muted mb-3">Pay for all items in this transit permit</p>
-              <button class="btn btn-lg btn-success w-100" (click)="payAllTransit()">
-                <i class="bi bi-credit-card me-2"></i>PAY ALL ITEMS
-              </button>
-              <small class="text-muted mt-2 d-block">Click to pay for all items in this bill</small>
-            </div>
-          </div>
-        </div>
-      </div>
       }
-
       <!-- Hologram Tab -->
       @if (activeTab === 'hologram') {
-      <!-- Info Alert -->
       <div class="alert alert-info mb-3">
         <h5><i class="bi bi-info-circle me-2"></i>Hologram Payment Information</h5>
-        <p class="mb-0">
-          This section shows hologram requisitions where payment slips have been uploaded.
-          The payment amount shown (₹0.15 per hologram) is the additional wallet payment required from your
-          Excise/Additional Wallet Balance.
-        </p>
+        <p class="mb-0">This section shows wallet payment transactions for hologram only.</p>
       </div>
-
       <div class="table-responsive">
         <table class="table table-hover table-bordered">
           <thead class="table-success">
             <tr>
-              <th>Reference Number</th>
-              <th>Company Name</th>
+              <th>Txn ID</th>
               <th>Type</th>
-              <th>Total Quantity</th>
-              <th>Hologram Fee (₹0.15/unit)</th>
-              <th>HOA</th>
+              <th>Payment For</th>
+              <th>Amount</th>
+              <th>Reference</th>
               <th>Status</th>
-              <th>Action</th>
+              <th>Date/Time</th>
             </tr>
           </thead>
           <tbody>
-            @for (item of hologramData; track item.id) {
-            <tr [id]="'hologram-' + item.referenceNo + '-' + item.procurementType">
-              <td>{{ item.referenceNo }}</td>
-              <td>{{ item.companyName }}</td>
-              <td>
-                <span class="badge text-white" [ngClass]="{
-                        'bg-success': item.procurementType === 'Local',
-                        'bg-dark': item.procurementType === 'Export',
-                        'bg-warning text-dark': item.procurementType === 'Defence'
-                      }">
-                  {{ item.procurementType || 'Local' }}
-                </span>
-              </td>
-              <td class="text-end">{{ item.totalQuantity | number:'1.0-0' }} pieces</td>
-              <td class="text-end">₹{{ item.hologramFee | number:'1.2-2' }}</td>
-              <td>{{ item.hoa }}</td>
-              <td>
-                <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
-              </td>
-              <td>
-                <button class="btn btn-success btn-sm" *ngIf="canPayHologram(item)" (click)="payHologramItem(item)">
-                  <i class="bi bi-credit-card me-1"></i>Pay
-                </button>
-                <span class="badge bg-success" *ngIf="item.status === 'Payment Successful'">
-                  <i class="bi bi-check-circle me-1"></i>Paid
-                </span>
-              </td>
+            @for (item of getPaymentTransactionsFor('hologram'); track item.id) {
+            <tr>
+              <td>{{ item.txnId }}</td>
+              <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
+              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td>{{ item.reference }}</td>
+              <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
             }
-            @if (hologramData.length === 0) {
-            <tr>
-              <td colspan="8" class="text-center text-muted py-4">
-                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                <p class="mb-0">No hologram payments pending. Upload payment slips from the Supply Chain dashboard to
-                  make payments here.</p>
-              </td>
-            </tr>
+            @if (getPaymentTransactionsFor('hologram').length === 0) {
+            <tr><td colspan="7" class="text-center text-muted py-4">No hologram wallet payment transactions found.</td></tr>
             }
           </tbody>
         </table>
       </div>
-
-      <!-- Hologram Payment Summary -->
-      <div class="row mt-4" *ngIf="hologramData.length > 0 && getPendingHologramCount() > 0">
-        <div class="col-md-6">
-          <div class="card border-primary">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Hologram Payment Summary</h5>
-            </div>
-            <div class="card-body">
-              <div class="d-flex justify-content-between mb-3">
-                <span class="fw-bold">Total Hologram Fee:</span>
-                <span class="h4 text-primary">₹{{ getTotalHologramFee() | number:'1.2-2' }}</span>
-              </div>
-              <div class="d-flex justify-content-between mb-3">
-                <span class="fw-bold">Total Quantity :</span>
-                <span class="h5 text-info">{{ getTotalHologramQuantity() | number:'1.2-2' }}</span>
-              </div>
-              <div class="d-flex justify-content-between">
-                <span class="fw-bold">Pending Payments:</span>
-                <span class="badge bg-warning">{{ getPendingHologramCount() }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card border-success">
-            <div class="card-header bg-success text-white">
-              <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Action</h5>
-            </div>
-            <div class="card-body text-center">
-              <p class="text-muted mb-3">Pay for all pending hologram requisitions</p>
-              <button class="btn btn-lg btn-success w-100" (click)="payAllHologram()"
-                [disabled]="getPendingHologramCount() === 0">
-                <i class="bi bi-credit-card me-2"></i>PAY ALL HOLOGRAM FEES
-              </button>
-              <small class="text-muted mt-2 d-block">Click to pay for all pending hologram requisitions</small>
-            </div>
-          </div>
-        </div>
-      </div>
       }
-
       <!-- Wallet Recharge Tab -->
       @if (activeTab === 'recharge') {
       <div class="table-responsive">
@@ -874,6 +734,10 @@
     </div>
   </div>
 </div>
+
+
+
+
 
 
 

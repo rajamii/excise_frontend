@@ -732,35 +732,41 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
         console.log('Fetched Hologram Procurements for Payment:', data);
-
-        // Filter for items approved by commissioner
-        // Also include items already paid if we want to show history, but usually payment page shows pending
-        // Backend "Approved by Commissioner" -> "Payment Pending" effectively
-
-        this.hologramData = data
+        this.hologramData = (data || [])
           .filter(item => this.isForActiveLicense(item))
-          .filter(item => item.status === 'Approved by Commissioner' || item.status === 'Payment Completed')
           .map(item => {
-            const totalQty = (Number(item.localQty) || 0) + (Number(item.exportQty) || 0) + (Number(item.defenceQty) || 0);
-            const hologramFee = totalQty * 0.15; // Example fee calculation
+            const localQty = Number((item as any).localQty ?? (item as any).local_qty) || 0;
+            const exportQty = Number((item as any).exportQty ?? (item as any).export_qty) || 0;
+            const defenceQty = Number((item as any).defenceQty ?? (item as any).defence_qty) || 0;
+            const totalQty = localQty + exportQty + defenceQty;
+            const hologramFee = totalQty * 0.15;
             const paymentDetails: any = (item as any).paymentDetails || (item as any).payment_details || {};
             const paidAt = paymentDetails?.paid_at ? new Date(paymentDetails.paid_at) : null;
+            const referenceNo =
+              (item as any).refNo ||
+              (item as any).ref_no ||
+              (item as any).ourRefNo ||
+              (item as any).our_ref_no ||
+              (item as any).referenceNo ||
+              '';
+            const normalizedStatus = (item as any).status || (item as any).paymentStatus || (item as any).payment_status || 'Pending';
 
             return {
               id: item.id?.toString() || '',
-              referenceNo: item.refNo || '',
-              companyName: item.licenseeName || item.manufacturingUnit || '',
-              procurementType: 'Security Hologram', // Default or derived
+              referenceNo,
+              companyName: (item as any).licenseeName || (item as any).manufacturingUnit || (item as any).distillery_name || '',
+              procurementType: 'Security Hologram',
               totalQuantity: totalQty,
-              hologramFee: hologramFee,
+              hologramFee,
               hoa: '0039-00-800-45-01',
-              status: item.status || '',
-              localQty: Number(item.localQty) || 0,
-              exportQty: Number(item.exportQty) || 0,
-              defenceQty: Number(item.defenceQty) || 0,
+              status: normalizedStatus,
+              localQty,
+              exportQty,
+              defenceQty,
               paymentDate: paidAt
             } as HologramItem;
-          });
+          })
+          .filter(item => !!item.referenceNo);
       },
       error: (err) => console.error('Error fetching hologram payments:', err)
     });
@@ -1302,13 +1308,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   // Hologram payment methods
   canPayHologram(item: HologramItem): boolean {
-    const payableStatuses = [
-      'ApprovedByCommissioner',
-      'Approved by Commissioner',
-      'ApprovedByJointCommissioner'
-    ];
-    // Don't pay if 0 amount, unless it's a test? keeping fee check.
-    return payableStatuses.includes(item.status);
+    const token = String(item?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const payableTokens = new Set([
+      'approvedbycommissioner',
+      'approvedbyjointcommissioner'
+    ]);
+    return payableTokens.has(token);
   }
 
   payHologramItem(item: HologramItem): void {
@@ -1447,6 +1452,31 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   getPendingHologramCount(): number {
     return this.hologramData.filter(item => this.canPayHologram(item)).length;
+  }
+
+  getHologramWalletPaymentHistory(): HistoryItem[] {
+    return this.getPaymentTransactionsFor('hologram');
+  }
+
+  getPaymentTransactionsFor(tab: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram'): HistoryItem[] {
+    const keywordByTab: Record<'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram', string> = {
+      requisition: 'requisition',
+      revalidation: 'revalidation',
+      cancellation: 'cancellation',
+      transit: 'transit',
+      hologram: 'hologram'
+    };
+    const keyword = keywordByTab[tab];
+
+    return this.historyData.filter((item) => {
+      const paymentFor = String(item?.paymentFor || '').toLowerCase();
+      const type = String(item?.type || '').toLowerCase();
+      const isDebitLike =
+        type.includes('utilization') ||
+        type.includes('utilized') ||
+        type.includes('debit');
+      return paymentFor.includes(keyword) && isDebitLike;
+    });
   }
 }
 
