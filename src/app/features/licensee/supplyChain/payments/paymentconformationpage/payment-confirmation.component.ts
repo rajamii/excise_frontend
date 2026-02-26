@@ -120,6 +120,7 @@ const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
 })
 export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
   activeTab = 'requisition';
+  private autoSelectLastPaidTabOnLoad = false;
   isBreweryUser = false;
   walletModuleLabel = 'Distillery';
   showRetryButton = false;
@@ -217,6 +218,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     // Get query parameters
     this.route.queryParams.subscribe(params => {
+      const requestedTab = String(params['tab'] || '').trim().toLowerCase();
+      const source = String(params['source'] || '').trim().toLowerCase();
+      this.autoSelectLastPaidTabOnLoad =
+        !requestedTab ||
+        requestedTab === 'recharge' ||
+        source.includes('wallet');
+
       if (params['billNo']) {
         this.transitBillNo = params['billNo'];
         this.setActiveTab('transit');
@@ -353,6 +361,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       this.applyWalletSummary(response.summary);
       this.applyWalletRecharge(response.recharge);
       this.applyWalletHistory(response.history);
+      this.applyLastPaidTabAsDefault();
     });
   }
 
@@ -1477,6 +1486,39 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         type.includes('debit');
       return paymentFor.includes(keyword) && isDebitLike;
     });
+  }
+
+  private applyLastPaidTabAsDefault(): void {
+    if (!this.autoSelectLastPaidTabOnLoad) {
+      return;
+    }
+
+    const targetTab = this.getLastPaidModuleTab();
+    if (targetTab && this.canShowTab(targetTab)) {
+      this.activeTab = targetTab;
+    }
+
+    this.autoSelectLastPaidTabOnLoad = false;
+  }
+
+  private getLastPaidModuleTab(): 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | '' {
+    const txns = [...this.historyData]
+      .filter((item) => {
+        const type = String(item?.type || '').toLowerCase();
+        return type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+      })
+      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+
+    for (const txn of txns) {
+      const paymentFor = String(txn?.paymentFor || '').toLowerCase();
+      if (paymentFor.includes('hologram')) return 'hologram';
+      if (paymentFor.includes('transit')) return 'transit';
+      if (paymentFor.includes('cancellation')) return 'cancellation';
+      if (paymentFor.includes('revalidation')) return 'revalidation';
+      if (paymentFor.includes('requisition')) return 'requisition';
+    }
+
+    return '';
   }
 }
 
