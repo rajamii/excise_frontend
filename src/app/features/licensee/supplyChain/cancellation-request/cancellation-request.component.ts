@@ -11,6 +11,7 @@ interface Permit {
   number: string;
   amount: number;
   isCancelled: boolean;
+  isSelected?: boolean;
 }
 
 interface RequisitionData {
@@ -133,8 +134,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         if (cancelData) {
           if (Array.isArray(cancelData)) {
             cancelData.forEach(c => {
-              if (c.cancelled_permit_number) {
-                c.cancelled_permit_number.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
+              const cancelledRaw = c.cancelled_permit_numbers || c.cancelled_permit_number || '';
+              if (cancelledRaw) {
+                cancelledRaw.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
               }
             });
           } else {
@@ -142,16 +144,45 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
           }
         }
         console.log('Generating permits with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermits(this.requisitionData.requisitonNumberOfPermits || this.requisitionData.requisiton_number_of_permits, cancelledNumbers);
+        this.generatePermitsFromRequisition(cancelledNumbers);
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading cancellations:', error);
         console.log('Generating permits (fallback) with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermits(this.requisitionData.requisitonNumberOfPermits, new Set());
+        this.generatePermitsFromRequisition(new Set());
         this.isLoading = false;
       }
     });
+  }
+
+  private generatePermitsFromRequisition(cancelledSet: Set<string>) {
+    const detailsNumbersRaw =
+      this.requisitionData?.details_permits_number ||
+      this.requisitionData?.detailsPermitsNumber ||
+      '';
+
+    const explicitPermitNumbers = String(detailsNumbersRaw)
+      .split(',')
+      .map((num: string) => num.trim())
+      .filter((num: string) => num.length > 0);
+
+    if (explicitPermitNumbers.length > 0) {
+      this.permits = explicitPermitNumbers.map((num: string) => ({
+        number: num,
+        amount: 1000,
+        isCancelled: cancelledSet.has(num),
+        isSelected: false
+      }));
+      return;
+    }
+
+    const totalCount =
+      this.requisitionData?.requisitonNumberOfPermits ||
+      this.requisitionData?.requisiton_number_of_permits ||
+      0;
+
+    this.generatePermits(totalCount, cancelledSet);
   }
 
   generatePermits(totalCount: any, cancelledSet: Set<string>) {
@@ -164,7 +195,8 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.permits.push({
         number: numStr,
         amount: 1000,
-        isCancelled: cancelledSet.has(numStr)
+        isCancelled: cancelledSet.has(numStr),
+        isSelected: false
       });
     }
   }
@@ -193,6 +225,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   // Helper to handle selection since template is not fully binded in the snippet provided
   togglePermit(permit: Permit, event: any) {
     if (permit.isCancelled) return;
+    permit.isSelected = !!event.target.checked;
 
     // Update newlySelectedPermits for submission logic
     if (event.target.checked) {

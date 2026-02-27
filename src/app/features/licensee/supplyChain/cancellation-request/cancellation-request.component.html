@@ -32,12 +32,12 @@
             type="checkbox"
             [id]="'chkPermit_' + permit.number"
             [value]="permit.number"
-            [checked]="permit.isCancelled"
+            [checked]="permit.isCancelled || permit.isSelected"
             [disabled]="permit.isCancelled"
             (change)="togglePermit(permit, $event)"
           />
           <label class="form-check-label" [for]="'chkPermit_' + permit.number">
-            Permit {{ permit.number }} - ₹{{ permit.amount }}
+            Permit No. {{ permit.number }} - ₹{{ permit.amount }}
             <span *ngIf="permit.isCancelled">(Cancelled)</span>
           </label>
         </div>
@@ -234,3 +234,4 @@
   [class.show]="showDeclarationModal || showSuccessModal"
   [style.display]="showDeclarationModal || showSuccessModal ? 'block' : 'none'"
 ></div>
+
