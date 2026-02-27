@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AccountService } from '../../../../../core/services/account.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../services/supplychain.service';
@@ -91,6 +91,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   // Services
   public accountService = inject(AccountService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private enaRequisitionService = inject(EnaRequisitionService);
   private supplyChainService = inject(SupplyChainService);
   private unifiedActionsService = inject(UnifiedActionsService);
@@ -129,6 +130,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   allArrivalDetailsRows: ArrivalDetailsRow[] = [];
   filteredArrivalDetailsRows: ArrivalDetailsRow[] = [];
   private sidebarGuardTimer: ReturnType<typeof setInterval> | null = null;
+  private pendingArrivalRef: string = '';
+  private pendingArrivalId: number | null = null;
+  private autoArrivalHandled = false;
 
   // Pagination
   currentPage: number = 1;
@@ -141,6 +145,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.cleanupSidebarLockState();
+    this.captureArrivalAutoOpenRequest();
     this.loadData();
   }
 
@@ -288,6 +293,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         });
 
         this.applyFilters();
+        this.tryAutoOpenArrivalModal();
       },
       error: (error) => {
         console.error('Error loading requisitions:', error);
@@ -296,6 +302,46 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.filteredRequisitionData = [];
         this.revalidationApprovedDateByRef = {};
       }
+    });
+  }
+
+  private captureArrivalAutoOpenRequest(): void {
+    const shouldOpen = this.route.snapshot.queryParamMap.get('openArrival') === '1';
+    if (!shouldOpen) return;
+
+    const ref = String(this.route.snapshot.queryParamMap.get('ref') || '').trim();
+    const idRaw = String(this.route.snapshot.queryParamMap.get('id') || '').trim();
+    const idParsed = Number(idRaw);
+
+    this.pendingArrivalRef = ref.toUpperCase();
+    this.pendingArrivalId = Number.isFinite(idParsed) && idParsed > 0 ? idParsed : null;
+    this.autoArrivalHandled = false;
+  }
+
+  private tryAutoOpenArrivalModal(): void {
+    if (this.autoArrivalHandled) return;
+    if (!this.route.snapshot.queryParamMap.get('openArrival')) return;
+    if (!this.requisitionData.length) return;
+
+    const targetById = this.pendingArrivalId != null
+      ? this.requisitionData.find((row) => Number(row.id || 0) === this.pendingArrivalId)
+      : null;
+
+    const targetByRef = !targetById && this.pendingArrivalRef
+      ? this.requisitionData.find((row) => String(row.referenceNo || '').trim().toUpperCase() === this.pendingArrivalRef)
+      : null;
+
+    const target = targetById || targetByRef;
+    if (!target) return;
+
+    this.autoArrivalHandled = true;
+    this.openArrivalModal(target);
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { openArrival: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
     });
   }
 
@@ -410,6 +456,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   canCancelRequisition(item: TableData): boolean {
+    const backendEligibility = item.canInitiateCancellation ?? item.canCancel;
+    if (backendEligibility !== undefined && backendEligibility !== null) {
+      return Boolean(backendEligibility);
+    }
+
     // Check if cancellation is allowed for this requisition
     const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
     const isFinalApproved = this.isCommissionerFinalApproval(item);

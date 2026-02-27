@@ -1025,6 +1025,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return;
         }
 
+        if (action === 'UPDATE_ARRIVAL') {
+            this.navigateToRequisitionArrivalUpdate(event.item);
+            return;
+        }
+
         this.unifiedActionsService.executeAction(action, event.item, this.applicationType, context).subscribe({
             next: (result: any) => {
                 const isSuccess = result?.success !== false;
@@ -1283,26 +1288,67 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         const actions: string[] = [];
 
-        // For requisitions, check if cancel button should be shown
+        // For requisitions, use backend-driven eligibility flags.
         if (this.applicationType === 'requisition') {
-            const status = (this.applicationData.status || '').toLowerCase();
-            const currentStageName = (this.applicationData.currentStageName || '').toLowerCase();
-            
-            // Check if it's approved (final stage)
-            const isApproved = status.includes('approved') || 
-                             currentStageName.includes('approved') ||
-                             status === 'approved';
-            
-            // Check if not already cancelled
-            const isCancelled = status.includes('cancel') || currentStageName.includes('cancel');
-            
-            // For licensee users, show cancel button if approved and not cancelled
-            if (this.getUserContext() === 'licensee' && isApproved && !isCancelled) {
+            const isLicensee = this.getUserContext() === 'licensee';
+            const canRequestCancellation = this.canRequestRequisitionCancellation();
+            const canUpdateArrival = this.canUpdateRequisitionArrival();
+
+            if (isLicensee && canRequestCancellation) {
                 actions.push('REQUEST_CANCELLATION');
+            }
+            if (isLicensee && canUpdateArrival) {
+                actions.push('UPDATE_ARRIVAL');
             }
         }
 
         return actions.length > 0 ? actions : null;
+    }
+
+    private canRequestRequisitionCancellation(): boolean {
+        const data: any = this.applicationData as any;
+        if (!data) return false;
+
+        const backendFlag = data.can_initiate_cancellation ?? data.canInitiateCancellation ?? data.canCancel;
+        if (backendFlag !== undefined && backendFlag !== null) {
+            return Boolean(backendFlag);
+        }
+
+        const isFinal = Boolean(data.current_stage_is_final ?? data.currentStageIsFinal ?? false);
+        if (!isFinal) return false;
+
+        const status = String(data.status || '').toLowerCase();
+        const stage = String(data.currentStageName || data.current_stage_name || '').toLowerCase();
+        const rejected = status.includes('reject') || stage.includes('reject');
+        const cancelled = status.includes('cancel') || stage.includes('cancel');
+        return !rejected && !cancelled;
+    }
+
+    private canUpdateRequisitionArrival(): boolean {
+        const data: any = this.applicationData as any;
+        if (!data) return false;
+
+        const isFinal = Boolean(data.current_stage_is_final ?? data.currentStageIsFinal ?? false);
+        if (!isFinal) return false;
+
+        const status = String(data.status || '').toLowerCase();
+        const stage = String(data.currentStageName || data.current_stage_name || '').toLowerCase();
+        const rejected = status.includes('reject') || stage.includes('reject');
+        const cancelled = status.includes('cancel') || stage.includes('cancel');
+        return !rejected && !cancelled;
+    }
+
+    private navigateToRequisitionArrivalUpdate(item: any): void {
+        const ref = String(item?.referenceNo || item?.our_ref_no || item?.refNo || '').trim();
+        const id = String(item?.id || '').trim();
+        this.router.navigate(['/dashboard'], {
+            queryParams: {
+                section: 'requisition',
+                ref: ref || undefined,
+                id: id || undefined,
+                openArrival: '1'
+            }
+        });
     }
 
     // Type check methods for template

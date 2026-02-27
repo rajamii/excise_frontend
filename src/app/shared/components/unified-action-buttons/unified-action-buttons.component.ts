@@ -236,6 +236,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'RAISE_OBJECTION',
       'REJECT',
       'REQUEST_CANCELLATION',
+      'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
       'SUBMIT'
@@ -252,6 +253,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'RAISE_OBJECTION',
       'REJECT',
       'REQUEST_CANCELLATION',
+      'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
       'SUBMIT'
@@ -314,6 +316,10 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
       case 'REQUEST_CANCELLATION':
         this.handleCancellationRequest();
+        break;
+
+      case 'UPDATE_ARRIVAL':
+        this.actionClicked.emit({ action: 'UPDATE_ARRIVAL', item: this.item });
         break;
 
       case 'REQUEST_REVALIDATION':
@@ -700,6 +706,17 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         icon: 'cancel',
         color: 'warn',
         tooltip: 'Request Cancellation'
+      });
+    }
+
+    if (include.includes('UPDATE_ARRIVAL') && !result.some(config => config.action === 'UPDATE_ARRIVAL')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding UPDATE_ARRIVAL fallback');
+      result.push({
+        action: 'UPDATE_ARRIVAL',
+        label: 'Update Arrival',
+        icon: 'local_shipping',
+        color: 'accent',
+        tooltip: 'Update Bulk Liter Arrival'
       });
     }
 
