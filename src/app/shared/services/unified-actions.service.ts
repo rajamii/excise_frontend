@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -831,7 +831,8 @@ export class UnifiedActionsService {
             context_data: {
               action: mode.toUpperCase()
             }
-          }
+          },
+          { headers: new HttpHeaders({ Accept: 'application/json' }) }
         ).pipe(
           map(() => ({ success: true, message: `${mode.toUpperCase()} action completed successfully` })),
           catchError((error) => of({
@@ -886,7 +887,10 @@ export class UnifiedActionsService {
   }
 
   private fetchWorkflowNextStages(applicationId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/next-stages/`).pipe(
+    return this.http.get<any[]>(
+      `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/next-stages/`,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    ).pipe(
       map((res: any) => Array.isArray(res) ? res : []),
       catchError(() => of([]))
     );

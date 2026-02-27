@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -622,12 +622,20 @@ export class LicenseApplicationService {
 
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   updateSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   searchApplications(filters: any): Observable<any> {
@@ -743,12 +751,20 @@ export class LicenseApplicationService {
 
   submitNewLicenseSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   updateNewLicenseSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   searchNewLicenseApplications(filters: any): Observable<any> {

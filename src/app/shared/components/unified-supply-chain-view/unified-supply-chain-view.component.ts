@@ -1047,7 +1047,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             },
             error: (error: any) => {
                 console.error('Action failed:', error);
-                this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
+                this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
             }
         });
     }
@@ -1081,7 +1081,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         }
                     },
                     error: (error: any) => {
-                        this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
+                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
                     }
                 });
             },
@@ -1105,7 +1105,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         }
                     },
                     error: (error: any) => {
-                        this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
+                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
                     }
                 });
             }
@@ -1205,12 +1205,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                             this.snackBar.open(approveResult?.message || 'Approval failed after site enquiry submit.', 'Close', { duration: 4500 });
                         },
                         error: (error: any) => {
-                            this.snackBar.open(error?.message || 'Approval failed after site enquiry submit.', 'Close', { duration: 4500 });
+                            this.snackBar.open(this.extractHttpErrorMessage(error, 'Approval failed after site enquiry submit.'), 'Close', { duration: 4500 });
                         }
                     });
                 },
                 error: (error: any) => {
-                    const message = error?.error?.detail || error?.error?.message || 'Failed to submit site enquiry form.';
+                    const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.');
                     if (String(message).toLowerCase().includes('already submitted')) {
                         this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
                             next: (approveResult: any) => {
@@ -1225,7 +1225,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                                 this.snackBar.open(approveResult?.message || 'Approval failed.', 'Close', { duration: 4500 });
                             },
                             error: (approveError: any) => {
-                                this.snackBar.open(approveError?.message || 'Approval failed.', 'Close', { duration: 4500 });
+                                this.snackBar.open(this.extractHttpErrorMessage(approveError, 'Approval failed.'), 'Close', { duration: 4500 });
                             }
                         });
                         return;
@@ -1245,6 +1245,35 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             item?.id ??
             ''
         ).trim();
+    }
+
+    private extractHttpErrorMessage(error: any, fallback: string): string {
+        const detail = error?.error?.detail;
+        if (typeof detail === 'string' && detail.trim()) {
+            return detail.trim();
+        }
+
+        const message = error?.error?.message;
+        if (typeof message === 'string' && message.trim()) {
+            return message.trim();
+        }
+
+        const rawError = error?.error;
+        if (typeof rawError === 'string') {
+            if (rawError.trim().toLowerCase().startsWith('<!doctype')) {
+                return 'Server returned an HTML error page instead of API JSON. Please check backend endpoint/permission for Site Enquiry.';
+            }
+            if (rawError.trim()) {
+                return rawError.trim();
+            }
+        }
+
+        const topMessage = error?.message;
+        if (typeof topMessage === 'string' && topMessage.toLowerCase().includes('unexpected token')) {
+            return 'Server returned an invalid JSON response (HTML page). Please check backend endpoint/permission for Site Enquiry.';
+        }
+
+        return fallback;
     }
 
     getIncludeActionsForDetailView(): string[] | null {
