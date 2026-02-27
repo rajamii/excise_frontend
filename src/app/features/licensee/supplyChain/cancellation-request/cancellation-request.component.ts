@@ -127,13 +127,16 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   fetchExistingCancellations() {
-    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?our_ref_no=${this.referenceNo}`).subscribe({
+    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?requisition_ref_no=${this.referenceNo}`).subscribe({
       next: (cancelData) => {
         console.log('Cancellation Data:', cancelData);
         const cancelledNumbers = new Set<string>();
         if (cancelData) {
           if (Array.isArray(cancelData)) {
             cancelData.forEach(c => {
+              if (!this.isCommissionerApprovedCancellation(c)) {
+                return;
+              }
               const cancelledRaw = c.cancelled_permit_numbers || c.cancelled_permit_number || '';
               if (cancelledRaw) {
                 cancelledRaw.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
@@ -154,6 +157,13 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         this.isLoading = false;
       }
     });
+  }
+
+  private isCommissionerApprovedCancellation(record: any): boolean {
+    const status = String(record?.status || '').toLowerCase();
+    const stageName = String(record?.current_stage_name || '').toLowerCase();
+    const merged = `${status} ${stageName}`;
+    return merged.includes('approved') && merged.includes('commissioner');
   }
 
   private generatePermitsFromRequisition(cancelledSet: Set<string>) {
@@ -229,9 +239,13 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
     // Update newlySelectedPermits for submission logic
     if (event.target.checked) {
-      this.newlySelectedPermits.push(permit.number);
+      if (!this.newlySelectedPermits.includes(permit.number)) {
+        this.newlySelectedPermits.push(permit.number);
+      }
       // Also update selectedPermits for display
-      this.selectedPermits.push(permit.number);
+      if (!this.selectedPermits.includes(permit.number)) {
+        this.selectedPermits.push(permit.number);
+      }
     } else {
       this.newlySelectedPermits = this.newlySelectedPermits.filter(n => n !== permit.number);
       // Remove from selectedPermits
@@ -351,5 +365,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   getCancellationCharges(): number {
     return this.newlySelectedPermits.length * 1000;
+  }
+
+  isPermitSelectionLocked(): boolean {
+    return this.permits.length > 0 && this.permits.every((p) => p.isCancelled);
   }
 }

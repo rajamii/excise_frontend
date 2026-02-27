@@ -1306,8 +1306,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (!data) return false;
 
         const backendFlag = data.can_initiate_cancellation ?? data.canInitiateCancellation ?? data.canCancel;
-        if (backendFlag === true) {
-            return true;
+        if (backendFlag !== undefined && backendFlag !== null) {
+            return Boolean(backendFlag);
         }
 
         const status = String(data.status || '').toLowerCase();

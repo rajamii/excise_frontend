@@ -21,9 +21,10 @@
         class="btn btn-outline-primary dropdown-toggle w-100"
         type="button"
         data-bs-toggle="dropdown"
+        [disabled]="isPermitSelectionLocked()"
         aria-expanded="false"
       >
-        Select Permits
+        {{ isPermitSelectionLocked() ? 'All permits already cancelled' : 'Select Permits' }}
       </button>
       <div class="dropdown-menu p-2 w-100">
         <div *ngFor="let permit of permits" class="form-check">
@@ -108,7 +109,11 @@
   <!-- Action Buttons -->
   <div class="d-flex justify-content-end gap-3 mt-4">
     <button class="btn btn-outline-secondary" (click)="goBack()">Cancel</button>
-    <button class="btn btn-danger" [disabled]="newlySelectedPermits.length === 0" (click)="showDeclaration()">
+    <button
+      *ngIf="!isPermitSelectionLocked()"
+      class="btn btn-danger"
+      [disabled]="newlySelectedPermits.length === 0"
+      (click)="showDeclaration()">
       Submit Cancellation Request
     </button>
   </div>
