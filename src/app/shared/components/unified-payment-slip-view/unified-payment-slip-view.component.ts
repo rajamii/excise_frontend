@@ -52,6 +52,8 @@ interface RequisitionSlipRow {
   status: string;
   quantity_bl: number;
   number_of_permits: string | number;
+  permit_numbers?: string;
+  transaction_id?: string;
   purpose: string;
   amount: number;
 }
@@ -907,15 +909,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           distillery_name: String(row.liftedFromDistilleryName || row.lifted_from_distillery_name || row.distilleryName || row.distillery_name || '-'),
           status: String(row.status || '-'),
           quantity_bl: Number(row.totalbl || row.total_bl || row.quantity || 0),
-          number_of_permits: String(
-            row.details_permits_number || 
-            row.detailsPermitsNumber || 
-            row.requisiton_number_of_permits || 
-            row.requisitonNumberOfPermits || 
-            row.numberOfPermits || 
-            row.number_of_permits || 
-            '1'
-          ),
+          number_of_permits: this.resolveRequisitionPermitsDisplay(row),
+          permit_numbers: this.resolveRequisitionPermitSequence(row),
+          transaction_id: String(row.transaction_id || row.transactionId || ''),
           purpose: String(row.purpose_name || row.purposeName || row.purpose || '-'),
           amount: Number(
             row.paymentAmount ||
@@ -1000,7 +996,51 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         if (Number.isFinite(paidAmount) && paidAmount > 0 && this.requisitionRow) {
           this.requisitionRow.amount = paidAmount;
         }
+        if (this.requisitionRow) {
+          const txnId = String(
+            latest?.transaction_id ||
+            latest?.transactionId ||
+            latest?.wallet_transaction_id ||
+            latest?.walletTransactionId ||
+            ''
+          ).trim();
+          if (txnId) {
+            this.requisitionRow.transaction_id = txnId;
+          }
+        }
       });
+  }
+
+  private resolveRequisitionPermitSequence(row: any): string {
+    return String(
+      row?.details_permits_number ||
+      row?.detailsPermitsNumber ||
+      row?.permit_numbers ||
+      row?.permitNumbers ||
+      ''
+    ).trim();
+  }
+
+  private resolveRequisitionPermitsDisplay(row: any): string {
+    const sequence = this.resolveRequisitionPermitSequence(row);
+    const explicitCount = Number(
+      row?.requisiton_number_of_permits ||
+      row?.requisitonNumberOfPermits ||
+      row?.numberOfPermits ||
+      row?.number_of_permits ||
+      0
+    );
+
+    let count = Number.isFinite(explicitCount) && explicitCount > 0 ? explicitCount : 0;
+    if (!count && sequence) {
+      count = sequence
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0).length;
+    }
+    if (!count) count = 1;
+
+    return sequence ? `${count} (${sequence})` : String(count);
   }
 
   private getLicenseeIdFromSession(): string {
