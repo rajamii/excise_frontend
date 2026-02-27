@@ -173,7 +173,6 @@
             <th class="distillery-name">{{ isCommissioner() ? 'Licensee Name' : 'Distillery Name' }}</th>
             <th class="status">Status</th>
             <th class="amount">{{ isCommissioner() ? 'Amount' : 'Imp. Pass Fee Amt.' }}</th>
-            <th class="priority" *ngIf="isCommissioner()">Priority</th>
             <th class="actions">Actions</th>
           </tr>
         </thead>
@@ -211,11 +210,6 @@
             </td>
             <td class="amount">
               <span class="amount-value">₹{{ item.amount }}</span>
-            </td>
-            <td class="priority" *ngIf="isCommissioner()">
-              <span class="priority-badge priority-{{ getPriority(item) }}">
-                {{ getPriority(item) | uppercase }}
-              </span>
             </td>
             <td class="actions" (click)="$event.stopPropagation()" style="position: relative; z-index: 1000;">
               <!-- Unified Action Buttons Component -->
