@@ -385,14 +385,6 @@ export class UnifiedActionsService {
     }
 
     switch (itemType) {
-      case 'requisition':
-        return this.enaRequisitionService.performAction(item.id, 'APPROVE'); // Payment submission
-
-      case 'transit':
-        return this.supplyChainService.performTransitPermitAction(item.id, 'PAY', 'Payment submitted');
-
-      case 'hologram':
-        return this.performHologramWorkflowAction(item, 'pay', 'Payment completed', 'Payment completed');
       case 'new-license': {
         const applicationId = this.getWorkflowApplicationId(item);
         if (!applicationId) {
@@ -404,22 +396,104 @@ export class UnifiedActionsService {
         );
       }
 
-      default:
-        // Navigate to payment page within SPA
-        this.router.navigate(['/dashboard'], {
-          queryParams: {
-            section: 'payment-confirmation',
-            ref: item.referenceNo,
-            type: itemType,
-            action: 'pay'
-          }
+      case 'requisition':
+      case 'revalidation':
+      case 'cancellation':
+      case 'transit':
+      case 'hologram': {
+        const walletTab = this.mapWalletTabForItemType(itemType);
+        this.navigateToWalletForPayment(item, itemType, walletTab);
+        return of({
+          success: true,
+          message: `Redirected to wallet (${walletTab}) for payment`
         });
+      }
+
+      default:
+        const walletTab = this.mapWalletTabForItemType(itemType);
+        this.navigateToWalletForPayment(item, itemType, walletTab);
 
         return of({
           success: true,
-          message: 'Navigated to payment page within SPA'
+          message: `Redirected to wallet (${walletTab}) for payment`
         });
     }
+  }
+
+  private mapWalletTabForItemType(itemType: string): 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' {
+    const normalized = String(itemType || '').toLowerCase().trim();
+    if (normalized === 'transit-permit') {
+      return 'transit';
+    }
+    if (normalized === 'hologram-request') {
+      return 'hologram';
+    }
+    if (normalized === 'revalidation') {
+      return 'revalidation';
+    }
+    if (normalized === 'cancellation') {
+      return 'cancellation';
+    }
+    if (normalized === 'hologram') {
+      return 'hologram';
+    }
+    if (normalized === 'transit') {
+      return 'transit';
+    }
+    return 'requisition';
+  }
+
+  private navigateToWalletForPayment(
+    item: any,
+    itemType: string,
+    tab: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram'
+  ): void {
+    const referenceNo = this.getItemReferenceNo(item);
+    const paymentAmount = this.getItemPaymentAmount(item);
+    const licenseeId = this.extractFirstNonEmpty(item, [
+      'licenseeId',
+      'licensee_id',
+      'licenseId',
+      'license_id'
+    ]);
+
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'wallet',
+        tab,
+        id: item?.id,
+        type: itemType,
+        ref: referenceNo || undefined,
+        referenceNo: referenceNo || undefined,
+        amount: Number.isFinite(paymentAmount) ? paymentAmount : undefined,
+        licenseeId: licenseeId || undefined,
+        action: 'pay',
+        source: 'supply-chain-view'
+      }
+    });
+  }
+
+  private getItemPaymentAmount(item: any): number {
+    const candidates = [
+      item?.paymentAmount,
+      item?.payment_amount,
+      item?.amount,
+      item?.brAmount,
+      item?.br_amount,
+      item?.totalAmount,
+      item?.total_amount,
+      item?.totalCancellationAmount,
+      item?.total_cancellation_amount
+    ];
+
+    for (const value of candidates) {
+      const numericValue = Number(value);
+      if (Number.isFinite(numericValue) && numericValue > 0) {
+        return numericValue;
+      }
+    }
+
+    return 0;
   }
 
   private handleRequestRevalidationAction(item: any, itemType: string, context?: string): Observable<ActionResult> {

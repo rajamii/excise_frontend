@@ -138,6 +138,19 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="shouldShowPendingPaymentInTab('requisition')">
+              <td>-</td>
+              <td>Pending Payment</td>
+              <td>{{ getPendingPaymentModuleLabel() }}</td>
+              <td class="text-end">Rs {{ getPendingPaymentAmount() | number:'1.2-2' }}</td>
+              <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
+              <td><span class="badge bg-warning text-dark">Pending</span></td>
+              <td class="text-end">
+                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+              </td>
+            </tr>
             @for (item of getPaymentTransactionsFor('requisition'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
@@ -172,6 +185,19 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="shouldShowPendingPaymentInTab('revalidation')">
+              <td>-</td>
+              <td>Pending Payment</td>
+              <td>{{ getPendingPaymentModuleLabel() }}</td>
+              <td class="text-end">Rs {{ getPendingPaymentAmount() | number:'1.2-2' }}</td>
+              <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
+              <td><span class="badge bg-warning text-dark">Pending</span></td>
+              <td class="text-end">
+                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+              </td>
+            </tr>
             @for (item of getPaymentTransactionsFor('revalidation'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
@@ -206,6 +232,19 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="shouldShowPendingPaymentInTab('cancellation')">
+              <td>-</td>
+              <td>Pending Payment</td>
+              <td>{{ getPendingPaymentModuleLabel() }}</td>
+              <td class="text-end">Rs {{ getPendingPaymentAmount() | number:'1.2-2' }}</td>
+              <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
+              <td><span class="badge bg-warning text-dark">Pending</span></td>
+              <td class="text-end">
+                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+              </td>
+            </tr>
             @for (item of getPaymentTransactionsFor('cancellation'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
@@ -240,6 +279,19 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="shouldShowPendingPaymentInTab('transit')">
+              <td>-</td>
+              <td>Pending Payment</td>
+              <td>{{ getPendingPaymentModuleLabel() }}</td>
+              <td class="text-end">Rs {{ getPendingPaymentAmount() | number:'1.2-2' }}</td>
+              <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
+              <td><span class="badge bg-warning text-dark">Pending</span></td>
+              <td class="text-end">
+                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+              </td>
+            </tr>
             @for (item of getPaymentTransactionsFor('transit'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
@@ -275,6 +327,19 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="shouldShowPendingPaymentInTab('hologram')">
+              <td>-</td>
+              <td>Pending Payment</td>
+              <td>{{ getPendingPaymentModuleLabel() }}</td>
+              <td class="text-end">Rs {{ getPendingPaymentAmount() | number:'1.2-2' }}</td>
+              <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
+              <td><span class="badge bg-warning text-dark">Pending</span></td>
+              <td class="text-end">
+                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+              </td>
+            </tr>
             @for (item of getPaymentTransactionsFor('hologram'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>

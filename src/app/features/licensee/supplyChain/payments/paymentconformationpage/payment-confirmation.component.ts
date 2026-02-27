@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, of, Observable } from 'rxjs';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import {
@@ -102,6 +103,15 @@ interface MyLicenseRow {
 }
 
 type WalletModuleType = 'distillery' | 'brewery' | '';
+type PaymentModuleTab = 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
+
+interface PendingWalletPaymentContext {
+  id: string;
+  tab: PaymentModuleTab;
+  itemType: string;
+  referenceNo: string;
+  amount: number;
+}
 
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   excise: '',
@@ -119,7 +129,14 @@ const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   styleUrls: ['./payment-confirmation.component.scss']
 })
 export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
+  private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
+  private readonly isBrowser = typeof window !== 'undefined';
   activeTab = 'requisition';
+  private walletDataLoaded = false;
+  pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
+  private hasHandledPendingWalletPayment = false;
+  private isHandlingPendingWalletPayment = false;
   private autoSelectLastPaidTabOnLoad = false;
   isBreweryUser = false;
   walletModuleLabel = 'Distillery';
@@ -201,6 +218,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   rechargeData: RechargeItem[] = [];
 
   historyData: HistoryItem[] = [];
+  private optimisticPaymentHistory: HistoryItem[] = [];
 
   hologramData: HologramItem[] = [];
 
@@ -210,10 +228,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     private receiptNumberService: ReceiptNumberService,
     private hologramService: HologramDataService,
     private supplyChainService: SupplyChainService,
+    private enaRequisitionService: EnaRequisitionService,
     private paymentIntegrationService: PaymentIntegrationService
   ) { }
 
   ngOnInit(): void {
+    this.loadOptimisticPaymentsFromStorage();
+    this.loadPendingPaymentContextFromStorage();
     this.initializeWalletContextAndLoadData();
 
     // Get query parameters
@@ -233,6 +254,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       if (params['tab']) {
         this.setActiveTab(params['tab']);
       }
+
+      this.capturePendingWalletPaymentContext(params);
+
       // Handle hologram payment navigation
       if (params['refNo'] && params['action'] === 'makePayment') {
         // Only default to hologram if no tab is specified or if tab is hologram
@@ -325,6 +349,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private loadWalletDataFromBackend(licenseeId: string): void {
+    this.walletDataLoaded = false;
     this.activeLicenseeId = licenseeId;
     this.exciseWalletBalance = 0;
     this.educationCessBalance = 0;
@@ -361,6 +386,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       this.applyWalletSummary(response.summary);
       this.applyWalletRecharge(response.recharge);
       this.applyWalletHistory(response.history);
+      this.walletDataLoaded = true;
       this.applyLastPaidTabAsDefault();
     });
   }
@@ -577,7 +603,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       hoa: this.pickAny(row, ['head_of_account', 'headOfAccount'], '-'),
       amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
       date: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
-      status: this.pickAny(row, ['payment_status', 'paymentStatus'], 'Success')
+      status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'))
     }));
   }
 
@@ -626,11 +652,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         paymentFor,
         amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
         reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
-        status: this.pickAny(row, ['payment_status', 'paymentStatus'], 'Success'),
+        status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success')),
         dateTime: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
         licenseeId: this.pickAny(row, ['licensee_id', 'licenseeId'], this.activeLicenseeId || '-')
       } as HistoryItem;
     });
+
+    this.reconcileOptimisticPayments();
   }
 
   private resolvePaymentForType(row: any): string {
@@ -650,7 +678,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
       return 'Transit';
     }
-    if (sourceModule.includes('requisition') || txnId.startsWith('REQ-') || reference.startsWith('NHP/')) {
+    if (sourceModule.includes('requisition') || txnId.startsWith('REQ-') || reference.startsWith('NHP/') || reference.startsWith('REQ/')) {
       return 'Requisition';
     }
     if (sourceModule.includes('wallet')) {
@@ -685,6 +713,21 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private toDate(value: any): Date {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? new Date() : date;
+  }
+
+  private normalizeTransactionStatus(value: any): string {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'Payment Successful';
+    if (raw === 's' || raw.includes('success') || raw.includes('completed')) {
+      return 'Payment Successful';
+    }
+    if (raw === 'p' || raw.includes('pending')) {
+      return 'Pending';
+    }
+    if (raw === 'f' || raw.includes('fail') || raw.includes('error')) {
+      return 'Failed';
+    }
+    return String(value);
   }
 
   private inferWalletTypeFromHoa(hoa: string): string {
@@ -917,6 +960,346 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
     this.activeTab = requested;
+  }
+
+  private normalizePaymentModuleTab(value: string): PaymentModuleTab | null {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'requisition') return 'requisition';
+    if (normalized === 'revalidation') return 'revalidation';
+    if (normalized === 'cancellation') return 'cancellation';
+    if (normalized === 'transit' || normalized === 'transit-permit') return 'transit';
+    if (normalized === 'hologram' || normalized === 'hologram-request') return 'hologram';
+    return null;
+  }
+
+  private capturePendingWalletPaymentContext(params: any): void {
+    const action = String(params?.['action'] || '').trim().toLowerCase();
+    if (action !== 'pay') {
+      if (!this.pendingWalletPaymentContext) {
+        this.loadPendingPaymentContextFromStorage();
+      }
+      return;
+    }
+
+    const id = String(params?.['id'] || '').trim();
+    const tab =
+      this.normalizePaymentModuleTab(String(params?.['tab'] || '')) ||
+      this.normalizePaymentModuleTab(String(params?.['type'] || ''));
+    const amount = this.toNumber(params?.['amount']);
+
+    if (!id || !tab || amount <= 0) {
+      this.pendingWalletPaymentContext = null;
+      this.hasHandledPendingWalletPayment = false;
+      return;
+    }
+
+    this.pendingWalletPaymentContext = {
+      id,
+      tab,
+      itemType: String(params?.['type'] || tab),
+      referenceNo: String(params?.['referenceNo'] || params?.['ref'] || params?.['refNo'] || '-'),
+      amount
+    };
+    this.hasHandledPendingWalletPayment = false;
+    this.setActiveTab(tab);
+    this.persistPendingPaymentContextToStorage();
+  }
+
+  hasPendingWalletPaymentContext(): boolean {
+    return !!this.pendingWalletPaymentContext;
+  }
+
+  shouldShowPendingPaymentInTab(tab: PaymentModuleTab): boolean {
+    const context = this.pendingWalletPaymentContext;
+    if (!context) return false;
+    return context.tab === tab && this.activeTab === tab;
+  }
+
+  getPendingPaymentModuleLabel(): string {
+    const tab = this.pendingWalletPaymentContext?.tab;
+    if (!tab) return '-';
+    return this.getModuleLabelForTab(tab);
+  }
+
+  getPendingPaymentAmount(): number {
+    return Number(this.pendingWalletPaymentContext?.amount || 0);
+  }
+
+  getPendingPaymentAvailableBalance(): number {
+    const tab = this.pendingWalletPaymentContext?.tab;
+    if (!tab) return 0;
+    return this.getAvailableBalanceForModuleTab(tab);
+  }
+
+  getPendingPaymentShortfall(): number {
+    const required = this.getPendingPaymentAmount();
+    const available = this.getPendingPaymentAvailableBalance();
+    return Math.max(0, required - available);
+  }
+
+  proceedPendingWalletPayment(): void {
+    if (!this.walletDataLoaded || this.hasHandledPendingWalletPayment || this.isHandlingPendingWalletPayment) {
+      return;
+    }
+
+    const context = this.pendingWalletPaymentContext;
+    if (!context) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    this.isHandlingPendingWalletPayment = true;
+    this.setActiveTab(context.tab);
+
+    const availableBalance = this.getAvailableBalanceForModuleTab(context.tab);
+    const requiredAmount = Number(context.amount || 0);
+
+    if (requiredAmount <= 0) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    if (availableBalance < requiredAmount) {
+      const shortage = Math.max(0, requiredAmount - availableBalance);
+      Swal.fire({
+        icon: 'error',
+        title: 'Insufficient Wallet Balance',
+        html:
+          `<div style="text-align:left">` +
+          `<div><strong>Module:</strong> ${this.getModuleLabelForTab(context.tab)}</div>` +
+          `<div><strong>Reference:</strong> ${context.referenceNo}</div>` +
+          `<div><strong>Required:</strong> Rs ${requiredAmount.toFixed(2)}</div>` +
+          `<div><strong>Available:</strong> Rs ${availableBalance.toFixed(2)}</div>` +
+          `<div><strong>Shortfall:</strong> Rs ${shortage.toFixed(2)}</div>` +
+          `</div>`,
+        showCancelButton: true,
+        confirmButtonText: 'Add Money',
+        cancelButtonText: 'Close'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.setActiveTab('recharge');
+        }
+        this.resetPendingPaymentAttemptState();
+      });
+      return;
+    }
+
+    this.executeWalletPaymentFromContext(context).subscribe({
+      next: () => {
+        this.addOptimisticPaymentHistoryRow(context);
+        Swal.fire({
+          icon: 'success',
+          title: 'Payment Successful',
+          text: `${this.getModuleLabelForTab(context.tab)} payment completed successfully.`
+        });
+        this.refreshWalletData();
+        this.loadCancellationDataFromApi();
+        this.loadHologramDataFromApi();
+        this.finishPendingWalletPaymentHandling();
+      },
+      error: (err) => {
+        const errorMessage =
+          err?.error?.error ||
+          err?.error?.detail ||
+          err?.error?.message ||
+          err?.message ||
+          'Payment failed';
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Payment Failed',
+          text: String(errorMessage)
+        });
+        this.resetPendingPaymentAttemptState();
+      }
+    });
+  }
+
+  private addOptimisticPaymentHistoryRow(context: PendingWalletPaymentContext): void {
+    const now = new Date();
+    const row: HistoryItem = {
+      id: `local-${now.getTime()}`,
+      txnId: `LOCAL-${now.getTime()}`,
+      userId: '-',
+      type: 'Wallet Utilization',
+      paymentFor: this.getModuleLabelForTab(context.tab),
+      amount: Number(context.amount || 0),
+      reference: context.referenceNo || '-',
+      status: 'Payment Successful',
+      dateTime: now,
+      licenseeId: this.activeLicenseeId || '-'
+    };
+    this.optimisticPaymentHistory = [row, ...this.optimisticPaymentHistory];
+    this.persistOptimisticPaymentsToStorage();
+  }
+
+  private reconcileOptimisticPayments(): void {
+    if (!this.optimisticPaymentHistory.length) return;
+
+    const serverKeys = new Set(
+      this.historyData.map((item) =>
+        `${String(item.paymentFor || '').toLowerCase()}|${String(item.reference || '').toLowerCase()}|${Number(item.amount || 0).toFixed(2)}`
+      )
+    );
+
+    this.optimisticPaymentHistory = this.optimisticPaymentHistory.filter((item) => {
+      const key = `${String(item.paymentFor || '').toLowerCase()}|${String(item.reference || '').toLowerCase()}|${Number(item.amount || 0).toFixed(2)}`;
+      return !serverKeys.has(key);
+    });
+    this.persistOptimisticPaymentsToStorage();
+  }
+
+  private loadOptimisticPaymentsFromStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      const raw = sessionStorage.getItem(this.optimisticPaymentStorageKey);
+      if (!raw) {
+        this.optimisticPaymentHistory = [];
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      const rows = Array.isArray(parsed) ? parsed : [];
+      this.optimisticPaymentHistory = rows.map((item: any) => ({
+        ...item,
+        dateTime: this.toDate(item?.dateTime)
+      }));
+    } catch {
+      this.optimisticPaymentHistory = [];
+    }
+  }
+
+  private persistOptimisticPaymentsToStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      sessionStorage.setItem(this.optimisticPaymentStorageKey, JSON.stringify(this.optimisticPaymentHistory));
+    } catch {
+      // no-op
+    }
+  }
+
+  private loadPendingPaymentContextFromStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      const raw = sessionStorage.getItem(this.pendingPaymentStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+
+      const tab = this.normalizePaymentModuleTab(String(parsed?.tab || ''));
+      const id = String(parsed?.id || '').trim();
+      const amount = Number(parsed?.amount || 0);
+      if (!tab || !id || !Number.isFinite(amount) || amount <= 0) return;
+
+      this.pendingWalletPaymentContext = {
+        id,
+        tab,
+        itemType: String(parsed?.itemType || tab),
+        referenceNo: String(parsed?.referenceNo || '-'),
+        amount
+      };
+      this.hasHandledPendingWalletPayment = false;
+      this.setActiveTab(tab);
+    } catch {
+      // no-op
+    }
+  }
+
+  private persistPendingPaymentContextToStorage(): void {
+    if (!this.isBrowser || !this.pendingWalletPaymentContext) return;
+    try {
+      sessionStorage.setItem(this.pendingPaymentStorageKey, JSON.stringify(this.pendingWalletPaymentContext));
+    } catch {
+      // no-op
+    }
+  }
+
+  private clearPendingPaymentContextFromStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      sessionStorage.removeItem(this.pendingPaymentStorageKey);
+    } catch {
+      // no-op
+    }
+  }
+
+  goToAddMoneyForPendingPayment(): void {
+    const context = this.pendingWalletPaymentContext;
+    if (!context) return;
+
+    if (context.tab === 'hologram') {
+      this.addMoney('hologram');
+      return;
+    }
+
+    this.setActiveTab('recharge');
+    this.addMoney(this.isBreweryUser ? 'brewery' : 'excise');
+  }
+
+  closePendingWalletPaymentDetails(): void {
+    this.finishPendingWalletPaymentHandling();
+  }
+
+  private executeWalletPaymentFromContext(context: PendingWalletPaymentContext): Observable<any> {
+    switch (context.tab) {
+      case 'requisition':
+        return this.enaRequisitionService.performAction(Number(context.id), 'APPROVE');
+      case 'revalidation':
+        return this.supplyChainService.performRevalidationAction(context.id, 'APPROVE', 'licensee');
+      case 'cancellation':
+        return this.supplyChainService.performCancellationAction(context.id, 'SubmitPayslip', 'licensee');
+      case 'transit':
+        return this.supplyChainService.performTransitPermitAction(context.id, 'PAY', 'licensee');
+      case 'hologram':
+        return this.hologramService.performAction('procurement', Number(context.id), 'pay', 'Payment Completed via Wallet');
+      default:
+        return of({});
+    }
+  }
+
+  private getAvailableBalanceForModuleTab(tab: PaymentModuleTab): number {
+    if (tab === 'hologram') {
+      return this.hologramWalletBalance;
+    }
+
+    // Transit, requisition, revalidation and cancellation can involve non-hologram heads.
+    return this.getTotalWalletBalance();
+  }
+
+  private getModuleLabelForTab(tab: PaymentModuleTab): string {
+    if (tab === 'requisition') return 'Requisition';
+    if (tab === 'revalidation') return 'Revalidation';
+    if (tab === 'cancellation') return 'Cancellation';
+    if (tab === 'transit') return 'Transit Permit';
+    return 'Hologram';
+  }
+
+  private finishPendingWalletPaymentHandling(): void {
+    this.hasHandledPendingWalletPayment = true;
+    this.isHandlingPendingWalletPayment = false;
+    this.pendingWalletPaymentContext = null;
+    this.clearPendingPaymentContextFromStorage();
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        action: null,
+        id: null,
+        amount: null,
+        type: null,
+        ref: null,
+        refNo: null,
+        referenceNo: null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    }).catch(() => {
+      // no-op
+    });
+  }
+
+  private resetPendingPaymentAttemptState(): void {
+    this.hasHandledPendingWalletPayment = false;
+    this.isHandlingPendingWalletPayment = false;
   }
 
   getStatusClass(status: string): string {
@@ -1477,7 +1860,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     };
     const keyword = keywordByTab[tab];
 
-    return this.historyData.filter((item) => {
+    const activeLicensee = String(this.activeLicenseeId || '').trim().toLowerCase();
+    const mergedRows = [...this.optimisticPaymentHistory, ...this.historyData].filter((item) => {
+      if (!activeLicensee) return true;
+      const rowLicensee = String(item?.licenseeId || '').trim().toLowerCase();
+      return !rowLicensee || rowLicensee === activeLicensee;
+    });
+
+    return mergedRows.filter((item) => {
       const paymentFor = String(item?.paymentFor || '').toLowerCase();
       const type = String(item?.type || '').toLowerCase();
       const isDebitLike =

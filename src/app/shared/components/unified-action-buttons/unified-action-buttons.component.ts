@@ -356,7 +356,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       html: `
         <div class="payment-details">
           <p><strong>Application:</strong> ${this.item.referenceNo}</p>
-          <p><strong>Amount:</strong> ₹${this.item['brAmount'] || 'N/A'}</p>
+          <p><strong>Amount:</strong> Rs ${this.item['brAmount'] || 'N/A'}</p>
           <p><strong>Type:</strong> ${this.itemType}</p>
         </div>
       `,
@@ -368,13 +368,33 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       cancelButtonColor: '#6c757d'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: 'Payment Successful!',
-          text: 'Your payment has been processed successfully.',
-          icon: 'success',
-          confirmButtonText: 'OK'
+        this.unifiedActionsService.executeAction('PAY', this.item, this.itemType, this.context).subscribe({
+          next: (response) => {
+            if (response?.success === false) {
+              Swal.fire({
+                title: 'Payment Redirection Failed',
+                text: response?.message || 'Unable to open wallet payment page.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+              });
+            }
+            // Success path intentionally shows no extra modal:
+            // user is redirected to wallet section by UnifiedActionsService.
+          },
+          error: (error) => {
+            const message =
+              error?.error?.detail ||
+              error?.error?.message ||
+              error?.message ||
+              'Unable to open wallet payment page.';
+            Swal.fire({
+              title: 'Payment Redirection Failed',
+              text: message,
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+          }
         });
-        this.actionClicked.emit({ action: 'PAY', item: this.item });
       }
     });
   }
@@ -962,4 +982,5 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     return 'default';
   }
 }
+
 
