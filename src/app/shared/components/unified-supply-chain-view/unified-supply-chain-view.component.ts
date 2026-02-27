@@ -1292,13 +1292,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (this.applicationType === 'requisition') {
             const isLicensee = this.getUserContext() === 'licensee';
             const canRequestCancellation = this.canRequestRequisitionCancellation();
-            const canUpdateArrival = this.canUpdateRequisitionArrival();
 
             if (isLicensee && canRequestCancellation) {
                 actions.push('REQUEST_CANCELLATION');
-            }
-            if (isLicensee && canUpdateArrival) {
-                actions.push('UPDATE_ARRIVAL');
             }
         }
 
@@ -1310,32 +1306,28 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (!data) return false;
 
         const backendFlag = data.can_initiate_cancellation ?? data.canInitiateCancellation ?? data.canCancel;
-        if (backendFlag !== undefined && backendFlag !== null) {
-            return Boolean(backendFlag);
+        if (backendFlag === true) {
+            return true;
         }
 
-        const isFinal = Boolean(data.current_stage_is_final ?? data.currentStageIsFinal ?? false);
-        if (!isFinal) return false;
-
         const status = String(data.status || '').toLowerCase();
         const stage = String(data.currentStageName || data.current_stage_name || '').toLowerCase();
         const rejected = status.includes('reject') || stage.includes('reject');
         const cancelled = status.includes('cancel') || stage.includes('cancel');
-        return !rejected && !cancelled;
-    }
+        if (rejected || cancelled) return false;
 
-    private canUpdateRequisitionArrival(): boolean {
-        const data: any = this.applicationData as any;
-        if (!data) return false;
+        const approvedLike =
+            status.includes('approved') ||
+            stage.includes('approved') ||
+            status.includes('payment') ||
+            stage.includes('payment') ||
+            status.includes('forwarded') ||
+            stage.includes('forwarded');
+
+        if (approvedLike) return true;
 
         const isFinal = Boolean(data.current_stage_is_final ?? data.currentStageIsFinal ?? false);
-        if (!isFinal) return false;
-
-        const status = String(data.status || '').toLowerCase();
-        const stage = String(data.currentStageName || data.current_stage_name || '').toLowerCase();
-        const rejected = status.includes('reject') || stage.includes('reject');
-        const cancelled = status.includes('cancel') || stage.includes('cancel');
-        return !rejected && !cancelled;
+        return isFinal;
     }
 
     private navigateToRequisitionArrivalUpdate(item: any): void {
