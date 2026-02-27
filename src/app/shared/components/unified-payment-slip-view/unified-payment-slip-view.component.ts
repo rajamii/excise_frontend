@@ -917,7 +917,16 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
             '1'
           ),
           purpose: String(row.purpose_name || row.purposeName || row.purpose || '-'),
-          amount: Number(row.amount || row.totalAmount || row.total_amount || row.totalbl || 0)
+          amount: Number(
+            row.paymentAmount ||
+            row.payment_amount ||
+            row.amount ||
+            row.brAmount ||
+            row.br_amount ||
+            row.totalAmount ||
+            row.total_amount ||
+            0
+          )
         };
 
         console.log('✅ REQUISITION SLIP: Loaded successfully:', this.requisitionRow);
@@ -925,6 +934,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         if (!this.referenceNo) {
           this.referenceNo = this.requisitionRow.reference_no;
         }
+
+        // Always prefer actual wallet debit amount for this requisition reference.
+        this.enrichRequisitionAmountFromWallet(row, this.requisitionRow.reference_no);
         this.isLoading = false;
       },
       error: (error) => {
@@ -933,6 +945,79 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  private enrichRequisitionAmountFromWallet(sourceRow: any, referenceNo: string): void {
+    const ref = String(referenceNo || '').trim();
+    if (!ref) return;
+
+    const licenseeId =
+      String(
+        sourceRow?.licensee_id ||
+        sourceRow?.licenseeId ||
+        this.getLicenseeIdFromSession()
+      ).trim();
+
+    if (!licenseeId) return;
+
+    const historyUrl = `${environment.apiBaseUrl}/transactional/payment/wallet/${licenseeId}/history/`;
+    this.http.get<any>(historyUrl, { params: { limit: '500' } })
+      .pipe(catchError(() => of({ results: [] })))
+      .subscribe((response) => {
+        const rows = Array.isArray(response)
+          ? response
+          : (Array.isArray(response?.results) ? response.results : []);
+
+        const targetRef = ref.toUpperCase();
+        const candidates = rows.filter((row: any) => {
+          const rowRef = String(row?.reference_no || row?.referenceNo || '').trim().toUpperCase();
+          if (!rowRef || rowRef !== targetRef) return false;
+
+          const entryType = String(row?.entry_type || row?.entryType || '').toLowerCase();
+          const type = String(row?.transaction_type || row?.transactionType || '').toLowerCase();
+          const isDebitLike =
+            entryType.includes('debit') ||
+            entryType.includes('utilized') ||
+            type.includes('debit');
+
+          const sourceModule = String(row?.source_module || row?.sourceModule || '').toLowerCase();
+          const txnId = String(row?.transaction_id || row?.transactionId || '').toUpperCase();
+          const looksRequisition = sourceModule.includes('requisition') || txnId.startsWith('REQ-') || rowRef.startsWith('REQ/');
+
+          return isDebitLike && looksRequisition;
+        });
+
+        if (!candidates.length) return;
+
+        candidates.sort((a: any, b: any) => {
+          const at = new Date(a?.created_at || a?.createdAt || 0).getTime();
+          const bt = new Date(b?.created_at || b?.createdAt || 0).getTime();
+          return bt - at;
+        });
+
+        const latest = candidates[0];
+        const paidAmount = Number(latest?.amount || 0);
+        if (Number.isFinite(paidAmount) && paidAmount > 0 && this.requisitionRow) {
+          this.requisitionRow.amount = paidAmount;
+        }
+      });
+  }
+
+  private getLicenseeIdFromSession(): string {
+    try {
+      const raw = sessionStorage.getItem('currentUser');
+      if (!raw) return '';
+      const parsed = JSON.parse(raw);
+      return String(
+        parsed?.licensee_id ||
+        parsed?.licenseeId ||
+        parsed?.licensee_id_no ||
+        parsed?.licenseeIdNo ||
+        ''
+      ).trim();
+    } catch {
+      return '';
+    }
   }
 
   private loadRevalidationSlip(): void {
