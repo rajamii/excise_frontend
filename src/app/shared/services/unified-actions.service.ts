@@ -522,47 +522,24 @@ export class UnifiedActionsService {
     if (!referenceNo) {
       return of({
         success: false,
-        message: 'Reference number is required to submit cancellation'
+        message: 'Reference number is required to open cancellation request'
       });
     }
 
     const requisitionId = item?.id ? String(item.id) : '';
-    const submit$ = requisitionId
-      ? this.enaRequisitionService.getRequisitionById(requisitionId).pipe(
-          switchMap((requisition: any) => this.submitCancellationFromRequisition(referenceNo, requisition, item))
-        )
-      : this.submitCancellationFromRequisition(referenceNo, null, item);
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'requisition',
+        openCancellationRef: referenceNo,
+        openCancellationId: requisitionId || undefined,
+        source: 'licensee-dashboard'
+      }
+    });
 
-    return submit$.pipe(
-      map((response: any) => {
-        this.router.navigate(['/dashboard'], {
-          queryParams: {
-            section: 'cancellation',
-            ref: referenceNo,
-            type: 'requisition'
-          }
-        });
-
-        return {
-          success: true,
-          message: response?.message || 'Cancellation request submitted successfully'
-        };
-      }),
-      catchError((error: any) => {
-        const message =
-          error?.error?.details
-            ? `Cancellation failed: ${JSON.stringify(error.error.details)}`
-            : error?.error?.error ||
-              error?.error?.message ||
-              error?.message ||
-              'Failed to submit cancellation request';
-
-        return of({
-          success: false,
-          message
-        });
-      })
-    );
+    return of({
+      success: true,
+      message: 'Opening cancellation request form'
+    });
   }
 
   private submitCancellationFromRequisition(referenceNo: string, requisition: any, fallbackItem: any): Observable<any> {

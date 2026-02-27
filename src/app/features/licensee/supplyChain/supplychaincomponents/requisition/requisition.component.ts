@@ -8,7 +8,7 @@ import { SupplyChainService } from '../../services/supplychain.service';
 import { CancellationRequestComponent } from '../../cancellation-request/cancellation-request.component';
 import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 interface TableData {
@@ -130,9 +130,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   allArrivalDetailsRows: ArrivalDetailsRow[] = [];
   filteredArrivalDetailsRows: ArrivalDetailsRow[] = [];
   private sidebarGuardTimer: ReturnType<typeof setInterval> | null = null;
+  private queryParamSub: Subscription | null = null;
   private pendingArrivalRef: string = '';
   private pendingArrivalId: number | null = null;
   private autoArrivalHandled = false;
+  private pendingCancellationRef: string = '';
+  private pendingCancellationId: number | null = null;
+  private autoCancellationHandled = false;
 
   // Pagination
   currentPage: number = 1;
@@ -146,10 +150,19 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.cleanupSidebarLockState();
     this.captureArrivalAutoOpenRequest();
+    this.captureCancellationAutoOpenRequest();
+    this.queryParamSub = this.route.queryParamMap.subscribe(() => {
+      this.captureCancellationAutoOpenRequest();
+      this.tryAutoOpenCancellationModal();
+    });
     this.loadData();
   }
 
   ngOnDestroy(): void {
+    if (this.queryParamSub) {
+      this.queryParamSub.unsubscribe();
+      this.queryParamSub = null;
+    }
     this.cleanupSidebarLockState();
     this.setBulkRecordModalMode(false);
   }
@@ -294,6 +307,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
         this.applyFilters();
         this.tryAutoOpenArrivalModal();
+        this.tryAutoOpenCancellationModal();
       },
       error: (error) => {
         console.error('Error loading requisitions:', error);
@@ -318,6 +332,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.autoArrivalHandled = false;
   }
 
+  private captureCancellationAutoOpenRequest(): void {
+    const refRaw = String(this.route.snapshot.queryParamMap.get('openCancellationRef') || '').trim();
+    if (!refRaw) return;
+
+    const idRaw = String(this.route.snapshot.queryParamMap.get('openCancellationId') || '').trim();
+    const idParsed = Number(idRaw);
+
+    this.pendingCancellationRef = this.normalizeRefToken(refRaw);
+    this.pendingCancellationId = Number.isFinite(idParsed) && idParsed > 0 ? idParsed : null;
+    this.autoCancellationHandled = false;
+  }
+
   private tryAutoOpenArrivalModal(): void {
     if (this.autoArrivalHandled) return;
     if (!this.route.snapshot.queryParamMap.get('openArrival')) return;
@@ -340,6 +366,36 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { openArrival: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  private tryAutoOpenCancellationModal(): void {
+    if (this.autoCancellationHandled) return;
+    if (!this.route.snapshot.queryParamMap.get('openCancellationRef')) return;
+    if (!this.requisitionData.length) return;
+
+    const targetById = this.pendingCancellationId != null
+      ? this.requisitionData.find((row) => Number(row.id || 0) === this.pendingCancellationId)
+      : null;
+
+    const targetByRef = !targetById && this.pendingCancellationRef
+      ? this.requisitionData.find((row) => this.normalizeRefToken(row.referenceNo) === this.pendingCancellationRef)
+      : null;
+
+    const target = targetById || targetByRef;
+    if (!target) return;
+
+    this.autoCancellationHandled = true;
+    this.openCancellationModal(target);
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        openCancellationRef: null,
+        openCancellationId: null
+      },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
