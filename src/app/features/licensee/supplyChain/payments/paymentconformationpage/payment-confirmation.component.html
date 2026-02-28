@@ -428,9 +428,14 @@
 <!-- Wallet History Modal -->
 <div class="modal fade" id="walletHistoryModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
+    <div class="modal-content wallet-history-modal-content"
+      [ngClass]="{
+        'wallet-theme-excise': selectedWalletForHistory === 'excise',
+        'wallet-theme-education': selectedWalletForHistory === 'education',
+        'wallet-theme-hologram': selectedWalletForHistory === 'hologram'
+      }">
+      <div class="modal-header wallet-history-header">
+        <h5 class="modal-title wallet-history-title">
           <i class="bi bi-clock-history me-2"></i>
           {{
             selectedWalletForHistory === 'excise'
@@ -438,10 +443,15 @@
               : (selectedWalletForHistory === 'education' ? 'Education Cess' : 'Hologram')
           }} Wallet History
         </h5>
+        <div class="wallet-history-bars" aria-hidden="true">
+          <button type="button" [class.active]="selectedWalletForHistory === 'excise'" (click)="switchWalletHistory('excise')">Excise</button>
+          <button type="button" [class.active]="selectedWalletForHistory === 'education'" (click)="switchWalletHistory('education')">Education</button>
+          <button type="button" [class.active]="selectedWalletForHistory === 'hologram'" (click)="switchWalletHistory('hologram')">Hologram</button>
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="card mb-3">
+      <div class="modal-body wallet-history-body">
+        <div class="card mb-3 wallet-history-filter-card">
           <div class="card-body py-2">
             <div class="d-flex flex-wrap align-items-end gap-2">
               <div class="col-auto">
@@ -475,7 +485,7 @@
                   (ngModelChange)="applyWalletHistoryFilters()" placeholder="0">
               </div>
               <div class="col-auto ms-auto d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm" (click)="clearWalletHistoryFilters(true)"
+                <button class="btn btn-outline-secondary btn-sm wallet-history-refresh-btn" (click)="clearWalletHistoryFilters(true)"
                   title="Clear">
                   <i class="bi bi-arrow-clockwise"></i>
                 </button>
@@ -484,8 +494,8 @@
           </div>
         </div>
 
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered table-hover">
+        <div class="table-responsive wallet-history-table-wrap">
+          <table class="table table-sm table-bordered table-hover wallet-history-table">
             <thead class="table-success">
               <tr>
                 <th>Date</th>
@@ -500,8 +510,12 @@
               <tr *ngFor="let t of walletHistoryFiltered">
                 <td>{{ t.date | date:'dd-MMM-yyyy' }}</td>
                 <td>
-                  <span class="badge"
-                    [ngClass]="{ 'bg-success': t.type==='Added', 'bg-danger': t.type==='Utilized', 'bg-info text-dark': t.type==='Refunded' }">{{ t.type }}</span>
+                  <span class="history-type-badge"
+                    [ngClass]="{
+                      'type-added': t.type==='Added',
+                      'type-utilized': t.type==='Utilized',
+                      'type-refunded': t.type==='Refunded'
+                    }">{{ t.type }}</span>
                 </td>
                 <td>{{ t.paymentFor || '-' }}</td>
                 <td class="text-end">₹{{ t.amount | number:'1.2-2' }}</td>
@@ -516,7 +530,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-secondary wallet-history-close-btn" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>

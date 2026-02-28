@@ -999,6 +999,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
   }
 
+  switchWalletHistory(wallet: WalletHistoryCategory): void {
+    if (this.selectedWalletForHistory === wallet) return;
+    this.selectedWalletForHistory = wallet;
+    this.clearWalletHistoryFilters(false);
+    this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+  }
+
   openHologramHistory(): void {
     this.openWalletHistory('hologram');
   }
