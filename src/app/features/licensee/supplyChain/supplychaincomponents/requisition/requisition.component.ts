@@ -842,7 +842,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return '-';
     }
     return rows
-      .map((r) => `${String(r?.tanker_no || '').trim()}: ${Number(r?.bulk_liter || 0).toFixed(2)}`)
+      .map((r) => `${String(r?.tanker_no || '').trim()}: ${Number(r?.bulk_liter || 0).toFixed(2)} Bulk Liter`)
       .join(', ');
   }
 

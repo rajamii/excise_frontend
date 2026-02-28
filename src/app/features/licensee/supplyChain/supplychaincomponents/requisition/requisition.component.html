@@ -705,7 +705,12 @@
                   <td class="tankers-col">{{ row.tankerCount }}</td>
                   <td class="requested-col">{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
                   <td class="bl-col">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
-                  <td class="tanker-details-col">{{ formatTankerDetailsShort(row.tankerDetails) }}</td>
+                  <td class="tanker-details-col">
+                    <div class="tanker-details-highlight" [title]="row.tankerDetails || formatTankerDetailsShort(row.tankerDetails)">
+                      <i class="bi bi-truck tanker-details-icon"></i>
+                      <span class="tanker-details-text">{{ formatTankerDetailsShort(row.tankerDetails) }}</span>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>

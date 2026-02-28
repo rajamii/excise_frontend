@@ -2436,6 +2436,34 @@
                 max-width: 300px;
                 word-wrap: break-word;
                 line-height: 1.4;
+
+                .tanker-details-highlight {
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 0.55rem;
+                  padding: 0.45rem 0.85rem;
+                  border-radius: 999px;
+                  border: 1px solid rgba(14, 165, 233, 0.35);
+                  background: linear-gradient(135deg, #eff8ff 0%, #ecfeff 100%);
+                  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.15);
+                  max-width: 100%;
+                }
+
+                .tanker-details-icon {
+                  color: #0284c7;
+                  font-size: 0.95rem;
+                  line-height: 1;
+                }
+
+                .tanker-details-text {
+                  color: #0f172a;
+                  font-weight: 600;
+                  font-size: 0.9rem;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  max-width: 280px;
+                }
               }
             }
 
