@@ -16,7 +16,7 @@ interface TableData {
   amount: string;
   workflowId?: number;
   currentStage?: number;
-  priority?: string;
+  permitNumber?: string;
   cancellationReason?: string;
   requestDate?: string;
   licenseType?: string;
@@ -56,7 +56,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Sikkim Distilleries Ltd",
       status: "PENDING",
       amount: "15.00",
-      priority: "high",
       cancellationReason: "Business Closure",
       licenseType: "Manufacturing License"
     },
@@ -67,7 +66,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Darjeeling Artisan Pvt Ltd",
       status: "APPROVED",
       amount: "20.00",
-      priority: "normal",
       cancellationReason: "Voluntary Surrender",
       licenseType: "Retail License"
     },
@@ -78,7 +76,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Royal Sikkim Brewery",
       status: "APPROVED",
       amount: "0.00",
-      priority: "urgent",
       cancellationReason: "Non-Compliance",
       licenseType: "Manufacturing License"
     },
@@ -89,7 +86,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Himalayan Distilleries Pvt Ltd",
       status: "PROCESSING",
       amount: "0.00",
-      priority: "high",
       cancellationReason: "License Transfer",
       licenseType: "Wholesale License"
     },
@@ -100,7 +96,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Eastern Himalaya Distillery",
       status: "REJECTED",
       amount: "0.00",
-      priority: "normal",
       cancellationReason: "Financial Issues",
       licenseType: "Manufacturing License"
     },
@@ -111,7 +106,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Gangtok Premium Spirits",
       status: "PENDING",
       amount: "0.00",
-      priority: "urgent",
       cancellationReason: "Regulatory Violation",
       licenseType: "Retail License"
     }
@@ -160,7 +154,18 @@ export class CancellationComponent implements OnInit {
             amount: (item.totalCancellationAmount || item.total_cancellation_amount || item.cancellationBrAmount || item.cancellation_br_amount || '0.00').toString(),
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-            priority: this.determinePriority(item),
+            permitNumber: (
+              item.cancelled_permit_numbers ||
+              item.cancelled_permit_number ||
+              item.details_permits_number ||
+              item.detailsPermitsNumber ||
+              item.permitNumber ||
+              item.permit_no ||
+              item.permitNo ||
+              item.original_permit_no ||
+              item.originalPermitNo ||
+              '-'
+            ).toString(),
             cancellationReason: item.reasonForCancellation || item.reason_for_cancellation || 'Cancellation Request',
             licenseType: item.licenseType || item.license_type || 'Import Permit',
             allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActions(item.status),
@@ -237,19 +242,6 @@ export class CancellationComponent implements OnInit {
     return 'licensee';
   }
 
-  private determinePriority(item: any): string {
-    const status = item.status?.toUpperCase();
-    const amount = parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || '0');
-
-    if (status?.includes('URGENT') || amount > 50000) {
-      return 'urgent';
-    } else if (status?.includes('HIGH') || amount > 20000) {
-      return 'high';
-    } else {
-      return 'normal';
-    }
-  }
-
   private getDefaultActions(status: string): string[] {
     const statusUpper = status?.toUpperCase();
 
@@ -273,7 +265,7 @@ export class CancellationComponent implements OnInit {
         distilleryName: "Sikkim Distilleries Ltd",
         status: "CancellationPending",
         amount: "15.00",
-        priority: "high",
+        permitNumber: "1",
         cancellationReason: "Business Closure",
         licenseType: "Manufacturing License",
         allowedActions: ['APPROVE', 'REJECT']
@@ -286,7 +278,7 @@ export class CancellationComponent implements OnInit {
         distilleryName: "Darjeeling Artisan Pvt Ltd",
         status: "ApprovedCancellationByCommissioner",
         amount: "20.00",
-        priority: "normal",
+        permitNumber: "1",
         cancellationReason: "Voluntary Surrender",
         licenseType: "Retail License",
         allowedActions: []
@@ -385,7 +377,7 @@ export class CancellationComponent implements OnInit {
 
   getUrgentCancellationCount(): number {
     return this.filteredCancellationData.filter(item =>
-      item.priority === 'urgent' || item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
+      item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
     ).length;
   }
 

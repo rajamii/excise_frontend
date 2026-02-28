@@ -57,7 +57,7 @@
           </div>
         </div>
         
-        <div class="summary-card success-card">
+        <div class="summary-card success-card" *ngIf="moduleType !== 'cancellation'">
           <div class="card-icon">✓</div>
           <div class="card-content">
             <p class="card-label">
@@ -297,7 +297,6 @@
               <th>Original Requisition</th>
               <th>Cancelled Permits</th>
               <th>Total Permits Cancelled</th>
-              <th>Refund Amount</th>
               <th>Reason</th>
             </tr>
           </thead>
@@ -310,7 +309,6 @@
               <td>{{ cancellationRow.original_requisition_ref }}</td>
               <td>{{ cancellationRow.cancelled_permit_numbers }}</td>
               <td>{{ cancellationRow.total_permits_cancelled }}</td>
-              <td class="amount-cell">₹{{ cancellationRow.refund_amount | number:'1.2-2' }}</td>
               <td>{{ cancellationRow.reason }}</td>
             </tr>
           </tbody>

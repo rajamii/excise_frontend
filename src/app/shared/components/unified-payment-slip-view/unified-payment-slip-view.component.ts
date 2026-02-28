@@ -641,8 +641,8 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       return this.revalidationRow?.permit_numbers || '0';
     }
     if (this.moduleType === 'cancellation') {
-      // Return the total permits cancelled
-      return this.cancellationRow?.total_permits_cancelled || 0;
+      // Show actual cancelled permit number(s), not just count.
+      return this.cancellationRow?.cancelled_permit_numbers || '-';
     }
     if (this.moduleType === 'hologram') {
       return this.hologramRow?.total_qty || 0;
@@ -1221,7 +1221,17 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           distillery_name: String(row.branchName || row.branch_name || row.distilleryName || row.distillery_name || '-'),
           status: String(row.status || '-'),
           original_requisition_ref: String(row.originalRequisitionRef || row.original_requisition_ref || '-'),
-          cancelled_permit_numbers: String(row.cancelledPermitNumber || row.cancelled_permit_number || '-'),
+          cancelled_permit_numbers: String(
+            row.cancelled_permit_numbers ||
+            row.cancelledPermitNumbers ||
+            row.cancelled_permit_number ||
+            row.cancelledPermitNumber ||
+            row.details_permits_number ||
+            row.detailsPermitsNumber ||
+            row.permit_no ||
+            row.permitNo ||
+            '-'
+          ),
           total_permits_cancelled: Number(row.permitNocount || row.permit_nocount || 0),
           refund_amount: Number(row.totalCancellationAmount || row.total_cancellation_amount || 0),
           reason: String(row.cancellationReason || row.cancellation_reason || 'Cancellation Request')
