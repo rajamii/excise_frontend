@@ -23,6 +23,7 @@ interface LastEntryDetail {
   id: string;
   date: string;
   type: 'PRODUCTION' | 'CONSUMPTION' | 'ADJUSTMENT' | 'TRANSIT_PERMIT' | 'CANCELLATION';
+  activity?: string;
   quantity: number;
   previousStock: number;
   newStock: number;
@@ -31,6 +32,7 @@ interface LastEntryDetail {
   officerName?: string;
   transitPermitNo?: string;
   packSize?: number;  // Pack size in ml
+  sortTimestamp?: number;
 }
 
 interface PackSizeInfo {
@@ -684,17 +686,27 @@ export class BrandwarehouseComponent implements OnInit {
         next: (arrivals: any[]) => {
           arrivals.forEach((arrival: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            const eventDate = this.resolveEntryDate(
+              arrival.arrival_date,
+              arrival.arrivalDate,
+              arrival.created_at,
+              arrival.createdAt,
+              arrival.updated_at,
+              arrival.updatedAt
+            );
             allEntries.push({
               id: `arrival-${arrival.id}`,
-              date: arrival.arrival_date || arrival.arrivalDate,
+              date: eventDate,
               type: 'PRODUCTION',
+              activity: 'Stock Added',
               quantity: arrival.quantity_added || arrival.quantityAdded,
               previousStock: arrival.previous_stock || arrival.previousStock,
               newStock: arrival.new_stock || arrival.newStock,
               referenceNo: arrival.reference_no || arrival.referenceNo,
               description: `Stock addition - ${packSize}ml`,
               officerName: 'System',
-              packSize: packSize
+              packSize: packSize,
+              sortTimestamp: this.toSortTimestamp(eventDate)
             });
           });
 
@@ -717,17 +729,28 @@ export class BrandwarehouseComponent implements OnInit {
         next: (utilizations: any[]) => {
           utilizations.forEach((util: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            const eventDate = this.resolveEntryDate(
+              util.approval_date,
+              util.approvalDate,
+              util.updated_at,
+              util.updatedAt,
+              util.created_at,
+              util.createdAt,
+              util.date
+            );
             allEntries.push({
               id: `util-${util.id}`,
-              date: util.date,
+              date: eventDate,
               type: 'TRANSIT_PERMIT',
+              activity: 'Stock Utilized',
               quantity: util.quantity,
               previousStock: util.previousStock || 0,
               newStock: util.newStock || 0,
               referenceNo: util.permit_no || util.permitNo,
               description: `Transit to ${util.distributor} - ${packSize}ml`,
               transitPermitNo: util.permit_no || util.permitNo,
-              packSize: packSize
+              packSize: packSize,
+              sortTimestamp: this.toSortTimestamp(eventDate)
             });
           });
 
@@ -750,17 +773,27 @@ export class BrandwarehouseComponent implements OnInit {
         next: (cancellations: any[]) => {
           cancellations.forEach((cancel: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            const eventDate = this.resolveEntryDate(
+              cancel.cancellation_date,
+              cancel.cancellationDate,
+              cancel.updated_at,
+              cancel.updatedAt,
+              cancel.created_at,
+              cancel.createdAt
+            );
             allEntries.push({
               id: `cancel-${cancel.id}`,
-              date: cancel.cancellation_date,
+              date: eventDate,
               type: 'CANCELLATION',
+              activity: 'Stock Restored',
               quantity: cancel.bottles_reversed,
               previousStock: cancel.previousStock || 0,
               newStock: cancel.newStock || 0,
               referenceNo: cancel.permit_no,
               description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || 'N/A'})`,
               transitPermitNo: cancel.permit_no,
-              packSize: packSize
+              packSize: packSize,
+              sortTimestamp: this.toSortTimestamp(eventDate)
             });
           });
 
@@ -793,14 +826,56 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   finalizeLastEntries(entries: LastEntryDetail[]): void {
-    // Sort by date descending (most recent first)
-    entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Sort by true activity time descending (across all event types).
+    // This keeps utilization, cancellation and production interleaved by when they happened.
+    entries.sort((a, b) => {
+      const timeDiff = this.getEntrySortTimestamp(b) - this.getEntrySortTimestamp(a);
+      if (timeDiff !== 0) return timeDiff;
+
+      // Tie-breaker so equal timestamps don't appear grouped by fetch order/type.
+      const idDiff = this.extractEntryNumericId(b.id) - this.extractEntryNumericId(a.id);
+      if (idDiff !== 0) return idDiff;
+
+      return String(a.id).localeCompare(String(b.id));
+    });
 
     // Take only the most recent 10 entries
     this.selectedLastEntries = entries.slice(0, 10);
     this.isLoadingLastEntries = false;
 
     console.log('Finalized recent entries:', this.selectedLastEntries);
+  }
+
+  private resolveEntryDate(...candidates: any[]): string {
+    for (const candidate of candidates) {
+      const value = String(candidate ?? '').trim();
+      if (!value) continue;
+      const dt = new Date(value);
+      if (!Number.isNaN(dt.getTime())) {
+        return dt.toISOString();
+      }
+    }
+    return new Date().toISOString();
+  }
+
+  private toSortTimestamp(value: any): number {
+    const dt = new Date(String(value ?? ''));
+    const time = dt.getTime();
+    return Number.isNaN(time) ? 0 : time;
+  }
+
+  private getEntrySortTimestamp(entry: LastEntryDetail): number {
+    if (Number.isFinite(entry.sortTimestamp as number)) {
+      return Number(entry.sortTimestamp);
+    }
+    return this.toSortTimestamp(entry.date);
+  }
+
+  private extractEntryNumericId(entryId: string): number {
+    const match = String(entryId || '').match(/(\d+)(?!.*\d)/);
+    if (!match) return 0;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   viewProduction(brand: GroupedBrandStock): void {

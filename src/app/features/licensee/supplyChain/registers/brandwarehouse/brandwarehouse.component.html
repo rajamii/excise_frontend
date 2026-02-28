@@ -744,6 +744,10 @@
                   <span class="label">Reference:</span>
                   <span class="value">{{ entry.referenceNo }}</span>
                 </div>
+                <div class="activity" *ngIf="entry.activity">
+                  <span class="label">Activity:</span>
+                  <span class="value">{{ entry.activity }}</span>
+                </div>
                 <div class="officer" *ngIf="entry.officerName">
                   <span class="label">Officer:</span>
                   <span class="value">{{ entry.officerName }}</span>
