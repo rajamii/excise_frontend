@@ -792,9 +792,19 @@ export class TransitPermitComponent implements OnInit {
         // Show success message
         alert('Transit Permit Application submitted successfully!');
 
-        // Open payment receipt from actual wallet deduction transaction context.
-        this.router.navigate(['/dev-payment-receipt'], {
-          queryParams: { billNo: generatedBillNo || this.formData.billNo }
+        // Open unified payment slip from actual wallet deduction transaction context.
+        const resolvedBillNo = generatedBillNo || this.formData.billNo;
+        const transitId = String(response?.id ?? response?.data?.id ?? '').trim();
+        this.router.navigate(['/payment-slip-view'], {
+          queryParams: {
+            id: transitId || undefined,
+            type: 'transit',
+            billNo: resolvedBillNo || undefined,
+            refNo: resolvedBillNo || undefined,
+            ref: resolvedBillNo || undefined,
+            referenceNo: resolvedBillNo || undefined,
+            source: 'licensee'
+          }
         });
 
         // Optional: Navigate or reset
@@ -1303,3 +1313,4 @@ export class TransitPermitComponent implements OnInit {
     return Math.min(totalHeight, maxHeight) + 'px';
   }
 }
+

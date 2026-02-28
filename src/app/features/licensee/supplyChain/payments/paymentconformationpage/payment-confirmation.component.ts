@@ -1542,7 +1542,26 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   downloadDetails(): void {
     console.log('Downloading payment details');
-    // Navigate to payment receipt page
+
+    if (this.activeTab === 'transit') {
+      const transitRef = String(this.transitBillNo || this.selectedItem?.referenceNo || '').trim();
+      const transitId = String(this.transitId || this.selectedItem?.id || '').trim();
+
+      this.router.navigate(['/payment-slip-view'], {
+        queryParams: {
+          id: transitId || undefined,
+          type: 'transit',
+          billNo: transitRef || undefined,
+          refNo: transitRef || undefined,
+          ref: transitRef || undefined,
+          referenceNo: transitRef || undefined,
+          source: 'licensee'
+        }
+      });
+      return;
+    }
+
+    // Navigate to payment receipt page for non-transit flows.
     this.router.navigate(['/dev-payment-receipt']);
   }
 
@@ -1911,4 +1930,5 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return '';
   }
 }
+
 
