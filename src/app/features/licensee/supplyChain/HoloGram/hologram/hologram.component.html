@@ -43,15 +43,28 @@
                       <td>1</td>
                       <td>Local</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.localQtyLakh" min="0"
-                          step="1" placeholder="e.g. 1500">
+                        <input
+                          type="number"
+                          class="form-control"
+                          [(ngModel)]="formData.localQtyLakh"
+                          (ngModelChange)="onSeriesQuantityChange('local')"
+                          [disabled]="isSeriesInputDisabled('local')"
+                          min="0"
+                          step="1"
+                          placeholder="e.g. 1500">
                       </td>
                     </tr>
                     <tr>
                       <td>2</td>
                       <td>Export</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.exportQtyLakh" min="0"
+                        <input
+                          type="number"
+                          class="form-control"
+                          [(ngModel)]="formData.exportQtyLakh"
+                          (ngModelChange)="onSeriesQuantityChange('export')"
+                          [disabled]="isSeriesInputDisabled('export')"
+                          min="0"
                           step="1">
                       </td>
                     </tr>
@@ -59,7 +72,13 @@
                       <td>3</td>
                       <td>Defence</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.defenceQtyLakh" min="0"
+                        <input
+                          type="number"
+                          class="form-control"
+                          [(ngModel)]="formData.defenceQtyLakh"
+                          (ngModelChange)="onSeriesQuantityChange('defence')"
+                          [disabled]="isSeriesInputDisabled('defence')"
+                          min="0"
                           step="1">
                       </td>
                     </tr>

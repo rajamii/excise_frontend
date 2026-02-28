@@ -16,6 +16,8 @@ interface HologramFormData {
   defenceQtyLakh: number | null;
 }
 
+type SeriesKey = 'local' | 'export' | 'defence';
+
 @Component({
   selector: 'app-hologram',
   standalone: true,
@@ -255,6 +257,56 @@ export class HologramComponent {
     return l + e + d;
   }
 
+  private getSeriesQuantity(series: SeriesKey): number {
+    if (series === 'local') return Number(this.formData.localQtyLakh) || 0;
+    if (series === 'export') return Number(this.formData.exportQtyLakh) || 0;
+    return Number(this.formData.defenceQtyLakh) || 0;
+  }
+
+  private setSeriesQuantity(series: SeriesKey, value: number): void {
+    if (series === 'local') {
+      this.formData.localQtyLakh = value;
+    } else if (series === 'export') {
+      this.formData.exportQtyLakh = value;
+    } else {
+      this.formData.defenceQtyLakh = value;
+    }
+  }
+
+  private sanitizeQuantity(value: any): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.floor(parsed);
+  }
+
+  private getActiveSeries(): SeriesKey | null {
+    const localQty = this.getSeriesQuantity('local');
+    const exportQty = this.getSeriesQuantity('export');
+    const defenceQty = this.getSeriesQuantity('defence');
+
+    if (localQty > 0) return 'local';
+    if (exportQty > 0) return 'export';
+    if (defenceQty > 0) return 'defence';
+    return null;
+  }
+
+  isSeriesInputDisabled(series: SeriesKey): boolean {
+    const activeSeries = this.getActiveSeries();
+    return !!activeSeries && activeSeries !== series;
+  }
+
+  onSeriesQuantityChange(series: SeriesKey): void {
+    const normalizedCurrent = this.sanitizeQuantity(this.getSeriesQuantity(series));
+    this.setSeriesQuantity(series, normalizedCurrent);
+
+    if (normalizedCurrent > 0) {
+      const otherSeries: SeriesKey[] = ['local', 'export', 'defence'].filter(
+        (key): key is SeriesKey => key !== series
+      );
+      otherSeries.forEach((key) => this.setSeriesQuantity(key, 0));
+    }
+  }
+
   getSeriesRowNumber(series: 'local' | 'export' | 'defence'): number {
     if (!this.submittedData) return 0;
 
@@ -285,13 +337,19 @@ export class HologramComponent {
       return false;
     }
 
-    // Check if at least one quantity is greater than 0
+    // Exactly one series must be selected with quantity > 0.
     const localQty = Number(this.formData.localQtyLakh) || 0;
     const exportQty = Number(this.formData.exportQtyLakh) || 0;
     const defenceQty = Number(this.formData.defenceQtyLakh) || 0;
+    const selectedCount = [localQty, exportQty, defenceQty].filter(qty => qty > 0).length;
 
-    if (localQty <= 0 && exportQty <= 0 && defenceQty <= 0) {
-      this.errorMessage = 'Enter at least one quantity greater than 0';
+    if (selectedCount === 0) {
+      this.errorMessage = 'Enter quantity in any one series only (Local/Export/Defence).';
+      return false;
+    }
+
+    if (selectedCount > 1) {
+      this.errorMessage = 'Only one series can be selected at a time.';
       return false;
     }
 
