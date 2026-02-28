@@ -16,6 +16,23 @@ export interface ActionItem {
   currentStage?: number;
   allowedActions?: string[];
   allowedActionConfigs?: ActionButtonConfig[]; // Dynamic configs from backend
+  refNo?: string;
+  billNo?: string;
+  transitProducts?: any[];
+  cases?: number;
+  quantity?: number;
+  exciseDuty?: number;
+  total_excise_duty?: number;
+  totalExciseDuty?: number;
+  additionalExcise?: number;
+  total_additional_excise?: number;
+  totalAdditionalExcise?: number;
+  educationCess?: number;
+  total_education_cess?: number;
+  totalEducationCess?: number;
+  brAmount?: number;
+  totalAmount?: number;
+  total_amount?: number;
   [key: string]: any; // Allow additional properties
 }
 
@@ -290,9 +307,166 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       cancelButtonColor: '#6c757d'
     }).then((result) => {
       if (result.isConfirmed) {
+        if (this.shouldShowTransitOicRejectDeclaration(button)) {
+          this.showTransitOicRejectDeclaration(button);
+          return;
+        }
         this.executeAction(button);
       }
     });
+  }
+
+  private shouldShowTransitOicRejectDeclaration(button: ActionButtonConfig): boolean {
+    const action = this.normalizeActionName(button?.action);
+    return action === 'REJECT' && this.itemType === 'transit' && this.context === 'officer-in-charge';
+  }
+
+  private showTransitOicRejectDeclaration(button: ActionButtonConfig): void {
+    const summary = this.getTransitRejectSummary();
+    const currency = this.formatInr(summary.totalRefund);
+    const excise = this.formatInr(summary.exciseRefund);
+    const education = this.formatInr(summary.educationRefund);
+    const refNo = this.escapeHtml(String(this.item?.referenceNo || this.item?.['refNo'] || this.item?.['billNo'] || 'N/A'));
+
+    Swal.fire({
+      title: 'Declaration Before Rejection',
+      html: `
+        <div style="text-align:left;font-size:14px;line-height:1.5">
+          <p style="margin:0 0 8px 0;"><strong>Reference:</strong> ${refNo}</p>
+          <p style="margin:0 0 10px 0;color:#9a3412;">
+            Rejecting this transit permit will trigger automatic reversal actions.
+          </p>
+          <ul style="padding-left:18px;margin:0 0 10px 0;">
+            <li>Stock utilized under this permit will be reverted to inventory.</li>
+            <li>Wallet refund will be posted for this permit.</li>
+            <li><strong>Excise refund:</strong> ${excise}</li>
+            <li><strong>Education cess refund:</strong> ${education}</li>
+            <li><strong>Total wallet refund:</strong> ${currency}</li>
+            <li><strong>Stock impact:</strong> ${summary.totalCases} case(s) will be reverted.</li>
+          </ul>
+          <p style="margin:0;">
+            Proceed only if this cancellation is valid and fully verified.
+          </p>
+          <div style="margin-top:12px;">
+            <label for="rejectReasonInput" style="display:block;font-weight:600;margin-bottom:6px;">
+              Rejection reason (optional)
+            </label>
+            <textarea
+              id="rejectReasonInput"
+              class="swal2-textarea"
+              style="display:block;width:100%;min-height:78px;margin:0;"
+              placeholder="Enter reason for rejection..."
+            ></textarea>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input id="rejectAcknowledgeCheckbox" type="checkbox" />
+              <span>I understand the above consequences and want to continue.</span>
+            </label>
+          </div>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Proceed With Rejection',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6c757d',
+      focusConfirm: false,
+      preConfirm: () => {
+        const popup = Swal.getPopup();
+        const checkbox = popup?.querySelector('#rejectAcknowledgeCheckbox') as HTMLInputElement | null;
+        const reasonInput = popup?.querySelector('#rejectReasonInput') as HTMLTextAreaElement | null;
+
+        if (!checkbox?.checked) {
+          Swal.showValidationMessage('Please acknowledge the declaration to proceed.');
+          return false;
+        }
+
+        return {
+          reason: String(reasonInput?.value || '').trim()
+        };
+      }
+    }).then((declarationResult) => {
+      if (declarationResult.isConfirmed) {
+        const reason = String((declarationResult.value as any)?.reason || '').trim();
+        this.item = {
+          ...this.item,
+          __rejectReason: reason
+        };
+        this.executeAction(button);
+      }
+    });
+  }
+
+  private getTransitRejectSummary(): {
+    totalCases: number;
+    exciseRefund: number;
+    educationRefund: number;
+    totalRefund: number;
+  } {
+    const products = this.getTransitProductsForSummary();
+    let totalCases = 0;
+    let exciseRefund = 0;
+    let educationRefund = 0;
+
+    products.forEach((row: any) => {
+      totalCases += this.toNumber(row?.cases ?? row?.quantity);
+      const rowExcise = this.toNumber(row?.exciseDuty ?? row?.total_excise_duty ?? row?.totalExciseDuty);
+      const rowAdditional = this.toNumber(row?.additionalExcise ?? row?.total_additional_excise ?? row?.totalAdditionalExcise);
+      const rowEducation = this.toNumber(row?.educationCess ?? row?.total_education_cess ?? row?.totalEducationCess);
+      exciseRefund += (rowExcise + rowAdditional);
+      educationRefund += rowEducation;
+    });
+
+    if (products.length === 0) {
+      totalCases = this.toNumber(this.item?.cases ?? this.item?.quantity);
+      const fallbackExcise = this.toNumber(this.item?.exciseDuty ?? this.item?.total_excise_duty ?? this.item?.totalExciseDuty);
+      const fallbackAdditional = this.toNumber(this.item?.additionalExcise ?? this.item?.total_additional_excise ?? this.item?.totalAdditionalExcise);
+      const fallbackEducation = this.toNumber(this.item?.educationCess ?? this.item?.total_education_cess ?? this.item?.totalEducationCess);
+      exciseRefund = fallbackExcise + fallbackAdditional;
+      educationRefund = fallbackEducation;
+    }
+
+    const fallbackTotal = this.toNumber(this.item?.brAmount ?? this.item?.totalAmount ?? this.item?.total_amount);
+    const calculatedTotal = exciseRefund + educationRefund;
+    const totalRefund = calculatedTotal > 0 ? calculatedTotal : fallbackTotal;
+
+    return {
+      totalCases,
+      exciseRefund,
+      educationRefund,
+      totalRefund
+    };
+  }
+
+  private getTransitProductsForSummary(): any[] {
+    const products = this.item?.transitProducts;
+    if (Array.isArray(products)) {
+      return products;
+    }
+    return [];
+  }
+
+  private toNumber(value: any): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private formatInr(value: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(this.toNumber(value));
+  }
+
+  private escapeHtml(value: string): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**

@@ -461,6 +461,7 @@
                   <option value="">All</option>
                   <option value="Added">Added</option>
                   <option value="Utilized">Utilized</option>
+                  <option value="Refunded">Refunded</option>
                 </select>
               </div>
               <div class="col-auto">
@@ -500,7 +501,7 @@
                 <td>{{ t.date | date:'dd-MMM-yyyy' }}</td>
                 <td>
                   <span class="badge"
-                    [ngClass]="{ 'bg-success': t.type==='Added', 'bg-danger': t.type==='Utilized' }">{{ t.type }}</span>
+                    [ngClass]="{ 'bg-success': t.type==='Added', 'bg-danger': t.type==='Utilized', 'bg-info text-dark': t.type==='Refunded' }">{{ t.type }}</span>
                 </td>
                 <td>{{ t.paymentFor || '-' }}</td>
                 <td class="text-end">₹{{ t.amount | number:'1.2-2' }}</td>

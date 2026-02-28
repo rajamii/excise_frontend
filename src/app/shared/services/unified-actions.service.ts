@@ -240,7 +240,11 @@ export class UnifiedActionsService {
       });
     }
 
-    const reason = prompt('Enter rejection reason (optional):') || 'Rejected';
+    const hasInlineReason = !!item && Object.prototype.hasOwnProperty.call(item, '__rejectReason');
+    const inlineReason = String(item?.__rejectReason ?? item?.rejectReason ?? '').trim();
+    const reason = hasInlineReason
+      ? (inlineReason || 'Rejected')
+      : (prompt('Enter rejection reason (optional):') || 'Rejected');
 
     switch (itemType) {
       case 'requisition':

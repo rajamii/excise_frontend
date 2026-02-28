@@ -77,7 +77,7 @@ interface HologramItem {
   paymentSlipUploaded?: boolean;
 }
 
-type WalletHistoryType = 'Added' | 'Utilized';
+type WalletHistoryType = 'Added' | 'Utilized' | 'Refunded';
 type WalletHistoryCategory = 'excise' | 'education' | 'hologram';
 
 interface WalletHistoryTransaction {
@@ -619,10 +619,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const balanceAfter = this.toNumber(this.pickAny(row, ['balance_after', 'balanceAfter'], 0));
       const paymentFor = this.resolvePaymentForType(row);
 
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const isCredit = entryType === 'credit' || entryType === 'cr';
+      const type: WalletHistoryType = isCredit
+        ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Added')
+        : 'Utilized';
+
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
         date: String(createdAt).slice(0, 10),
-        type: entryType === 'credit' ? 'Added' : 'Utilized',
+        type,
         amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
         balanceAfter,
         reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
@@ -643,16 +649,18 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.historyData = rows.map((row: any, index: number) => {
       const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const isCredit = entryType === 'credit' || entryType === 'cr';
       const paymentFor = this.resolvePaymentForType(row);
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
         txnId: this.pickAny(row, ['transaction_id', 'transactionId'], '-'),
         userId: this.pickAny(row, ['user_id', 'userId'], '-'),
-        type: entryType === 'credit' ? 'Wallet Recharge' : 'Wallet Utilization',
+        type: isCredit ? (normalizedStatus === 'Refunded' ? 'Wallet Refund' : 'Wallet Recharge') : 'Wallet Utilization',
         paymentFor,
         amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
         reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
-        status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success')),
+        status: normalizedStatus,
         dateTime: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
         licenseeId: this.pickAny(row, ['licensee_id', 'licenseeId'], this.activeLicenseeId || '-')
       } as HistoryItem;
@@ -718,6 +726,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private normalizeTransactionStatus(value: any): string {
     const raw = String(value || '').trim().toLowerCase();
     if (!raw) return 'Payment Successful';
+    if (raw === 'r' || raw.includes('refund')) {
+      return 'Refunded';
+    }
     if (raw === 's' || raw.includes('success') || raw.includes('completed')) {
       return 'Payment Successful';
     }
@@ -869,7 +880,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   walletHistoryFilters = {
     from: '',
     to: '',
-    type: '', // Added | Utilized
+    type: '', // Added | Utilized | Refunded
     minAmount: '',
     maxAmount: ''
   };
@@ -1306,6 +1317,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const statusLower = status.toLowerCase();
     if (statusLower.includes('approved') || statusLower.includes('success')) {
       return 'badge bg-success';
+    } else if (statusLower.includes('refund')) {
+      return 'badge bg-info text-dark';
     } else if (statusLower.includes('pending') || statusLower.includes('ready')) {
       return 'badge bg-warning';
     } else if (statusLower.includes('rejected') || statusLower.includes('failed')) {
@@ -1893,7 +1906,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         type.includes('utilization') ||
         type.includes('utilized') ||
         type.includes('debit');
-      return paymentFor.includes(keyword) && isDebitLike;
+      const isRefundLike = type.includes('refund');
+      return paymentFor.includes(keyword) && (isDebitLike || isRefundLike);
     });
   }
 
