@@ -1,4 +1,5 @@
-<div class="container" [class.right-panel-active]="isRightPanelActive" id="container">
+<div class="login-layout">
+  <div class="container" [class.right-panel-active]="isRightPanelActive" id="container">
   <!-- Sign Up Panel -->
   <div class="form-container sign-up-container">
     <div class="form-header">
@@ -266,4 +267,13 @@
       </div>
     </div>
   </div>
+  </div>
+
+  @if (!isPasswordMode && otpSent && loginOtpPreview) {
+  <aside class="otp-preview-box" aria-live="polite">
+    <span class="otp-preview-label">Login OTP</span>
+    <span class="otp-preview-value">{{ loginOtpPreview }}</span>
+    <span class="otp-preview-note">Use this OTP to complete sign in.</span>
+  </aside>
+  }
 </div>

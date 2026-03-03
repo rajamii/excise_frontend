@@ -35,6 +35,7 @@ export class LoginComponent extends BaseComponent {
   hideConfirmPassword = true;
   otpSent = false;
   otpIndex: string | null = null;
+  loginOtpPreview: string | null = null;
   otpAutoSubmitted = false;
   isSendingOtp = false;
 
@@ -182,6 +183,7 @@ export class LoginComponent extends BaseComponent {
     this.isPasswordMode = isPassword;
     this.otpSent = false;
     this.otpIndex = null;
+    this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
     this.loginForm.reset();
     this.setValidators();
@@ -263,12 +265,14 @@ export class LoginComponent extends BaseComponent {
       next: (response) => {
         this.otpSent = true;
         this.otpIndex = response.otpId;
+        this.loginOtpPreview = response.otp ? String(response.otp) : null;
         console.log('OTP:', response.otp);
         this.isSendingOtp = false;
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
         alert('Failed to send OTP. Please try again.');
+        this.loginOtpPreview = null;
         this.isSendingOtp = false;
       },
     });
@@ -539,6 +543,7 @@ export class LoginComponent extends BaseComponent {
   resetPhoneNumber(): void {
     this.otpSent = false;
     this.otpIndex = null;
+    this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
     this.loginForm.reset();
     this.setValidators();
