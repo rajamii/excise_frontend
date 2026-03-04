@@ -209,9 +209,9 @@
       <!-- OTP login -->
       @if (!isPasswordMode) {
       @if (!otpSent) {
-      <input formControlName="phoneNumber" placeholder="Phone Number" required />
+      <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric" required />
       <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
-        [disabled]="loginForm.controls['phoneNumber'].invalid">Send OTP</button>
+        [disabled]="isSendingOtp">Send OTP</button>
       }
 
       @if (otpSent) {

@@ -255,8 +255,12 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendOtp(): void {
-    if (this.loginForm.controls['phoneNumber'].invalid || this.isSendingOtp) {
-      this.setLoginErrors(['Enter a valid 10-digit mobile number to receive OTP.']);
+    if (this.isSendingOtp) {
+      return;
+    }
+
+    if (this.loginForm.controls['phoneNumber'].invalid) {
+      this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
       return;
     }
 
@@ -633,6 +637,9 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'sendOtp') {
+      if (hasAny(['invalid phone', 'invalid mobile', 'phone number', 'mobile number', 'format'])) {
+        return ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
+      }
       if (status === 404 || hasAny(['user not found', 'not registered', 'does not exist'])) {
         return ['This mobile number is not registered. Please sign up first.'];
       }
@@ -689,7 +696,7 @@ export class LoginComponent extends BaseComponent {
     if (firstName?.invalid) messages.push('First name is required.');
     if (lastName?.invalid) messages.push('Last name is required.');
     if (phoneNumber?.hasError('required')) messages.push('Mobile number is required.');
-    if (phoneNumber?.hasError('pattern')) messages.push('Enter a valid 10-digit mobile number.');
+    if (phoneNumber?.hasError('pattern')) messages.push('Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.');
     if (email?.hasError('required')) messages.push('Email address is required.');
     if (email?.hasError('email')) messages.push('Enter a valid email address.');
     if (password?.hasError('required')) messages.push('Password is required.');
