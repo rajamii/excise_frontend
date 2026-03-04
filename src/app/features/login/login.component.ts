@@ -18,6 +18,7 @@ import { PatternConstants } from '../../shared/constants/pattern.constants';
 import { District } from '../../core/models/district.model';
 import { Subdivision } from '../../core/models/subdivision.model';
 import { MasterService } from '../../core/services/master.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -186,6 +187,7 @@ export class LoginComponent extends BaseComponent {
     this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
     this.loginForm.reset();
+    this.clearLoginErrors();
     this.setValidators();
   }
 
@@ -254,10 +256,12 @@ export class LoginComponent extends BaseComponent {
 
   sendOtp(): void {
     if (this.loginForm.controls['phoneNumber'].invalid || this.isSendingOtp) {
+      this.setLoginErrors(['Enter a valid 10-digit mobile number to receive OTP.']);
       return;
     }
 
     this.isSendingOtp = true;
+    this.clearLoginErrors();
     const phoneNumber = this.loginForm.value.phoneNumber;
     const formData = FormDataUtil.buildFormData({ phoneNumber });
 
@@ -271,7 +275,7 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
-        alert('Failed to send OTP. Please try again.');
+        this.setLoginErrors(this.mapLoginErrors(err, 'sendOtp'));
         this.loginOtpPreview = null;
         this.isSendingOtp = false;
       },
@@ -283,7 +287,11 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendRegistrationOtp() {
-    if (this.registrationForm.invalid) { console.log('Invalid registration form'); return }
+    if (this.registrationForm.invalid) {
+      this.registrationError = true;
+      this.registrationErrorMessages = this.getRegistrationValidationErrors();
+      return;
+    }
     const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
     this.isSendingOtp = true;
     this.registrationError = false;
@@ -301,7 +309,7 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         this.isSendingOtp = false;
         this.registrationError = true;
-        this.registrationErrorMessages = this.extractErrorMessages(err.error);
+        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'sendOtp');
       }
     });
   }
@@ -314,7 +322,11 @@ export class LoginComponent extends BaseComponent {
     const otp = this.registrationOtpControl.value;
     const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
 
-    if (!otp || otp.length !== 4 || !this.registrationOtpId) return;
+    if (!otp || otp.length !== 4 || !this.registrationOtpId) {
+      this.registrationError = true;
+      this.registrationErrorMessages = ['Enter a valid 4-digit OTP.'];
+      return;
+    }
 
     this.authService.verifyRegistrationOtp({
       phoneNumber: phoneNumber,
@@ -344,13 +356,23 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         this.registrationError = true;
-        this.registrationErrorMessages = this.extractErrorMessages(err.error || { detail: ['Invalid OTP'] });
+        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'verifyOtp');
       }
     });
   }
 
   onRegister() {
-    if (this.registrationForm.invalid || !this.otpVerified) return;
+    if (!this.otpVerified) {
+      this.registrationError = true;
+      this.registrationErrorMessages = ['Verify OTP before completing registration.'];
+      return;
+    }
+
+    if (this.registrationForm.invalid) {
+      this.registrationError = true;
+      this.registrationErrorMessages = this.getRegistrationValidationErrors();
+      return;
+    }
 
     this.isRegistering = true;
     this.registrationError = false;
@@ -387,7 +409,7 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         this.isRegistering = false;
         this.registrationError = true;
-        this.registrationErrorMessages = this.extractErrorMessages(err.error);
+        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'register');
         console.error('Registration error response:', err.error); // ← Check this in console
       }
     });
@@ -426,32 +448,48 @@ export class LoginComponent extends BaseComponent {
 
   private loginWithPassword(): void {
     if (this.loginForm.invalid) {
-      alert('Please fill in all fields correctly.');
+      this.setLoginErrors(['Enter valid user ID, password, and captcha to continue.']);
       return;
     }
 
+    this.clearLoginErrors();
     this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
-        this.loginError = false;
-        this.loginErrorMessages = [];
+        this.clearLoginErrors();
         this.handleAuthResponse(res);
       },
       error: (err) => {
         console.error('Login error:', err);
-        this.loginError = true;
-        this.loginErrorMessages = this.extractErrorMessages(err.error);
+        this.setLoginErrors(this.mapLoginErrors(err, 'password'));
       },
     });
   }
 
   private extractErrorMessages(errorObj: any): string[] {
-    if (!errorObj || typeof errorObj !== 'object') return ['Unknown error'];
+    if (!errorObj) return [];
 
-    return Object.values(errorObj).flatMap((val) => {
-      if (Array.isArray(val)) {
-        return val.map((v) => String(v));
+    if (typeof errorObj === 'string') {
+      return [errorObj];
+    }
+
+    if (Array.isArray(errorObj)) {
+      return errorObj.map((entry) => String(entry));
+    }
+
+    if (typeof errorObj !== 'object') return [];
+
+    return Object.entries(errorObj).flatMap(([key, val]) => {
+      if (key === 'detail' || key === 'message' || key === 'non_field_errors') {
+        if (Array.isArray(val)) {
+          return val.map((v) => String(v));
+        }
+        return [String(val)];
       }
-      return [String(val)];
+
+      if (Array.isArray(val)) {
+        return val.map((v) => `${this.prettyFieldName(key)}: ${String(v)}`);
+      }
+      return [`${this.prettyFieldName(key)}: ${String(val)}`];
     });
   }
 
@@ -466,11 +504,12 @@ export class LoginComponent extends BaseComponent {
 
   private verifyOtp(): void {
     if (!this.loginForm.value.otp || !this.otpIndex) {
-      alert('Please enter a valid OTP.');
+      this.setLoginErrors(['Enter a valid 4-digit OTP.']);
       this.otpAutoSubmitted = false;
       return;
     }
 
+    this.clearLoginErrors();
     const requestData = {
       phoneNumber: this.loginForm.value.phoneNumber,
       otp: this.loginForm.value.otp,
@@ -479,11 +518,12 @@ export class LoginComponent extends BaseComponent {
 
     this.authService.verifyOtp(requestData).subscribe({
       next: (res: any) => {
+        this.clearLoginErrors();
         this.handleAuthResponse(res);
       },
       error: (err) => {
         console.error('OTP verification error:', err);
-        alert('Invalid OTP. Please try again.');
+        this.setLoginErrors(this.mapLoginErrors(err, 'verifyOtp'));
         this.otpAutoSubmitted = false;
       },
     });
@@ -520,17 +560,17 @@ export class LoginComponent extends BaseComponent {
             }
             this.redirectBasedOnRole(user.role?.id);
           } else {
-            alert('Failed to fetch user details. Please log in again.');
+            this.setLoginErrors(['Login succeeded, but profile loading failed. Please sign in again.']);
           }
         },
         error: (err) => {
           console.error('Error fetching user details:', err);
-          alert('Failed to fetch user details. Please log in again.');
+          this.setLoginErrors(['Failed to load user details after login. Please sign in again.']);
         }
       });
     } else {
       console.error('Invalid login response structure:', res);
-      alert('Authentication failed. Invalid response from server.');
+      this.setLoginErrors(['Authentication failed due to an invalid server response.']);
     }
   }
 
@@ -546,6 +586,168 @@ export class LoginComponent extends BaseComponent {
     this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
     this.loginForm.reset();
+    this.clearLoginErrors();
     this.setValidators();
+  }
+
+  private clearLoginErrors(): void {
+    this.loginError = false;
+    this.loginErrorMessages = [];
+  }
+
+  private setLoginErrors(messages: string[]): void {
+    const normalized = messages?.length ? messages : ['Something went wrong. Please try again.'];
+    this.loginError = true;
+    this.loginErrorMessages = normalized;
+    this.showErrorPopup(normalized);
+  }
+
+  private showErrorPopup(messages: string[]): void {
+    Swal.fire({
+      icon: 'error',
+      title: 'Login Error',
+      text: messages.join('\n'),
+      confirmButtonText: 'OK',
+      allowOutsideClick: true,
+      allowEscapeKey: true
+    });
+  }
+
+  private mapLoginErrors(err: HttpErrorResponse | any, flow: 'password' | 'sendOtp' | 'verifyOtp'): string[] {
+    const backendMessages = this.extractErrorMessages(err?.error);
+    const status = err?.status;
+    const normalizedText = backendMessages.join(' ').toLowerCase();
+
+    const hasAny = (terms: string[]) => terms.some((term) => normalizedText.includes(term));
+
+    if (flow === 'password') {
+      if (status === 401 || hasAny(['invalid credentials', 'incorrect password', 'invalid password', 'wrong password'])) {
+        return ['Incorrect user ID or password. Please try again.'];
+      }
+      if (status === 404 || hasAny(['user not found', 'does not exist', 'not registered', 'unregistered'])) {
+        return ['User ID is not registered. Please sign up first.'];
+      }
+      if (hasAny(['captcha', 'invalid response'])) {
+        return ['Captcha verification failed. Please solve captcha again.'];
+      }
+    }
+
+    if (flow === 'sendOtp') {
+      if (status === 404 || hasAny(['user not found', 'not registered', 'does not exist'])) {
+        return ['This mobile number is not registered. Please sign up first.'];
+      }
+      if (status === 429 || hasAny(['too many', 'rate limit'])) {
+        return ['Too many OTP requests. Please wait and try again.'];
+      }
+    }
+
+    if (flow === 'verifyOtp') {
+      if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp'])) {
+        return ['Invalid OTP. Enter the correct OTP and try again.'];
+      }
+      if (hasAny(['expired otp', 'otp expired', 'expired'])) {
+        return ['OTP has expired. Please request a new OTP.'];
+      }
+      if (status === 404 || hasAny(['not registered', 'user not found'])) {
+        return ['This mobile number is not registered. Please sign up first.'];
+      }
+    }
+
+    if (backendMessages.length > 0) {
+      return backendMessages;
+    }
+
+    return ['Something went wrong. Please try again.'];
+  }
+
+  private prettyFieldName(field: string): string {
+    switch (field) {
+      case 'phoneNumber': return 'Phone number';
+      case 'firstName': return 'First name';
+      case 'lastName': return 'Last name';
+      case 'middleName': return 'Middle name';
+      case 'panNumber': return 'PAN number';
+      case 'hashkey': return 'Captcha';
+      case 'response': return 'Captcha';
+      case 'non_field_errors': return 'Error';
+      default:
+        return field.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+    }
+  }
+
+  private getRegistrationValidationErrors(): string[] {
+    const messages: string[] = [];
+    const firstName = this.registrationForm.get('firstName');
+    const lastName = this.registrationForm.get('lastName');
+    const phoneNumber = this.registrationForm.get('phoneNumber');
+    const email = this.registrationForm.get('email');
+    const password = this.registrationForm.get('password');
+    const confirmPassword = this.registrationForm.get('confirmPassword');
+    const hashkey = this.registrationForm.get('hashkey');
+    const response = this.registrationForm.get('response');
+
+    if (firstName?.invalid) messages.push('First name is required.');
+    if (lastName?.invalid) messages.push('Last name is required.');
+    if (phoneNumber?.hasError('required')) messages.push('Mobile number is required.');
+    if (phoneNumber?.hasError('pattern')) messages.push('Enter a valid 10-digit mobile number.');
+    if (email?.hasError('required')) messages.push('Email address is required.');
+    if (email?.hasError('email')) messages.push('Enter a valid email address.');
+    if (password?.hasError('required')) messages.push('Password is required.');
+    if (password?.hasError('minlength')) messages.push('Password must be at least 8 characters long.');
+    if (confirmPassword?.hasError('required')) messages.push('Confirm password is required.');
+    if (confirmPassword?.hasError('mismatch') || this.registrationForm.hasError('mismatch')) {
+      messages.push('Password and confirm password must match.');
+    }
+    if (this.registrationForm.get('district')?.invalid) messages.push('District is required.');
+    if (this.registrationForm.get('subdivision')?.invalid) messages.push('Subdivision is required.');
+    if (this.registrationForm.get('panNumber')?.invalid) messages.push('PAN number is required.');
+    if (this.registrationForm.get('address')?.invalid) messages.push('Address is required.');
+    if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
+
+    return messages.length > 0 ? Array.from(new Set(messages)) : ['Please check the form and try again.'];
+  }
+
+  private mapRegistrationErrors(err: HttpErrorResponse | any, flow: 'sendOtp' | 'verifyOtp' | 'register'): string[] {
+    const backendMessages = this.extractErrorMessages(err?.error);
+    const status = err?.status;
+    const normalizedText = backendMessages.join(' ').toLowerCase();
+
+    const hasAny = (terms: string[]) => terms.some((term) => normalizedText.includes(term));
+
+    if (flow === 'sendOtp') {
+      if (status === 409 || hasAny(['already registered', 'already exists'])) {
+        return ['This mobile number is already registered. Please sign in instead.'];
+      }
+      if (status === 429 || hasAny(['too many', 'rate limit'])) {
+        return ['Too many OTP requests. Please wait and try again.'];
+      }
+    }
+
+    if (flow === 'verifyOtp') {
+      if (status === 400 || status === 401 || hasAny(['invalid otp', 'incorrect otp', 'otp is invalid'])) {
+        return ['Invalid OTP. Enter the correct OTP and try again.'];
+      }
+      if (hasAny(['expired otp', 'otp expired', 'expired'])) {
+        return ['OTP has expired. Please request a new OTP.'];
+      }
+    }
+
+    if (flow === 'register') {
+      if (status === 409 || hasAny(['already registered', 'already exists', 'duplicate'])) {
+        return ['User already exists with this mobile/email/PAN. Please sign in or use different details.'];
+      }
+      if (hasAny(['password', 'match'])) {
+        return ['Password and confirm password must match.'];
+      }
+      if (hasAny(['captcha', 'invalid response'])) {
+        return ['Captcha verification failed. Please solve captcha again.'];
+      }
+    }
+
+    if (backendMessages.length > 0) {
+      return backendMessages;
+    }
+
+    return ['Something went wrong during signup. Please try again.'];
   }
 }

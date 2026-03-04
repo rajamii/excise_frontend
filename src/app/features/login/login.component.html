@@ -134,6 +134,20 @@
             Registering... <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
           </span>
         </button>
+
+        @if (registrationError) {
+        <div class="error-box">
+          <mat-card class="error-card">
+            <mat-card-content>
+              <ul>
+                @for (msg of registrationErrorMessages; track msg) {
+                <li>{{ msg }}</li>
+                }
+              </ul>
+            </mat-card-content>
+          </mat-card>
+        </div>
+        }
         }
 
         <!-- STEP 4: Success -->
@@ -196,7 +210,7 @@
       @if (!isPasswordMode) {
       @if (!otpSent) {
       <input formControlName="phoneNumber" placeholder="Phone Number" required />
-      <button matButton="filled" class="filled-button" (click)="sendOtp()"
+      <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
         [disabled]="loginForm.controls['phoneNumber'].invalid">Send OTP</button>
       }
 
@@ -215,6 +229,20 @@
       <button matButton="filled" class="filled-button" type="submit"
         [disabled]="loginForm.controls['otp'].invalid">Verify</button>
       }
+      }
+
+      @if (loginError) {
+      <div class="error-box">
+        <mat-card class="error-card">
+          <mat-card-content>
+            <ul>
+              @for (msg of loginErrorMessages; track msg) {
+              <li>{{ msg }}</li>
+              }
+            </ul>
+          </mat-card-content>
+        </mat-card>
+      </div>
       }
       }
     </form>
