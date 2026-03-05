@@ -57,10 +57,50 @@ export class ManageComponent extends BaseComponent implements OnInit {
     if (this.data) {
       // Clone the user data to avoid direct mutation
       this.user = { ...this.data };
+      this.normalizeEditData();
       this.isEditMode = true;
     }
     this.loadDistricts();
     this.loadRoles();
+  }
+
+  /**
+   * Normalizes list API response shape for edit form models.
+   * Backend list returns district/subdivision as { code, name },
+   * while form expects { districtCode/subdivisionCode, district/subdivision }.
+   */
+  private normalizeEditData(): void {
+    const districtAny = this.user.district as any;
+    if (districtAny && districtAny.code !== undefined && districtAny.districtCode === undefined) {
+      this.user.district = {
+        ...districtAny,
+        districtCode: Number(districtAny.code),
+        district: districtAny.name ?? districtAny.district,
+      } as District;
+    }
+
+    const subdivisionAny = this.user.subdivision as any;
+    if (
+      subdivisionAny &&
+      subdivisionAny.code !== undefined &&
+      subdivisionAny.subdivisionCode === undefined
+    ) {
+      this.user.subdivision = {
+        ...subdivisionAny,
+        subdivisionCode: Number(subdivisionAny.code),
+        subdivision: subdivisionAny.name ?? subdivisionAny.subdivision,
+      } as Subdivision;
+    }
+  }
+
+  private getDistrictCode(): number | undefined {
+    const districtAny = this.user.district as any;
+    return districtAny?.districtCode ?? districtAny?.code;
+  }
+
+  private getSubdivisionCode(): number | undefined {
+    const subdivisionAny = this.user.subdivision as any;
+    return subdivisionAny?.subdivisionCode ?? subdivisionAny?.code;
   }
 
   /**
@@ -157,20 +197,24 @@ export class ManageComponent extends BaseComponent implements OnInit {
     }).then((result) => {
       if (!result.isConfirmed) return;
 
-      // Prepare payload for registration
+      // Build base payload for both create and update
       const payload: UserPayload = {
         email: this.user.email,
-        password: this.user.password,
-        confirmPassword: this.user.confirmPassword,
         role: this.user.role?.id,
         firstName: this.user.firstName,
         middleName: this.user.middleName || '',
         lastName: this.user.lastName,
         phoneNumber: this.user.phoneNumber,
-        district: this.user.district?.districtCode,
-        subdivision: this.user.subdivision?.subdivisionCode,
+        district: this.getDistrictCode(),
+        subdivision: this.getSubdivisionCode(),
         address: this.user.address,
       };
+
+      // Password fields are required only while creating a new user
+      if (!this.isEditMode) {
+        payload.password = this.user.password;
+        payload.confirmPassword = this.user.confirmPassword;
+      }
 
       console.log('payload being sent:', payload);
 
