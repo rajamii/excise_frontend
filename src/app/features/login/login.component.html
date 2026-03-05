@@ -1,4 +1,11 @@
 <div class="login-layout">
+  <div class="top-actions">
+    <button type="button" class="back-home-btn" (click)="goToHome()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Home
+    </button>
+  </div>
+
   <div class="container" [class.right-panel-active]="isRightPanelActive" id="container">
   <!-- Sign Up Panel -->
   <div class="form-container sign-up-container">

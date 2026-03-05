@@ -167,6 +167,10 @@ export class LoginComponent extends BaseComponent {
     this.isRightPanelActive = false;
   }
 
+  goToHome(): void {
+    this.router.navigate(['/']);
+  }
+
   private passwordMatchValidator(formGroup: FormGroup) {
     const password = formGroup.get('password')?.value;
     const confirmPassword = formGroup.get('confirmPassword')?.value;

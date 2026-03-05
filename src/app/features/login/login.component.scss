@@ -16,6 +16,37 @@
 	position: relative;
 }
 
+.top-actions {
+	position: fixed;
+	top: 118px;
+	left: 16px;
+	z-index: 1200;
+}
+
+.back-home-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	border: 1px solid #1c2b78;
+	background: #ffffff;
+	color: #1c2b78;
+	border-radius: 8px;
+	padding: 8px 12px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+
+	&:hover {
+		background: #eef1ff;
+	}
+
+	mat-icon {
+		font-size: 18px;
+		width: 18px;
+		height: 18px;
+	}
+}
+
 .container {
 	background-color: #fff;
 	box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
@@ -429,6 +460,16 @@ app-captcha {
 	.login-layout {
 		flex-direction: column;
 		width: 100%;
+	}
+
+	.top-actions {
+		top: 112px;
+		left: 10px;
+	}
+
+	.back-home-btn {
+		padding: 7px 10px;
+		font-size: 13px;
 	}
 
 	.container {
