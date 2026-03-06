@@ -118,6 +118,11 @@
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
             </button>
+            <button class="nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
+            "isDashboardSectionActive('label-registration')">
+              <mat-icon class="nav-icon">label</mat-icon>
+              <span class="nav-text">Label Registration</span>
+            </button>
           </div>
 
           <!-- Admin/Officer Navigation -->

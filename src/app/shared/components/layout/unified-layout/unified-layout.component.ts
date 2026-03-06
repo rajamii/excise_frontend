@@ -270,15 +270,25 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
-  navigateToLicenseeRegistration(type: 'company' | 'salesman-barman'): void {
-    const section =
-      type === 'company'
-        ? 'company-registration'
-        : 'salesman-barman-registration';
+  navigateToLicenseeRegistration(type: 'company' | 'salesman-barman' | 'label'): void {
+    const sectionMap: Record<'company' | 'salesman-barman' | 'label', string> = {
+      company: 'company-registration',
+      'salesman-barman': 'salesman-barman-registration',
+      label: 'label-registration'
+    };
+    const section = sectionMap[type];
 
     this.router.navigate(['/dashboard'], {
       queryParams: { section }
     });
+  }
+
+  isDashboardSectionActive(section: string): boolean {
+    const urlTree = this.router.parseUrl(this.router.url);
+    const primarySegments = urlTree.root.children['primary']?.segments ?? [];
+    const path = primarySegments.map(segment => segment.path).join('/');
+    const activeSection = urlTree.queryParams['section'];
+    return path === 'dashboard' && activeSection === section;
   }
 
   // Navigate to role-specific sections

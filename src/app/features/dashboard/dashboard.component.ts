@@ -51,7 +51,9 @@ import { CommissionerDashboardComponent as CommissionerDashboard } from './role-
 import { ITCellDashboardComponent } from './role-components/itcell-dashboard.component';
 import { OfficerInChargeDashboardComponent } from './role-components/officer-in-charge-dashboard.component';
 import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
+import { PrepareApplicationComponent as CompanyCollaborationPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-collaboration/prepare-application/prepare-application.component';
 import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } from '../licensee/salesman-registration/prepare-application.component';
+import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-registration/prepare-application/prepare-application.component';
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
 
 @Component({
@@ -94,7 +96,9 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     ITCellDashboardComponent,
     OfficerInChargeDashboardComponent,
     CompanyPrepareApplicationComponent,
+    CompanyCollaborationPrepareApplicationComponent,
     SalesmanPrepareApplicationComponent,
+    LabelRegistrationPrepareApplicationComponent,
     ApplyNewLicenseComponent
   ],
   templateUrl: './dashboard.component.html',
@@ -495,7 +499,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram': 'Hologram Procurement',
       'hologram-request': 'Hologram Request',
       'company-registration': 'Company Registration',
+      'company-registration-apply': 'Company Registration',
+      'company-collaboration': 'Company Collaboration',
       'salesman-barman-registration': 'Salesman/Barman Registration',
+      'salesman-barman-registration-apply': 'Salesman/Barman Registration',
+      'label-registration': 'Label Registration',
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
 

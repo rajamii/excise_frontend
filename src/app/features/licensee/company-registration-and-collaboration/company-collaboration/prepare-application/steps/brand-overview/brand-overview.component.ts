@@ -1,21 +1,11 @@
 import { Component, EventEmitter, Output, OnInit, DoCheck } from '@angular/core';
 import { MaterialModule } from '../../../../../../../shared/material.module';
-
-interface Brand {
-  id: number;
-  brand_code: string;
-  brand_name: string;
-  category: string;
-  type: string;
-  strength: number;
-  sizes: string[];
-}
-
-interface FeeStructure {
-  applicationFee: number;
-  collaborationFee: number;
-  securityDeposit: number;
-}
+import {
+  COMPANY_COLLAB_STORAGE_KEYS,
+  CompanyCollaborationBrand,
+  CompanyCollaborationFeeStructure
+} from '../../../../../../../core/models/company-collaboration.model';
+import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
 
 @Component({
   selector: 'app-brand-overview',
@@ -28,17 +18,18 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
-  selectedBrands: Brand[] = [];
+  selectedBrands: CompanyCollaborationBrand[] = [];
   displayedColumns: string[] = ['serialNo', 'brandCode', 'brandName', 'type', 'strength', 'sizes', 'action'];
 
   // Fee structure - typically loaded from service/API
-  feeStructure: FeeStructure = {
+  feeStructure: CompanyCollaborationFeeStructure = {
     applicationFee: 1000,
     collaborationFee: 5000,
     securityDeposit: 10000
   };
 
   private lastBrandCount = 0;
+  constructor(private companyCollaborationService: CompanyCollaborationService) {}
 
   ngOnInit() {
     this.loadSelectedBrands();
@@ -46,7 +37,7 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
 
   ngDoCheck() {
     // Check if brands have changed in session storage
-    const savedBrands = sessionStorage.getItem('selectedBrandsDetails');
+    const savedBrands = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
     if (savedBrands) {
       const brands = JSON.parse(savedBrands);
       if (brands.length !== this.lastBrandCount) {
@@ -57,7 +48,7 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
   }
 
   private loadSelectedBrands() {
-    const savedBrands = sessionStorage.getItem('selectedBrandsDetails');
+    const savedBrands = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
     if (savedBrands) {
       try {
         this.selectedBrands = JSON.parse(savedBrands);
@@ -68,7 +59,7 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
         this.lastBrandCount = 0;
       }
     } else {
-      this.selectedBrands = [];
+      this.selectedBrands = this.companyCollaborationService.getSelectedBrands();
       this.lastBrandCount = 0;
     }
   }
@@ -77,11 +68,12 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
     this.selectedBrands = this.selectedBrands.filter(brand => brand.id !== brandId);
     
     // Update session storage
-    sessionStorage.setItem('selectedBrandsDetails', JSON.stringify(this.selectedBrands));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(this.selectedBrands));
     
     // Also update the selected brand IDs
     const selectedIds = this.selectedBrands.map(brand => brand.id);
-    sessionStorage.setItem('selectedBrands', JSON.stringify(selectedIds));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedIds));
+    this.companyCollaborationService.setSelectedBrands(this.selectedBrands);
     
     this.lastBrandCount = this.selectedBrands.length;
   }
@@ -91,12 +83,12 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
   }
 
   getBottlerDetails(): any {
-    const saved = sessionStorage.getItem('bottlerDetails');
+    const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
     return saved ? JSON.parse(saved) : {};
   }
 
   getCompanyDetails(): any {
-    const saved = sessionStorage.getItem('companyDetails');
+    const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
     return saved ? JSON.parse(saved) : {};
   }
 
@@ -111,7 +103,7 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
   proceedToNext() {
     if (this.selectedBrands.length > 0) {
       // Save fee structure to session storage for next step
-      sessionStorage.setItem('feeStructure', JSON.stringify(this.feeStructure));
+      sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure, JSON.stringify(this.feeStructure));
       
       // Save overview summary
       const overviewSummary = {
@@ -120,7 +112,7 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
         applicationDate: this.getCurrentDate(),
         selectedBrands: this.selectedBrands
       };
-      sessionStorage.setItem('overviewSummary', JSON.stringify(overviewSummary));
+      sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary, JSON.stringify(overviewSummary));
       
       this.next.emit();
     }

@@ -1,18 +1,11 @@
 import { Component, EventEmitter, Output, OnInit, OnDestroy } from '@angular/core';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { FormsModule } from '@angular/forms';
-
-interface Brand {
-  id: number;
-  brand_code: string;
-  brand_name: string;
-  category: string;
-  type: string;
-  strength: number;
-  sizes: string[];
-  brand_owner_code: string;
-  status: string;
-}
+import {
+  COMPANY_COLLAB_STORAGE_KEYS,
+  CompanyCollaborationBrand
+} from '../../../../../../../core/models/company-collaboration.model';
+import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
 
 @Component({
   selector: 'app-select-brands',
@@ -26,7 +19,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   @Output() readonly back = new EventEmitter<void>();
 
   // Sample brands data - in real app, this would come from a service
-  allBrands: Brand[] = [
+  allBrands: CompanyCollaborationBrand[] = [
     {
       id: 1,
       brand_code: 'NA',
@@ -64,7 +57,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
 
   ];
 
-  filteredBrands: Brand[] = [];
+  filteredBrands: CompanyCollaborationBrand[] = [];
   selectedBrandIds: Set<number> = new Set();
 
   // Filter properties
@@ -75,6 +68,8 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   // Dynamic filter options
   categories: string[] = [];
   types: string[] = [];
+
+  constructor(private companyCollaborationService: CompanyCollaborationService) {}
 
   ngOnInit() {
     this.initializeFilters();
@@ -93,7 +88,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   }
 
   private loadSavedSelection() {
-    const saved = sessionStorage.getItem('selectedBrands');
+    const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
     if (saved) {
       try {
         const savedIds = JSON.parse(saved);
@@ -102,15 +97,17 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
         console.error('Error loading saved brand selection:', error);
       }
     }
+    this.companyCollaborationService.setSelectedBrands(this.getSelectedBrands());
   }
 
   private saveSelection() {
     const selectedIds = Array.from(this.selectedBrandIds);
-    sessionStorage.setItem('selectedBrands', JSON.stringify(selectedIds));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedIds));
 
     // Also save detailed brand information
     const selectedBrands = this.getSelectedBrands();
-    sessionStorage.setItem('selectedBrandsDetails', JSON.stringify(selectedBrands));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(selectedBrands));
+    this.companyCollaborationService.setSelectedBrands(selectedBrands);
   }
 
   filterBrands() {
@@ -163,14 +160,15 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     return this.selectedBrandIds.size;
   }
 
-  getSelectedBrands(): Brand[] {
+  getSelectedBrands(): CompanyCollaborationBrand[] {
     return this.allBrands.filter(brand => this.selectedBrandIds.has(brand.id));
   }
 
   resetSelection() {
     this.selectedBrandIds.clear();
-    sessionStorage.removeItem('selectedBrands');
-    sessionStorage.removeItem('selectedBrandsDetails');
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
+    this.companyCollaborationService.clearSelectedBrands();
   }
 
   goBack() {

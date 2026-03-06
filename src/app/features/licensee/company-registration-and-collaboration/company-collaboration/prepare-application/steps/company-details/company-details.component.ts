@@ -4,6 +4,10 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
+import {
+  COMPANY_COLLAB_STORAGE_KEYS,
+  CompanyCollaborationCompanyDetails
+} from '../../../../../../../core/models/company-collaboration.model';
 
 @Component({
   selector: 'app-company-details',
@@ -81,14 +85,22 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private getFromSessionStorage(): any {
-    const storedData = sessionStorage.getItem('companyDetails');
-    return storedData ? JSON.parse(storedData) : {};
+  private getFromSessionStorage(): Partial<CompanyCollaborationCompanyDetails> {
+    const storedData = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
+    if (!storedData) {
+      return {};
+    }
+    try {
+      return JSON.parse(storedData) as Partial<CompanyCollaborationCompanyDetails>;
+    } catch (error) {
+      console.error('Unable to parse company collaboration company details from sessionStorage:', error);
+      return {};
+    }
   }
 
   private saveToSessionStorage() {
     const formData = this.companyDetailsForm.getRawValue();
-    sessionStorage.setItem('companyDetails', JSON.stringify(formData));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails, JSON.stringify(formData));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
@@ -128,7 +140,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
   resetForm() {
     this.companyDetailsForm.reset();
-    sessionStorage.removeItem('companyDetails');
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
   }
 
   goBack() {

@@ -2,38 +2,48 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { CompanyCollaborationBrand } from '../models/company-collaboration.model';
 
 @Injectable({
-    providedIn: 'root'
+  providedIn: 'root'
 })
 export class CompanyCollaborationService {
-    // Backend repository does not expose collaboration endpoints; keep a safe guard.
-    private baseUrl = `${environment.apiBaseUrl}`;
+  private baseUrl = `${environment.apiBaseUrl}/transactional/company-collaboration`;
+  private selectedBrands: CompanyCollaborationBrand[] = [];
 
-    constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
-    createCollaboration(data: any): Observable<any> {
-        return this.unavailable();
-    }
+  applyCompanyCollaboration(data: FormData): Observable<any> {
+    return this.http.post(`${this.baseUrl}/apply/`, data);
+  }
 
-    getCollaborations(params: any = {}): Observable<any> {
-        return this.unavailable();
-    }
+  listCompanyCollaborations(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/list/`);
+  }
 
-    getCollaboration(id: number): Observable<any> {
-        return this.unavailable();
-    }
+  getCompanyCollaborationDetail(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.baseUrl}/detail/${encodedId}/`);
+  }
 
-    updateCollaboration(id: number, data: any): Observable<any> {
-        return this.unavailable();
-    }
+  getDashboardCounts(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/dashboard-counts/`);
+  }
 
-    deleteCollaboration(id: number): Observable<any> {
-        return this.unavailable();
-    }
+  getApplicationsByStatus(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/list-by-status/`);
+  }
 
-    private unavailable(): Observable<never> {
-        throw new Error('Company collaboration APIs are not available in the backend.');
-    }
+  setSelectedBrands(brands: CompanyCollaborationBrand[]): void {
+    this.selectedBrands = [...brands];
+  }
+
+  getSelectedBrands(): CompanyCollaborationBrand[] {
+    return this.selectedBrands;
+  }
+
+  clearSelectedBrands(): void {
+    this.selectedBrands = [];
+  }
 }
 

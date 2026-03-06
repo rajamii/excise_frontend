@@ -75,9 +75,18 @@
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
         <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
-        <app-prepare-application *ngIf="selectedSupplyChainSection === 'company-registration'"></app-prepare-application>
+        <app-prepare-application
+          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-registration-apply'">
+        </app-prepare-application>
+        <app-company-collaboration-prepare-application
+          *ngIf="selectedSupplyChainSection === 'company-collaboration'">
+        </app-company-collaboration-prepare-application>
         <app-salesman-registration
-          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration'"></app-salesman-registration>
+          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration' || selectedSupplyChainSection === 'salesman-barman-registration-apply'">
+        </app-salesman-registration>
+        <app-label-registration-prepare-application
+          *ngIf="selectedSupplyChainSection === 'label-registration'">
+        </app-label-registration-prepare-application>
         <app-new-license-dashboard *ngIf="selectedSupplyChainSection === 'new-license'"></app-new-license-dashboard>
         <app-apply-new-license *ngIf="selectedSupplyChainSection === 'new-license-apply'"></app-apply-new-license>
 

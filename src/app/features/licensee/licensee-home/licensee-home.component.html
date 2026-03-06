@@ -113,6 +113,18 @@
                         </div>
                     </mat-expansion-panel>
                 </mat-accordion>
+                <mat-accordion>
+                    <mat-expansion-panel>
+                        <mat-expansion-panel-header>
+                            Company Collaboration
+                        </mat-expansion-panel-header>
+                        <div class="button-column">
+                            <button mat-menu-item (click)="navigateToDashboardSection('company-collaboration')">
+                                Prepare Application
+                            </button>
+                        </div>
+                    </mat-expansion-panel>
+                </mat-accordion>
                 <!-- Accordion Menu for Salesman/Barman Registration -->
                 <mat-accordion>
                     <mat-expansion-panel>
@@ -134,6 +146,18 @@
                             <button mat-menu-item routerLink="salesman-barman/application-status"
                                 routerLinkActive="active-link">
                                 Application Status
+                            </button>
+                        </div>
+                    </mat-expansion-panel>
+                </mat-accordion>
+                <mat-accordion>
+                    <mat-expansion-panel>
+                        <mat-expansion-panel-header>
+                            Label Registration
+                        </mat-expansion-panel-header>
+                        <div class="button-column">
+                            <button mat-menu-item (click)="navigateToDashboardSection('label-registration')">
+                                Prepare Application
                             </button>
                         </div>
                     </mat-expansion-panel>

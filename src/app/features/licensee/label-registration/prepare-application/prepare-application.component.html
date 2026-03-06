@@ -1,0 +1,32 @@
+<mat-horizontal-stepper [linear]="true" #stepper>
+  <mat-step label="Licensee Details">
+    <app-label-registration-licensee-details (next)="stepper.next()"></app-label-registration-licensee-details>
+  </mat-step>
+
+  <mat-step label="Label Details">
+    <app-label-registration-product-details
+      (back)="stepper.previous()"
+      (next)="stepper.next()">
+    </app-label-registration-product-details>
+  </mat-step>
+
+  <mat-step label="Packaging & Pricing">
+    <app-label-registration-packaging-details
+      (back)="stepper.previous()"
+      (next)="stepper.next()">
+    </app-label-registration-packaging-details>
+  </mat-step>
+
+  <mat-step label="Upload Documents">
+    <app-label-registration-upload-documents
+      (back)="stepper.previous()"
+      (next)="stepper.next()">
+    </app-label-registration-upload-documents>
+  </mat-step>
+
+  <mat-step label="Submit Application">
+    <app-label-registration-submit-application
+      (back)="stepper.previous()">
+    </app-label-registration-submit-application>
+  </mat-step>
+</mat-horizontal-stepper>

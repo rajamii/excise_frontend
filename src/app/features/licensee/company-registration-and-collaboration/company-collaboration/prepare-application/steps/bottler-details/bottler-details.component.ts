@@ -3,16 +3,11 @@ import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms'
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../../../shared/material.module';
-
-interface BrandOwner {
-  id: number;
-  brand_owner_code: string;
-  company_name: string;
-  company_address: string;
-  location: string;
-  status: string;
-  brand_count?: number;
-}
+import {
+  COMPANY_COLLAB_STORAGE_KEYS,
+  CompanyCollaborationBottlerDetails,
+  CompanyCollaborationBrandOwner
+} from '../../../../../../../core/models/company-collaboration.model';
 
 @Component({
   selector: 'app-bottler-details',
@@ -29,7 +24,7 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   
   // Sample brand owners data - replace with actual service call
-  brandOwners: BrandOwner[] = [
+  brandOwners: CompanyCollaborationBrandOwner[] = [
     {
       id: 1,
       brand_owner_code: 'NA',
@@ -129,14 +124,22 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getFromSessionStorage(): any {
-    const storedData = sessionStorage.getItem('bottlerDetails');
-    return storedData ? JSON.parse(storedData) : {};
+  private getFromSessionStorage(): Partial<CompanyCollaborationBottlerDetails> {
+    const storedData = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
+    if (!storedData) {
+      return {};
+    }
+    try {
+      return JSON.parse(storedData) as Partial<CompanyCollaborationBottlerDetails>;
+    } catch (error) {
+      console.error('Unable to parse company collaboration bottler details from sessionStorage:', error);
+      return {};
+    }
   }
 
   private saveToSessionStorage() {
     const formData = this.bottlerDetailsForm.getRawValue();
-    sessionStorage.setItem('bottlerDetails', JSON.stringify(formData));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails, JSON.stringify(formData));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
@@ -158,7 +161,7 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
     return this.errorMessages[field]();
   }
 
-  getSelectedBrandOwnerDetails(): BrandOwner | undefined {
+  getSelectedBrandOwnerDetails(): CompanyCollaborationBrandOwner | undefined {
     const selectedId = this.bottlerDetailsForm.get('brandOwner')?.value;
     return this.brandOwners.find(owner => owner.id.toString() === selectedId?.toString());
   }
@@ -168,7 +171,7 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
     this.bottlerDetailsForm.patchValue({
       financialYear: this.getCurrentFinancialYear()
     });
-    sessionStorage.removeItem('bottlerDetails');
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
   }
 
   proceedToNext() {

@@ -1,0 +1,130 @@
+<form [formGroup]="productForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Label Details</div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="form-field-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Brand Name</mat-label>
+          <input matInput formControlName="brandName" required />
+          @if (productForm.controls['brandName'].invalid && productForm.controls['brandName'].touched) {
+            <mat-error>{{ getErrorMessage('brandName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Label Name</mat-label>
+          <input matInput formControlName="labelName" required />
+          @if (productForm.controls['labelName'].invalid && productForm.controls['labelName'].touched) {
+            <mat-error>{{ getErrorMessage('labelName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Liquor Category</mat-label>
+          <mat-select formControlName="liquorCategory" required>
+            <mat-option value="">-- Select Category --</mat-option>
+            @for (item of liquorCategories; track item) {
+              <mat-option [value]="item">{{ item }}</mat-option>
+            }
+          </mat-select>
+          @if (productForm.controls['liquorCategory'].invalid && productForm.controls['liquorCategory'].touched) {
+            <mat-error>{{ getErrorMessage('liquorCategory') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Label Type</mat-label>
+          <mat-select formControlName="labelType" required>
+            <mat-option value="">-- Select Label Type --</mat-option>
+            @for (item of labelTypes; track item) {
+              <mat-option [value]="item">{{ item }}</mat-option>
+            }
+          </mat-select>
+          @if (productForm.controls['labelType'].invalid && productForm.controls['labelType'].touched) {
+            <mat-error>{{ getErrorMessage('labelType') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Strength (% ABV)</mat-label>
+          <input matInput type="number" formControlName="abvStrength" min="0" max="100" required />
+          @if (productForm.controls['abvStrength'].invalid && productForm.controls['abvStrength'].touched) {
+            <mat-error>{{ getErrorMessage('abvStrength') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Net Content (ML)</mat-label>
+          <input matInput type="number" formControlName="netContentMl" min="30" required />
+          @if (productForm.controls['netContentMl'].invalid && productForm.controls['netContentMl'].touched) {
+            <mat-error>{{ getErrorMessage('netContentMl') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Origin State</mat-label>
+          <input matInput formControlName="originState" required />
+          @if (productForm.controls['originState'].invalid && productForm.controls['originState'].touched) {
+            <mat-error>{{ getErrorMessage('originState') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Barcode / SKU</mat-label>
+          <input matInput formControlName="barcode" required />
+          @if (productForm.controls['barcode'].invalid && productForm.controls['barcode'].touched) {
+            <mat-error>{{ getErrorMessage('barcode') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Shelf Life (Months)</mat-label>
+          <input matInput type="number" formControlName="shelfLifeMonths" min="1" max="120" required />
+          @if (productForm.controls['shelfLifeMonths'].invalid && productForm.controls['shelfLifeMonths'].touched) {
+            <mat-error>{{ getErrorMessage('shelfLifeMonths') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Ingredient Declaration</mat-label>
+          <textarea
+            matInput
+            formControlName="ingredients"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="2"
+            cdkAutosizeMaxRows="4"
+            required>
+          </textarea>
+          @if (productForm.controls['ingredients'].invalid && productForm.controls['ingredients'].touched) {
+            <mat-error>{{ getErrorMessage('ingredients') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Mandatory Label Declaration Text</mat-label>
+          <textarea
+            matInput
+            formControlName="declarationText"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="3"
+            cdkAutosizeMaxRows="6"
+            required>
+          </textarea>
+          @if (productForm.controls['declarationText'].invalid && productForm.controls['declarationText'].touched) {
+            <mat-error>{{ getErrorMessage('declarationText') }}</mat-error>
+          }
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()">Next</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>
