@@ -64,6 +64,10 @@ export class MasterService {
     return this.http.get(`${this.LICENSEE_PROFILE_URL}/me/`);
   }
 
+  patchMyLicenseeProfile(data: any): Observable<any> {
+    return this.http.patch(`${this.LICENSEE_PROFILE_URL}/me/`, data);
+  }
+
   getLicenseeProfile(id: number): Observable<any> {
     return this.http.get(`${this.LICENSEE_PROFILE_URL}/${id}/`);
   }

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
-import { Subscription } from 'rxjs';
+import { Subscription, catchError, throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 
 // Import Material Modules
@@ -326,11 +326,23 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     this.saveError   = '';
     this.saveSuccess = false;
 
-    const payload = this.formatPayload();
+    const payload = this.isNewProfile
+      ? this.formatCreatePayload()
+      : this.formatUpdatePayload();
 
     const save$ = this.isNewProfile
       ? this.mastersService.createLicenseeProfile(payload)
-      : this.mastersService.patchLicenseeProfile(this.licenseeProfile.id, payload);
+      : this.mastersService
+          .patchLicenseeProfile(this.licenseeProfile.id, payload)
+          .pipe(
+            // Some backends only allow self-updates at /me/ and reject id-based update with 403.
+            catchError((error: any) => {
+              if ([403, 404, 405].includes(error?.status)) {
+                return this.mastersService.patchMyLicenseeProfile(payload);
+              }
+              return throwError(() => error);
+            })
+          );
 
     const sub = save$.subscribe({
       next: (response: any) => {
@@ -398,17 +410,26 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   }
 
   /**
-   * Build the request payload using camelCase to match backend API convention.
-   * getRawValue() includes disabled (immutable) fields so they're sent on create.
-   * On update the backend ignores them anyway.
+   * Build create payload using camelCase to match backend API convention.
    */
-  private formatPayload(): any {
+  private formatCreatePayload(): any {
     const v = this.profileForm.getRawValue();
     return {
       fatherName:        v.father_name,
       dob:                this.formatDate(v.dob),
       gender:             v.gender,
       nationality:        v.nationality,
+      maritalStatus:     v.marital_status,
+      residentialStatus: v.residential_status
+    };
+  }
+
+  /**
+   * Build update payload with mutable fields only.
+   */
+  private formatUpdatePayload(): any {
+    const v = this.profileForm.getRawValue();
+    return {
       maritalStatus:     v.marital_status,
       residentialStatus: v.residential_status
     };
