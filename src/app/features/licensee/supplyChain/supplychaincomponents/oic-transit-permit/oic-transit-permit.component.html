@@ -182,13 +182,9 @@
       <ng-container matColumnDef="status">
         <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
         <mat-cell *matCellDef="let element">
-          <span class="status-badge" [ngClass]="getStatusClass(element.status_code || element.status)">
-            <mat-icon>{{
-              (element.status_code === 'TRP_02' || element.status.toLowerCase().includes('payment')) ? 'schedule' :
-              (element.status_code === 'TRP_03' || element.status.toLowerCase().includes('approved')) ? 'check_circle' :
-              'cancel'
-              }}</mat-icon>
-            {{ getStatusLabel(element.status_code || element.status) }}
+          <span class="status-badge" [ngClass]="getStatusClass(element.status_code || element.status_label || element.status)">
+            <mat-icon>{{ getStatusIcon(element) }}</mat-icon>
+            {{ getStatusLabel(element) }}
           </span>
         </mat-cell>
       </ng-container>
@@ -204,14 +200,6 @@
             <button mat-icon-button color="primary" (click)="onViewFinalPermit(element)" matTooltip="View Permit"
               *ngIf="element.status_code === 'TRP_03' || element.status.toLowerCase().includes('approved')">
               <mat-icon>assignment</mat-icon>
-            </button>
-            <button mat-icon-button color="accent" (click)="onApprove(element)" matTooltip="Approve"
-              *ngIf="element.status_code === 'TRP_02' || element.status.toLowerCase().includes('payment')">
-              <mat-icon>check_circle</mat-icon>
-            </button>
-            <button mat-icon-button color="warn" (click)="onReject(element)" matTooltip="Reject"
-              *ngIf="element.status_code === 'TRP_02' || element.status.toLowerCase().includes('payment')">
-              <mat-icon>cancel</mat-icon>
             </button>
           </div>
         </mat-cell>

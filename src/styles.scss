@@ -56,3 +56,600 @@ body{ background-color: #EDF7FE; }
     }
   }
 }
+
+// OIC add-officer dialog polish
+.oic-manage-dialog {
+  .mat-mdc-dialog-container {
+    --mdc-dialog-container-shape: 14px;
+  }
+
+  .mat-mdc-dialog-surface,
+  .mdc-dialog__surface {
+    border-radius: 14px !important;
+    box-shadow: 0 18px 46px rgba(12, 27, 72, 0.28) !important;
+    border: 1px solid #dce4f6;
+  }
+}
+
+// Global inactivity warning modal styling
+.swal2-popup.idle-timeout-popup {
+  width: min(460px, calc(100vw - 2rem)) !important;
+  border-radius: 16px !important;
+  padding: 1.5rem 1.5rem 1.25rem !important;
+  border: 1px solid #e4e9f5;
+  box-shadow: 0 24px 60px rgba(9, 27, 68, 0.22) !important;
+}
+
+.idle-timeout-title {
+  font-size: 1.35rem !important;
+  font-weight: 700 !important;
+  color: #1e2a4a !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.idle-timeout-content {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+}
+
+.idle-timeout-scene {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 25%, #253b75 0%, #121f46 45%, #0b1530 100%);
+  border: 1px solid #2a3e73;
+}
+
+.idle-star {
+  position: absolute;
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #d6e4ff;
+  opacity: 0.9;
+  animation: idleTwinkle 2.2s infinite ease-in-out;
+}
+
+.idle-star-1 { top: 20%; left: 12%; animation-delay: 0s; }
+.idle-star-2 { top: 33%; left: 32%; animation-delay: 0.35s; }
+.idle-star-3 { top: 19%; right: 20%; animation-delay: 0.7s; }
+.idle-star-4 { top: 44%; right: 10%; animation-delay: 1.05s; }
+
+.idle-timeout-earth {
+  position: absolute;
+  left: -22px;
+  bottom: -46px;
+  width: 142px;
+  height: 142px;
+  border-radius: 50%;
+}
+
+.idle-earth-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 65% 35%, #66b5ff 0%, #2c7ef2 34%, #1d4fb0 70%, #163f95 100%);
+  box-shadow: inset -14px -18px 24px rgba(6, 28, 74, 0.48);
+}
+
+.idle-earth-glow {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(136, 185, 255, 0.32);
+  animation: idleEarthGlow 1.8s infinite ease-in-out;
+}
+
+.idle-earth-sikkim-pin {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffd56b;
+  border: 2px solid #fff1c9;
+  box-shadow: 0 0 0 0 rgba(255, 213, 107, 0.66);
+  animation: idleSikkimPulse 1.2s infinite ease-out;
+}
+
+.idle-earth-sikkim-pin::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 9px;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 6px solid #ffd56b;
+}
+
+.idle-earth-sikkim-label {
+  position: absolute;
+  top: 7px;
+  right: -24px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffe6a9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.idle-timeout-ufo {
+  position: absolute;
+  right: 30px;
+  top: 54px;
+  width: 66px;
+  height: 32px;
+  animation: idleUfoFlight 4.2s infinite ease-in-out;
+}
+
+.idle-ufo-body {
+  position: absolute;
+  inset: auto 0 0;
+  height: 18px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, #f8fbff 0%, #c8d8f7 55%, #9bb7e8 100%);
+  border: 1px solid #b9cdef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.idle-ufo-dome {
+  position: absolute;
+  left: 16px;
+  top: 0;
+  width: 34px;
+  height: 18px;
+  border-radius: 18px 18px 8px 8px;
+  background: linear-gradient(180deg, #9ad7ff 0%, #4da1ef 100%);
+  border: 1px solid #7bbef5;
+}
+
+.idle-ufo-light {
+  position: absolute;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffd680;
+  box-shadow: 0 0 8px rgba(255, 214, 128, 0.75);
+}
+
+.idle-ufo-light-1 { left: 12px; }
+.idle-ufo-light-2 { left: 29px; }
+.idle-ufo-light-3 { left: 46px; }
+
+.idle-ufo-beam {
+  position: absolute;
+  left: 22px;
+  top: 15px;
+  width: 22px;
+  height: 44px;
+  background: linear-gradient(180deg, rgba(147, 204, 255, 0.55) 0%, rgba(147, 204, 255, 0) 100%);
+  clip-path: polygon(22% 0%, 78% 0%, 100% 100%, 0% 100%);
+  animation: idleBeamPulse 1.5s infinite ease-in-out;
+}
+
+.idle-timeout-message {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: #4b5a7a;
+  text-align: center;
+  max-width: 330px;
+}
+
+.idle-timeout-countdown {
+  min-width: 156px;
+  border-radius: 999px;
+  padding: 0.42rem 1.05rem;
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: #0d2a55;
+  background: #ecf3ff;
+  border: 1px solid #cfe0ff;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+.idle-timeout-countdown.is-critical {
+  color: #8f1222;
+  background: #ffe8ec;
+  border-color: #ffb8c4;
+  animation: idleDangerPulse 0.9s infinite ease-in-out;
+}
+
+.idle-timeout-progress {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #eaf0fb;
+  overflow: hidden;
+}
+
+.idle-timeout-progress #idle-progress-bar {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3d6fd8 0%, #6ba5ff 100%);
+  transition: width 0.2s linear;
+}
+
+.idle-timeout-progress #idle-progress-bar.is-critical {
+  background: linear-gradient(90deg, #cc3448 0%, #ff6f7f 100%);
+}
+
+.swal2-actions .idle-timeout-confirm,
+.swal2-actions .idle-timeout-cancel {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.58rem 1rem;
+  font-size: 0.93rem;
+  font-weight: 600;
+  margin: 0 0.25rem;
+}
+
+.swal2-actions .idle-timeout-confirm {
+  color: #ffffff;
+  background: linear-gradient(180deg, #2f66d6 0%, #1f4fb6 100%);
+  box-shadow: 0 8px 18px rgba(26, 76, 170, 0.28);
+}
+
+.swal2-actions .idle-timeout-confirm:hover {
+  filter: brightness(1.05);
+}
+
+.swal2-actions .idle-timeout-cancel {
+  color: #304a78;
+  background: #eaf0fb;
+}
+
+@keyframes idleTwinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes idleEarthGlow {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.04); opacity: 0.6; }
+}
+
+@keyframes idleUfoFlight {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  40% { transform: translate(-10px, -8px) rotate(-3deg); }
+  75% { transform: translate(8px, -18px) rotate(2deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes idleBeamPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.9); }
+  50% { opacity: 0.8; transform: scaleY(1.03); }
+}
+
+@keyframes idleDangerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes idleSikkimPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 207, 94, 0.72);
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgba(255, 207, 94, 0);
+  }
+}
+
+// Inactivity logout popup (sad alien)
+.swal2-popup.inactive-logout-popup {
+  width: min(420px, calc(100vw - 2rem)) !important;
+  border-radius: 16px !important;
+  padding: 1.3rem 1.4rem 1.15rem !important;
+  border: 1px solid #dce5f8;
+  box-shadow: 0 22px 52px rgba(8, 24, 62, 0.24) !important;
+}
+
+.inactive-logout-title {
+  margin-bottom: 0.45rem !important;
+  color: #1f2e53 !important;
+  font-size: 1.38rem !important;
+  font-weight: 800 !important;
+}
+
+.inactive-logout-content {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+}
+
+.inactive-alien-wrap {
+  position: relative;
+  width: 88px;
+  height: 102px;
+  animation: inactiveAlienFloat 2.3s infinite ease-in-out;
+}
+
+.inactive-alien-head {
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  width: 72px;
+  height: 66px;
+  border-radius: 46px 46px 40px 40px;
+  background: linear-gradient(180deg, #8cf5cf 0%, #4fcf9c 100%);
+  border: 1px solid #5abf95;
+  box-shadow: inset 0 -8px 14px rgba(24, 92, 72, 0.24);
+}
+
+.inactive-alien-eye {
+  position: absolute;
+  top: 36px;
+  width: 12px;
+  height: 16px;
+  border-radius: 50%;
+  background: #143449;
+}
+
+.inactive-alien-eye-left { left: 28px; }
+.inactive-alien-eye-right { right: 28px; }
+
+.inactive-alien-mouth {
+  position: absolute;
+  left: 37px;
+  top: 57px;
+  width: 14px;
+  height: 7px;
+  border-bottom: 3px solid #235066;
+  border-radius: 0 0 14px 14px;
+}
+
+.inactive-alien-antenna {
+  position: absolute;
+  left: 42px;
+  top: 2px;
+  width: 4px;
+  height: 16px;
+  border-radius: 4px;
+  background: #56c59a;
+  transform-origin: bottom center;
+  animation: inactiveAntennaSway 1.2s infinite ease-in-out;
+}
+
+.inactive-alien-antenna::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #8cf5cf;
+  border: 1px solid #63c89f;
+}
+
+.inactive-alien-tear {
+  position: absolute;
+  right: 22px;
+  top: 43px;
+  width: 6px;
+  height: 11px;
+  border-radius: 3px 3px 6px 6px;
+  background: linear-gradient(180deg, #8ad3ff 0%, #3f98e8 100%);
+  animation: inactiveTearDrop 1.5s infinite ease-in;
+}
+
+.inactive-logout-message {
+  margin: 0;
+  text-align: center;
+  color: #506384;
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.swal2-actions .inactive-logout-confirm {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.58rem 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(180deg, #2f66d6 0%, #1f4fb6 100%);
+  box-shadow: 0 8px 16px rgba(23, 72, 162, 0.3);
+}
+
+@keyframes inactiveAlienFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes inactiveAntennaSway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(8deg); }
+}
+
+@keyframes inactiveTearDrop {
+  0% { opacity: 0; transform: translateY(0); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(14px); }
+}
+
+
+/* ========================================
+   Unified Action Buttons - Global Styles
+   ======================================== */
+
+/* Base icon button styles */
+app-unified-action-buttons button[mat-icon-button],
+.action-buttons-container button[mat-icon-button] {
+  min-width: 56px !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 16px !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: visible !important;
+}
+
+app-unified-action-buttons button[mat-icon-button]:hover,
+.action-buttons-container button[mat-icon-button]:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button]:active,
+.action-buttons-container button[mat-icon-button]:active {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button] mat-icon,
+.action-buttons-container button[mat-icon-button] mat-icon {
+  font-size: 26px !important;
+  width: 26px !important;
+  height: 26px !important;
+}
+
+/* View Button - Light Blue Background */
+app-unified-action-buttons button[mat-icon-button][data-variant="view"],
+.action-buttons-container button[mat-icon-button][data-variant="view"] {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][data-variant="view"] mat-icon,
+.action-buttons-container button[mat-icon-button][data-variant="view"] mat-icon {
+  color: #1976d2 !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][data-variant="view"]:hover,
+.action-buttons-container button[mat-icon-button][data-variant="view"]:hover {
+  background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%) !important;
+}
+
+/* Slip Buttons - Yellow Background */
+app-unified-action-buttons button[mat-icon-button][data-variant="slip"],
+.action-buttons-container button[mat-icon-button][data-variant="slip"] {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][data-variant="slip"] mat-icon,
+.action-buttons-container button[mat-icon-button][data-variant="slip"] mat-icon {
+  color: #f9a825 !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][data-variant="slip"]:hover,
+.action-buttons-container button[mat-icon-button][data-variant="slip"]:hover {
+  background: linear-gradient(135deg, #ffecb3 0%, #ffe082 100%) !important;
+}
+
+/* Payment Slip Buttons - Light Purple Background */
+app-unified-action-buttons button[mat-icon-button][data-variant="payment-slip"],
+.action-buttons-container button[mat-icon-button][data-variant="payment-slip"] {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][data-variant="payment-slip"] mat-icon,
+.action-buttons-container button[mat-icon-button][data-variant="payment-slip"] mat-icon {
+  color: #7b1fa2 !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][data-variant="payment-slip"]:hover,
+.action-buttons-container button[mat-icon-button][data-variant="payment-slip"]:hover {
+  background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%) !important;
+}
+
+/* Success Actions - Light Green Background */
+app-unified-action-buttons button[mat-icon-button][color="success"],
+.action-buttons-container button[mat-icon-button][color="success"] {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="success"] mat-icon,
+.action-buttons-container button[mat-icon-button][color="success"] mat-icon {
+  color: #388e3c !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="success"]:hover,
+.action-buttons-container button[mat-icon-button][color="success"]:hover {
+  background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%) !important;
+}
+
+/* Danger/Warn Actions - Light Red Background */
+app-unified-action-buttons button[mat-icon-button][color="warn"],
+app-unified-action-buttons button[mat-icon-button][color="danger"],
+.action-buttons-container button[mat-icon-button][color="warn"],
+.action-buttons-container button[mat-icon-button][color="danger"] {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="warn"] mat-icon,
+app-unified-action-buttons button[mat-icon-button][color="danger"] mat-icon,
+.action-buttons-container button[mat-icon-button][color="warn"] mat-icon,
+.action-buttons-container button[mat-icon-button][color="danger"] mat-icon {
+  color: #d32f2f !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="warn"]:hover,
+app-unified-action-buttons button[mat-icon-button][color="danger"]:hover,
+.action-buttons-container button[mat-icon-button][color="warn"]:hover,
+.action-buttons-container button[mat-icon-button][color="danger"]:hover {
+  background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%) !important;
+}
+
+/* Info Actions - Light Cyan Background */
+app-unified-action-buttons button[mat-icon-button][color="info"],
+.action-buttons-container button[mat-icon-button][color="info"] {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="info"] mat-icon,
+.action-buttons-container button[mat-icon-button][color="info"] mat-icon {
+  color: #0097a7 !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="info"]:hover,
+.action-buttons-container button[mat-icon-button][color="info"]:hover {
+  background: linear-gradient(135deg, #b2ebf2 0%, #80deea 100%) !important;
+}
+
+/* Accent Actions - Light Purple Background */
+app-unified-action-buttons button[mat-icon-button][color="accent"],
+.action-buttons-container button[mat-icon-button][color="accent"] {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%) !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="accent"] mat-icon,
+.action-buttons-container button[mat-icon-button][color="accent"] mat-icon {
+  color: #7b1fa2 !important;
+}
+
+app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
+.action-buttons-container button[mat-icon-button][color="accent"]:hover {
+  background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  app-unified-action-buttons button[mat-icon-button],
+  .action-buttons-container button[mat-icon-button] {
+    min-width: 48px !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+  }
+  
+  app-unified-action-buttons button[mat-icon-button] mat-icon,
+  .action-buttons-container button[mat-icon-button] mat-icon {
+    font-size: 22px !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+}

@@ -16,7 +16,7 @@ interface TableData {
   amount: string;
   workflowId?: number;
   currentStage?: number;
-  priority?: string;
+  permitNumber?: string;
   cancellationReason?: string;
   requestDate?: string;
   licenseType?: string;
@@ -56,7 +56,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Sikkim Distilleries Ltd",
       status: "PENDING",
       amount: "15.00",
-      priority: "high",
       cancellationReason: "Business Closure",
       licenseType: "Manufacturing License"
     },
@@ -67,7 +66,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Darjeeling Artisan Pvt Ltd",
       status: "APPROVED",
       amount: "20.00",
-      priority: "normal",
       cancellationReason: "Voluntary Surrender",
       licenseType: "Retail License"
     },
@@ -78,7 +76,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Royal Sikkim Brewery",
       status: "APPROVED",
       amount: "0.00",
-      priority: "urgent",
       cancellationReason: "Non-Compliance",
       licenseType: "Manufacturing License"
     },
@@ -89,7 +86,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Himalayan Distilleries Pvt Ltd",
       status: "PROCESSING",
       amount: "0.00",
-      priority: "high",
       cancellationReason: "License Transfer",
       licenseType: "Wholesale License"
     },
@@ -100,7 +96,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Eastern Himalaya Distillery",
       status: "REJECTED",
       amount: "0.00",
-      priority: "normal",
       cancellationReason: "Financial Issues",
       licenseType: "Manufacturing License"
     },
@@ -111,7 +106,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Gangtok Premium Spirits",
       status: "PENDING",
       amount: "0.00",
-      priority: "urgent",
       cancellationReason: "Regulatory Violation",
       licenseType: "Retail License"
     }
@@ -146,7 +140,7 @@ export class CancellationComponent implements OnInit {
         this.cancellationData = data.map((item: any, index: number) => {
           const mappedItem = {
             id: item.id || item.pk || `fallback-${index}-${Date.now()}`, // Ensure unique ID
-            referenceNo: item.ourRefNo || item.our_ref_no || `CAN/${item.id || index}/2025`,
+            referenceNo: item.ourRefNo || item.our_ref_no || 'N/A',
             submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') :
               (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') :
                 (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') :
@@ -160,7 +154,18 @@ export class CancellationComponent implements OnInit {
             amount: (item.totalCancellationAmount || item.total_cancellation_amount || item.cancellationBrAmount || item.cancellation_br_amount || '0.00').toString(),
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-            priority: this.determinePriority(item),
+            permitNumber: (
+              item.cancelled_permit_numbers ||
+              item.cancelled_permit_number ||
+              item.details_permits_number ||
+              item.detailsPermitsNumber ||
+              item.permitNumber ||
+              item.permit_no ||
+              item.permitNo ||
+              item.original_permit_no ||
+              item.originalPermitNo ||
+              '-'
+            ).toString(),
             cancellationReason: item.reasonForCancellation || item.reason_for_cancellation || 'Cancellation Request',
             licenseType: item.licenseType || item.license_type || 'Import Permit',
             allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActions(item.status),
@@ -237,19 +242,6 @@ export class CancellationComponent implements OnInit {
     return 'licensee';
   }
 
-  private determinePriority(item: any): string {
-    const status = item.status?.toUpperCase();
-    const amount = parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || '0');
-
-    if (status?.includes('URGENT') || amount > 50000) {
-      return 'urgent';
-    } else if (status?.includes('HIGH') || amount > 20000) {
-      return 'high';
-    } else {
-      return 'normal';
-    }
-  }
-
   private getDefaultActions(status: string): string[] {
     const statusUpper = status?.toUpperCase();
 
@@ -273,7 +265,7 @@ export class CancellationComponent implements OnInit {
         distilleryName: "Sikkim Distilleries Ltd",
         status: "CancellationPending",
         amount: "15.00",
-        priority: "high",
+        permitNumber: "1",
         cancellationReason: "Business Closure",
         licenseType: "Manufacturing License",
         allowedActions: ['APPROVE', 'REJECT']
@@ -286,7 +278,7 @@ export class CancellationComponent implements OnInit {
         distilleryName: "Darjeeling Artisan Pvt Ltd",
         status: "ApprovedCancellationByCommissioner",
         amount: "20.00",
-        priority: "normal",
+        permitNumber: "1",
         cancellationReason: "Voluntary Surrender",
         licenseType: "Retail License",
         allowedActions: []
@@ -385,7 +377,7 @@ export class CancellationComponent implements OnInit {
 
   getUrgentCancellationCount(): number {
     return this.filteredCancellationData.filter(item =>
-      item.priority === 'urgent' || item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
+      item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
     ).length;
   }
 
@@ -1069,5 +1061,82 @@ export class CancellationComponent implements OnInit {
       case 'warning': return 'linear-gradient(135deg, #f59e0b, #d97706)';
       default: return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
     }
+  }
+
+  // Action include list for unified action buttons
+  getActionIncludeList(item: TableData): string[] {
+    const actions = ['VIEW'];
+    
+    // For cancellation, show payment slip after payment is made
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getActionIncludeList (cancellation):', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      hasPayment,
+      allowedActions: item.allowedActions,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    // Show "View Payment Slip" after payment is made
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    // Trust backend for VIEW_PERMIT_SLIP action
+    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
+      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+      actions.push('VIEW_PERMIT_SLIP');
+    }
+    
+    console.log('🔍 Final actions array:', actions);
+    return actions;
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed for cancellation
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Payment indicators for cancellation
+    // After submission and payment, status changes to forwarded or approved
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('payslip') ||
+                                   status.includes('paid');
+    
+    console.log('🔍 hasPaymentBeenMade (cancellation):', {
+      status: item.status,
+      normalizedStatus: status,
+      statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
+  }
+
+  canViewPermitSlip(item: TableData): boolean {
+    // Only commissioner can view permit slip at final approved stage
+    if (!this.isCommissioner()) {
+      return false;
+    }
+    
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Check if it's at final approved stage
+    // For cancellation, show permit slip when forwarded to commissioner OR approved by commissioner
+    const isFinalApproved = status.includes('approvedcancellationbycommissioner') ||
+                           status.includes('approvedcancellationpayslipbycommissioner') ||
+                           status.includes('forwardedcancellationtocommissioner') || // Show for commissioner review
+                           status.includes('forwardedcancellationpaysliptocommissioner') || // Show for payment slip review
+                           status.includes('finalapproved');
+    
+    console.log('🔍 canViewPermitSlip (cancellation):', {
+      status: item.status,
+      normalizedStatus: status,
+      isFinalApproved,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    return isFinalApproved;
   }
 }

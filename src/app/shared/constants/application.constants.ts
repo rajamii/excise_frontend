@@ -8,7 +8,9 @@ export const APPLICATION_TYPES = {
     CANCELLATION: 'cancellation',
     TRANSIT: 'transit',
     HOLOGRAM: 'hologram',
-    NEW_LICENSE: 'new-license'
+    NEW_LICENSE: 'new-license',
+    COMPANY_REGISTRATION: 'company-registration',
+    SALESMAN_BARMAN_REGISTRATION: 'salesman-barman-registration'
 } as const;
 
 export type ApplicationType = typeof APPLICATION_TYPES[keyof typeof APPLICATION_TYPES];
@@ -38,7 +40,9 @@ export const WORKFLOW_IDS = {
     [APPLICATION_TYPES.CANCELLATION]: 5, // ENA Cancellation
     [APPLICATION_TYPES.TRANSIT]: 8,      // Transit Permit
     [APPLICATION_TYPES.HOLOGRAM]: 7,     // Hologram Request
-    [APPLICATION_TYPES.NEW_LICENSE]: 0   // New License workflow id not required for view-only flow
+    [APPLICATION_TYPES.NEW_LICENSE]: 0,  // New License workflow id not required for view-only flow
+    [APPLICATION_TYPES.COMPANY_REGISTRATION]: 0, // View-only detail flow
+    [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 0 // View-only detail flow
 } as const;
 
 /**
@@ -51,7 +55,9 @@ export const APPLICATION_TITLES = {
     [APPLICATION_TYPES.CANCELLATION]: 'CANCELLATION APPLICATION',
     [APPLICATION_TYPES.TRANSIT]: 'TRANSIT PERMIT APPLICATION',
     [APPLICATION_TYPES.HOLOGRAM]: 'HOLOGRAM REQUEST',
-    [APPLICATION_TYPES.NEW_LICENSE]: 'NEW LICENSE APPLICATION'
+    [APPLICATION_TYPES.NEW_LICENSE]: 'NEW LICENSE APPLICATION',
+    [APPLICATION_TYPES.COMPANY_REGISTRATION]: 'COMPANY REGISTRATION',
+    [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 'SALESMAN/BARMAN REGISTRATION'
 } as const;
 
 /**
@@ -64,7 +70,9 @@ export const PAGE_TITLES = {
     [APPLICATION_TYPES.CANCELLATION]: 'Cancellation Application Details', 
     [APPLICATION_TYPES.TRANSIT]: 'Transit Permit Details',
     [APPLICATION_TYPES.HOLOGRAM]: 'Hologram Request Details',
-    [APPLICATION_TYPES.NEW_LICENSE]: 'New License Application Details'
+    [APPLICATION_TYPES.NEW_LICENSE]: 'New License Application Details',
+    [APPLICATION_TYPES.COMPANY_REGISTRATION]: 'Company Registration Details',
+    [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 'Salesman/Barman Registration Details'
 } as const;
 
 /**

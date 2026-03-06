@@ -103,6 +103,8 @@ export class HologramprocurementComponent implements OnInit {
 
           // Check if there's edit history
           const hasEditHistory = (item as any).editHistory || (item as any).edit_history;
+          const normalizedPaymentStatus = String((item as any).paymentStatus || (item as any).payment_status || '').toLowerCase();
+          const isWalletPaid = normalizedPaymentStatus === 'completed' || normalizedPaymentStatus === 'success';
 
           return {
             ...item,
@@ -115,7 +117,7 @@ export class HologramprocurementComponent implements OnInit {
             localQtyLakh: requestedLocal,  // FIXED: Original requested quantity
             exportQtyLakh: requestedExport, // FIXED: Original requested quantity
             defenceQtyLakh: requestedDefence, // FIXED: Original requested quantity
-            paymentCompleted: item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
+            paymentCompleted: isWalletPaid || item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
             editedByCommissioner: !!hasEditHistory,
             editHistory: hasEditHistory || undefined,
             companyName: item.manufacturingUnit || item.licenseeName || '', // Map to companyName
@@ -339,40 +341,52 @@ export class HologramprocurementComponent implements OnInit {
     this.router.navigate(["/dev-hologram"]);
   }
 
-  navigateToPaymentPage(hologram: HologramRow): void {
-    if (!this.isPaymentEnabled(hologram)) {
-      alert('Payment is pending Commissioner approval.');
-      return;
-    }
-
-    // In API version, we might redirect to a payment page with ID
-    this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: {
-        tab: 'hologram',
-        refNo: hologram.refNo,
-        action: 'makePayment',
-        id: hologram.id // backend ID
-      }
-    });
-  }
-
   viewPaymentSlip(item: HologramRow): void {
-    this.router.navigate(['/dev-payslip'], {
+    this.router.navigate(['/payment-slip-view'], {
       queryParams: {
+        id: item.id,
+        type: 'hologram',
+        refNo: item.refNo,
         ref: item.refNo,
-        type: 'HOLOGRAM'
+        referenceNo: item.refNo,
+        source: 'licensee'
       }
     });
   }
 
-  // Payment methods
-  isPaymentEnabled(item: HologramRow): boolean {
-    const actions = (item.allowed_actions || item.allowedActions || []).map(a => String(a).toLowerCase());
-    if (actions.includes('pay')) {
-      return true;
-    }
-    // Backward compatibility fallback
-    return item.status === 'Approved by Commissioner';
+  shouldShowMakePayment(item: HologramRow): boolean {
+    const status = String(item.status || '').toLowerCase().replace(/\s+/g, '');
+    return (
+      (status.includes('approvedbycommissioner') || status.includes('commissionerapproved')) &&
+      !item.paymentCompleted
+    );
+  }
+
+  navigateToWalletRecharge(item: HologramRow, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const queryParams = {
+      section: 'wallet',
+      tab: 'hologram',
+      source: 'hologram-procurement',
+      refNo: item.refNo,
+      action: 'makePayment'
+    };
+
+    this.router.navigate(['/dashboard'], {
+      queryParams
+    }).then((ok) => {
+      if (!ok && this.isBrowser) {
+        const target = `/dashboard?section=wallet&tab=hologram&source=hologram-procurement&refNo=${encodeURIComponent(String(item.refNo || ''))}&action=makePayment`;
+        window.location.assign(target);
+      }
+    }).catch(() => {
+      if (this.isBrowser) {
+        const target = `/dashboard?section=wallet&tab=hologram&source=hologram-procurement&refNo=${encodeURIComponent(String(item.refNo || ''))}&action=makePayment`;
+        window.location.assign(target);
+      }
+    });
   }
 
   calculatePaymentAmount(hologram: HologramRow): number {
@@ -402,7 +416,7 @@ export class HologramprocurementComponent implements OnInit {
     // In real implementation, payment is handled via payment gateway or separate flow.
     // For now, we can maybe call an API to mark it?
     // Or just show alert that "This is testing only"
-    alert('In API mode, please use the Make Payment button to proceed with transaction.');
+    alert('In API mode, please use the Submit Payment button inside View Details.');
   }
 
   // Clear data methods (for testing)

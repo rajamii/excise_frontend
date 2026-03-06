@@ -1,0 +1,102 @@
+<div class="oic-modal">
+  <h2 mat-dialog-title class="modal-title">Add Officers</h2>
+  <p class="modal-subtitle">Create an officer account mapped to an approved establishment.</p>
+
+  <form #formRef="ngForm" class="modal-form">
+    <mat-dialog-content class="modal-content">
+      <div class="loading-inline" *ngIf="isLoading">
+        <mat-spinner diameter="22"></mat-spinner>
+        <span>Loading approved establishments...</span>
+      </div>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Establishment Name</mat-label>
+        <mat-select
+          name="approvedApplicationId"
+          required
+          [(ngModel)]="form.approvedApplicationId"
+          #applicationModel="ngModel"
+          [disabled]="isLoading || isSaving"
+        >
+          <mat-option *ngFor="let item of establishments" [value]="item.applicationId">
+            {{ item.establishmentName }} ({{ item.licenseId }})
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="(applicationModel.touched || submitAttempted) && applicationModel.errors?.['required']">
+          Establishment is required
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Name</mat-label>
+        <input
+          matInput
+          name="name"
+          required
+          [(ngModel)]="form.name"
+          #nameModel="ngModel"
+          [disabled]="isSaving"
+        />
+        <mat-error *ngIf="(nameModel.touched || submitAttempted) && nameModel.errors?.['required']">
+          Name is required
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          name="email"
+          required
+          email
+          [(ngModel)]="form.email"
+          #emailModel="ngModel"
+          [disabled]="isSaving"
+        />
+        <mat-error *ngIf="(emailModel.touched || submitAttempted) && emailModel.errors?.['required']">
+          Email is required
+        </mat-error>
+        <mat-error *ngIf="(emailModel.touched || submitAttempted) && emailModel.errors?.['email']">
+          Enter a valid email
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Phone Number</mat-label>
+        <input
+          matInput
+          type="tel"
+          name="phoneNumber"
+          required
+          maxlength="10"
+          pattern="^[6-9][0-9]{9}$"
+          [(ngModel)]="form.phoneNumber"
+          #phoneModel="ngModel"
+          [disabled]="isSaving"
+        />
+        <mat-error *ngIf="(phoneModel.touched || submitAttempted) && phoneModel.errors?.['required']">
+          Phone number is required
+        </mat-error>
+        <mat-error *ngIf="(phoneModel.touched || submitAttempted) && phoneModel.errors?.['pattern']">
+          Phone must be 10 digits and start with 6-9
+        </mat-error>
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end" class="modal-actions">
+      <button
+        matButton="filled"
+        color="primary"
+        class="save-btn"
+        (click)="onSave()"
+        [disabled]="formRef.invalid || isSaving || isLoading"
+      >
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+      <button matButton="filled" color="warn" class="cancel-btn" (click)="onCancel()" [disabled]="isSaving">
+        Cancel
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

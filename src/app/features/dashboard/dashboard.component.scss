@@ -1200,6 +1200,27 @@ mat-card,
     animation-delay: 0.4s;
 }
 
+// Simple dashboard mode (restore old simple look)
+.stats-container .stat-card.custom {
+    display: none !important;
+}
+
+.stats-container .stat-card .card-trend,
+.stats-container .stat-card .sub-info,
+.stats-container .stat-card .card-footer {
+    display: none !important;
+}
+
+.stats-container .stat-card .card-header {
+    justify-content: center !important;
+    padding: 1.5rem 1.5rem 0.5rem !important;
+}
+
+.stats-container .stat-card .card-content {
+    text-align: center;
+    padding-bottom: 1.5rem !important;
+}
+
 // ========================================
 // TABLE STYLES
 // ========================================

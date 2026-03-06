@@ -78,4 +78,25 @@ export class EnaRequisitionService {
       .post(`${this.apiUrl}${id}/perform-action/`, { action: action }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
+
+  getRequisitionArrivalDetails(id: number): Observable<any> {
+    return this.http
+      .get(`${this.apiUrl}${id}/arrival-bulk-liter-details/`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  getAllRequisitionArrivalDetails(): Observable<any> {
+    return this.http
+      .get(`${this.apiUrl}arrival-bulk-liter-details/`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  saveRequisitionArrivalDetails(
+    id: number,
+    payload: { tanker_count: number; tanker_details: Array<{ tanker_no: string; bulk_liter: number }> }
+  ): Observable<any> {
+    return this.http
+      .post(`${this.apiUrl}${id}/arrival-bulk-liter-details/`, payload, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
 }

@@ -13,11 +13,13 @@ export interface Distillery {
   distilleryAddress: string;
   distilleryState: string;
   viaRoute: string;
+  licenseeId?: string;
   // Support snake_case from backend
   distillery_name?: string;
   distillery_address?: string;
   distillery_state?: string;
   via_route?: string;
+  licensee_id?: string;
   state?: string; // API also returns 'state' property
 }  
 

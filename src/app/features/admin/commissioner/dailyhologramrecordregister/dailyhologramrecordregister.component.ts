@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { HologramService, DailyRegisterEntry, DailyRegisterSummary } from '../../../../core/services/hologram.service';
+import { environment } from '../../../../../environments/environment';
 
 interface FilterOptions {
   referenceNumber: string;
@@ -21,6 +23,9 @@ interface FilterOptions {
 })
 export class DailyhologramrecordregisterComponent implements OnInit {
   Math = Math;
+  private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
+  private readonly authUsersApiBase = `${environment.apiBaseUrl}/auth/users`;
+  private readonly hologramApiBase = `${environment.apiBaseUrl}/transactional/supply_chain/hologram`;
   
   dailyRegisterEntries: DailyRegisterEntry[] = [];
   filteredEntries: DailyRegisterEntry[] = [];
@@ -46,6 +51,10 @@ export class DailyhologramrecordregisterComponent implements OnInit {
 
   // List of distilleries/breweries - will be populated from backend
   distilleries: string[] = [];
+  private createdDistilleryBreweryNames: string[] = [];
+  private oicMappedEstablishmentNames: string[] = [];
+  private hologramRequestLicenseeNames: string[] = [];
+  private oicMappedCountByName: Record<string, number> = {};
 
   // Pagination
   currentPage = 1;
@@ -59,9 +68,13 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
 
-  constructor(private hologramService: HologramService) {}
+  constructor(
+    private hologramService: HologramService,
+    private http: HttpClient
+  ) {}
 
   ngOnInit() {
+    this.loadDropdownSources();
     this.loadDailyRegisterEntries();
     
     // Auto-refresh every 30 seconds
@@ -78,10 +91,8 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       next: (response) => {
         this.summary = response.summary;
         this.dailyRegisterEntries = response.entries;
-        
-        // Extract unique distilleries
-        const distillerySet = new Set(response.entries.map(e => e.distilleryName));
-        this.distilleries = Array.from(distillerySet).sort();
+
+        this.updateDistilleryOptions(response.entries);
         
         this.applyFilters();
         this.isLoading = false;
@@ -92,6 +103,196 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  private loadDropdownSources(): void {
+    this.loadOicMappedEstablishments();
+    this.loadCreatedDistilleryBreweryNames();
+    this.loadHologramRequestLicensees();
+  }
+
+  private loadCreatedDistilleryBreweryNames(): void {
+    this.http.get<any>(`${this.licenseApiBase}/list/?page_size=2000`).subscribe({
+      next: (payload) => {
+        const rows = this.extractRows(payload);
+        const result = new Set<string>();
+        for (const row of rows) {
+          if (!this.isDistilleryOrBrewery(row)) {
+            continue;
+          }
+          const name = this.extractLicenseeName(row);
+          if (name) {
+            result.add(name);
+          }
+        }
+        this.createdDistilleryBreweryNames = Array.from(result).sort((a, b) => a.localeCompare(b));
+        this.updateDistilleryOptions(this.dailyRegisterEntries);
+      },
+      error: () => {
+        this.createdDistilleryBreweryNames = [];
+        this.updateDistilleryOptions(this.dailyRegisterEntries);
+      }
+    });
+  }
+
+  private loadOicMappedEstablishments(): void {
+    this.http.get<any>(`${this.authUsersApiBase}/oic/officers/?page_size=2000`).subscribe({
+      next: (payload) => {
+        const rows = this.extractRows(payload);
+        const countByName: Record<string, number> = {};
+        for (const row of rows) {
+          const name = String(row?.establishment_name || row?.establishmentName || '').trim();
+          if (!name) {
+            continue;
+          }
+          countByName[name] = (countByName[name] || 0) + 1;
+        }
+
+        this.oicMappedCountByName = countByName;
+        this.oicMappedEstablishmentNames = Object.keys(countByName).sort((a, b) => a.localeCompare(b));
+        this.updateDistilleryOptions(this.dailyRegisterEntries);
+      },
+      error: () => {
+        this.oicMappedCountByName = {};
+        this.oicMappedEstablishmentNames = [];
+        this.updateDistilleryOptions(this.dailyRegisterEntries);
+      }
+    });
+  }
+
+  private loadHologramRequestLicensees(): void {
+    this.http.get<any>(`${this.hologramApiBase}/request/?page_size=2000`).subscribe({
+      next: (payload) => {
+        const rows = this.extractRows(payload);
+        const names = new Set<string>();
+        for (const row of rows) {
+          const name = String(
+            row?.licenseeName ||
+            row?.licensee_name ||
+            row?.manufacturingUnit ||
+            row?.manufacturing_unit ||
+            ''
+          ).trim();
+          if (name) {
+            names.add(name);
+          }
+        }
+
+        this.hologramRequestLicenseeNames = Array.from(names).sort((a, b) => a.localeCompare(b));
+        this.updateDistilleryOptions(this.dailyRegisterEntries);
+      },
+      error: () => {
+        this.hologramRequestLicenseeNames = [];
+        this.updateDistilleryOptions(this.dailyRegisterEntries);
+      }
+    });
+  }
+
+  private extractRows(payload: any): any[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (!payload || typeof payload !== 'object') {
+      return [];
+    }
+
+    const candidates = [
+      payload.results,
+      payload.data,
+      payload.items,
+      payload.rows,
+      payload.approved,
+      payload.officers,
+      payload.establishments
+    ];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+    }
+
+    return [];
+  }
+
+  private updateDistilleryOptions(entries: DailyRegisterEntry[]): void {
+    const entryNames = Array.from(
+      new Set((entries || []).map((e) => String(e?.distilleryName || '').trim()).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
+
+    const merged = [
+      ...this.oicMappedEstablishmentNames,
+      ...this.createdDistilleryBreweryNames,
+      ...this.hologramRequestLicenseeNames,
+      ...entryNames
+    ];
+
+    const normalized = new Map<string, string>();
+    for (const raw of merged) {
+      const trimmed = String(raw || '').trim();
+      if (!trimmed) {
+        continue;
+      }
+      const key = trimmed.toLowerCase();
+      if (!normalized.has(key)) {
+        normalized.set(key, trimmed);
+      }
+    }
+
+    this.distilleries = Array.from(normalized.values()).sort((a, b) => a.localeCompare(b));
+
+    if (this.filters.distillery && !this.distilleries.includes(this.filters.distillery)) {
+      this.filters.distillery = '';
+    }
+  }
+
+  getDistilleryOptionLabel(name: string): string {
+    return name;
+  }
+
+  private isDistilleryOrBrewery(row: any): boolean {
+    const subCategoryId = Number(
+      row?.license_sub_category_id ??
+      row?.licenseSubCategoryId ??
+      row?.license_sub_category?.id ??
+      row?.licenseSubCategory?.id ??
+      0
+    );
+    if (subCategoryId === 1 || subCategoryId === 2) {
+      return true;
+    }
+
+    const subCategoryName = String(
+      row?.license_sub_category_name ??
+      row?.licenseSubCategoryName ??
+      row?.license_sub_category?.description ??
+      row?.licenseSubCategory?.description ??
+      row?.license_sub_category ??
+      row?.licenseSubCategory ??
+      ''
+    ).toLowerCase();
+
+    const categoryTokens = [
+      subCategoryName,
+      String(row?.license_category_name ?? row?.licenseCategoryName ?? row?.license_category ?? row?.licenseCategory ?? '').toLowerCase(),
+      String(row?.license_type_name ?? row?.licenseTypeName ?? row?.license_type ?? row?.licenseType ?? '').toLowerCase(),
+      String(row?.category ?? '').toLowerCase(),
+      String(row?.sub_category ?? row?.subCategory ?? '').toLowerCase()
+    ].join(' ');
+
+    return categoryTokens.includes('brew') || categoryTokens.includes('distill');
+  }
+
+  private extractLicenseeName(row: any): string {
+    return String(
+      row?.manufacturing_unit_name ??
+      row?.manufacturingUnitName ??
+      row?.establishment_name ??
+      row?.establishmentName ??
+      row?.licensee_name ??
+      row?.licenseeName ??
+      ''
+    ).trim();
   }
 
   applyFilters() {
@@ -245,7 +446,32 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   }
 
   refreshData() {
+    this.loadDropdownSources();
     this.loadDailyRegisterEntries();
+  }
+
+  isSlaBreached(entry: DailyRegisterEntry): boolean {
+    return !!entry.isOverdue || (entry.status === 'COMPLETED' && entry.completedOnTime === false);
+  }
+
+  getCompletedOnTimeLabel(entry: DailyRegisterEntry): string {
+    if (entry.status !== 'COMPLETED') {
+      return '-';
+    }
+    if (entry.completedOnTime === true) {
+      return 'Yes';
+    }
+    if (entry.completedOnTime === false) {
+      return 'No';
+    }
+    return '-';
+  }
+
+  getCompletedOnTimeClass(entry: DailyRegisterEntry): string {
+    if (entry.status !== 'COMPLETED') {
+      return 'bg-secondary text-white';
+    }
+    return entry.completedOnTime === true ? 'bg-success text-white' : 'bg-danger text-white';
   }
 
   clearAllData() {
@@ -261,7 +487,14 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     }
     
     if (entry.status === 'COMPLETED') {
-      return 'Completed';
+      if (entry.completedOnTime === false) {
+        return entry.completionTime
+          ? `Completed Late (saved ${entry.completionTime})`
+          : 'Completed Late';
+      }
+      return entry.completionTime
+        ? `Completed On Time (saved ${entry.completionTime})`
+        : 'Completed';
     }
 
     return entry.timeRemaining || 'No deadline set';
@@ -273,6 +506,9 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     }
     
     if (entry.status === 'COMPLETED') {
+      if (entry.completedOnTime === false) {
+        return 'text-danger fw-bold';
+      }
       return 'text-success';
     }
 
@@ -317,5 +553,21 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       }
       return total + rangesCount;
     }, 0);
+  }
+
+  getBrandAllocatedQty(brand: any): number {
+    return Number(brand?.allocatedQty ?? brand?.quantity ?? 0);
+  }
+
+  getBrandIssuedQty(brand: any): number {
+    return Number(brand?.issuedQty ?? brand?.quantity ?? 0);
+  }
+
+  getBrandWastageQty(brand: any): number {
+    return Number(brand?.wastageQty ?? 0);
+  }
+
+  getBrandSavedAt(brand: any): string {
+    return String(brand?.savedAt || '');
   }
 }

@@ -14,6 +14,7 @@ interface TableData {
   submissionDate: string;
   distilleryName: string;
   status: string;
+  statusCode?: string;
   backendStatus?: string; // Original backend status for role-based logic
   amount: string;
   workflowId?: number;
@@ -108,9 +109,12 @@ export class TransitComponent implements OnInit {
    * Returns the backend status directly for display
    * No mapping - just like requisition/revalidation components
    */
-  private mapBackendStatusToDisplayStatus(backendStatus: string): string {
-    // Return backend status directly, just like requisition component
-    return backendStatus || 'Pending';
+  private mapBackendStatusToDisplayStatus(backendStatus: string, currentStageDescription?: string): string {
+    const stageDescription = String(currentStageDescription || '').trim();
+    if (stageDescription) return stageDescription;
+    const value = String(backendStatus || '').trim();
+    if (!value) return 'Pending';
+    return value;
   }
 
   loadTransitData(): void {
@@ -137,7 +141,10 @@ export class TransitComponent implements OnInit {
 
           // Get the status from backend - support both camelCase and snake_case
           const backendStatus = item.status || '';
-          const displayStatus = this.mapBackendStatusToDisplayStatus(backendStatus);
+          const displayStatus = this.mapBackendStatusToDisplayStatus(
+            backendStatus,
+            item.current_stage_description || item.currentStageDescription
+          );
 
           // Calculate duties for this row (supporting both casings)
           const excise = parseFloat(item.exciseDutyRsPerCase || item.excise_duty_rs_per_case || '0');
@@ -160,6 +167,7 @@ export class TransitComponent implements OnInit {
               submissionDate: date,
               distilleryName: distributorName,
               status: displayStatus, // Use status from database with proper mapping
+              statusCode: item.statusCode || item.status_code || '',
               backendStatus: backendStatus, // Store original backend status for role-based logic
               amount: rowTotal,
               workflowId: item.workflow || item.workflow_id || item.workflowId,
@@ -198,9 +206,10 @@ export class TransitComponent implements OnInit {
   // Unified action handler
   onUnifiedAction(event: { action: string, item: any }): void {
     const context = this.getUserContext();
+    const action = String(event.action || '').toUpperCase();
 
     this.unifiedActionsService.executeAction(
-      event.action,
+      action,
       event.item,
       'transit',
       context
@@ -211,7 +220,7 @@ export class TransitComponent implements OnInit {
             alert(result.message);
           }
           // Reload data if it was a backend action
-          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE'].includes(event.action)) {
+          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE'].includes(action)) {
             this.loadTransitData();
           }
         } else {
@@ -298,7 +307,7 @@ export class TransitComponent implements OnInit {
     // Since we removed priority, we can base urgency on status or other criteria
     // For now, let's count items that need immediate attention (PENDING status)
     return this.filteredTransitData.filter(item =>
-      item.status === 'PENDING' || item.status === 'Ready for Payment'
+      item.status === 'PENDING'
     ).length;
   }
 
@@ -332,6 +341,98 @@ export class TransitComponent implements OnInit {
     if (this.userRole !== 'licensee') return false;
     // Check both display status and backend status
     return item.status === 'Ready for Payment' || item.backendStatus === 'Ready for Payment';
+  }
+
+  getTransitIncludeActions(item: TableData): string[] {
+    const actions = ['VIEW'];
+    
+    // Show payment slip after payment is made
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getTransitIncludeActions:', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      statusCode: item.statusCode,
+      hasPayment
+    });
+    
+    // Show "View Payment Slip" after payment is made
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    console.log('🔍 Final transit actions array:', actions);
+    return actions;
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed for transit
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
+    
+    // Payment indicators for transit
+    // After payment, status changes to forwarded, approved, or specific status codes
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('paymentsuccessful') ||
+                                   status.includes('paid') ||
+                                   statusCode === 'TRP_03' ||
+                                   statusCode === 'TRP_04';
+    
+    console.log('🔍 hasPaymentBeenMade (transit):', {
+      status: item.status,
+      statusCode: item.statusCode,
+      normalizedStatus: status,
+      statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
+  }
+
+  canShowPaymentSlip(item: TableData): boolean {
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
+    const text = `${item?.status || ''} ${item?.backendStatus || ''}`.toLowerCase();
+    if (statusCode === 'TRP_03' || statusCode === 'TRP_04') return true;
+    return (
+      text.includes('approved') ||
+      text.includes('rejected') ||
+      text.includes('cancelled') ||
+      text.includes('refund initiated')
+    );
+  }
+
+  openTransitSlip(item: TableData): void {
+    const billNo = String(item?.referenceNo || '').trim();
+    const queryParams = {
+      type: 'transit',
+      refNo: billNo || undefined,
+      billNo: billNo || undefined,
+      source: this.getUserContext()
+    };
+
+    this.router.navigate(['/payment-slip-view'], { queryParams })
+      .then((ok) => {
+        if (ok) return;
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams();
+        if (queryParams.type) params.set('type', String(queryParams.type));
+        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+        if (queryParams.billNo) params.set('billNo', String(queryParams.billNo));
+        if (queryParams.source) params.set('source', String(queryParams.source));
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      })
+      .catch(() => {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams();
+        if (queryParams.type) params.set('type', String(queryParams.type));
+        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+        if (queryParams.billNo) params.set('billNo', String(queryParams.billNo));
+        if (queryParams.source) params.set('source', String(queryParams.source));
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      });
   }
 
   /**

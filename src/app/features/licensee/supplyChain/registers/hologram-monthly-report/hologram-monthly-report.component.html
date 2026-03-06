@@ -9,7 +9,7 @@
             <div class="col">
               <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturings Units - {{
                 getCurrentHologramTypeDisplay() }}</h1>
-              <p class="mb-0 small text-muted">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
+              <p class="mb-0 small text-muted">{{ establishmentLine || (commissionerMode ? 'All Manufacturing Units' : 'Assigned Manufacturing Unit') }}</p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
@@ -65,6 +65,18 @@
                 <div class="alert alert-info py-1 px-2 mb-0 small">
                   {{ getCurrentHologramTypeDisplay() }}
                 </div>
+              </div>
+
+              <!-- Commissioner Manufacturing Unit Dropdown -->
+              <div *ngIf="commissionerMode">
+                <label class="form-label small mb-1">Distillery/Brewery</label>
+                <select class="form-select form-select-sm"
+                  [(ngModel)]="selectedManufacturingUnit"
+                  (ngModelChange)="onManufacturingUnitChange()">
+                  <option *ngFor="let unit of manufacturingUnits" [value]="unit">
+                    {{ unit }}
+                  </option>
+                </select>
               </div>
             </div>
 
@@ -279,18 +291,25 @@
                   <!-- Skip all summary rows - month summary is shown above the table -->
                 } @else if (row.rowType === 'ARRIVAL') {
                 <tr [ngClass]="getRowClass(row)">
-                  <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
-                    {{ row.label }}
+                  <td class="p-2 align-middle fw-bold monthly-entry-meta-cell">
+                    <div class="monthly-entry-meta">
+                    <div class="monthly-entry-title">{{ row.label }}</div>
+                    @if (row.meta?.transactionDateTime) {
+                    <small class="d-block text-secondary fw-semibold monthly-entry-time">
+                      <i class="bi bi-clock-history me-1"></i>{{ row.meta?.transactionDateTime | date:'dd MMM yyyy, hh:mm a' }}
+                    </small>
+                    }
                     @if (row.meta && row.meta.referenceNo) {
-                    <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-info fw-bold monthly-entry-ref">
                       Ref: {{ row.meta.referenceNo }}
                     </small>
                     }
                     @if (row.meta && row.meta.notes) {
-                    <small class="d-block text-success fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-success fw-semibold monthly-entry-note">
                       {{ row.meta.notes }}
                     </small>
                     }
+                    </div>
                   </td>
                   <td colspan="2" class="text-center p-2 align-middle" style="font-size: 0.875rem;">
                     <div class="d-flex align-items-center justify-content-center gap-2">
@@ -310,7 +329,7 @@
                           </strong>
                         </div>
                         <div class="d-flex flex-wrap gap-2">
-                          @for (carton of row.meta.cartonRanges; track carton.cartoonNumber) {
+                          @for (carton of row.meta.cartonRanges; track carton.cartoonNumber + '_' + carton.fromSerial + '_' + carton.toSerial + '_' + carton.quantity) {
                             <div class="badge bg-success bg-opacity-10 border border-success text-dark p-2" 
                                  style="font-size: 0.75rem; min-width: 150px;">
                               <div class="fw-bold text-success mb-1">
@@ -369,23 +388,30 @@
                 } @else {
                 <!-- Utilization/Wastage Rows -->
                 <tr [ngClass]="getRowClass(row)" [class.border-bottom-0]="!row.meta?.isLastInGroup">
-                  <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
-                    {{ row.label }}
+                  <td class="p-2 align-middle fw-bold monthly-entry-meta-cell">
+                    <div class="monthly-entry-meta">
+                    <div class="monthly-entry-title">{{ row.label }}</div>
+                    @if (row.meta?.transactionDateTime) {
+                    <small class="d-block text-secondary fw-semibold monthly-entry-time">
+                      <i class="bi bi-clock-history me-1"></i>{{ row.meta?.transactionDateTime | date:'dd MMM yyyy, hh:mm a' }}
+                    </small>
+                    }
                     @if (row.meta?.referenceNo && row.label) {
-                    <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-info fw-bold monthly-entry-ref">
                       Ref: {{ row.meta?.referenceNo }}
                     </small>
                     }
                     @if (row.meta?.entryCount && (row.meta?.entryCount ?? 0) > 1) {
-                      <small class="d-block text-primary fw-semibold" style="font-size: 0.7rem;">
+                      <small class="d-block text-primary fw-semibold monthly-entry-note">
                         <i class="bi bi-layers me-1"></i>{{ row.meta?.entryCount }} entries
                       </small>
                     }
                     @if (row.meta?.isNotInUse) {
-                    <small class="d-block text-warning fw-semibold" style="font-size: 0.7rem;">
+                    <small class="d-block text-warning fw-semibold monthly-entry-note">
                       <i class="bi bi-pause-circle me-1"></i>Not In Use
                     </small>
                     }
+                    </div>
                     @if (getAssignedRollsRanges(row); as rollsRanges) {
                       @if (rollsRanges.length > 0) {
                         <div class="ranges-assigned-box mt-2 p-2 border rounded bg-light">
@@ -442,7 +468,7 @@
                                        [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                        style="font-size: 0.85rem;">
                                     <i class="bi bi-box-seam me-2"></i>
-                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollIndex + 1 }}
                                   </div>
                                   <span class="badge bg-secondary" style="font-size: 0.75rem;">
                                     {{ rollGroup.brands.length }} Brand{{ rollGroup.brands.length > 1 ? 's' : '' }}
@@ -475,7 +501,9 @@
                                         <span class="text-muted" style="font-size: 0.75rem;">
                                           <i class="bi bi-cup-straw me-1"></i>{{ brand.bottleSize }}
                                         </span>
-                                        <span class="text-primary fw-semibold" style="font-size: 0.75rem;">
+                                        <span class="fw-semibold"
+                                              [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                              style="font-size: 0.75rem;">
                                           <i class="bi bi-calculator me-1"></i>{{ brand.totalQty | number }} units
                                         </span>
                                       </div>
@@ -505,7 +533,7 @@
                                        [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                        style="font-size: 0.8rem;">
                                     <i class="bi bi-box-seam me-1"></i>
-                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollIndex + 1 }}
                                   </div>
                                   <div class="brands-count-badge bg-white border px-2 py-1 rounded"
                                        [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
@@ -556,7 +584,9 @@
                                       </div>
                                     </div>
                                     <div class="brand-total">
-                                      <span class="badge bg-primary text-white fw-bold" style="font-size: 0.75rem;">
+                                      <span class="badge text-white fw-bold"
+                                            [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                            style="font-size: 0.75rem;">
                                         {{ brand.totalQty | number }} units
                                       </span>
                                     </div>
@@ -570,7 +600,7 @@
                                       </span>
                                     </div>
                                     <div class="ranges-list d-flex flex-wrap gap-2">
-                                      @for (range of brand.allRanges; track range.from + range.to) {
+                                      @for (range of brand.allRanges; track range.from + '_' + range.to + '_' + range.qty + '_' + $index) {
                                         <div class="range-item bg-light border rounded px-2 py-1"
                                              [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                              style="font-family: 'Courier New', monospace; font-size: 0.75rem;">
@@ -636,7 +666,7 @@
                                          [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                          style="font-size: 0.8rem;">
                                       <i class="bi bi-box-seam me-1"></i>
-                                      Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                      Roll {{ rollGroup.rollName }} - Assignment #{{ rollIndex + 1 }}
                                     </div>
                                     <div class="brands-count-badge bg-white border px-2 py-1 rounded"
                                          [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
@@ -647,7 +677,9 @@
                                     </div>
                                   </div>
                                   <div class="roll-stats">
-                                    <span class="badge bg-danger text-white fw-bold px-3 py-2" style="font-size: 0.85rem;">
+                                    <span class="badge text-white fw-bold px-3 py-2"
+                                          [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                          style="font-size: 0.85rem;">
                                       <i class="bi bi-exclamation-triangle me-1"></i>
                                       {{ rollGroup.totalQty | number }} damaged
                                     </span>
@@ -686,7 +718,9 @@
                                           </div>
                                         </div>
                                         <div class="brand-total">
-                                          <span class="badge bg-danger text-white fw-bold" style="font-size: 0.75rem;">
+                                          <span class="badge text-white fw-bold"
+                                                [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                                style="font-size: 0.75rem;">
                                             {{ brand.totalQty | number }} damaged
                                           </span>
                                         </div>
@@ -702,11 +736,11 @@
                                         <div class="ranges-list d-flex flex-wrap gap-2">
                                           @for (range of brand.allRanges; track range.from + range.to + range.qty) {
                                             @if (range.qty > 0) {
-                                              <div class="range-item bg-light border border-danger rounded px-2 py-1"
+                                              <div class="range-item bg-light border rounded px-2 py-1"
                                                    [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                                    style="font-family: 'Courier New', monospace; font-size: 0.75rem;">
                                                 <div class="range-display text-center">
-                                                  <div class="fw-bold text-danger">
+                                                  <div class="fw-bold" [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)">
                                                     {{ range.from }} → {{ range.to }}
                                                   </div>
                                                   <div class="small text-muted">Damaged: {{ range.qty | number }}</div>
@@ -765,8 +799,13 @@
                       <div class="d-flex flex-column w-100">
                         <div class="text-end">
                           <span class="fs-5 text-success fw-bold">{{ row.closingBalance | number }}</span>
+                          @if (row.meta?.transactionDateTime) {
+                            <small class="text-secondary fw-semibold d-block mt-1" style="font-size: 0.65rem;">
+                              <i class="bi bi-clock-history me-1"></i>{{ row.meta?.transactionDateTime | date:'dd MMM yyyy, hh:mm a' }}
+                            </small>
+                          }
                           @if (row.meta?.referenceNo) {
-                            <small class="text-info fw-semibold d-block mt-1" style="font-size: 0.65rem;">Ref: {{ row.meta?.referenceNo }}</small>
+                            <small class="text-info fw-bold d-block mt-1" style="font-size: 0.78rem;">Ref: {{ row.meta?.referenceNo }}</small>
                           }
                         </div>
                         @if (row.meta && row.meta.isLastInGroup && row.meta.openingBalanceForGroup !== undefined) {

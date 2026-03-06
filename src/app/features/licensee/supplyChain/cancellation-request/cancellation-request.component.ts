@@ -11,6 +11,7 @@ interface Permit {
   number: string;
   amount: number;
   isCancelled: boolean;
+  isSelected?: boolean;
 }
 
 interface RequisitionData {
@@ -126,15 +127,19 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   fetchExistingCancellations() {
-    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?our_ref_no=${this.referenceNo}`).subscribe({
+    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?requisition_ref_no=${this.referenceNo}`).subscribe({
       next: (cancelData) => {
         console.log('Cancellation Data:', cancelData);
         const cancelledNumbers = new Set<string>();
         if (cancelData) {
           if (Array.isArray(cancelData)) {
             cancelData.forEach(c => {
-              if (c.cancelled_permit_number) {
-                c.cancelled_permit_number.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
+              if (!this.isCommissionerApprovedCancellation(c)) {
+                return;
+              }
+              const cancelledRaw = c.cancelled_permit_numbers || c.cancelled_permit_number || '';
+              if (cancelledRaw) {
+                cancelledRaw.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
               }
             });
           } else {
@@ -142,16 +147,52 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
           }
         }
         console.log('Generating permits with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermits(this.requisitionData.requisitonNumberOfPermits || this.requisitionData.requisiton_number_of_permits, cancelledNumbers);
+        this.generatePermitsFromRequisition(cancelledNumbers);
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading cancellations:', error);
         console.log('Generating permits (fallback) with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermits(this.requisitionData.requisitonNumberOfPermits, new Set());
+        this.generatePermitsFromRequisition(new Set());
         this.isLoading = false;
       }
     });
+  }
+
+  private isCommissionerApprovedCancellation(record: any): boolean {
+    const status = String(record?.status || '').toLowerCase();
+    const stageName = String(record?.current_stage_name || '').toLowerCase();
+    const merged = `${status} ${stageName}`;
+    return merged.includes('approved') && merged.includes('commissioner');
+  }
+
+  private generatePermitsFromRequisition(cancelledSet: Set<string>) {
+    const detailsNumbersRaw =
+      this.requisitionData?.details_permits_number ||
+      this.requisitionData?.detailsPermitsNumber ||
+      '';
+
+    const explicitPermitNumbers = String(detailsNumbersRaw)
+      .split(',')
+      .map((num: string) => num.trim())
+      .filter((num: string) => num.length > 0);
+
+    if (explicitPermitNumbers.length > 0) {
+      this.permits = explicitPermitNumbers.map((num: string) => ({
+        number: num,
+        amount: 1000,
+        isCancelled: cancelledSet.has(num),
+        isSelected: false
+      }));
+      return;
+    }
+
+    const totalCount =
+      this.requisitionData?.requisitonNumberOfPermits ||
+      this.requisitionData?.requisiton_number_of_permits ||
+      0;
+
+    this.generatePermits(totalCount, cancelledSet);
   }
 
   generatePermits(totalCount: any, cancelledSet: Set<string>) {
@@ -164,7 +205,8 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.permits.push({
         number: numStr,
         amount: 1000,
-        isCancelled: cancelledSet.has(numStr)
+        isCancelled: cancelledSet.has(numStr),
+        isSelected: false
       });
     }
   }
@@ -193,12 +235,17 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   // Helper to handle selection since template is not fully binded in the snippet provided
   togglePermit(permit: Permit, event: any) {
     if (permit.isCancelled) return;
+    permit.isSelected = !!event.target.checked;
 
     // Update newlySelectedPermits for submission logic
     if (event.target.checked) {
-      this.newlySelectedPermits.push(permit.number);
+      if (!this.newlySelectedPermits.includes(permit.number)) {
+        this.newlySelectedPermits.push(permit.number);
+      }
       // Also update selectedPermits for display
-      this.selectedPermits.push(permit.number);
+      if (!this.selectedPermits.includes(permit.number)) {
+        this.selectedPermits.push(permit.number);
+      }
     } else {
       this.newlySelectedPermits = this.newlySelectedPermits.filter(n => n !== permit.number);
       // Remove from selectedPermits
@@ -265,13 +312,16 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     }
 
     const payload = {
-      referenceNo: this.referenceNo,
-      permitNumbers: this.newlySelectedPermits,
-      licenseeId: this.currentLicenseeId,
+      reference_no: this.referenceNo,
+      permit_numbers: this.newlySelectedPermits,
+      licensee_id: this.currentLicenseeId,
     };
+
+    console.log('🔧 Submitting cancellation with payload:', payload);
 
     this.supplyChainService.submitCancellation(payload).subscribe({
       next: (response: any) => {
+        console.log('✅ Cancellation submitted successfully:', response);
         this.showSuccessModal = true;
         this.successMessage = response.message;
         // Refresh data to show updated status
@@ -279,8 +329,15 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         this.newlySelectedPermits = [];
       },
       error: (error) => {
-        console.error('Error submitting cancellation:', error);
-        this.errorMessage = 'Failed to submit cancellation.';
+        console.error('❌ Error submitting cancellation:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error,
+          message: error.message
+        });
+        this.errorMessage = 'Failed to submit cancellation: ' + (error.error?.error || error.error?.message || error.message);
+        alert(this.errorMessage);
       },
     });
   }
@@ -289,7 +346,15 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   // getLicenseeIdFromSession()...
 
   redirectToDashboard() {
-    this.close.emit();
+    this.showSuccessModal = false;
+    // Navigate to dashboard cancellation section and force reload
+    this.router.navigate(['/dashboard'], { 
+      queryParams: { section: 'cancellation' },
+      queryParamsHandling: 'merge'
+    }).then(() => {
+      // Force page reload to ensure data is refreshed
+      window.location.reload();
+    });
   }
 
   goBack() {
@@ -300,5 +365,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   getCancellationCharges(): number {
     return this.newlySelectedPermits.length * 1000;
+  }
+
+  isPermitSelectionLocked(): boolean {
+    return this.permits.length > 0 && this.permits.every((p) => p.isCancelled);
   }
 }

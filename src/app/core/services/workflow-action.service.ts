@@ -23,7 +23,16 @@ export interface ApplicationWorkflowData {
   workflowId?: number;
   currentStage?: number | any;
   currentStageName?: string;
-  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'hologram-procurement' | 'new-license'; // Changed to type to match component
+  type:
+    | 'requisition'
+    | 'revalidation'
+    | 'cancellation'
+    | 'transit'
+    | 'hologram'
+    | 'hologram-procurement'
+    | 'new-license'
+    | 'company-registration'
+    | 'salesman-barman-registration'; // Changed to type to match component
   status: string;
   referenceNo?: string;
   allowedActionConfigs?: WorkflowActionConfig[];
@@ -109,6 +118,15 @@ export class WorkflowActionService {
           map((stages: any[]) => this.mapNextStagesToActionConfigs(stages)),
           catchError(() => of([]))
         );
+      case 'company-registration':
+      case 'salesman-barman-registration':
+        if (!workflowApplicationId) {
+          return of([]);
+        }
+        return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/next-stages/`).pipe(
+          map((stages: any[]) => this.mapNextStagesToActionConfigs(stages)),
+          catchError(() => of([]))
+        );
 
       default:
         return of([]);
@@ -116,22 +134,89 @@ export class WorkflowActionService {
   }
 
   private getWorkflowApplicationId(data: ApplicationWorkflowData): string {
-    return String(data.referenceNo || data.id || '').trim();
+    return String(
+      (data as any)?.application_id ??
+      (data as any)?.applicationId ??
+      data.referenceNo ??
+      data.id ??
+      ''
+    ).trim();
   }
 
   private mapNextStagesToActionConfigs(stages: any[]): WorkflowActionConfig[] {
     if (!Array.isArray(stages)) return [];
 
-    return stages.map((stage: any): WorkflowActionConfig => {
+    const sortedStages = [...stages].sort((a: any, b: any) => {
+      const aTransitionId = Number(a?.transition_id ?? a?.transitionId);
+      const bTransitionId = Number(b?.transition_id ?? b?.transitionId);
+      if (Number.isFinite(aTransitionId) && Number.isFinite(bTransitionId) && aTransitionId !== bTransitionId) {
+        return aTransitionId - bTransitionId;
+      }
+      const aId = Number(a?.id);
+      const bId = Number(b?.id);
+      if (Number.isFinite(aId) && Number.isFinite(bId) && aId !== bId) {
+        return aId - bId;
+      }
+      return 0;
+    });
+
+    return sortedStages.map((stage: any): WorkflowActionConfig | null => {
+      const explicitAction = String(stage?.action || '').toUpperCase().trim();
       const stageName = String(stage?.name || '').toLowerCase();
-      let action = 'APPROVE';
-      let label = 'Approve';
-      let icon = 'check_circle';
+      let action = '';
+      let label = '';
+      let icon = '';
       let color: WorkflowActionConfig['color'] = 'accent';
-      let tooltip = `Move to ${stage?.name || 'next stage'}`;
+      let tooltip = '';
       let requiresConfirmation = false;
 
-      if (stageName.includes('objection')) {
+      if (explicitAction === 'RAISE_OBJECTION' || explicitAction === 'OBJECTION') {
+        action = 'RAISE_OBJECTION';
+        label = 'Raise Objection';
+        icon = 'report_problem';
+        color = 'warning';
+        tooltip = 'Raise objection and send back to applicant';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'REJECT') {
+        action = 'REJECT';
+        label = 'Reject';
+        icon = 'cancel';
+        color = 'danger';
+        tooltip = 'Reject this application';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'FORWARD') {
+        action = 'FORWARD';
+        label = 'Forward';
+        icon = 'arrow_forward';
+        color = 'primary';
+        tooltip = 'Forward to next stage';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'APPROVE') {
+        action = 'APPROVE';
+        label = 'Approve';
+        icon = 'check_circle';
+        color = 'success';
+        tooltip = 'Approve this application';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'PAY') {
+        action = 'PAY';
+        label = 'Pay';
+        icon = 'payment';
+        color = 'primary';
+        tooltip = 'Proceed to payment';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'VIEW') {
+        action = 'VIEW';
+        label = 'View';
+        icon = 'visibility';
+        color = 'info';
+        tooltip = 'View details';
+        requiresConfirmation = false;
+      } else if (explicitAction) {
+        // Hide unsupported or internal transition actions from UI buttons
+        // (e.g. REVERT/RESOLVE_OBJECTION paths).
+        return null;
+      } else if (stageName.includes('objection')) {
         action = 'RAISE_OBJECTION';
         label = 'Raise Objection';
         icon = 'report_problem';
@@ -152,12 +237,16 @@ export class WorkflowActionService {
         color = 'success';
         tooltip = 'Approve this application';
         requiresConfirmation = true;
-      } else if (stageName.includes('payment')) {
-        action = 'FORWARD';
-        label = 'Forward';
-        icon = 'arrow_forward';
-        color = 'primary';
-        tooltip = 'Forward for payment';
+      } else {
+        // IMPORTANT: Don't infer PAY from stage name (e.g. "payment_pending").
+        // Action must come explicitly from workflow transition action.
+        // Otherwise commissioner/officer stages that forward to payment stage
+        // get wrongly shown as "Pay" instead of "Approve".
+        action = 'APPROVE';
+        label = 'Approve';
+        icon = 'check_circle';
+        color = 'success';
+        tooltip = `Move to ${stage?.name || 'next stage'}`;
         requiresConfirmation = true;
       }
 
@@ -170,7 +259,7 @@ export class WorkflowActionService {
         requiresConfirmation,
         targetStage: stage?.id ? Number(stage.id) : undefined
       };
-    });
+    }).filter((config): config is WorkflowActionConfig => !!config);
   }
 
   /**
@@ -240,7 +329,12 @@ export class WorkflowActionService {
 
         return this.http.post(
           `${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/advance/${targetStage}/`,
-          { remarks: comments || `${actionName} from unified action` }
+          {
+            remarks: comments || `${actionName} from unified action`,
+            context_data: {
+              action: String(actionName || '').toUpperCase().trim()
+            }
+          }
         );
     }
 

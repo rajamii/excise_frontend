@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
+import { ApplicationType } from '../constants/application.constants';
 
 export interface ActionResult {
   success: boolean;
@@ -36,7 +37,7 @@ export class UnifiedActionsService {
   executeAction(
     action: string,
     item: any,
-    itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'new-license',
+    itemType: ApplicationType,
     context?: string
   ): Observable<ActionResult> {
 
@@ -97,6 +98,9 @@ export class UnifiedActionsService {
 
       case 'VIEW_SLIP':
         return this.handleViewSlipAction(item, itemType, context);
+
+      case 'VIEW_PAYMENT_SLIP':
+        return this.handleViewPaymentSlipAction(item, itemType, context);
 
       case 'DOWNLOAD':
         return this.handleDownloadAction(item, itemType);
@@ -216,7 +220,9 @@ export class UnifiedActionsService {
       case 'hologram':
         return this.performHologramWorkflowAction(item, 'approve', 'Approved', 'Approved');
       case 'new-license':
-        return this.executeNewLicenseAdvance(item, 'approve', 'Approved');
+      case 'company-registration':
+      case 'salesman-barman-registration':
+        return this.executeWorkflowAdvance(item, 'approve', 'Approved');
 
       default:
         return of({
@@ -234,7 +240,11 @@ export class UnifiedActionsService {
       });
     }
 
-    const reason = prompt('Enter rejection reason (optional):') || 'Rejected';
+    const hasInlineReason = !!item && Object.prototype.hasOwnProperty.call(item, '__rejectReason');
+    const inlineReason = String(item?.__rejectReason ?? item?.rejectReason ?? '').trim();
+    const reason = hasInlineReason
+      ? (inlineReason || 'Rejected')
+      : (prompt('Enter rejection reason (optional):') || 'Rejected');
 
     switch (itemType) {
       case 'requisition':
@@ -252,7 +262,9 @@ export class UnifiedActionsService {
       case 'hologram':
         return this.performHologramWorkflowAction(item, 'reject', reason, 'Rejected');
       case 'new-license':
-        return this.executeNewLicenseAdvance(item, 'reject', reason);
+      case 'company-registration':
+      case 'salesman-barman-registration':
+        return this.executeWorkflowAdvance(item, 'reject', reason);
 
       default:
         return of({
@@ -270,8 +282,8 @@ export class UnifiedActionsService {
     if (itemType === 'hologram') {
       return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
-    if (itemType === 'new-license') {
-      return this.executeNewLicenseAdvance(item, 'forward', 'Forwarded');
+    if (['new-license', 'company-registration', 'salesman-barman-registration'].includes(itemType)) {
+      return this.executeWorkflowAdvance(item, 'forward', 'Forwarded');
     }
 
     // Forward is typically the same as approve for most workflows
@@ -377,14 +389,6 @@ export class UnifiedActionsService {
     }
 
     switch (itemType) {
-      case 'requisition':
-        return this.enaRequisitionService.performAction(item.id, 'APPROVE'); // Payment submission
-
-      case 'transit':
-        return this.supplyChainService.performTransitPermitAction(item.id, 'PAY', 'Payment submitted');
-
-      case 'hologram':
-        return this.performHologramWorkflowAction(item, 'pay', 'Payment completed', 'Payment completed');
       case 'new-license': {
         const applicationId = this.getWorkflowApplicationId(item);
         if (!applicationId) {
@@ -396,22 +400,104 @@ export class UnifiedActionsService {
         );
       }
 
-      default:
-        // Navigate to payment page within SPA
-        this.router.navigate(['/dashboard'], {
-          queryParams: {
-            section: 'payment-confirmation',
-            ref: item.referenceNo,
-            type: itemType,
-            action: 'pay'
-          }
+      case 'requisition':
+      case 'revalidation':
+      case 'cancellation':
+      case 'transit':
+      case 'hologram': {
+        const walletTab = this.mapWalletTabForItemType(itemType);
+        this.navigateToWalletForPayment(item, itemType, walletTab);
+        return of({
+          success: true,
+          message: `Redirected to wallet (${walletTab}) for payment`
         });
+      }
+
+      default:
+        const walletTab = this.mapWalletTabForItemType(itemType);
+        this.navigateToWalletForPayment(item, itemType, walletTab);
 
         return of({
           success: true,
-          message: 'Navigated to payment page within SPA'
+          message: `Redirected to wallet (${walletTab}) for payment`
         });
     }
+  }
+
+  private mapWalletTabForItemType(itemType: string): 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' {
+    const normalized = String(itemType || '').toLowerCase().trim();
+    if (normalized === 'transit-permit') {
+      return 'transit';
+    }
+    if (normalized === 'hologram-request') {
+      return 'hologram';
+    }
+    if (normalized === 'revalidation') {
+      return 'revalidation';
+    }
+    if (normalized === 'cancellation') {
+      return 'cancellation';
+    }
+    if (normalized === 'hologram') {
+      return 'hologram';
+    }
+    if (normalized === 'transit') {
+      return 'transit';
+    }
+    return 'requisition';
+  }
+
+  private navigateToWalletForPayment(
+    item: any,
+    itemType: string,
+    tab: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram'
+  ): void {
+    const referenceNo = this.getItemReferenceNo(item);
+    const paymentAmount = this.getItemPaymentAmount(item);
+    const licenseeId = this.extractFirstNonEmpty(item, [
+      'licenseeId',
+      'licensee_id',
+      'licenseId',
+      'license_id'
+    ]);
+
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'wallet',
+        tab,
+        id: item?.id,
+        type: itemType,
+        ref: referenceNo || undefined,
+        referenceNo: referenceNo || undefined,
+        amount: Number.isFinite(paymentAmount) ? paymentAmount : undefined,
+        licenseeId: licenseeId || undefined,
+        action: 'pay',
+        source: 'supply-chain-view'
+      }
+    });
+  }
+
+  private getItemPaymentAmount(item: any): number {
+    const candidates = [
+      item?.paymentAmount,
+      item?.payment_amount,
+      item?.amount,
+      item?.brAmount,
+      item?.br_amount,
+      item?.totalAmount,
+      item?.total_amount,
+      item?.totalCancellationAmount,
+      item?.total_cancellation_amount
+    ];
+
+    for (const value of candidates) {
+      const numericValue = Number(value);
+      if (Number.isFinite(numericValue) && numericValue > 0) {
+        return numericValue;
+      }
+    }
+
+    return 0;
   }
 
   private handleRequestRevalidationAction(item: any, itemType: string, context?: string): Observable<ActionResult> {
@@ -432,8 +518,118 @@ export class UnifiedActionsService {
   }
 
   private handleRequestCancellationAction(item: any, itemType: string): Observable<ActionResult> {
-    // Reuse cancellation navigation
-    return this.handleCancelAction(item, itemType);
+    if (itemType !== 'requisition') {
+      return this.handleCancelAction(item, itemType);
+    }
+
+    const referenceNo = this.getItemReferenceNo(item);
+    if (!referenceNo) {
+      return of({
+        success: false,
+        message: 'Reference number is required to open cancellation request'
+      });
+    }
+
+    const requisitionId = item?.id ? String(item.id) : '';
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'requisition',
+        openCancellationRef: referenceNo,
+        openCancellationId: requisitionId || undefined,
+        source: 'licensee-dashboard'
+      }
+    });
+
+    return of({
+      success: true,
+      message: 'Opening cancellation request form'
+    });
+  }
+
+  private submitCancellationFromRequisition(referenceNo: string, requisition: any, fallbackItem: any): Observable<any> {
+    const payload = this.buildCancellationPayload(referenceNo, requisition, fallbackItem);
+    if (!Array.isArray(payload.permit_numbers) || payload.permit_numbers.length === 0) {
+      return throwError(() => new Error('No permit numbers available to submit cancellation'));
+    }
+    return this.supplyChainService.submitCancellation(payload);
+  }
+
+  private buildCancellationPayload(referenceNo: string, requisition: any, fallbackItem: any): any {
+    const source = requisition || {};
+    const fallback = fallbackItem || {};
+
+    const permitNumbers = this.extractPermitNumbers(source, fallback);
+    const licenseeId =
+      this.extractFirstNonEmpty(source, ['licenseeId', 'licensee_id']) ||
+      this.extractFirstNonEmpty(fallback, ['licenseeId', 'licensee_id']) ||
+      '';
+
+    const payload: any = {
+      reference_no: referenceNo,
+      permit_numbers: permitNumbers
+    };
+
+    if (licenseeId) {
+      payload.licensee_id = String(licenseeId).trim();
+    }
+
+    return payload;
+  }
+
+  private extractPermitNumbers(source: any, fallback: any): string[] {
+    const sequence =
+      this.extractFirstNonEmpty(source, ['detailsPermitsNumber', 'details_permits_number']) ||
+      this.extractFirstNonEmpty(fallback, ['detailsPermitsNumber', 'details_permits_number']);
+
+    if (sequence) {
+      const parsed = String(sequence)
+        .split(',')
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0);
+      if (parsed.length > 0) {
+        return parsed;
+      }
+    }
+
+    const countRaw =
+      this.extractFirstNonEmpty(source, [
+        'requisitonNumberOfPermits',
+        'requisiton_number_of_permits',
+        'numberOfPermits',
+        'number_of_permits'
+      ]) ||
+      this.extractFirstNonEmpty(fallback, [
+        'requisitonNumberOfPermits',
+        'requisiton_number_of_permits',
+        'numberOfPermits',
+        'number_of_permits'
+      ]);
+
+    const count = Number(countRaw);
+    if (!Number.isFinite(count) || count <= 0) {
+      return [];
+    }
+
+    const generated: string[] = [];
+    for (let i = 1; i <= count; i++) {
+      generated.push(String(i));
+    }
+    return generated;
+  }
+
+  private extractFirstNonEmpty(source: any, keys: string[]): string {
+    if (!source) return '';
+    for (const key of keys) {
+      const value = source[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return String(value);
+      }
+    }
+    return '';
+  }
+
+  private getItemReferenceNo(item: any): string {
+    return this.extractFirstNonEmpty(item, ['referenceNo', 'refNo', 'ourRefNo', 'our_ref_no', 'billNo', 'bill_no']);
   }
 
   private handleSubmitPaySlipAction(item: any, itemType: string): Observable<ActionResult> {
@@ -517,27 +713,99 @@ export class UnifiedActionsService {
       'requisition': '/dev-final-requisition-letters',
       'revalidation': '/dev-revalidation-permit-slip',
       'transit': '/dev-final-transit-permit-view',
-      'hologram': '/dev-payslip'
+      'hologram': '/payment-slip-view'
     };
 
-    const route = slipRoutes[itemType];
+    const normalizedType = String(itemType || '').toLowerCase();
+    const route = slipRoutes[normalizedType];
     if (route) {
+      const queryParams = {
+        id: item.id,
+        type: normalizedType,
+        refNo: item.referenceNo,
+        ref: item.referenceNo,
+        referenceNo: item.referenceNo,
+        source: context || 'dashboard'
+      };
+
       this.router.navigate([route], {
-        queryParams: {
-          ref: item.referenceNo,
-          source: context || 'dashboard'
+        queryParams
+      }).then((ok) => {
+        if (!ok && typeof window !== 'undefined') {
+          const params = new URLSearchParams();
+          Object.entries(queryParams).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+              params.set(key, String(value));
+            }
+          });
+          const query = params.toString();
+          window.location.href = query ? `${route}?${query}` : route;
+        }
+      }).catch(() => {
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams();
+          Object.entries(queryParams).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+              params.set(key, String(value));
+            }
+          });
+          const query = params.toString();
+          window.location.href = query ? `${route}?${query}` : route;
         }
       });
 
       return of({
         success: true,
-        message: `Navigated to ${itemType} slip view`
+        message: `Navigated to ${normalizedType} slip view`
       });
     }
 
     return of({
       success: false,
       message: `No slip route defined for ${itemType}`
+    });
+  }
+
+  private handleViewPaymentSlipAction(item: any, itemType: string, context?: string): Observable<ActionResult> {
+    // Navigate to unified payment slip view
+    const queryParams = {
+      id: item.id,
+      type: itemType,
+      refNo: item.referenceNo,
+      ref: item.referenceNo,
+      referenceNo: item.referenceNo,
+      source: context || 'dashboard'
+    };
+
+    this.router.navigate(['/payment-slip-view'], {
+      queryParams
+    }).then((ok) => {
+      if (!ok && typeof window !== 'undefined') {
+        const params = new URLSearchParams();
+        Object.entries(queryParams).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.set(key, String(value));
+          }
+        });
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      }
+    }).catch(() => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams();
+        Object.entries(queryParams).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.set(key, String(value));
+          }
+        });
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      }
+    });
+
+    return of({
+      success: true,
+      message: `Navigated to payment slip view`
     });
   }
 
@@ -582,7 +850,7 @@ export class UnifiedActionsService {
   }
 
   private handleRaiseObjectionAction(item: any, itemType: string): Observable<ActionResult> {
-    if (itemType !== 'new-license') {
+    if (!['new-license', 'company-registration', 'salesman-barman-registration'].includes(itemType)) {
       return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
     }
 
@@ -591,10 +859,10 @@ export class UnifiedActionsService {
       return of({ success: false, message: 'Objection remarks are required' });
     }
 
-    return this.executeNewLicenseObjection(item, reason.trim());
+    return this.executeWorkflowObjection(item, reason.trim());
   }
 
-  private executeNewLicenseAdvance(
+  private executeWorkflowAdvance(
     item: any,
     mode: 'approve' | 'reject' | 'forward',
     remarks: string
@@ -604,16 +872,22 @@ export class UnifiedActionsService {
       return of({ success: false, message: 'Application ID is missing for workflow action' });
     }
 
-    return this.fetchNewLicenseNextStages(applicationId).pipe(
+    return this.fetchWorkflowNextStages(applicationId).pipe(
       switchMap((stages: any[]) => {
-        const target = this.pickNewLicenseStage(stages, mode);
+        const target = this.pickWorkflowStage(stages, mode);
         if (!target?.id) {
           return of({ success: false, message: `No valid target stage found for ${mode}` });
         }
 
         return this.http.post<any>(
           `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/advance/${target.id}/`,
-          { remarks }
+          {
+            remarks,
+            context_data: {
+              action: mode.toUpperCase()
+            }
+          },
+          { headers: new HttpHeaders({ Accept: 'application/json' }) }
         ).pipe(
           map(() => ({ success: true, message: `${mode.toUpperCase()} action completed successfully` })),
           catchError((error) => of({
@@ -629,15 +903,15 @@ export class UnifiedActionsService {
     );
   }
 
-  private executeNewLicenseObjection(item: any, remarks: string): Observable<ActionResult> {
+  private executeWorkflowObjection(item: any, remarks: string): Observable<ActionResult> {
     const applicationId = this.getWorkflowApplicationId(item);
     if (!applicationId) {
       return of({ success: false, message: 'Application ID is missing for objection' });
     }
 
-    return this.fetchNewLicenseNextStages(applicationId).pipe(
+    return this.fetchWorkflowNextStages(applicationId).pipe(
       switchMap((stages: any[]) => {
-        const target = this.pickNewLicenseStage(stages, 'objection');
+        const target = this.pickWorkflowStage(stages, 'objection');
         if (!target?.id) {
           return of({ success: false, message: 'No objection stage available from current stage' });
         }
@@ -667,38 +941,104 @@ export class UnifiedActionsService {
     );
   }
 
-  private fetchNewLicenseNextStages(applicationId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/next-stages/`).pipe(
+  private fetchWorkflowNextStages(applicationId: string): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/next-stages/`,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    ).pipe(
       map((res: any) => Array.isArray(res) ? res : []),
       catchError(() => of([]))
     );
   }
 
-  private pickNewLicenseStage(
+  private pickWorkflowStage(
     stages: any[],
     mode: 'approve' | 'reject' | 'forward' | 'objection'
   ): any | null {
     if (!Array.isArray(stages) || stages.length === 0) return null;
 
-    const byName = (keyword: string) =>
-      stages.find((s: any) => String(s?.name || '').toLowerCase().includes(keyword));
+    const normalizedStages = [...stages].sort((a: any, b: any) => {
+      const aTransitionId = Number(a?.transition_id ?? a?.transitionId);
+      const bTransitionId = Number(b?.transition_id ?? b?.transitionId);
+      if (Number.isFinite(aTransitionId) && Number.isFinite(bTransitionId) && aTransitionId !== bTransitionId) {
+        return aTransitionId - bTransitionId;
+      }
+      const aId = Number(a?.id);
+      const bId = Number(b?.id);
+      if (Number.isFinite(aId) && Number.isFinite(bId)) {
+        return aId - bId;
+      }
+      return 0;
+    });
+
+    const getCondition = (stage: any): Record<string, any> => {
+      const condition = stage?.condition;
+      return condition && typeof condition === 'object' ? condition : {};
+    };
+
+    const hasSpecialConditionalFlag = (stage: any) => {
+      const condition = getCondition(stage);
+      return condition?.['is_reverted'] === true
+        || condition?.['has_objections'] === true
+        || condition?.['objections_resolved'] === true;
+    };
+
+    const isRejectLike = (stage: any) => {
+      const action = String(stage?.action || '').toUpperCase().trim();
+      const name = String(stage?.name || '').toLowerCase();
+      return action === 'REJECT' || name.includes('reject');
+    };
+
+    const isObjectionLike = (stage: any) => {
+      const action = String(stage?.action || '').toUpperCase().trim();
+      const name = String(stage?.name || '').toLowerCase();
+      return action === 'RAISE_OBJECTION' || action === 'OBJECTION' || name.includes('objection');
+    };
+
+    const byAction = (expected: string) =>
+      normalizedStages.find((s: any) => String(s?.action || '').toUpperCase().trim() === expected);
+
+    const byName = (keyword: string, predicate?: (stage: any) => boolean) =>
+      normalizedStages.find((s: any) => {
+        const name = String(s?.name || '').toLowerCase();
+        return name.includes(keyword) && (!predicate || predicate(s));
+      });
+
+    const byConditionFlag = (flag: string) =>
+      normalizedStages.find((s: any) => getCondition(s)?.[flag] === true);
+
+    const firstSafeNonRejectStage = () =>
+      normalizedStages.find((s: any) => {
+        return !isRejectLike(s) && !isObjectionLike(s) && !hasSpecialConditionalFlag(s);
+      }) || null;
 
     if (mode === 'objection') {
-      return byName('objection');
+      return (
+        byAction('RAISE_OBJECTION') ||
+        byAction('OBJECTION') ||
+        byConditionFlag('has_objections') ||
+        byName('objection')
+      );
     }
 
     if (mode === 'reject') {
-      return byName('reject');
+      return byAction('REJECT') || byName('reject');
     }
 
     if (mode === 'approve') {
-      return byName('approved') || byName('payment') || stages[0];
+      return (
+        byAction('APPROVE') ||
+        byAction('FORWARD') ||
+        byName('approved', (s) => !hasSpecialConditionalFlag(s)) ||
+        byName('payment', (s) => !hasSpecialConditionalFlag(s)) ||
+        firstSafeNonRejectStage()
+      );
     }
 
-    return stages.find((s: any) => {
-      const name = String(s?.name || '').toLowerCase();
-      return !name.includes('reject') && !name.includes('objection');
-    }) || stages[0];
+    const explicitForward = byAction('FORWARD');
+    if (explicitForward) return explicitForward;
+
+    return firstSafeNonRejectStage();
   }
 
   private getWorkflowApplicationId(item: any): string {

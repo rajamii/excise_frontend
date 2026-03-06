@@ -149,6 +149,21 @@ export class HologramdetailsComponent implements OnInit {
           // Backend might send `carton_details` as a list of assigned cartons.
           // For the main table, we show summary or specific fields.
           // If status is ARRIVED, we might want to show details.
+          const firstDetailWithArrival = Array.isArray(rawDetails)
+            ? rawDetails.find((d: any) => d?.arrivedDate || d?.arrived_date || d?.arrival_date || d?.processedAt || d?.processed_at)
+            : null;
+          const resolvedArrivalDate =
+            (p as any).arrival_date ||
+            (p as any).arrivalDate ||
+            (p as any).arrival_processed_date ||
+            (p as any).updated_at ||
+            firstDetailWithArrival?.arrivedDate ||
+            firstDetailWithArrival?.arrived_date ||
+            firstDetailWithArrival?.arrival_date ||
+            firstDetailWithArrival?.processedAt ||
+            firstDetailWithArrival?.processed_at ||
+            null;
+          const backendPaymentCompleted = this.resolvePaymentCompleted(p as any);
 
           return {
             id: p.id!,
@@ -163,12 +178,12 @@ export class HologramdetailsComponent implements OnInit {
             remarks: p.remarks || `Hologram procurement (${pType})`,
             status: internalStatus,
             approvedDate: p.date,
-            arrivedDate: (p as any).updated_at,
+            arrivedDate: resolvedArrivalDate,
             procurementType: pType,
             carton_details: rawDetails,
             supplyChainData: {
               ...p,
-              paymentCompleted: true
+              paymentCompleted: backendPaymentCompleted
             }
           };
         });
@@ -326,6 +341,11 @@ export class HologramdetailsComponent implements OnInit {
     // 3. Status is NOT 'ARRIVED', 'Cartoon Assigned' or 'Completed' (already processed)
     //    UNLESS data is missing (cartonNumber is empty/null/-)
 
+    // Hard gate: allow update only after payment completion.
+    if (!this.isPaymentCompleted(record)) {
+      return false;
+    }
+
     const status = record.status;
     if (status === 'ARRIVED' || status === 'Cartoon Assigned' || status === 'Completed') {
       const hasDetails = record.carton_details && record.carton_details.length > 0;
@@ -358,6 +378,17 @@ export class HologramdetailsComponent implements OnInit {
       // Check if paymentCompleted flag is set
       if (record.supplyChainData.paymentCompleted === true) {
         // console.log(`  ✅ Payment completed (from supplyChainData)`);
+        return true;
+      }
+
+      const paymentStatus = String(
+        record.supplyChainData.paymentStatus ||
+        record.supplyChainData.payment_status ||
+        record.supplyChainData?.paymentDetails?.payment_status ||
+        record.supplyChainData?.payment_details?.payment_status ||
+        ''
+      ).toLowerCase().trim();
+      if (paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid') {
         return true;
       }
     }
@@ -394,6 +425,25 @@ export class HologramdetailsComponent implements OnInit {
 
     // console.log(`  ❌ Payment NOT completed - button should be DISABLED`);
     return false;
+  }
+
+  private resolvePaymentCompleted(procurement: any): boolean {
+    if (!procurement) {
+      return false;
+    }
+    if (procurement.paymentCompleted === true) {
+      return true;
+    }
+
+    const paymentStatus = String(
+      procurement.paymentStatus ||
+      procurement.payment_status ||
+      procurement?.paymentDetails?.payment_status ||
+      procurement?.payment_details?.payment_status ||
+      ''
+    ).toLowerCase().trim();
+
+    return paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid';
   }
 
   // Track locked carton number and suffix counter
@@ -474,6 +524,62 @@ export class HologramdetailsComponent implements OnInit {
     } else {
       this.currentCarton.numberOfHolograms = 0;
     }
+
+    this.validateCurrentCartonRealtime();
+  }
+
+  onCartonInputChange(): void {
+    this.validateCurrentCartonRealtime();
+  }
+
+  onSerialInputChange(): void {
+    this.calculateCurrentCartonCount();
+  }
+
+  private validateCurrentCartonRealtime(): void {
+    if (this.isArrivalQuantityCompleted()) {
+      this.serialRangeValidationError = '';
+      return;
+    }
+
+    const fromSerial = (this.currentCarton.fromSerial || '').trim();
+    const toSerial = (this.currentCarton.toSerial || '').trim();
+
+    if (this.lockedCartonNumber) {
+      if (!fromSerial || !toSerial) {
+        if (this.serialRangeValidationError.toLowerCase().includes('serial range is already entered')) {
+          this.serialRangeValidationError = '';
+        }
+        return;
+      }
+
+      const duplicateCheck = this.findDuplicateCartonOrRange(this.lockedCartonNumber, fromSerial, toSerial);
+      if (duplicateCheck && duplicateCheck.toLowerCase().includes('serial range')) {
+        this.serialRangeValidationError = duplicateCheck;
+      } else if (this.serialRangeValidationError.toLowerCase().includes('serial range is already entered')) {
+        this.serialRangeValidationError = '';
+      }
+      return;
+    }
+
+    const cartonText = (this.currentCarton.cartoonNumber || '').trim();
+    if (!cartonText) {
+      if (this.serialRangeValidationError.toLowerCase().includes('carton number already exists')) {
+        this.serialRangeValidationError = '';
+      }
+      return;
+    }
+
+    const duplicateCheck = this.findDuplicateCartonOrRange(cartonText, fromSerial, toSerial);
+
+    if (duplicateCheck && duplicateCheck.toLowerCase().includes('carton number')) {
+      this.serialRangeValidationError = duplicateCheck;
+      return;
+    }
+
+    if (this.serialRangeValidationError.toLowerCase().includes('carton number already exists')) {
+      this.serialRangeValidationError = '';
+    }
   }
 
   // Helper to get suffix letter (a, b, c, ... z, aa, ab, etc.)
@@ -505,6 +611,16 @@ export class HologramdetailsComponent implements OnInit {
     }
     if (this.currentCarton.numberOfHolograms <= 0) {
       alert('Invalid hologram count. Please check serial numbers.');
+      return;
+    }
+
+    const candidateBaseCarton = (this.lockedCartonNumber || this.currentCarton.cartoonNumber || '').trim();
+    const candidateFrom = (this.currentCarton.fromSerial || '').trim();
+    const candidateTo = (this.currentCarton.toSerial || '').trim();
+    const duplicateCheck = this.findDuplicateCartonOrRange(candidateBaseCarton, candidateFrom, candidateTo);
+    if (duplicateCheck) {
+      this.serialRangeValidationError = duplicateCheck;
+      alert(duplicateCheck);
       return;
     }
 
@@ -585,6 +701,10 @@ export class HologramdetailsComponent implements OnInit {
       return total + (carton.numberOfHolograms || 0);
     }, 0);
 
+    if (this.isArrivalQuantityCompleted()) {
+      this.serialRangeValidationError = '';
+    }
+
     // Update validation error for final confirmation
     this.updateFinalValidation();
   }
@@ -598,6 +718,10 @@ export class HologramdetailsComponent implements OnInit {
 
   // Check if can save current carton
   canSaveCurrentCarton(): boolean {
+    if (this.isArrivalQuantityCompleted()) {
+      return false;
+    }
+
     const types = this.getAvailableHologramTypes();
     // Only require type selection if multiple types are available
     const typeValid = types.length <= 1 || this.currentCarton.type.trim() !== '';
@@ -608,6 +732,13 @@ export class HologramdetailsComponent implements OnInit {
       this.currentCarton.numberOfHolograms > 0 &&
       typeValid &&
       this.serialRangeValidationError === ''; // Don't allow save if there's a validation error
+  }
+
+  private isArrivalQuantityCompleted(): boolean {
+    if (!this.selectedRecordForUpdate) {
+      return false;
+    }
+    return this.totalCalculatedHolograms >= this.selectedRecordForUpdate.numberOfHolograms;
   }
 
   extractSerialNumber(serial: string): number | null {
@@ -658,7 +789,11 @@ export class HologramdetailsComponent implements OnInit {
           },
           error: (err) => {
             console.error('Error assigning cartons:', err);
-            alert('Failed to save carton details. Please try again.');
+            const backendMessage =
+              err?.error?.detail ||
+              err?.error?.message ||
+              (typeof err?.error === 'string' ? err.error : '');
+            alert(backendMessage || 'Failed to save carton details. Please try again.');
           }
         });
     }
@@ -786,7 +921,100 @@ export class HologramdetailsComponent implements OnInit {
       return false;
     }
 
+    // Final duplicate guard before submit (covers any missed entry-level checks)
+    for (const carton of this.savedCartons) {
+      const msg = this.findDuplicateCartonOrRange(
+        carton.baseCartoonNumber || carton.cartoonNumber,
+        carton.fromSerial,
+        carton.toSerial,
+        true
+      );
+      if (msg) {
+        this.serialRangeValidationError = msg;
+        alert(msg);
+        return false;
+      }
+    }
+
     return true;
+  }
+
+  private normalizeCartonKey(value: string): string {
+    const text = String(value || '').trim().toLowerCase();
+    if (!text) {
+      return '';
+    }
+    const clean = this.getCleanCartoonNumber(text).replace(/\([a-z]+\)$/i, '').trim();
+    return clean.replace(/\s+/g, '');
+  }
+
+  private normalizeSerialKey(value: string): string {
+    const text = String(value || '').trim();
+    if (!text) {
+      return '';
+    }
+    const match = text.match(/\d+/);
+    if (match) {
+      return String(parseInt(match[0], 10));
+    }
+    return text.toLowerCase();
+  }
+
+  private findDuplicateCartonOrRange(baseCarton: string, fromSerial: string, toSerial: string, skipSavedCartonCheck: boolean = false): string | null {
+    const selectedId = this.selectedRecordForUpdate?.id;
+    const targetCartonKey = this.normalizeCartonKey(baseCarton);
+    const targetFrom = this.normalizeSerialKey(fromSerial);
+    const targetTo = this.normalizeSerialKey(toSerial);
+
+    // Check payload-level duplicates inside current modal list
+    if (!skipSavedCartonCheck) {
+      for (const saved of this.savedCartons) {
+        const savedCartonKey = this.normalizeCartonKey(saved.baseCartoonNumber || saved.cartoonNumber || '');
+        const savedFrom = this.normalizeSerialKey(saved.fromSerial || '');
+        const savedTo = this.normalizeSerialKey(saved.toSerial || '');
+        if (savedCartonKey && targetCartonKey && savedCartonKey === targetCartonKey && !this.lockedCartonNumber) {
+          return 'Carton number already exists. Please use a different carton number.';
+        }
+        if (savedFrom && savedTo && targetFrom && targetTo && savedFrom === targetFrom && savedTo === targetTo) {
+          return 'This serial range is already entered before. Please use another range.';
+        }
+      }
+    }
+
+    // Check previously saved records in the same OIC dashboard context (same unit scope)
+    for (const record of this.hologramRecords || []) {
+      if (!record || record.id === selectedId) {
+        continue;
+      }
+      const details = Array.isArray(record.carton_details) ? record.carton_details : [];
+      if (details.length > 0) {
+        for (const detail of details) {
+          const existingCarton = this.normalizeCartonKey(
+            detail?.baseCartoonNumber || detail?.cartoonNumber || detail?.cartoon_number || detail?.carton_number || ''
+          );
+          const existingFrom = this.normalizeSerialKey(detail?.fromSerial || detail?.from_serial || '');
+          const existingTo = this.normalizeSerialKey(detail?.toSerial || detail?.to_serial || '');
+          if (existingCarton && targetCartonKey && existingCarton === targetCartonKey && !this.lockedCartonNumber) {
+            return 'Carton number already exists for this OIC/Distillery context. Try another carton number.';
+          }
+          if (existingFrom && existingTo && targetFrom && targetTo && existingFrom === targetFrom && existingTo === targetTo) {
+            return 'This serial range is already entered before. Please use another range.';
+          }
+        }
+      } else {
+        const existingCarton = this.normalizeCartonKey(record.cartoonNumber || '');
+        const existingFrom = this.normalizeSerialKey(record.fromSerial || '');
+        const existingTo = this.normalizeSerialKey(record.toSerial || '');
+        if (existingCarton && targetCartonKey && existingCarton === targetCartonKey && !this.lockedCartonNumber) {
+          return 'Carton number already exists for this OIC/Distillery context. Try another carton number.';
+        }
+        if (existingFrom && existingTo && targetFrom && targetTo && existingFrom === targetFrom && existingTo === targetTo) {
+          return 'This serial range is already entered before. Please use another range.';
+        }
+      }
+    }
+
+    return null;
   }
 
   closeUpdateModal() {
@@ -1170,7 +1398,8 @@ export class HologramdetailsComponent implements OnInit {
       fromSerial: detail.fromSerial || detail.from_serial || 'N/A',
       toSerial: detail.toSerial || detail.to_serial || 'N/A',
       quantity: this.calculateQuantityFromSerials(detail.fromSerial || detail.from_serial, detail.toSerial || detail.to_serial),
-      type: detail.type || this.getHologramType(record)
+      type: detail.type || this.getHologramType(record),
+      arrivedDate: detail.arrivedDate || detail.arrived_date || detail.arrival_date || detail.processedAt || detail.processed_at || null
     }));
   }
 
@@ -1223,40 +1452,35 @@ export class HologramdetailsComponent implements OnInit {
 
   // Get the actual date when officer saved the arrival details
   getActualArrivalDate(roll: any, record: HologramRecord): string {
-    // First check if there's a specific arrival date for this roll/carton
-    if (roll.arrivedDate) {
-      return new Date(roll.arrivedDate).toLocaleDateString('en-GB', {
+    const formatDateTime = (value: any): string => {
+      return new Date(value).toLocaleString('en-GB', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
       });
+    };
+
+    // First check if there's a specific arrival date for this roll/carton
+    if (roll.arrivedDate) {
+      return formatDateTime(roll.arrivedDate);
     }
 
     // Check if there's a general arrival date for the record (when officer saved)
     if (record.arrivedDate) {
-      return new Date(record.arrivedDate).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+      return formatDateTime(record.arrivedDate);
     }
 
     // Check for updated_at timestamp (when the record was last updated by officer)
     if (record.supplyChainData?.updated_at) {
-      return new Date(record.supplyChainData.updated_at).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+      return formatDateTime(record.supplyChainData.updated_at);
     }
 
     // Check for any timestamp indicating when the arrival was processed
     if (record.supplyChainData?.arrival_processed_date) {
-      return new Date(record.supplyChainData.arrival_processed_date).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
+      return formatDateTime(record.supplyChainData.arrival_processed_date);
     }
 
     // If no specific date found, return pending
@@ -1341,4 +1565,5 @@ export class HologramdetailsComponent implements OnInit {
 
 
 }
+
 

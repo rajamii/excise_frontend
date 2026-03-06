@@ -143,6 +143,7 @@
               <th class="submission-date">App. Sub. Date</th>
               <th class="distillery-name">Distillery Name</th>
               <th class="status">Status</th>
+              <th class="revalidation-extension">Revalidation Extended (From-To)</th>
               <th class="amount">Import Pass Fee Amount</th>
               <th class="actions">Action</th>
             </tr>
@@ -178,6 +179,9 @@
                   {{ item.status }}
                 </span>
               </td>
+              <td class="revalidation-extension">
+                <span class="date-text">{{ getRevalidationExtensionRange(item) }}</span>
+              </td>
               <td class="amount">
                 <span class="amount-value">₹{{ item.amount }}</span>
               </td>
@@ -187,7 +191,7 @@
                   [item]="item"
                   [itemType]="'revalidation'"
                   [context]="getUserContext()"
-                  [includeActions]="['VIEW','PAY']"
+                  [includeActions]="getActionIncludeList(item)"
                   (actionClicked)="onUnifiedAction($event)">
                 </app-unified-action-buttons>
               </td>
@@ -279,3 +283,4 @@
       </div>
     </div>
   </div>
+

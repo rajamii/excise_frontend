@@ -24,6 +24,16 @@ export class CompanyRegistrationService {
     return this.http.get(`${this.baseUrl}/list/`);
   }
 
+  // Backward-compatible list endpoint
+  getCompanyList(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/`);
+  }
+
+  // Get company record by numeric id (admin/master style endpoint)
+  getCompanyById(id: number): Observable<any> {
+    return this.http.get(`${this.baseUrl}/${id}/`);
+  }
+
   // Get company registration details by application ID
   getCompanyDetail(applicationId: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/detail/${applicationId}/`);

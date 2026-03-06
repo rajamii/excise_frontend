@@ -131,7 +131,7 @@
             <th class="license-type">License Type</th>
             <th class="cancellation-reason">Reason</th>
             <th class="status">Status</th>
-            <th class="priority">Priority</th>
+            <th class="permit-number">Permit Number</th>
             <th class="actions">Actions</th>
           </tr>
         </thead>
@@ -141,7 +141,7 @@
           track item.id;
           let i = $index
           ) {
-          <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
+          <tr class="register-row">
             <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1 }}</td>
             <td class="ref-number">
               <div class="d-flex align-items-center gap-2">
@@ -172,10 +172,8 @@
                 {{ item.status }}
               </span>
             </td>
-            <td class="priority">
-              <span class="priority-badge priority-{{ item.priority || 'normal' }}">
-                {{ (item.priority || 'normal') | titlecase }}
-              </span>
+            <td class="permit-number">
+              <span class="permit-text">{{ item.permitNumber || '-' }}</span>
             </td>
             <td class="actions">
               <!-- Unified Action Buttons Component -->
@@ -183,7 +181,7 @@
                 [item]="item"
                 [itemType]="'cancellation'"
                 [context]="getUserContext()"
-                [includeActions]="['VIEW','PAY']"
+                [includeActions]="getActionIncludeList(item)"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
             </td>
@@ -251,3 +249,4 @@
     </div>
   </div>
 </div>
+

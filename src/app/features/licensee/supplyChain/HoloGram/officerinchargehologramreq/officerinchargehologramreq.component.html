@@ -17,10 +17,6 @@
                         <i class="bi bi-arrow-clockwise me-2"></i>
                         Refresh Requests
                     </button>
-                    <button class="btn btn-outline-secondary me-2" (click)="backToHologramRegister()">
-                        <i class="bi bi-arrow-left me-2"></i>
-                        Back to Hologram Register
-                    </button>
                 </div>
             </div>
             <!-- Summary Cards -->
@@ -607,9 +603,8 @@
                                     </td>
                                     <td>
                                         <div class="input-group input-group-sm" style="width: 120px;">
-                                            <input type="number" class="form-control" [value]="allocation.quantity"
-                                                (input)="onAllocationQuantityChange(allocation, $event)" min="1"
-                                                [max]="allocation.quantity + allocation.remainingInCartoon">
+                                            <input type="text" class="form-control" [value]="allocation.quantity"
+                                                readonly disabled>
                                             <span class="input-group-text">units</span>
                                         </div>
                                     </td>

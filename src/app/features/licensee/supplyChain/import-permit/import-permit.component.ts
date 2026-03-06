@@ -42,6 +42,48 @@ interface FormData {
   purpose: string;
 }
 
+interface MyLicense {
+  license_id?: string;
+  licenseId?: string;
+  license_sub_category_id?: number;
+  licenseSubCategoryId?: number;
+  license_sub_category?: string;
+  licenseSubCategory?: string;
+  establishment_name?: string;
+  establishmentName?: string;
+}
+
+interface SupplyChainProfileResponse {
+  success?: boolean;
+  exists?: boolean;
+  data?: {
+    licensee_id?: string;
+    licenseeId?: string;
+    manufacturing_unit_name?: string;
+    manufacturingUnitName?: string;
+  } | null;
+}
+
+interface UserUnitsResponse {
+  success?: boolean;
+  data?: Array<{
+    licensee_id?: string;
+    licenseeId?: string;
+    manufacturing_unit_name?: string;
+    manufacturingUnitName?: string;
+  }>;
+}
+
+interface UnitCatalogResponse {
+  success?: boolean;
+  data?: Array<{
+    name?: string;
+    licensee_id?: string;
+    licenseeId?: string;
+    type?: string;
+  }>;
+}
+
 @Component({
   selector: 'app-import-permit',
   standalone: true,
@@ -55,6 +97,8 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   errorMessage = '';
   refNoError = '';
   calculatedTotal = 0;
+  calculatedPayableAmount = 0;
+  selectedPricePerBl = 0;
   bulkSpiritKindType = '';
   selectedDistilleryState = '';
   currentYear = new Date().getFullYear();
@@ -78,6 +122,12 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   checkposts: Checkpost[] = [];
   purposes: Purpose[] = [];
   isLoading = false;
+  currentLicenseIds: string[] = [];
+  currentProfileLicenseeIds: string[] = [];
+  currentLicenseSubCategoryIds: number[] = [];
+  currentEstablishmentNames: string[] = [];
+  isDistilleryLicensee = false;
+  accessMessage = '';
 
   constructor(
     private router: Router,
@@ -94,10 +144,9 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     if (this.isBrowser) {
       this.initializeForm();
-      this.loadBulkSpiritTypes();
-      this.loadDistilleries();
       this.fetchCheckposts();
       this.fetchPurposes();
+      this.loadLicenseContextAndMasters();
     }
   }
 
@@ -145,12 +194,88 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
 
   // fetchStatuses removed (Legacy)
 
-  private loadBulkSpiritTypes(): void {
+  private loadLicenseContextAndMasters(): void {
+    this.http
+      .get<MyLicense[]>(`${environment.apiBaseUrl}/masters/license/me/`)
+      .subscribe({
+        next: (licenses) => {
+          const rows = Array.isArray(licenses) ? licenses : [];
+          this.currentLicenseIds = rows
+            .map((item) => String(item?.license_id ?? item?.licenseId ?? '').trim())
+            .filter((id) => !!id);
+
+          this.currentLicenseSubCategoryIds = rows
+            .map((item) =>
+              Number(item?.license_sub_category_id ?? item?.licenseSubCategoryId ?? 0)
+            )
+            .filter((id) => Number.isFinite(id) && id > 0);
+          this.currentEstablishmentNames = rows
+            .map((item) =>
+              String(item?.establishment_name ?? item?.establishmentName ?? '').trim()
+            )
+            .filter((name) => !!name);
+
+          this.isDistilleryLicensee =
+            this.currentLicenseSubCategoryIds.includes(2) ||
+            rows.some((item) =>
+              String(item?.license_sub_category ?? item?.licenseSubCategory ?? '')
+                .toLowerCase()
+                .includes('distiller')
+            );
+
+          if (!this.isDistilleryLicensee) {
+            this.bulkSpiritTypes = [];
+            this.distilleries = [];
+            this.accessMessage =
+              'Requisition / Import Permit is only available for distillery licensees.';
+            this.changeDetector.detectChanges();
+            return;
+          }
+
+          this.accessMessage = '';
+          this.loadBulkSpiritTypes(this.getPreferredLicenseSubCategoryId());
+          this.loadProfileLicenseeIdsAndDistilleries();
+        },
+        error: () => {
+          this.bulkSpiritTypes = [];
+          this.distilleries = [];
+          this.accessMessage = 'Unable to verify license details. Please try again.';
+          this.changeDetector.detectChanges();
+        },
+      });
+  }
+
+  private getPreferredLicenseSubCategoryId(): number | undefined {
+    if (this.currentLicenseSubCategoryIds.includes(2)) {
+      return 2;
+    }
+    return this.currentLicenseSubCategoryIds[0];
+  }
+
+  private loadBulkSpiritTypes(licenseSubCategoryId?: number): void {
     this.isLoading = true;
 
-    this.SupplyChainService.getBulkSpiritTypes().subscribe({
+    this.SupplyChainService.getBulkSpiritTypes(licenseSubCategoryId).subscribe({
       next: (types) => {
-        this.bulkSpiritTypes = types || [];
+        const unique = new Map<string, BulkSpiritType>();
+        (types || []).forEach((type: any) => {
+          const key = String(
+            type?.bulkSpiritKindType ?? type?.bulk_spirit_kind_type ?? ''
+          ).trim().toLowerCase();
+          if (!key || unique.has(key)) {
+            return;
+          }
+
+          unique.set(key, {
+            ...type,
+            bulkSpiritKindType: String(
+              type?.bulkSpiritKindType ?? type?.bulk_spirit_kind_type ?? ''
+            ).trim(),
+            strength: String(type?.strength ?? '').trim(),
+          });
+        });
+
+        this.bulkSpiritTypes = Array.from(unique.values());
         this.changeDetector.detectChanges();
         this.isLoading = false;
       },
@@ -158,6 +283,115 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
         this.isLoading = false;
       },
     });
+  }
+
+  private loadProfileLicenseeIdsAndDistilleries(): void {
+    this.http
+      .get<SupplyChainProfileResponse>(
+        `${environment.apiBaseUrl}/masters/supply_chain/user-profile/profile/`
+      )
+      .subscribe({
+        next: (profileResponse) => {
+          const activeProfileId = String(
+            profileResponse?.data?.licensee_id ??
+              profileResponse?.data?.licenseeId ??
+              ''
+          ).trim();
+          const activeProfileName = String(
+            profileResponse?.data?.manufacturing_unit_name ??
+              profileResponse?.data?.manufacturingUnitName ??
+              ''
+          ).trim();
+
+          this.http
+            .get<UserUnitsResponse>(
+              `${environment.apiBaseUrl}/masters/supply_chain/user-profile/user-units/`
+            )
+            .subscribe({
+              next: (unitsResponse) => {
+                const unitIds = (unitsResponse?.data || [])
+                  .map((unit) =>
+                    String(unit?.licensee_id ?? unit?.licenseeId ?? '').trim()
+                  )
+                  .filter((id) => !!id);
+                const unitNames = (unitsResponse?.data || [])
+                  .map((unit) =>
+                    String(
+                      unit?.manufacturing_unit_name ?? unit?.manufacturingUnitName ?? ''
+                    ).trim()
+                  )
+                  .filter((name) => !!name);
+
+                const merged = new Set<string>([
+                  ...(activeProfileId ? [activeProfileId] : []),
+                  ...unitIds,
+                ]);
+                const mergedNames = new Set<string>([
+                  ...this.currentEstablishmentNames,
+                  ...(activeProfileName ? [activeProfileName] : []),
+                  ...unitNames,
+                ]);
+
+                this.currentProfileLicenseeIds = Array.from(merged);
+                this.currentEstablishmentNames = Array.from(mergedNames);
+                if (this.currentProfileLicenseeIds.length > 0) {
+                  this.accessMessage = '';
+                  this.loadDistilleries();
+                  return;
+                }
+
+                this.loadDerivedLicenseeIdsFromUnitsCatalog();
+              },
+              error: () => {
+                this.currentProfileLicenseeIds = activeProfileId ? [activeProfileId] : [];
+                if (activeProfileName) {
+                  this.currentEstablishmentNames = Array.from(
+                    new Set<string>([...this.currentEstablishmentNames, activeProfileName])
+                  );
+                }
+                if (this.currentProfileLicenseeIds.length > 0) {
+                  this.loadDistilleries();
+                  return;
+                }
+                this.loadDerivedLicenseeIdsFromUnitsCatalog();
+              },
+            });
+        },
+        error: () => {
+          this.currentProfileLicenseeIds = [];
+          this.loadDerivedLicenseeIdsFromUnitsCatalog();
+        },
+      });
+  }
+
+  private loadDerivedLicenseeIdsFromUnitsCatalog(): void {
+    this.http
+      .get<UnitCatalogResponse>(
+        `${environment.apiBaseUrl}/masters/supply_chain/user-profile/units/`
+      )
+      .subscribe({
+        next: (catalogResponse) => {
+          const derivedIds = (catalogResponse?.data || [])
+            .filter((unit) => {
+              const unitName = String(unit?.name ?? '').trim();
+              if (!unitName) {
+                return false;
+              }
+              return this.currentEstablishmentNames.some((estName) =>
+                this.matchesEstablishment(unitName, estName)
+              );
+            })
+            .map((unit) => String(unit?.licensee_id ?? unit?.licenseeId ?? '').trim())
+            .filter((id) => !!id);
+
+          this.currentProfileLicenseeIds = Array.from(new Set<string>(derivedIds));
+          this.loadDistilleries();
+        },
+        error: () => {
+          this.currentProfileLicenseeIds = [];
+          this.loadDistilleries();
+        }
+      });
   }
 
   private initializeForm(): void {
@@ -177,13 +411,13 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
           this.formData.refNo = response.ref_number || response.refNumber;
         } else {
           this.refNoError = 'Failed to load reference number';
-          this.formData.refNo = 'IBPS/01/EXCISE';
+          this.formData.refNo = 'REQ/01/EXCISE';
         }
       },
       error: (error) => {
         console.error('Error loading reference number:', error);
         this.refNoError = 'Error loading reference number';
-        this.formData.refNo = 'IBPS/01/EXCISE';
+        this.formData.refNo = 'REQ/01/EXCISE';
       }
     });
   }
@@ -191,6 +425,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   calculateTotal(): void {
     this.calculatedTotal =
       (this.formData.quantity || 0) * (this.formData.numberOfPermits || 0);
+    this.calculatedPayableAmount = this.calculatedTotal * this.selectedPricePerBl;
   }
 
   /**
@@ -200,6 +435,8 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     if (!this.formData.bulkSpiritType) {
       this.formData.strengthTo = '';
       this.bulkSpiritKindType = '';
+      this.selectedPricePerBl = 0;
+      this.calculateTotal();
       return;
     }
 
@@ -215,9 +452,15 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
       this.formData.strengthTo = selectedType.strength || '';
       this.bulkSpiritKindType =
         selectedType.bulkSpiritKindType || '';
+      const rawPrice = (selectedType as any).priceBl ?? (selectedType as any).price_bl ?? 0;
+      const parsedPrice = Number(rawPrice);
+      this.selectedPricePerBl = Number.isFinite(parsedPrice) ? parsedPrice : 0;
+      this.calculateTotal();
     } else {
       this.formData.strengthTo = '';
       this.bulkSpiritKindType = '';
+      this.selectedPricePerBl = 0;
+      this.calculateTotal();
     }
   }
 
@@ -252,19 +495,124 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
 
   private loadDistilleries(): void {
     this.isLoading = true;
+    if (this.currentLicenseIds.length === 0) {
+      this.distilleries = [];
+      this.isLoading = false;
+      this.accessMessage =
+        'No mapped license_id found for your account. Please verify approved license mapping.';
+      this.changeDetector.detectChanges();
+      return;
+    }
 
-    this.SupplyChainService.getDistilleries().subscribe({
+    // Strict filter: Lifted From is scoped by license_id from /masters/license/me/.
+    this.SupplyChainService.getDistilleries(
+      [],
+      this.currentEstablishmentNames,
+      this.currentLicenseIds
+    ).subscribe({
       next: (distilleries) => {
-        this.distilleries = distilleries || [];
+        const mapped = this.normalizeAndDedupeDistilleries(distilleries || []);
+
+        if (mapped.length === 0) {
+          // Fallback: if strict mapping returns no rows, load full master list
+          // so users can still select a source distillery.
+          this.loadAllDistilleriesFallback();
+          return;
+        }
+
+        this.distilleries = mapped;
+        this.accessMessage = '';
         this.isLoading = false;
-        this.changeDetector.detectChanges(); // Trigger change detection
+        this.changeDetector.detectChanges();
       },
       error: () => {
         this.distilleries = [];
         this.isLoading = false;
-        this.changeDetector.detectChanges(); // Trigger change detection
+        this.changeDetector.detectChanges();
       },
     });
+  }
+
+  private loadAllDistilleriesFallback(): void {
+    this.SupplyChainService.getDistilleries().subscribe({
+      next: (allDistilleries) => {
+        const fallbackList = this.normalizeAndDedupeDistilleries(allDistilleries || []);
+        this.distilleries = fallbackList;
+        this.isLoading = false;
+
+        if (fallbackList.length > 0) {
+          this.accessMessage = '';
+        } else {
+          this.accessMessage =
+            'No distillery master data available. Please contact administrator.';
+        }
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.distilleries = [];
+        this.isLoading = false;
+        this.accessMessage =
+          'No mapped distillery found for your account. Please verify supply-chain profile or license mapping.';
+        this.changeDetector.detectChanges();
+      },
+    });
+  }
+
+  private normalizeAndDedupeDistilleries(items: any[]): Distillery[] {
+    const unique = new Map<string, Distillery>();
+
+    items.forEach((item: any) => {
+      const normalized: Distillery = {
+        ...item,
+        id: Number(item?.id ?? 0),
+        distilleryName: String(item?.distilleryName ?? item?.distillery_name ?? '').trim(),
+        distilleryAddress: String(item?.distilleryAddress ?? item?.distillery_address ?? '').trim(),
+        distilleryState: String(item?.distilleryState ?? item?.distillery_state ?? item?.state ?? '').trim(),
+        viaRoute: String(item?.viaRoute ?? item?.via_route ?? '').trim(),
+        licenseeId: String(item?.licenseeId ?? item?.licensee_id ?? '').trim(),
+        licensee_id: String(item?.licenseeId ?? item?.licensee_id ?? '').trim()
+      };
+
+      const key = `${normalized.id}|${normalized.distilleryName.toLowerCase()}`;
+      if (
+        !unique.has(key) &&
+        normalized.distilleryName &&
+        !this.isBreweryName(normalized.distilleryName)
+      ) {
+        unique.set(key, normalized);
+      }
+    });
+
+    return Array.from(unique.values());
+  }
+
+  private isBreweryName(name: string): boolean {
+    const value = String(name || '').toLowerCase();
+    return value.includes('brewery') || value.includes('breweries') || value.includes('beer');
+  }
+
+  private normalizeName(value: string): string {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/m\/s/g, '')
+      .replace(/pvt\.?/g, '')
+      .replace(/ltd\.?/g, '')
+      .replace(/limited/g, '')
+      .replace(/industries/g, '')
+      .replace(/distilleries/g, 'distillery')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  private matchesEstablishment(distilleryName: string, establishmentName: string): boolean {
+    const d = this.normalizeName(distilleryName);
+    const e = this.normalizeName(establishmentName);
+
+    if (!d || !e) {
+      return false;
+    }
+
+    return d.includes(e) || e.includes(d);
   }
 
   getDistilleryName(value: string): string {
@@ -335,7 +683,18 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
 
 
   submitForm(): void {
+    if (!this.isDistilleryLicensee) {
+      this.errorMessage = 'Only distillery licensees can submit requisition.';
+      return;
+    }
+
     if (this.validateForm()) {
+      const selectedLicenseeId = this.getPreferredRequisitionLicenseId();
+      if (!selectedLicenseeId) {
+        this.errorMessage = 'Unable to resolve license ID. Please ensure your active license mapping is available and try again.';
+        return;
+      }
+
       this.isLoading = true;
 
       const now = new Date().toISOString();
@@ -359,6 +718,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
         liftedFrom: this.getDistilleryName(this.formData.liftedFrom),
         purposeName: this.formData.purpose,
         checkPostName: this.formData.checkpostEntry,
+        licenseeId: selectedLicenseeId,
       };
 
       console.log('Submitting requisition with state:', requisitionData.state);
@@ -394,6 +754,10 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   }
 
   validateForm(): boolean {
+    if (!this.isDistilleryLicensee) {
+      this.errorMessage = 'Requisition is allowed only for distillery licensees.';
+      return false;
+    }
     if (!this.formData.date) {
       this.errorMessage = 'Please select a date';
       return false;
@@ -430,6 +794,22 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     this.errorMessage = '';
     return true;
   }
+
+  private getSelectedDistilleryLicenseeId(): string {
+    const selected = this.distilleries.find(
+      (d) => d.id.toString() === this.formData.liftedFrom.toString()
+    );
+    return String(selected?.licenseeId || selected?.licensee_id || '').trim();
+  }
+
+  private getPreferredRequisitionLicenseId(): string {
+    const myLicenseId = String(this.currentLicenseIds?.[0] || '').trim();
+    if (myLicenseId) {
+      return myLicenseId;
+    }
+    return this.getSelectedDistilleryLicenseeId();
+  }
+
 
   goBack(): void {
     // Navigate back to the dashboard with the 'requisition' section selected

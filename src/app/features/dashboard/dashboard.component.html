@@ -39,16 +39,6 @@
       *ngIf="selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()"
       class="supply-chain-content"
       [class.hologram-overview-wrapper]="selectedSupplyChainSection === 'hologram-overview'">
-      <!-- Top Action Bar for Payment & Wallet Button -->
-      <div class="top-action-bar" *ngIf="isLicenseeUser() && selectedSupplyChainSection === 'requisition'">
-        <div class="action-bar-content">
-          <button mat-raised-button color="primary" (click)="openWallet()" class="wallet-button">
-            <mat-icon>account_balance_wallet</mat-icon>
-            Payment & Wallet
-          </button>
-        </div>
-      </div>
-
       <!-- Section Header -->
       <div class="section-header">
         <div class="header-left">
@@ -73,17 +63,29 @@
         <app-revalidation *ngIf="selectedSupplyChainSection === 'revalidation'"></app-revalidation>
         <app-cancellation *ngIf="selectedSupplyChainSection === 'cancellation'"></app-cancellation>
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
-        <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
+        <app-commissioner-dashboard
+          *ngIf="selectedSupplyChainSection === 'hologram' && isCommissionerUser()"
+          [embeddedHologramOnly]="true"></app-commissioner-dashboard>
+        <app-dailyhologramrecordregister
+          *ngIf="selectedSupplyChainSection === 'commissioner-hologram-working-records' && isCommissionerUser()">
+        </app-dailyhologramrecordregister>
+        <app-hologram-monthly-report
+          *ngIf="selectedSupplyChainSection === 'commissioner-monthly-view-details' && isCommissionerUser()">
+        </app-hologram-monthly-report>
+        <app-hologramprocurement
+          *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId !== 10"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
+        <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet' && canRenderWalletSection()"></app-payment-confirmation>
+        <app-registration-management
+          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'salesman-barman-registration'">
+        </app-registration-management>
         <app-prepare-application
-          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-registration-apply'">
-        </app-prepare-application>
+          *ngIf="selectedSupplyChainSection === 'company-registration-apply'"></app-prepare-application>
         <app-company-collaboration-prepare-application
           *ngIf="selectedSupplyChainSection === 'company-collaboration'">
         </app-company-collaboration-prepare-application>
         <app-salesman-registration
-          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration' || selectedSupplyChainSection === 'salesman-barman-registration-apply'">
-        </app-salesman-registration>
+          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration-apply'"></app-salesman-registration>
         <app-label-registration-prepare-application
           *ngIf="selectedSupplyChainSection === 'label-registration'">
         </app-label-registration-prepare-application>
@@ -95,7 +97,7 @@
         <app-itcell *ngIf="selectedSupplyChainSection === 'process-flow'"></app-itcell>
 
         <!-- Officer in Charge specific sections -->
-        <app-transit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-transit>
+        <app-oic-transit-permit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-oic-transit-permit>
 
         <!-- Import the actual components for officer sections -->
         <app-brands-details *ngIf="selectedSupplyChainSection === 'brands'"></app-brands-details>
@@ -304,7 +306,7 @@
 
     <!-- Performance Metrics Section (for admin roles) -->
     <div class="performance-metrics"
-      *ngIf="shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      *ngIf="false && shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
       <div class="metrics-header">
         <h3>
           <mat-icon>analytics</mat-icon>
@@ -342,7 +344,7 @@
 
     <!-- Recent Activity Feed (for all roles) -->
     <div class="recent-activity"
-      *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
+      *ngIf="false && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
       <div class="activity-header">
         <h3>
           <mat-icon>history</mat-icon>

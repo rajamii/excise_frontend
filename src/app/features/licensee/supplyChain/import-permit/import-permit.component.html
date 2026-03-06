@@ -15,9 +15,12 @@
             <div class="alert alert-danger" *ngIf="errorMessage">
               {{ errorMessage }}
             </div>
+            <div class="alert alert-warning" *ngIf="accessMessage">
+              {{ accessMessage }}
+            </div>
 
             <!-- Form Section -->
-            <div class="form-section">
+            <div class="form-section" *ngIf="!accessMessage">
               <div class="row mb-4">
                 <div class="col-md-6">
                   <label class="form-label">Our Ref. No:</label>
@@ -49,6 +52,18 @@
                   <div class="form-control-plaintext fw-bold w-100 text-center fs-5 text-primary">
                     {{ calculatedTotal }}
                   </div>
+                </div>
+              </div>
+
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label class="form-label">Price / BL:</label>
+                  <input type="text" class="form-control" [value]="selectedPricePerBl | number:'1.2-2'" readonly />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Payable Amount:</label>
+                  <input type="text" class="form-control fw-bold text-success"
+                    [value]="calculatedPayableAmount | number:'1.2-2'" readonly />
                 </div>
               </div>
 
@@ -168,7 +183,7 @@
         </div>
 
         <!-- Letter Preview Card -->
-        <div id="importPermitPrintSection" class="main card shadow-sm border-0 printable-content"
+        <div id="importPermitPrintSection" *ngIf="!accessMessage" class="main card shadow-sm border-0 printable-content"
           style="max-width: 1150px; margin: 0 auto">
           <div class="letter-header text-center fw-bold mb-3 fs-5">
             <div class="d-flex align-items-center justify-content-center gap-3 mb-2">

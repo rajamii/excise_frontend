@@ -20,6 +20,36 @@ export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'r
   confirmPassword?: string;
 };
 
+export interface OICApprovedEstablishment {
+  applicationId: string;
+  establishmentName: string;
+  licenseId: string;
+  licenseeId: string;
+  districtCode: string;
+  subdivisionCode: string;
+}
+
+export interface OICOfficerRecord {
+  id: number;
+  officerId: number;
+  username: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  applicationId: string;
+  licenseId: string;
+  licensee_id: string;
+  establishment_name: string;
+  created_at: string;
+}
+
+export interface CreateOICOfficerPayload {
+  approvedApplicationId: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+}
+
 @Injectable({ providedIn: 'root' })
 
 export class AdminService {
@@ -53,6 +83,26 @@ export class AdminService {
   // Delete user by username
   deleteUser(id: number): Observable<any> {
     return this.http.delete(`${this.usersUrl}/users/${id}/delete/`);
+  }
+
+  // OIC officer management for Site Admin
+  getOICApprovedEstablishments(): Observable<OICApprovedEstablishment[]> {
+    return this.http.get<OICApprovedEstablishment[]>(
+      `${this.usersUrl}/users/oic/approved-establishments/`
+    );
+  }
+
+  getOICOfficers(): Observable<OICOfficerRecord[]> {
+    return this.http.get<OICOfficerRecord[]>(
+      `${this.usersUrl}/users/oic/officers/`
+    );
+  }
+
+  createOICOfficer(payload: CreateOICOfficerPayload): Observable<any> {
+    return this.http.post(
+      `${this.usersUrl}/users/oic/officers/create/`,
+      payload
+    );
   }
 
 

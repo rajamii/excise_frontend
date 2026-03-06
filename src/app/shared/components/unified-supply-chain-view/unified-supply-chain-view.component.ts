@@ -4,15 +4,20 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 
 // Services
 import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
+import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
+import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
+import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
+import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
 
 // Constants
 import { 
@@ -79,7 +84,7 @@ export interface UnifiedApplicationData {
     exportQty?: number;
     defenceQty?: number;
     totalQty?: number;
-    paymentAmount?: number;
+    paymentAmount?: string | number;
     hologramType?: string;
     permitType?: string;
 
@@ -109,6 +114,46 @@ export interface UnifiedApplicationData {
     policeStationName?: string;
     yearly_license_fee?: string | number;
     yearlyLicenseFee?: string | number;
+
+    // Company registration specific fields
+    brandType?: string;
+    license?: string;
+    applicationYear?: string;
+    companyName?: string;
+    pan?: string;
+    officeAddress?: string;
+    country?: string;
+    state?: string;
+    factoryAddress?: string;
+    pinCode?: string | number;
+    companyMobileNumber?: string | number;
+    companyEmailId?: string;
+    memberName?: string;
+    memberDesignation?: string;
+    memberMobileNumber?: string | number;
+    memberEmailId?: string;
+    memberAddress?: string;
+    paymentId?: string;
+    paymentDate?: string | Date;
+    paymentRemarks?: string;
+
+    // Salesman/Barman registration specific fields
+    role?: string;
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
+    gender?: string;
+    dob?: string | Date;
+    nationality?: string;
+    address?: string;
+    aadhaar?: string;
+    emailId?: string;
+    sikkimSubject?: boolean;
+    excise_district?: string;
+    exciseDistrict?: string;
+    current_stage_name?: string;
+    is_approved?: boolean;
+    created_at?: string | Date;
     
     // Transit permit specific fields
     routeDetails?: string;
@@ -227,7 +272,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private enaRequisitionService: EnaRequisitionService,
         private supplyChainService: SupplyChainService,
         private hologramDataService: HologramDataService,
+        private companyRegistrationService: CompanyRegistrationService,
+        private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
+        private licenseApplicationService: LicenseApplicationService,
         private unifiedActionsService: UnifiedActionsService,
+        private dialog: MatDialog,
         private snackBar: MatSnackBar,
         @Inject(PLATFORM_ID) platformId: Object
     ) {
@@ -251,7 +300,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     currentStageName: ['currentStageName', 'current_stage_name'],
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
                     distilleryName: ['liftedFromDistilleryName', 'lifted_from_distillery_name', 'distillery_name', 'distilleryName'],
-                    brAmount: ['totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number', 'br_amount', 'brAmount'],
+                    brAmount: ['paymentAmount', 'payment_amount', 'br_amount', 'brAmount', 'totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number'],
                     quantity: ['totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number', 'quantity'],
                     numberOfPermits: ['requisitonNumberOfPermits', 'requisition_number_of_permits', 'number_of_permits', 'numberOfPermits'],
                     purpose: ['purposeName', 'purpose_name', 'branchPurpose', 'branch_purpose', 'purpose'],
@@ -385,7 +434,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
                     distilleryName: ['manufacturingUnit', 'manufacturing_unit', 'licenseeName', 'licensee_name'],
                     brAmount: ['paymentAmount', 'payment_amount', 'total_amount', 'totalAmount'],
-                    quantity: ['localQty', 'exportQty', 'defenceQty', 'total_requested_quantity']
+                    quantity: ['total_requested_quantity', 'localQty', 'local_qty', 'exportQty', 'export_qty', 'defenceQty', 'defence_qty']
                 }
             },
             'new-license': {
@@ -403,6 +452,37 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
                     distilleryName: ['establishment_name', 'establishmentName', 'applicant_name', 'applicantName'],
                     brAmount: ['yearly_license_fee']
+                }
+            },
+            'company-registration': {
+                service: this.companyRegistrationService,
+                listMethod: 'getCompanyList',
+                detailMethod: 'getCompanyDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.COMPANY_REGISTRATION],
+                fieldMappings: {
+                    id: ['id', 'applicationId', 'application_id'],
+                    referenceNo: ['applicationId', 'application_id', 'id'],
+                    submissionDate: ['paymentDate', 'payment_date', 'created_at', 'updated_at'],
+                    status: ['current_stage_name', 'currentStageName', 'status', 'application_status', 'current_stage', 'currentStage'],
+                    currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow_id', 'workflowId', 'workflow'],
+                    distilleryName: ['companyName', 'company_name'],
+                    brAmount: ['paymentAmount', 'payment_amount']
+                }
+            },
+            'salesman-barman-registration': {
+                service: this.salesmanBarmanRegistrationService,
+                listMethod: 'getSalesmanBarmanList',
+                detailMethod: 'getSalesmanBarmanDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'id'],
+                    submissionDate: ['created_at', 'updated_at', 'applicationDate'],
+                    status: ['current_stage_name', 'current_stage', 'status'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    distilleryName: ['license_category_name', 'licenseCategoryName', 'license_category']
                 }
             }
         };
@@ -520,15 +600,25 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         const mappedData: UnifiedApplicationData = {
             id: this.extractFieldValue(apiData, config.fieldMappings.id)?.toString() || '',
-            referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo) || '',
+            referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo)?.toString() || '',
             submissionDate: this.parseDate(this.extractFieldValue(apiData, config.fieldMappings.submissionDate)),
-            status: this.extractFieldValue(apiData, config.fieldMappings.status) || 'PENDING',
+            status: this.extractFieldValue(apiData, config.fieldMappings.status)?.toString() || 'PENDING',
             currentStage: this.parseId(rawCurrentStage),
             currentStageName: this.extractFieldValue(apiData, config.fieldMappings.currentStageName || []),
             workflowId: this.parseId(rawWorkflowId) || config.workflowId,
             allowedActions,
             allowedActionConfigs
         };
+
+        // For workflows where backend often sends generic "PENDING",
+        // prefer explicit current stage name for user-facing status.
+        if (
+            (this.applicationType === 'salesman-barman-registration' || this.applicationType === 'company-registration') &&
+            mappedData.currentStageName &&
+            (!mappedData.status || String(mappedData.status).toUpperCase() === 'PENDING')
+        ) {
+            mappedData.status = String(mappedData.currentStageName);
+        }
 
         Object.keys(apiData).forEach(key => {
             if (!mappedData.hasOwnProperty(key)) {
@@ -744,11 +834,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 break;
                 
             case 'hologram':
-                mappedData['localQty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['localQty', 'local_qty']));
-                mappedData['exportQty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['exportQty', 'export_qty']));
-                mappedData['defenceQty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['defenceQty', 'defence_qty']));
-                mappedData['totalQty'] = (mappedData['localQty'] || 0) + (mappedData['exportQty'] || 0) + (mappedData['defenceQty'] || 0);
-                mappedData['paymentAmount'] = this.parseNumericValue(this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount']));
+                mappedData['localQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['requested_local_qty', 'localQty', 'local_qty'])
+                );
+                mappedData['exportQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['requested_export_qty', 'exportQty', 'export_qty'])
+                );
+                mappedData['defenceQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['requested_defence_qty', 'defenceQty', 'defence_qty'])
+                );
+                mappedData['totalQty'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['total_requested_quantity']),
+                    (mappedData['localQty'] || 0) + (mappedData['exportQty'] || 0) + (mappedData['defenceQty'] || 0)
+                );
+                mappedData['quantity'] = mappedData['totalQty'];
+                mappedData['paymentAmount'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount']),
+                    (mappedData['totalQty'] || 0) * 0.15
+                );
+                if (!mappedData['brAmount']) {
+                    mappedData['brAmount'] = mappedData['paymentAmount'];
+                }
                 break;
             case 'new-license':
                 mappedData['distilleryName'] =
@@ -759,24 +865,38 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.extractFieldValue(apiData, ['yearly_license_fee', 'yearlyLicenseFee'])
                 );
                 break;
+            case 'company-registration':
+                mappedData['distilleryName'] =
+                    this.extractFieldValue(apiData, ['companyName', 'company_name']) || 'Not specified';
+                mappedData['brAmount'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount'])
+                );
+                break;
+            case 'salesman-barman-registration':
+                mappedData['distilleryName'] =
+                    this.extractFieldValue(apiData, ['license_category_name', 'licenseCategoryName', 'license_category']) ||
+                    'Not specified';
+                break;
         }
     }
 
     private findItemByReference(items: any[], refNo: string, referenceFields: string[]): any {
-        const decodedRefNo = decodeURIComponent(refNo);
+        const decodedRefNo = decodeURIComponent(refNo || '');
+        const targetRef = String(refNo || '');
+        const decodedTargetRef = String(decodedRefNo || '');
         
         for (const field of referenceFields) {
             const foundItem = items.find((item: any) => 
-                item[field] === refNo || item[field] === decodedRefNo
+                String(item[field] ?? '') === targetRef || String(item[field] ?? '') === decodedTargetRef
             );
             if (foundItem) return foundItem;
         }
         
         for (const field of referenceFields) {
             const foundItem = items.find((item: any) => 
-                item[field] && (
-                    item[field].includes(refNo) || 
-                    item[field].includes(decodedRefNo)
+                String(item[field] ?? '') && (
+                    String(item[field] ?? '').includes(targetRef) || 
+                    String(item[field] ?? '').includes(decodedTargetRef)
                 )
             );
             if (foundItem) return foundItem;
@@ -900,6 +1020,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();
 
+        if (action === 'APPROVE') {
+            this.handleApproveWithDynamicPrechecks(event.item, context);
+            return;
+        }
+
+        if (action === 'UPDATE_ARRIVAL') {
+            this.navigateToRequisitionArrivalUpdate(event.item);
+            return;
+        }
+
         this.unifiedActionsService.executeAction(action, event.item, this.applicationType, context).subscribe({
             next: (result: any) => {
                 const isSuccess = result?.success !== false;
@@ -922,7 +1052,293 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             },
             error: (error: any) => {
                 console.error('Action failed:', error);
-                this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
+                this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
+            }
+        });
+    }
+
+    private handleApproveWithDynamicPrechecks(item: any, context: UserContext): void {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+            this.snackBar.open('Application ID not found for site enquiry.', 'Close', { duration: 4000 });
+            return;
+        }
+
+        this.http.get<any[]>(`${environment.apiBaseUrl}/auth/${encodeURIComponent(applicationId)}/next-stages/`).subscribe({
+            next: (stages: any[]) => {
+                if (this.hasApproveSiteEnquiryRequirement(stages)) {
+                    this.openSiteEnquiryAndApprove(item, context, applicationId);
+                    return;
+                }
+
+                this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                    next: (result: any) => {
+                        const isSuccess = result?.success !== false;
+                        if (isSuccess) {
+                            if (result.message) {
+                                this.snackBar.open(result.message, 'Close', { duration: 3000 });
+                            }
+                            const currentId = this.applicationData?.id?.toString() || '';
+                            const currentRef = this.applicationData?.referenceNo || '';
+                            this.loadApplicationData(currentRef, currentId);
+                        } else {
+                            this.snackBar.open(result?.message || 'Action failed', 'Close', { duration: 4000 });
+                        }
+                    },
+                    error: (error: any) => {
+                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
+                    }
+                });
+            },
+            error: () => {
+                if (this.isCurrentStageSiteEnquiry()) {
+                    this.openSiteEnquiryAndApprove(item, context, applicationId);
+                    return;
+                }
+                this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                    next: (result: any) => {
+                        const isSuccess = result?.success !== false;
+                        if (isSuccess) {
+                            if (result.message) {
+                                this.snackBar.open(result.message, 'Close', { duration: 3000 });
+                            }
+                            const currentId = this.applicationData?.id?.toString() || '';
+                            const currentRef = this.applicationData?.referenceNo || '';
+                            this.loadApplicationData(currentRef, currentId);
+                        } else {
+                            this.snackBar.open(result?.message || 'Action failed', 'Close', { duration: 4000 });
+                        }
+                    },
+                    error: (error: any) => {
+                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
+                    }
+                });
+            }
+        });
+    }
+
+    private hasApproveSiteEnquiryRequirement(stages: any[]): boolean {
+        if (this.applicationType !== 'new-license') {
+            return false;
+        }
+        if (this.isCurrentStageSiteEnquiry()) {
+            return true;
+        }
+        if (!Array.isArray(stages) || stages.length === 0) {
+            return false;
+        }
+        return stages.some((stage: any) => {
+            const stageName = String(stage?.name || '').toLowerCase();
+            if (stageName.includes('site enquiry') || stageName.includes('site_enquiry') || stageName.includes('site-enquiry')) {
+                return this.isApproveLikeStage(stage);
+            }
+            return this.isApproveLikeStage(stage) && this.isSiteEnquiryCondition(stage?.condition);
+        });
+    }
+
+    private isApproveLikeStage(stage: any): boolean {
+        const action = String(stage?.action || '').toUpperCase().trim();
+        const name = String(stage?.name || '').toLowerCase();
+        if (action === 'APPROVE' || action === 'FORWARD') {
+            return true;
+        }
+        return name.includes('approved') || name.includes('payment');
+    }
+
+    private isSiteEnquiryCondition(condition: any): boolean {
+        if (!condition || typeof condition !== 'object') {
+            return false;
+        }
+
+        if (condition['site_enquiry_required'] === true || condition['requires_site_enquiry'] === true) {
+            return true;
+        }
+
+        const requiredForm = String(condition['required_form'] || condition['pre_approval_form'] || '').toLowerCase();
+        if (requiredForm === 'site_enquiry' || requiredForm === 'site-enquiry') {
+            return true;
+        }
+
+        const gate = String(condition['approval_gate'] || condition['gate'] || '').toLowerCase();
+        return gate === 'site_enquiry' || gate === 'site-enquiry';
+    }
+
+    private isCurrentStageSiteEnquiry(): boolean {
+        if (this.applicationType !== 'new-license') {
+            return false;
+        }
+        const stageName = String(
+            this.applicationData?.currentStageName ??
+            (this.applicationData as any)?.current_stage_name ??
+            this.applicationData?.status ??
+            ''
+        ).toLowerCase();
+
+        return stageName.includes('site enquiry') || stageName.includes('site_enquiry') || stageName.includes('site-enquiry');
+    }
+
+    private openSiteEnquiryAndApprove(item: any, context: UserContext, applicationId: string): void {
+        const submitSiteEnquiry$ =
+            this.applicationType === 'new-license'
+                ? (formData: FormData) => this.licenseApplicationService.submitNewLicenseSiteEnquiryData(applicationId, formData)
+                : (formData: FormData) => this.licenseApplicationService.submitSiteEnquiryData(applicationId, formData);
+
+        const dialogRef = this.dialog.open(SiteEnquiryFormDialogComponent, {
+            width: '980px',
+            maxWidth: '98vw',
+            disableClose: true,
+            data: { applicationId }
+        });
+
+        dialogRef.afterClosed().subscribe((result: { formData: FormData } | null) => {
+            if (!result?.formData) {
+                return;
+            }
+
+            submitSiteEnquiry$(result.formData).subscribe({
+                next: () => {
+                    this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                        next: (approveResult: any) => {
+                            const isSuccess = approveResult?.success !== false;
+                            if (isSuccess) {
+                                this.snackBar.open('Site enquiry submitted and application approved.', 'Close', { duration: 3500 });
+                                const currentId = this.applicationData?.id?.toString() || '';
+                                const currentRef = this.applicationData?.referenceNo || '';
+                                this.loadApplicationData(currentRef, currentId);
+                                return;
+                            }
+                            this.snackBar.open(approveResult?.message || 'Approval failed after site enquiry submit.', 'Close', { duration: 4500 });
+                        },
+                        error: (error: any) => {
+                            this.snackBar.open(this.extractHttpErrorMessage(error, 'Approval failed after site enquiry submit.'), 'Close', { duration: 4500 });
+                        }
+                    });
+                },
+                error: (error: any) => {
+                    const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.');
+                    if (String(message).toLowerCase().includes('already submitted')) {
+                        this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
+                            next: (approveResult: any) => {
+                                const isSuccess = approveResult?.success !== false;
+                                if (isSuccess) {
+                                    this.snackBar.open('Existing site enquiry found. Application approved.', 'Close', { duration: 3500 });
+                                    const currentId = this.applicationData?.id?.toString() || '';
+                                    const currentRef = this.applicationData?.referenceNo || '';
+                                    this.loadApplicationData(currentRef, currentId);
+                                    return;
+                                }
+                                this.snackBar.open(approveResult?.message || 'Approval failed.', 'Close', { duration: 4500 });
+                            },
+                            error: (approveError: any) => {
+                                this.snackBar.open(this.extractHttpErrorMessage(approveError, 'Approval failed.'), 'Close', { duration: 4500 });
+                            }
+                        });
+                        return;
+                    }
+                    this.snackBar.open(message, 'Close', { duration: 4500 });
+                }
+            });
+        });
+    }
+
+    private getWorkflowApplicationId(item: any): string {
+        return String(
+            item?.application_id ??
+            item?.applicationId ??
+            item?.referenceNo ??
+            item?.refNo ??
+            item?.id ??
+            ''
+        ).trim();
+    }
+
+    private extractHttpErrorMessage(error: any, fallback: string): string {
+        const detail = error?.error?.detail;
+        if (typeof detail === 'string' && detail.trim()) {
+            return detail.trim();
+        }
+
+        const message = error?.error?.message;
+        if (typeof message === 'string' && message.trim()) {
+            return message.trim();
+        }
+
+        const rawError = error?.error;
+        if (typeof rawError === 'string') {
+            if (rawError.trim().toLowerCase().startsWith('<!doctype')) {
+                return 'Server returned an HTML error page instead of API JSON. Please check backend endpoint/permission for Site Enquiry.';
+            }
+            if (rawError.trim()) {
+                return rawError.trim();
+            }
+        }
+
+        const topMessage = error?.message;
+        if (typeof topMessage === 'string' && topMessage.toLowerCase().includes('unexpected token')) {
+            return 'Server returned an invalid JSON response (HTML page). Please check backend endpoint/permission for Site Enquiry.';
+        }
+
+        return fallback;
+    }
+
+    getIncludeActionsForDetailView(): string[] | null {
+        if (!this.applicationData) {
+            return null;
+        }
+
+        const actions: string[] = [];
+
+        // For requisitions, use backend-driven eligibility flags.
+        if (this.applicationType === 'requisition') {
+            const isLicensee = this.getUserContext() === 'licensee';
+            const canRequestCancellation = this.canRequestRequisitionCancellation();
+
+            if (isLicensee && canRequestCancellation) {
+                actions.push('REQUEST_CANCELLATION');
+            }
+        }
+
+        return actions.length > 0 ? actions : null;
+    }
+
+    private canRequestRequisitionCancellation(): boolean {
+        const data: any = this.applicationData as any;
+        if (!data) return false;
+
+        const backendFlag = data.can_initiate_cancellation ?? data.canInitiateCancellation ?? data.canCancel;
+        if (backendFlag !== undefined && backendFlag !== null) {
+            return Boolean(backendFlag);
+        }
+
+        const status = String(data.status || '').toLowerCase();
+        const stage = String(data.currentStageName || data.current_stage_name || '').toLowerCase();
+        const rejected = status.includes('reject') || stage.includes('reject');
+        const cancelled = status.includes('cancel') || stage.includes('cancel');
+        if (rejected || cancelled) return false;
+
+        const approvedLike =
+            status.includes('approved') ||
+            stage.includes('approved') ||
+            status.includes('payment') ||
+            stage.includes('payment') ||
+            status.includes('forwarded') ||
+            stage.includes('forwarded');
+
+        if (approvedLike) return true;
+
+        const isFinal = Boolean(data.current_stage_is_final ?? data.currentStageIsFinal ?? false);
+        return isFinal;
+    }
+
+    private navigateToRequisitionArrivalUpdate(item: any): void {
+        const ref = String(item?.referenceNo || item?.our_ref_no || item?.refNo || '').trim();
+        const id = String(item?.id || '').trim();
+        this.router.navigate(['/dashboard'], {
+            queryParams: {
+                section: 'requisition',
+                ref: ref || undefined,
+                id: id || undefined,
+                openArrival: '1'
             }
         });
     }
@@ -934,6 +1350,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isTransit(): boolean { return this.applicationType === 'transit'; }
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
+    isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
+    isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
 
     getApplicationTitle(): string {
         return APPLICATION_TITLES[this.applicationType] || 'APPLICATION';
@@ -1002,8 +1420,226 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return statusMap[status] || STATUS_BADGE_CLASSES.INFO;
     }
 
+    hasText(value: unknown): boolean {
+        if (value === null || value === undefined) return false;
+        return String(value).trim().length > 0;
+    }
+
     printApplication(): void {
-        window.print();
+        const printSection = document.getElementById('applicationPrintSection');
+        if (!printSection) {
+            console.error('Print section not found');
+            alert('Print section not found. Please try again.');
+            return;
+        }
+
+        // Clone the print section to modify image paths
+        const clonedSection = printSection.cloneNode(true) as HTMLElement;
+        
+        // Get the base URL for absolute paths
+        const baseUrl = window.location.origin;
+        
+        // Update all image src attributes to use absolute URLs
+        const images = clonedSection.querySelectorAll('img');
+        images.forEach(img => {
+            const src = img.getAttribute('src');
+            if (src && !src.startsWith('http')) {
+                img.setAttribute('src', `${baseUrl}/${src}`);
+            }
+        });
+
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) {
+            alert('Please allow popups to print');
+            return;
+        }
+
+        const appTitle = this.getApplicationTitle();
+
+        const styles = `
+            <style>
+                @page {
+                    size: A4 portrait;
+                    margin: 10mm;
+                }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 12px;
+                    line-height: 1.4;
+                    color: #000;
+                }
+                .card {
+                    border: 3px solid #2563eb !important;
+                    border-radius: 8px;
+                    padding: 12mm;
+                    box-shadow: none !important;
+                }
+                .application-header {
+                    text-align: center;
+                    margin-bottom: 15px;
+                    padding-bottom: 12px;
+                    border-bottom: 2px solid #2563eb;
+                }
+                .dept-seal {
+                    height: 60px;
+                    width: auto;
+                    filter: invert(1) brightness(0.2);
+                }
+                .d-flex {
+                    display: flex;
+                }
+                .align-items-center {
+                    align-items: center;
+                }
+                .justify-content-center {
+                    justify-content: center;
+                }
+                .gap-3 {
+                    gap: 12px;
+                }
+                .mb-2 {
+                    margin-bottom: 8px;
+                }
+                .mb-3 {
+                    margin-bottom: 12px;
+                }
+                .mb-4 {
+                    margin-bottom: 16px;
+                }
+                .fw-bold {
+                    font-weight: bold;
+                }
+                .fs-4 {
+                    font-size: 18px;
+                }
+                .fs-5 {
+                    font-size: 16px;
+                }
+                .text-primary {
+                    color: #2563eb;
+                }
+                .text-center {
+                    text-align: center;
+                }
+                .mt-2 {
+                    margin-top: 8px;
+                }
+                .p-4 {
+                    padding: 16px;
+                }
+                .row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    margin: 0 -8px;
+                }
+                .col-md-6 {
+                    flex: 0 0 50%;
+                    max-width: 50%;
+                    padding: 0 8px;
+                }
+                .col-md-12 {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                    padding: 0 8px;
+                }
+                .info-card {
+                    background: #f8f9fa;
+                    padding: 12px;
+                    border-radius: 6px;
+                    margin-bottom: 12px;
+                    border: 1px solid #e5e7eb;
+                }
+                h6 {
+                    font-size: 13px;
+                    font-weight: bold;
+                    margin-bottom: 8px;
+                }
+                p {
+                    margin-bottom: 6px;
+                    font-size: 11px;
+                }
+                strong {
+                    font-weight: bold;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 8px;
+                    font-size: 10px;
+                }
+                th {
+                    background: #2563eb;
+                    color: white;
+                    padding: 6px 4px;
+                    text-align: left;
+                    font-weight: bold;
+                    font-size: 9px;
+                }
+                td {
+                    padding: 5px 4px;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 10px;
+                }
+                tr:last-child td {
+                    border-bottom: none;
+                }
+                .badge {
+                    display: inline-block;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                    font-size: 9px;
+                    font-weight: bold;
+                }
+                .bg-success {
+                    background-color: #10b981;
+                    color: white;
+                }
+                .bg-warning {
+                    background-color: #f59e0b;
+                    color: white;
+                }
+                .bg-danger {
+                    background-color: #ef4444;
+                    color: white;
+                }
+                .bg-info {
+                    background-color: #3b82f6;
+                    color: white;
+                }
+                .no-print {
+                    display: none !important;
+                }
+            </style>
+        `;
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>${appTitle}</title>
+                    <meta charset="utf-8">
+                    ${styles}
+                </head>
+                <body>
+                    ${clonedSection.outerHTML}
+                </body>
+            </html>
+        `);
+
+        printWindow.document.close();
+        
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        }, 500);
     }
 
 }

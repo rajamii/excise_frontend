@@ -1,10 +1,10 @@
-<div class="d-flex min-vh-100">
+<div class="d-flex" [class.min-vh-100]="!embeddedHologramOnly">
 
   <!-- Main Content Area -->
-  <main class="flex-grow-1 bg-light">
+  <main class="flex-grow-1" [class.bg-light]="!embeddedHologramOnly">
     <div class="container-fluid p-0">
       <!-- Header Section -->
-      <div class="header-section text-black">
+      <div class="header-section text-black" *ngIf="!embeddedHologramOnly">
         <div class="container-fluid">
           <div class="row align-items-center py-3">
             <div class="col">
@@ -31,7 +31,7 @@
       </div>
 
       <!-- Overdue Alert -->
-      <div *ngIf="showOverdueAlert && overdueHologramEntries.length > 0" class="container-fluid mt-3">
+      <div *ngIf="!embeddedHologramOnly && showOverdueAlert && overdueHologramEntries.length > 0" class="container-fluid mt-3">
         <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
           <i class="bi bi-exclamation-triangle-fill me-3 fs-3"></i>
           <div class="flex-grow-1">
@@ -53,7 +53,7 @@
       </div>
 
       <!-- Tabs Section -->
-      <div class="bg-white border-bottom">
+      <div class="bg-white border-bottom" *ngIf="!embeddedHologramOnly">
         <div class="container-fluid">
           <ul class="nav nav-tabs border-0">
             <li class="nav-item">
@@ -457,25 +457,7 @@
                         </td>
                         <td class="actions">
                           <div class="action-buttons">
-                            <!-- View Payment Receipt - Show for APPROVED/COMPLETED applications -->
-                            <button class="btn btn-outline-success btn-sm" (click)="viewPaymentSlip(item)"
-                              title="View Payment Receipt"
-                              *ngIf="item.status === 'APPROVED' || item.status === 'PAYMENT COMPLETED'">
-                              <i class="bi bi-receipt"></i>
-                            </button>
-
-                            <button class="btn btn-outline-primary btn-sm" (click)="reviewHologram(item)"
-                              title="Review Application">
-                              <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn btn-outline-success btn-sm" (click)="approveHologram(item)"
-                              title="Approve" *ngIf="item.allowedActions?.includes('approve')">
-                              <i class="bi bi-check"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" (click)="rejectHologram(item)" title="Reject"
-                              *ngIf="item.allowedActions?.includes('reject')">
-                              <i class="bi bi-x"></i>
-                            </button>
+                            <span class="text-muted small">Use Details</span>
                           </div>
                         </td>
                       </tr>

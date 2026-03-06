@@ -6,6 +6,8 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AccountService } from '../services/account.service';
+import { isPlatformBrowser } from '@angular/common';
+import { Inject, PLATFORM_ID } from '@angular/core';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -13,13 +15,16 @@ export class AuthInterceptor implements HttpInterceptor {
 
   constructor(
     private router: Router,
-    private accountService: AccountService
+    private accountService: AccountService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(req).pipe(
       catchError((err: HttpErrorResponse) => {
+        const isBrowser = isPlatformBrowser(this.platformId);
         if (
+          isBrowser &&
           err.status === 401 &&
           this.isTokenExpired(err) &&
           !this.isHandlingTokenExpiry
@@ -44,8 +49,7 @@ export class AuthInterceptor implements HttpInterceptor {
     const code = err.error?.code || '';
     return (
       code === 'token_not_valid' ||
-      detail.toLowerCase().includes('expired') ||
-      detail.toLowerCase().includes('authentication credentials were not provided')
+      detail.toLowerCase().includes('expired')
     );
   }
 }

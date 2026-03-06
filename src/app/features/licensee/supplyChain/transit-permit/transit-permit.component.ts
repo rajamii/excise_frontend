@@ -5,6 +5,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { SupplyChainService } from '../services/supplychain.service';
 import { DistRow, LiquorRates } from '../models/supply-chain.models';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
+import { SupplyChainProfileService } from '../../../../core/services/supply-chain-profile.service';
+import { PaymentIntegrationService } from '../../../../core/services/payment-integration.service';
 
 interface FormData {
   billNo: string;
@@ -33,6 +35,27 @@ interface Product {
   bottleType?: string;
 }
 
+interface BrandOption {
+  label: string;
+  brandName: string;
+}
+
+interface WalletDeductionPreview {
+  walletType: 'excise' | 'education_cess';
+  label: string;
+  before: number;
+  deduction: number;
+  after: number;
+}
+
+interface StockDeductionPreview {
+  brand: string;
+  size: number;
+  currentPieces: number;
+  deductionPieces: number;
+  remainingPieces: number;
+}
+
 @Component({
   selector: 'app-transit-permit',
   standalone: true,
@@ -53,7 +76,7 @@ interface Product {
 })
 export class TransitPermitComponent implements OnInit {
   formData: FormData = {
-    billNo: 'TRP/2/EXCISE',
+    billNo: 'TRP/01/EXCISE',
     soleDistributor: 'M/s Karma Chopel Bhutia',
     date: '',
     depotAddress: '',
@@ -72,12 +95,16 @@ export class TransitPermitComponent implements OnInit {
   showUnlockModal = false;
 
   distributors: DistRow[] = [];
+  uniqueDistributorNames: string[] = [];
   availableDepotAddresses: string[] = [];
-  brandOptions: string[] = [];
+  brandOptions: BrandOption[] = [];
   sizeOptions: string[] = [];
   bottleTypes: { id: number; bottleType: string }[] = [];
   /* vehicleNumbers: string[] = []; */
   private brandsData: { brandName: string; sizes: number[] }[] = [];
+  private warehouseCatalogData: any[] = [];
+  private activeLicenseId: string = '';
+  private resolvedLicenseId: string = '';
 
   // New properties for stock logic
   private brandMlConversionData: any[] = [];
@@ -87,6 +114,13 @@ export class TransitPermitComponent implements OnInit {
   currentStockStatus: string = '';
   stockError: string | null = null;
   paymentAgreed: boolean = false; // For payment confirmation modal
+  walletPreviews: WalletDeductionPreview[] = [];
+  stockPreviews: StockDeductionPreview[] = [];
+  paymentConfirmAgreed = false;
+  loadingPaymentPreview = false;
+  paymentPreviewError = '';
+  private paymentPreviewWatchdog: any = null;
+  paymentDeductionPopupVisible = false;
 
   // Stock Summary Box
   selectedBrandStockSummary: { size: number, pieces: number, approxCases: number }[] = [];
@@ -103,7 +137,9 @@ export class TransitPermitComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     @Inject(PLATFORM_ID) platformId: Object,
-    private supplyChainService: SupplyChainService
+    private supplyChainService: SupplyChainService,
+    private supplyChainProfileService: SupplyChainProfileService,
+    private paymentIntegrationService: PaymentIntegrationService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
 
@@ -138,7 +174,7 @@ export class TransitPermitComponent implements OnInit {
       }
     }
 
-    // Generate next sequential bill number
+    // Show next bill number in UI (backend remains source-of-truth on submit).
     this.generateNextBillNumber();
   }
 
@@ -146,6 +182,11 @@ export class TransitPermitComponent implements OnInit {
     // Fetch Distributors
     this.supplyChainService.getDistributors().subscribe(data => {
       this.distributors = data;
+      this.uniqueDistributorNames = [...new Set(
+        data
+          .map(d => (d.distributorName || '').trim())
+          .filter(name => !!name)
+      )];
 
       // If default distributor is set, trigger change logic to load stock/depots
       if (this.formData.soleDistributor) {
@@ -154,11 +195,7 @@ export class TransitPermitComponent implements OnInit {
       }
     });
 
-    // Fetch Brands - We might fetch this later based on stock, or keep as fallback
-    this.supplyChainService.getLiquorBrands().subscribe(data => {
-      this.brandsData = data;
-      this.brandOptions = data.map(b => b.brandName);
-    });
+    this.loadEstablishmentScopedBrands();
 
     // Fetch Bottle Types
     this.supplyChainService.getBottleTypes().subscribe(data => {
@@ -168,6 +205,128 @@ export class TransitPermitComponent implements OnInit {
 
     // Fetch Brand ML Conversion Data
     this.loadMlConversionData();
+  }
+
+  private loadEstablishmentScopedBrands(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (response: any) => {
+        const profile = response?.data as any;
+        this.activeLicenseId = String(
+          profile?.licenseeId ||
+          profile?.licensee_id ||
+          ''
+        ).trim();
+        this.resolvedLicenseId = this.toValidLicenseId(this.activeLicenseId);
+        this.loadBrandWarehouseCatalog();
+      },
+      error: () => {
+        this.activeLicenseId = '';
+        this.resolvedLicenseId = '';
+        this.loadBrandWarehouseCatalog();
+      }
+    });
+  }
+
+  private toValidLicenseId(value: string): string {
+    const normalized = String(value || '').trim();
+    if (normalized.startsWith('NA/') || normalized.startsWith('NLI/')) {
+      return normalized;
+    }
+    return '';
+  }
+
+  private resolveEffectiveLicenseIdForPayment(): string {
+    const fromProfile = this.toValidLicenseId(this.resolvedLicenseId || this.activeLicenseId);
+    if (fromProfile) {
+      return fromProfile;
+    }
+
+    const rows = Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : [];
+    for (const row of rows) {
+      const candidate = this.toValidLicenseId(String(row?.licenseId || row?.license_id || '').trim());
+      if (candidate) {
+        return candidate;
+      }
+    }
+    return '';
+  }
+
+  private loadBrandWarehouseCatalog(): void {
+    this.supplyChainService.getBrandWarehouseStock(
+      undefined,
+      undefined,
+      this.resolvedLicenseId || undefined
+    ).subscribe({
+      next: (data) => {
+        this.warehouseCatalogData = data || [];
+        this.brandWarehouseData = data || [];
+        if (!this.resolvedLicenseId) {
+          const inferred = this.resolveEffectiveLicenseIdForPayment();
+          if (inferred) {
+            this.resolvedLicenseId = inferred;
+          }
+        }
+        this.rebuildBrandCatalogFromWarehouse();
+      },
+      error: (error) => {
+        console.error('Failed to load establishment-scoped warehouse brands', error);
+        this.warehouseCatalogData = [];
+        this.brandWarehouseData = [];
+        this.brandsData = [];
+        this.brandOptions = [];
+      }
+    });
+  }
+
+  private rebuildBrandCatalogFromWarehouse(): void {
+    const sizesByBrand = new Map<string, Set<number>>();
+    const options: BrandOption[] = [];
+
+    this.warehouseCatalogData.forEach((entry: any) => {
+      const brandName = this.getWarehouseBrandName(entry);
+      const capacitySize = this.getWarehouseCapacitySize(entry);
+      const exciseDuty = this.getWarehouseExciseDuty(entry);
+
+      if (!brandName || !capacitySize) return;
+
+      if (!sizesByBrand.has(brandName)) {
+        sizesByBrand.set(brandName, new Set<number>());
+      }
+      sizesByBrand.get(brandName)!.add(capacitySize);
+
+      options.push({
+        brandName,
+        label: brandName
+      });
+    });
+
+    this.brandsData = Array.from(sizesByBrand.entries())
+      .map(([brandName, sizes]) => ({
+        brandName,
+        sizes: Array.from(sizes).sort((a, b) => a - b)
+      }))
+      .sort((a, b) => a.brandName.localeCompare(b.brandName));
+
+    this.brandOptions = options.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  private getWarehouseBrandName(entry: any): string {
+    return String(entry?.brandDetails || entry?.brand_details || '').trim();
+  }
+
+  private getWarehouseCapacitySize(entry: any): number {
+    const value = Number(entry?.capacitySize ?? entry?.capacity_size ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private getWarehouseCurrentStock(entry: any): number {
+    const value = Number(entry?.currentStock ?? entry?.current_stock ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private getWarehouseExciseDuty(entry: any): number {
+    const value = Number(entry?.exciseDutyRsPerCase ?? entry?.excise_duty_rs_per_case ?? 0);
+    return Number.isFinite(value) ? value : 0;
   }
 
   loadMlConversionData(): void {
@@ -224,9 +383,8 @@ export class TransitPermitComponent implements OnInit {
   onDistributorChange(): void {
     if (!this.formData.soleDistributor) {
       this.availableDepotAddresses = [];
-      // Clear stock data when distributor is cleared
       this.selectedBrandStockSummary = [];
-      this.brandWarehouseData = [];
+      this.brandWarehouseData = [...this.warehouseCatalogData];
       this.availableStockPieces = 0;
       this.conversionFactor = 0;
       this.currentStockStatus = '';
@@ -241,26 +399,6 @@ export class TransitPermitComponent implements OnInit {
       this.formData.depotAddress = this.availableDepotAddresses[0];
     } else {
       this.formData.depotAddress = '';
-    }
-
-    // Check if there is an onDepotAddressChange method needed or just simple binding
-
-    // Fetch Warehouse Stock for this distributor
-    if (this.formData.soleDistributor) {
-      // Fetch ALL stock temporarily to debug mismatch between Distributor name and Distillery name in DB
-      this.supplyChainService.getBrandWarehouseStock('').subscribe(data => {
-        console.log(`Stock Data Received (ALL):`, data);
-        this.brandWarehouseData = data;
-
-        // Update brand options based on available stock
-        // Filter unique brands from warehouse data
-        const warehouseBrands = [...new Set(data.map(item => item.brand_details))].filter(b => !!b);
-        if (warehouseBrands.length > 0) {
-          this.brandOptions = warehouseBrands;
-        }
-        // If no stock data, maybe fallback to getLiquorBrands? 
-        // For now, let's assume if distributor has stock, we use that.
-      });
     }
   }
 
@@ -282,29 +420,29 @@ export class TransitPermitComponent implements OnInit {
     const selectedBrandBasic = this.brandsData.find(b => b.brandName === this.formData.brand);
     console.log('selectedBrandBasic:', selectedBrandBasic);
 
-    // FETCH STOCK SPECIFICALLY FOR THIS BRAND
-    console.log('Fetching specific stock for brand:', this.formData.brand);
-    // Pass empty distillery name to ignore that filter, and pass brand name
-    this.supplyChainService.getBrandWarehouseStock('', this.formData.brand).subscribe(data => {
-      console.log('Stock Data for Brand (raw response):', data);
-      this.brandWarehouseData = data;
-
-      // Log each entry to see what we got - USE CAMELCASE FIELD NAMES
-      data.forEach((entry, index) => {
-        console.log(`Entry ${index}:`, {
-          brandDetails: entry.brandDetails,
-          capacitySize: entry.capacitySize,
-          currentStock: entry.currentStock,
-          status: entry.status
-        });
+    // Fetch fresh stock for selected brand within active establishment scope.
+    this.supplyChainService
+      .getBrandWarehouseStock(
+        undefined,
+        this.formData.brand,
+        this.resolvedLicenseId || undefined
+      )
+      .subscribe({
+        next: (data) => {
+          console.log('Stock Data for Brand (raw response):', data);
+          this.brandWarehouseData = data || [];
+          this.updateStockSummary(selectedBrandBasic);
+        },
+        error: (error) => {
+          console.error('Error fetching brand warehouse stock:', error);
+          const searchBrand = this.formData.brand.toLowerCase().trim();
+          this.brandWarehouseData = this.warehouseCatalogData.filter((item: any) => {
+            const dbBrand = this.getWarehouseBrandName(item).toLowerCase().trim();
+            return dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+          });
+          this.updateStockSummary(selectedBrandBasic);
+        }
       });
-
-      // After fetching, update the summary logic
-      this.updateStockSummary(selectedBrandBasic);
-    }, error => {
-      console.error('Error fetching brand warehouse stock:', error);
-      this.selectedBrandStockSummary = [];
-    });
   }
 
   updateStockSummary(selectedBrandBasic: any): void {
@@ -314,10 +452,9 @@ export class TransitPermitComponent implements OnInit {
     console.log('updateStockSummary called with brand:', this.formData.brand);
     console.log('brandWarehouseData:', this.brandWarehouseData);
 
-    // Check if we have any data - USE CAMELCASE FIELD NAMES
     const warehouseEntries = this.brandWarehouseData.filter(item => {
-      if (!item.brandDetails) return false;
-      const dbBrand = item.brandDetails.toLowerCase().trim();
+      const dbBrand = this.getWarehouseBrandName(item).toLowerCase().trim();
+      if (!dbBrand) return false;
       const matches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
       console.log(`Comparing "${dbBrand}" with "${searchBrand}": ${matches}`);
       return matches;
@@ -329,11 +466,9 @@ export class TransitPermitComponent implements OnInit {
       // Use all defined sizes for the brand as the base
       this.sizeOptions = selectedBrandBasic.sizes.map((s: number) => s.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
 
-      // Generate summary for ALL sizes - USE CAMELCASE FIELD NAMES
       this.selectedBrandStockSummary = selectedBrandBasic.sizes.map((size: number) => {
-        // Check if we have stock for this size
-        const stockEntry = warehouseEntries.find(we => we.capacitySize === size);
-        const pieces = stockEntry ? (stockEntry.currentStock || 0) : 0;
+        const stockEntry = warehouseEntries.find(we => this.getWarehouseCapacitySize(we) === size);
+        const pieces = stockEntry ? this.getWarehouseCurrentStock(stockEntry) : 0;
 
         console.log(`Size ${size}ml: stockEntry=`, stockEntry, `pieces=${pieces}`);
 
@@ -348,13 +483,14 @@ export class TransitPermitComponent implements OnInit {
       }).sort((a: any, b: any) => a.size - b.size);
 
     } else {
-      // Fallback if brand not found in basic list - USE CAMELCASE FIELD NAMES
       if (warehouseEntries.length > 0) {
-        this.sizeOptions = warehouseEntries.map(item => item.capacitySize.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
+        this.sizeOptions = warehouseEntries
+          .map(item => this.getWarehouseCapacitySize(item).toString())
+          .sort((a: any, b: any) => parseInt(a) - parseInt(b));
 
         this.selectedBrandStockSummary = warehouseEntries.map(entry => {
-          const size = entry.capacitySize;
-          const pieces = entry.currentStock || 0;
+          const size = this.getWarehouseCapacitySize(entry);
+          const pieces = this.getWarehouseCurrentStock(entry);
           const conv = this.brandMlConversionData.find(c => c.ml === size);
           const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
           const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
@@ -402,25 +538,26 @@ export class TransitPermitComponent implements OnInit {
     // If conversion factor is still 0, show error
     if (this.conversionFactor === 0) {
       console.error('Conversion factor is 0! Available conversion data:', this.brandMlConversionData);
-      this.currentStockStatus = 'Unable to calculate. Conversion data not loaded.';
+      this.currentStockStatus = `No pieces-per-case mapping found for ${sizeMl}ml in master table.`;
       return;
     }
 
-    // 2. Get Available Stock - use loose matching for brand name - USE CAMELCASE FIELD NAMES
+    // 2. Get Available Stock - use loose matching for brand name.
     const searchBrand = this.formData.brand.toLowerCase().trim();
     const stockEntry = this.brandWarehouseData.find(x => {
-      if (!x.brandDetails) return false;
-      const dbBrand = x.brandDetails.toLowerCase().trim();
+      const dbBrand = this.getWarehouseBrandName(x).toLowerCase().trim();
+      if (!dbBrand) return false;
       const brandMatches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
-      const sizeMatches = x.capacitySize === sizeMl;
-      console.log(`Checking: "${dbBrand}" vs "${searchBrand}" (${brandMatches}) and ${x.capacitySize} vs ${sizeMl} (${sizeMatches})`);
+      const capacitySize = this.getWarehouseCapacitySize(x);
+      const sizeMatches = capacitySize === sizeMl;
+      console.log(`Checking: "${dbBrand}" vs "${searchBrand}" (${brandMatches}) and ${capacitySize} vs ${sizeMl} (${sizeMatches})`);
       return brandMatches && sizeMatches;
     });
 
     console.log('Stock entry found:', stockEntry);
 
     if (stockEntry) {
-      this.availableStockPieces = stockEntry.currentStock || 0;
+      this.availableStockPieces = this.getWarehouseCurrentStock(stockEntry);
       console.log('Available stock pieces:', this.availableStockPieces);
       const approxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
       this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${approxCases} case${approxCases !== 1 ? 's' : ''})`;
@@ -644,12 +781,31 @@ export class TransitPermitComponent implements OnInit {
     // Call backend
     this.supplyChainService.submitTransitPermit(payload).subscribe({
       next: (response) => {
+        const generatedBillNo = String(response?.bill_no || response?.billNo || '').trim();
+        if (generatedBillNo) {
+          this.formData.billNo = generatedBillNo;
+        }
         // Mark as submitted and locked
         this.isSubmitted = true;
         this.isLocked = true;
 
         // Show success message
         alert('Transit Permit Application submitted successfully!');
+
+        // Open unified payment slip from actual wallet deduction transaction context.
+        const resolvedBillNo = generatedBillNo || this.formData.billNo;
+        const transitId = String(response?.id ?? response?.data?.id ?? '').trim();
+        this.router.navigate(['/payment-slip-view'], {
+          queryParams: {
+            id: transitId || undefined,
+            type: 'transit',
+            billNo: resolvedBillNo || undefined,
+            refNo: resolvedBillNo || undefined,
+            ref: resolvedBillNo || undefined,
+            referenceNo: resolvedBillNo || undefined,
+            source: 'licensee'
+          }
+        });
 
         // Optional: Navigate or reset
       },
@@ -684,16 +840,31 @@ export class TransitPermitComponent implements OnInit {
   }
 
   acceptDeclaration(): void {
-    // Proceed with submission
-    this.submitApplication();
+    this.paymentConfirmAgreed = false;
+    this.paymentPreviewError = '';
+    this.startPaymentPreviewLoading();
+    this.buildStockDeductionPreview();
+    this.loadWalletDeductionPreviewAndOpenModal();
+  }
 
-    // Manually close modal if we assume submission trigger started (or move this inside submitApplication subscription)
-    // Looking at submitApplication, it has an alert.
-    // Ideally we should close modal ONLY if validation passes.
+  private startPaymentPreviewLoading(): void {
+    this.loadingPaymentPreview = true;
+    if (this.paymentPreviewWatchdog) {
+      clearTimeout(this.paymentPreviewWatchdog);
+    }
+    this.paymentPreviewWatchdog = setTimeout(() => {
+      if (!this.loadingPaymentPreview) return;
+      this.loadingPaymentPreview = false;
+      this.paymentPreviewError = 'Wallet information is taking too long to load. Please try again.';
+      this.validationErrors = [this.paymentPreviewError];
+    }, 10000);
+  }
 
-    if (this.validationErrors.length === 0) {
-      const closeBtn = document.getElementById('closeModalBtn');
-      if (closeBtn) closeBtn.click();
+  private stopPaymentPreviewLoading(): void {
+    this.loadingPaymentPreview = false;
+    if (this.paymentPreviewWatchdog) {
+      clearTimeout(this.paymentPreviewWatchdog);
+      this.paymentPreviewWatchdog = null;
     }
   }
 
@@ -701,51 +872,156 @@ export class TransitPermitComponent implements OnInit {
     console.log('Declaration cancelled');
   }
 
+  private loadWalletDeductionPreviewAndOpenModal(): void {
+    const licenseId = this.resolveEffectiveLicenseIdForPayment();
+    if (!licenseId) {
+      this.stopPaymentPreviewLoading();
+      this.paymentPreviewError = 'Approved license not found in profile. Please switch to approved unit/profile first.';
+      this.validationErrors = [this.paymentPreviewError];
+      return;
+    }
+
+    const exciseDeduction = this.getTotalExciseDuty() + this.getTotalAdditionalExcise();
+    const educationDeduction = this.getTotalEducationCess();
+
+    this.paymentIntegrationService.getWalletSummary(licenseId).subscribe({
+      next: (res: any) => {
+        const rows = Array.isArray(res?.results) ? res.results : [];
+
+        const exciseRow = rows.find((r: any) => String(r.walletType || r.wallet_type || '').toLowerCase() === 'excise');
+        const educationRow = rows.find((r: any) => String(r.walletType || r.wallet_type || '').toLowerCase() === 'education_cess');
+
+        const exciseBefore = Number(exciseRow?.currentBalance ?? exciseRow?.current_balance ?? 0);
+        const educationBefore = Number(educationRow?.currentBalance ?? educationRow?.current_balance ?? 0);
+
+        this.walletPreviews = [
+          {
+            walletType: 'excise',
+            label: 'Excise Wallet (includes Additional Excise)',
+            before: exciseBefore,
+            deduction: exciseDeduction,
+            after: exciseBefore - exciseDeduction
+          },
+          {
+            walletType: 'education_cess',
+            label: 'Education Cess Wallet',
+            before: educationBefore,
+            deduction: educationDeduction,
+            after: educationBefore - educationDeduction
+          }
+        ];
+
+        const insuff = this.walletPreviews.find(w => w.after < 0);
+        this.paymentPreviewError = insuff
+          ? `Insufficient ${insuff.label}. Add wallet balance before proceeding.`
+          : '';
+        this.validationErrors = this.paymentPreviewError ? [this.paymentPreviewError] : [];
+
+        this.stopPaymentPreviewLoading();
+        this.openPaymentModalAfterDeclarationClose();
+      },
+      error: (err) => {
+        this.stopPaymentPreviewLoading();
+        this.paymentPreviewError = 'Unable to fetch wallet balances for deduction preview.';
+        this.validationErrors = [this.paymentPreviewError];
+      }
+    });
+  }
+
+  private openPaymentModalAfterDeclarationClose(): void {
+    // Close declaration popup and show a simple, non-animated custom popup.
+    const closeBtn = document.getElementById('closeModalBtn');
+    if (closeBtn) {
+      closeBtn.click();
+    }
+    this.paymentDeductionPopupVisible = true;
+  }
+
+  private buildStockDeductionPreview(): void {
+    const grouped = new Map<string, StockDeductionPreview>();
+    const catalog = Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : [];
+
+    for (const product of this.products) {
+      const sizeMl = Number(product.size || 0);
+      if (!product.brand || !sizeMl) continue;
+
+      const conversion = this.brandMlConversionData.find((x: any) => Number(x.ml) === sizeMl);
+      const piecesPerCase = Number(conversion?.pieces_in_case ?? conversion?.piecesInCase ?? 0);
+      const requiredPieces = piecesPerCase > 0 ? Number(product.cases || 0) * piecesPerCase : 0;
+
+      const matchedEntry = catalog.find((entry: any) => {
+        const entryBrand = this.getWarehouseBrandName(entry).toLowerCase().trim();
+        const productBrand = String(product.brand).toLowerCase().trim();
+        const brandMatch = entryBrand === productBrand || entryBrand.includes(productBrand) || productBrand.includes(entryBrand);
+        return brandMatch && this.getWarehouseCapacitySize(entry) === sizeMl;
+      });
+
+      const currentPieces = matchedEntry ? this.getWarehouseCurrentStock(matchedEntry) : 0;
+      const key = `${String(product.brand).toLowerCase().trim()}::${sizeMl}`;
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          brand: product.brand,
+          size: sizeMl,
+          currentPieces,
+          deductionPieces: requiredPieces,
+          remainingPieces: currentPieces - requiredPieces
+        });
+      } else {
+        const row = grouped.get(key)!;
+        row.deductionPieces += requiredPieces;
+        row.remainingPieces = row.currentPieces - row.deductionPieces;
+      }
+    }
+
+    this.stockPreviews = Array.from(grouped.values()).sort((a, b) => {
+      if (a.brand === b.brand) return a.size - b.size;
+      return a.brand.localeCompare(b.brand);
+    });
+  }
+
+  proceedWithWalletAndStockDeduction(): void {
+    if (!this.paymentConfirmAgreed) return;
+    if (this.paymentPreviewError) return;
+    if (this.walletPreviews.some(w => w.after < 0)) return;
+    if (this.stockPreviews.some(s => s.remainingPieces < 0)) return;
+    this.paymentDeductionPopupVisible = false;
+    this.submitApplication();
+  }
+
+  closePaymentDeductionPopup(): void {
+    this.paymentDeductionPopupVisible = false;
+  }
+
+  canProceedWithDeduction(): boolean {
+    if (!this.paymentConfirmAgreed) return false;
+    if (!!this.paymentPreviewError) return false;
+    if (this.walletPreviews.some(w => w.after < 0)) return false;
+    if (this.stockPreviews.some(s => s.remainingPieces < 0)) return false;
+    return true;
+  }
+
   private generateNextBillNumber(): void {
     this.supplyChainService.getTransitPermits().subscribe({
       next: (permits: any[]) => {
         let maxSequence = 0;
 
-        // Check backend data
         if (permits && permits.length > 0) {
-          permits.forEach(p => {
-            const billNo = p.bill_no || p.billNo; // Backend uses bill_no
-            if (billNo && billNo.startsWith('TRP/')) {
-              const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
-              if (match) {
-                const sequence = parseInt(match[1], 10);
-                if (sequence > maxSequence) {
-                  maxSequence = sequence;
-                }
-              }
+          permits.forEach((p: any) => {
+            const billNo = String(p.bill_no || p.billNo || '').trim().toUpperCase();
+            const match = billNo.match(/^TRP\/0*(\d+)\/EXCISE$/);
+            if (match) {
+              const sequence = parseInt(match[1], 10);
+              if (sequence > maxSequence) maxSequence = sequence;
             }
           });
         }
 
-        // Check localStorage as fallback/supplement (optional, but good if mixed usage)
-        if (this.isBrowser) {
-          const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-          transitList.forEach((permit: any) => {
-            const billNo = permit.billNo;
-            if (billNo && billNo.startsWith('TRP/')) {
-              const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
-              if (match) {
-                const sequence = parseInt(match[1], 10);
-                if (sequence > maxSequence) {
-                  maxSequence = sequence;
-                }
-              }
-            }
-          });
-        }
-
-        // Set next sequence
-        this.formData.billNo = `TRP/${maxSequence + 1}/EXCISE`;
+        const next = maxSequence + 1;
+        this.formData.billNo = `TRP/${String(next).padStart(2, '0')}/EXCISE`;
       },
-      error: (err) => {
-        console.error('Failed to fetch permits for bill number generation', err);
-        // Fallback to basic logic or previous localStorage logic if API fails
-        this.formData.billNo = `TRP/${Math.floor(Math.random() * 10000)}/EXCISE`; // Temporary fallback to avoid collision if offline
+      error: () => {
+        this.formData.billNo = 'TRP/01/EXCISE';
       }
     });
   }
@@ -1037,3 +1313,4 @@ export class TransitPermitComponent implements OnInit {
     return Math.min(totalHeight, maxHeight) + 'px';
   }
 }
+

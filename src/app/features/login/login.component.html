@@ -1,4 +1,12 @@
-<div class="container" [class.right-panel-active]="isRightPanelActive" id="container">
+<div class="login-layout">
+  <div class="top-actions">
+    <button type="button" class="back-home-btn" (click)="goToHome()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Home
+    </button>
+  </div>
+
+  <div class="container" [class.right-panel-active]="isRightPanelActive" id="container">
   <!-- Sign Up Panel -->
   <div class="form-container sign-up-container">
     <div class="form-header">
@@ -133,6 +141,20 @@
             Registering... <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
           </span>
         </button>
+
+        @if (registrationError) {
+        <div class="error-box">
+          <mat-card class="error-card">
+            <mat-card-content>
+              <ul>
+                @for (msg of registrationErrorMessages; track msg) {
+                <li>{{ msg }}</li>
+                }
+              </ul>
+            </mat-card-content>
+          </mat-card>
+        </div>
+        }
         }
 
         <!-- STEP 4: Success -->
@@ -194,9 +216,9 @@
       <!-- OTP login -->
       @if (!isPasswordMode) {
       @if (!otpSent) {
-      <input formControlName="phoneNumber" placeholder="Phone Number" required />
-      <button matButton="filled" class="filled-button" (click)="sendOtp()"
-        [disabled]="loginForm.controls['phoneNumber'].invalid">Send OTP</button>
+      <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric" required />
+      <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
+        [disabled]="isSendingOtp">Send OTP</button>
       }
 
       @if (otpSent) {
@@ -214,6 +236,20 @@
       <button matButton="filled" class="filled-button" type="submit"
         [disabled]="loginForm.controls['otp'].invalid">Verify</button>
       }
+      }
+
+      @if (loginError) {
+      <div class="error-box">
+        <mat-card class="error-card">
+          <mat-card-content>
+            <ul>
+              @for (msg of loginErrorMessages; track msg) {
+              <li>{{ msg }}</li>
+              }
+            </ul>
+          </mat-card-content>
+        </mat-card>
+      </div>
       }
       }
     </form>
@@ -266,4 +302,13 @@
       </div>
     </div>
   </div>
+  </div>
+
+  @if (!isPasswordMode && otpSent && loginOtpPreview) {
+  <aside class="otp-preview-box" aria-live="polite">
+    <span class="otp-preview-label">Login OTP</span>
+    <span class="otp-preview-value">{{ loginOtpPreview }}</span>
+    <span class="otp-preview-note">Use this OTP to complete sign in.</span>
+  </aside>
+  }
 </div>

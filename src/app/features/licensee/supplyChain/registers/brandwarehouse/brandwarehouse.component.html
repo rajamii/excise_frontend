@@ -6,9 +6,9 @@
       <div class="title-section">
         <h1 class="warehouse-title">
           <i class="bi bi-house-gear"></i>
-          Sikkim Distillery - Stock Inventory
+          {{ inventoryTitle }}
         </h1>
-        <p class="warehouse-subtitle">Monitor and manage all Sikkim brand inventory (Distilleries)</p>
+        <p class="warehouse-subtitle">{{ inventorySubtitle }}</p>
       </div>
       <div class="header-actions">
         <button class="btn btn-outline" (click)="refreshData()" [disabled]="isLoading">
@@ -105,6 +105,33 @@
     </div>
   </div>
 
+  <!-- Newly Updated from Hologram Daily Entry -->
+  <div class="new-updates-strip" *ngIf="newlyUpdatedStocks.length > 0">
+    <div class="new-updates-header">
+      <h3>
+        <i class="bi bi-stars"></i>
+        Newly Updated from Daily Entry
+      </h3>
+      <div class="new-updates-actions">
+        <span class="new-updates-count">{{ newlyUpdatedStocks.length }} brand(s)</span>
+        <button type="button" class="btn btn-outline btn-sm" *ngIf="getHiddenNewUpdatesCount() > 0"
+          (click)="showNewUpdatesModal = true">
+          <i class="bi bi-list-ul"></i>
+          More Details (+{{ getHiddenNewUpdatesCount() }})
+        </button>
+      </div>
+    </div>
+
+    <div class="new-updates-list">
+      <button type="button" class="new-update-chip" *ngFor="let stock of getVisibleNewlyUpdatedStocks()"
+        (click)="viewBrandDetails(stock)">
+        <span class="chip-tag">{{ getNewUpdateTag(stock) }}</span>
+        <span class="chip-name">{{ stock.brandName }}</span>
+        <span class="chip-meta">{{ stock.totalStock | number }} units</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Filters Section -->
   <div class="filters-section">
     <div class="filters-header">
@@ -152,7 +179,7 @@
           <option value="">All Levels</option>
           <option value="HIGH">High (80%+)</option>
           <option value="MEDIUM">Medium (40-80%)</option>
-          <option value="LOW">Low (<40%)< /option>
+          <option value="LOW">Low (&lt;40%)</option>
         </select>
       </div>
 
@@ -196,6 +223,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let brand of paginatedStocks; let i = index" class="table-row"
+            [class.new-updated-row]="isRecentlyUpdatedStock(brand)"
             [class.low-stock-row]="brand.overallStatus === 'LOW_STOCK'"
             [class.out-stock-row]="brand.overallStatus === 'OUT_OF_STOCK'"
             [class.over-stock-row]="brand.overallStatus === 'OVERSTOCKED'">
@@ -203,7 +231,12 @@
             <!-- Brand Details -->
             <td class="brand-details-cell">
               <div class="brand-info">
-                <div class="brand-name">{{ brand.brandName }}</div>
+                <div class="brand-name">
+                  {{ brand.brandName }}
+                  <span class="new-update-inline-tag" *ngIf="isRecentlyUpdatedStock(brand)">
+                    {{ getNewUpdateTag(brand) }}
+                  </span>
+                </div>
                 <div class="brand-meta">
                   <span class="distillery-name">{{ brand.distilleryName }}</span>
                   <span class="separator">•</span>
@@ -330,6 +363,44 @@
         Next
         <i class="bi bi-chevron-right"></i>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Newly Updated Brands Timeline Modal -->
+<div class="modal-overlay" *ngIf="showNewUpdatesModal" (click)="showNewUpdatesModal = false">
+  <div class="modal-content new-updates-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-stars"></i>
+        Updated Brands Timeline
+      </h2>
+      <button class="modal-close" (click)="showNewUpdatesModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="new-updates-timeline">
+        <div class="timeline-row" *ngFor="let stock of newlyUpdatedStocks; let i = index">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-box">
+            <div class="timeline-main">
+              <span class="chip-tag">{{ getNewUpdateTag(stock) }}</span>
+              <strong>{{ stock.brandName }}</strong>
+            </div>
+            <div class="timeline-meta">
+              <span>{{ stock.totalStock | number }} units</span>
+              <span>{{ stock.lastUpdated | date:'dd-MMM-yyyy HH:mm' }}</span>
+              <span>{{ stock.overallStatus.replace('_', ' ') }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="showNewUpdatesModal = false">Close</button>
     </div>
   </div>
 </div>
@@ -672,6 +743,10 @@
                 <div class="reference">
                   <span class="label">Reference:</span>
                   <span class="value">{{ entry.referenceNo }}</span>
+                </div>
+                <div class="activity" *ngIf="entry.activity">
+                  <span class="label">Activity:</span>
+                  <span class="value">{{ entry.activity }}</span>
                 </div>
                 <div class="officer" *ngIf="entry.officerName">
                   <span class="label">Officer:</span>

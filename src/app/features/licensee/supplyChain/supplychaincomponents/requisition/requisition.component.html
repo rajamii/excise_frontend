@@ -1,8 +1,12 @@
 <!-- Requisition Register Header -->
 <div class="requisition-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-
-
+  <div class="d-flex justify-content-end align-items-center mb-3 top-action-row">
+    <div class="header-actions d-flex gap-2" *ngIf="canViewArrivalSummary()">
+      <button type="button" class="btn btn-sm all-bulk-record-btn" (click)="openArrivalSummaryModal()">
+        <i class="bi bi-clipboard-data me-1"></i>
+        All Bulk Detail Record
+      </button>
+    </div>
   </div>
 
   <!-- Summary Cards -->
@@ -165,11 +169,11 @@
             <th class="sl-no">Sl. No{{ isCommissioner() ? '.' : 's.' }}</th>
             <th class="ref-number">Ref. No</th>
             <th class="submission-date">{{ isCommissioner() ? 'Submission Date' : 'App. Sub. Date' }}</th>
+            <th class="approval-date">Approval Date</th>
             <th class="distillery-name">{{ isCommissioner() ? 'Licensee Name' : 'Distillery Name' }}</th>
             <th class="status">Status</th>
             <th class="amount">{{ isCommissioner() ? 'Amount' : 'Imp. Pass Fee Amt.' }}</th>
-            <th class="priority" *ngIf="isCommissioner()">Priority</th>
-            <th class="actions">Action{{ isCommissioner() ? 's' : '' }}</th>
+            <th class="actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -177,10 +181,18 @@
           <tr class="register-row">
             <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td class="ref-number">
-              <span class="ref-text">{{ item.referenceNo }}</span>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="ref-text">{{ item.referenceNo }}</span>
+                @if (isRevalidationApprovedByCommissioner(item)) {
+                  <span class="badge revalidated-badge">REVALIDATED</span>
+                }
+              </div>
             </td>
             <td class="submission-date">
               <span class="date-text">{{ item.submissionDate }}</span>
+            </td>
+            <td class="approval-date">
+              <span class="date-text">{{ getCommissionerApprovalDate(item) }}</span>
             </td>
             <td class="distillery-name">
               <span class="company-name">{{ item.distilleryName }}</span>
@@ -199,20 +211,29 @@
             <td class="amount">
               <span class="amount-value">₹{{ item.amount }}</span>
             </td>
-            <td class="priority" *ngIf="isCommissioner()">
-              <span class="priority-badge priority-{{ getPriority(item) }}">
-                {{ getPriority(item) | uppercase }}
-              </span>
-            </td>
-            <td class="actions">
+            <td class="actions" (click)="$event.stopPropagation()" style="position: relative; z-index: 1000;">
               <!-- Unified Action Buttons Component -->
               <app-unified-action-buttons
                 [item]="item"
                 [itemType]="'requisition'"
                 [context]="getUserContext()"
-                [includeActions]="['VIEW','PAY']"
+                [includeActions]="getActionIncludeList(item)"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
+              <button
+                *ngIf="canUpdateArrival(item)"
+                type="button"
+                class="btn btn-sm mt-2 arrival-update-btn"
+                (click)="openArrivalModal(item)">
+                Update Arrival
+              </button>
+              <button
+                *ngIf="canViewArrivalDetails(item)"
+                type="button"
+                class="btn btn-sm mt-2 arrival-view-btn"
+                (click)="openArrivalViewModal(item)">
+                View BL Details
+              </button>
             </td>
           </tr>
           }
@@ -310,3 +331,412 @@
   </div>
 </div>
 <div class="modal-backdrop fade show" *ngIf="isCancellationModalOpen"></div>
+
+<!-- Arrival Update Modal -->
+<div class="modal fade" *ngIf="isArrivalModalOpen" [class.show]="isArrivalModalOpen"
+  [style.display]="isArrivalModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content arrival-update-modal">
+      <div class="modal-header arrival-update-header">
+        <div class="header-content">
+          <i class="bi bi-truck-front-fill header-icon"></i>
+          <div>
+            <h5 class="modal-title">Update Arrival Details</h5>
+            <p class="modal-subtitle">Enter tanker-wise arrival information</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeArrivalModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body arrival-update-body">
+        <div class="info-cards-grid mb-4">
+          <div class="info-card">
+            <div class="info-card-icon ref-icon-arrival">
+              <i class="bi bi-hash"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Reference No.</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.referenceNo || '-' }}</div>
+            </div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon licensee-icon-arrival">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Licensee ID</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.licenseeId || '-' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tanker-count-section mb-4">
+          <div class="count-input-wrapper">
+            <label class="form-label">
+              <i class="bi bi-truck me-2"></i>
+              <span class="fw-semibold">Total Tankers</span>
+            </label>
+            <input
+              type="number"
+              class="form-control tanker-count-input"
+              min="1"
+              [(ngModel)]="arrivalTankerCount"
+              (change)="onArrivalTankerCountChange()">
+          </div>
+          <div class="helper-text">
+            <i class="bi bi-info-circle me-1"></i>
+            Fill tanker-wise arrival details below
+          </div>
+        </div>
+
+        <div class="tanker-entry-section mb-4">
+          <div class="section-header">
+            <i class="bi bi-list-check"></i>
+            <h6 class="section-title">Tanker Entry Details</h6>
+          </div>
+          <div class="table-container">
+            <table class="table arrival-table mb-0">
+              <thead>
+                <tr>
+                  <th class="text-center" style="width: 80px;">#</th>
+                  <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
+                  <th><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of arrivalEntries; let i = index">
+                  <td class="text-center serial-col">{{ i + 1 }}</td>
+                  <td>
+                    <input
+                      class="form-control form-control-sm tanker-input"
+                      [(ngModel)]="row.tanker_no"
+                      placeholder="Enter tanker number">
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm liter-input"
+                      min="0.01"
+                      step="0.01"
+                      [(ngModel)]="row.bulk_liter"
+                      placeholder="Enter bulk liter">
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div *ngIf="arrivalErrorMessage" class="alert alert-danger d-flex align-items-center mb-3">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <span>{{ arrivalErrorMessage }}</span>
+        </div>
+
+        <div class="arrival-summary-card">
+          <div class="summary-row">
+            <div class="summary-item">
+              <i class="bi bi-clipboard-check summary-icon"></i>
+              <div class="summary-content">
+                <span class="summary-label">Requested Total Quantity</span>
+                <span class="summary-value requested">{{ getArrivalAllowedBulkLiter() | number:'1.2-2' }}</span>
+              </div>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-item">
+              <i class="bi bi-calculator summary-icon"></i>
+              <div class="summary-content">
+                <span class="summary-label">Entered Total Bulk Liter</span>
+                <span class="summary-value entered"
+                  [class.text-danger]="getArrivalAllowedBulkLiter() > 0 && getArrivalTotalBulkLiter() > getArrivalAllowedBulkLiter()">
+                  {{ getArrivalTotalBulkLiter() | number:'1.2-2' }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="validation-status"
+            [class.match]="isArrivalTotalMatchingRequested()"
+            [class.mismatch]="!isArrivalTotalMatchingRequested()">
+            <i class="bi" [class.bi-check-circle-fill]="isArrivalTotalMatchingRequested()" 
+               [class.bi-exclamation-circle-fill]="!isArrivalTotalMatchingRequested()"></i>
+            {{ isArrivalTotalMatchingRequested() ? 'Quantities Matched - Ready to Save' : 'Must match exactly to enable save' }}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer arrival-update-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeArrivalModal()" [disabled]="isArrivalSaving">
+          <i class="bi bi-x-circle me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-success save-btn" (click)="saveArrivalDetails()" [disabled]="!canSaveArrivalDetails()">
+          <i class="bi bi-check-circle me-2"></i>{{ isArrivalSaving ? 'Saving...' : 'Save Arrival Details' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="isArrivalModalOpen"></div>
+
+<!-- Arrival BL View Modal -->
+<div class="modal fade" *ngIf="isArrivalViewModalOpen" [class.show]="isArrivalViewModalOpen"
+  [style.display]="isArrivalViewModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content bl-details-modal">
+      <div class="modal-header bl-details-header">
+        <div class="header-content">
+          <i class="bi bi-file-earmark-text-fill header-icon"></i>
+          <div>
+            <h5 class="modal-title">BL Details</h5>
+            <p class="modal-subtitle">Bulk Liter Requisition Information</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeArrivalViewModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body bl-details-body">
+        <div class="info-cards-grid mb-4">
+          <div class="info-card">
+            <div class="info-card-icon ref-icon">
+              <i class="bi bi-hash"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Reference No.</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.referenceNo || '-' }}</div>
+            </div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon licensee-icon">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="info-card-content">
+              <label class="info-label">Licensee ID</label>
+              <div class="info-value">{{ selectedArrivalRequisition?.licenseeId || '-' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-stats-grid mb-4">
+          <div class="stat-card tanker-stat">
+            <div class="stat-icon">
+              <i class="bi bi-truck"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ arrivalViewTankerCount }}</div>
+              <div class="stat-label">Total Tankers</div>
+            </div>
+          </div>
+          <div class="stat-card liter-stat">
+            <div class="stat-icon">
+              <i class="bi bi-droplet-fill"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ arrivalViewTotalBulkLiter | number:'1.2-2' }}</div>
+              <div class="stat-label">Total Bulk Liter</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tanker-details-section" *ngIf="arrivalViewEntries.length > 0">
+          <div class="section-header">
+            <i class="bi bi-list-ul"></i>
+            <h6 class="section-title">Tanker Details</h6>
+          </div>
+          <div class="table-container">
+            <table class="table bl-details-table mb-0">
+              <thead>
+                <tr>
+                  <th class="text-center" style="width: 80px;">#</th>
+                  <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
+                  <th class="text-end"><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of arrivalViewEntries; let i = index">
+                  <td class="text-center serial-col">{{ i + 1 }}</td>
+                  <td class="tanker-col">{{ row.tanker_no }}</td>
+                  <td class="text-end liter-col">{{ row.bulk_liter || 0 | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div *ngIf="arrivalViewErrorMessage" class="alert alert-warning d-flex align-items-center mb-0">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <span>{{ arrivalViewErrorMessage }}</span>
+        </div>
+      </div>
+      <div class="modal-footer bl-details-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeArrivalViewModal()">
+          <i class="bi bi-x-circle me-2"></i>Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="isArrivalViewModalOpen"></div>
+
+<!-- All Bulk Detail Record Modal -->
+<div class="modal fade" *ngIf="isArrivalSummaryModalOpen" [class.show]="isArrivalSummaryModalOpen"
+  [style.display]="isArrivalSummaryModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered all-bulk-record-modal" role="document">
+    <div class="modal-content">
+      <div class="modal-header all-bulk-header">
+        <div class="header-content">
+          <i class="bi bi-clipboard-data header-icon"></i>
+          <div class="header-text">
+            <h5 class="modal-title">All Bulk Detail Record</h5>
+            <p class="modal-subtitle">View and filter all bulk liquor arrival details</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeArrivalSummaryModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body all-bulk-body">
+        <!-- Filter Section -->
+        <div class="filter-section">
+          <div class="filter-header">
+            <i class="bi bi-funnel"></i>
+            <h6>Filter Options</h6>
+          </div>
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label class="filter-label">
+                <i class="bi bi-calendar-event"></i>
+                Date Filter
+              </label>
+              <input
+                type="date"
+                class="form-control"
+                [(ngModel)]="arrivalSummaryDateFilter"
+                (change)="onArrivalSummaryDateFilterChange()">
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">
+                <i class="bi bi-calendar3"></i>
+                Month Filter
+              </label>
+              <input
+                type="month"
+                class="form-control"
+                [(ngModel)]="arrivalSummaryMonthFilter"
+                (change)="onArrivalSummaryMonthFilterChange()">
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-outline-secondary" type="button"
+                (click)="arrivalSummaryDateFilter=''; arrivalSummaryMonthFilter=''; applyArrivalSummaryFilters()">
+                <i class="bi bi-x-circle me-1"></i>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Summary -->
+        <div class="results-summary">
+          <div class="summary-info">
+            <i class="bi bi-list-check"></i>
+            <div class="summary-text">
+              <div class="summary-label">Entries</div>
+              <div class="summary-value"><span class="highlight">{{ filteredArrivalDetailsRows.length }}</span></div>
+            </div>
+          </div>
+          <div class="total-bl">
+            <i class="bi bi-droplet-fill"></i>
+            <div class="total-content">
+              <div class="total-label">Total BL (Filtered)</div>
+              <div class="total-value">{{ getFilteredArrivalTotalBulkLiter() | number:'1.2-2' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly BL Summary -->
+        <div class="monthly-summary-section" *ngIf="getArrivalSummaryMonthlyRows().length > 0">
+          <div class="section-header">
+            <i class="bi bi-calendar2-month"></i>
+            <h6 class="section-title">Monthly BL Summary</h6>
+          </div>
+          <div class="table-responsive">
+            <table class="table monthly-summary-table mb-0">
+              <thead>
+                <tr>
+                  <th class="month-col"><i class="bi bi-calendar"></i> Month</th>
+                  <th><i class="bi bi-list-ol"></i> Entries</th>
+                  <th><i class="bi bi-truck"></i> Total Tankers</th>
+                  <th><i class="bi bi-droplet"></i> Total BL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of getArrivalSummaryMonthlyRows()">
+                  <td class="month-col">{{ row.monthLabel }}</td>
+                  <td class="entries-col">{{ row.entries }}</td>
+                  <td class="tankers-col">{{ row.totalTankers }}</td>
+                  <td class="bl-col">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Arrival Entries -->
+        <div class="arrival-entries-section" *ngIf="filteredArrivalDetailsRows.length > 0">
+          <div class="section-header">
+            <div class="header-left">
+              <i class="bi bi-table"></i>
+              <h6 class="section-title">Arrival Entries</h6>
+            </div>
+            <span class="entries-badge">{{ filteredArrivalDetailsRows.length }} Entries</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table arrival-entries-table mb-0">
+              <thead>
+                <tr>
+                  <th class="serial-col"><i class="bi bi-hash"></i> #</th>
+                  <th class="date-col"><i class="bi bi-calendar-date"></i> Date</th>
+                  <th class="ref-col"><i class="bi bi-file-text"></i> Ref. No</th>
+                  <th class="distillery-col"><i class="bi bi-building"></i> Distillery</th>
+                  <th><i class="bi bi-truck"></i> Tankers</th>
+                  <th><i class="bi bi-box"></i> Requested Qty</th>
+                  <th><i class="bi bi-droplet-fill"></i> Total BL</th>
+                  <th><i class="bi bi-info-circle"></i> Tanker Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of filteredArrivalDetailsRows; let i = index">
+                  <td class="serial-col">{{ i + 1 }}</td>
+                  <td class="date-col">{{ formatArrivalDate(row.arrivalDate) }}</td>
+                  <td class="ref-col">{{ row.referenceNo }}</td>
+                  <td class="distillery-col">{{ row.distilleryName || '-' }}</td>
+                  <td class="tankers-col">{{ row.tankerCount }}</td>
+                  <td class="requested-col">{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
+                  <td class="bl-col">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
+                  <td class="tanker-details-col">
+                    <div class="tanker-details-highlight" [title]="row.tankerDetails || formatTankerDetailsShort(row.tankerDetails)">
+                      <i class="bi bi-truck tanker-details-icon"></i>
+                      <span class="tanker-details-text">{{ formatTankerDetailsShort(row.tankerDetails) }}</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!isArrivalSummaryLoading && filteredArrivalDetailsRows.length === 0 && !arrivalSummaryErrorMessage">
+          <i class="bi bi-inbox empty-icon"></i>
+          <h6 class="empty-title">No Records Found</h6>
+          <p class="empty-message">No BL details found for selected filters. Try adjusting your filter criteria.</p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div class="alert alert-warning" *ngIf="arrivalSummaryErrorMessage">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ arrivalSummaryErrorMessage }}</span>
+        </div>
+      </div>
+      <div class="modal-footer all-bulk-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeArrivalSummaryModal()">
+          <i class="bi bi-x-lg"></i>
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="isArrivalSummaryModalOpen"></div>

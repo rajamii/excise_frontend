@@ -1,10 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
+import { catchError, forkJoin, of, Observable } from 'rxjs';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
+import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
+import { environment } from '../../../../../../environments/environment';
+import Swal from 'sweetalert2';
+import {
+  AddMoneyViewContext,
+  AddMoneyWalletType,
+  UnifiedAddMoneyModalComponent
+} from '../../../../../shared/components/unified-add-money-modal/unified-add-money-modal.component';
 
 interface PaymentItem {
   id: string;
@@ -42,6 +53,7 @@ interface HistoryItem {
   txnId: string;
   userId: string;
   type: string;
+  paymentFor: string;
   amount: number;
   reference: string;
   status: string;
@@ -65,27 +77,101 @@ interface HologramItem {
   paymentSlipUploaded?: boolean;
 }
 
+type WalletHistoryType = 'Added' | 'Utilized' | 'Refunded';
+type WalletHistoryCategory = 'excise' | 'education' | 'hologram';
+
+interface WalletHistoryTransaction {
+  id: string;
+  date: string;
+  type: WalletHistoryType;
+  amount: number;
+  balanceAfter: number;
+  reference: string;
+  paymentFor?: string;
+}
+
+interface MyLicenseRow {
+  license_id?: string;
+  licenseId?: string;
+  license_sub_category_id?: number;
+  licenseSubCategoryId?: number;
+  license_sub_category?: string;
+  licenseSubCategory?: string;
+  status?: string;
+  stage_name?: string;
+  stageName?: string;
+}
+
+type WalletModuleType = 'distillery' | 'brewery' | '';
+type PaymentModuleTab = 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
+
+interface PendingWalletPaymentContext {
+  id: string;
+  tab: PaymentModuleTab;
+  itemType: string;
+  referenceNo: string;
+  amount: number;
+}
+
+const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
+  excise: '',
+  brewery: '',
+  education: '',
+  hologram: ''
+};
+
 @Component({
   selector: 'app-payment-confirmation',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UnifiedAddMoneyModalComponent],
   providers: [HologramDataService],
   templateUrl: './payment-confirmation.component.html',
   styleUrls: ['./payment-confirmation.component.scss']
 })
-export class PaymentConfirmationComponent implements OnInit {
+export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
+  private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
+  private readonly isBrowser = typeof window !== 'undefined';
   activeTab = 'requisition';
+  private walletDataLoaded = false;
+  pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
+  private hasHandledPendingWalletPayment = false;
+  private isHandlingPendingWalletPayment = false;
+  private autoSelectLastPaidTabOnLoad = false;
+  private pendingHologramAutoPayRefNo = '';
+  private pendingHologramAutoPayType = '';
   isBreweryUser = false;
+  walletModuleLabel = 'Distillery';
   showRetryButton = false;
   showTransitPayment = false;
   selectedItem: PaymentItem | null = null;
   showMultiTypePaymentModal = false;
   multiTypePaymentItems: HologramItem[] = [];
+  selectedAddMoneyContext: AddMoneyViewContext | null = null;
+  addMoneyTransactionId = '';
+  addMoneyAmount = 0;
+  private movedModalState: Array<{ element: HTMLElement; parent: Node; nextSibling: Node | null }> = [];
 
   // Wallet Balances
-  exciseWalletBalance = 9831806.35;
+  exciseWalletBalance = 0;
   breweryWalletBalance = 0;
-  educationCessBalance = 9998687.78;
+  educationCessBalance = 0;
+  hologramWalletBalance = 0;
+  activeLicenseeId = '';
+  private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
+  private resolvedLicenseModuleType: WalletModuleType = '';
+  private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
+  private readonly http = inject(HttpClient);
+  private readonly distilleryTabs = new Set([
+    'requisition',
+    'revalidation',
+    'cancellation',
+    'transit',
+    'hologram',
+    'recharge',
+    'history'
+  ]);
+  private readonly breweryTabs = new Set(['transit', 'hologram', 'recharge', 'history']);
 
   // Transit Data
   transitBillNo = '';
@@ -94,7 +180,7 @@ export class PaymentConfirmationComponent implements OnInit {
   transitExciseDuty = 0;
   transitAdditionalExcise = 0;
   transitItemCount = 0;
-  transitBillStatus = 'Ready for Payment';
+  transitBillStatus = '';
   transitId: string = '';
   transitPaymentAgreed = false; // Added for modal agreement
 
@@ -129,117 +215,58 @@ export class PaymentConfirmationComponent implements OnInit {
     }
   ];
 
-  transitData: TransitItem[] = [
-    {
-      id: '4',
-      billNumber: 'BILL001',
-      serialNo: 'SER001',
-      quantity: 100,
-      portions: 10,
-      nips: 'NIPS001',
-      licenseeId: 'LIC001',
-      status: 'Ready for Payment',
-      paymentDate: null,
-      totalAmount: 1500.00
-    }
-  ];
+  transitData: TransitItem[] = [];
 
-  rechargeData: RechargeItem[] = [
-    {
-      id: '5',
-      transactionType: 'Wallet Recharge',
-      hoa: '0045-00-112-45-03',
-      amount: 10000.00,
-      date: new Date(),
-      status: 'Success'
-    }
-  ];
+  rechargeData: RechargeItem[] = [];
 
-  historyData: HistoryItem[] = [
-    {
-      id: '6',
-      txnId: 'TXN001',
-      userId: 'USER001',
-      type: 'Payment',
-      amount: 500.00,
-      reference: 'REF001',
-      status: 'Success',
-      dateTime: new Date(),
-      licenseeId: 'LIC001'
-    }
-  ];
+  historyData: HistoryItem[] = [];
+  private optimisticPaymentHistory: HistoryItem[] = [];
 
-  hologramData: HologramItem[] = [
-    {
-      id: '7',
-      referenceNo: 'YB/1/BREW/25',
-      companyName: 'Yuksom Breweries Ltd.',
-      totalQuantity: 15.0,
-      hologramFee: 1500.00,
-      hoa: '0039-00-105-45-04',
-      status: 'ApprovedByCommissioner',
-      localQty: 15.0,
-      exportQty: 0.0,
-      defenceQty: 0.0,
-      paymentDate: null
-    },
-    {
-      id: '8',
-      referenceNo: 'YB/2/BREW/25',
-      companyName: 'Yuksom Breweries Ltd.',
-      totalQuantity: 25.5,
-      hologramFee: 2550.00,
-      hoa: '0039-00-105-45-04',
-      status: 'ApprovedByCommissioner',
-      localQty: 20.0,
-      exportQty: 5.5,
-      defenceQty: 0.0,
-      paymentDate: null
-    },
-    {
-      id: '9',
-      referenceNo: 'YB/3/BREW/25',
-      companyName: 'Yuksom Breweries Ltd.',
-      totalQuantity: 10.0,
-      hologramFee: 1000.00,
-      hoa: '0039-00-105-45-04',
-      status: 'Payment Successful',
-      localQty: 10.0,
-      exportQty: 0.0,
-      defenceQty: 0.0,
-      paymentDate: new Date('2025-01-15')
-    }
-  ];
+  hologramData: HologramItem[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private receiptNumberService: ReceiptNumberService,
     private hologramService: HologramDataService,
-    private supplyChainService: SupplyChainService
+    private supplyChainService: SupplyChainService,
+    private enaRequisitionService: EnaRequisitionService,
+    private paymentIntegrationService: PaymentIntegrationService
   ) { }
 
   ngOnInit(): void {
-    // Load hologram data from API
-    this.loadHologramDataFromApi();
-    // Load cancellation data from API
-    this.loadCancellationDataFromApi();
+    this.loadOptimisticPaymentsFromStorage();
+    this.loadPendingPaymentContextFromStorage();
+    this.initializeWalletContextAndLoadData();
 
     // Get query parameters
     this.route.queryParams.subscribe(params => {
+      const requestedTab = String(params['tab'] || '').trim().toLowerCase();
+      const source = String(params['source'] || '').trim().toLowerCase();
+      this.autoSelectLastPaidTabOnLoad =
+        !requestedTab ||
+        requestedTab === 'recharge' ||
+        source.includes('wallet');
+
       if (params['billNo']) {
         this.transitBillNo = params['billNo'];
-        this.activeTab = 'transit';
+        this.setActiveTab('transit');
         this.loadTransitData();
       }
       if (params['tab']) {
-        this.activeTab = params['tab'];
+        this.setActiveTab(params['tab']);
       }
+
+      this.capturePendingWalletPaymentContext(params);
+
       // Handle hologram payment navigation
       if (params['refNo'] && params['action'] === 'makePayment') {
+        this.pendingHologramAutoPayRefNo = String(params['refNo'] || '').trim();
+        this.pendingHologramAutoPayType = String(params['type'] || '').trim();
+
         // Only default to hologram if no tab is specified or if tab is hologram
         if (!params['tab'] || params['tab'] === 'hologram') {
-          this.activeTab = 'hologram';
+          this.setActiveTab('hologram');
 
           // Optionally highlight or scroll to the specific hologram item
           setTimeout(() => {
@@ -266,11 +293,14 @@ export class PaymentConfirmationComponent implements OnInit {
             }
           }, 500);
         }
+
+        // Build pending payment context even if URL only contains refNo.
+        this.tryBuildHologramPendingContextFromRefNo(
+          this.pendingHologramAutoPayRefNo,
+          this.pendingHologramAutoPayType
+        );
       }
     });
-
-    // Check user type (this would come from a service in real app)
-    this.isBreweryUser = false; // Set based on user session
 
     // Ensure any stale modal/backdrop artifacts are cleaned on navigation
     this.router.events.subscribe(ev => {
@@ -280,39 +310,617 @@ export class PaymentConfirmationComponent implements OnInit {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Move Bootstrap modals to <body> so backdrop and click handling work correctly
+    // inside the dashboard + sidenav layout.
+    this.attachModalsToBody();
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupModalArtifacts();
+    this.restoreMovedModals();
+  }
+
+  private initializeWalletContextAndLoadData(): void {
+    const fromQuery = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
+    if (fromQuery) {
+      this.activeLicenseeId = fromQuery;
+      this.resolveAndApplyModuleTypeForLicense(fromQuery);
+      this.loadWalletDataFromBackend(fromQuery);
+      this.refreshModuleTabData();
+      return;
+    }
+
+    this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`)
+      .pipe(catchError(() => of([] as MyLicenseRow[])))
+      .subscribe((licenses) => {
+        const rows = Array.isArray(licenses) ? licenses : [];
+        const preferred = this.pickPreferredWalletLicense(rows);
+        const resolvedModuleType = this.resolveModuleTypeFromLicense(preferred);
+        const licenseeId =
+          String(preferred?.license_id ?? preferred?.licenseId ?? '').trim() ||
+          this.resolveActiveLicenseeIdFromSession();
+
+        this.applyResolvedModuleType(resolvedModuleType);
+
+        if (!licenseeId) {
+          this.showErrorMessage('Licensee id not found in profile/session. Wallet data cannot be loaded.');
+          return;
+        }
+
+        this.activeLicenseeId = licenseeId;
+        this.loadWalletDataFromBackend(licenseeId);
+        this.refreshModuleTabData();
+      });
+  }
+
+  private refreshModuleTabData(): void {
+    this.loadHologramDataFromApi();
+    this.loadCancellationDataFromApi();
+  }
+
+  private loadWalletDataFromBackend(licenseeId: string): void {
+    this.walletDataLoaded = false;
+    this.activeLicenseeId = licenseeId;
+    this.exciseWalletBalance = 0;
+    this.educationCessBalance = 0;
+    this.breweryWalletBalance = 0;
+    this.hologramWalletBalance = 0;
+    this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
+    this.rechargeData = [];
+    this.historyData = [];
+    this.exciseWalletTransactions = [];
+    this.educationWalletTransactions = [];
+    this.hologramWalletTransactions = [];
+    this.walletHistoryFiltered = [];
+
+    forkJoin({
+      summary: this.paymentIntegrationService.getWalletSummary(licenseeId).pipe(
+        catchError((error) => {
+          console.error('Wallet summary API load failed:', error);
+          return of({ results: [] } as any);
+        })
+      ),
+      recharge: this.paymentIntegrationService.getWalletRecharge(licenseeId).pipe(
+        catchError((error) => {
+          console.error('Wallet recharge API load failed:', error);
+          return of({ results: [] } as any);
+        })
+      ),
+      history: this.paymentIntegrationService.getWalletHistory(licenseeId).pipe(
+        catchError((error) => {
+          console.error('Wallet history API load failed:', error);
+          return of({ results: [] } as any);
+        })
+      )
+    }).subscribe((response) => {
+      this.applyWalletSummary(response.summary);
+      this.applyWalletRecharge(response.recharge);
+      this.applyWalletHistory(response.history);
+      this.walletDataLoaded = true;
+      this.applyLastPaidTabAsDefault();
+    });
+  }
+
+  private refreshWalletData(): void {
+    const licenseeId = String(this.activeLicenseeId || '').trim();
+    if (licenseeId) {
+      this.loadWalletDataFromBackend(licenseeId);
+      return;
+    }
+    this.initializeWalletContextAndLoadData();
+  }
+
+  private resolveActiveLicenseeIdFromSession(): string {
+    const fromSession = sessionStorage.getItem('currentUser');
+    if (fromSession) {
+      try {
+        const parsed = JSON.parse(fromSession);
+        return this.pickFirstNonEmpty(parsed, [
+          'licensee_id',
+          'licenseeId',
+          'licensee_id_no',
+          'licenseeIdNo',
+          'username',
+          'userName'
+        ]);
+      } catch (error) {
+        console.error('Invalid currentUser session payload:', error);
+      }
+    }
+
+    return '';
+  }
+
+  private pickPreferredWalletLicense(rows: MyLicenseRow[]): MyLicenseRow | null {
+    const walletEligible = rows.filter((row) => this.resolveModuleTypeFromLicense(row) !== '');
+    const approvedWalletEligible = walletEligible.filter((row) => this.isApprovedLicenseRow(row));
+    if (approvedWalletEligible.length > 0) {
+      return approvedWalletEligible[0];
+    }
+    if (walletEligible.length > 0) {
+      return walletEligible[0];
+    }
+    return rows[0] ?? null;
+  }
+
+  private resolveAndApplyModuleTypeForLicense(licenseeId: string): void {
+    const normalizedId = String(licenseeId || '').trim().toLowerCase();
+    if (!normalizedId) {
+      this.applyResolvedModuleType(this.resolvedLicenseModuleType);
+      return;
+    }
+
+    this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`)
+      .pipe(catchError(() => of([] as MyLicenseRow[])))
+      .subscribe((licenses) => {
+        const rows = Array.isArray(licenses) ? licenses : [];
+        const matching = rows.find((row) => {
+          const rowId = String(row.license_id ?? row.licenseId ?? '').trim().toLowerCase();
+          return !!rowId && rowId === normalizedId;
+        });
+
+        if (matching) {
+          this.applyResolvedModuleType(this.resolveModuleTypeFromLicense(matching));
+          return;
+        }
+
+        const fallback = this.pickPreferredWalletLicense(rows);
+        this.applyResolvedModuleType(this.resolveModuleTypeFromLicense(fallback));
+      });
+  }
+
+  private isApprovedLicenseRow(row: MyLicenseRow | null | undefined): boolean {
+    if (!row) {
+      return false;
+    }
+
+    const status = String(row.status || '').toLowerCase();
+    const stage = String(row.stage_name ?? row.stageName ?? '').toLowerCase();
+    if (!status && !stage) {
+      return false;
+    }
+
+    return (
+      status.includes('approved') ||
+      stage.includes('approved') ||
+      stage.includes('license issued')
+    );
+  }
+
+  private resolveModuleTypeFromLicense(row: MyLicenseRow | null | undefined): WalletModuleType {
+    if (!row) {
+      return '';
+    }
+
+    const subCategoryId = Number(
+      row.license_sub_category_id ??
+      row.licenseSubCategoryId ??
+      0
+    );
+    if (subCategoryId === 2) {
+      return 'distillery';
+    }
+    if (subCategoryId === 1) {
+      return 'brewery';
+    }
+
+    const subCategoryName = String(
+      row.license_sub_category ??
+      row.licenseSubCategory ??
+      ''
+    ).toLowerCase();
+
+    if (subCategoryName.includes('distill')) {
+      return 'distillery';
+    }
+    if (subCategoryName.includes('brew')) {
+      return 'brewery';
+    }
+    return '';
+  }
+
+  private applyResolvedModuleType(moduleType: WalletModuleType): void {
+    this.resolvedLicenseModuleType = moduleType;
+    this.isBreweryUser = moduleType === 'brewery';
+    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.ensureActiveTabAllowed();
+  }
+
+  canShowTab(tab: string): boolean {
+    const set = this.isBreweryUser ? this.breweryTabs : this.distilleryTabs;
+    return set.has(tab);
+  }
+
+  private ensureActiveTabAllowed(): void {
+    if (this.canShowTab(this.activeTab)) {
+      return;
+    }
+    this.activeTab = this.isBreweryUser ? 'transit' : 'requisition';
+  }
+
+  private isForActiveLicense(item: any): boolean {
+    const active = String(this.activeLicenseeId || '').trim().toLowerCase();
+    if (!active) return true;
+
+    const candidate = String(
+      this.pickAny(item, ['licensee_id', 'licenseeId', 'license_id', 'licenseId', 'user_id', 'userId'], '')
+    ).trim().toLowerCase();
+
+    if (!candidate) return true;
+    return candidate === active;
+  }
+
+  private applyWalletSummary(payload: any): void {
+    const rows = this.safeArray(payload?.results);
+    const startsAsBrewery = this.resolvedLicenseModuleType === 'brewery';
+
+    this.exciseWalletBalance = 0;
+    this.educationCessBalance = 0;
+    this.breweryWalletBalance = 0;
+    this.hologramWalletBalance = 0;
+    this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
+    this.isBreweryUser = startsAsBrewery;
+
+    rows.forEach((row: any) => {
+      const walletType = String(
+        this.pickAny(row, ['wallet_type', 'walletType'], '')
+      ).toLowerCase();
+      const moduleType = String(
+        this.pickAny(row, ['module_type', 'moduleType'], '')
+      ).toLowerCase();
+      const hoa = this.pickAny(row, ['head_of_account', 'headOfAccount'], '');
+      const balance = this.toNumber(this.pickAny(row, ['current_balance', 'currentBalance'], 0));
+      const inferredWalletType = walletType || this.inferWalletTypeFromHoa(String(hoa));
+      const treatAsBreweryWallet =
+        inferredWalletType === 'brewery' ||
+        moduleType === 'brewery' ||
+        (startsAsBrewery && inferredWalletType === 'excise' && !moduleType);
+
+      if (inferredWalletType === 'education_cess') {
+        this.educationCessBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.education = String(hoa);
+        }
+      } else if (inferredWalletType === 'hologram') {
+        this.hologramWalletBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.hologram = String(hoa);
+        }
+      } else if (treatAsBreweryWallet) {
+        this.breweryWalletBalance += balance;
+        this.isBreweryUser = true;
+        if (hoa) {
+          this.walletHoaByType.brewery = String(hoa);
+        }
+      } else {
+        this.exciseWalletBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.excise = String(hoa);
+        }
+      }
+    });
+
+    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.ensureActiveTabAllowed();
+  }
+
+  private applyWalletRecharge(payload: any): void {
+    const rows = this.safeArray(payload?.results);
+
+    this.rechargeData = rows.map((row: any, index: number) => ({
+      id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+      transactionType: this.pickAny(row, ['transaction_type', 'transactionType'], 'Wallet Recharge'),
+      hoa: this.pickAny(row, ['head_of_account', 'headOfAccount'], '-'),
+      amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
+      date: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
+      status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'))
+    }));
+  }
+
+  private applyWalletHistory(payload: any): void {
+    const rows = this.safeArray(payload?.results);
+
+    const mappedModalHistory: Array<WalletHistoryTransaction & { walletType: string }> = rows.map((row: any, index: number) => {
+      const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
+      const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], ''));
+      const walletTypeRaw = String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase();
+      const walletType = walletTypeRaw || this.inferWalletTypeFromHoa(hoa);
+      const createdAt = this.pickAny(row, ['created_at', 'createdAt'], new Date().toISOString());
+      const balanceAfter = this.toNumber(this.pickAny(row, ['balance_after', 'balanceAfter'], 0));
+      const paymentFor = this.resolvePaymentForType(row);
+
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const isCredit = entryType === 'credit' || entryType === 'cr';
+      const type: WalletHistoryType = isCredit
+        ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Added')
+        : 'Utilized';
+
+      return {
+        id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+        date: String(createdAt).slice(0, 10),
+        type,
+        amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
+        balanceAfter,
+        reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
+        paymentFor,
+        walletType
+      };
+    });
+
+    this.exciseWalletTransactions = mappedModalHistory.filter(item =>
+      item.walletType === 'excise' || item.walletType === 'brewery' || item.walletType === ''
+    );
+    this.educationWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'education_cess');
+    this.hologramWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'hologram');
+
+    if (this.selectedWalletForHistory) {
+      this.applyWalletHistoryFilters();
+    }
+
+    this.historyData = rows.map((row: any, index: number) => {
+      const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const isCredit = entryType === 'credit' || entryType === 'cr';
+      const paymentFor = this.resolvePaymentForType(row);
+      return {
+        id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+        txnId: this.pickAny(row, ['transaction_id', 'transactionId'], '-'),
+        userId: this.pickAny(row, ['user_id', 'userId'], '-'),
+        type: isCredit ? (normalizedStatus === 'Refunded' ? 'Wallet Refund' : 'Wallet Recharge') : 'Wallet Utilization',
+        paymentFor,
+        amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
+        reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
+        status: normalizedStatus,
+        dateTime: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
+        licenseeId: this.pickAny(row, ['licensee_id', 'licenseeId'], this.activeLicenseeId || '-')
+      } as HistoryItem;
+    });
+
+    this.reconcileOptimisticPayments();
+    this.syncPendingPaymentContextWithLatestData();
+  }
+
+  private resolvePaymentForType(row: any): string {
+    const sourceModule = String(this.pickAny(row, ['source_module', 'sourceModule'], '')).toLowerCase();
+    const txnId = String(this.pickAny(row, ['transaction_id', 'transactionId'], '')).toUpperCase();
+    const reference = String(this.pickAny(row, ['reference_no', 'referenceNo'], '')).toUpperCase();
+
+    if (sourceModule.includes('hologram_procurement') || txnId.startsWith('HGP-')) {
+      return 'Hologram Procurement';
+    }
+    if (sourceModule.includes('cancellation') || txnId.startsWith('CAN-') || reference.startsWith('CAN/')) {
+      return 'Cancellation';
+    }
+    if (sourceModule.includes('revalidation') || txnId.startsWith('REV-') || reference.startsWith('REV/')) {
+      return 'Revalidation';
+    }
+    if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
+      return 'Transit';
+    }
+    if (sourceModule.includes('requisition') || txnId.startsWith('REQ-') || reference.startsWith('NHP/') || reference.startsWith('REQ/')) {
+      return 'Requisition';
+    }
+    if (sourceModule.includes('wallet')) {
+      return 'Wallet Recharge';
+    }
+    return 'Other';
+  }
+
+  private pickAny(source: any, keys: string[], fallback: any): any {
+    for (const key of keys) {
+      if (source && source[key] !== undefined && source[key] !== null && source[key] !== '') {
+        return source[key];
+      }
+    }
+    return fallback;
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    const value = this.pickAny(source, keys, '');
+    return String(value || '').trim();
+  }
+
+  private safeArray(value: any): any[] {
+    return Array.isArray(value) ? value : [];
+  }
+
+  private toNumber(value: any): number {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  private toDate(value: any): Date {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? new Date() : date;
+  }
+
+  private normalizeTransactionStatus(value: any): string {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'Payment Successful';
+    if (raw === 'r' || raw.includes('refund')) {
+      return 'Refunded';
+    }
+    if (raw === 's' || raw.includes('success') || raw.includes('completed')) {
+      return 'Payment Successful';
+    }
+    if (raw === 'p' || raw.includes('pending')) {
+      return 'Pending';
+    }
+    if (raw === 'f' || raw.includes('fail') || raw.includes('error')) {
+      return 'Failed';
+    }
+    return String(value);
+  }
+
+  private inferWalletTypeFromHoa(hoa: string): string {
+    if (hoa === '0045-00-112-45-03') {
+      return 'education_cess';
+    }
+    if (
+      hoa === '0039-00-800-45-01' ||
+      hoa === '0039-00-105-45-04' ||
+      hoa === '0039-80-800-45-01'
+    ) {
+      return 'hologram';
+    }
+    if (hoa === '0038-00-102-45-00') {
+      return 'brewery';
+    }
+    return 'excise';
+  }
+
+  private attachModalsToBody(): void {
+    const modalIds = ['walletHistoryModal', 'paymentModal', 'transitPaymentModal', 'addMoneyModal'];
+
+    for (const modalId of modalIds) {
+      const modalEl = document.getElementById(modalId);
+      if (!modalEl || modalEl.parentNode === document.body) {
+        continue;
+      }
+
+      this.movedModalState.push({
+        element: modalEl,
+        parent: modalEl.parentNode!,
+        nextSibling: modalEl.nextSibling
+      });
+
+      document.body.appendChild(modalEl);
+    }
+  }
+
+  private restoreMovedModals(): void {
+    for (const entry of this.movedModalState.reverse()) {
+      const { element, parent, nextSibling } = entry;
+
+      if (nextSibling && nextSibling.parentNode === parent) {
+        parent.insertBefore(element, nextSibling);
+      } else {
+        parent.appendChild(element);
+      }
+    }
+
+    this.movedModalState = [];
+  }
+
   loadHologramDataFromApi(): void {
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
         console.log('Fetched Hologram Procurements for Payment:', data);
-
-        // Filter for items approved by commissioner
-        // Also include items already paid if we want to show history, but usually payment page shows pending
-        // Backend "Approved by Commissioner" -> "Payment Pending" effectively
-
-        this.hologramData = data
-          .filter(item => item.status === 'Approved by Commissioner' || item.status === 'Payment Completed')
+        this.hologramData = (data || [])
+          .filter(item => this.isForActiveLicense(item))
           .map(item => {
-            const totalQty = (Number(item.localQty) || 0) + (Number(item.exportQty) || 0) + (Number(item.defenceQty) || 0);
-            const hologramFee = totalQty * 0.15; // Example fee calculation
+            const localQty = Number((item as any).localQty ?? (item as any).local_qty) || 0;
+            const exportQty = Number((item as any).exportQty ?? (item as any).export_qty) || 0;
+            const defenceQty = Number((item as any).defenceQty ?? (item as any).defence_qty) || 0;
+            const totalQty = localQty + exportQty + defenceQty;
+            const hologramFee = totalQty * 0.15;
+            const paymentDetails: any = (item as any).paymentDetails || (item as any).payment_details || {};
+            const paidAt = paymentDetails?.paid_at ? new Date(paymentDetails.paid_at) : null;
+            const referenceNo =
+              (item as any).refNo ||
+              (item as any).ref_no ||
+              (item as any).ourRefNo ||
+              (item as any).our_ref_no ||
+              (item as any).referenceNo ||
+              '';
+            const normalizedStatus = (item as any).status || (item as any).paymentStatus || (item as any).payment_status || 'Pending';
 
             return {
               id: item.id?.toString() || '',
-              referenceNo: item.refNo || '',
-              companyName: item.licenseeName || item.manufacturingUnit || '',
-              procurementType: 'Security Hologram', // Default or derived
+              referenceNo,
+              companyName: (item as any).licenseeName || (item as any).manufacturingUnit || (item as any).distillery_name || '',
+              procurementType: 'Security Hologram',
               totalQuantity: totalQty,
-              hologramFee: hologramFee,
-              hoa: '0039-00-105-45-04',
-              status: item.status || '',
-              localQty: Number(item.localQty) || 0,
-              exportQty: Number(item.exportQty) || 0,
-              defenceQty: Number(item.defenceQty) || 0,
-              paymentDate: null // Backend doesn't send this yet, or we need to derive
+              hologramFee,
+              hoa: '0039-00-800-45-01',
+              status: normalizedStatus,
+              localQty,
+              exportQty,
+              defenceQty,
+              paymentDate: paidAt
             } as HologramItem;
-          });
+          })
+          .filter(item => !!item.referenceNo);
+
+        if (this.pendingHologramAutoPayRefNo) {
+          this.tryBuildHologramPendingContextFromRefNo(
+            this.pendingHologramAutoPayRefNo,
+            this.pendingHologramAutoPayType
+          );
+        }
+        this.syncPendingPaymentContextWithLatestData();
       },
       error: (err) => console.error('Error fetching hologram payments:', err)
     });
+  }
+
+  private syncPendingPaymentContextWithLatestData(): void {
+    const context = this.pendingWalletPaymentContext;
+    if (!context || context.tab !== 'hologram') return;
+
+    const ref = String(context.referenceNo || '').trim().toUpperCase();
+    if (!ref) return;
+
+    const hasMatchingPaidTxn = this.historyData.some((txn) => {
+      const paymentFor = String(txn?.paymentFor || '').toLowerCase();
+      const type = String(txn?.type || '').toLowerCase();
+      const status = String(txn?.status || '').toLowerCase();
+      const txnRef = String(txn?.reference || '').trim().toUpperCase();
+      const isHologram = paymentFor.includes('hologram');
+      const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+      const isSuccessful = status.includes('success') || status.includes('paid') || status.includes('completed');
+      return isHologram && isDebitLike && isSuccessful && txnRef === ref;
+    });
+
+    const hasPayableHologramItem = this.hologramData.some((item) => {
+      const itemRef = String(item?.referenceNo || '').trim().toUpperCase();
+      return itemRef === ref && this.canPayHologram(item);
+    });
+
+    if (hasMatchingPaidTxn || !hasPayableHologramItem) {
+      this.pendingWalletPaymentContext = null;
+      this.pendingHologramAutoPayRefNo = '';
+      this.pendingHologramAutoPayType = '';
+      this.hasHandledPendingWalletPayment = true;
+      this.clearPendingPaymentContextFromStorage();
+    }
+  }
+
+  private tryBuildHologramPendingContextFromRefNo(refNo: string, typeHint?: string): void {
+    const targetRef = String(refNo || '').trim();
+    if (!targetRef || !Array.isArray(this.hologramData) || this.hologramData.length === 0) return;
+
+    const targetRefUpper = targetRef.toUpperCase();
+    const typeHintLower = String(typeHint || '').trim().toLowerCase();
+
+    const sameRefItems = this.hologramData.filter((item) =>
+      String(item?.referenceNo || '').trim().toUpperCase() === targetRefUpper
+    );
+    if (sameRefItems.length === 0) return;
+
+    const typedItems = typeHintLower
+      ? sameRefItems.filter((item) => String(item?.procurementType || '').trim().toLowerCase() === typeHintLower)
+      : sameRefItems;
+
+    const candidatePool = typedItems.length > 0 ? typedItems : sameRefItems;
+    const chosen = candidatePool.find((item) => this.canPayHologram(item));
+    if (!chosen) return;
+
+    const id = String(chosen?.id || '').trim();
+    const amount = Number(chosen?.hologramFee || 0);
+    if (!id || !Number.isFinite(amount) || amount <= 0) return;
+
+    this.pendingWalletPaymentContext = {
+      id,
+      tab: 'hologram',
+      itemType: 'hologram',
+      referenceNo: String(chosen.referenceNo || targetRef),
+      amount
+    };
+    this.hasHandledPendingWalletPayment = false;
+    this.setActiveTab('hologram');
+    this.persistPendingPaymentContextToStorage();
   }
 
   loadCancellationDataFromApi(): void {
@@ -321,8 +929,10 @@ export class PaymentConfirmationComponent implements OnInit {
         console.log('Fetched Cancellation Data:', data);
         // Map backend data to PaymentItem interface
         this.cancellationData = data.filter(item =>
+          this.isForActiveLicense(item) && (
           item.status === 'ApprovedCancellationByCommissioner' ||
           item.status === 'ForwardedCancellationPaySLipToCommissioner'
+          )
         ).map(item => ({
           id: item.id,
           referenceNo: item.ourRefNo || item.our_ref_no,
@@ -354,29 +964,24 @@ export class PaymentConfirmationComponent implements OnInit {
   // processHologramPayment(hologramItem: HologramItem): void { ... }
 
   // Wallet history (utilization and additions)
-  selectedWalletForHistory: 'excise' | 'education' | null = null;
+  selectedWalletForHistory: WalletHistoryCategory | null = null;
   walletHistoryFilters = {
     from: '',
     to: '',
-    type: '', // Added | Utilized
+    type: '', // Added | Utilized | Refunded
     minAmount: '',
     maxAmount: ''
   };
 
-  exciseWalletTransactions: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [
-    { id: 'E1', date: '2025-09-20', type: 'Added', amount: 200000.00, balanceAfter: 10000000.00, reference: 'PG-20250920-001' },
-    { id: 'E2', date: '2025-09-21', type: 'Utilized', amount: 1500.00, balanceAfter: 99998500.00, reference: 'TP-BILL001' },
-    { id: 'E3', date: '2025-09-22', type: 'Utilized', amount: 2500.00, balanceAfter: 99996000.00, reference: 'REQUISITION-IBPS/03/EXCISE' }
-  ];
+  exciseWalletTransactions: WalletHistoryTransaction[] = [];
 
-  educationWalletTransactions: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [
-    { id: 'ED1', date: '2025-09-19', type: 'Added', amount: 100000.00, balanceAfter: 10000000.00, reference: 'PG-20250919-111' },
-    { id: 'ED2', date: '2025-09-21', type: 'Utilized', amount: 500.00, balanceAfter: 99999500.00, reference: 'REV-REV/001/2025' }
-  ];
+  educationWalletTransactions: WalletHistoryTransaction[] = [];
 
-  walletHistoryFiltered: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [];
+  hologramWalletTransactions: WalletHistoryTransaction[] = [];
 
-  openWalletHistory(wallet: 'excise' | 'education'): void {
+  walletHistoryFiltered: WalletHistoryTransaction[] = [];
+
+  openWalletHistory(wallet: WalletHistoryCategory): void {
     // Clean any previous artifacts before opening a new modal
     this.cleanupModalArtifacts();
     this.selectedWalletForHistory = wallet;
@@ -384,6 +989,9 @@ export class PaymentConfirmationComponent implements OnInit {
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
     const modalEl = document.getElementById('walletHistoryModal');
     if (modalEl) {
+      if (modalEl.parentNode !== document.body) {
+        document.body.appendChild(modalEl);
+      }
       const modal = new (window as any).bootstrap.Modal(modalEl);
       modal.show();
       // When modal fully hidden, run cleanup in case bootstrap misses anything
@@ -391,8 +999,28 @@ export class PaymentConfirmationComponent implements OnInit {
     }
   }
 
+  switchWalletHistory(wallet: WalletHistoryCategory): void {
+    if (this.selectedWalletForHistory === wallet) return;
+    this.selectedWalletForHistory = wallet;
+    this.clearWalletHistoryFilters(false);
+    this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+  }
+
+  openHologramHistory(): void {
+    this.openWalletHistory('hologram');
+  }
+
   getActiveWalletTxns() {
-    return this.selectedWalletForHistory === 'excise' ? this.exciseWalletTransactions : this.educationWalletTransactions;
+    if (this.selectedWalletForHistory === 'excise') {
+      return this.exciseWalletTransactions;
+    }
+    if (this.selectedWalletForHistory === 'education') {
+      return this.educationWalletTransactions;
+    }
+    if (this.selectedWalletForHistory === 'hologram') {
+      return this.hologramWalletTransactions;
+    }
+    return [];
   }
 
   applyWalletHistoryFilters(): void {
@@ -429,13 +1057,386 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   setActiveTab(tab: string): void {
-    this.activeTab = tab;
+    const requested = String(tab || '').trim();
+    if (!requested) {
+      return;
+    }
+    if (!this.canShowTab(requested)) {
+      this.ensureActiveTabAllowed();
+      return;
+    }
+    this.activeTab = requested;
+  }
+
+  private normalizePaymentModuleTab(value: string): PaymentModuleTab | null {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'requisition') return 'requisition';
+    if (normalized === 'revalidation') return 'revalidation';
+    if (normalized === 'cancellation') return 'cancellation';
+    if (normalized === 'transit' || normalized === 'transit-permit') return 'transit';
+    if (normalized === 'hologram' || normalized === 'hologram-request') return 'hologram';
+    return null;
+  }
+
+  private capturePendingWalletPaymentContext(params: any): void {
+    const action = String(params?.['action'] || '').trim().toLowerCase();
+    const isPaymentAction = action === 'pay' || action === 'makepayment';
+    if (!isPaymentAction) {
+      if (!this.pendingWalletPaymentContext) {
+        this.loadPendingPaymentContextFromStorage();
+      }
+      return;
+    }
+
+    const id = String(params?.['id'] || '').trim();
+    const tab =
+      this.normalizePaymentModuleTab(String(params?.['tab'] || '')) ||
+      this.normalizePaymentModuleTab(String(params?.['type'] || ''));
+    const amount = this.toNumber(params?.['amount']);
+
+    if (!id || !tab || amount <= 0) {
+      // For hologram makePayment deep-link we may only receive refNo;
+      // context gets built later from loaded hologram data.
+      if (action === 'makepayment') {
+        return;
+      }
+      this.pendingWalletPaymentContext = null;
+      this.hasHandledPendingWalletPayment = false;
+      return;
+    }
+
+    this.pendingWalletPaymentContext = {
+      id,
+      tab,
+      itemType: String(params?.['type'] || tab),
+      referenceNo: String(params?.['referenceNo'] || params?.['ref'] || params?.['refNo'] || '-'),
+      amount
+    };
+    this.hasHandledPendingWalletPayment = false;
+    this.setActiveTab(tab);
+    this.persistPendingPaymentContextToStorage();
+  }
+
+  hasPendingWalletPaymentContext(): boolean {
+    return !!this.pendingWalletPaymentContext;
+  }
+
+  shouldShowPendingPaymentInTab(tab: PaymentModuleTab): boolean {
+    const context = this.pendingWalletPaymentContext;
+    if (!context) return false;
+    return context.tab === tab && this.activeTab === tab;
+  }
+
+  getPendingPaymentModuleLabel(): string {
+    const tab = this.pendingWalletPaymentContext?.tab;
+    if (!tab) return '-';
+    return this.getModuleLabelForTab(tab);
+  }
+
+  getPendingPaymentAmount(): number {
+    return Number(this.pendingWalletPaymentContext?.amount || 0);
+  }
+
+  getPendingPaymentAvailableBalance(): number {
+    const tab = this.pendingWalletPaymentContext?.tab;
+    if (!tab) return 0;
+    return this.getAvailableBalanceForModuleTab(tab);
+  }
+
+  getPendingPaymentShortfall(): number {
+    const required = this.getPendingPaymentAmount();
+    const available = this.getPendingPaymentAvailableBalance();
+    return Math.max(0, required - available);
+  }
+
+  proceedPendingWalletPayment(): void {
+    if (!this.walletDataLoaded || this.hasHandledPendingWalletPayment || this.isHandlingPendingWalletPayment) {
+      return;
+    }
+
+    const context = this.pendingWalletPaymentContext;
+    if (!context) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    this.isHandlingPendingWalletPayment = true;
+    this.setActiveTab(context.tab);
+
+    const availableBalance = this.getAvailableBalanceForModuleTab(context.tab);
+    const requiredAmount = Number(context.amount || 0);
+
+    if (requiredAmount <= 0) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    if (availableBalance < requiredAmount) {
+      const shortage = Math.max(0, requiredAmount - availableBalance);
+      Swal.fire({
+        icon: 'error',
+        title: 'Insufficient Wallet Balance',
+        html:
+          `<div style="text-align:left">` +
+          `<div><strong>Module:</strong> ${this.getModuleLabelForTab(context.tab)}</div>` +
+          `<div><strong>Reference:</strong> ${context.referenceNo}</div>` +
+          `<div><strong>Required:</strong> Rs ${requiredAmount.toFixed(2)}</div>` +
+          `<div><strong>Available:</strong> Rs ${availableBalance.toFixed(2)}</div>` +
+          `<div><strong>Shortfall:</strong> Rs ${shortage.toFixed(2)}</div>` +
+          `</div>`,
+        showCancelButton: true,
+        confirmButtonText: 'Add Money',
+        cancelButtonText: 'Close'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.setActiveTab('recharge');
+        }
+        this.resetPendingPaymentAttemptState();
+      });
+      return;
+    }
+
+    this.executeWalletPaymentFromContext(context).subscribe({
+      next: () => {
+        this.addOptimisticPaymentHistoryRow(context);
+        Swal.fire({
+          icon: 'success',
+          title: 'Payment Successful',
+          text: `${this.getModuleLabelForTab(context.tab)} payment completed successfully.`
+        });
+        this.refreshWalletData();
+        this.loadCancellationDataFromApi();
+        this.loadHologramDataFromApi();
+        this.finishPendingWalletPaymentHandling();
+      },
+      error: (err) => {
+        const errorMessage =
+          err?.error?.error ||
+          err?.error?.detail ||
+          err?.error?.message ||
+          err?.message ||
+          'Payment failed';
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Payment Failed',
+          text: String(errorMessage)
+        });
+        this.resetPendingPaymentAttemptState();
+      }
+    });
+  }
+
+  private addOptimisticPaymentHistoryRow(context: PendingWalletPaymentContext): void {
+    // Hologram payment API writes wallet transaction immediately; avoid temporary duplicate row.
+    if (context.tab === 'hologram') {
+      return;
+    }
+
+    const now = new Date();
+    const row: HistoryItem = {
+      id: `local-${now.getTime()}`,
+      txnId: `LOCAL-${now.getTime()}`,
+      userId: '-',
+      type: 'Wallet Utilization',
+      paymentFor: this.getModuleLabelForTab(context.tab),
+      amount: Number(context.amount || 0),
+      reference: context.referenceNo || '-',
+      status: 'Payment Successful',
+      dateTime: now,
+      licenseeId: this.activeLicenseeId || '-'
+    };
+    this.optimisticPaymentHistory = [row, ...this.optimisticPaymentHistory];
+    this.persistOptimisticPaymentsToStorage();
+  }
+
+  private reconcileOptimisticPayments(): void {
+    if (!this.optimisticPaymentHistory.length) return;
+
+    const normalizeModule = (value: string): string => {
+      const text = String(value || '').toLowerCase();
+      if (text.includes('hologram')) return 'hologram';
+      if (text.includes('transit')) return 'transit';
+      if (text.includes('cancellation')) return 'cancellation';
+      if (text.includes('revalidation')) return 'revalidation';
+      if (text.includes('requisition')) return 'requisition';
+      return text.trim();
+    };
+
+    const serverKeys = new Set(
+      this.historyData.map((item) =>
+        `${normalizeModule(String(item.paymentFor || ''))}|${String(item.reference || '').toLowerCase()}|${Number(item.amount || 0).toFixed(2)}`
+      )
+    );
+
+    this.optimisticPaymentHistory = this.optimisticPaymentHistory.filter((item) => {
+      const key = `${normalizeModule(String(item.paymentFor || ''))}|${String(item.reference || '').toLowerCase()}|${Number(item.amount || 0).toFixed(2)}`;
+      return !serverKeys.has(key);
+    });
+    this.persistOptimisticPaymentsToStorage();
+  }
+
+  private loadOptimisticPaymentsFromStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      const raw = sessionStorage.getItem(this.optimisticPaymentStorageKey);
+      if (!raw) {
+        this.optimisticPaymentHistory = [];
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      const rows = Array.isArray(parsed) ? parsed : [];
+      this.optimisticPaymentHistory = rows.map((item: any) => ({
+        ...item,
+        dateTime: this.toDate(item?.dateTime)
+      }));
+    } catch {
+      this.optimisticPaymentHistory = [];
+    }
+  }
+
+  private persistOptimisticPaymentsToStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      sessionStorage.setItem(this.optimisticPaymentStorageKey, JSON.stringify(this.optimisticPaymentHistory));
+    } catch {
+      // no-op
+    }
+  }
+
+  private loadPendingPaymentContextFromStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      const raw = sessionStorage.getItem(this.pendingPaymentStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+
+      const tab = this.normalizePaymentModuleTab(String(parsed?.tab || ''));
+      const id = String(parsed?.id || '').trim();
+      const amount = Number(parsed?.amount || 0);
+      if (!tab || !id || !Number.isFinite(amount) || amount <= 0) return;
+
+      this.pendingWalletPaymentContext = {
+        id,
+        tab,
+        itemType: String(parsed?.itemType || tab),
+        referenceNo: String(parsed?.referenceNo || '-'),
+        amount
+      };
+      this.hasHandledPendingWalletPayment = false;
+      this.setActiveTab(tab);
+    } catch {
+      // no-op
+    }
+  }
+
+  private persistPendingPaymentContextToStorage(): void {
+    if (!this.isBrowser || !this.pendingWalletPaymentContext) return;
+    try {
+      sessionStorage.setItem(this.pendingPaymentStorageKey, JSON.stringify(this.pendingWalletPaymentContext));
+    } catch {
+      // no-op
+    }
+  }
+
+  private clearPendingPaymentContextFromStorage(): void {
+    if (!this.isBrowser) return;
+    try {
+      sessionStorage.removeItem(this.pendingPaymentStorageKey);
+    } catch {
+      // no-op
+    }
+  }
+
+  goToAddMoneyForPendingPayment(): void {
+    const context = this.pendingWalletPaymentContext;
+    if (!context) return;
+
+    if (context.tab === 'hologram') {
+      this.addMoney('hologram');
+      return;
+    }
+
+    this.setActiveTab('recharge');
+    this.addMoney(this.isBreweryUser ? 'brewery' : 'excise');
+  }
+
+  closePendingWalletPaymentDetails(): void {
+    this.finishPendingWalletPaymentHandling();
+  }
+
+  private executeWalletPaymentFromContext(context: PendingWalletPaymentContext): Observable<any> {
+    switch (context.tab) {
+      case 'requisition':
+        return this.enaRequisitionService.performAction(Number(context.id), 'APPROVE');
+      case 'revalidation':
+        return this.supplyChainService.performRevalidationAction(context.id, 'APPROVE', 'licensee');
+      case 'cancellation':
+        return this.supplyChainService.performCancellationAction(context.id, 'SubmitPayslip', 'licensee');
+      case 'transit':
+        return this.supplyChainService.performTransitPermitAction(context.id, 'PAY', 'licensee');
+      case 'hologram':
+        return this.hologramService.performAction('procurement', Number(context.id), 'pay', 'Payment Completed via Wallet');
+      default:
+        return of({});
+    }
+  }
+
+  private getAvailableBalanceForModuleTab(tab: PaymentModuleTab): number {
+    if (tab === 'hologram') {
+      return this.hologramWalletBalance;
+    }
+
+    // Transit, requisition, revalidation and cancellation can involve non-hologram heads.
+    return this.getTotalWalletBalance();
+  }
+
+  private getModuleLabelForTab(tab: PaymentModuleTab): string {
+    if (tab === 'requisition') return 'Requisition';
+    if (tab === 'revalidation') return 'Revalidation';
+    if (tab === 'cancellation') return 'Cancellation';
+    if (tab === 'transit') return 'Transit Permit';
+    return 'Hologram';
+  }
+
+  private finishPendingWalletPaymentHandling(): void {
+    this.hasHandledPendingWalletPayment = true;
+    this.isHandlingPendingWalletPayment = false;
+    this.pendingWalletPaymentContext = null;
+    this.pendingHologramAutoPayRefNo = '';
+    this.pendingHologramAutoPayType = '';
+    this.clearPendingPaymentContextFromStorage();
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        action: null,
+        id: null,
+        amount: null,
+        type: null,
+        ref: null,
+        refNo: null,
+        referenceNo: null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    }).catch(() => {
+      // no-op
+    });
+  }
+
+  private resetPendingPaymentAttemptState(): void {
+    this.hasHandledPendingWalletPayment = false;
+    this.isHandlingPendingWalletPayment = false;
   }
 
   getStatusClass(status: string): string {
     const statusLower = status.toLowerCase();
     if (statusLower.includes('approved') || statusLower.includes('success')) {
       return 'badge bg-success';
+    } else if (statusLower.includes('refund')) {
+      return 'badge bg-info text-dark';
     } else if (statusLower.includes('pending') || statusLower.includes('ready')) {
       return 'badge bg-warning';
     } else if (statusLower.includes('rejected') || statusLower.includes('failed')) {
@@ -461,6 +1462,9 @@ export class PaymentConfirmationComponent implements OnInit {
     // Show payment confirmation modal
     const modal = document.getElementById('paymentModal');
     if (modal) {
+      if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
       const bootstrapModal = new (window as any).bootstrap.Modal(modal);
       bootstrapModal.show();
     }
@@ -469,8 +1473,9 @@ export class PaymentConfirmationComponent implements OnInit {
   confirmPayment(): void {
     if (!this.selectedItem) return;
 
-    // Check if sufficient balance
-    if (this.educationCessBalance < this.selectedItem.amount) {
+    const isHologramPayment = this.activeTab === 'hologram';
+    const availableBalance = isHologramPayment ? this.hologramWalletBalance : this.educationCessBalance;
+    if (availableBalance < this.selectedItem.amount) {
       this.showInsufficientBalanceAlert();
       return;
     }
@@ -485,42 +1490,49 @@ export class PaymentConfirmationComponent implements OnInit {
       bootstrapModal?.hide();
     }
   }
-
   processPayment(item: PaymentItem): void {
-    // Simulate payment processing
     console.log('Processing payment for:', item.referenceNo);
 
-    // Update wallet balance (Client-side simulation)
-    this.educationCessBalance -= item.amount;
-
-    // Check if it's a hologram item (by existing in hologramData or id format)
-    // In this component, we might be paying generic PaymentItem or HologramItem
-    // If activeTab is hologram, we use API
-
     if (this.activeTab === 'hologram') {
-      // Call API
-      // Item ID is the procurement ID
       const procurementId = Number(item.id);
 
       this.hologramService.performAction('procurement', procurementId, 'pay', 'Payment Completed via Wallet').subscribe({
         next: (res) => {
-          this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
-          item.status = 'Payment Successful'; // Update local status immediately
-          this.loadHologramDataFromApi(); // Refresh data
+          this.showSuccessMessage(`Payment of Rs ${item.amount} processed successfully.`);
+          item.status = String(res?.status || 'Payment Completed');
+          const deducted = Number(res?.wallet_deduction?.amount ?? item.amount ?? 0);
+          const balanceAfter = Number(res?.wallet_deduction?.balance_after ?? (this.getSelectedWalletBalance() - deducted));
+          const txnId = String(res?.wallet_deduction?.transaction_id || 'N/A');
+          Swal.fire({
+            icon: 'success',
+            title: 'Payment Successful',
+            html:
+              `<div style="text-align:left">` +
+              `<div><strong>Deducted Amount:</strong> Rs ${deducted.toFixed(2)}</div>` +
+              `<div><strong>Remaining Wallet Balance:</strong> Rs ${balanceAfter.toFixed(2)}</div>` +
+              `<div><strong>Transaction ID:</strong> ${txnId}</div>` +
+              `</div>`,
+            confirmButtonText: 'OK'
+          });
+          this.loadHologramDataFromApi();
+          this.refreshWalletData();
         },
         error: (err) => {
           console.error('Payment failed:', err);
-          alert('Payment failed API call');
+          const errorMessage = err?.error?.error || err?.error?.detail || err?.message || 'Payment failed API call';
+          this.showErrorMessage(errorMessage);
+          alert(errorMessage);
         }
       });
     } else if (this.activeTab === 'cancellation') {
       // Cancellation Payment Logic
       this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee').subscribe({
         next: (res) => {
-          this.showSuccessMessage(`Cancellation Payment of ₹${item.amount} processed successfully!`);
+          this.showSuccessMessage(`Cancellation Payment of Rs ${item.amount} processed successfully!`);
           item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
+          this.refreshWalletData();
         },
         error: (err) => {
           console.error('Cancellation Payment failed:', err);
@@ -530,10 +1542,10 @@ export class PaymentConfirmationComponent implements OnInit {
     } else {
       // Legacy/Other tabs logic
       item.status = 'Payment Successful';
-      this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
+      this.showSuccessMessage(`Payment of Rs ${item.amount} processed successfully!`);
+      this.refreshWalletData();
     }
   }
-
   updateHologramPaymentStatus(refNo: string, procurementType?: string): void {
     // Legacy method using localStorage - removed for API based flow.
     console.warn("updateHologramPaymentStatus called but implementation removed for API transition.");
@@ -547,14 +1559,140 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   addMoney(walletType: string): void {
-    console.log('Add money to:', walletType);
-    // Navigate to add money page or show modal
-    this.showInfoMessage('Redirecting to payment gateway...');
+    const normalizedWalletType = this.normalizeAddMoneyWalletType(walletType);
+    if (!normalizedWalletType) {
+      this.showErrorMessage(`Unsupported wallet type: ${walletType}`);
+      return;
+    }
+
+    this.openUnifiedAddMoneyView(normalizedWalletType);
+  }
+
+  private normalizeAddMoneyWalletType(walletType: string): AddMoneyWalletType | null {
+    switch (walletType) {
+      case 'excise':
+      case 'education':
+      case 'hologram':
+      case 'brewery':
+        return walletType;
+      default:
+        return null;
+    }
+  }
+
+  private openUnifiedAddMoneyView(walletType: AddMoneyWalletType): void {
+    this.cleanupModalArtifacts();
+    this.selectedAddMoneyContext = this.getAddMoneyContext(walletType);
+    this.addMoneyTransactionId = this.generateWalletTransactionId(walletType);
+    this.addMoneyAmount = 0;
+
+    const modalEl = document.getElementById('addMoneyModal');
+    if (modalEl) {
+      if (modalEl.parentNode !== document.body) {
+        document.body.appendChild(modalEl);
+      }
+
+      const modal = new (window as any).bootstrap.Modal(modalEl);
+      modal.show();
+      modalEl.addEventListener('hidden.bs.modal', () => this.cleanupModalArtifacts(), { once: true });
+    }
+  }
+
+  private getAddMoneyContext(walletType: AddMoneyWalletType): AddMoneyViewContext {
+    const moduleLabel = this.walletModuleLabel;
+
+    switch (walletType) {
+      case 'excise':
+        return {
+          walletType,
+          moduleLabel,
+          walletLabel: 'Excise Duty Wallet',
+          hoa: this.walletHoaByType.excise
+        };
+      case 'brewery':
+        return {
+          walletType,
+          moduleLabel,
+          walletLabel: 'Excise Duty Wallet',
+          hoa: this.walletHoaByType.brewery
+        };
+      case 'education':
+        return {
+          walletType,
+          moduleLabel,
+          walletLabel: 'Education Cess Wallet',
+          hoa: this.walletHoaByType.education
+        };
+      case 'hologram':
+        return {
+          walletType,
+          moduleLabel,
+          walletLabel: 'Hologram Wallet',
+          hoa: this.walletHoaByType.hologram
+        };
+      default:
+        return {
+          walletType: 'excise',
+          moduleLabel,
+          walletLabel: 'Excise Duty Wallet',
+          hoa: this.walletHoaByType.excise
+        };
+    }
+  }
+
+  private generateWalletTransactionId(walletType: AddMoneyWalletType): string {
+    const prefixByWallet: Record<AddMoneyWalletType, string> = {
+      excise: 'EX',
+      brewery: 'BR',
+      education: 'EC',
+      hologram: 'HG'
+    };
+
+    const timestamp = Date.now().toString();
+    const randomBlock = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    return `BILLDESK${prefixByWallet[walletType]}${timestamp}${randomBlock}`;
+  }
+
+  closeUnifiedAddMoneyView(): void {
+    const modalEl = document.getElementById('addMoneyModal');
+    if (modalEl) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalEl);
+      modal?.hide();
+    }
+  }
+
+  proceedUnifiedAddMoney(): void {
+    if (this.addMoneyAmount <= 0) {
+      this.showErrorMessage('Please enter amount greater than zero.');
+      return;
+    }
+
+    this.showInfoMessage('Recharge request submitted. Wallet balance will refresh from backend after payment success.');
+    this.closeUnifiedAddMoneyView();
   }
 
   downloadDetails(): void {
     console.log('Downloading payment details');
-    // Navigate to payment receipt page
+
+    if (this.activeTab === 'transit') {
+      const transitRef = String(this.transitBillNo || this.selectedItem?.referenceNo || '').trim();
+      const transitId = String(this.transitId || this.selectedItem?.id || '').trim();
+
+      this.router.navigate(['/payment-slip-view'], {
+        queryParams: {
+          id: transitId || undefined,
+          type: 'transit',
+          billNo: transitRef || undefined,
+          refNo: transitRef || undefined,
+          ref: transitRef || undefined,
+          referenceNo: transitRef || undefined,
+          source: 'licensee'
+        }
+      });
+      return;
+    }
+
+    // Navigate to payment receipt page for non-transit flows.
     this.router.navigate(['/dev-payment-receipt']);
   }
 
@@ -568,7 +1706,7 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   loadTransitData(): void {
-    this.showTransitPayment = true;
+    this.showTransitPayment = false;
 
     // Fetch from backend to get the ID and current status
     this.supplyChainService.getTransitPermits(this.transitBillNo).subscribe({
@@ -601,16 +1739,19 @@ export class PaymentConfirmationComponent implements OnInit {
           this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
           this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
           this.transitItemCount = 1;
+          this.showTransitPayment = String(found.status || '').trim() === 'Ready for Payment';
         } else {
           console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
           alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
 
-          // Fallback to sample/params if not found (e.g. before backend sync) or handle error
-          this.transitTotalAmount = 1500.00; // Default dummy
+          this.transitData = [];
+          this.transitTotalAmount = 0;
         }
       },
       error: (err) => {
         console.error('Error fetching transit permits:', err);
+        this.transitData = [];
+        this.showTransitPayment = false;
         alert('Failed to load transit permit details. Please try again.');
       }
     });
@@ -633,6 +1774,9 @@ export class PaymentConfirmationComponent implements OnInit {
     this.transitPaymentAgreed = false;
     const modal = document.getElementById('transitPaymentModal');
     if (modal) {
+      if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
       const bootstrapModal = new (window as any).bootstrap.Modal(modal);
       bootstrapModal.show();
     }
@@ -652,7 +1796,12 @@ export class PaymentConfirmationComponent implements OnInit {
         console.log('Payment successful', response);
         this.showSuccessMessage('Payment successful! Forwarded to Officer in Charge.');
         alert('Payment successful! Forwarded to Officer in Charge.');
-        this.transitBillStatus = 'PaymentSuccessfulandForwardedToOfficerincharge';
+        this.transitBillStatus = String(
+          response?.data?.status ||
+          response?.status ||
+          this.transitBillStatus ||
+          ''
+        );
 
         // Update wallet balance locally
         this.educationCessBalance -= this.transitEducationCess;
@@ -660,6 +1809,7 @@ export class PaymentConfirmationComponent implements OnInit {
 
         // Refresh data
         this.loadTransitData();
+        this.refreshWalletData();
       },
       error: (err) => {
         console.error('Payment failed', err);
@@ -689,15 +1839,23 @@ export class PaymentConfirmationComponent implements OnInit {
     console.log('Info:', message);
   }
 
+  getSelectedWalletBalance(): number {
+    return this.activeTab === 'hologram' ? this.hologramWalletBalance : this.educationCessBalance;
+  }
+
+  getSelectedWalletBalanceAfterDeduction(): number {
+    const amount = Number(this.selectedItem?.amount || 0);
+    return Math.max(0, this.getSelectedWalletBalance() - amount);
+  }
+
   // Hologram payment methods
   canPayHologram(item: HologramItem): boolean {
-    const payableStatuses = [
-      'ApprovedByCommissioner',
-      'Approved by Commissioner',
-      'ApprovedByJointCommissioner'
-    ];
-    // Don't pay if 0 amount, unless it's a test? keeping fee check.
-    return payableStatuses.includes(item.status);
+    const token = String(item?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const payableTokens = new Set([
+      'approvedbycommissioner',
+      'approvedbyjointcommissioner'
+    ]);
+    return payableTokens.has(token);
   }
 
   payHologramItem(item: HologramItem): void {
@@ -744,17 +1902,15 @@ export class PaymentConfirmationComponent implements OnInit {
 
     const totalAmount = this.multiTypePaymentItems.reduce((sum, item) => sum + item.hologramFee, 0);
 
-    // Check if sufficient balance
-    if (totalAmount > this.getTotalWalletBalance()) {
+    if (totalAmount > this.hologramWalletBalance) {
       this.closeMultiTypePaymentModal();
       this.showInsufficientBalanceAlert();
       return;
     }
 
-    // Confirm payment for all types
     const confirmed = confirm(
       `You are about to pay for ${this.multiTypePaymentItems.length} types under reference ${this.multiTypePaymentItems[0].referenceNo}.\n\n` +
-      `Total Amount: ₹${totalAmount.toFixed(2)}\n\n` +
+      `Total Amount: Rs ${totalAmount.toFixed(2)}\n\n` +
       `A single payment slip will be generated for all types.\n\n` +
       `Do you want to proceed?`
     );
@@ -763,43 +1919,24 @@ export class PaymentConfirmationComponent implements OnInit {
       return;
     }
 
-    // Process payment for all types
-    let successCount = 0;
-    this.multiTypePaymentItems.forEach(item => {
-      try {
-        // Update wallet balance
-        this.educationCessBalance -= item.hologramFee;
-
-        // Update item status
-        item.status = 'Payment Successful';
-        item.paymentDate = new Date();
-
-        // Update the specific hologram application in localStorage
-        this.updateHologramPaymentStatus(item.referenceNo, item.procurementType);
-
-        successCount++;
-        console.log(`✅ Payment completed for ${item.referenceNo} - ${item.procurementType}`);
-      } catch (error) {
-        console.error(`❌ Failed to process payment for ${item.referenceNo} - ${item.procurementType}:`, error);
-      }
-    });
-
-    // Create unified payment transaction record
-    this.createUnifiedPaymentTransaction(this.multiTypePaymentItems);
-
-    // Close modal
-    this.closeMultiTypePaymentModal();
-
-    // Show success message
-    this.showSuccessMessage(
-      `Successfully processed payment for ${successCount} types totaling ₹${totalAmount.toFixed(2)}!\n\n` +
-      `A single unified payment slip has been generated for reference ${this.multiTypePaymentItems[0].referenceNo}.`
+    const paymentRequests = this.multiTypePaymentItems.map(item =>
+      this.hologramService.performAction('procurement', Number(item.id), 'pay', 'Payment Completed via Wallet')
     );
 
-    // Reload hologram data
-    this.loadHologramDataFromApi();
+    forkJoin(paymentRequests).subscribe({
+      next: () => {
+        this.closeMultiTypePaymentModal();
+        this.showSuccessMessage(`Successfully processed payment totaling Rs ${totalAmount.toFixed(2)}.`);
+        this.loadHologramDataFromApi();
+        this.refreshWalletData();
+      },
+      error: (err) => {
+        const errorMessage = err?.error?.error || err?.error?.detail || err?.message || 'Multi-type payment failed';
+        this.showErrorMessage(errorMessage);
+        alert(errorMessage);
+      }
+    });
   }
-
   // Create unified payment transaction for multiple types
   private createUnifiedPaymentTransaction(items: HologramItem[]): void {
     // NOTE: This unified part is complex to map to single PerformAction if backend doesn't support batch.
@@ -858,4 +1995,72 @@ export class PaymentConfirmationComponent implements OnInit {
   getPendingHologramCount(): number {
     return this.hologramData.filter(item => this.canPayHologram(item)).length;
   }
+
+  getHologramWalletPaymentHistory(): HistoryItem[] {
+    return this.getPaymentTransactionsFor('hologram');
+  }
+
+  getPaymentTransactionsFor(tab: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram'): HistoryItem[] {
+    const keywordByTab: Record<'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram', string> = {
+      requisition: 'requisition',
+      revalidation: 'revalidation',
+      cancellation: 'cancellation',
+      transit: 'transit',
+      hologram: 'hologram'
+    };
+    const keyword = keywordByTab[tab];
+
+    const activeLicensee = String(this.activeLicenseeId || '').trim().toLowerCase();
+    const mergedRows = [...this.optimisticPaymentHistory, ...this.historyData].filter((item) => {
+      if (!activeLicensee) return true;
+      const rowLicensee = String(item?.licenseeId || '').trim().toLowerCase();
+      return !rowLicensee || rowLicensee === activeLicensee;
+    });
+
+    return mergedRows.filter((item) => {
+      const paymentFor = String(item?.paymentFor || '').toLowerCase();
+      const type = String(item?.type || '').toLowerCase();
+      const isDebitLike =
+        type.includes('utilization') ||
+        type.includes('utilized') ||
+        type.includes('debit');
+      const isRefundLike = type.includes('refund');
+      return paymentFor.includes(keyword) && (isDebitLike || isRefundLike);
+    });
+  }
+
+  private applyLastPaidTabAsDefault(): void {
+    if (!this.autoSelectLastPaidTabOnLoad) {
+      return;
+    }
+
+    const targetTab = this.getLastPaidModuleTab();
+    if (targetTab && this.canShowTab(targetTab)) {
+      this.activeTab = targetTab;
+    }
+
+    this.autoSelectLastPaidTabOnLoad = false;
+  }
+
+  private getLastPaidModuleTab(): 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | '' {
+    const txns = [...this.historyData]
+      .filter((item) => {
+        const type = String(item?.type || '').toLowerCase();
+        return type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+      })
+      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+
+    for (const txn of txns) {
+      const paymentFor = String(txn?.paymentFor || '').toLowerCase();
+      if (paymentFor.includes('hologram')) return 'hologram';
+      if (paymentFor.includes('transit')) return 'transit';
+      if (paymentFor.includes('cancellation')) return 'cancellation';
+      if (paymentFor.includes('revalidation')) return 'revalidation';
+      if (paymentFor.includes('requisition')) return 'requisition';
+    }
+
+    return '';
+  }
 }
+
+

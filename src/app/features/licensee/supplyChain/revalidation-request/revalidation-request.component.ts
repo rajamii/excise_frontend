@@ -121,9 +121,9 @@ export class RevalidationRequestComponent implements OnInit {
         // Success
         this.showMessage('Revalidation request submitted successfully!', 'success');
 
-        // Navigate back to the list after a short delay
+        // Navigate back to the dashboard revalidation section after a short delay
         setTimeout(() => {
-          this.router.navigate(['/licensee/supply-chain'], { queryParams: { tab: 'revalidation' } });
+          this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });
         }, 1500);
       },
       error: (error) => {
@@ -135,7 +135,23 @@ export class RevalidationRequestComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/dev-supply-chain'], { queryParams: { tab: 'revalidation' } });
+    const sourceParam = String(this.route.snapshot.queryParams['source'] || '').trim().toLowerCase();
+    let normalizedSource = 'licensee-dashboard';
+
+    if (sourceParam.includes('commissioner')) {
+      normalizedSource = 'commissioner-dashboard';
+    } else if (sourceParam.includes('permit-section')) {
+      normalizedSource = 'permit-section';
+    } else if (sourceParam.includes('licensee')) {
+      normalizedSource = 'licensee-dashboard';
+    }
+
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'revalidation',
+        source: normalizedSource
+      }
+    });
   }
 
 

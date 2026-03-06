@@ -23,6 +23,13 @@ export const licenseeRoutes: Routes = [
     loadComponent: () => import('./apply-new-license/apply-new-license.component').then(m => m.ApplyNewLicenseComponent)
   },
   {
+    path: 'payment-integrations',
+    loadComponent: () =>
+      import('./payment-integrations/payment-integrations.component').then(
+        m => m.PaymentIntegrationsComponent
+      )
+  },
+  {
     path: 'supply-chain',
     children: [
       {

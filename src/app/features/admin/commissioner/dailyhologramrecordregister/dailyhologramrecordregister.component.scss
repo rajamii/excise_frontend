@@ -339,3 +339,14 @@
     }
   }
 }
+
+// Force details modal above dashboard containers/sidenav stacking contexts
+.modal.show {
+  display: block;
+  position: fixed;
+  z-index: 1060;
+}
+
+.modal-backdrop.show {
+  z-index: 1055;
+}

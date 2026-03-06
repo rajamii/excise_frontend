@@ -9,6 +9,12 @@
             Hologram Inventory
           </h2>
           <p class="page-subtitle">Comprehensive hologram inventory and usage analytics</p>
+          @if (establishmentDisplay) {
+          <div class="establishment-chip">
+            <i class="bi bi-buildings me-2"></i>
+            <span>Establishment: {{ establishmentDisplay }}</span>
+          </div>
+          }
         </div>
         <div class="col-auto">
           <div class="header-actions">
@@ -816,11 +822,7 @@
                         <th>Carton Number</th>
                         <th>Total Rolls Assigned</th>
                         <th>Serial Range</th>
-                        <th>Brand Name</th>
-                        <th>Qty in ML</th>
-                        <th>Qty Used</th>
-                        <th>Qty Damaged</th>
-                        <th>Qty Leftover</th>
+                        <th>Brands & Qty</th>
                         <th>Status</th>
                         <th>Completion Date</th>
                       </tr>
@@ -851,18 +853,13 @@
                         <td>
                           <span class="font-monospace small">{{ history.serialRange }}</span>
                         </td>
-                        <td>{{ history.brandName }}</td>
-                        <td class="text-center">
-                          <span class="badge bg-info">{{ history.bottleSize }}</span>
-                        </td>
-                        <td class="text-end">
-                          <span class="text-success fw-bold">{{ history.qtyUsed | number }}</span>
-                        </td>
-                        <td class="text-end">
-                          <span class="text-danger fw-bold">{{ history.qtyDamaged | number }}</span>
-                        </td>
-                        <td class="text-end">
-                          <span class="text-info fw-bold">{{ history.qtyLeftover | number }}</span>
+                        <td>
+                          <button class="btn btn-sm btn-outline-primary" 
+                                  (click)="openHistoryBrandsModal(history)"
+                                  [disabled]="!history.brandDetailsList || history.brandDetailsList.length === 0">
+                            <i class="bi bi-tags me-1"></i>
+                            View Brands ({{ history.brandDetailsList?.length || 0 }})
+                          </button>
                         </td>
                         <td>
                           <span class="badge bg-success">
@@ -881,7 +878,7 @@
                       </tr>
                       } @empty {
                       <tr>
-                        <td colspan="12" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                           <i class="bi bi-inbox display-4"></i>
                           <br>
                           No completed entries yet.
@@ -892,6 +889,67 @@
                       }
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+            }
+
+            @if (showHistoryBrandsModal && selectedHistoryForBrands) {
+            <div class="modal fade show history-brands-modal" style="display: block; background-color: rgba(0,0,0,0.5);">
+              <div class="modal-dialog modal-xl modal-dialog-centered history-brands-dialog">
+                <div class="modal-content history-brands-content">
+                  <div class="modal-header text-white history-brands-header">
+                    <h5 class="modal-title">
+                      <i class="bi bi-tags me-2"></i>
+                      Brands & Qty Details - {{ selectedHistoryForBrands.requestReference }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" (click)="closeHistoryBrandsModal()"></button>
+                  </div>
+                  <div class="modal-body history-brands-body">
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-hover history-brands-table">
+                        <thead class="table-light">
+                          <tr>
+                            <th>Brand Name</th>
+                            <th>Bottle Size</th>
+                            <th>Carton</th>
+                            <th>Serial Ranges</th>
+                            <th class="text-end">Qty Used</th>
+                            <th class="text-end">Qty Damaged</th>
+                            <th class="text-end">Qty Leftover</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (brand of selectedHistoryForBrands.brandDetailsList || []; track $index) {
+                          <tr>
+                            <td><strong>{{ brand.brandName }}</strong></td>
+                            <td>{{ brand.bottleSize }}</td>
+                            <td><span class="font-monospace">{{ brand.cartonNumber }}</span></td>
+                            <td><small class="font-monospace">{{ brand.serialRanges }}</small></td>
+                            <td class="text-end text-success fw-bold">{{ brand.qtyUsed | number }}</td>
+                            <td class="text-end text-danger fw-bold">{{ brand.qtyDamaged | number }}</td>
+                            <td class="text-end text-info fw-bold">{{ brand.qtyLeftover | number }}</td>
+                          </tr>
+                          } @empty {
+                          <tr>
+                            <td colspan="7" class="text-center text-muted py-3">No brand details found.</td>
+                          </tr>
+                          }
+                        </tbody>
+                        <tfoot class="table-light history-brands-tfoot">
+                          <tr>
+                            <th colspan="4" class="text-end">Total</th>
+                            <th class="text-end text-success">{{ selectedHistoryForBrands.qtyUsed | number }}</th>
+                            <th class="text-end text-danger">{{ selectedHistoryForBrands.qtyDamaged | number }}</th>
+                            <th class="text-end text-info">{{ selectedHistoryForBrands.qtyLeftover | number }}</th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="modal-footer history-brands-footer">
+                    <button type="button" class="btn btn-secondary" (click)="closeHistoryBrandsModal()">Close</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1414,56 +1472,50 @@
                         </div>
                         <div class="col-md-4">
                           <div class="range-details">
-                            @if (range.usedDate) {
+                            @if (range.status !== 'AVAILABLE' && range.usedDate) {
                             <div class="detail-item">
                               <i class="bi bi-calendar-check text-primary me-1"></i>
                               <small>Used: {{ range.usedDate | date:'dd-MMM-yyyy' }}</small>
                             </div>
                             }
-                            @if (range.damageDate) {
+                            @if (range.status !== 'AVAILABLE' && range.damageDate) {
                             <div class="detail-item">
                               <i class="bi bi-exclamation-triangle text-danger me-1"></i>
                               <small>Damaged: {{ range.damageDate | date:'dd-MMM-yyyy' }}</small>
                             </div>
                             }
-                            @if (range.referenceNo) {
+                            @if (range.status !== 'AVAILABLE' && range.referenceNo) {
                             <div class="detail-item">
                               <i class="bi bi-file-text text-info me-1"></i>
                               <small>Request Ref: {{ range.referenceNo }}</small>
                             </div>
                             }
-                            @if (range.brandDetails && range.brandDetails !== 'N/A') {
+                            @if (range.status !== 'AVAILABLE' && range.brandDetails && range.brandDetails !== 'N/A') {
                             <div class="detail-item">
                               <i class="bi bi-tag text-success me-1"></i>
                               <small><span class="fw-bold text-success">Brand: {{ range.brandDetails }}</span></small>
                             </div>
-                            } @else if (range.productionLine && range.productionLine !== 'N/A' &&
+                            } @else if (range.status !== 'AVAILABLE' && range.productionLine && range.productionLine !== 'N/A' &&
                             !range.productionLine.startsWith('LINE-')) {
                             <div class="detail-item">
                               <i class="bi bi-tag text-success me-1"></i>
                               <small><span class="fw-bold text-success">Brand: {{ range.productionLine }}</span></small>
                             </div>
-                            } @else if (range.referenceNo && range.referenceNo !== 'N/A') {
-                            <div class="detail-item">
-                              <i class="bi bi-tag text-warning me-1"></i>
-                              <small><span class="fw-bold text-warning">Brand: Check Request {{ range.referenceNo
-                                  }}</span></small>
-                            </div>
                             }
-                            @if (range.bottleSize) {
+                            @if (range.status !== 'AVAILABLE' && range.bottleSize) {
                             <div class="detail-item">
                               <i class="bi bi-cup text-primary me-1"></i>
                               <small>Bottle Size: {{ range.bottleSize }}</small>
                             </div>
                             }
-                            @if (range.productionLine && range.productionLine !== 'N/A' &&
+                            @if (range.status !== 'AVAILABLE' && range.productionLine && range.productionLine !== 'N/A' &&
                             !range.productionLine.startsWith('LINE-')) {
                             <div class="detail-item">
                               <i class="bi bi-gear text-secondary me-1"></i>
                               <small>{{ range.productionLine }}</small>
                             </div>
                             }
-                            @if (range.damageReason) {
+                            @if (range.status === 'DAMAGED' && range.damageReason) {
                             <div class="detail-item">
                               <i class="bi bi-info-circle text-warning me-1"></i>
                               <small>{{ range.damageReason }}</small>

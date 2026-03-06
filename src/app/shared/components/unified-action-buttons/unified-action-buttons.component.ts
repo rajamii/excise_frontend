@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { WorkflowActionService } from '../../../core/services/workflow-action.service';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
+import { ApplicationType } from '../../constants/application.constants';
 import Swal from 'sweetalert2';
 
 export interface ActionItem {
@@ -15,6 +16,23 @@ export interface ActionItem {
   currentStage?: number;
   allowedActions?: string[];
   allowedActionConfigs?: ActionButtonConfig[]; // Dynamic configs from backend
+  refNo?: string;
+  billNo?: string;
+  transitProducts?: any[];
+  cases?: number;
+  quantity?: number;
+  exciseDuty?: number;
+  total_excise_duty?: number;
+  totalExciseDuty?: number;
+  additionalExcise?: number;
+  total_additional_excise?: number;
+  totalAdditionalExcise?: number;
+  educationCess?: number;
+  total_education_cess?: number;
+  totalEducationCess?: number;
+  brAmount?: number;
+  totalAmount?: number;
+  total_amount?: number;
   [key: string]: any; // Allow additional properties
 }
 
@@ -40,7 +58,7 @@ export interface ActionButtonConfig {
     MatTooltipModule
   ],
   template: `
-    <div class="action-buttons-container">
+    <div class="action-buttons-container" [class.table-mode]="displayMode === 'table'">
       <!-- DETAILED VIEW MODE: Primary Action Buttons for all users -->
       <ng-container *ngIf="displayMode === 'detailed'">
         <ng-container *ngFor="let button of getPrimaryActionButtons()">
@@ -58,21 +76,16 @@ export interface ActionButtonConfig {
 
       <!-- TABLE MODE: All buttons as icons OR DETAILED MODE: Secondary Action Buttons -->
       <ng-container *ngFor="let button of getDisplayButtons()">
-        <a
-          *ngIf="button.action === 'VIEW'"
-          class="action-icon-link"
-          [ngClass]="'action-color-' + button.color"
-          [attr.href]="getViewHref()"
-          [attr.title]="button.tooltip">
-          <mat-icon>{{ button.icon }}</mat-icon>
-        </a>
-        <button 
-          *ngIf="button.action !== 'VIEW'"
-          mat-icon-button 
+        <button
+          mat-icon-button
           type="button"
+          [matTooltip]="button.tooltip || getButtonTooltip(button)"
+          [attr.title]="button.tooltip || getButtonTooltip(button)"
+          [attr.data-action]="button.action"
+          [attr.data-variant]="getButtonVariant(button)"
           [color]="button.color"
-          [matTooltip]="button.tooltip"
-          (click)="onActionClick(button)">
+          (click)="onActionButtonClick(button, $event)"
+          (mousedown)="onActionButtonClick(button, $event)">
           <mat-icon>{{ button.icon }}</mat-icon>
         </button>
       </ng-container>
@@ -82,16 +95,35 @@ export interface ActionButtonConfig {
   styles: [`
     .action-buttons-container {
       display: flex;
+      flex-direction: row;
       gap: 12px;
       align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      position: relative;
+      z-index: 10;
+      min-height: 40px;
+    }
+
+    .action-buttons-container.table-mode {
+      gap: 10px;
+      flex-wrap: nowrap;
     }
 
     .action-btn {
       min-width: 120px;
       height: 40px;
-      font-weight: 500;
+      font-weight: 600;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      }
       
       mat-icon {
         margin-right: 8px;
@@ -101,58 +133,21 @@ export interface ActionButtonConfig {
       }
     }
 
-    button[mat-icon-button] {
-      min-width: 40px;
-      width: 40px;
-      height: 40px;
-      
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .action-icon-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      text-decoration: none;
-      cursor: pointer;
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .action-color-primary { color: #1976d2; }
-    .action-color-success { color: #28a745; }
-    .action-color-warning { color: #f59e0b; }
-    .action-color-danger { color: #dc3545; }
-    .action-color-info { color: #17a2b8; }
-    .action-color-warn { color: #dc3545; }
-    .action-color-accent { color: #7c3aed; }
-
-    /* Color overrides for better visibility */
+    /* Color overrides for raised buttons */
     .mat-mdc-raised-button.mat-success {
-      background-color: #28a745;
+      background-color: #388e3c;
       color: white;
     }
 
     .mat-mdc-raised-button.mat-danger {
-      background-color: #dc3545;
+      background-color: #d32f2f;
       color: white;
     }
   `]
 })
 export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   @Input() item!: ActionItem;
-  @Input() itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'new-license' = 'requisition';
+  @Input() itemType: ApplicationType = 'requisition';
   @Input() context: 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' = 'licensee';
   @Input() displayMode: 'table' | 'detailed' = 'table';
   @Input() includeActions: string[] | null = null;
@@ -258,6 +253,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'RAISE_OBJECTION',
       'REJECT',
       'REQUEST_CANCELLATION',
+      'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
       'SUBMIT'
@@ -274,6 +270,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'RAISE_OBJECTION',
       'REJECT',
       'REQUEST_CANCELLATION',
+      'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
       'SUBMIT'
@@ -287,9 +284,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
    * MAIN ACTION HANDLER - All button logic centralized here
    */
   onActionClick(button: ActionButtonConfig): void {
-    const normalizedAction = (button?.action || '').toString().trim().toUpperCase();
+    const normalizedAction = this.normalizeActionName(button?.action);
     const normalizedButton: ActionButtonConfig = { ...button, action: normalizedAction };
-    console.log('🔧 UNIFIED BUTTONS: Action clicked:', normalizedButton.action);
 
     // Handle confirmation if required
     if (normalizedButton.requiresConfirmation) {
@@ -311,9 +307,166 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       cancelButtonColor: '#6c757d'
     }).then((result) => {
       if (result.isConfirmed) {
+        if (this.shouldShowTransitOicRejectDeclaration(button)) {
+          this.showTransitOicRejectDeclaration(button);
+          return;
+        }
         this.executeAction(button);
       }
     });
+  }
+
+  private shouldShowTransitOicRejectDeclaration(button: ActionButtonConfig): boolean {
+    const action = this.normalizeActionName(button?.action);
+    return action === 'REJECT' && this.itemType === 'transit' && this.context === 'officer-in-charge';
+  }
+
+  private showTransitOicRejectDeclaration(button: ActionButtonConfig): void {
+    const summary = this.getTransitRejectSummary();
+    const currency = this.formatInr(summary.totalRefund);
+    const excise = this.formatInr(summary.exciseRefund);
+    const education = this.formatInr(summary.educationRefund);
+    const refNo = this.escapeHtml(String(this.item?.referenceNo || this.item?.['refNo'] || this.item?.['billNo'] || 'N/A'));
+
+    Swal.fire({
+      title: 'Declaration Before Rejection',
+      html: `
+        <div style="text-align:left;font-size:14px;line-height:1.5">
+          <p style="margin:0 0 8px 0;"><strong>Reference:</strong> ${refNo}</p>
+          <p style="margin:0 0 10px 0;color:#9a3412;">
+            Rejecting this transit permit will trigger automatic reversal actions.
+          </p>
+          <ul style="padding-left:18px;margin:0 0 10px 0;">
+            <li>Stock utilized under this permit will be reverted to inventory.</li>
+            <li>Wallet refund will be posted for this permit.</li>
+            <li><strong>Excise refund:</strong> ${excise}</li>
+            <li><strong>Education cess refund:</strong> ${education}</li>
+            <li><strong>Total wallet refund:</strong> ${currency}</li>
+            <li><strong>Stock impact:</strong> ${summary.totalCases} case(s) will be reverted.</li>
+          </ul>
+          <p style="margin:0;">
+            Proceed only if this cancellation is valid and fully verified.
+          </p>
+          <div style="margin-top:12px;">
+            <label for="rejectReasonInput" style="display:block;font-weight:600;margin-bottom:6px;">
+              Rejection reason (optional)
+            </label>
+            <textarea
+              id="rejectReasonInput"
+              class="swal2-textarea"
+              style="display:block;width:100%;min-height:78px;margin:0;"
+              placeholder="Enter reason for rejection..."
+            ></textarea>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input id="rejectAcknowledgeCheckbox" type="checkbox" />
+              <span>I understand the above consequences and want to continue.</span>
+            </label>
+          </div>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Proceed With Rejection',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6c757d',
+      focusConfirm: false,
+      preConfirm: () => {
+        const popup = Swal.getPopup();
+        const checkbox = popup?.querySelector('#rejectAcknowledgeCheckbox') as HTMLInputElement | null;
+        const reasonInput = popup?.querySelector('#rejectReasonInput') as HTMLTextAreaElement | null;
+
+        if (!checkbox?.checked) {
+          Swal.showValidationMessage('Please acknowledge the declaration to proceed.');
+          return false;
+        }
+
+        return {
+          reason: String(reasonInput?.value || '').trim()
+        };
+      }
+    }).then((declarationResult) => {
+      if (declarationResult.isConfirmed) {
+        const reason = String((declarationResult.value as any)?.reason || '').trim();
+        this.item = {
+          ...this.item,
+          __rejectReason: reason
+        };
+        this.executeAction(button);
+      }
+    });
+  }
+
+  private getTransitRejectSummary(): {
+    totalCases: number;
+    exciseRefund: number;
+    educationRefund: number;
+    totalRefund: number;
+  } {
+    const products = this.getTransitProductsForSummary();
+    let totalCases = 0;
+    let exciseRefund = 0;
+    let educationRefund = 0;
+
+    products.forEach((row: any) => {
+      totalCases += this.toNumber(row?.cases ?? row?.quantity);
+      const rowExcise = this.toNumber(row?.exciseDuty ?? row?.total_excise_duty ?? row?.totalExciseDuty);
+      const rowAdditional = this.toNumber(row?.additionalExcise ?? row?.total_additional_excise ?? row?.totalAdditionalExcise);
+      const rowEducation = this.toNumber(row?.educationCess ?? row?.total_education_cess ?? row?.totalEducationCess);
+      exciseRefund += (rowExcise + rowAdditional);
+      educationRefund += rowEducation;
+    });
+
+    if (products.length === 0) {
+      totalCases = this.toNumber(this.item?.cases ?? this.item?.quantity);
+      const fallbackExcise = this.toNumber(this.item?.exciseDuty ?? this.item?.total_excise_duty ?? this.item?.totalExciseDuty);
+      const fallbackAdditional = this.toNumber(this.item?.additionalExcise ?? this.item?.total_additional_excise ?? this.item?.totalAdditionalExcise);
+      const fallbackEducation = this.toNumber(this.item?.educationCess ?? this.item?.total_education_cess ?? this.item?.totalEducationCess);
+      exciseRefund = fallbackExcise + fallbackAdditional;
+      educationRefund = fallbackEducation;
+    }
+
+    const fallbackTotal = this.toNumber(this.item?.brAmount ?? this.item?.totalAmount ?? this.item?.total_amount);
+    const calculatedTotal = exciseRefund + educationRefund;
+    const totalRefund = calculatedTotal > 0 ? calculatedTotal : fallbackTotal;
+
+    return {
+      totalCases,
+      exciseRefund,
+      educationRefund,
+      totalRefund
+    };
+  }
+
+  private getTransitProductsForSummary(): any[] {
+    const products = this.item?.transitProducts;
+    if (Array.isArray(products)) {
+      return products;
+    }
+    return [];
+  }
+
+  private toNumber(value: any): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private formatInr(value: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(this.toNumber(value));
+  }
+
+  private escapeHtml(value: string): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**
@@ -339,12 +492,25 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         this.handleCancellationRequest();
         break;
 
+      case 'UPDATE_ARRIVAL':
+        this.actionClicked.emit({ action: 'UPDATE_ARRIVAL', item: this.item });
+        break;
+
       case 'REQUEST_REVALIDATION':
         this.handleRevalidationRequest();
         break;
 
       case 'VIEW':
         this.handleViewAction();
+        break;
+      case 'VIEW_SLIP':
+        this.handleViewSlipAction();
+        break;
+      case 'VIEW_PAYMENT_SLIP':
+        this.handleViewPaymentSlipAction();
+        break;
+      case 'VIEW_PERMIT_SLIP':
+        this.handleViewPermitSlipAction();
         break;
 
       default:
@@ -354,18 +520,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
   private handleWorkflowAction(button: ActionButtonConfig): void {
     console.log(`🔧 UNIFIED BUTTONS: Executing workflow action: ${button.action}`);
-
-    // Call backend service to execute workflow action
-    // For now, show success message
-    Swal.fire({
-      title: 'Action Completed',
-      text: `${button.label} action has been executed successfully.`,
-      icon: 'success',
-      confirmButtonText: 'OK'
-    }).then(() => {
-      // Emit event to parent for any additional handling
-      this.actionClicked.emit({ action: button.action, item: this.item });
-    });
+    // Real success/failure is handled in parent after API response.
+    this.actionClicked.emit({ action: button.action, item: this.item });
   }
 
   private handlePaymentAction(): void {
@@ -374,7 +530,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       html: `
         <div class="payment-details">
           <p><strong>Application:</strong> ${this.item.referenceNo}</p>
-          <p><strong>Amount:</strong> ₹${this.item['brAmount'] || 'N/A'}</p>
+          <p><strong>Amount:</strong> Rs ${this.item['brAmount'] || 'N/A'}</p>
           <p><strong>Type:</strong> ${this.itemType}</p>
         </div>
       `,
@@ -386,13 +542,33 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       cancelButtonColor: '#6c757d'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: 'Payment Successful!',
-          text: 'Your payment has been processed successfully.',
-          icon: 'success',
-          confirmButtonText: 'OK'
+        this.unifiedActionsService.executeAction('PAY', this.item, this.itemType, this.context).subscribe({
+          next: (response) => {
+            if (response?.success === false) {
+              Swal.fire({
+                title: 'Payment Redirection Failed',
+                text: response?.message || 'Unable to open wallet payment page.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+              });
+            }
+            // Success path intentionally shows no extra modal:
+            // user is redirected to wallet section by UnifiedActionsService.
+          },
+          error: (error) => {
+            const message =
+              error?.error?.detail ||
+              error?.error?.message ||
+              error?.message ||
+              'Unable to open wallet payment page.';
+            Swal.fire({
+              title: 'Payment Redirection Failed',
+              text: message,
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+          }
         });
-        this.actionClicked.emit({ action: 'PAY', item: this.item });
       }
     });
   }
@@ -409,12 +585,6 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       cancelButtonColor: '#6c757d'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          title: 'Cancellation Requested',
-          text: 'Your cancellation request has been submitted successfully.',
-          icon: 'success',
-          confirmButtonText: 'OK'
-        });
         this.actionClicked.emit({ action: 'REQUEST_CANCELLATION', item: this.item });
       }
     });
@@ -441,12 +611,166 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   }
 
   private handleViewAction(): void {
-    // Handle VIEW directly so it works across all roles/pages
-    this.unifiedActionsService.executeAction('VIEW', this.item, this.itemType, this.context).subscribe({
-      error: (error: any) => {
-        console.error('VIEW action failed:', error);
-      }
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW action');
+    
+    // Force navigation directly using window.location for reliability
+    const ref = this.item?.referenceNo ?? this.item?.['refNo'] ?? '';
+    const id = this.item?.id ?? this.item?.['pk'] ?? '';
+    
+    const queryParams: any = {
+      id: id || undefined,
+      ref: ref || undefined,
+      type: this.itemType,
+      source: this.context || 'licensee'
+    };
+    
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value));
+        }
+      });
+      const query = params.toString();
+      const url = query ? `/supply-chain-view?${query}` : '/supply-chain-view';
+      console.log('🚀 NAVIGATE to view:', url);
+      
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
+  }
+
+  private handleViewSlipAction(): void {
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW_SLIP action for item:', this.item);
+    
+    // Force navigation directly using window.location for reliability
+    const url = this.getSlipHref();
+    console.log('🚀 NAVIGATE to slip:', url);
+    
+    if (typeof window !== 'undefined') {
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
+  }
+
+  private handleViewPaymentSlipAction(): void {
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW_PAYMENT_SLIP action for item:', this.item);
+    
+    // Force navigation directly using window.location for reliability
+    const queryParams = {
+      id: this.item.id,
+      type: this.itemType,
+      refNo: this.item.referenceNo,
+      ref: this.item.referenceNo,
+      referenceNo: this.item.referenceNo,
+      source: this.context || 'dashboard'
+    };
+    
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value));
+        }
+      });
+      const query = params.toString();
+      const url = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      console.log('🚀 NAVIGATE to payment slip:', url);
+      
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
+  }
+
+  private handleViewPermitSlipAction(): void {
+    console.log('🔧 UNIFIED BUTTONS: Handling VIEW_PERMIT_SLIP action for item:', this.item);
+    
+    // Determine the correct view path based on itemType
+    let viewPath = '';
+    
+    if (this.itemType === 'revalidation') {
+      viewPath = '/unified-letter-view/revalidation';
+    } else if (this.itemType === 'cancellation') {
+      viewPath = '/unified-letter-view/cancellation';
+    } else if (this.itemType === 'requisition') {
+      viewPath = '/unified-letter-view/requisition';
+    } else {
+      console.error('Unknown itemType for permit slip:', this.itemType);
+      return;
+    }
+    
+    const queryParams = {
+      id: this.item.id,
+      ref: this.item.referenceNo,
+      refNo: this.item.referenceNo,
+      source: this.context || 'dashboard'
+    };
+    
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value));
+        }
+      });
+      const query = params.toString();
+      const url = query ? `${viewPath}?${query}` : viewPath;
+      console.log('🚀 NAVIGATE to permit slip:', url);
+      
+      // Use setTimeout to defer navigation to next event loop cycle
+      setTimeout(() => {
+        window.location.href = url;
+      }, 0);
+    }
+  }
+
+  public getSlipHref(): string {
+    const id = this.item?.id ?? this.item?.['pk'] ?? '';
+    const ref =
+      this.item?.referenceNo ??
+      this.item?.['refNo'] ??
+      this.item?.['ourRefNo'] ??
+      this.item?.['our_ref_no'] ??
+      this.item?.['billNo'] ??
+      this.item?.['bill_no'] ??
+      '';
+
+    const params = new URLSearchParams();
+    if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
+    if (this.itemType) params.set('type', String(this.itemType));
+    if (ref) {
+      params.set('refNo', String(ref));
+      params.set('ref', String(ref));
+      params.set('referenceNo', String(ref));
+      if (this.itemType === 'transit') params.set('billNo', String(ref));
+    }
+    params.set('source', this.context || 'dashboard');
+    const query = params.toString();
+
+    const routeByType: Record<string, string> = {
+      requisition: '/dev-final-requisition-letters',
+      revalidation: '/dev-revalidation-permit-slip',
+      transit: '/dev-final-transit-permit-view',
+      hologram: '/payment-slip-view'
+    };
+    const route = routeByType[String(this.itemType || '').toLowerCase()] || '/payment-slip-view';
+    const finalUrl = query ? `${route}?${query}` : route;
+    
+    console.log('🔧 UNIFIED BUTTONS: getSlipHref ->', {
+      itemType: this.itemType,
+      id,
+      ref,
+      route,
+      finalUrl
     });
+    
+    return finalUrl;
   }
 
   public getViewHref(): string {
@@ -505,7 +829,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   private normalizeActionList(list: string[] | null | undefined): string[] {
     if (!Array.isArray(list)) return [];
     return list
-      .map(action => String(action).toUpperCase().trim())
+      .map(action => this.normalizeActionName(action))
       .filter(action => !!action);
   }
 
@@ -513,16 +837,80 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const include = this.normalizeActionList(this.includeActions);
     const exclude = this.normalizeActionList(this.excludeActions);
 
+    console.log('🔧 UNIFIED BUTTONS: getFilteredConfigs ->', {
+      includeActions: this.includeActions,
+      normalizedInclude: include,
+      excludeActions: this.excludeActions,
+      normalizedExclude: exclude,
+      availableActionConfigs: this.availableActionConfigs
+    });
+
     let result = [...this.availableActionConfigs];
 
     // If includeActions specifies VIEW but backend didn't return it, add a safe fallback.
     if (include.includes('VIEW') && !result.some(config => config.action === 'VIEW')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW fallback');
       result.push({
         action: 'VIEW',
         label: 'View',
         icon: 'visibility',
         color: 'primary',
         tooltip: 'View Details'
+      });
+    }
+
+    if (include.includes('VIEW_SLIP') && !result.some(config => config.action === 'VIEW_SLIP')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW_SLIP fallback');
+      result.push({
+        action: 'VIEW_SLIP',
+        label: this.getSlipButtonLabel(),
+        icon: 'receipt',
+        color: 'primary',
+        tooltip: this.getSlipButtonTooltip()
+      });
+    }
+
+    if (include.includes('VIEW_PAYMENT_SLIP') && !result.some(config => config.action === 'VIEW_PAYMENT_SLIP')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW_PAYMENT_SLIP fallback');
+      result.push({
+        action: 'VIEW_PAYMENT_SLIP',
+        label: 'View Payment Slip',
+        icon: 'receipt_long',
+        color: 'primary',
+        tooltip: 'View Payment Slip'
+      });
+    }
+
+    if (include.includes('VIEW_PERMIT_SLIP') && !result.some(config => config.action === 'VIEW_PERMIT_SLIP')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding VIEW_PERMIT_SLIP fallback');
+      result.push({
+        action: 'VIEW_PERMIT_SLIP',
+        label: 'View Permit Slip',
+        icon: 'description',
+        color: 'success',
+        tooltip: 'View Permit Slip'
+      });
+    }
+
+    if (include.includes('REQUEST_CANCELLATION') && !result.some(config => config.action === 'REQUEST_CANCELLATION')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding REQUEST_CANCELLATION fallback');
+      result.push({
+        action: 'REQUEST_CANCELLATION',
+        label: 'Request Cancellation',
+        icon: 'cancel',
+        color: 'warn',
+        tooltip: 'Request Cancellation'
+      });
+    }
+
+    if (include.includes('UPDATE_ARRIVAL') && !result.some(config => config.action === 'UPDATE_ARRIVAL')) {
+      console.log('🔧 UNIFIED BUTTONS: Adding UPDATE_ARRIVAL fallback');
+      result.push({
+        action: 'UPDATE_ARRIVAL',
+        label: 'Update Arrival',
+        icon: 'local_shipping',
+        color: 'accent',
+        tooltip: 'Update Bulk Liter Arrival'
       });
     }
 
@@ -545,20 +933,33 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       deduped.push(config);
     }
 
+    console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', deduped);
     return deduped;
   }
 
   private normalizeActionConfig(config: any): ActionButtonConfig {
     const rawAction = config?.action ?? config?.Action ?? config?.action_name ?? config?.actionName;
-    const action = rawAction ? String(rawAction).toUpperCase().trim() : '';
-    const label = config?.label ?? config?.Label ?? this.toTitleCase(action);
-    const icon = config?.icon ?? config?.Icon ?? 'arrow_forward';
+    const action = this.normalizeActionName(rawAction);
+    let label = config?.label ?? config?.Label ?? this.toTitleCase(action);
+    let icon = config?.icon ?? config?.Icon ?? 'arrow_forward';
     const color = config?.color ?? config?.Color ?? 'primary';
-    const tooltip = config?.tooltip ?? config?.Tooltip ?? (label ? `${label} Application` : 'Perform Action');
+    let tooltip = config?.tooltip ?? config?.Tooltip ?? (label ? `${label} Application` : 'Perform Action');
     const requiresConfirmation = config?.requiresConfirmation ?? config?.requires_confirmation ?? false;
     const confirmationMessage = config?.confirmationMessage ?? config?.confirmation_message;
     const transitionId = config?.transitionId ?? config?.transition_id;
     const toStageId = config?.toStageId ?? config?.to_stage_id ?? config?.targetStage ?? config?.target_stage;
+
+    if (this.isSlipAction(action)) {
+      label = this.getSlipButtonLabel();
+      icon = 'receipt';
+      tooltip = this.getSlipButtonTooltip();
+    }
+
+    if (action === 'VIEW_PAYMENT_SLIP') {
+      label = 'View Payment Slip';
+      icon = 'receipt_long';
+      tooltip = 'View Payment Slip';
+    }
 
     return {
       action,
@@ -580,4 +981,180 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       .toLowerCase()
       .replace(/\b\w/g, char => char.toUpperCase());
   }
+
+  private normalizeActionName(action: any): string {
+    const normalized = String(action || '').toUpperCase().trim().replace(/[\s-]+/g, '_');
+    if (!normalized) return '';
+    switch (normalized) {
+      case 'VIEWSLIP':
+      case 'VIEWPAYMENTSLIP':
+      case 'VIEW_PAYMENTSLIP':
+      case 'VIEW_PAY_SLIP':
+      case 'PAYMENTSLIP':
+      case 'PAY_SLIP':
+      case 'SLIP_VIEW':
+      case 'SUBMITPAYSLIP':
+      case 'APPROVEPAYSLIP':
+      case 'REJECTPAYSLIP':
+        return 'VIEW_SLIP';
+      case 'VIEWAPPLICATION':
+      case 'VIEW_DETAILS':
+      case 'VIEWDETAILS':
+        return 'VIEW';
+      default:
+        return normalized;
+    }
+  }
+
+  onActionButtonClick(button: ActionButtonConfig, event?: Event): void {
+    console.log('🖱️ BUTTON CLICKED!', {
+      action: button.action,
+      label: button.label,
+      event: event?.type,
+      button
+    });
+    
+    // CRITICAL: Stop event propagation to prevent parent handlers from interfering
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    }
+    
+    // Use setTimeout to defer execution to next event loop cycle
+    // This allows Angular's change detection to complete first
+    setTimeout(() => {
+      this.onActionClick(button);
+    }, 0);
+  }
+
+  logButtonInteraction(eventType: string, button: ActionButtonConfig): void {
+    console.log(`🖱️ Button ${eventType}:`, button.action, button.label);
+    if (eventType === 'mouseenter') {
+      console.log('  ✅ Mouse is OVER the button!');
+    }
+  }
+
+  forceNavigateToSlip(): void {
+    console.log('🚀 FORCE NAVIGATE TO SLIP!');
+    const url = this.getSlipHref();
+    console.log('🚀 Navigating to:', url);
+    if (typeof window !== 'undefined') {
+      window.location.href = url;
+    }
+  }
+
+  private isSlipAction(action: any): boolean {
+    const token = String(action || '').toUpperCase().trim().replace(/[\s-]+/g, '_');
+    if (!token) return false;
+    return token.includes('PAYSLIP') || token.includes('PAY_SLIP') || token === 'VIEW_SLIP' || token === 'VIEWSLIP';
+  }
+
+  private getSlipButtonLabel(): string {
+    const permitTypes = new Set(['requisition', 'revalidation', 'transit']);
+    return permitTypes.has(String(this.itemType || '').toLowerCase()) ? 'View Permit Slip' : 'View Slip';
+  }
+
+  private getSlipButtonTooltip(): string {
+    const permitTypes = new Set(['requisition', 'revalidation', 'transit']);
+    return permitTypes.has(String(this.itemType || '').toLowerCase()) ? 'View Permit Slip' : 'View Payment Slip';
+  }
+
+  isSlipButton(button: ActionButtonConfig | null | undefined): boolean {
+    if (!button) return false;
+    if (this.isSlipAction(button.action)) return true;
+    const combinedText = `${button.label || ''} ${button.tooltip || ''}`.toLowerCase();
+    if (combinedText.includes('slip')) return true;
+    if (combinedText.includes('payment') && combinedText.includes('view')) return true;
+    if (combinedText.includes('permit') && combinedText.includes('slip')) return true;
+
+    const icon = String(button.icon || '').toLowerCase();
+    return icon.includes('receipt') || icon.includes('description') || icon.includes('assignment');
+  }
+
+  getButtonTooltip(button: ActionButtonConfig | null | undefined): string {
+    if (!button) return '';
+    if (button.tooltip) return button.tooltip;
+    if (this.isSlipAction(button.action)) return this.getSlipButtonTooltip();
+    if (button.label) return button.label;
+    return this.toTitleCase(this.normalizeActionName(button.action));
+  }
+
+  getButtonBackground(button: ActionButtonConfig): string {
+    const variant = this.getButtonVariant(button);
+    if (variant === 'slip') {
+      return 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)';
+    }
+    if (variant === 'view') {
+      return 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+    }
+
+    const color = button.color || 'primary';
+    const action = button.action || '';
+    
+    switch (color) {
+      case 'primary':
+        return 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+      case 'warning':
+        return 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)';
+      case 'success':
+        return 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)';
+      case 'warn':
+      case 'danger':
+        return 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)';
+      case 'info':
+        return 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)';
+      case 'accent':
+        return 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)';
+      default:
+        return 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+    }
+  }
+
+  getIconColor(button: ActionButtonConfig): string {
+    const variant = this.getButtonVariant(button);
+    if (variant === 'slip') {
+      return '#f9a825';
+    }
+    if (variant === 'view') {
+      return '#1976d2';
+    }
+
+    const color = button.color || 'primary';
+
+    switch (color) {
+      case 'primary':
+        return '#1976d2';
+      case 'warning':
+        return '#f9a825';
+      case 'success':
+        return '#388e3c';
+      case 'warn':
+      case 'danger':
+        return '#d32f2f';
+      case 'info':
+        return '#0097a7';
+      case 'accent':
+        return '#7b1fa2';
+      default:
+        return '#1976d2';
+    }
+  }
+
+  getButtonVariant(button: ActionButtonConfig | null | undefined): 'slip' | 'view' | 'payment-slip' | 'default' {
+    if (!button) return 'default';
+    
+    // Check if it's specifically a payment slip
+    if (button.action === 'VIEW_PAYMENT_SLIP') return 'payment-slip';
+    
+    // Check if it's a permit slip
+    if (this.isSlipButton(button)) return 'slip';
+
+    const normalizedAction = this.normalizeActionName(button.action);
+    if (normalizedAction === 'VIEW') return 'view';
+
+    return 'default';
+  }
 }
+
+

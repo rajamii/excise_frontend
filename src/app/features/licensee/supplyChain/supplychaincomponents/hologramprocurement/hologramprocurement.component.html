@@ -225,18 +225,10 @@
                   <i class="bi bi-eye me-1"></i>
                   <span class="d-none d-md-inline">View</span>
                 </button>
-
-                <!-- Make Payment button -->
-                <button *ngIf="!item.paymentCompleted && isPaymentEnabled(item)" class="btn btn-warning btn-sm"
-                  (click)="navigateToPaymentPage(item)" title="Make Wallet Payment (₹0.15 per hologram)">
+                <button *ngIf="shouldShowMakePayment(item)" class="btn btn-warning btn-sm"
+                  type="button" (click)="navigateToWalletRecharge(item, $event)" title="Make Payment">
                   <i class="bi bi-wallet2 me-1"></i>
                   <span class="d-none d-md-inline">Make Payment</span>
-                </button>
-                <!-- Mark as Paid button (for testing) -->
-                <button *ngIf="isPaymentEnabled(item) && !item.paymentCompleted" class="btn btn-info btn-sm"
-                  (click)="markPaymentCompleted(item.refNo)" title="Test: Mark payment as completed (for testing only)">
-                  <i class="bi bi-check-circle me-1"></i>
-                  <span class="d-none d-md-inline">Mark Paid (Test)</span>
                 </button>
                 <!-- View Payment Receipt button -->
                 <button *ngIf="item.paymentCompleted" class="btn btn-success btn-sm" (click)="viewPaymentSlip(item)"
@@ -664,3 +656,4 @@
     </div>
   </div>
 </div>
+

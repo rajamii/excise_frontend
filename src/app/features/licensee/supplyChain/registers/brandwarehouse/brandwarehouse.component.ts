@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BrandWarehouseService, BrandWarehouseUtilization } from '../../services/brand-warehouse.service';
 import { ProductionService, ProductionBatch } from '../../services/production.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface TransitPermitDetail {
   permitNo: string;
@@ -22,6 +23,7 @@ interface LastEntryDetail {
   id: string;
   date: string;
   type: 'PRODUCTION' | 'CONSUMPTION' | 'ADJUSTMENT' | 'TRANSIT_PERMIT' | 'CANCELLATION';
+  activity?: string;
   quantity: number;
   previousStock: number;
   newStock: number;
@@ -30,6 +32,7 @@ interface LastEntryDetail {
   officerName?: string;
   transitPermitNo?: string;
   packSize?: number;  // Pack size in ml
+  sortTimestamp?: number;
 }
 
 interface PackSizeInfo {
@@ -45,6 +48,7 @@ interface PackSizeInfo {
 
 interface GroupedBrandStock {
   brandName: string;
+  licenseId?: string;
   distilleryName: string;
   brandType: string;
   packSizes: { [key: number]: PackSizeInfo };
@@ -52,6 +56,7 @@ interface GroupedBrandStock {
   totalCapacity: number;
   totalUtilized: number;
   lastUpdated: string;
+  isNew?: boolean;
   overallStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'OVERSTOCKED';
 }
 
@@ -86,14 +91,18 @@ interface FilterOptions {
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
 
-  // Current distillery context - TODO: Make this dynamic based on logged-in user
-  private readonly CURRENT_DISTILLERY = 'Sikkim'; // This will be dynamic later
+  // Current distillery context resolved from active user profile.
+  private currentDistilleryName = '';
+  private currentLicenseId = '';
+  private resolvedLicenseId = '';
+  private currentLicenseType = '';
   private readonly EXCLUDED_BREWERIES: string[] = []; // Show all Sikkim brands including breweries
 
   // Data
   groupedBrandStocks: GroupedBrandStock[] = [];
   filteredStocks: GroupedBrandStock[] = [];
   paginatedStocks: GroupedBrandStock[] = [];
+  newlyUpdatedStocks: GroupedBrandStock[] = [];
   warehouseOverview: WarehouseOverview = {
     totalBrands: 0,
     totalCapacity: 0,
@@ -130,6 +139,7 @@ export class BrandwarehouseComponent implements OnInit {
   showTransitPermitsModal = false;
   showLastEntriesModal = false;
   showProductionModal = false;
+  showNewUpdatesModal = false;
   isLoadingProduction = false;
   isLoadingLastEntries = false;
   adjustmentQuantity = 0;
@@ -160,12 +170,54 @@ export class BrandwarehouseComponent implements OnInit {
 
   constructor(
     private brandWarehouseService: BrandWarehouseService,
-    private productionService: ProductionService
+    private productionService: ProductionService,
+    private supplyChainProfileService: SupplyChainProfileService
   ) { }
 
   ngOnInit(): void {
-    this.initializeSikkimBrands();
-    this.loadWarehouseData();
+    this.resolveCurrentDistilleryAndLoad();
+  }
+
+  private resolveCurrentDistilleryAndLoad(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (profileResponse) => {
+        const profileData: any = profileResponse?.data || {};
+        this.currentLicenseId = String(
+          profileData?.licenseeId ||
+          profileData?.licensee_id ||
+          ''
+        ).trim();
+        this.resolvedLicenseId = this.toValidLicenseId(this.currentLicenseId);
+        this.currentLicenseType = String(
+          profileData?.licenseType ||
+          profileData?.license_type ||
+          ''
+        ).trim();
+        this.currentDistilleryName = String(
+          profileData?.manufacturingUnitName ||
+          profileData?.manufacturing_unit_name ||
+          ''
+        ).trim();
+        this.initializeSikkimBrands();
+        this.loadWarehouseData();
+      },
+      error: () => {
+        this.currentDistilleryName = '';
+        this.currentLicenseId = '';
+        this.resolvedLicenseId = '';
+        this.currentLicenseType = '';
+        this.initializeSikkimBrands();
+        this.loadWarehouseData();
+      }
+    });
+  }
+
+  private toValidLicenseId(value: string): string {
+    const normalized = String(value || '').trim();
+    if (normalized.startsWith('NA/') || normalized.startsWith('NLI/') || normalized.startsWith('LA/')) {
+      return normalized;
+    }
+    return '';
   }
 
   /**
@@ -190,7 +242,7 @@ export class BrandwarehouseComponent implements OnInit {
     this.isLoading = true;
 
     // Load overview first
-    this.brandWarehouseService.getWarehouseOverview().subscribe({
+    this.brandWarehouseService.getWarehouseOverview(this.buildApiFilters()).subscribe({
       next: (overview) => {
         this.warehouseOverview = overview;
       },
@@ -232,33 +284,21 @@ export class BrandwarehouseComponent implements OnInit {
    * TODO: Make this dynamic based on logged-in user's distillery
    */
   private filterByCurrentDistillery(brands: GroupedBrandStock[]): GroupedBrandStock[] {
-    return brands.filter(brand => {
-      if (!brand.distilleryName) return false;
-
-      const distilleryName = brand.distilleryName.toLowerCase();
-
-      // Check if it belongs to current distillery
-      const belongsToCurrentDistillery = distilleryName.includes(this.CURRENT_DISTILLERY.toLowerCase());
-
-      // Check if it's a brewery (exclude breweries from distillery dashboard)
-      const isBrewery = this.EXCLUDED_BREWERIES.some(brewery =>
-        distilleryName.includes(brewery.toLowerCase())
-      );
-
-      // Include only if belongs to current distillery AND is not a brewery
-      return belongsToCurrentDistillery && !isBrewery;
-    });
+    // Server-side scoping by mapped license_id is authoritative.
+    return brands;
   }
 
   /**
    * Build API filters from component filters
    */
   private buildApiFilters(): any {
-    const filters: any = {
-      // Always filter by current distillery
-      distillery_name: this.CURRENT_DISTILLERY
-      // Show all Sikkim brands including breweries
-    };
+    const filters: any = {};
+
+    // Only pass explicit license_id when it is a real issued/app license format.
+    // Otherwise rely on backend user-scope resolution (OIC assignment/profile mapping).
+    if (this.resolvedLicenseId) {
+      filters.license_id = this.resolvedLicenseId;
+    }
 
     if (this.filters.brandName) {
       filters.brand_name = this.filters.brandName;
@@ -274,6 +314,43 @@ export class BrandwarehouseComponent implements OnInit {
     }
 
     return filters;
+  }
+
+  private getDisplayEstablishmentName(): string {
+    const fromProfile = String(this.currentDistilleryName || '').trim();
+    if (fromProfile) {
+      return fromProfile;
+    }
+
+    const fromData = String(
+      this.groupedBrandStocks.find((b) => String(b?.distilleryName || '').trim())?.distilleryName || ''
+    ).trim();
+    if (fromData) {
+      return fromData;
+    }
+
+    return 'Assigned Establishment';
+  }
+
+  private inferEstablishmentType(name: string): 'Brewery' | 'Distillery' | 'Establishment' {
+    const haystack = `${this.currentLicenseType} ${name}`.toLowerCase();
+    if (haystack.includes('brew')) {
+      return 'Brewery';
+    }
+    if (haystack.includes('distill')) {
+      return 'Distillery';
+    }
+    return 'Establishment';
+  }
+
+  get inventoryTitle(): string {
+    return `${this.getDisplayEstablishmentName()} - Stock Inventory`;
+  }
+
+  get inventorySubtitle(): string {
+    const establishmentName = this.getDisplayEstablishmentName();
+    const unitType = this.inferEstablishmentType(establishmentName).toLowerCase();
+    return `Monitor and manage ${unitType} brand inventory for ${establishmentName}`;
   }
 
   initializeSampleData(): void {
@@ -383,7 +460,46 @@ export class BrandwarehouseComponent implements OnInit {
       return matchesBrand && matchesType && matchesStatus && matchesStockLevel;
     });
 
+    // Priority ordering: newly updated first, then latest updated time
+    this.filteredStocks.sort((a, b) => {
+      const aPriority = this.isRecentlyUpdatedStock(a) ? 1 : 0;
+      const bPriority = this.isRecentlyUpdatedStock(b) ? 1 : 0;
+      if (bPriority !== aPriority) return bPriority - aPriority;
+
+      const aTs = new Date(a.lastUpdated || 0).getTime() || 0;
+      const bTs = new Date(b.lastUpdated || 0).getTime() || 0;
+      return bTs - aTs;
+    });
+
+    this.newlyUpdatedStocks = this.filteredStocks
+      .filter(stock => this.isRecentlyUpdatedStock(stock) && (stock.totalStock || 0) > 0)
+      .slice(0, 8);
+
     this.updatePagination();
+  }
+
+  isRecentlyUpdatedStock(stock: GroupedBrandStock): boolean {
+    if (!stock) return false;
+    if (stock.isNew === true) return true;
+    const updatedTs = new Date(stock.lastUpdated || 0).getTime();
+    if (!updatedTs) return false;
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    return (Date.now() - updatedTs) <= oneDayMs;
+  }
+
+  getNewUpdateTag(stock: GroupedBrandStock): string {
+    if (!stock) return '';
+    if (stock.isNew === true) return 'NEW';
+    return 'UPDATED';
+  }
+
+  getVisibleNewlyUpdatedStocks(): GroupedBrandStock[] {
+    return (this.newlyUpdatedStocks || []).slice(0, 5);
+  }
+
+  getHiddenNewUpdatesCount(): number {
+    const total = (this.newlyUpdatedStocks || []).length;
+    return total > 5 ? total - 5 : 0;
   }
 
   checkStockLevel(stock: GroupedBrandStock): boolean {
@@ -570,17 +686,27 @@ export class BrandwarehouseComponent implements OnInit {
         next: (arrivals: any[]) => {
           arrivals.forEach((arrival: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            const eventDate = this.resolveEntryDate(
+              arrival.arrival_date,
+              arrival.arrivalDate,
+              arrival.created_at,
+              arrival.createdAt,
+              arrival.updated_at,
+              arrival.updatedAt
+            );
             allEntries.push({
               id: `arrival-${arrival.id}`,
-              date: arrival.arrival_date || arrival.arrivalDate,
+              date: eventDate,
               type: 'PRODUCTION',
+              activity: 'Stock Added',
               quantity: arrival.quantity_added || arrival.quantityAdded,
               previousStock: arrival.previous_stock || arrival.previousStock,
               newStock: arrival.new_stock || arrival.newStock,
               referenceNo: arrival.reference_no || arrival.referenceNo,
               description: `Stock addition - ${packSize}ml`,
               officerName: 'System',
-              packSize: packSize
+              packSize: packSize,
+              sortTimestamp: this.toSortTimestamp(eventDate)
             });
           });
 
@@ -603,17 +729,28 @@ export class BrandwarehouseComponent implements OnInit {
         next: (utilizations: any[]) => {
           utilizations.forEach((util: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            const eventDate = this.resolveEntryDate(
+              util.approval_date,
+              util.approvalDate,
+              util.updated_at,
+              util.updatedAt,
+              util.created_at,
+              util.createdAt,
+              util.date
+            );
             allEntries.push({
               id: `util-${util.id}`,
-              date: util.date,
+              date: eventDate,
               type: 'TRANSIT_PERMIT',
+              activity: 'Stock Utilized',
               quantity: util.quantity,
               previousStock: util.previousStock || 0,
               newStock: util.newStock || 0,
               referenceNo: util.permit_no || util.permitNo,
               description: `Transit to ${util.distributor} - ${packSize}ml`,
               transitPermitNo: util.permit_no || util.permitNo,
-              packSize: packSize
+              packSize: packSize,
+              sortTimestamp: this.toSortTimestamp(eventDate)
             });
           });
 
@@ -636,17 +773,27 @@ export class BrandwarehouseComponent implements OnInit {
         next: (cancellations: any[]) => {
           cancellations.forEach((cancel: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            const eventDate = this.resolveEntryDate(
+              cancel.cancellation_date,
+              cancel.cancellationDate,
+              cancel.updated_at,
+              cancel.updatedAt,
+              cancel.created_at,
+              cancel.createdAt
+            );
             allEntries.push({
               id: `cancel-${cancel.id}`,
-              date: cancel.cancellation_date,
+              date: eventDate,
               type: 'CANCELLATION',
+              activity: 'Stock Restored',
               quantity: cancel.bottles_reversed,
               previousStock: cancel.previousStock || 0,
               newStock: cancel.newStock || 0,
               referenceNo: cancel.permit_no,
               description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || 'N/A'})`,
               transitPermitNo: cancel.permit_no,
-              packSize: packSize
+              packSize: packSize,
+              sortTimestamp: this.toSortTimestamp(eventDate)
             });
           });
 
@@ -679,14 +826,56 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   finalizeLastEntries(entries: LastEntryDetail[]): void {
-    // Sort by date descending (most recent first)
-    entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Sort by true activity time descending (across all event types).
+    // This keeps utilization, cancellation and production interleaved by when they happened.
+    entries.sort((a, b) => {
+      const timeDiff = this.getEntrySortTimestamp(b) - this.getEntrySortTimestamp(a);
+      if (timeDiff !== 0) return timeDiff;
+
+      // Tie-breaker so equal timestamps don't appear grouped by fetch order/type.
+      const idDiff = this.extractEntryNumericId(b.id) - this.extractEntryNumericId(a.id);
+      if (idDiff !== 0) return idDiff;
+
+      return String(a.id).localeCompare(String(b.id));
+    });
 
     // Take only the most recent 10 entries
     this.selectedLastEntries = entries.slice(0, 10);
     this.isLoadingLastEntries = false;
 
     console.log('Finalized recent entries:', this.selectedLastEntries);
+  }
+
+  private resolveEntryDate(...candidates: any[]): string {
+    for (const candidate of candidates) {
+      const value = String(candidate ?? '').trim();
+      if (!value) continue;
+      const dt = new Date(value);
+      if (!Number.isNaN(dt.getTime())) {
+        return dt.toISOString();
+      }
+    }
+    return new Date().toISOString();
+  }
+
+  private toSortTimestamp(value: any): number {
+    const dt = new Date(String(value ?? ''));
+    const time = dt.getTime();
+    return Number.isNaN(time) ? 0 : time;
+  }
+
+  private getEntrySortTimestamp(entry: LastEntryDetail): number {
+    if (Number.isFinite(entry.sortTimestamp as number)) {
+      return Number(entry.sortTimestamp);
+    }
+    return this.toSortTimestamp(entry.date);
+  }
+
+  private extractEntryNumericId(entryId: string): number {
+    const match = String(entryId || '').match(/(\d+)(?!.*\d)/);
+    if (!match) return 0;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   viewProduction(brand: GroupedBrandStock): void {
@@ -893,7 +1082,7 @@ export class BrandwarehouseComponent implements OnInit {
    * TODO: Replace with actual user session/authentication service
    */
   getCurrentDistillery(): string {
-    return this.CURRENT_DISTILLERY;
+    return this.currentDistilleryName || 'N/A';
   }
 
   /**
@@ -901,8 +1090,8 @@ export class BrandwarehouseComponent implements OnInit {
    * TODO: This will be called when user authentication is implemented
    */
   setCurrentDistillery(distilleryName: string): void {
-    // TODO: Implement when making dashboard dynamic
-    console.log(`Future implementation: Set distillery to ${distilleryName}`);
+    this.currentDistilleryName = String(distilleryName || '').trim();
+    this.loadWarehouseData();
   }
 
   refreshData(): void {

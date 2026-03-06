@@ -283,8 +283,13 @@
       <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
       <button mat-flat-button color="primary"
               (click)="proceedToNext()"
-              [disabled]="!applicantDetailsForm.valid || !areRequiredDocumentsUploaded()"
+              [disabled]="!applicantDetailsForm.valid"
               type="button">Next</button>
     </mat-card-actions>
+    @if (!areRequiredDocumentsUploaded()) {
+      <div class="required-doc-warning">
+        Upload all required documents to proceed.
+      </div>
+    }
   </mat-card>
 </form>

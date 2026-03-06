@@ -14,14 +14,21 @@ interface TableData {
   id: string;
   referenceNo: string;
   submissionDate: string;
+  submissionDateRaw?: string;
+  revalidationDateRaw?: string;
+  requisitionDateRaw?: string;
+  approvalDateRaw?: string;
+  updatedAtRaw?: string;
   distilleryName: string;
   status: string;
+  statusCode?: string;
   amount: string;
   isLive?: boolean;
   isInvalid?: boolean;
   allowedActions?: string[]; // Dynamic actions from backend
   workflowId?: number;
   currentStage?: number;
+  currentStageIsFinal?: boolean | string; // Indicates if current stage is final approval
   allowedActionConfigs?: any[];
 }
 
@@ -105,8 +112,14 @@ export class RevalidationComponent implements OnInit {
           id: item.id, // Map ID
           referenceNo: item.ourRefNo || item.our_ref_no,
           submissionDate: formattedDate,
+          submissionDateRaw: dateVal || '',
+          revalidationDateRaw: item.revalidationDate || item.revalidation_date || '',
+          requisitionDateRaw: item.requisitionDate || item.requisition_date || '',
+          approvalDateRaw: item.approvalDate || item.approval_date || '',
+          updatedAtRaw: item.updatedAt || item.updated_at || '',
           distilleryName: item.distilleryName || item.distillery_name,
           status: item.status,
+          statusCode: item.statusCode || item.status_code || '',
           amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
           isLive: !item.status?.includes('INVALID') && !item.status?.includes('EXPIRED'),
           isInvalid: item.status?.includes('INVALID') || item.status?.includes('EXPIRED'),
@@ -454,6 +467,130 @@ export class RevalidationComponent implements OnInit {
     }
     console.log(`[ID: ${item.id}] ✗ REJECT button HIDDEN`);
     return false;
+  }
+
+  getActionIncludeList(item: TableData): string[] {
+    const actions = ['VIEW'];
+    
+    // For revalidation, show payment slip after submission (₹1000 deduction)
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getActionIncludeList (revalidation):', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      hasPayment,
+      allowedActions: item.allowedActions,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    // Show "View Payment Slip" after payment is made (₹1000 deducted)
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    // Trust backend for VIEW_PERMIT_SLIP action
+    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
+      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+      actions.push('VIEW_PERMIT_SLIP');
+    }
+    
+    console.log('🔍 Final actions array:', actions);
+    return actions;
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed (₹1000 deducted from wallet)
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Payment indicators for revalidation
+    // After submission, ₹1000 is deducted, so any status after submission indicates payment
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('revalidation') ||
+                                   status.includes('submitted') ||
+                                   status.includes('pending');
+    
+    console.log('🔍 hasPaymentBeenMade check (revalidation):', {
+      status,
+      statusIndicatesPayment,
+      result: statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
+  }
+
+  canViewPermitSlip(item: TableData): boolean {
+    // Only commissioner can view permit slip at final approved stage
+    if (!this.isCommissioner()) {
+      return false;
+    }
+    
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const currentStageIsFinal = item.currentStageIsFinal === true || item.currentStageIsFinal === 'true';
+    
+    // Check if it's at final approved stage
+    // For revalidation, show permit slip when forwarded to commissioner OR approved by commissioner
+    const isFinalApproved = (status.includes('approved') && currentStageIsFinal) ||
+                           status.includes('approvedrevalidationbycommissioner') ||
+                           status.includes('forwardedrevalidationtocommissioner') || // Show for commissioner review
+                           status.includes('finalapproved');
+    
+    console.log('🔍 canViewPermitSlip (revalidation):', {
+      status: item.status,
+      normalizedStatus: status,
+      currentStageIsFinal,
+      isFinalApproved,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    return isFinalApproved;
+  }
+
+  getRevalidationExtensionRange(item: TableData): string {
+    if (!this.isCommissionerApprovedRevalidation(item)) {
+      return '-';
+    }
+
+    const fromDate =
+      this.parseDate(item.approvalDateRaw) ||
+      this.parseDate(item.requisitionDateRaw) ||
+      this.parseDate(item.revalidationDateRaw) ||
+      this.parseDate(item.updatedAtRaw) ||
+      this.parseDate(item.submissionDateRaw) ||
+      this.parseDate(item.submissionDate);
+
+    if (!fromDate) {
+      return '-';
+    }
+
+    const toDate = new Date(fromDate);
+    toDate.setDate(toDate.getDate() + 45);
+    return `${this.formatDisplayDate(fromDate)} to ${this.formatDisplayDate(toDate)}`;
+  }
+
+  private isCommissionerApprovedRevalidation(item: TableData): boolean {
+    const status = this.normalizeToken(item.status);
+    const statusCode = this.normalizeToken(item.statusCode);
+    return status.includes('approvedrevalidationbycommissioner') || statusCode === 'rv09';
+  }
+
+  private parseDate(value: string | undefined): Date | null {
+    if (!value) {
+      return null;
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private formatDisplayDate(date: Date): string {
+    return date
+      .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      .replace(/ /g, '-');
+  }
+
+  private normalizeToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
 }

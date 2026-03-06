@@ -184,7 +184,7 @@
                 [item]="item"
                 [itemType]="'transit'"
                 [context]="getUserContext()"
-                [includeActions]="['VIEW','PAY']"
+                [includeActions]="getTransitIncludeActions(item)"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
             </td>

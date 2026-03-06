@@ -9,6 +9,179 @@
   overflow: hidden;
 }
 
+.wallet-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.wallet-summary-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.wallet-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  border-color: #cbd5e1;
+}
+
+.wallet-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.wallet-summary-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.wallet-summary-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eef2ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.wallet-summary-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.wallet-summary-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.wallet-summary-tag.warning {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
+.wallet-summary-balance {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.wallet-summary-meta {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.wallet-summary-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hologram-card {
+  background: linear-gradient(145deg, #fffdf5 0%, #fff7ed 100%);
+  border-color: #fed7aa;
+}
+
+.excise-card {
+  background: linear-gradient(145deg, #f7fbff 0%, #eef4ff 100%);
+  border-color: #bfd8ff;
+
+  .wallet-summary-icon {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .wallet-summary-tag {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+  }
+
+  .wallet-summary-balance {
+    color: #1d4ed8;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
+.education-card {
+  background: linear-gradient(145deg, #f2fffb 0%, #ebfff8 100%);
+  border-color: #a7f3d0;
+
+  .wallet-summary-icon {
+    background: #ccfbf1;
+    color: #0f766e;
+  }
+
+  .wallet-summary-tag {
+    background: #ccfbf1;
+    border-color: #99f6e4;
+    color: #115e59;
+  }
+
+  .wallet-summary-balance {
+    color: #0e7490;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
+.view-hover {
+  cursor: pointer;
+  position: relative;
+}
+
+.view-hover::after {
+  content: 'Click card to open hologram view';
+  position: absolute;
+  left: 1rem;
+  bottom: 0.8rem;
+  font-size: 0.78rem;
+  color: #7c2d12;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  padding: 0.12rem 0.55rem;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.view-hover:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .history-hover {
   cursor: pointer;
   transition: box-shadow .25s ease, transform .15s ease, background .25s ease, border-color .25s ease;
@@ -25,7 +198,7 @@
   &::after {
     content: 'Click to view history';
     position: absolute;
-    left: 1.5rem;
+    right: 1.5rem;
     bottom: .75rem;
     font-size: .85rem;
     color: #157347;
@@ -221,6 +394,18 @@
 
 // Responsive Design
 @media (max-width: 768px) {
+  .wallet-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-summary-card {
+    min-height: 200px;
+  }
+
+  .wallet-summary-balance {
+    font-size: 1.85rem;
+  }
+
   .wallet-card {
     .wallet-amount {
       font-size: 2rem;
@@ -312,4 +497,308 @@
   50% {
     background-color: #FEF3C7;
   }
+}
+
+/* Keep payment modals above all dashboard layers and backdrops clickable */
+::ng-deep #walletHistoryModal,
+::ng-deep #addMoneyModal,
+::ng-deep #paymentModal,
+::ng-deep #transitPaymentModal,
+::ng-deep .modal.show {
+  z-index: 20000 !important;
+  pointer-events: auto !important;
+}
+
+::ng-deep #walletHistoryModal .modal-dialog,
+::ng-deep #addMoneyModal .modal-dialog,
+::ng-deep #paymentModal .modal-dialog,
+::ng-deep #transitPaymentModal .modal-dialog {
+  pointer-events: auto !important;
+}
+
+::ng-deep .modal-backdrop,
+::ng-deep .modal-backdrop.show {
+  z-index: 19990 !important;
+  opacity: 0.45 !important;
+}
+
+/* Wallet history modal redesign (applies to all 3 wallet histories). */
+::ng-deep #walletHistoryModal .wallet-history-modal-content {
+  border-radius: 16px;
+  border: 1px solid #d1d5db;
+  overflow: hidden;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border-bottom: 1px solid #dbe2ea;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-title {
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 0;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-bars {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-bars button {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #64748b;
+  padding: 0.28rem 0.62rem;
+  border-right: 1px solid #e2e8f0;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-bars button:last-child {
+  border-right: none;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-bars button.active {
+  color: #0f172a;
+  background: #dbeafe;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-filter-card {
+  border: 1px solid #d6dde6;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-filter-card .form-label {
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 0.2rem;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-filter-card .form-control,
+::ng-deep #walletHistoryModal .wallet-history-filter-card .form-select {
+  border-color: #cbd5e1;
+  box-shadow: none;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-filter-card .form-control:focus,
+::ng-deep #walletHistoryModal .wallet-history-filter-card .form-select:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 0.12rem rgba(59, 130, 246, 0.18);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table-wrap {
+  border: 1px solid #d6dde6;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table thead th {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-weight: 700;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+::ng-deep #walletHistoryModal .wallet-theme-excise .wallet-history-bars button.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+::ng-deep #walletHistoryModal .wallet-theme-education .wallet-history-bars button.active {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+::ng-deep #walletHistoryModal .wallet-theme-hologram .wallet-history-bars button.active {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+::ng-deep #walletHistoryModal .modal-dialog {
+  max-width: min(1180px, 96vw);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-modal-content {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  box-shadow: 0 28px 60px rgba(2, 6, 23, 0.35);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-header {
+  position: relative;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, #e7edf9 0%, #f4f7fb 50%, #ffffff 100%);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #0ea5e9, #14b8a6, #f59e0b);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+::ng-deep #walletHistoryModal .btn-close {
+  border-radius: 10px;
+  padding: 0.6rem;
+  background-color: #eef2ff;
+  opacity: 1;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+::ng-deep #walletHistoryModal .btn-close:hover {
+  background-color: #dbeafe;
+  transform: rotate(90deg);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-body {
+  padding: 1rem 1.15rem 0.75rem;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-bars {
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+  transform: translateY(1px);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-bars button {
+  min-width: 78px;
+  text-align: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-filter-card {
+  border-radius: 14px;
+  padding: 0.1rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-filter-card .form-control,
+::ng-deep #walletHistoryModal .wallet-history-filter-card .form-select {
+  border-radius: 10px;
+  height: 38px;
+  font-weight: 600;
+  background: #ffffff;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-refresh-btn {
+  min-width: 40px;
+  border-radius: 10px;
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-refresh-btn:hover {
+  background: #e2e8f0;
+  border-color: #64748b;
+  color: #0f172a;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table-wrap {
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table {
+  margin-bottom: 0;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table thead th {
+  font-size: 1.12rem;
+  padding: 0.85rem 0.72rem;
+  background: linear-gradient(180deg, #e2e8f0 0%, #dbe3ee 100%);
+  border-color: #b7c5d8;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table tbody td {
+  padding: 0.85rem 0.72rem;
+  border-color: #d4dde8;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table tbody tr:nth-child(odd) {
+  background: #f8fbff;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-table tbody tr:hover {
+  background: #edf4ff;
+}
+
+::ng-deep #walletHistoryModal .history-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 0.18rem 0.56rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+}
+
+::ng-deep #walletHistoryModal .history-type-badge.type-added {
+  color: #065f46;
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+::ng-deep #walletHistoryModal .history-type-badge.type-utilized {
+  color: #7f1d1d;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+::ng-deep #walletHistoryModal .history-type-badge.type-refunded {
+  color: #0c4a6e;
+  background: #cffafe;
+  border-color: #67e8f9;
+}
+
+::ng-deep #walletHistoryModal .modal-footer {
+  border-top: 1px solid #d7e0ec;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  padding: 0.85rem 1rem 0.95rem;
+}
+
+::ng-deep #walletHistoryModal .wallet-history-close-btn {
+  border-radius: 11px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  border: none;
+  box-shadow: 0 8px 20px rgba(71, 85, 105, 0.25);
+}
+
+::ng-deep #walletHistoryModal .wallet-history-close-btn:hover {
+  background: linear-gradient(135deg, #4b5563 0%, #334155 100%);
 }

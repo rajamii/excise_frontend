@@ -8,8 +8,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
@@ -22,12 +23,14 @@ import { ApplicationTableComponent } from '../licensee/licensee-dashboard/applic
 import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../core/services/account.service';
 import Swal from 'sweetalert2';
+import { environment } from '../../../environments/environment';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
 import { RevalidationComponent } from '../licensee/supplyChain/supplychaincomponents/revalidation/revalidation.component';
 import { CancellationComponent } from '../licensee/supplyChain/supplychaincomponents/cancellation/cancellation.component';
 import { TransitComponent } from '../licensee/supplyChain/supplychaincomponents/transit/transit.component';
+import { OicTransitPermitComponent } from '../licensee/supplyChain/supplychaincomponents/oic-transit-permit/oic-transit-permit.component';
 import { HologramprocurementComponent } from '../licensee/supplyChain/supplychaincomponents/hologramprocurement/hologramprocurement.component';
 import { HologramrequestComponent } from '../licensee/supplyChain/supplychaincomponents/hologramrequest/hologramrequest.component';
 import { TransitPermitComponent } from '../licensee/supplyChain/transit-permit/transit-permit.component';
@@ -35,6 +38,8 @@ import { ImportPermitComponent } from '../licensee/supplyChain/import-permit/imp
 import { Hologramrequestlevel1Component } from '../licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component';
 import { HologramComponent } from '../licensee/supplyChain/HoloGram/hologram/hologram.component';
 import { NewLicenseDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/new-license/new-license-dashboard.component';
+import { RegistrationManagementComponent } from '../licensee/supplyChain/supplychaincomponents/registration-management/registration-management.component';
+import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
 // Officer-specific Components
 import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
@@ -44,6 +49,7 @@ import { OicdailyhologramregisterComponent } from '../licensee/supplyChain/regis
 import { BrandwarehouseComponent } from '../licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component';
 import { ITCELLComponent } from '../admin/it-cell/itcell.component';
 import { HologramoveriewComponent } from '../licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component';
+import { DailyhologramrecordregisterComponent } from '../admin/commissioner/dailyhologramrecordregister/dailyhologramrecordregister.component';
 
 // Role-specific Dashboard Components
 import { PermitSectionDashboardComponent } from './role-components/permit-section-dashboard.component';
@@ -75,6 +81,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     RevalidationComponent,
     CancellationComponent,
     TransitComponent,
+    OicTransitPermitComponent,
     HologramprocurementComponent,
     HologramrequestComponent,
     TransitPermitComponent,
@@ -82,6 +89,8 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     Hologramrequestlevel1Component,
     HologramComponent,
     NewLicenseDashboardComponent,
+    RegistrationManagementComponent,
+    PaymentConfirmationComponent,
     // Officer-specific Components
     BrandsDetailsComponent,
     HologramMonthlyReportComponent,
@@ -90,6 +99,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     BrandwarehouseComponent,
     ITCELLComponent,
     HologramoveriewComponent,
+    DailyhologramrecordregisterComponent,
     // Role-specific Dashboard Components
     PermitSectionDashboardComponent,
     CommissionerDashboard,
@@ -106,6 +116,8 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
+  private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   dashboardConfig!: DashboardConfig;
   currentUser: User | null = null;
@@ -131,10 +143,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
+  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'approved';
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
+  private licenseeMenuAccessResolved = false;
+  private showBreweryOrDistilleryMenus = false;
 
   // Professional dashboard enhancements
   previousCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
@@ -149,6 +163,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private unifiedDashboardService: UnifiedDashboardService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private accountService: AccountService,
+    private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router
   ) { }
@@ -184,6 +199,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private handleQueryParams(): void {
     const initialSection = this.route.snapshot.queryParamMap.get('section');
     this.selectedSupplyChainSection = initialSection || null;
+    this.enforceSectionAccess();
 
     // Subscribe to query parameter changes
     this.route.queryParams
@@ -191,6 +207,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(params => {
         const section = params['section'];
         this.selectedSupplyChainSection = section || null;
+        this.enforceSectionAccess();
       });
   }
 
@@ -241,6 +258,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (config) => {
           this.dashboardConfig = config;
+          this.loadLicenseeMenuAccess();
           this.loadDashboardData();
         },
         error: (error) => {
@@ -294,19 +312,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
             };
           }
 
+          // Product requirement: newly submitted applications should appear under Pending.
+          const pendingBucket = [
+            ...filteredApplications.pending,
+            ...filteredApplications.awaitingPayment,
+            ...filteredApplications.applied
+          ];
+
           // Store counts separately but combine pending display
           this.dashboardCounts = {
-            applied: filteredApplications.applied.length,
-            pending: filteredApplications.pending.length,
+            applied: 0,
+            pending: pendingBucket.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
             approved: filteredApplications.approved.length,
             rejected: filteredApplications.rejected.length
           };
 
-          // Combine pending and awaiting payment into one datasource
+          // Show submitted + pending + awaiting payment together in Pending table.
           this.updateDataSources({
-            applied: filteredApplications.applied,
-            pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment],
+            applied: [],
+            pending: pendingBucket,
             approved: filteredApplications.approved,
             rejected: filteredApplications.rejected
           });
@@ -336,8 +361,172 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.currentUser?.roleId === 2;
   }
 
+  isCommissionerUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || 0);
+    if (roleId === 10) {
+      return true;
+    }
+
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('commissioner');
+  }
+
+  canRenderWalletSection(): boolean {
+    if (!this.isLicenseeUser()) {
+      return true;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return true;
+    }
+    return this.showBreweryOrDistilleryMenus;
+  }
+
+  private enforceSectionAccess(): void {
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return;
+    }
+    if (!this.isLicenseeUser()) {
+      return;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return;
+    }
+    if (this.showBreweryOrDistilleryMenus) {
+      return;
+    }
+
+    this.selectedSupplyChainSection = null;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { section: null, tab: null, source: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  private loadLicenseeMenuAccess(): void {
+    if (!this.isLicenseeUser()) {
+      this.licenseeMenuAccessResolved = true;
+      this.showBreweryOrDistilleryMenus = false;
+      return;
+    }
+
+    this.licenseeMenuAccessResolved = false;
+    this.showBreweryOrDistilleryMenus = false;
+
+    forkJoin({
+      licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
+        catchError(() => of([]))
+      ),
+      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(
+        catchError(() => of({ approved: [] }))
+      ),
+      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(
+        catchError(() => of([]))
+      )
+    }).subscribe({
+      next: ({ licenses, approvedPayload, allApplications }) => {
+        const licenseRows = Array.isArray(licenses) ? licenses : [];
+        const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
+        const allRows = Array.isArray(allApplications) ? allApplications : [];
+        const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
+        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll];
+        const hasDistillery = combinedRows.some((item) => this.isDistillery(item));
+        const hasBrewery = combinedRows.some((item) => this.isBrewery(item));
+
+        this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+        this.licenseeMenuAccessResolved = true;
+        this.enforceSectionAccess();
+      },
+      error: () => {
+        this.showBreweryOrDistilleryMenus = false;
+        this.licenseeMenuAccessResolved = true;
+        this.enforceSectionAccess();
+      }
+    });
+  }
+
+  private isApprovedStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+    ).toLowerCase();
+    return stage.includes('approved');
+  }
+
+  private isDistillery(item: any): boolean {
+    const subCategoryId = this.extractSubCategoryId(item);
+    if (subCategoryId === 2) {
+      return true;
+    }
+    const name = this.extractSubCategoryName(item);
+    return name.includes('distiller');
+  }
+
+  private isBrewery(item: any): boolean {
+    const subCategoryId = this.extractSubCategoryId(item);
+    if (subCategoryId === 1) {
+      return true;
+    }
+    const name = this.extractSubCategoryName(item);
+    return name.includes('brew');
+  }
+
+  private extractSubCategoryId(item: any): number {
+    const nested = item?.license_sub_category ?? item?.licenseSubCategory;
+    const raw =
+      item?.license_sub_category_id ??
+      item?.licenseSubCategoryId ??
+      (typeof nested === 'object' ? nested?.id : nested) ??
+      0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private extractSubCategoryName(item: any): string {
+    const nested = item?.license_sub_category ?? item?.licenseSubCategory;
+    const raw =
+      item?.license_sub_category_name ??
+      item?.licenseSubCategoryName ??
+      (typeof nested === 'object'
+        ? (nested?.description ?? nested?.name ?? nested?.label ?? '')
+        : nested ?? '');
+    return String(raw ?? '').toLowerCase();
+  }
+
   // Supply Chain Section Handlers
   clearSupplyChainSection(): void {
+    const parentSectionMap: Record<string, string> = {
+      'import-permit': 'requisition',
+      'transit-permit': 'transit',
+      'hologram-new': 'hologram',
+      'hologram-request-form': 'hologram-request',
+      'new-license-apply': 'new-license',
+      'company-registration-apply': 'company-registration',
+      'salesman-barman-registration-apply': 'salesman-barman-registration'
+    };
+
+    const current = String(this.selectedSupplyChainSection || '').trim();
+    const parent = parentSectionMap[current];
+
+    if (parent) {
+      this.selectedSupplyChainSection = parent;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: parent },
+        queryParamsHandling: 'merge'
+      });
+      return;
+    }
+
     this.selectedSupplyChainSection = null;
     this.router.navigate([], {
       relativeTo: this.route,
@@ -352,11 +541,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
-    this.activeTable = 'default';
+    this.activeTable = 'approved';
   }
 
   onApplicationTypeChange(): void {
-    this.activeTable = 'default';
+    this.activeTable = 'approved';
     this.loadDashboardData();
   }
 
@@ -369,7 +558,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.appliedDataSource.data = result.applied || [];
     this.pendingDataSource.data = result.pending || [];
     this.approvedDataSource.data = result.approved || [];
-    this.rejectedDataSource.data = [];
+    this.rejectedDataSource.data = result.rejected || [];
   }
 
   private clearDataSources(): void {
@@ -470,6 +659,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       9: 'Joint Commissioner Dashboard',
       10: 'Commissioner Dashboard',
       11: 'Secretary Dashboard',
+      12: 'Deputy Commissioner Dashboard',
     };
 
     const titleFromRoleId = roleNames[this.currentUser?.roleId || 0];
@@ -497,6 +687,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'cancellation': 'Cancellation Management',
       'transit': 'Transit Management',
       'hologram': 'Hologram Procurement',
+      'commissioner-hologram-working-records': 'Hologram Working Records',
+      'commissioner-monthly-view-details': 'Monthly View Details',
       'hologram-request': 'Hologram Request',
       'company-registration': 'Company Registration',
       'company-registration-apply': 'Company Registration',
@@ -512,6 +704,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'import-permit': 'New Requisition Application',
       'hologram-request-form': 'New Hologram Request',
       'hologram-new': 'New Hologram Procurement',
+      'wallet': 'Payment & Wallet',
 
       // IT Cell Sections
       'itcell-hologram': 'Hologram Management (IT Cell)',
@@ -551,7 +744,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'transit',
       'hologram',
       'hologram-request',
-      'new-license'
+      'new-license',
+      'company-registration',
+      'salesman-barman-registration'
     ];
 
     return sectionsWithActions.includes(section);
@@ -566,6 +761,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram': return 'New Hologram';
       case 'hologram-request': return 'New Request';
       case 'new-license': return 'Apply New License';
+      case 'company-registration': return 'Apply Company';
+      case 'salesman-barman-registration': return 'Apply Salesman/Barman';
       default: return 'Create New';
     }
   }
@@ -579,6 +776,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram': return 'add_circle';
       case 'hologram-request': return 'add_circle';
       case 'new-license': return 'add_circle';
+      case 'company-registration': return 'add_circle';
+      case 'salesman-barman-registration': return 'add_circle';
       default: return 'add';
     }
   }
@@ -597,6 +796,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-request-form' } });
     } else if (section === 'new-license') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'new-license-apply' } });
+    } else if (section === 'company-registration') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'company-registration-apply' } });
+    } else if (section === 'salesman-barman-registration') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'salesman-barman-registration-apply' } });
     }
   }
 
@@ -604,11 +807,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Open wallet dialog
   openWallet(): void {
-    // Navigate to the existing payment confirmation page which has wallet functionality
-    this.router.navigate(['/dev-payment-confirmation'], {
+    this.router.navigate(['/dashboard'], {
       queryParams: {
+        section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
-        source: 'dashboard-requisition'
+        source: 'dashboard-wallet'
       }
     });
   }

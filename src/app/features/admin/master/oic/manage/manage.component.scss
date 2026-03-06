@@ -1,0 +1,84 @@
+:host {
+  display: block;
+}
+
+.oic-modal {
+  padding: 4px 4px 0;
+}
+
+.modal-title {
+  margin: 0;
+  text-align: center;
+  font-size: 31px;
+  font-weight: 700;
+  color: #112b66;
+  letter-spacing: 0.2px;
+}
+
+.modal-subtitle {
+  margin: 4px 4px 14px;
+  text-align: center;
+  font-size: 13px;
+  color: #5c6b8f;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 62vh;
+  padding: 4px 2px 8px;
+}
+
+.loading-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4a5d8b;
+  font-size: 13px;
+  padding: 2px 2px 4px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.modal-actions {
+  padding: 12px 0 4px;
+  border-top: 1px solid #e7ecfa;
+  margin-top: 4px;
+}
+
+.save-btn,
+.cancel-btn {
+  min-width: 92px;
+  border-radius: 8px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+@media (max-width: 768px) {
+  .modal-title {
+    font-size: 28px;
+  }
+
+  .modal-subtitle {
+    margin-bottom: 10px;
+  }
+
+  .modal-actions {
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .save-btn,
+  .cancel-btn {
+    flex: 1;
+    width: 100%;
+  }
+}
