@@ -275,10 +275,19 @@ export class LoginComponent extends BaseComponent {
 
     this.authService.sendOtp(formData).subscribe({
       next: (response) => {
+        const otpId = this.extractOtpId(response);
+        if (!otpId) {
+          this.setLoginErrors(['OTP request succeeded but server response was incomplete. Please try again.']);
+          this.isSendingOtp = false;
+          return;
+        }
+
         this.otpSent = true;
-        this.otpIndex = response.otpId;
-        this.loginOtpPreview = response.otp ? String(response.otp) : null;
-        console.log('OTP:', response.otp);
+        this.otpIndex = otpId;
+        this.loginOtpPreview = this.extractOtpPreview(response);
+        this.showOtpSuccessPopup(
+          response?.message || 'OTP sent successfully to your registered mobile number.'
+        );
         this.isSendingOtp = false;
       },
       error: (err) => {
@@ -308,11 +317,20 @@ export class LoginComponent extends BaseComponent {
       purpose: 'register'
     }).subscribe({
       next: (res: any) => {
-        this.registrationOtpId = res.otpId;
+        const otpId = this.extractOtpId(res);
+        if (!otpId) {
+          this.registrationError = true;
+          this.registrationErrorMessages = ['OTP request succeeded but server response was incomplete. Please try again.'];
+          this.isSendingOtp = false;
+          return;
+        }
+
+        this.registrationOtpId = otpId;
         this.registrationOtpSent = true;
+        this.showOtpSuccessPopup(
+          res?.message || 'OTP sent successfully to your mobile number.'
+        );
         this.isSendingOtp = false;
-        //debug log
-        console.log('Registration OTP sent. OTP:', res.otp);
       },
       error: (err) => {
         this.isSendingOtp = false;
@@ -621,6 +639,80 @@ export class LoginComponent extends BaseComponent {
     });
   }
 
+  private showOtpSuccessPopup(message: string): void {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && typeof active.blur === 'function') {
+      active.blur();
+    }
+
+    Swal.fire({
+      position: 'center',
+      icon: 'success',
+      title: 'OTP Sent',
+      text: message,
+      showConfirmButton: false,
+      timer: 2200,
+      timerProgressBar: true,
+      returnFocus: false,
+    });
+  }
+
+  private extractOtpId(payload: any): string | null {
+    return payload?.otpId || payload?.otp_id || payload?.data?.otpId || payload?.data?.otp_id || null;
+  }
+
+  private extractOtpPreview(payload: any): string | null {
+    const otp = payload?.otp ?? payload?.otp_value ?? payload?.data?.otp;
+    return otp ? String(otp) : null;
+  }
+
+  allowOnlyDigits(event: KeyboardEvent): void {
+    const allowedControlKeys = [
+      'Backspace',
+      'Delete',
+      'ArrowLeft',
+      'ArrowRight',
+      'Tab',
+      'Home',
+      'End'
+    ];
+
+    if (allowedControlKeys.includes(event.key)) {
+      return;
+    }
+
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  sanitizePhoneInput(event: Event, target: 'login' | 'registration'): void {
+    const input = event.target as HTMLInputElement;
+    const digitsOnly = (input.value || '').replace(/\D/g, '').slice(0, 10);
+    input.value = digitsOnly;
+
+    if (target === 'login') {
+      this.loginForm.controls['phoneNumber'].setValue(digitsOnly, { emitEvent: false });
+      return;
+    }
+
+    this.registrationForm.controls['phoneNumber'].setValue(digitsOnly, { emitEvent: false });
+  }
+
+  onLoginPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.isPasswordMode && !this.otpSent) {
+      this.sendOtp();
+    }
+  }
+
+  onRegistrationPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.registrationOtpSent && !this.registrationComplete) {
+      this.sendRegistrationOtp();
+    }
+  }
+
   private mapLoginErrors(err: HttpErrorResponse | any, flow: 'password' | 'sendOtp' | 'verifyOtp'): string[] {
     const backendMessages = this.extractErrorMessages(err?.error);
     const status = err?.status;
@@ -648,7 +740,7 @@ export class LoginComponent extends BaseComponent {
         return ['This mobile number is not registered. Please sign up first.'];
       }
       if (status === 429 || hasAny(['too many', 'rate limit'])) {
-        return ['Too many OTP requests. Please wait and try again.'];
+        return ['OTP request limit reached (15 attempts). Please try again after 15 minutes.'];
       }
     }
 
@@ -730,7 +822,7 @@ export class LoginComponent extends BaseComponent {
         return ['This mobile number is already registered. Please sign in instead.'];
       }
       if (status === 429 || hasAny(['too many', 'rate limit'])) {
-        return ['Too many OTP requests. Please wait and try again.'];
+        return ['OTP request limit reached (15 attempts). Please try again after 15 minutes.'];
       }
     }
 

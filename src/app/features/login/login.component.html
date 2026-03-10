@@ -22,7 +22,10 @@
         <input formControlName="middleName" placeholder="Middle Name" />
         <input formControlName="lastName" placeholder="Last Name" required />
 
-        <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required />
+        <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required
+          inputmode="numeric" (keypress)="allowOnlyDigits($event)"
+          (input)="sanitizePhoneInput($event, 'registration')"
+          (keydown.enter)="onRegistrationPhoneEnter($event)" />
 
         <button mat-raised-button color="primary" class="filled-button" type="button" (click)="sendRegistrationOtp()"
           [disabled]="isSendingOtp || 
@@ -216,7 +219,9 @@
       <!-- OTP login -->
       @if (!isPasswordMode) {
       @if (!otpSent) {
-      <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric" required />
+      <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric" required
+        (keypress)="allowOnlyDigits($event)" (input)="sanitizePhoneInput($event, 'login')"
+        (keydown.enter)="onLoginPhoneEnter($event)" />
       <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
         [disabled]="isSendingOtp">Send OTP</button>
       }
