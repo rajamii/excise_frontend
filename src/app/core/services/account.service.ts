@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
   providedIn: 'root',
 })
 export class AccountService {
+  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
   getCurrentUser() {
     return this.userIdentity;
   }
@@ -125,7 +126,11 @@ export class AccountService {
     }
 
     if (isPlatformBrowser(this.platformId)) {
+      const blockedUsers = localStorage.getItem(this.blockedUsersStorageKey);
       localStorage.clear();
+      if (blockedUsers) {
+        localStorage.setItem(this.blockedUsersStorageKey, blockedUsers);
+      }
       sessionStorage.clear();
     }
     this.authenticate(null);

@@ -28,6 +28,7 @@ import { HttpErrorResponse } from '@angular/common/http';
   styleUrl: './login.component.scss',
 })
 export class LoginComponent extends BaseComponent {
+  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
   loginForm: FormGroup;
   registrationForm: FormGroup;
   isPasswordMode = true;
@@ -244,6 +245,42 @@ export class LoginComponent extends BaseComponent {
     }
   }
 
+  private getBlockedUsers(): Array<{ id?: number; username?: string; phoneNumber?: string; email?: string }> {
+    try {
+      const raw = localStorage.getItem(this.blockedUsersStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private isLocallyBlockedByUsername(username: string): boolean {
+    const normalized = String(username || '').trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.username || '').trim().toLowerCase() === normalized);
+  }
+
+  private isLocallyBlockedByPhone(phoneNumber: string): boolean {
+    const normalized = String(phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10) === normalized);
+  }
+
+  private isLocallyBlockedUser(user: any): boolean {
+    const username = String(user?.username || user?.login || '').trim().toLowerCase();
+    const phone = String(user?.phoneNumber || user?.phone_number || '').replace(/\D/g, '').slice(0, 10);
+    return this.getBlockedUsers().some(entry => {
+      const blockedUsername = String(entry?.username || '').trim().toLowerCase();
+      const blockedPhone = String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+      return (!!username && blockedUsername === username) || (!!phone && blockedPhone === phone);
+    });
+  }
+
   // Fetch districts
   fetchDistricts(): void {
     this.loadingDistricts = true;
@@ -295,6 +332,11 @@ export class LoginComponent extends BaseComponent {
 
     if (phoneControl.invalid) {
       this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
+      return;
+    }
+
+    if (this.isLocallyBlockedByPhone(sanitizedPhoneNumber)) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
       return;
     }
 
@@ -496,6 +538,11 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
+    if (this.isLocallyBlockedByUsername(String(this.loginForm.value.username || ''))) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+      return;
+    }
+
     this.clearLoginErrors();
     this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
@@ -596,6 +643,11 @@ export class LoginComponent extends BaseComponent {
       this.accountService.identity(true).subscribe({
         next: (user) => {
           if (user) {
+            if (this.isLocallyBlockedUser(user)) {
+              this.accountService.clearAppData();
+              this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+              return;
+            }
             const previousUrl = this.stateStorgeService.getUrl();
             if (previousUrl && previousUrl !== '/login') {
               this.stateStorgeService.clearUrl();
