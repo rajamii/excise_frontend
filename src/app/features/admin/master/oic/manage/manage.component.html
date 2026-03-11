@@ -1,6 +1,8 @@
 <div class="oic-modal">
-  <h2 mat-dialog-title class="modal-title">Add Officers</h2>
-  <p class="modal-subtitle">Create an officer account mapped to an approved establishment.</p>
+  <h2 mat-dialog-title class="modal-title">{{ isEditMode ? 'Update Officer' : 'Add Officers' }}</h2>
+  <p class="modal-subtitle">
+    {{ isEditMode ? 'Update the officer account mapped to an approved establishment.' : 'Create an officer account mapped to an approved establishment.' }}
+  </p>
 
   <form #formRef="ngForm" class="modal-form">
     <mat-dialog-content class="modal-content">
@@ -117,7 +119,7 @@
         (click)="onSave()"
         [disabled]="formRef.invalid || isSaving || isLoading"
       >
-        {{ isSaving ? 'Saving...' : 'Save' }}
+        {{ isSaving ? (isEditMode ? 'Updating...' : 'Saving...') : (isEditMode ? 'Update' : 'Save') }}
       </button>
       <button matButton="filled" color="warn" class="cancel-btn" (click)="onCancel()" [disabled]="isSaving">
         Cancel

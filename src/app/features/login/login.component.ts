@@ -717,6 +717,9 @@ export class LoginComponent extends BaseComponent {
     const hasAny = (terms: string[]) => terms.some((term) => normalizedText.includes(term));
 
     if (flow === 'password') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (status === 401 || hasAny(['invalid credentials', 'incorrect password', 'invalid password', 'wrong password'])) {
         return ['Incorrect user ID or password. Please try again.'];
       }
@@ -729,6 +732,9 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'sendOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (hasAny(['invalid phone', 'invalid mobile', 'phone number', 'mobile number', 'format'])) {
         return ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
       }
@@ -741,6 +747,9 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'verifyOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp'])) {
         return ['Invalid OTP. Enter the correct OTP and try again.'];
       }

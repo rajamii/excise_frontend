@@ -25,6 +25,7 @@ export class ManageComponent implements OnInit {
   isLoading = false;
   isSaving = false;
   submitAttempted = false;
+  isEditMode = false;
 
   form: CreateOICOfficerPayload = {
     approvedApplicationId: '',
@@ -40,6 +41,15 @@ export class ManageComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.isEditMode = !!this.data?.id;
+    if (this.data) {
+      this.form = {
+        approvedApplicationId: String(this.data.applicationId || ''),
+        name: String(this.data.name || ''),
+        email: String(this.data.email || ''),
+        phoneNumber: String(this.data.phoneNumber || '')
+      };
+    }
     this.loadEstablishments();
   }
 
@@ -209,10 +219,14 @@ export class ManageComponent implements OnInit {
     }
 
     this.isSaving = true;
-    this.adminService.createOICOfficer(this.form).subscribe({
+    const request = this.isEditMode && this.data?.id
+      ? this.adminService.updateOICOfficer(this.data.id, this.form)
+      : this.adminService.createOICOfficer(this.form);
+
+    request.subscribe({
       next: (response) => {
         this.isSaving = false;
-        Swal.fire('Success', 'Officer created successfully.', 'success');
+        Swal.fire('Success', this.isEditMode ? 'Officer updated successfully.' : 'Officer created successfully.', 'success');
         this.dialogRef.close({
           refresh: true,
           credentials: response?.credentials || null

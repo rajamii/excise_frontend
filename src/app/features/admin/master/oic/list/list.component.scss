@@ -71,7 +71,7 @@ mat-card.oic-card mat-card-header.oic-card-header {
 
 .oic-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1120px;
   border-radius: 8px;
   overflow: hidden;
 
@@ -98,6 +98,10 @@ mat-card.oic-card mat-card-header.oic-card-header {
 
   .email-cell {
     word-break: break-word;
+  }
+
+  .mat-mdc-slide-toggle {
+    margin-left: 0;
   }
 }
 
