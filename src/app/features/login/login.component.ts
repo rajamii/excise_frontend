@@ -220,6 +220,30 @@ export class LoginComponent extends BaseComponent {
     this.hidePassword = !this.hidePassword;
   }
 
+  sanitizePhoneNumberInput(form: 'login' | 'registration', event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    const sanitizedValue = input.value.replace(/\D/g, '').slice(0, 10);
+    if (input.value !== sanitizedValue) {
+      input.value = sanitizedValue;
+    }
+
+    const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
+    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: false });
+    targetForm.get('phoneNumber')?.markAsDirty();
+    targetForm.get('phoneNumber')?.updateValueAndValidity();
+  }
+
+  onOtpPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.isPasswordMode && !this.otpSent) {
+      this.sendOtp();
+    }
+  }
+
   // Fetch districts
   fetchDistricts(): void {
     this.loadingDistricts = true;
@@ -263,14 +287,20 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    if (this.loginForm.controls['phoneNumber'].invalid) {
+    const phoneControl = this.loginForm.controls['phoneNumber'];
+    const sanitizedPhoneNumber = String(phoneControl.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl.value !== sanitizedPhoneNumber) {
+      phoneControl.setValue(sanitizedPhoneNumber);
+    }
+
+    if (phoneControl.invalid) {
       this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
       return;
     }
 
     this.isSendingOtp = true;
     this.clearLoginErrors();
-    const phoneNumber = this.loginForm.value.phoneNumber;
+    const phoneNumber = sanitizedPhoneNumber;
     const formData = FormDataUtil.buildFormData({ phoneNumber });
 
     this.authService.sendOtp(formData).subscribe({
@@ -295,12 +325,18 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendRegistrationOtp() {
+    const phoneControl = this.registrationForm.get('phoneNumber');
+    const sanitizedPhoneNumber = String(phoneControl?.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl?.value !== sanitizedPhoneNumber) {
+      phoneControl?.setValue(sanitizedPhoneNumber);
+    }
+
     if (this.registrationForm.invalid) {
       this.registrationError = true;
       this.registrationErrorMessages = this.getRegistrationValidationErrors();
       return;
     }
-    const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
+    const phoneNumber = sanitizedPhoneNumber;
     this.isSendingOtp = true;
     this.registrationError = false;
     this.authService.sendRegistrationOtp({

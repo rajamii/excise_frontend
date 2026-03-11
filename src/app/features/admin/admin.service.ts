@@ -40,7 +40,11 @@ export interface OICOfficerRecord {
   licenseId: string;
   licensee_id: string;
   establishment_name: string;
+  establishmentName?: string;
   created_at: string;
+  createdAt?: string;
+  officer_created_at?: string;
+  officerCreatedAt?: string;
 }
 
 export interface CreateOICOfficerPayload {

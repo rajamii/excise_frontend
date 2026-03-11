@@ -383,6 +383,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    if (this.currentUser?.roleId === 5 && this.selectedSupplyChainSection === 'transit-applications') {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
+
     if (this.selectedSupplyChainSection !== 'wallet') {
       return;
     }
@@ -858,7 +869,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 5: // Permit Section
         this.quickActions = [
           { id: 'review-permits', label: 'Review Permits', icon: 'assignment', color: 'primary', action: () => this.navigateToSection('requisition') },
-          { id: 'approve-transit', label: 'Transit Approvals', icon: 'local_shipping', color: 'accent', action: () => this.navigateToSection('transit') },
           { id: 'generate-report', label: 'Generate Report', icon: 'assessment', color: 'warn', action: () => this.generateReport() }
         ];
         break;

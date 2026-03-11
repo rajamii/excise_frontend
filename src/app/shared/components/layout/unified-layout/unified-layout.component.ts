@@ -59,6 +59,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     label: string;
     icon: string;
     hideForSiteAdmin?: boolean;
+    hideForPermitSection?: boolean;
     hideForOic?: boolean;
     hideForCommissioner?: boolean;
     showOnlyForOic?: boolean;
@@ -73,7 +74,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     { section: 'transit', label: 'Transit', icon: 'local_shipping', hideForCommissioner: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
-    { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
+    { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
     { section: 'brands', label: 'Brands Details', icon: 'label' },
     { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
     { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
@@ -823,8 +824,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('commissioner');
   }
 
+  isPermitSectionUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    return roleId === 5;
+  }
+
   canAccessSection(section: string): boolean {
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      return false;
+    }
+
+    if (this.isPermitSectionUser() && section === 'transit-applications') {
       return false;
     }
 

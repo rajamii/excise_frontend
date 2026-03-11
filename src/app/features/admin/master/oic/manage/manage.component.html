@@ -18,14 +18,39 @@
           #applicationModel="ngModel"
           [disabled]="isLoading || isSaving"
         >
-          <mat-option *ngFor="let item of establishments" [value]="item.applicationId">
-            {{ item.establishmentName }} ({{ item.licenseId }})
+          <mat-select-trigger>
+            {{ getSelectedEstablishmentLabel() }}
+          </mat-select-trigger>
+          <mat-option
+            *ngFor="let item of establishments"
+            [value]="item.applicationId"
+            [class.existing-oic-option]="hasExistingOic(item)"
+          >
+            <div class="establishment-option">
+              <span class="establishment-option__label">{{ item.establishmentName }} ({{ item.licenseId }})</span>
+              <span *ngIf="hasExistingOic(item)" class="establishment-option__badge">
+                Already entered ({{ getOicCount(item) }})
+              </span>
+            </div>
           </mat-option>
         </mat-select>
+        <mat-hint *ngIf="selectedEstablishmentHasExistingOic()" class="existing-oic-hint">
+          This establishment already has {{ getSelectedEstablishmentOicCount() }} OIC mapped.
+        </mat-hint>
         <mat-error *ngIf="(applicationModel.touched || submitAttempted) && applicationModel.errors?.['required']">
           Establishment is required
         </mat-error>
       </mat-form-field>
+      <div *ngIf="shouldShowOicDetailsButton()" class="existing-oic-details-wrap">
+        <button
+          mat-stroked-button
+          type="button"
+          class="existing-oic-details-btn"
+          (click)="viewExistingOicDetails()"
+        >
+          Details
+        </button>
+      </div>
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Name</mat-label>

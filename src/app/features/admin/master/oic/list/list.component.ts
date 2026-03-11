@@ -52,7 +52,7 @@ export class ListComponent implements OnInit {
 
   onAddOfficer(): void {
     const dialogRef = this.dialog.open(ManageComponent, {
-      width: '560px',
+      width: '760px',
       maxWidth: '96vw',
       autoFocus: false,
       panelClass: 'oic-manage-dialog'
@@ -91,5 +91,19 @@ export class ListComponent implements OnInit {
       return '-';
     }
     return parsed.toLocaleString();
+  }
+
+  getCreatedAtDisplay(row: OICOfficerRecord): string {
+    return this.formatDate(
+      row.created_at ||
+      row.createdAt ||
+      row.officer_created_at ||
+      row.officerCreatedAt ||
+      ''
+    );
+  }
+
+  getEstablishmentDisplay(row: OICOfficerRecord): string {
+    return row.establishment_name || row.establishmentName || '-';
   }
 }

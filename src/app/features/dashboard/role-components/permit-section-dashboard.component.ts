@@ -198,13 +198,20 @@ export class PermitSectionDashboardComponent implements OnInit {
     this.loadAllApplications();
   }
 
+  private isPermitSectionUser(): boolean {
+    return Number(this.accountService.getCurrentUser()?.role?.id ?? 0) === 5;
+  }
+
   loadAllApplications(): void {
     // Load all types of applications for permit section review
     this.loadRequisitions();
     this.loadRevalidations();
     this.loadCancellations();
-    this.loadTransitPermits();
     this.loadHolograms();
+
+    if (!this.isPermitSectionUser()) {
+      this.loadTransitPermits();
+    }
   }
 
   loadRequisitions(): void {
@@ -340,7 +347,7 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   getFilterOptions() {
-    return [
+    const options = [
       { value: 'all', label: 'All Applications' },
       { value: 'requisition', label: 'Requisitions' },
       { value: 'revalidation', label: 'Revalidations' },
@@ -348,6 +355,10 @@ export class PermitSectionDashboardComponent implements OnInit {
       { value: 'transit', label: 'Transit Permits' },
       { value: 'hologram', label: 'Holograms' }
     ];
+
+    return this.isPermitSectionUser()
+      ? options.filter(option => option.value !== 'transit')
+      : options;
   }
 
   onDashboardFilterChange(filterValue: string): void {
