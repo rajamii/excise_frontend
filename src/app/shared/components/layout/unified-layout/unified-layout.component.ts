@@ -52,6 +52,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  readonly sidebarSectionLabels: Record<string, string> = {
+    requisition: 'Ena Requisition',
+    revalidation: 'Ena Revalidation',
+    cancellation: 'Ena Cancellation',
+    transit: 'Transit Permit',
+    hologram: 'New Hologram Procurement'
+  };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
   readonly officerSectionItems: Array<{
@@ -66,13 +73,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
-    { section: 'requisition', label: 'Requisition', icon: 'description' },
-    { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
-    { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
-    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true },
+    { section: 'requisition', label: 'Ena Requisition', icon: 'description' },
+    { section: 'revalidation', label: 'Ena Revalidation', icon: 'refresh' },
+    { section: 'cancellation', label: 'Ena Cancellation', icon: 'cancel' },
+    { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
-    { section: 'transit', label: 'Transit', icon: 'local_shipping', hideForCommissioner: true },
+    { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
     { section: 'brands', label: 'Brands Details', icon: 'label' },
@@ -586,6 +593,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   isWalletActive(): boolean {
     return this.isDashboardSectionActive('wallet');
+  }
+
+  getSidebarLabel(section: string, fallbackLabel?: string): string {
+    return this.sidebarSectionLabels[section] || fallbackLabel || section;
   }
 
   // Check if user is licensee/supply chain
