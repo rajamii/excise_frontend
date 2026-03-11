@@ -21,6 +21,7 @@ export interface CommissionerTableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
+  factoryName?: string;
   status: string;
   amount: string;
   priority?: string;
@@ -563,6 +564,7 @@ export class CommissionerDashboardComponent implements OnInit {
           referenceNo: item.ourRefNo || item.our_ref_no,
           submissionDate: subDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
           expiryDate: expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+          factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || item.distilleryName || item.distillery_name || 'Unknown Factory',
           distilleryName: item.distilleryName || item.distillery_name || 'Unknown Distillery',
           status: status,
           amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',

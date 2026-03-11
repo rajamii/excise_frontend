@@ -74,7 +74,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
     { section: 'requisition', label: 'Ena Requisition', icon: 'description' },
-    { section: 'revalidation', label: 'Ena Revalidation', icon: 'refresh' },
+    { section: 'revalidation', label: 'Ena Revalidation', icon: 'refresh', hideForPermitSection: true },
     { section: 'cancellation', label: 'Ena Cancellation', icon: 'cancel' },
     { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
@@ -837,7 +837,19 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   isPermitSectionUser(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    return roleId === 5;
+    if (roleId === 5) {
+      return true;
+    }
+
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      this.user?.role?.name ||
+      this.user?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('permitsection');
   }
 
   canAccessSection(section: string): boolean {

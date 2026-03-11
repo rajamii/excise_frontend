@@ -50,7 +50,7 @@
               <mat-icon class="nav-icon">description</mat-icon>
               <span class="nav-text">{{ getSidebarLabel('requisition') }}</span>
             </button>
-            <button class="nav-item" *ngIf="showDistilleryMenus" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
+            <button class="nav-item" *ngIf="showDistilleryMenus && !isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
               <mat-icon class="nav-icon">refresh</mat-icon>
               <span class="nav-text">{{ getSidebarLabel('revalidation') }}</span>
             </button>

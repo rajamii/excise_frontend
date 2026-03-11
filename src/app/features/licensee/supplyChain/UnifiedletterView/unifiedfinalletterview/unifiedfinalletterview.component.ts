@@ -1,7 +1,10 @@
 import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, map, of } from 'rxjs';
 import { SupplyChainService } from '../../services/supplychain.service';
+import { environment } from '../../../../../../environments/environment';
 
 interface CancellationFinalLetterData {
   id: string;
@@ -44,6 +47,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private supplyChainService: SupplyChainService,
+    private http: HttpClient,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -235,8 +239,34 @@ export class UnifiedfinalletterviewComponent implements OnInit {
             }
           }
           
-          this.mapApiDataToFinalLetter(foundItem);
-          this.isLoading = false;
+          const resolvedRefNo = String(
+            this.route.snapshot.queryParamMap.get('refNo') ||
+            foundItem.ourRefNo ||
+            foundItem.our_ref_no ||
+            foundItem.referenceNo ||
+            foundItem.ref_no ||
+            ''
+          ).trim();
+
+          if (this.resolvePermitNumbers(foundItem).length > 0 || !resolvedRefNo) {
+            this.mapApiDataToFinalLetter(foundItem);
+            this.isLoading = false;
+            return;
+          }
+
+          this.fetchPermitNumbersFromRequisition(resolvedRefNo).subscribe({
+            next: (permitNumbers) => {
+              if (permitNumbers.length > 0) {
+                foundItem.details_permits_number = permitNumbers.join(',');
+              }
+              this.mapApiDataToFinalLetter(foundItem);
+              this.isLoading = false;
+            },
+            error: () => {
+              this.mapApiDataToFinalLetter(foundItem);
+              this.isLoading = false;
+            }
+          });
         } else {
           console.warn('Revalidation not found for ID:', revalidationId);
           
@@ -293,17 +323,9 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     const referenceNo = passedRefNo ? decodeURIComponent(passedRefNo) : 
                        (apiData.ourRefNo || apiData.our_ref_no || 'CAN/001/2025');
     
-    // Get permit numbers from details_permits_number field ONLY - no fallback
-    let permitNumbers: string[] = [];
-    if (apiData.details_permits_number || apiData.detailsPermitsNumber) {
-      const detailsPermits = apiData.details_permits_number || apiData.detailsPermitsNumber;
-      permitNumbers = this.parsePermitNumbersFromDetails(detailsPermits);
-      console.log('✅ Using permit numbers from details_permits_number:', detailsPermits, '→', permitNumbers);
-    } else {
-      // No details_permits_number in database - show empty or error
-      console.log('❌ details_permits_number not found in database');
-      permitNumbers = []; // Empty array - will show "No data" in the letter
-    }
+    const permitNumbers = this.resolvePermitNumbers(apiData);
+    const originalPermitDate = this.resolveOriginalPermitDate(apiData);
+    const revalidatedUpToDate = this.resolveRevalidationValidUpToDate(apiData, originalPermitDate);
     
     console.log('📋 Mapping API data to final letter:', {
       establishment_name: apiData.establishment_name,
@@ -324,10 +346,10 @@ export class UnifiedfinalletterviewComponent implements OnInit {
       distilleryAddress: this.generateDistilleryAddress(establishmentName),
       exciseOfficerName: 'The Excise Officer-in-Charge',
       permitNumbers: permitNumbers,
-      originalPermitDate: new Date(apiData.requisitionDate || apiData.requisition_date || Date.now()),
+      originalPermitDate: originalPermitDate,
       cancellationReason: apiData.reasonForCancellation || apiData.reason_for_cancellation || 'As per your request',
       approvedBy: '',
-      approvedDate: new Date(),
+      approvedDate: revalidatedUpToDate,
       fileNumber: '',
       commissionerName: '',
       commissionerDesignation: '',
@@ -352,6 +374,113 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     
     console.log('✅ Parsed permits:', permits);
     return permits;
+  }
+
+  private resolvePermitNumbers(apiData: any): string[] {
+    const permitSources = [
+      apiData?.details_permits_number,
+      apiData?.detailsPermitsNumber,
+      apiData?.permit_numbers,
+      apiData?.permitNumbers,
+      apiData?.requisition?.details_permits_number,
+      apiData?.requisition?.detailsPermitsNumber,
+      apiData?.requisition?.permit_numbers,
+      apiData?.requisition?.permitNumbers
+    ];
+
+    for (const source of permitSources) {
+      const parsed = this.parsePermitNumbersFromDetails(String(source || ''));
+      if (parsed.length > 0) {
+        console.log('✅ Using permit numbers from dynamic source:', source, '→', parsed);
+        return parsed;
+      }
+    }
+
+    const permitCount = Number(
+      apiData?.requisiton_number_of_permits ??
+      apiData?.requisition_number_of_permits ??
+      apiData?.number_of_permits ??
+      apiData?.numberOfPermits ??
+      apiData?.requisition?.requisiton_number_of_permits ??
+      apiData?.requisition?.requisition_number_of_permits ??
+      apiData?.requisition?.number_of_permits ??
+      apiData?.requisition?.numberOfPermits ??
+      0
+    );
+
+    if (permitCount > 0) {
+      const generated = Array.from({ length: permitCount }, (_, index) => String(index + 1));
+      console.log('⚠️ Permit numbers missing, generated from permit count:', permitCount, '→', generated);
+      return generated;
+    }
+
+    console.log('❌ No permit number data found in revalidation/requisition payload');
+    return [];
+  }
+
+  private fetchPermitNumbersFromRequisition(referenceNo: string) {
+    const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/`;
+    return this.http.get<any>(url, {
+      params: { our_ref_no: referenceNo }
+    }).pipe(
+      map((response: any) => {
+        const rows = Array.isArray(response)
+          ? response
+          : (Array.isArray(response?.results) ? response.results : []);
+        const matched = rows.find((row: any) => {
+          const ref = String(
+            row?.our_ref_no ||
+            row?.ourRefNo ||
+            row?.referenceNo ||
+            row?.ref_no ||
+            ''
+          ).trim().toUpperCase();
+          return ref === String(referenceNo || '').trim().toUpperCase();
+        }) || rows[0];
+
+        if (!matched) {
+          return [];
+        }
+
+        return this.resolvePermitNumbers(matched);
+      }),
+      catchError((error) => {
+        console.error('Error fetching requisition permit numbers:', error);
+        return of([]);
+      })
+    );
+  }
+
+  private resolveOriginalPermitDate(apiData: any): Date {
+    return new Date(
+      apiData?.requisitionDate ||
+      apiData?.requisition_date ||
+      apiData?.approvalDate ||
+      apiData?.approval_date ||
+      apiData?.revalidationDate ||
+      apiData?.revalidation_date ||
+      Date.now()
+    );
+  }
+
+  private resolveRevalidationValidUpToDate(apiData: any, baseDate: Date): Date {
+    const explicitDate = new Date(
+      apiData?.expiryDate ||
+      apiData?.expiry_date ||
+      apiData?.validTo ||
+      apiData?.valid_to ||
+      apiData?.validityDate ||
+      apiData?.validity_date ||
+      ''
+    );
+
+    if (!Number.isNaN(explicitDate.getTime())) {
+      return explicitDate;
+    }
+
+    const validUpTo = new Date(baseDate);
+    validUpTo.setDate(validUpTo.getDate() + 45);
+    return validUpTo;
   }
 
   private loadSampleFinalLetterData(cancellationId: string): void {

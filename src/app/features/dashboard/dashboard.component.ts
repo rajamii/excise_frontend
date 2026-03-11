@@ -383,7 +383,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
-    if (this.currentUser?.roleId === 5 && this.selectedSupplyChainSection === 'transit-applications') {
+    if (this.currentUser?.roleId === 5 && ['transit-applications'].includes(String(this.selectedSupplyChainSection || ''))) {
       this.selectedSupplyChainSection = null;
       this.router.navigate([], {
         relativeTo: this.route,
