@@ -922,6 +922,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       result = result.filter(config => !exclude.includes(config.action));
     }
 
+    result = this.applyRequisitionPostPaymentActionRules(result);
+
     // Deduplicate by action so multiple transitions mapped to same action
     // (e.g., two "approve-like" paths) don't render duplicate buttons.
     const seen = new Set<string>();
@@ -935,6 +937,41 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', deduped);
     return deduped;
+  }
+
+  private applyRequisitionPostPaymentActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    if (this.itemType !== 'requisition') {
+      return configs;
+    }
+
+    if (!['permit-section', 'commissioner'].includes(this.context)) {
+      return configs;
+    }
+
+    if (!this.isRequisitionPostPaymentStage()) {
+      return configs;
+    }
+
+    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+  }
+
+  private isRequisitionPostPaymentStage(): boolean {
+    const status = String(this.item?.status || '').toLowerCase().replace(/\s+/g, '');
+    const stageName = String(this.item?.['currentStageName'] || this.item?.['current_stage_name'] || '').toLowerCase().replace(/\s+/g, '');
+
+    const merged = `${status} ${stageName}`;
+    const postPaymentMarkers = [
+      'payslip',
+      'payment',
+      'paid',
+      'wallet',
+      'approvedbypermitsection',
+      'forwardedtocommissioner',
+      'approvedbycommissioner',
+      'rejectedbycommissioner'
+    ];
+
+    return postPaymentMarkers.some(marker => merged.includes(marker));
   }
 
   private normalizeActionConfig(config: any): ActionButtonConfig {

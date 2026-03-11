@@ -18,6 +18,7 @@ interface TableData {
   submissionDateRaw?: string;
   approvalDateRaw?: string;
   distilleryName: string;
+  establishmentName?: string;
   status: string;
   amount: string;
   workflowId?: number;
@@ -247,6 +248,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             submissionDateRaw: dateVal || '',
             approvalDateRaw: item.approvalDate || item.approval_date || '',
             distilleryName: item.liftedFromDistilleryName || item.lifted_from_distillery_name || item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
+            establishmentName:
+              item.establishmentName ||
+              item.establishment_name ||
+              item.manufacturingUnitName ||
+              item.manufacturing_unit_name ||
+              item.licenseeName ||
+              item.licensee_name ||
+              'N/A',
             status: item.status || 'PENDING',
             amount: item.amount || item.paymentAmount || item.payment_amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
             workflowId: item.workflow || item.workflow_id || item.workflowId,
