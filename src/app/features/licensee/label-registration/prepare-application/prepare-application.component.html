@@ -1,27 +1,20 @@
-<mat-horizontal-stepper [linear]="true" #stepper>
-  <mat-step label="Licensee Details">
+<mat-horizontal-stepper [linear]="true" #stepper (selectionChange)="onStepSelectionChange($event)">
+  <mat-step label="Applicant Details">
     <app-label-registration-licensee-details (next)="stepper.next()"></app-label-registration-licensee-details>
   </mat-step>
 
-  <mat-step label="Label Details">
+  <mat-step label="Manufacturer & Brand">
     <app-label-registration-product-details
       (back)="stepper.previous()"
       (next)="stepper.next()">
     </app-label-registration-product-details>
   </mat-step>
 
-  <mat-step label="Packaging & Pricing">
+  <mat-step label="Package Details">
     <app-label-registration-packaging-details
       (back)="stepper.previous()"
       (next)="stepper.next()">
     </app-label-registration-packaging-details>
-  </mat-step>
-
-  <mat-step label="Upload Documents">
-    <app-label-registration-upload-documents
-      (back)="stepper.previous()"
-      (next)="stepper.next()">
-    </app-label-registration-upload-documents>
   </mat-step>
 
   <mat-step label="Submit Application">

@@ -1,51 +1,53 @@
 export interface LabelRegistrationLicenseeDetails {
   applicationYear: string;
-  licenseeName: string;
-  licenseNumber: string;
-  licenseType: string;
-  establishmentName: string;
-  contactPerson: string;
-  contactNumber: string;
-  emailAddress: string;
-  premisesAddress: string;
+  applicantType: string;
+  liquorCategory: string;
+  applicationDate: string;
+  registrationValidFrom: string;
+  registrationValidUpTo: string;
 }
 
 export interface LabelRegistrationProductDetails {
+  // Manufacturer
+  bottlerOrigin: string;
+  bottlerState?: string;
+  bottlerName: string;
+  bottlerAddress: string;
+
+  // Brand owner
+  brandOwnerType: string;
+  brandOwnerCode?: string;
+  brandOwnerName: string;
+  brandOwnerAddress: string;
+
+  // Brand
+  liquorKind: string;
+  liquorType: string;
+  brandCode?: string;
   brandName: string;
-  labelName: string;
-  liquorCategory: string;
-  labelType: string;
-  abvStrength: number;
-  netContentMl: number;
-  originState: string;
-  ingredients: string;
-  declarationText: string;
-  barcode: string;
-  shelfLifeMonths: number;
+
+  // Strength
+  allowedStrength: number;
+  strengthValue: number;
+  strengthUnit: string;
 }
 
 export interface LabelRegistrationPackagingItem {
-  sizeMl: number;
-  packagingType: string;
-  unitsPerCase: number;
-  mrp: number;
+  measureValueMl: number;
+  packageType: string;
+  purposeSale: string;
+  bottlesPerCase: number;
+  edpPerCase: number;
+  mrpPerBottle: number;
+  exciseDutyPerCase?: number;
+  bottlingFeePerCase?: number;
+  importPerCase?: number;
+  exportPerCase?: number;
+  mrpRange?: string;
 }
 
 export interface LabelRegistrationPackagingDetails {
   packagingRows: LabelRegistrationPackagingItem[];
-  marketDistricts: string[];
-  proposedLaunchDate: string;
-  annualProjectedSales: number;
-  remarks?: string;
-}
-
-export interface LabelRegistrationDocuments {
-  undertaking: File;
-  brandAuthorization: File;
-  labelArtworkFront: File;
-  labelArtworkBack?: File;
-  labAnalysisReport: File;
-  trademarkCertificate?: File;
 }
 
 export interface LabelRegistrationSubmission {

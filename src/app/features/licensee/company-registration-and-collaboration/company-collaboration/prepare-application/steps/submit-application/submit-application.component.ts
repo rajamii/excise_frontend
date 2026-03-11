@@ -33,7 +33,8 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
   acceptTerms = false;
   isSubmitting = false;
   applicationId: string | null = null;
-  submissionMode: 'online' | 'local' | null = null;
+  collaborationId: string | null = null;
+  submissionMode: 'online' | null = null;
 
   private lastDataCheck = '';
 
@@ -148,27 +149,35 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       const formData = this.buildFormData();
       const response = await firstValueFrom(this.collaborationService.applyCompanyCollaboration(formData));
 
-      this.applicationId = response?.applicationId || response?.application_id || this.generateApplicationId();
+      const collaborationId =
+        response?.id ?? response?.data?.id ?? response?.collaborationId ?? response?.collaboration_id;
+      this.collaborationId =
+        collaborationId !== undefined && collaborationId !== null && String(collaborationId).trim()
+          ? String(collaborationId)
+          : null;
+      this.applicationId =
+        response?.applicationId ||
+        response?.application_id ||
+        response?.data?.applicationId ||
+        response?.data?.application_id ||
+        this.generateApplicationId();
       this.submissionMode = 'online';
-      this.saveSubmission('Submitted', 'online', response?.id);
+      this.saveSubmission('Submitted', 'online', response?.id || response?.applicationId || response?.application_id);
 
       await Swal.fire(
         'Success',
         `Application submitted successfully. ID: ${this.applicationId}`,
         'success'
       );
+      this.clearApplicationData();
     } catch (error) {
       const httpError = error as HttpErrorResponse;
       console.error('Company collaboration submit failed:', httpError);
 
-      this.applicationId = this.generateApplicationId();
-      this.submissionMode = 'local';
-      this.saveSubmission('Saved Locally', 'local');
-
       await Swal.fire(
-        'Saved In Local Mode',
-        `Backend endpoint is unavailable. Local reference ID: ${this.applicationId}`,
-        'warning'
+        'Submission Failed',
+        this.getErrorMessage(httpError),
+        'error'
       );
     } finally {
       this.isSubmitting = false;
@@ -189,7 +198,7 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
 
     formData.append('financial_year', String(this.bottlerDetails.financialYear || this.getCurrentFinancialYear()));
     formData.append('application_year', String(this.bottlerDetails.financialYear || this.getCurrentFinancialYear()));
-    formData.append('brand_owner', String(this.bottlerDetails.brandOwner || ''));
+    formData.append('brand_owner', String(this.bottlerDetails.brandOwnerName || this.bottlerDetails.brandOwner || ''));
     formData.append('brand_owner_code', String(this.bottlerDetails.brandOwnerCode || ''));
     formData.append('brand_owner_name', String(this.bottlerDetails.brandOwnerName || ''));
     formData.append('brand_owner_address', String(this.bottlerDetails.brandOwnerAddress || ''));
@@ -245,6 +254,37 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.submission, JSON.stringify(payload));
   }
 
+  private getErrorMessage(error: HttpErrorResponse): string {
+    const detail = error?.error?.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+
+    if (detail && typeof detail === 'object') {
+      const firstEntry = Object.entries(detail)[0];
+      if (firstEntry) {
+        const [, value] = firstEntry;
+        if (Array.isArray(value)) {
+          return value.join(', ');
+        }
+        return String(value);
+      }
+    }
+
+    if (error?.error && typeof error.error === 'object') {
+      const firstEntry = Object.entries(error.error)[0];
+      if (firstEntry) {
+        const [, value] = firstEntry;
+        if (Array.isArray(value)) {
+          return value.join(', ');
+        }
+        return String(value);
+      }
+    }
+
+    return error?.message || 'Unable to submit company collaboration application.';
+  }
+
   private getCurrentFinancialYear(): string {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -271,8 +311,33 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     });
   }
 
+  async openApplicationSummary(): Promise<void> {
+    if (!this.applicationId) {
+      return;
+    }
+
+    const queryParams = {
+      id: this.collaborationId || this.applicationId,
+      ref: this.applicationId,
+      type: 'company-collaboration',
+      source: 'licensee'
+    };
+
+    try {
+      const navigated = await this.router.navigate(['/supply-chain-view'], { queryParams });
+      if (!navigated && typeof window !== 'undefined') {
+        const params = new URLSearchParams(queryParams);
+        window.location.href = `/supply-chain-view?${params.toString()}`;
+      }
+    } catch {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(queryParams);
+        window.location.href = `/supply-chain-view?${params.toString()}`;
+      }
+    }
+  }
+
   goToDashboard(): void {
-    this.clearApplicationData();
     this.router.navigate(['/dashboard']);
   }
 

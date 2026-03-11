@@ -1,12 +1,15 @@
 <mat-card>
   <mat-card-header>
     <div class="heading">Submit Application</div>
+    @if (!applicationId) {
     <div class="validation">
       Review all details before final submission
     </div>
+    }
   </mat-card-header>
 
   <mat-card-content>
+    @if (!applicationId) {
     <!-- Application Summary Section -->
     <div class="info-section" *ngIf="bottlerDetails || companyDetails || selectedBrands.length > 0">
       <div class="section-header">
@@ -125,7 +128,7 @@
                 <span>{{ brand.brand_code }}</span> | 
                 <span>{{ brand.category }}</span> | 
                 <span>{{ brand.type }}</span> | 
-                <span>{{ brand.strength }}% ABV</span>
+                <span>{{ brand.strength !== null ? brand.strength + '% ABV' : 'Strength N/A' }}</span>
               </div>
               <div class="brand-sizes">
                 Sizes: {{ brand.sizes.join(', ') }}
@@ -171,8 +174,8 @@
         </span>
       </mat-checkbox>
     </div>
+    }
 
-    <!-- Application ID Display (after submission) -->
     @if (applicationId) {
       <div class="success-section">
         <div class="success-header">
@@ -184,12 +187,11 @@
           <span class="value">{{ applicationId }}</span>
         </div>
         <div class="next-steps">
-          <h4>Next Steps:</h4>
+          <h4>Next Steps</h4>
           <ul>
-            <li>Your application will be reviewed by the licensing authority</li>
-            <li>You will receive updates via email and SMS</li>
-            <li>Processing time: 7-15 working days</li>
-            <li>Payment receipt will be sent to your registered email</li>
+            <li>Your submitted application summary is available on a separate page.</li>
+            <li>Use the button below to view the application summary.</li>
+            <li>The application will continue in the normal workflow after submission.</li>
           </ul>
         </div>
       </div>
@@ -208,11 +210,11 @@
         {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
       </button>
     } @else {
-      <button mat-flat-button color="primary" (click)="goToDashboard()">
-        Go to Dashboard
+      <button mat-flat-button color="primary" (click)="openApplicationSummary()">
+        View Application Summary
       </button>
-      <button mat-stroked-button (click)="downloadReceipt()">
-        Download Receipt
+      <button mat-stroked-button (click)="goToDashboard()">
+        Go to Dashboard
       </button>
     }
   </mat-card-actions>

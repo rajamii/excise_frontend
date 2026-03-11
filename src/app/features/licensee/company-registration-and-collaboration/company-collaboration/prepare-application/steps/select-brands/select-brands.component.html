@@ -65,7 +65,7 @@
                 <span class="category">{{ brand.category }}</span>
                 <span class="type">{{ brand.type }}</span>
               </div>
-              <div class="brand-strength">{{ brand.strength }}% ABV</div>
+              <div class="brand-strength">{{ brand.strength !== null ? brand.strength + '% ABV' : 'Strength N/A' }}</div>
               <div class="brand-sizes">
                 Available sizes: {{ brand.sizes.join(', ') }}
               </div>

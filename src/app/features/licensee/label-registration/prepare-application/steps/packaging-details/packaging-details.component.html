@@ -1,122 +1,176 @@
 <form [formGroup]="packagingForm">
   <mat-card>
     <mat-card-header>
-      <div class="heading">Packaging & Pricing</div>
-      <div class="validation">Configure approved pack sizes and pricing details</div>
+      <div class="heading">Package Details and Proposed MRP</div>
+      <div class="validation">Configure package matrix and proposed pricing details</div>
     </mat-card-header>
 
     <mat-card-content>
       <div class="packaging-section">
         <div class="section-title">
           <mat-icon>inventory_2</mat-icon>
-          <h3>Pack Size Matrix</h3>
+          <h3>Package Details and Proposed MRP</h3>
         </div>
 
-        <div class="packaging-rows" formArrayName="packagingRows">
-          <div
-            class="packaging-row"
-            *ngFor="let row of packagingRows.controls; let i = index"
-            [formGroupName]="i">
-            <mat-form-field appearance="outline">
-              <mat-label>Size (ML)</mat-label>
-              <input matInput type="number" formControlName="sizeMl" min="30" />
-              @if (row.get('sizeMl')?.invalid && row.get('sizeMl')?.touched) {
-                <mat-error>Enter valid size</mat-error>
-              }
-            </mat-form-field>
+        <div class="package-table-wrapper">
+          <table mat-table [dataSource]="packagingRows.controls" class="mat-elevation-z1">
+            <ng-container matColumnDef="measureValueMl">
+              <th mat-header-cell *matHeaderCellDef>Measure Value (ML)</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="1" formControlName="measureValueMl" placeholder="e.g. 750" title="Measure Value (ML)" />
+                  @if (group.get('measureValueMl')?.invalid && group.get('measureValueMl')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Packaging Type</mat-label>
-              <mat-select formControlName="packagingType">
-                <mat-option value="">-- Select Type --</mat-option>
-                @for (type of packagingTypes; track type) {
-                  <mat-option [value]="type">{{ type }}</mat-option>
-                }
-              </mat-select>
-              @if (row.get('packagingType')?.invalid && row.get('packagingType')?.touched) {
-                <mat-error>Packaging type required</mat-error>
-              }
-            </mat-form-field>
+            <ng-container matColumnDef="packageType">
+              <th mat-header-cell *matHeaderCellDef>Package Type</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <mat-select formControlName="packageType">
+                    <mat-option value="">-- Select --</mat-option>
+                    @for (type of packageTypes; track type) {
+                      <mat-option [value]="type">{{ type }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (group.get('packageType')?.invalid && group.get('packageType')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Units Per Case</mat-label>
-              <input matInput type="number" formControlName="unitsPerCase" min="1" />
-              @if (row.get('unitsPerCase')?.invalid && row.get('unitsPerCase')?.touched) {
-                <mat-error>Enter valid quantity</mat-error>
-              }
-            </mat-form-field>
+            <ng-container matColumnDef="purposeSale">
+              <th mat-header-cell *matHeaderCellDef>Purpose Sale</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <mat-select formControlName="purposeSale">
+                    <mat-option value="">-- Select --</mat-option>
+                    @for (item of purposeSaleOptions; track item) {
+                      <mat-option [value]="item">{{ item }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (group.get('purposeSale')?.invalid && group.get('purposeSale')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
 
-            <mat-form-field appearance="outline">
-              <mat-label>MRP (INR)</mat-label>
-              <input matInput type="number" formControlName="mrp" min="1" />
-              @if (row.get('mrp')?.invalid && row.get('mrp')?.touched) {
-                <mat-error>Enter valid MRP</mat-error>
-              }
-            </mat-form-field>
+            <ng-container matColumnDef="bottlesPerCase">
+              <th mat-header-cell *matHeaderCellDef>No. of Bottle / Case</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="1" formControlName="bottlesPerCase" placeholder="e.g. 12" title="No. of Bottles per Case" />
+                  @if (group.get('bottlesPerCase')?.invalid && group.get('bottlesPerCase')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
 
-            <button mat-icon-button color="warn" (click)="removePackagingRow(i)" [disabled]="packagingRows.length === 1">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </div>
+            <ng-container matColumnDef="edpPerCase">
+              <th mat-header-cell *matHeaderCellDef>E.D.P / Case (Rs.)</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="0" formControlName="edpPerCase" placeholder="0.00" title="E.D.P per Case (Rs.)" />
+                  @if (group.get('edpPerCase')?.invalid && group.get('edpPerCase')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="mrpPerBottle">
+              <th mat-header-cell *matHeaderCellDef>MRP / Bottle (Rs.)</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="0" formControlName="mrpPerBottle" placeholder="0.00" title="MRP per Bottle (Rs.)" />
+                  @if (group.get('mrpPerBottle')?.invalid && group.get('mrpPerBottle')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="exciseDutyPerCase">
+              <th mat-header-cell *matHeaderCellDef>Excise Duty / Case</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="0" formControlName="exciseDutyPerCase" placeholder="0.00" title="Excise Duty per Case" />
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="bottlingFeePerCase">
+              <th mat-header-cell *matHeaderCellDef>Bottling Fee / Case</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="0" formControlName="bottlingFeePerCase" placeholder="0.00" title="Bottling Fee per Case" />
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="importPerCase">
+              <th mat-header-cell *matHeaderCellDef>Import / Case</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="0" formControlName="importPerCase" placeholder="0.00" title="Import per Case" />
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="exportPerCase">
+              <th mat-header-cell *matHeaderCellDef>Export / Case</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="0" formControlName="exportPerCase" placeholder="0.00" title="Export per Case" />
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="mrpRange">
+              <th mat-header-cell *matHeaderCellDef>MRP Range</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <mat-select formControlName="mrpRange">
+                    <mat-option value="">-- Select --</mat-option>
+                    @for (range of mrpRangeOptions; track range) {
+                      <mat-option [value]="range">{{ range }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="action">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let group; let i = index">
+                <button mat-icon-button type="button" color="warn" (click)="removePackagingRow(i)" [disabled]="packagingRows.length === 1">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
         </div>
 
         <div class="row-actions">
           <button mat-stroked-button type="button" (click)="addPackagingRow()">
             <mat-icon>add</mat-icon>
-            Add Pack Size
+            Add Row
           </button>
         </div>
       </div>
 
       <div class="summary-strip">
-        <span>Total Packs: <strong>{{ packagingRows.length }}</strong></span>
-        <span>Average MRP: <strong>INR {{ getEstimatedAverageMrp() | number:'1.2-2' }}</strong></span>
-      </div>
-
-      <div class="form-field-container">
-        <mat-form-field appearance="outline">
-          <mat-label>Target Market Districts</mat-label>
-          <mat-select formControlName="marketDistricts" multiple>
-            @for (district of districts; track district) {
-              <mat-option [value]="district">{{ district }}</mat-option>
-            }
-          </mat-select>
-          @if (packagingForm.controls['marketDistricts'].invalid && packagingForm.controls['marketDistricts'].touched) {
-            <mat-error>{{ getErrorMessage('marketDistricts') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Proposed Launch Date</mat-label>
-          <input matInput [matDatepicker]="launchDatePicker" formControlName="proposedLaunchDate" />
-          <mat-datepicker-toggle matSuffix [for]="launchDatePicker"></mat-datepicker-toggle>
-          <mat-datepicker #launchDatePicker></mat-datepicker>
-          @if (packagingForm.controls['proposedLaunchDate'].invalid && packagingForm.controls['proposedLaunchDate'].touched) {
-            <mat-error>{{ getErrorMessage('proposedLaunchDate') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Projected Annual Sales (Cases)</mat-label>
-          <input matInput type="number" formControlName="annualProjectedSales" min="1" />
-          @if (packagingForm.controls['annualProjectedSales'].invalid && packagingForm.controls['annualProjectedSales'].touched) {
-            <mat-error>{{ getErrorMessage('annualProjectedSales') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Remarks (Optional)</mat-label>
-          <textarea
-            matInput
-            formControlName="remarks"
-            cdkTextareaAutosize
-            cdkAutosizeMinRows="2"
-            cdkAutosizeMaxRows="4">
-          </textarea>
-          @if (packagingForm.controls['remarks'].invalid && packagingForm.controls['remarks'].touched) {
-            <mat-error>{{ getErrorMessage('remarks') }}</mat-error>
-          }
-        </mat-form-field>
+        <span>Total Rows: <strong>{{ packagingRows.length }}</strong></span>
+        <span>Average MRP / Bottle: <strong>INR {{ getEstimatedAverageMrp() | number:'1.2-2' }}</strong></span>
       </div>
     </mat-card-content>
 

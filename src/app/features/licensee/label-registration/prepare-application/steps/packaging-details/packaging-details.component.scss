@@ -39,24 +39,23 @@ mat-card {
         }
       }
 
-      .packaging-rows {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+      .package-table-wrapper {
+        overflow-x: auto;
+        padding-bottom: 4px;
 
-        .packaging-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr 1fr auto;
-          gap: 12px;
-          align-items: center;
-          background: #ffffff;
-          border: 1px solid #e0e4f1;
+        table {
+          width: 100%;
+          min-width: 1800px;
           border-radius: 8px;
-          padding: 12px;
+          overflow: hidden;
+        }
 
-          mat-form-field {
-            width: 100%;
-          }
+        th {
+          white-space: nowrap;
+        }
+
+        mat-form-field {
+          width: 160px;
         }
       }
 
@@ -79,19 +78,6 @@ mat-card {
       font-size: 14px;
     }
 
-    .form-field-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 24px 20px;
-
-      .full-width {
-        grid-column: span 3;
-      }
-
-      mat-form-field {
-        width: 100%;
-      }
-    }
   }
 
   mat-card-actions {
@@ -103,15 +89,9 @@ mat-card {
 }
 
 @media (max-width: 1024px) {
-  mat-card mat-card-content .packaging-section .packaging-rows .packaging-row {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  mat-card mat-card-content .form-field-container {
-    grid-template-columns: 1fr 1fr;
-
-    .full-width {
-      grid-column: span 2;
+  mat-card mat-card-content .packaging-section .package-table-wrapper {
+    mat-form-field {
+      width: 150px;
     }
   }
 }
@@ -122,18 +102,6 @@ mat-card {
       flex-direction: column;
       align-items: flex-start;
       gap: 4px;
-    }
-
-    .packaging-section .packaging-rows .packaging-row {
-      grid-template-columns: 1fr;
-    }
-
-    .form-field-container {
-      grid-template-columns: 1fr;
-
-      .full-width {
-        grid-column: span 1;
-      }
     }
   }
 }

@@ -20,30 +20,23 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
 
   selectedBrands: CompanyCollaborationBrand[] = [];
   displayedColumns: string[] = ['serialNo', 'brandCode', 'brandName', 'type', 'strength', 'sizes', 'action'];
+  feeStructure: CompanyCollaborationFeeStructure | null = null;
+  isLoadingFee = false;
 
-  // Fee structure - typically loaded from service/API
-  feeStructure: CompanyCollaborationFeeStructure = {
-    applicationFee: 1000,
-    collaborationFee: 5000,
-    securityDeposit: 10000
-  };
-
-  private lastBrandCount = 0;
+  private lastBrandSignature = '';
   constructor(private companyCollaborationService: CompanyCollaborationService) {}
 
   ngOnInit() {
     this.loadSelectedBrands();
+    this.refreshFeeStructure();
   }
 
   ngDoCheck() {
-    // Check if brands have changed in session storage
     const savedBrands = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
-    if (savedBrands) {
-      const brands = JSON.parse(savedBrands);
-      if (brands.length !== this.lastBrandCount) {
-        this.loadSelectedBrands();
-        this.lastBrandCount = brands.length;
-      }
+    const currentSignature = this.getStoredBrandSignature(savedBrands);
+    if (currentSignature !== this.lastBrandSignature) {
+      this.loadSelectedBrands();
+      this.refreshFeeStructure();
     }
   }
 
@@ -52,34 +45,66 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
     if (savedBrands) {
       try {
         this.selectedBrands = JSON.parse(savedBrands);
-        this.lastBrandCount = this.selectedBrands.length;
       } catch (error) {
         console.error('Error loading selected brands:', error);
         this.selectedBrands = [];
-        this.lastBrandCount = 0;
       }
     } else {
       this.selectedBrands = this.companyCollaborationService.getSelectedBrands();
-      this.lastBrandCount = 0;
     }
+
+    this.lastBrandSignature = this.getBrandSignature(this.selectedBrands);
   }
 
-  removeBrand(brandId: number) {
-    this.selectedBrands = this.selectedBrands.filter(brand => brand.id !== brandId);
-    
-    // Update session storage
+  private refreshFeeStructure(): void {
+    if (this.selectedBrands.length === 0) {
+      this.feeStructure = null;
+      sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
+      return;
+    }
+
+    this.isLoadingFee = true;
+    this.companyCollaborationService.getFeeStructure(
+      this.selectedBrands.map((brand) => brand.id),
+      this.selectedBrands
+    ).subscribe({
+      next: (feeStructure) => {
+        this.feeStructure = feeStructure;
+        sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure, JSON.stringify(feeStructure));
+        this.isLoadingFee = false;
+      },
+      error: (error) => {
+        console.error('Failed to load company collaboration fee structure:', error);
+        this.feeStructure = null;
+        sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
+        this.isLoadingFee = false;
+      }
+    });
+  }
+
+  removeBrand(brandId: string | number) {
+    this.selectedBrands = this.selectedBrands.filter((brand) => String(brand.id) !== String(brandId));
+
     sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(this.selectedBrands));
-    
-    // Also update the selected brand IDs
-    const selectedIds = this.selectedBrands.map(brand => brand.id);
+
+    const selectedIds = this.selectedBrands.map((brand) => brand.id);
     sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedIds));
     this.companyCollaborationService.setSelectedBrands(this.selectedBrands);
-    
-    this.lastBrandCount = this.selectedBrands.length;
+
+    this.lastBrandSignature = this.getBrandSignature(this.selectedBrands);
+    this.refreshFeeStructure();
   }
 
   getTotalAmount(): number {
-    return this.feeStructure.applicationFee + this.feeStructure.collaborationFee + this.feeStructure.securityDeposit;
+    if (!this.feeStructure) {
+      return 0;
+    }
+
+    return (
+      Number(this.feeStructure.applicationFee || 0) +
+      Number(this.feeStructure.collaborationFee || 0) +
+      Number(this.feeStructure.securityDeposit || 0)
+    );
   }
 
   getBottlerDetails(): any {
@@ -101,11 +126,9 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
   }
 
   proceedToNext() {
-    if (this.selectedBrands.length > 0) {
-      // Save fee structure to session storage for next step
+    if (this.selectedBrands.length > 0 && this.feeStructure) {
       sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure, JSON.stringify(this.feeStructure));
-      
-      // Save overview summary
+
       const overviewSummary = {
         totalBrands: this.selectedBrands.length,
         totalAmount: this.getTotalAmount(),
@@ -115,6 +138,23 @@ export class BrandOverviewComponent implements OnInit, DoCheck {
       sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary, JSON.stringify(overviewSummary));
       
       this.next.emit();
+    }
+  }
+
+  private getBrandSignature(brands: CompanyCollaborationBrand[]): string {
+    return JSON.stringify(brands.map((brand) => String(brand.id)).sort());
+  }
+
+  private getStoredBrandSignature(storedBrands: string | null): string {
+    if (!storedBrands) {
+      return '';
+    }
+
+    try {
+      const brands = JSON.parse(storedBrands) as CompanyCollaborationBrand[];
+      return this.getBrandSignature(brands);
+    } catch {
+      return '';
     }
   }
 }

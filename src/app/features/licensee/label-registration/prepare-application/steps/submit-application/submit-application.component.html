@@ -13,115 +13,174 @@
 
       <div class="summary-grid">
         <div class="summary-row">
-          <span class="label">Application Year</span>
+          <span class="label">Label Registration Year</span>
           <span class="value">{{ licenseeDetails.applicationYear || 'N/A' }}</span>
         </div>
         <div class="summary-row">
-          <span class="label">Licensee</span>
-          <span class="value">{{ licenseeDetails.licenseeName || 'N/A' }}</span>
+          <span class="label">Applicant Type</span>
+          <span class="value">{{ licenseeDetails.applicantType || 'N/A' }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Liquor Category</span>
+          <span class="value">{{ licenseeDetails.liquorCategory || 'N/A' }}</span>
         </div>
         <div class="summary-row">
           <span class="label">Brand</span>
           <span class="value">{{ productDetails.brandName || 'N/A' }}</span>
         </div>
         <div class="summary-row">
-          <span class="label">Label Name</span>
-          <span class="value">{{ productDetails.labelName || 'N/A' }}</span>
+          <span class="label">Bottler</span>
+          <span class="value">{{ productDetails.bottlerName || 'N/A' }}</span>
         </div>
         <div class="summary-row">
-          <span class="label">Pack Sizes</span>
+          <span class="label">Package Rows</span>
           <span class="value">{{ getPackagingRows().length }}</span>
         </div>
         <div class="summary-row">
-          <span class="label">Uploaded Documents</span>
-          <span class="value">{{ getUploadedDocuments().length }}</span>
-        </div>
-        <div class="summary-row">
           <span class="label">Application Date</span>
-          <span class="value">{{ getCurrentDate() }}</span>
+          <span class="value">{{ licenseeDetails.applicationDate ? (licenseeDetails.applicationDate | date:'dd/MM/yyyy') : getCurrentDate() }}</span>
         </div>
       </div>
     </div>
 
     <div class="info-section" *ngIf="!applicationId">
       <div class="section-header">
-        <mat-icon>badge</mat-icon>
-        <h3>Licensee Information</h3>
+        <mat-icon>assignment</mat-icon>
+        <h3>Applicant Details</h3>
       </div>
       <div class="details-grid">
-        <div class="detail-item"><span class="label">License Number</span><span class="value">{{ licenseeDetails.licenseNumber }}</span></div>
-        <div class="detail-item"><span class="label">License Type</span><span class="value">{{ licenseeDetails.licenseType }}</span></div>
-        <div class="detail-item"><span class="label">Establishment</span><span class="value">{{ licenseeDetails.establishmentName }}</span></div>
-        <div class="detail-item"><span class="label">Contact Person</span><span class="value">{{ licenseeDetails.contactPerson }}</span></div>
-        <div class="detail-item"><span class="label">Contact Number</span><span class="value">{{ licenseeDetails.contactNumber }}</span></div>
-        <div class="detail-item"><span class="label">Email</span><span class="value">{{ licenseeDetails.emailAddress }}</span></div>
+        <div class="detail-item"><span class="label">Label Registration Year</span><span class="value">{{ licenseeDetails.applicationYear }}</span></div>
+        <div class="detail-item"><span class="label">Applicant Type</span><span class="value">{{ licenseeDetails.applicantType }}</span></div>
+        <div class="detail-item"><span class="label">Liquor Category</span><span class="value">{{ licenseeDetails.liquorCategory }}</span></div>
+        <div class="detail-item"><span class="label">Application Date</span><span class="value">{{ licenseeDetails.applicationDate | date:'dd/MM/yyyy' }}</span></div>
+        <div class="detail-item"><span class="label">Registration Valid From</span><span class="value">{{ licenseeDetails.registrationValidFrom | date:'dd/MM/yyyy' }}</span></div>
+        <div class="detail-item"><span class="label">Registration Valid Up To</span><span class="value">{{ licenseeDetails.registrationValidUpTo | date:'dd/MM/yyyy' }}</span></div>
       </div>
     </div>
 
     <div class="info-section" *ngIf="!applicationId">
       <div class="section-header">
-        <mat-icon>label</mat-icon>
-        <h3>Label Specification</h3>
+        <mat-icon>domain</mat-icon>
+        <h3>Manufacturer & Brand</h3>
       </div>
       <div class="details-grid">
-        <div class="detail-item"><span class="label">Liquor Category</span><span class="value">{{ productDetails.liquorCategory }}</span></div>
-        <div class="detail-item"><span class="label">Label Type</span><span class="value">{{ productDetails.labelType }}</span></div>
-        <div class="detail-item"><span class="label">Strength</span><span class="value">{{ productDetails.abvStrength }}% ABV</span></div>
-        <div class="detail-item"><span class="label">Net Content</span><span class="value">{{ productDetails.netContentMl }} ML</span></div>
-        <div class="detail-item"><span class="label">Origin State</span><span class="value">{{ productDetails.originState }}</span></div>
-        <div class="detail-item"><span class="label">Barcode</span><span class="value">{{ productDetails.barcode }}</span></div>
+        <div class="detail-item"><span class="label">Bottler Origin</span><span class="value">{{ productDetails.bottlerOrigin }}</span></div>
+        <div class="detail-item"><span class="label">Bottler State</span><span class="value">{{ productDetails.bottlerState || 'N/A' }}</span></div>
+        <div class="detail-item full-width"><span class="label">Bottler</span><span class="value">{{ productDetails.bottlerName }}</span></div>
+        <div class="detail-item full-width"><span class="label">Bottler Address</span><span class="value">{{ productDetails.bottlerAddress }}</span></div>
+
+        <div class="detail-item"><span class="label">Brand Owner Type</span><span class="value">{{ productDetails.brandOwnerType }}</span></div>
+        <div class="detail-item"><span class="label">Brand Owner</span><span class="value">{{ productDetails.brandOwnerName }}</span></div>
+        <div class="detail-item full-width"><span class="label">Brand Owner Address</span><span class="value">{{ productDetails.brandOwnerAddress }}</span></div>
+
+        <div class="detail-item"><span class="label">Liquor Kind</span><span class="value">{{ productDetails.liquorKind }}</span></div>
+        <div class="detail-item"><span class="label">Liquor Type</span><span class="value">{{ productDetails.liquorType }}</span></div>
+        <div class="detail-item"><span class="label">Brand Name</span><span class="value">{{ productDetails.brandName }}</span></div>
+
+        <div class="detail-item"><span class="label">Allowed Strength</span><span class="value">{{ productDetails.allowedStrength }}</span></div>
+        <div class="detail-item"><span class="label">Strength Value & Unit</span><span class="value">{{ productDetails.strengthValue }} {{ productDetails.strengthUnit }}</span></div>
       </div>
     </div>
 
     <div class="info-section" *ngIf="!applicationId">
       <div class="section-header">
         <mat-icon>inventory_2</mat-icon>
-        <h3>Packaging Matrix</h3>
+        <h3>Package Details and Proposed MRP</h3>
       </div>
       <div class="packaging-table">
         <table mat-table [dataSource]="getPackagingRows()" class="mat-elevation-z1">
-          <ng-container matColumnDef="size">
-            <th mat-header-cell *matHeaderCellDef>Size (ML)</th>
-            <td mat-cell *matCellDef="let row">{{ row.sizeMl }}</td>
+          <ng-container matColumnDef="measureValueMl">
+            <th mat-header-cell *matHeaderCellDef>Measure (ML)</th>
+            <td mat-cell *matCellDef="let row">{{ row.measureValueMl ?? row.sizeMl }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="type">
-            <th mat-header-cell *matHeaderCellDef>Type</th>
-            <td mat-cell *matCellDef="let row">{{ row.packagingType }}</td>
+          <ng-container matColumnDef="packageType">
+            <th mat-header-cell *matHeaderCellDef>Package Type</th>
+            <td mat-cell *matCellDef="let row">{{ row.packageType || row.packagingType }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="units">
-            <th mat-header-cell *matHeaderCellDef>Units/Case</th>
-            <td mat-cell *matCellDef="let row">{{ row.unitsPerCase }}</td>
+          <ng-container matColumnDef="purposeSale">
+            <th mat-header-cell *matHeaderCellDef>Purpose Sale</th>
+            <td mat-cell *matCellDef="let row">{{ row.purposeSale || 'N/A' }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="mrp">
-            <th mat-header-cell *matHeaderCellDef>MRP</th>
-            <td mat-cell *matCellDef="let row">INR {{ row.mrp }}</td>
+          <ng-container matColumnDef="bottlesPerCase">
+            <th mat-header-cell *matHeaderCellDef>No. / Case</th>
+            <td mat-cell *matCellDef="let row">{{ row.bottlesPerCase ?? row.unitsPerCase }}</td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="['size', 'type', 'units', 'mrp']"></tr>
-          <tr mat-row *matRowDef="let row; columns: ['size', 'type', 'units', 'mrp']"></tr>
+          <ng-container matColumnDef="edpPerCase">
+            <th mat-header-cell *matHeaderCellDef>E.D.P / Case</th>
+            <td mat-cell *matCellDef="let row">INR {{ row.edpPerCase ?? '0' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="mrpPerBottle">
+            <th mat-header-cell *matHeaderCellDef>MRP / Bottle</th>
+            <td mat-cell *matCellDef="let row">INR {{ row.mrpPerBottle ?? row.mrp }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="exciseDutyPerCase">
+            <th mat-header-cell *matHeaderCellDef>Excise Duty / Case</th>
+            <td mat-cell *matCellDef="let row">INR {{ row.exciseDutyPerCase ?? '0' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="bottlingFeePerCase">
+            <th mat-header-cell *matHeaderCellDef>Bottling Fee / Case</th>
+            <td mat-cell *matCellDef="let row">INR {{ row.bottlingFeePerCase ?? '0' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="importPerCase">
+            <th mat-header-cell *matHeaderCellDef>Import / Case</th>
+            <td mat-cell *matCellDef="let row">INR {{ row.importPerCase ?? '0' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="exportPerCase">
+            <th mat-header-cell *matHeaderCellDef>Export / Case</th>
+            <td mat-cell *matCellDef="let row">INR {{ row.exportPerCase ?? '0' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="mrpRange">
+            <th mat-header-cell *matHeaderCellDef>MRP Range</th>
+            <td mat-cell *matCellDef="let row">{{ row.mrpRange || 'N/A' }}</td>
+          </ng-container>
+
+          <tr
+            mat-header-row
+            *matHeaderRowDef="[
+              'measureValueMl',
+              'packageType',
+              'purposeSale',
+              'bottlesPerCase',
+              'edpPerCase',
+              'mrpPerBottle',
+              'exciseDutyPerCase',
+              'bottlingFeePerCase',
+              'importPerCase',
+              'exportPerCase',
+              'mrpRange'
+            ]">
+          </tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: [
+              'measureValueMl',
+              'packageType',
+              'purposeSale',
+              'bottlesPerCase',
+              'edpPerCase',
+              'mrpPerBottle',
+              'exciseDutyPerCase',
+              'bottlingFeePerCase',
+              'importPerCase',
+              'exportPerCase',
+              'mrpRange'
+            ]">
+          </tr>
         </table>
       </div>
       <div class="summary-row highlight">
-        <span class="label">Average MRP</span>
+        <span class="label">Average MRP / Bottle</span>
         <span class="value">INR {{ getAverageMrp() | number:'1.2-2' }}</span>
-      </div>
-    </div>
-
-    <div class="info-section" *ngIf="!applicationId">
-      <div class="section-header">
-        <mat-icon>folder</mat-icon>
-        <h3>Documents</h3>
-      </div>
-      <div class="documents-list">
-        @for (document of documentMeta; track document.key) {
-          <div class="doc-row">
-            <span class="doc-name">{{ document.name }}</span>
-            <span class="doc-file">{{ document.fileName || 'Not uploaded' }}</span>
-          </div>
-        }
       </div>
     </div>
 
@@ -133,32 +192,32 @@
       </mat-checkbox>
     </div>
 
-    @if (applicationId) {
-      <div class="success-section">
-        <div class="success-header">
-          <mat-icon>check_circle</mat-icon>
-          <h3>Application Processed</h3>
-        </div>
-        <div class="application-id">
-          <span class="label">Application ID:</span>
-          <span class="value">{{ applicationId }}</span>
-        </div>
-        <p class="mode-note" *ngIf="submissionMode === 'local'">
-          Submitted in local mode because backend endpoint is currently unavailable.
-        </p>
+    <div class="success-section" *ngIf="applicationId">
+      <div class="success-header">
+        <mat-icon>check_circle</mat-icon>
+        <h3>Application Processed</h3>
       </div>
-    }
+      <div class="application-id">
+        <span class="label">Application ID:</span>
+        <span class="value">{{ applicationId }}</span>
+      </div>
+      <p class="mode-note" *ngIf="submissionMode === 'local'">
+        Submitted in local mode because backend endpoint is currently unavailable.
+      </p>
+    </div>
   </mat-card-content>
 
   <mat-card-actions>
-    @if (!applicationId) {
+    <ng-container *ngIf="!applicationId; else processedActions">
       <button mat-stroked-button type="button" (click)="goBack()">Back</button>
       <button mat-flat-button color="primary" type="button" (click)="submitApplication()" [disabled]="!acceptTerms || isSubmitting">
         {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
       </button>
-    } @else {
+    </ng-container>
+
+    <ng-template #processedActions>
       <button mat-flat-button color="primary" type="button" (click)="goToDashboard()">Go to Dashboard</button>
       <button mat-stroked-button type="button" (click)="startNewApplication()">Start New Application</button>
-    }
+    </ng-template>
   </mat-card-actions>
 </mat-card>

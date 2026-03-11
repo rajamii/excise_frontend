@@ -28,6 +28,19 @@ mat-card {
         grid-column: span 3;
       }
 
+      .section-heading {
+        color: #005cbb;
+        font-size: 18px;
+        font-weight: 600;
+        padding-top: 10px;
+        margin-bottom: 0;
+        font-style: italic;
+      }
+
+      .error-hint {
+        color: #d32f2f;
+      }
+
       mat-form-field {
         width: 100%;
       }

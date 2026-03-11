@@ -92,10 +92,18 @@ mat-card {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px 16px;
+
+        .detail-item.full-width {
+          grid-column: span 2;
+        }
       }
 
       .packaging-table {
         overflow-x: auto;
+
+        table {
+          min-width: 1800px;
+        }
       }
 
       .documents-list {
@@ -124,6 +132,10 @@ mat-card {
           }
         }
       }
+    }
+
+    .documents-section {
+      margin-bottom: 20px;
     }
 
     .terms-section {

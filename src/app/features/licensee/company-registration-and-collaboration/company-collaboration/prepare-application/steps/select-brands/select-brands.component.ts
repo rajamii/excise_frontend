@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, DoCheck, EventEmitter, Output, OnDestroy, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { FormsModule } from '@angular/forms';
 import {
@@ -14,51 +14,15 @@ import { CompanyCollaborationService } from '../../../../../../../core/services/
   templateUrl: './select-brands.component.html',
   styleUrl: './select-brands.component.scss'
 })
-export class SelectBrandsComponent implements OnInit, OnDestroy {
+export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
-  // Sample brands data - in real app, this would come from a service
-  allBrands: CompanyCollaborationBrand[] = [
-    {
-      id: 1,
-      brand_code: 'NA',
-      brand_name: 'NA',
-      category: 'NA',
-      type: 'NA',
-      strength: 3,
-      sizes: ['NA'],
-      brand_owner_code: 'NA',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      brand_code: 'NA',
-      brand_name: 'NA',
-      category: 'NA',
-      type: 'NA',
-      strength: 2,
-      sizes: ['NA'],
-      brand_owner_code: 'NA',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      brand_code: 'NA',
-      brand_name: 'NA',
-      category: 'NA',
-      type: 'NA',
-      strength: 1,
-      sizes: ['NA'],
-      brand_owner_code: 'NA',
-      status: 'Active'
-    },
-
-
-  ];
+  allBrands: CompanyCollaborationBrand[] = [];
 
   filteredBrands: CompanyCollaborationBrand[] = [];
-  selectedBrandIds: Set<number> = new Set();
+  selectedBrandIds: Set<string> = new Set();
+  isLoadingBrands = false;
 
   // Filter properties
   selectedCategory: string = '';
@@ -68,13 +32,21 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   // Dynamic filter options
   categories: string[] = [];
   types: string[] = [];
+  private lastBottlerSignature = '';
 
   constructor(private companyCollaborationService: CompanyCollaborationService) {}
 
   ngOnInit() {
-    this.initializeFilters();
-    this.loadSavedSelection();
-    this.filterBrands();
+    this.lastBottlerSignature = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails) || '';
+    this.loadBrands();
+  }
+
+  ngDoCheck(): void {
+    const currentSignature = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails) || '';
+    if (currentSignature !== this.lastBottlerSignature) {
+      this.lastBottlerSignature = currentSignature;
+      this.loadBrands();
+    }
   }
 
   ngOnDestroy() {
@@ -82,7 +54,6 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   }
 
   private initializeFilters() {
-    // Extract unique categories and types
     this.categories = [...new Set(this.allBrands.map(brand => brand.category))].sort();
     this.types = [...new Set(this.allBrands.map(brand => brand.type))].sort();
   }
@@ -92,22 +63,82 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     if (saved) {
       try {
         const savedIds = JSON.parse(saved);
-        this.selectedBrandIds = new Set(savedIds);
+        this.selectedBrandIds = new Set(
+          Array.isArray(savedIds) ? savedIds.map((id) => String(id)) : []
+        );
       } catch (error) {
         console.error('Error loading saved brand selection:', error);
       }
     }
-    this.companyCollaborationService.setSelectedBrands(this.getSelectedBrands());
   }
 
   private saveSelection() {
     const selectedIds = Array.from(this.selectedBrandIds);
     sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedIds));
 
-    // Also save detailed brand information
     const selectedBrands = this.getSelectedBrands();
     sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(selectedBrands));
     this.companyCollaborationService.setSelectedBrands(selectedBrands);
+  }
+
+  private loadBrands(): void {
+    const bottlerDetails = this.getBottlerDetails();
+    const brandOwnerCode = String(bottlerDetails?.brandOwnerCode || bottlerDetails?.brandOwner || '').trim();
+    const brandOwnerName = String(bottlerDetails?.brandOwnerName || '').trim();
+
+    if (!brandOwnerCode) {
+      this.allBrands = [];
+      this.filteredBrands = [];
+      this.categories = [];
+      this.types = [];
+      this.selectedBrandIds.clear();
+      this.saveSelection();
+      return;
+    }
+
+    this.isLoadingBrands = true;
+    this.companyCollaborationService.getBrandsByOwner(brandOwnerCode, brandOwnerName).subscribe({
+      next: (brands) => {
+        this.allBrands = brands;
+        this.initializeFilters();
+        this.loadSavedSelection();
+        this.pruneSelectedBrandIds();
+        this.filterBrands();
+        this.saveSelection();
+        this.isLoadingBrands = false;
+      },
+      error: (error) => {
+        console.error('Failed to load collaboration brands:', error);
+        this.allBrands = [];
+        this.filteredBrands = [];
+        this.categories = [];
+        this.types = [];
+        this.selectedBrandIds.clear();
+        this.saveSelection();
+        this.isLoadingBrands = false;
+      }
+    });
+  }
+
+  private getBottlerDetails(): any {
+    const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
+    if (!saved) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(saved);
+    } catch (error) {
+      console.error('Error loading bottler details from session storage:', error);
+      return null;
+    }
+  }
+
+  private pruneSelectedBrandIds(): void {
+    const validIds = new Set(this.allBrands.map((brand) => String(brand.id)));
+    this.selectedBrandIds = new Set(
+      Array.from(this.selectedBrandIds).filter((id) => validIds.has(id))
+    );
   }
 
   filterBrands() {
@@ -122,36 +153,35 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     });
   }
 
-  isSelected(brandId: number): boolean {
-    return this.selectedBrandIds.has(brandId);
+  isSelected(brandId: string | number): boolean {
+    return this.selectedBrandIds.has(String(brandId));
   }
 
-  toggleBrand(brandId: number) {
-    if (this.selectedBrandIds.has(brandId)) {
-      this.selectedBrandIds.delete(brandId);
+  toggleBrand(brandId: string | number) {
+    const key = String(brandId);
+    if (this.selectedBrandIds.has(key)) {
+      this.selectedBrandIds.delete(key);
     } else {
-      this.selectedBrandIds.add(brandId);
+      this.selectedBrandIds.add(key);
     }
     this.saveSelection();
   }
 
   isAllSelected(): boolean {
     return this.filteredBrands.length > 0 &&
-      this.filteredBrands.every(brand => this.selectedBrandIds.has(brand.id));
+      this.filteredBrands.every((brand) => this.selectedBrandIds.has(String(brand.id)));
   }
 
   isIndeterminate(): boolean {
-    const selectedCount = this.filteredBrands.filter(brand => this.selectedBrandIds.has(brand.id)).length;
+    const selectedCount = this.filteredBrands.filter((brand) => this.selectedBrandIds.has(String(brand.id))).length;
     return selectedCount > 0 && selectedCount < this.filteredBrands.length;
   }
 
   masterToggle() {
     if (this.isAllSelected()) {
-      // Unselect all filtered brands
-      this.filteredBrands.forEach(brand => this.selectedBrandIds.delete(brand.id));
+      this.filteredBrands.forEach((brand) => this.selectedBrandIds.delete(String(brand.id)));
     } else {
-      // Select all filtered brands
-      this.filteredBrands.forEach(brand => this.selectedBrandIds.add(brand.id));
+      this.filteredBrands.forEach((brand) => this.selectedBrandIds.add(String(brand.id)));
     }
     this.saveSelection();
   }
@@ -161,7 +191,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   }
 
   getSelectedBrands(): CompanyCollaborationBrand[] {
-    return this.allBrands.filter(brand => this.selectedBrandIds.has(brand.id));
+    return this.allBrands.filter((brand) => this.selectedBrandIds.has(String(brand.id)));
   }
 
   resetSelection() {

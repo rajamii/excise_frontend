@@ -125,6 +125,7 @@
     padding: 4px !important;
     flex: 1 !important;
     min-width: 0 !important; // Allow truncation if needed
+    cursor: pointer !important;
 
     &:hover {
       background: rgba(255, 255, 255, 0.1) !important;
@@ -292,7 +293,6 @@
       padding: 16px 20px !important;
       background: #ffffff !important;
       transition: background-color 0.2s ease !important;
-      min-height: auto !important;
 
       &:hover {
         background: #f9fafb !important;
@@ -402,7 +402,6 @@
             padding: 12px 20px 12px 52px !important;
             background: #fafbfc !important;
             transition: background-color 0.2s ease !important;
-            min-height: auto !important;
 
             &:hover {
               background: #f3f4f6 !important;
@@ -514,7 +513,6 @@
       padding: 14px 16px !important;
       background: #ffffff !important;
       transition: background-color 0.2s ease !important;
-      min-height: auto !important;
 
       &:hover {
         background: #f7fafc !important;
@@ -698,6 +696,7 @@
         border-radius: 12px !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         transition: all 0.2s ease !important;
+        cursor: pointer !important;
 
         &:hover {
           background: rgba(255, 255, 255, 0.2) !important;

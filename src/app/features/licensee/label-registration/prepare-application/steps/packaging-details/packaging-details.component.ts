@@ -1,7 +1,8 @@
-import { Component, EventEmitter, OnDestroy, OnInit, Output, signal } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { SupplyChainService } from '../../../../supplyChain/services/supplychain.service';
 import { MaterialModule } from '../../../../../../shared/material.module';
 
 @Component({
@@ -18,54 +19,49 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
   packagingForm: FormGroup;
   private destroy$ = new Subject<void>();
 
-  districts = [
-    'Gangtok',
-    'Mangan',
-    'Gyalshing',
-    'Namchi',
-    'Pakyong',
-    'Soreng'
+  private readonly fallbackPackageTypes = ['Bottle', 'Can', 'Tetra Pack', 'PET', 'Keg'];
+  private readonly fallbackPurposeSaleOptions = ['Regular', 'Duty Free', 'Export', 'Import', 'Institutional'];
+
+  packageTypes = [...this.fallbackPackageTypes];
+  purposeSaleOptions = [...this.fallbackPurposeSaleOptions];
+  mrpRangeOptions = ['0-100', '101-200', '201-500', '501-1000', '1000+'];
+
+  displayedColumns: string[] = [
+    'measureValueMl',
+    'packageType',
+    'purposeSale',
+    'bottlesPerCase',
+    'edpPerCase',
+    'mrpPerBottle',
+    'exciseDutyPerCase',
+    'bottlingFeePerCase',
+    'importPerCase',
+    'exportPerCase',
+    'mrpRange',
+    'action'
   ];
 
-  packagingTypes = ['Bottle', 'Can', 'Tetra Pack', 'PET', 'Keg'];
-
-  errorMessages = {
-    marketDistricts: signal(''),
-    proposedLaunchDate: signal(''),
-    annualProjectedSales: signal(''),
-    remarks: signal('')
-  };
-
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private supplyChainService: SupplyChainService
+  ) {
     const storedValues = this.getFromSessionStorage();
     const rows = Array.isArray(storedValues.packagingRows) && storedValues.packagingRows.length > 0
       ? storedValues.packagingRows
       : [{}];
 
     this.packagingForm = this.fb.group({
-      packagingRows: this.fb.array(rows.map((row: any) => this.createPackagingRow(row))),
-      marketDistricts: new FormControl(storedValues.marketDistricts || [], [Validators.required]),
-      proposedLaunchDate: new FormControl(storedValues.proposedLaunchDate || '', [Validators.required]),
-      annualProjectedSales: new FormControl(storedValues.annualProjectedSales || '', [Validators.required, Validators.min(1)]),
-      remarks: new FormControl(storedValues.remarks || '', [Validators.maxLength(400)])
+      packagingRows: this.fb.array(rows.map((row: any) => this.createPackagingRow(row)))
     });
 
     this.packagingForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.saveToSessionStorage();
-      this.updateAllErrorMessages();
     });
   }
 
   ngOnInit(): void {
-    const savedData = this.getFromSessionStorage();
-    if (Object.keys(savedData).length > 0) {
-      this.packagingForm.patchValue({
-        marketDistricts: savedData.marketDistricts || [],
-        proposedLaunchDate: savedData.proposedLaunchDate || '',
-        annualProjectedSales: savedData.annualProjectedSales || '',
-        remarks: savedData.remarks || ''
-      });
-    }
+    this.loadPackageTypes();
+    this.loadPurposeSaleOptions();
   }
 
   ngOnDestroy(): void {
@@ -90,10 +86,17 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
 
   private createPackagingRow(data: any = {}): FormGroup {
     return this.fb.group({
-      sizeMl: new FormControl(data.sizeMl || '', [Validators.required, Validators.min(30)]),
-      packagingType: new FormControl(data.packagingType || '', [Validators.required]),
-      unitsPerCase: new FormControl(data.unitsPerCase || '', [Validators.required, Validators.min(1)]),
-      mrp: new FormControl(data.mrp || '', [Validators.required, Validators.min(1)])
+      measureValueMl: new FormControl(data.measureValueMl ?? data.sizeMl ?? '', [Validators.required, Validators.min(1)]),
+      packageType: new FormControl(data.packageType ?? data.packagingType ?? '', [Validators.required]),
+      purposeSale: new FormControl(data.purposeSale ?? '', [Validators.required]),
+      bottlesPerCase: new FormControl(data.bottlesPerCase ?? data.unitsPerCase ?? '', [Validators.required, Validators.min(1)]),
+      edpPerCase: new FormControl(data.edpPerCase ?? '', [Validators.required, Validators.min(0)]),
+      mrpPerBottle: new FormControl(data.mrpPerBottle ?? data.mrp ?? '', [Validators.required, Validators.min(0)]),
+      exciseDutyPerCase: new FormControl(data.exciseDutyPerCase ?? '', [Validators.min(0)]),
+      bottlingFeePerCase: new FormControl(data.bottlingFeePerCase ?? '', [Validators.min(0)]),
+      importPerCase: new FormControl(data.importPerCase ?? '', [Validators.min(0)]),
+      exportPerCase: new FormControl(data.exportPerCase ?? '', [Validators.min(0)]),
+      mrpRange: new FormControl(data.mrpRange ?? '')
     });
   }
 
@@ -106,29 +109,6 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
     sessionStorage.setItem('labelRegPackagingDetails', JSON.stringify(this.packagingForm.getRawValue()));
   }
 
-  private updateErrorMessage(field: keyof typeof this.errorMessages): void {
-    const control = this.packagingForm.get(field);
-    if (control?.hasError('required')) {
-      this.errorMessages[field].set('This field is required');
-    } else if (control?.hasError('min')) {
-      this.errorMessages[field].set('Value must be greater than zero');
-    } else if (control?.hasError('maxlength')) {
-      this.errorMessages[field].set('Maximum allowed characters exceeded');
-    } else {
-      this.errorMessages[field].set('');
-    }
-  }
-
-  private updateAllErrorMessages(): void {
-    Object.keys(this.errorMessages).forEach((field) => {
-      this.updateErrorMessage(field as keyof typeof this.errorMessages);
-    });
-  }
-
-  getErrorMessage(field: keyof typeof this.errorMessages): string {
-    return this.errorMessages[field]();
-  }
-
   hasInvalidPackagingRows(): boolean {
     return this.packagingRows.controls.some((row) => row.invalid);
   }
@@ -138,7 +118,7 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
     if (!rows.length) {
       return 0;
     }
-    const total = rows.reduce((sum: number, row: any) => sum + Number(row.mrp || 0), 0);
+    const total = rows.reduce((sum: number, row: any) => sum + Number(row.mrpPerBottle || 0), 0);
     return total / rows.length;
   }
 
@@ -148,12 +128,6 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
       this.packagingRows.removeAt(0);
     }
     this.packagingRows.push(this.createPackagingRow());
-    this.packagingForm.patchValue({
-      marketDistricts: [],
-      proposedLaunchDate: '',
-      annualProjectedSales: '',
-      remarks: ''
-    });
   }
 
   goBack(): void {
@@ -167,6 +141,45 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
     }
     this.packagingForm.markAllAsTouched();
     this.packagingRows.controls.forEach((row) => row.markAllAsTouched());
-    this.updateAllErrorMessages();
+  }
+
+  private loadPackageTypes(): void {
+    this.supplyChainService
+      .getBottleTypes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          const rows = Array.isArray(data) ? data : [];
+          const values = rows
+            .map((item: any) => String(item?.bottleType ?? item?.bottle_type ?? item ?? '').trim())
+            .filter(Boolean);
+          const unique = Array.from(new Set(values));
+          this.packageTypes = unique.length ? unique : [...this.fallbackPackageTypes];
+        },
+        error: (error) => {
+          console.error('Failed to load package types:', error);
+          this.packageTypes = [...this.fallbackPackageTypes];
+        }
+      });
+  }
+
+  private loadPurposeSaleOptions(): void {
+    this.supplyChainService
+      .getPurposes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          const rows = Array.isArray(data) ? data : [];
+          const values = rows
+            .map((item: any) => String(item?.purposeName ?? item?.purpose_name ?? item ?? '').trim())
+            .filter(Boolean);
+          const unique = Array.from(new Set(values));
+          this.purposeSaleOptions = unique.length ? unique : [...this.fallbackPurposeSaleOptions];
+        },
+        error: (error) => {
+          console.error('Failed to load purpose sale options:', error);
+          this.purposeSaleOptions = [...this.fallbackPurposeSaleOptions];
+        }
+      });
   }
 }

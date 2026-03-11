@@ -49,7 +49,7 @@
           <!-- Strength Column -->
           <ng-container matColumnDef="strength">
             <th mat-header-cell *matHeaderCellDef> Strength </th>
-            <td mat-cell *matCellDef="let element"> {{ element.strength }}% ABV </td>
+            <td mat-cell *matCellDef="let element"> {{ element.strength !== null ? element.strength + '% ABV' : 'N/A' }} </td>
           </ng-container>
 
           <!-- Available Sizes Column -->
@@ -82,6 +82,7 @@
     </div>
 
     <!-- Fee Breakdown Section -->
+    @if (feeStructure) {
     <div class="overview-section">
       <div class="section-header">
         <mat-icon>receipt</mat-icon>
@@ -123,6 +124,7 @@
         </div>
       </div>
     </div>
+    }
 
     @if (selectedBrands.length === 0) {
       <div class="no-brands-warning">
@@ -135,7 +137,7 @@
 
   <mat-card-actions>
     <button mat-stroked-button (click)="goBack()">Back</button>
-    <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="selectedBrands.length === 0">
+    <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="selectedBrands.length === 0 || !feeStructure">
       Next
     </button>
   </mat-card-actions>

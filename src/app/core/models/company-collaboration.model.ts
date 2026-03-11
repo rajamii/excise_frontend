@@ -1,5 +1,5 @@
 export interface CompanyCollaborationBrandOwner {
-  id: number;
+  id: string | number;
   brand_owner_code: string;
   company_name: string;
   company_address: string;
@@ -9,12 +9,12 @@ export interface CompanyCollaborationBrandOwner {
 }
 
 export interface CompanyCollaborationBrand {
-  id: number;
+  id: string | number;
   brand_code: string;
   brand_name: string;
   category: string;
   type: string;
-  strength: number;
+  strength: number | null;
   sizes: string[];
   brand_owner_code?: string;
   status?: string;
