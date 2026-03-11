@@ -5,7 +5,8 @@ import { environment } from '../../../environments/environment';
 import {
   CompanyCollaborationBrand,
   CompanyCollaborationBrandOwner,
-  CompanyCollaborationFeeStructure
+  CompanyCollaborationFeeStructure,
+  CompanyCollaborationMember
 } from '../models/company-collaboration.model';
 
 @Injectable({
@@ -86,23 +87,48 @@ export class CompanyCollaborationService {
   }
 
   private mapBrandOwner(item: any): CompanyCollaborationBrandOwner {
+    const rawMembers = Array.isArray(item?.members)
+      ? item.members
+      : Array.isArray(item?.company_members)
+        ? item.company_members
+        : [];
+
     return {
-      id: String(item?.id ?? item?.brandOwnerCode ?? item?.brand_owner_code ?? item?.brandOwner ?? item?.brand_owner ?? ''),
+      id: String(item?.id ?? item?.brandOwnerCode ?? item?.brand_owner_code ?? ''),
       brand_owner_code: String(item?.brandOwnerCode ?? item?.brand_owner_code ?? item?.id ?? ''),
       company_name: String(item?.companyName ?? item?.company_name ?? item?.brandOwner ?? item?.brand_owner ?? ''),
-      company_address: String(item?.companyAddress ?? item?.company_address ?? item?.location ?? ''),
+      pan_no: String(item?.panNo ?? item?.pan_no ?? item?.pan ?? ''),
+      office_address: String(item?.officeAddress ?? item?.office_address ?? item?.registeredOfficeAddress ?? item?.registered_office_address ?? item?.companyAddress ?? item?.company_address ?? ''),
+      factory_address: String(item?.factoryAddress ?? item?.factory_address ?? ''),
+      mobile: String(item?.mobile ?? item?.mobileNo ?? item?.mobile_no ?? item?.phone ?? ''),
+      email: String(item?.email ?? item?.emailAddress ?? item?.email_address ?? ''),
       location: String(item?.location ?? item?.companyAddress ?? item?.company_address ?? ''),
       status: String(item?.status ?? 'Active'),
-      brand_count: Number(item?.brandCount ?? item?.brand_count ?? 0)
+      brand_count: Number(item?.brandCount ?? item?.brand_count ?? 0),
+      members: rawMembers.map((m: any) => ({
+        member_name:    String(m?.memberName    ?? m?.member_name    ?? m?.name        ?? ''),
+        designation:    String(m?.designation   ?? m?.designationName ?? ''),
+        member_address: String(m?.memberAddress ?? m?.member_address ?? m?.address    ?? ''),
+        contact_number: String(m?.contactNumber ?? m?.contact_number ?? m?.phone      ?? ''),
+        email:          String(m?.email         ?? m?.emailAddress   ?? m?.email_address ?? '')
+      }))
     };
   }
 
   private mapBrand(item: any): CompanyCollaborationBrand {
+    const kindValue =
+      item?.kind ??
+      item?.liquorKind ??
+      item?.liquor_kind ??
+      item?.liquor_kind_name ??
+      item?.kind_name;
+
     return {
       id: String(item?.id ?? item?.brandCode ?? item?.brand_code ?? ''),
       brand_code: String(item?.brandCode ?? item?.brand_code ?? item?.id ?? ''),
       brand_name: String(item?.brandName ?? item?.brand_name ?? ''),
       category: String(item?.category ?? 'General'),
+      kind: kindValue ? String(kindValue) : '',
       type: String(item?.type ?? 'General'),
       strength: item?.strength === null || item?.strength === undefined || item?.strength === ''
         ? null

@@ -1,113 +1,276 @@
 <mat-card>
   <mat-card-header>
-    <div class="heading">Select Brands</div>
+    <div class="heading">Brands</div>
     <div class="validation">
-      Select brands for collaboration
+      Select the collaborating brand and its measure by choosing Liquor Category, Liquor Kind, and Liquor Type. * Marked fields are mandatory.
     </div>
   </mat-card-header>
 
   <mat-card-content>
-    <!-- Filter Section -->
-    <div class="filter-section">
-      <mat-form-field appearance="outline">
-        <mat-label>Filter by Category</mat-label>
-        <mat-select [(ngModel)]="selectedCategory" (selectionChange)="filterBrands()">
-          <mat-option value="">All Categories</mat-option>
-          @for (category of categories; track category) {
-            <mat-option [value]="category">{{ category }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Filter by Type</mat-label>
-        <mat-select [(ngModel)]="selectedType" (selectionChange)="filterBrands()">
-          <mat-option value="">All Types</mat-option>
-          @for (type of types; track type) {
-            <mat-option [value]="type">{{ type }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+    <!-- =====================================================================
+         BRAND SELECTION VIEW (PDF Step 7 — filter + per-size checkboxes)
+         ===================================================================== -->
+    @if (!showOverview) {
 
-      <mat-form-field appearance="outline">
-        <mat-label>Search Brands</mat-label>
-        <input matInput [(ngModel)]="searchTerm" (input)="filterBrands()" placeholder="Type to search...">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-    </div>
+      <!-- Filter Section — mirrors the three dropdowns shown in the PDF -->
+      <div class="filter-section">
+        <mat-form-field appearance="outline">
+          <mat-label>Liquor Category *</mat-label>
+          <mat-select [(ngModel)]="selectedCategory" (selectionChange)="filterBrands()">
+            <mat-option value="">-- Select --</mat-option>
+            @for (category of categories; track category) {
+              <mat-option [value]="category">{{ category }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matSuffix>filter_list</mat-icon>
+        </mat-form-field>
 
-    <!-- Brands Selection Table -->
-    <div class="brands-table">
-      <div class="table-header">
-        <mat-checkbox 
-          [checked]="isAllSelected()" 
-          [indeterminate]="isIndeterminate()"
-          (change)="masterToggle()">
-          Select All ({{ getSelectedCount() }} of {{ filteredBrands.length }} selected)
-        </mat-checkbox>
+        <!-- Liquor Kind (IMFL / OSBI) — present in PDF but was missing from code -->
+        <mat-form-field appearance="outline">
+          <mat-label>Liquor Kind *</mat-label>
+          <mat-select [(ngModel)]="selectedKind" (selectionChange)="filterBrands()">
+            <mat-option value="">-- Select --</mat-option>
+            @for (kind of kinds; track kind) {
+              <mat-option [value]="kind">{{ kind }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matSuffix>local_bar</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Liquor Type *</mat-label>
+          <mat-select [(ngModel)]="selectedType" (selectionChange)="filterBrands()">
+            <mat-option value="">-- Select --</mat-option>
+            @for (type of types; track type) {
+              <mat-option [value]="type">{{ type }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matSuffix>category</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-search">
+          <mat-label>Filter Brands</mat-label>
+          <input matInput [(ngModel)]="searchTerm" (input)="filterBrands()" placeholder="Search by brand name or code">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
       </div>
 
-      <div class="brands-grid">
-        @for (brand of filteredBrands; track brand.id) {
-          <div class="brand-card" [class.selected]="isSelected(brand.id)">
-            <div class="brand-header">
-              <mat-checkbox 
-                [checked]="isSelected(brand.id)"
-                (change)="toggleBrand(brand.id)">
-              </mat-checkbox>
-              <div class="brand-info">
-                <div class="brand-name">{{ brand.brand_name }}</div>
-                <div class="brand-details">{{ brand.brand_code }}</div>
-              </div>
-            </div>
-            <div class="brand-content">
-              <div class="brand-meta">
-                <span class="category">{{ brand.category }}</span>
-                <span class="type">{{ brand.type }}</span>
-              </div>
-              <div class="brand-strength">{{ brand.strength !== null ? brand.strength + '% ABV' : 'Strength N/A' }}</div>
-              <div class="brand-sizes">
-                Available sizes: {{ brand.sizes.join(', ') }}
-              </div>
-            </div>
+      <!-- Brands Table with per-pack-size checkboxes (matches PDF Step 7 screenshot) -->
+      @if (filteredBrands.length > 0) {
+        <div class="brands-table">
+          <div class="table-header">
+            <mat-checkbox
+              [checked]="isAllSelected()"
+              [indeterminate]="isIndeterminate()"
+              (change)="masterToggle()">
+              Select All ({{ getSelectedCount() }} measure(s) across {{ getSelectedBrandCount() }} brand(s) selected)
+            </mat-checkbox>
           </div>
-        }
-      </div>
+
+          <table class="brands-selection-table mat-elevation-z2">
+            <thead>
+              <tr>
+                <th class="col-sl">Sl. No</th>
+                <th class="col-brand">Brand Name</th>
+                <!-- Pack size columns — rendered dynamically so any sizes returned by the API are shown -->
+                <th class="col-size">750 Ml</th>
+                <th class="col-size">375 Ml</th>
+                <th class="col-size">180 Ml</th>
+                <th class="col-select">Select</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (brand of filteredBrands; track brand.id; let i = $index) {
+                <tr [class.row-selected]="isSelected(brand.id)">
+                  <td class="col-sl">{{ i + 1 }}</td>
+                  <td class="col-brand">
+                    <div class="brand-name">{{ brand.brand_name }}</div>
+                    <div class="brand-meta">
+                      <span class="brand-code">{{ brand.brand_code }}</span>
+                      <span class="brand-category">{{ brand.category }}</span>
+                      <span class="brand-type">{{ brand.type }}</span>
+                    </div>
+                  </td>
+                  <!-- 750 Ml -->
+                  <td class="col-size">
+                    @if (brand.sizes.includes('750 Ml')) {
+                      <mat-checkbox
+                        [checked]="isSizeSelected(brand.id, '750 Ml')"
+                        (change)="toggleBrandSize(brand.id, '750 Ml')">
+                      </mat-checkbox>
+                    }
+                  </td>
+                  <!-- 375 Ml -->
+                  <td class="col-size">
+                    @if (brand.sizes.includes('375 Ml')) {
+                      <mat-checkbox
+                        [checked]="isSizeSelected(brand.id, '375 Ml')"
+                        (change)="toggleBrandSize(brand.id, '375 Ml')">
+                      </mat-checkbox>
+                    }
+                  </td>
+                  <!-- 180 Ml -->
+                  <td class="col-size">
+                    @if (brand.sizes.includes('180 Ml')) {
+                      <mat-checkbox
+                        [checked]="isSizeSelected(brand.id, '180 Ml')"
+                        (change)="toggleBrandSize(brand.id, '180 Ml')">
+                      </mat-checkbox>
+                    }
+                  </td>
+                  <!-- Row-level select checkbox — selects/deselects all available sizes for this brand only -->
+                  <td class="col-select">
+                    <mat-checkbox
+                      [checked]="isAllSizesSelectedForBrand(brand)"
+                      [indeterminate]="isSomeSizesSelectedForBrand(brand)"
+                      (change)="toggleAllSizesForBrand(brand)">
+                    </mat-checkbox>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
 
       @if (filteredBrands.length === 0) {
         <div class="no-brands">
           <mat-icon>search_off</mat-icon>
-          <p>No brands found matching your criteria</p>
+          <p>No brands found. Please adjust your filters above.</p>
         </div>
       }
-    </div>
+    }
 
-    <!-- Selected Brands Summary -->
-    @if (getSelectedCount() > 0) {
-      <div class="selected-summary">
-        <div class="summary-header">
-          <mat-icon>check_circle</mat-icon>
-          <h3>Selected Brands Summary ({{ getSelectedCount() }} brands)</h3>
+    <!-- =====================================================================
+         OVERVIEW / SUMMARY VIEW (PDF Step 7 — selected brands listed)
+         ===================================================================== -->
+    @if (showOverview) {
+      <div class="overview-section">
+        <div class="section-header">
+          <mat-icon>inventory</mat-icon>
+          <h3>Selected Brands ({{ selectedBrands.length }})</h3>
         </div>
-        <div class="summary-grid">
-          @for (brand of getSelectedBrands(); track brand.id) {
-            <div class="summary-item">
-              <span>{{ brand.brand_name }} ({{ brand.brand_code }})</span>
-              <button mat-icon-button (click)="toggleBrand(brand.id)">
-                <mat-icon>close</mat-icon>
-              </button>
-            </div>
-          }
+
+        <div class="brands-overview-table">
+          <table mat-table [dataSource]="selectedBrands" class="mat-elevation-z2">
+
+            <ng-container matColumnDef="serialNo">
+              <th mat-header-cell *matHeaderCellDef> Sl. No </th>
+              <td mat-cell *matCellDef="let element; let i = index"> {{ i + 1 }} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="brandCode">
+              <th mat-header-cell *matHeaderCellDef> Brand Code </th>
+              <td mat-cell *matCellDef="let element"> {{ element.brand_code }} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="brandName">
+              <th mat-header-cell *matHeaderCellDef> Brand Name </th>
+              <td mat-cell *matCellDef="let element">
+                <div class="brand-name-cell">
+                  <span class="name">{{ element.brand_name }}</span>
+                  <span class="category">{{ element.category }}</span>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef> Type </th>
+              <td mat-cell *matCellDef="let element"> {{ element.type }} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="strength">
+              <th mat-header-cell *matHeaderCellDef> Strength </th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.strength !== null ? element.strength + '% ABV' : 'N/A' }}
+              </td>
+            </ng-container>
+
+            <!-- Pack Size column shows only the SELECTED sizes, not all available sizes -->
+            <ng-container matColumnDef="sizes">
+              <th mat-header-cell *matHeaderCellDef> Pack Size </th>
+              <td mat-cell *matCellDef="let element">
+                <div class="sizes-cell">
+                  @for (size of (element.selectedSizes || element.sizes); track size) {
+                    <span class="size-badge">{{ size }}</span>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="action">
+              <th mat-header-cell *matHeaderCellDef> Action </th>
+              <td mat-cell *matCellDef="let element">
+                <button mat-button color="warn" type="button" (click)="removeBrand(element.id)">
+                  Delete
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
         </div>
       </div>
+
+      <!-- Fee Breakdown -->
+      @if (feeStructure) {
+        <div class="overview-section">
+          <div class="section-header">
+            <mat-icon>receipt</mat-icon>
+            <h3>Fee Breakdown</h3>
+          </div>
+
+          <div class="fee-breakdown">
+            <div class="fee-grid">
+              <div class="fee-item">
+                <div class="fee-label">Application Fee:</div>
+                <div class="fee-value">&#8377;{{ feeStructure.applicationFee | number:'1.2-2' }}</div>
+              </div>
+              <div class="fee-item">
+                <div class="fee-label">Collaboration Fee:</div>
+                <div class="fee-value">&#8377;{{ feeStructure.collaborationFee | number:'1.2-2' }}</div>
+              </div>
+              <div class="fee-item">
+                <div class="fee-label">Security Deposit:</div>
+                <div class="fee-value">&#8377;{{ feeStructure.securityDeposit | number:'1.2-2' }}</div>
+              </div>
+              <div class="fee-item highlight">
+                <div class="fee-label">Total Amount:</div>
+                <div class="fee-value">&#8377;{{ getTotalAmount() | number:'1.2-2' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (selectedBrands.length === 0) {
+        <div class="no-brands-warning">
+          <mat-icon>warning</mat-icon>
+          <p>No brands selected. Please go back and select at least one brand to proceed.</p>
+        </div>
+      }
     }
+
   </mat-card-content>
 
   <mat-card-actions>
-    <button mat-stroked-button (click)="goBack()">Back</button>
-    <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="getSelectedCount() === 0">
-      Next
-    </button>
-    <button mat-stroked-button color="warn" (click)="resetSelection()">Reset Selection</button>
+    @if (!showOverview) {
+      <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+      <button mat-flat-button color="primary" type="button"
+        (click)="addSelectedBrands()"
+        [disabled]="getSelectedCount() === 0">
+        Add Selected Brands
+      </button>
+      <button mat-stroked-button color="warn" type="button" (click)="resetSelection()">Reset Selection</button>
+    } @else {
+      <button mat-stroked-button type="button" (click)="addMoreProduct()">Add More Product</button>
+      <button mat-flat-button color="primary" type="button"
+        (click)="proceedToSubmit()"
+        [disabled]="selectedBrands.length === 0 || !feeStructure">
+        Proceed to Submit Application
+      </button>
+    }
   </mat-card-actions>
 </mat-card>

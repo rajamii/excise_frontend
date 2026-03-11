@@ -1,34 +1,35 @@
-<mat-horizontal-stepper [linear]="true" #stepper>
+﻿<mat-horizontal-stepper [linear]="true" #stepper>
 
-    <mat-step label="Bottler Details"> 
-      <app-bottler-details (next)="stepper.next()"></app-bottler-details>
-    </mat-step>
-  
-    <mat-step label="Company Details">
-      <app-company-details 
-        (back)="stepper.previous()" 
-        (next)="stepper.next()">
-      </app-company-details>
-    </mat-step>
-    <mat-step label="Select Brands">
-      <app-select-brands 
-        (back)="stepper.previous()" 
-        (next)="stepper.next()">
-      </app-select-brands>
-    </mat-step>
+  <!-- Step 1: Bottler - licensee data is auto-fetched (PDF Step 5) -->
+  <mat-step label="Bottler">
+    <app-company-details
+      [showBack]="false"
+      (next)="stepper.next()">
+    </app-company-details>
+  </mat-step>
 
-    <mat-step label="Brand Overview">
-      <app-brand-overview 
-        (back)="stepper.previous()" 
-        (next)="stepper.next()">
-      </app-brand-overview>
-    </mat-step>
+  <!-- Step 2: Company - user selects the registered collaborating company (PDF Step 6) -->
+  <mat-step label="Company">
+    <app-bottler-details
+      (back)="stepper.previous()"
+      (next)="stepper.next()">
+    </app-bottler-details>
+  </mat-step>
 
-    <mat-step label="Submit Application">
-     
-      <app-submit-application 
-        (back)="stepper.previous()">
-      </app-submit-application>
-    </mat-step>
-  
+  <!-- Step 3: Brands - select liquor category / kind / type and pack sizes (PDF Step 7) -->
+  <mat-step label="Brands">
+    <app-select-brands
+      (back)="stepper.previous()"
+      (next)="stepper.next()">
+    </app-select-brands>
+  </mat-step>
+
+  <!-- Step 4: Submit Application - review summary and submit (PDF Step 8) -->
+  <mat-step label="Submit Application">
+    <app-submit-application
+      (back)="stepper.previous()">
+    </app-submit-application>
+  </mat-step>
+
 </mat-horizontal-stepper>
+

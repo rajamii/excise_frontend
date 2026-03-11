@@ -1,181 +1,204 @@
-<mat-card>
+﻿<mat-card>
   <mat-card-header>
     <div class="heading">Submit Application</div>
     @if (!applicationId) {
-    <div class="validation">
-      Review all details before final submission
-    </div>
+      <div class="validation">Review all details before final submission</div>
     }
   </mat-card-header>
 
   <mat-card-content>
+
+    <!-- ================================================================
+         PRE-SUBMISSION review
+         ================================================================ -->
     @if (!applicationId) {
-    <!-- Application Summary Section -->
-    <div class="info-section" *ngIf="bottlerDetails || companyDetails || selectedBrands.length > 0">
-      <div class="section-header">
-        <mat-icon>summarize</mat-icon>
-        <h3>Application Summary</h3>
-      </div>
-      <div class="application-summary">
-        <div class="summary-row" *ngIf="bottlerDetails">
-          <span class="label">Financial Year:</span>
-          <span class="value">{{ bottlerDetails.financialYear }}</span>
-        </div>
-        <div class="summary-row" *ngIf="bottlerDetails">
-          <span class="label">Brand Owner:</span>
-          <span class="value">{{ bottlerDetails.brandOwnerName }}</span>
-        </div>
-        <div class="summary-row" *ngIf="companyDetails">
-          <span class="label">Licensee Name:</span>
-          <span class="value">{{ companyDetails.licenseeName }}</span>
-        </div>
-        <div class="summary-row" *ngIf="companyDetails">
-          <span class="label">License Number:</span>
-          <span class="value">{{ companyDetails.licenseNumber }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="label">Selected Brands:</span>
-          <span class="value">{{ selectedBrands.length }} brands</span>
-        </div>
-        <div class="summary-row">
-          <span class="label">Application Date:</span>
-          <span class="value">{{ getCurrentDate() }}</span>
-        </div>
-        <div class="summary-row highlight" *ngIf="feeStructure">
-          <span class="label">Total Amount:</span>
-          <span class="value">₹{{ getTotalAmount() | number:'1.2-2' }}</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Bottler Details Section -->
-    <div class="info-section" *ngIf="bottlerDetails">
-      <div class="section-header">
-        <mat-icon>business</mat-icon>
-        <h3>Brand Owner Details</h3>
+      <!-- Quick Summary -->
+      <div class="info-section">
+        <div class="section-header">
+          <mat-icon>summarize</mat-icon>
+          <h3>Application Summary</h3>
+        </div>
+        <div class="application-summary">
+          @if (companyDetails) {
+            <div class="summary-row">
+              <span class="label">Financial Year:</span>
+              <span class="value">{{ companyDetails.financialYear }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Application ID:</span>
+              <span class="value">{{ companyDetails.applicationId }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Application Date:</span>
+              <span class="value">{{ companyDetails.applicationDate }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Bottler:</span>
+              <span class="value">{{ companyDetails.bottlerName }}</span>
+            </div>
+          }
+          @if (bottlerDetails) {
+            <div class="summary-row">
+              <span class="label">Collaborating Company:</span>
+              <span class="value">{{ bottlerDetails.brandOwnerName }}</span>
+            </div>
+          }
+          <div class="summary-row">
+            <span class="label">Selected Brands:</span>
+            <span class="value">{{ selectedBrands.length }} brand(s)</span>
+          </div>
+          @if (feeStructure) {
+            <div class="summary-row highlight">
+              <span class="label">Total Amount:</span>
+              <span class="value">&#8377;{{ getTotalAmount() | number:'1.2-2' }}</span>
+            </div>
+          }
+        </div>
       </div>
-      <div class="details-grid">
-        <div class="detail-item">
-          <span class="label">Financial Year:</span>
-          <span class="value">{{ bottlerDetails.financialYear }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Brand Owner Name:</span>
-          <span class="value">{{ bottlerDetails.brandOwnerName }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Brand Owner Code:</span>
-          <span class="value">{{ bottlerDetails.brandOwnerCode }}</span>
-        </div>
-        <div class="detail-item full-width">
-          <span class="label">Address:</span>
-          <span class="value">{{ bottlerDetails.brandOwnerAddress }}</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Company Details Section -->
-    <div class="info-section" *ngIf="companyDetails">
-      <div class="section-header">
-        <mat-icon>store</mat-icon>
-        <h3>Licensee Details</h3>
-      </div>
-      <div class="details-grid">
-        <div class="detail-item">
-          <span class="label">Licensee Name:</span>
-          <span class="value">{{ companyDetails.licenseeName }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">License Number:</span>
-          <span class="value">{{ companyDetails.licenseNumber }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">License Type:</span>
-          <span class="value">{{ companyDetails.licenseType }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Contact Person:</span>
-          <span class="value">{{ companyDetails.contactPerson }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Contact Number:</span>
-          <span class="value">{{ companyDetails.contactNumber }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Email:</span>
-          <span class="value">{{ companyDetails.emailAddress }}</span>
-        </div>
-        <div class="detail-item full-width">
-          <span class="label">Address:</span>
-          <span class="value">{{ companyDetails.licenseeAddress }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Selected Brands Section -->
-    <div class="info-section" *ngIf="selectedBrands.length > 0">
-      <div class="section-header">
-        <mat-icon>inventory</mat-icon>
-        <h3>Selected Brands ({{ selectedBrands.length }})</h3>
-      </div>
-      <div class="brands-summary">
-        @for (brand of selectedBrands; track brand.id; let i = $index) {
-          <div class="brand-item">
-            <div class="brand-number">{{ i + 1 }}</div>
-            <div class="brand-details">
-              <div class="brand-name">{{ brand.brand_name }}</div>
-              <div class="brand-meta">
-                <span>{{ brand.brand_code }}</span> | 
-                <span>{{ brand.category }}</span> | 
-                <span>{{ brand.type }}</span> | 
-                <span>{{ brand.strength !== null ? brand.strength + '% ABV' : 'Strength N/A' }}</span>
-              </div>
-              <div class="brand-sizes">
-                Sizes: {{ brand.sizes.join(', ') }}
-              </div>
+      <!-- Step 1 - Bottler Details -->
+      @if (companyDetails) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>factory</mat-icon>
+            <h3>Bottler Details</h3>
+          </div>
+          <div class="details-grid">
+            <div class="detail-item">
+              <span class="label">Financial Year:</span>
+              <span class="value">{{ companyDetails.financialYear }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Application ID:</span>
+              <span class="value">{{ companyDetails.applicationId }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Application Date:</span>
+              <span class="value">{{ companyDetails.applicationDate }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Bottler Name:</span>
+              <span class="value">{{ companyDetails.bottlerName }}</span>
+            </div>
+            <div class="detail-item full-width">
+              <span class="label">Bottler Address:</span>
+              <span class="value">{{ companyDetails.bottlerAddress }}</span>
             </div>
           </div>
-        }
-      </div>
-    </div>
+        </div>
+      }
 
-    <!-- Fee Summary Section -->
-    <div class="info-section" *ngIf="feeStructure">
-      <div class="section-header">
-        <mat-icon>receipt</mat-icon>
-        <h3>Payment Summary</h3>
-      </div>
-      <div class="fee-summary">
-        <div class="fee-row">
-          <span class="fee-label">Application Fee:</span>
-          <span class="fee-value">₹{{ feeStructure.applicationFee | number:'1.2-2' }}</span>
+      <!-- Step 2 - Collaborating Company Details -->
+      @if (bottlerDetails) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>business</mat-icon>
+            <h3>Collaborating Company Details</h3>
+          </div>
+          <div class="details-grid">
+            <div class="detail-item">
+              <span class="label">Company Name:</span>
+              <span class="value">{{ bottlerDetails.brandOwnerName }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">PAN No:</span>
+              <span class="value">{{ bottlerDetails.brandOwnerPan }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Mobile No:</span>
+              <span class="value">{{ bottlerDetails.brandOwnerMobile }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Email:</span>
+              <span class="value">{{ bottlerDetails.brandOwnerEmail }}</span>
+            </div>
+            <div class="detail-item full-width">
+              <span class="label">Registered Office Address:</span>
+              <span class="value">{{ bottlerDetails.brandOwnerOfficeAddress }}</span>
+            </div>
+            <div class="detail-item full-width">
+              <span class="label">Factory Address:</span>
+              <span class="value">{{ bottlerDetails.brandOwnerFactoryAddress }}</span>
+            </div>
+          </div>
         </div>
-        <div class="fee-row">
-          <span class="fee-label">Collaboration Fee:</span>
-          <span class="fee-value">₹{{ feeStructure.collaborationFee | number:'1.2-2' }}</span>
-        </div>
-        <div class="fee-row">
-          <span class="fee-label">Security Deposit:</span>
-          <span class="fee-value">₹{{ feeStructure.securityDeposit | number:'1.2-2' }}</span>
-        </div>
-        <div class="fee-row total">
-          <span class="fee-label">Total Amount:</span>
-          <span class="fee-value">₹{{ getTotalAmount() | number:'1.2-2' }}</span>
-        </div>
-      </div>
-    </div>
+      }
 
-    <!-- Terms and Conditions -->
-    <div class="terms-section">
-      <mat-checkbox [(ngModel)]="acceptTerms" required>
-        <span class="terms-text">
-          I hereby declare that all the information provided above is true and correct to the best of my knowledge. 
-          I agree to the <a href="#" (click)="viewTerms($event)">terms and conditions</a> for brand collaboration.
-        </span>
-      </mat-checkbox>
-    </div>
+      <!-- Step 3 - Selected Brands -->
+      @if (selectedBrands.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>inventory</mat-icon>
+            <h3>Selected Brands ({{ selectedBrands.length }})</h3>
+          </div>
+          <div class="brands-summary">
+            @for (brand of selectedBrands; track brand.id; let i = $index) {
+              <div class="brand-item">
+                <div class="brand-number">{{ i + 1 }}</div>
+                <div class="brand-details">
+                  <div class="brand-name">{{ brand.brand_name }}</div>
+                  <div class="brand-meta">
+                    <span>{{ brand.brand_code }}</span> |
+                    <span>{{ brand.category }}</span> |
+                    <span>{{ brand.type }}</span>
+                    @if (brand.strength !== null) {
+                      | <span>{{ brand.strength }}% ABV</span>
+                    }
+                  </div>
+                  <div class="brand-sizes">
+                    Pack Sizes: {{ (brand.selectedSizes || brand.sizes).join(', ') }}
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Payment Summary -->
+      @if (feeStructure) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>receipt</mat-icon>
+            <h3>Payment Summary</h3>
+          </div>
+          <div class="fee-summary">
+            <div class="fee-row">
+              <span class="fee-label">Application Fee:</span>
+              <span class="fee-value">&#8377;{{ feeStructure.applicationFee | number:'1.2-2' }}</span>
+            </div>
+            <div class="fee-row">
+              <span class="fee-label">Collaboration Fee:</span>
+              <span class="fee-value">&#8377;{{ feeStructure.collaborationFee | number:'1.2-2' }}</span>
+            </div>
+            <div class="fee-row">
+              <span class="fee-label">Security Deposit:</span>
+              <span class="fee-value">&#8377;{{ feeStructure.securityDeposit | number:'1.2-2' }}</span>
+            </div>
+            <div class="fee-row total">
+              <span class="fee-label">Total Amount:</span>
+              <span class="fee-value">&#8377;{{ getTotalAmount() | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Declaration -->
+      <div class="terms-section">
+        <mat-checkbox [(ngModel)]="acceptTerms" required>
+          <span class="terms-text">
+            I hereby declare that all the information provided above is true and correct to the best of my knowledge.
+            I agree to the <a href="#" (click)="viewTerms($event)">terms and conditions</a> for brand collaboration.
+          </span>
+        </mat-checkbox>
+      </div>
+
     }
 
+    <!-- ================================================================
+         POST-SUBMISSION success screen
+         ================================================================ -->
     @if (applicationId) {
       <div class="success-section">
         <div class="success-header">
@@ -189,9 +212,9 @@
         <div class="next-steps">
           <h4>Next Steps</h4>
           <ul>
-            <li>Your submitted application summary is available on a separate page.</li>
-            <li>Use the button below to view the application summary.</li>
-            <li>The application will continue in the normal workflow after submission.</li>
+            <li>Your application is now pending review by the Excise Department.</li>
+            <li>Use the button below to view your full application summary.</li>
+            <li>Once approved, proceed to make payment from the <strong>Make Payment</strong> menu.</li>
           </ul>
         </div>
       </div>
@@ -202,10 +225,8 @@
   <mat-card-actions>
     @if (!applicationId) {
       <button mat-stroked-button (click)="goBack()">Back</button>
-      <button 
-        mat-flat-button 
-        color="primary" 
-        (click)="submitApplication()" 
+      <button mat-flat-button color="primary"
+        (click)="submitApplication()"
         [disabled]="!acceptTerms || isSubmitting">
         {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
       </button>
@@ -219,3 +240,4 @@
     }
   </mat-card-actions>
 </mat-card>
+

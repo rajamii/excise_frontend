@@ -3,7 +3,6 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { BottlerDetailsComponent } from "./steps/bottler-details/bottler-details.component";
 import { CompanyDetailsComponent } from './steps/company-details/company-details.component';
 import { SelectBrandsComponent } from "./steps/select-brands/select-brands.component";
-import { BrandOverviewComponent } from './steps/brand-overview/brand-overview.component';
 import { SubmitApplicationComponent } from './steps/submit-application/submit-application.component';
 
 @Component({
@@ -13,7 +12,6 @@ import { SubmitApplicationComponent } from './steps/submit-application/submit-ap
     BottlerDetailsComponent, 
     CompanyDetailsComponent, 
     SelectBrandsComponent, 
-    BrandOverviewComponent, 
     SubmitApplicationComponent
   ],
   templateUrl: './prepare-application.component.html',

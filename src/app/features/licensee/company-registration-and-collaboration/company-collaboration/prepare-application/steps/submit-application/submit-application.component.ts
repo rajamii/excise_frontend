@@ -186,7 +186,7 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
 
   private isDataReadyForSubmit(): boolean {
     const hasBottler = !!this.bottlerDetails?.brandOwner;
-    const hasCompany = !!this.companyDetails?.licenseeName && !!this.companyDetails?.licenseNumber;
+    const hasCompany = !!this.companyDetails?.bottlerName && !!this.companyDetails?.bottlerId;
     const hasBrands = Array.isArray(this.selectedBrands) && this.selectedBrands.length > 0;
     const hasFee = !!this.feeStructure;
     return hasBottler && hasCompany && hasBrands && hasFee;
@@ -201,17 +201,22 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     formData.append('brand_owner', String(this.bottlerDetails.brandOwnerName || this.bottlerDetails.brandOwner || ''));
     formData.append('brand_owner_code', String(this.bottlerDetails.brandOwnerCode || ''));
     formData.append('brand_owner_name', String(this.bottlerDetails.brandOwnerName || ''));
-    formData.append('brand_owner_address', String(this.bottlerDetails.brandOwnerAddress || ''));
+    formData.append('brand_owner_office_address', String(this.bottlerDetails.brandOwnerOfficeAddress || ''));
+    formData.append('brand_owner_factory_address', String(this.bottlerDetails.brandOwnerFactoryAddress || ''));
+    formData.append('brand_owner_pan', String(this.bottlerDetails.brandOwnerPan || ''));
+    formData.append('brand_owner_mobile', String(this.bottlerDetails.brandOwnerMobile || ''));
+    formData.append('brand_owner_email', String(this.bottlerDetails.brandOwnerEmail || ''));
 
-    formData.append('licensee_name', String(this.companyDetails.licenseeName || ''));
-    formData.append('licensee_address', String(this.companyDetails.licenseeAddress || ''));
-    formData.append('contact_person', String(this.companyDetails.contactPerson || ''));
-    formData.append('contact_number', this.normalizeMobileNumber(this.companyDetails.contactNumber));
-    formData.append('email_address', String(this.companyDetails.emailAddress || ''));
-    formData.append('license_number', String(this.companyDetails.licenseNumber || ''));
-    formData.append('license_type', String(this.companyDetails.licenseType || ''));
-    formData.append('establishment_type', String(this.companyDetails.establishmentType || ''));
-    formData.append('business_reg_number', String(this.companyDetails.businessRegNumber || ''));
+    formData.append('licensee_name', String(this.companyDetails.bottlerName || ''));
+    formData.append('application_id', String(this.companyDetails.applicationId || ''));
+    formData.append('licensee_address', String(this.companyDetails.bottlerAddress || ''));
+    // contact_person not collected in Step 1 (auto-fetched from bottler profile)
+    // contact_number not collected in Step 1
+    // email_address not collected in Step 1
+    formData.append('license_number', String(this.companyDetails.bottlerId || ''));
+    // license_type not collected in Step 1
+    // establishment_type not collected in Step 1
+    // business_reg_number not collected in Step 1
 
     formData.append('selected_brand_ids', JSON.stringify(selectedBrandIds));
     formData.append('selected_brands', JSON.stringify(this.selectedBrands));
@@ -356,4 +361,3 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     this.collaborationService.clearSelectedBrands();
   }
 }
-
