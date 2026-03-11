@@ -125,35 +125,16 @@
 
         <!-- Officer Activity section -->
         <div *ngIf="selectedSupplyChainSection === 'officer-activity'" class="officer-activity-section">
-          <div class="section-header">
-            <h3>
-              <mat-icon>assignment</mat-icon>
-              Officer Activity Register
-            </h3>
-          </div>
-          <div class="activity-content">
-            <p>Officer activity tracking and register functionality.</p>
-            <div class="placeholder-content">
-              <div class="activity-item">
-                <div class="activity-icon">
-                  <mat-icon>check_circle</mat-icon>
-                </div>
-                <div class="activity-details">
-                  <h4>Application Approved</h4>
-                  <p>Transit permit application TP001/2024 approved</p>
-                  <small>2 hours ago</small>
-                </div>
+          <div class="officer-activity-placeholder">
+            <div class="placeholder-card">
+              <div class="placeholder-icon-wrap">
+                <mat-icon>construction</mat-icon>
               </div>
-              <div class="activity-item">
-                <div class="activity-icon">
-                  <mat-icon>cancel</mat-icon>
-                </div>
-                <div class="activity-details">
-                  <h4>Application Rejected</h4>
-                  <p>Requisition REQ002/2024 rejected due to incomplete documentation</p>
-                  <small>4 hours ago</small>
-                </div>
-              </div>
+              <h3>Under Development</h3>
+              <p>
+                The Officer Activity module is currently under development and will be available very soon.
+              </p>
+              <span class="placeholder-note">Thank you for your patience.</span>
             </div>
           </div>
         </div>
