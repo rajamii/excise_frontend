@@ -546,11 +546,17 @@ export class FinalrequistionlettersComponent implements OnInit {
     let allContent = "";
     printContents.forEach((element, index) => {
       allContent += element.outerHTML;
-      // Add page break between letters except for the last one
+      // Add exactly one page break between sections except for the last one
       if (index < printContents.length - 1) {
-        allContent += '<div style="page-break-after: always;"></div>';
+        allContent += '<div class="print-page-break"></div>';
       }
     });
+
+    const assetBaseUrl = `${window.location.origin}/`;
+    allContent = allContent.replace(
+      /src="assets\//g,
+      `src="${assetBaseUrl}assets/`
+    );
 
     // Get styles from the current document
     const styles = Array.from(document.styleSheets)
@@ -573,12 +579,12 @@ export class FinalrequistionlettersComponent implements OnInit {
           <style>
             @page {
               size: A4;
-              margin: 20mm;
+              margin: 6mm 8mm;
             }
             body {
               font-family: 'Arial', sans-serif;
-              font-size: 14px;
-              line-height: 1.6;
+              font-size: 12px;
+              line-height: 1.35;
               margin: 0;
               padding: 0;
             }
@@ -594,64 +600,73 @@ export class FinalrequistionlettersComponent implements OnInit {
             }
             .sub-header {
               text-align: center;
-              font-size: 12px;
-              margin-top: 10px;
-              margin-bottom: 15px;
+              font-size: 10px;
+              margin-top: 6px;
+              margin-bottom: 8px;
             }
             .letter-content {
-              margin-top: 20px;
+              margin-top: 10px;
               text-align: left;
             }
             .signature-section {
-              margin-top: 50px;
+              margin-top: 12px;
               text-align: right;
-              margin-right: 20px;
+              margin-right: 6px;
+              font-size: 10px;
+              line-height: 1.2;
             }
             .main, .permit-copy {
               border: 2px solid black !important;
-              padding: 15px;
-              margin-bottom: 30px;
+              padding: 6px 8px;
+              margin-bottom: 6mm;
               page-break-inside: avoid;
+              break-inside: avoid-page;
               background: white;
             }
-            .permit-copy {
-              page-break-before: always;
+            .print-page-break {
+              break-after: page;
+              page-break-after: always;
             }
             .permit-copy.last-copy {
               page-break-after: auto;
             }
+            .permit-content {
+              transform: scale(0.92);
+              transform-origin: top center;
+              width: 108.7%;
+            }
             .copy-number {
-              font-size: 18px;
+              font-size: 12px;
               text-align: center;
-              margin-bottom: 20px;
+              margin-bottom: 6px;
               border-bottom: 2px solid black;
-              padding-bottom: 10px;
+              padding-bottom: 4px;
               font-weight: bold;
             }
             .permit-section {
-              margin-top: 20px;
-              font-size: 14px;
-              line-height: 1.6;
+              margin-top: 6px;
+              font-size: 10px;
+              line-height: 1.14;
               text-align: justify;
             }
             .permit-table {
               width: 100%;
               border-collapse: collapse;
-              margin: 20px 0;
-              font-size: 12px;
+              margin: 6px 0;
+              font-size: 9px;
             }
             .permit-table td {
               border: 1px solid black;
               text-align: center;
-              padding: 8px 5px;
+              padding: 3px 2px;
               vertical-align: middle;
             }
             .permit-table tr:first-child td {
               font-weight: bold;
               background-color: #f5f5f5;
               text-align: center;
-              font-size: 11px;
-              padding: 10px 5px;
+              font-size: 8px;
+              padding: 4px 2px;
               -webkit-print-color-adjust: exact;
               color-adjust: exact;
             }
@@ -660,13 +675,7 @@ export class FinalrequistionlettersComponent implements OnInit {
               width: 20%;
             }
             .logo {
-              text-align: center;
-              margin-bottom: 10px;
-            }
-            .logo img {
-              height: 80px;
-              display: block !important;
-              margin: 0 auto !important;
+              display: none !important;
             }
             .bold-text {
               font-weight: bold;
@@ -678,22 +687,51 @@ export class FinalrequistionlettersComponent implements OnInit {
             .flex {
               display: flex;
               justify-content: space-between;
-              font-size: 12px;
-              margin-top: 15px;
-              margin-bottom: 10px;
+              font-size: 9px;
+              margin-top: 5px;
+              margin-bottom: 4px;
             }
             a {
               color: inherit;
               text-decoration: none;
             }
             p {
-              margin-bottom: 15px;
+              margin-bottom: 5px;
               text-align: justify;
             }
+            ol {
+              margin: 2px 0 0 14px;
+              padding-left: 8px;
+            }
+            li {
+              margin-bottom: 2px;
+            }
+            ${styles}
             strong {
               font-weight: bold;
             }
-            ${styles}
+            .main,
+            .permit-copy {
+              page-break-before: auto !important;
+              break-before: auto !important;
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            .main:not(:last-child),
+            .permit-copy:not(.last-copy) {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            .print-page-break {
+              page-break-before: auto !important;
+              break-before: auto !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            .letter-separator,
+            .permit-separator {
+              display: none !important;
+            }
           </style>
         </head>
         <body>
