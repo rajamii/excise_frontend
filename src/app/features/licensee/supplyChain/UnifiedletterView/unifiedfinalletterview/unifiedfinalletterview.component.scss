@@ -38,6 +38,10 @@
 /* Final Letter Content */
 .final-letter-container {
   background: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='160' viewBox='0 0 360 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='5' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='5' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-position: top center;
+  background-size: 360px 160px;
   padding: 60px 80px;
   font-family: 'Times New Roman', serif;
   font-size: 14px;
@@ -236,6 +240,10 @@
     box-shadow: none;
     border: none;
     background: white !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='160' viewBox='0 0 360 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='5' fill='rgba(22,88,58,0.065)'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='5' fill='rgba(22,88,58,0.065)'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E") !important;
+    background-repeat: repeat !important;
+    background-position: top center !important;
+    background-size: 360px 160px !important;
     font-size: 12px;
     max-width: none;
     min-height: auto;
@@ -300,6 +308,7 @@
     padding: 30px 20px;
     font-size: 13px;
     max-width: 100%;
+    background-size: 300px 130px;
   }
   
   .header-content {
@@ -336,6 +345,7 @@
   .final-letter-container {
     padding: 20px 15px;
     font-size: 12px;
+    background-size: 240px 110px;
   }
   
   .dept-title {
