@@ -260,7 +260,7 @@ interface CommissionerData {
                 </div>
                 <div class="holo-bottom-panel">
                   <h6 class="text-success mb-2"><i class="bi bi-clipboard-check me-1"></i>Additional Information</h6>
-                  <p class="mb-0">Verified and approved by IT Cell. Upload slip enabled for supply chain user.</p>
+                  <p class="mb-0">Verified and approved by IT Cells. Upload slip enabled for supply chain user.</p>
                 </div>
               </div>
 
@@ -882,14 +882,21 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   canEditHologramDetails(application: CommissionerData): boolean {
-    const status = String(application?.status || '').toLowerCase();
-    const isFinalized =
-      status.includes('approved by commissioner') ||
-      status.includes('cartoon assigned') ||
-      status.includes('payment completed') ||
-      status.includes('rejected') ||
-      status.includes('arrived');
-    return !isFinalized;
+    const status = String(application?.status || '')
+      .toLowerCase()
+      .replace(/[_\s-]+/g, '');
+    const allowedActions = Array.isArray(application?.allowedActions)
+      ? application.allowedActions.map((action: string) => String(action || '').toLowerCase())
+      : [];
+
+    const hasCommissionerApprovalAction = allowedActions.includes('approve');
+    const reachedCommissionerAfterItCell =
+      status.includes('verified') ||
+      status.includes('approvedbyitcell') ||
+      status.includes('forwardedtocommissioner') ||
+      status.includes('forwardedbyitcelltocommissioner');
+
+    return hasCommissionerApprovalAction && reachedCommissionerAfterItCell;
   }
 
   private parseQty(value: any): number {
@@ -901,7 +908,7 @@ export class CommissionerDashboardComponent implements OnInit {
     event?.preventDefault();
     event?.stopPropagation();
     const target = application || this.selectedHologramDetails;
-    if (!target) return;
+    if (!target || !this.canEditHologramDetails(target)) return;
 
     this.isHologramEditMode = true;
     this.hologramEditForm = {
