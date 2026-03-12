@@ -101,7 +101,7 @@ interface CommissionerData {
                       </div>
                     </td>
                     <td class="status">
-                      <span class="status-badge" [ngClass]="getStatusClass(application.status)">
+                      <span class="status-badge" [ngClass]="getStatusClass(application.status)" [class.text-white]="getStatusClass(application.status) === 'bg-success'">
                         {{ application.status }}
                       </span>
                     </td>
@@ -326,7 +326,7 @@ interface CommissionerData {
                 <td>{{ application.submissionDate }}</td>
                 <td>{{ application.distilleryName }}</td>
                 <td>
-                  <span class="badge" [ngClass]="getStatusClass(application.status)">
+                  <span class="badge" [ngClass]="getStatusClass(application.status)" [class.text-white]="getStatusClass(application.status) === 'bg-success'">
                     {{ application.status }}
                   </span>
                 </td>
