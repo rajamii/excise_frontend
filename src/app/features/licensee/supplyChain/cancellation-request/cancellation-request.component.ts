@@ -11,6 +11,8 @@ interface Permit {
   number: string;
   amount: number;
   isCancelled: boolean;
+  isLocked: boolean;
+  lockReason?: string;
   isSelected?: boolean;
 }
 
@@ -130,16 +132,35 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?requisition_ref_no=${this.referenceNo}`).subscribe({
       next: (cancelData) => {
         console.log('Cancellation Data:', cancelData);
-        const cancelledNumbers = new Set<string>();
+        const permitStateMap = new Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>();
         if (cancelData) {
           if (Array.isArray(cancelData)) {
             cancelData.forEach(c => {
-              if (!this.isCommissionerApprovedCancellation(c)) {
-                return;
-              }
               const cancelledRaw = c.cancelled_permit_numbers || c.cancelled_permit_number || '';
               if (cancelledRaw) {
-                cancelledRaw.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
+                const permitNumbers = cancelledRaw
+                  .split(',')
+                  .map((num: string) => num.trim())
+                  .filter((num: string) => num.length > 0);
+
+                const isApproved = this.isCommissionerApprovedCancellation(c);
+                const isPaid = this.isPaidCancellation(c);
+                const isLocked = this.isActiveCancellationRequest(c) || isPaid;
+                const lockReason = isApproved ? 'Cancelled' : (isPaid ? 'Paid' : 'Already submitted');
+
+                permitNumbers.forEach((num: string) => {
+                  const existing = permitStateMap.get(num) || {
+                    isCancelled: false,
+                    isLocked: false,
+                    lockReason: ''
+                  };
+
+                  permitStateMap.set(num, {
+                    isCancelled: existing.isCancelled || isApproved,
+                    isLocked: existing.isLocked || isLocked,
+                    lockReason: existing.lockReason || (isLocked ? lockReason : '')
+                  });
+                });
               }
             });
           } else {
@@ -147,13 +168,13 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
           }
         }
         console.log('Generating permits with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermitsFromRequisition(cancelledNumbers);
+        this.generatePermitsFromRequisition(permitStateMap);
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading cancellations:', error);
         console.log('Generating permits (fallback) with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermitsFromRequisition(new Set());
+        this.generatePermitsFromRequisition(new Map());
         this.isLoading = false;
       }
     });
@@ -166,7 +187,38 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     return merged.includes('approved') && merged.includes('commissioner');
   }
 
-  private generatePermitsFromRequisition(cancelledSet: Set<string>) {
+  private isRejectedCancellation(record: any): boolean {
+    const status = String(record?.status || '').toLowerCase();
+    const stageName = String(record?.current_stage_name || '').toLowerCase();
+    const merged = `${status} ${stageName}`;
+    return merged.includes('reject');
+  }
+
+  private isPaidCancellation(record: any): boolean {
+    if (record?.payment_completed === true) {
+      return true;
+    }
+
+    const paymentStatus = String(
+      record?.payment_status ||
+      record?.paymentStatus ||
+      record?.wallet_payment_status ||
+      ''
+    ).toLowerCase();
+
+    if (['success', 'paid', 'completed'].includes(paymentStatus)) {
+      return true;
+    }
+
+    const status = String(record?.status || '').toLowerCase();
+    return status.includes('payslip') || status.includes('paid');
+  }
+
+  private isActiveCancellationRequest(record: any): boolean {
+    return !this.isRejectedCancellation(record);
+  }
+
+  private generatePermitsFromRequisition(permitStateMap: Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>) {
     const detailsNumbersRaw =
       this.requisitionData?.details_permits_number ||
       this.requisitionData?.detailsPermitsNumber ||
@@ -181,7 +233,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.permits = explicitPermitNumbers.map((num: string) => ({
         number: num,
         amount: 1000,
-        isCancelled: cancelledSet.has(num),
+        isCancelled: permitStateMap.get(num)?.isCancelled || false,
+        isLocked: permitStateMap.get(num)?.isLocked || false,
+        lockReason: permitStateMap.get(num)?.lockReason || '',
         isSelected: false
       }));
       return;
@@ -192,10 +246,10 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.requisitionData?.requisiton_number_of_permits ||
       0;
 
-    this.generatePermits(totalCount, cancelledSet);
+    this.generatePermits(totalCount, permitStateMap);
   }
 
-  generatePermits(totalCount: any, cancelledSet: Set<string>) {
+  generatePermits(totalCount: any, permitStateMap: Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>) {
     this.permits = [];
     const count = Number(totalCount);
     console.log('Generating permits loop, count:', count);
@@ -205,7 +259,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.permits.push({
         number: numStr,
         amount: 1000,
-        isCancelled: cancelledSet.has(numStr),
+        isCancelled: permitStateMap.get(numStr)?.isCancelled || false,
+        isLocked: permitStateMap.get(numStr)?.isLocked || false,
+        lockReason: permitStateMap.get(numStr)?.lockReason || '',
         isSelected: false
       });
     }
@@ -234,7 +290,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   // Helper to handle selection since template is not fully binded in the snippet provided
   togglePermit(permit: Permit, event: any) {
-    if (permit.isCancelled) return;
+    if (permit.isLocked) return;
     permit.isSelected = !!event.target.checked;
 
     // Update newlySelectedPermits for submission logic
@@ -368,6 +424,6 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   isPermitSelectionLocked(): boolean {
-    return this.permits.length > 0 && this.permits.every((p) => p.isCancelled);
+    return this.permits.length > 0 && this.permits.every((p) => p.isLocked);
   }
 }

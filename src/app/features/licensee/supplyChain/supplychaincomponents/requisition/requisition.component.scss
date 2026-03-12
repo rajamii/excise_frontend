@@ -917,6 +917,25 @@
   }
 }
 
+.cancel-permit-btn {
+  background: #dc2626;
+  border: 1px solid #b91c1c;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);
+  transition: all 0.2s ease;
+
+  &:hover,
+  &:focus {
+    background: #b91c1c;
+    border-color: #991b1b;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(185, 28, 28, 0.28);
+  }
+}
+
 .arrival-update-btn {
   background: #2563eb;
   border: 1px solid #1d4ed8;

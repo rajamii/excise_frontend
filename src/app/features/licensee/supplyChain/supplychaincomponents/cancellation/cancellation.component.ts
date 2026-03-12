@@ -157,8 +157,6 @@ export class CancellationComponent implements OnInit {
             permitNumber: (
               item.cancelled_permit_numbers ||
               item.cancelled_permit_number ||
-              item.details_permits_number ||
-              item.detailsPermitsNumber ||
               item.permitNumber ||
               item.permit_no ||
               item.permitNo ||
