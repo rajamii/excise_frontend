@@ -225,11 +225,11 @@
                   <i class="bi bi-eye me-1"></i>
                   <span class="d-none d-md-inline">View</span>
                 </button>
-                <button *ngIf="shouldShowMakePayment(item)" class="btn btn-warning btn-sm"
+                <button *ngIf="shouldShowMakePayment(item) && !item.paymentCompleted" class="btn btn-warning btn-sm"
                   type="button" (click)="navigateToWalletRecharge(item, $event)" title="Make Payment"
-                  [disabled]="item.paymentCompleted">
+                  >
                   <i class="bi bi-wallet2 me-1"></i>
-                  <span class="d-none d-md-inline">{{ item.paymentCompleted ? 'Payment Done' : 'Make Payment' }}</span>
+                  <span class="d-none d-md-inline">Make Payment</span>
                 </button>
                 <!-- View Payment Receipt button -->
                 <button *ngIf="item.paymentCompleted" class="btn btn-success btn-sm" (click)="viewPaymentSlip(item)"
@@ -237,11 +237,6 @@
                   <i class="bi bi-receipt me-1"></i>
                   <span class="d-none d-md-inline">Payment Slip</span>
                 </button>
-                <!-- Payment Completed badge -->
-                <span *ngIf="item.paymentCompleted" class="badge bg-success align-self-center"
-                  title="Payment Completed">
-                  <i class="bi bi-check-circle me-1"></i>Paid
-                </span>
               </div>
             </td>
           </tr>
