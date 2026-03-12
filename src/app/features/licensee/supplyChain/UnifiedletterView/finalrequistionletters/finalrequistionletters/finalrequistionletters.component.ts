@@ -592,7 +592,13 @@ export class FinalrequistionlettersComponent implements OnInit {
               line-height: 1.35;
               margin: 0;
               padding: 0;
-              background: #fff;
+              background: #fff !important;
+            }
+            html {
+              background: #fff !important;
+            }
+            .forwarding-letter-container {
+              background: #fff !important;
             }
             .letter-header {
               display: flex;
@@ -748,20 +754,48 @@ export class FinalrequistionlettersComponent implements OnInit {
             }
             .permit-copy .letter-header {
               width: 100%;
-              margin-bottom: 6px;
-              font-size: 12px;
-              line-height: 1.2;
+              margin-bottom: 10px;
+              font-size: 15px;
+              line-height: 1.34;
+            }
+            .permit-copy {
+              width: calc(100% - 8mm) !important;
+              max-width: calc(100% - 8mm) !important;
+              margin: 0 auto !important;
+              min-height: 180mm !important;
+            }
+            .permit-copy .permit-content {
+              min-height: 158mm;
+              display: flex;
+              flex-direction: column;
             }
             .permit-copy .flex {
-              font-size: 8px;
-              margin-top: 4px;
-              margin-bottom: 4px;
+              font-size: 10.75px;
+              margin-top: 5px;
+              margin-bottom: 6px;
               gap: 6px;
             }
-            .permit-copy .signature-section {
+            .permit-copy .permit-section {
+              font-size: 12px;
+              line-height: 1.45;
               margin-top: 10px;
+            }
+            .permit-copy .permit-table {
+              margin: 10px 0;
+              font-size: 9.75px;
+            }
+            .permit-copy .permit-table tr:first-child td {
+              font-size: 8.5px;
+              padding: 5px 3px;
+            }
+            .permit-copy .permit-table td {
+              padding: 5px 3px;
+            }
+            .permit-copy .signature-section {
+              margin-top: auto;
+              padding-top: 18px;
               margin-right: 0;
-              font-size: 9px;
+              font-size: 11.5px;
             }
             .permit-copy ol {
               margin-top: 4px;
