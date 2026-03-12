@@ -579,7 +579,7 @@ export class FinalrequistionlettersComponent implements OnInit {
           <style>
             @page {
               size: A4;
-              margin: 5mm;
+              margin: 5mm 4mm;
             }
             * {
               box-sizing: border-box;
@@ -613,20 +613,21 @@ export class FinalrequistionlettersComponent implements OnInit {
             .letter-content {
               margin-top: 10px;
               text-align: left;
+              line-height: 1.35;
             }
             .signature-section {
-              margin-top: 12px;
+              margin-top: 14px;
               text-align: right;
               margin-right: 6px;
               font-size: 10px;
               line-height: 1.2;
             }
             .main, .permit-copy {
-              border: 2px solid black !important;
+              border: 2.5px solid #222 !important;
               width: 100%;
               max-width: 100%;
-              padding: 6px 7px;
-              margin: 0 0 5mm 0;
+              padding: 8px 10px 10px;
+              margin: 0;
               page-break-inside: avoid;
               break-inside: avoid-page;
               background: white;
@@ -648,7 +649,7 @@ export class FinalrequistionlettersComponent implements OnInit {
               font-size: 11px;
               text-align: center;
               margin-bottom: 6px;
-              border-bottom: 2px solid black;
+              border-bottom: 2px solid #222;
               padding-bottom: 4px;
               font-weight: bold;
             }
@@ -700,16 +701,16 @@ export class FinalrequistionlettersComponent implements OnInit {
               display: flex;
               justify-content: space-between;
               font-size: 9px;
-              margin-top: 5px;
-              margin-bottom: 4px;
-              gap: 8px;
+              margin-top: 8px;
+              margin-bottom: 6px;
+              gap: 6px;
             }
             a {
               color: inherit;
               text-decoration: none;
             }
             p {
-              margin-bottom: 5px;
+              margin-bottom: 8px;
               text-align: justify;
             }
             ol {
@@ -755,6 +756,7 @@ export class FinalrequistionlettersComponent implements OnInit {
               font-size: 8px;
               margin-top: 4px;
               margin-bottom: 4px;
+              gap: 6px;
             }
             .permit-copy .signature-section {
               margin-top: 10px;

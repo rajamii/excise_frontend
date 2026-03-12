@@ -42,6 +42,7 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     width: 100%;
     max-width: 100%;
     margin: 0 0 5mm 0;
+    padding: 15px 11px 16px;
     page-break-inside: avoid;
     background-image: $requisition-watermark !important;
     background-repeat: repeat !important;
@@ -245,7 +246,7 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   .main {
     border: 2px solid black !important;
-    padding: 10px;
+    padding: 15px 11px 16px;
     page-break-inside: avoid;
     margin: 0 0 5mm 0;
     width: 100%;
@@ -283,7 +284,7 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   // Ensure page setup for multiple letters
   @page {
     size: A4;
-    margin: 5mm;
+    margin: 5mm 4mm;
   }
 }
 
@@ -360,19 +361,20 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 .permit-copies-container {
   margin-top: 30px;
+  width: 100%;
 }
 
 .permit-copy {
-  border: 2px solid black;
-  margin: 20px auto;
-  padding: 20px;
+  border: 2.5px solid #222;
+  margin: 16px auto;
+  padding: 16px 10px 12px;
   background: white;
   background-image: $requisition-watermark;
   background-repeat: repeat;
   background-position: top center;
   background-size: 330px 160px;
   width: 100%;
-  max-width: 198mm;
+  max-width: 200mm;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
   overflow: hidden;
@@ -383,18 +385,18 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   }
 
   @media print {
-    border: 2px solid black !important;
+    border: 2.5px solid #222 !important;
     box-shadow: none;
     width: 100%;
     max-width: 100%;
-    margin: 0 0 5mm 0;
+    margin: 0;
     page-break-inside: avoid;
     page-break-before: always;
     background-image: $requisition-watermark !important;
     background-repeat: repeat !important;
     background-position: top center !important;
     background-size: 330px 160px !important;
-    padding: 10px;
+    padding: 10px 6px 8px;
 
     &.last-copy {
       page-break-after: auto;
@@ -409,9 +411,9 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .copy-number {
   font-size: 18px;
   text-align: center;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #000;
-  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #222;
+  padding-bottom: 6px;
   font-weight: bold;
   color: #1976d2;
 
@@ -432,7 +434,7 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   }
 
   .permit-section {
-    margin-top: 20px;
+    margin-top: 12px;
     font-size: 14px;
     line-height: 1.6;
     text-align: justify;
@@ -456,7 +458,7 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    margin: 20px 0;
+    margin: 12px 0;
     font-size: 12px;
 
     td {
@@ -493,9 +495,9 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   }
 
   .signature-section {
-    margin-top: 40px;
+    margin-top: 24px;
     text-align: right;
-    margin-right: 20px;
+    margin-right: 4px;
     font-size: 14px;
     font-weight: 500;
   }
@@ -509,10 +511,10 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 // Print adjustments for permits
 @media print {
   .permit-copy {
-    border: 2px solid black !important;
-    padding: 10px;
+    border: 2.5px solid #222 !important;
+    padding: 10px 6px 8px;
     page-break-inside: avoid;
-    margin: 0 0 5mm 0;
+    margin: 0;
     background-image: $requisition-watermark !important;
     background-repeat: repeat !important;
     background-position: top center !important;
@@ -533,7 +535,7 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   .copy-number {
     color: black !important;
-    border-bottom: 2px solid black !important;
+    border-bottom: 2px solid #222 !important;
   }
 
   .permit-content {
@@ -541,22 +543,24 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       width: 100%;
       font-size: 12px;
       line-height: 1.2;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .flex {
-      gap: 8px;
+      gap: 6px;
       font-size: 9px;
+      margin-top: 3px;
+      margin-bottom: 3px;
     }
 
     .permit-section {
       font-size: 10px;
       line-height: 1.22;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
     .permit-table {
-      margin: 8px 0;
+      margin: 6px 0;
       font-size: 8px;
 
       tr:first-child td {
@@ -574,7 +578,7 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   }
 
   .permit-content .signature-section {
-    margin-top: 12px;
+    margin-top: 10px;
     margin-right: 0;
     font-size: 10px;
   }
