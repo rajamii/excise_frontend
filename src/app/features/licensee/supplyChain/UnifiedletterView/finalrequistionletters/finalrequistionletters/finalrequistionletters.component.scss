@@ -39,9 +39,9 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   @media print {
     border: 2px solid black !important;
     box-shadow: none;
-    width: 100%;
-    max-width: 100%;
-    margin: 0 0 5mm 0;
+    width: calc(100% - 8mm);
+    max-width: calc(100% - 8mm);
+    margin: 0 auto 5mm auto;
     padding: 15px 11px 16px;
     page-break-inside: avoid;
     background-image: $requisition-watermark !important;
@@ -248,9 +248,9 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     border: 2px solid black !important;
     padding: 15px 11px 16px;
     page-break-inside: avoid;
-    margin: 0 0 5mm 0;
-    width: 100%;
-    max-width: 100%;
+    margin: 0 auto 5mm auto;
+    width: calc(100% - 8mm);
+    max-width: calc(100% - 8mm);
     overflow: hidden;
 
     &:not(:last-child) {

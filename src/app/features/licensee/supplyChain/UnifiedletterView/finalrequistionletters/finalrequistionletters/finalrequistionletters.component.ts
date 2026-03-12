@@ -624,10 +624,10 @@ export class FinalrequistionlettersComponent implements OnInit {
             }
             .main, .permit-copy {
               border: 2.5px solid #222 !important;
-              width: 100%;
-              max-width: 100%;
+              width: calc(100% - 8mm);
+              max-width: calc(100% - 8mm);
               padding: 8px 10px 10px;
-              margin: 0;
+              margin: 0 auto;
               page-break-inside: avoid;
               break-inside: avoid-page;
               background: white;
