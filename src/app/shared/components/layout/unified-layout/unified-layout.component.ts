@@ -75,11 +75,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
     { section: 'requisition', label: 'Ena Requisition', icon: 'description' },
     { section: 'revalidation', label: 'Ena Revalidation', icon: 'refresh', hideForPermitSection: true },
-    { section: 'cancellation', label: 'Ena Cancellation', icon: 'cancel' },
+    { section: 'cancellation', label: 'Ena Cancellation', icon: 'cancel', hideForPermitSection: true },
     { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
-    { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true },
+    { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
     { section: 'brands', label: 'Brands Details', icon: 'label' },
@@ -857,7 +857,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    if (this.isPermitSectionUser() && section === 'transit-applications') {
+    if (this.isPermitSectionUser() && (section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
       return false;
     }
 
