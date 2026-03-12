@@ -1285,20 +1285,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (!this.applicationData) {
             return null;
         }
-
-        const actions: string[] = [];
-
-        // For requisitions, use backend-driven eligibility flags.
-        if (this.applicationType === 'requisition') {
-            const isLicensee = this.getUserContext() === 'licensee';
-            const canRequestCancellation = this.canRequestRequisitionCancellation();
-
-            if (isLicensee && canRequestCancellation) {
-                actions.push('REQUEST_CANCELLATION');
-            }
-        }
-
-        return actions.length > 0 ? actions : null;
+        return null;
     }
 
     private canRequestRequisitionCancellation(): boolean {

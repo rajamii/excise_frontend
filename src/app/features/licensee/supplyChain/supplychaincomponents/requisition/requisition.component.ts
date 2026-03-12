@@ -491,15 +491,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     
     const hasPayment = this.hasPaymentBeenMade(item);
     const isFinalApproved = this.isCommissionerFinalApproval(item);
-    const canCancel = this.canCancelRequisition(item);
-    
     console.log('🔍 getActionIncludeList:', {
       itemId: item.id,
       refNo: item.referenceNo,
       status: item.status,
       hasPayment,
       isFinalApproved,
-      canCancel,
       isCommissioner: this.isCommissioner()
     });
     
@@ -511,11 +508,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     // Show "View Permit Slip" only for commissioner after final approval
     if (isFinalApproved && this.isCommissioner()) {
       actions.push('VIEW_SLIP');
-    }
-    
-    // Show "Cancel" button for approved requisitions (if allowed)
-    if (canCancel) {
-      actions.push('REQUEST_CANCELLATION');
     }
     
     console.log('🔍 Final actions array:', actions);

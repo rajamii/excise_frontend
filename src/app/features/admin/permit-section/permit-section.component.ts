@@ -6,7 +6,6 @@ import { Subscription } from "rxjs";
 import { filter } from "rxjs/operators";
 import { RequisitionComponent } from "../../licensee/supplyChain/supplychaincomponents/requisition/requisition.component";
 import { RevalidationComponent } from "../../licensee/supplyChain/supplychaincomponents/revalidation/revalidation.component";
-import { SupplyChainService } from "../../licensee/supplyChain/services/supplychain.service";
 
 
 interface PermitData {
@@ -15,7 +14,7 @@ interface PermitData {
   distilleryName: string;
   status: string;
   amount: number;
-  type: "requisition" | "revalidation" | "cancellation" | "transit";
+  type: "requisition" | "revalidation" | "transit";
 
   allowedActions?: string[];
   id?: number;
@@ -46,7 +45,6 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private supplyChainService: SupplyChainService,
   ) { }
 
   ngOnInit(): void {
@@ -58,7 +56,6 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
           event.urlAfterRedirects.includes("/app-permit-section/") &&
           (event.urlAfterRedirects.includes("/requisition/") ||
             event.urlAfterRedirects.includes("/revalidation/") ||
-            event.urlAfterRedirects.includes("/cancellation/") ||
             event.urlAfterRedirects.includes("/transit/")
           );
       });
@@ -67,39 +64,9 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
       this.router.url.includes("/app-permit-section/") &&
       (this.router.url.includes("/requisition/") ||
         this.router.url.includes("/revalidation/") ||
-        this.router.url.includes("/cancellation/") ||
         this.router.url.includes("/transit/"));
 
-    this.loadCancellationData();
-    this.loadCancellationData();
   }
-
-
-  loadCancellationData() {
-    // ... existing cancellation load logic ...
-    this.supplyChainService.getCancellations().subscribe({
-      next: (data) => {
-        const cancellations: PermitData[] = data.map((item: any) => ({
-          referenceNo: item.ourRefNo || item.our_ref_no || item.referenceNo || 'N/A',
-          submissionDate: item.cancellationDate ? new Date(item.cancellationDate) : (item.cancellation_date ? new Date(item.cancellation_date) : new Date()),
-          distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
-          status: item.status || 'PENDING',
-          amount: parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || '0'),
-          type: "cancellation",
-          allowedActions: item.allowedActions || item.allowed_actions || [],
-          id: item.id
-        }));
-
-        this.allPermits = [
-          ...this.allPermits.filter(p => p.type !== 'cancellation'),
-          ...cancellations
-        ];
-      },
-      error: (err) => console.error('Error fetching cancellations', err)
-    });
-  }
-
-
 
   ngOnDestroy(): void {
     if (this.routerSubscription) {
@@ -176,30 +143,6 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
     this.resetPagination();
   }
 
-  approveCancellation(permit: PermitData): void {
-    if (!permit.id) {
-      console.error('Permit ID missing for approval');
-      return;
-    }
-
-    if (confirm('Are you sure you want to approve this cancellation request?')) {
-      this.supplyChainService.performCancellationAction(permit.id, 'APPROVE', 'Approved by Permit Section')
-        .subscribe({
-          next: (res) => {
-            alert('Cancellation approved successfully');
-            // Refresh logic - ideally reload data
-            this.loadCancellationData();
-          },
-          error: (err) => {
-            console.error('Error approving cancellation', err);
-            alert('Failed to approve cancellation');
-          }
-        });
-    }
-  }
-
-
-
   viewPermitSlip(permit: PermitData): void {
     console.log("Viewing permit slip for:", permit.referenceNo);
     alert(`Viewing permit slip for ${permit.referenceNo
@@ -224,12 +167,6 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
       case "revalidation":
         this.router.navigate([
           "/app-permit-section/revalidation",
-          permit.referenceNo,
-        ]);
-        break;
-      case "cancellation":
-        this.router.navigate([
-          "/app-permit-section/cancellation",
           permit.referenceNo,
         ]);
         break;
@@ -284,7 +221,6 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
     const titles: { [key: string]: string } = {
       requisition: "Requisition",
       revalidation: "Revalidation",
-      cancellation: "Cancellation",
       transit: "Transit"
 
     };

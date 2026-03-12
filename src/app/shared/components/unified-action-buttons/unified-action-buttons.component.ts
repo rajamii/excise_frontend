@@ -892,7 +892,11 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       });
     }
 
-    if (include.includes('REQUEST_CANCELLATION') && !result.some(config => config.action === 'REQUEST_CANCELLATION')) {
+    if (
+      include.includes('REQUEST_CANCELLATION') &&
+      this.context === 'licensee' &&
+      !result.some(config => config.action === 'REQUEST_CANCELLATION')
+    ) {
       console.log('🔧 UNIFIED BUTTONS: Adding REQUEST_CANCELLATION fallback');
       result.push({
         action: 'REQUEST_CANCELLATION',
@@ -923,6 +927,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     }
 
     result = this.applyRequisitionPostPaymentActionRules(result);
+    result = this.applyContextActionRestrictions(result);
     result = this.applyCancellationCommissionerActionRules(result);
     result = this.applyRevalidationCommissionerActionRules(result);
     result = this.applyHologramCommissionerActionRules(result);
@@ -940,6 +945,19 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', deduped);
     return deduped;
+  }
+
+  private applyContextActionRestrictions(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    return configs.filter(config => {
+      const action = this.normalizeActionName(config?.action);
+      if (action === 'REQUEST_CANCELLATION' && this.itemType === 'requisition') {
+        return false;
+      }
+      if (action === 'REQUEST_CANCELLATION' && this.context !== 'licensee') {
+        return false;
+      }
+      return true;
+    });
   }
 
   private applyRequisitionPostPaymentActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
