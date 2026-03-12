@@ -923,6 +923,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     }
 
     result = this.applyRequisitionPostPaymentActionRules(result);
+    result = this.applyCancellationCommissionerActionRules(result);
 
     // Deduplicate by action so multiple transitions mapped to same action
     // (e.g., two "approve-like" paths) don't render duplicate buttons.
@@ -949,6 +950,14 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     }
 
     if (!this.isRequisitionPostPaymentStage()) {
+      return configs;
+    }
+
+    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+  }
+
+  private applyCancellationCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    if (this.itemType !== 'cancellation') {
       return configs;
     }
 

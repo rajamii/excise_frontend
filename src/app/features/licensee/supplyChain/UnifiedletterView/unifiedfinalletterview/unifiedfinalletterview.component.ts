@@ -377,7 +377,14 @@ export class UnifiedfinalletterviewComponent implements OnInit {
   }
 
   private resolvePermitNumbers(apiData: any): string[] {
-    const permitSources = [
+    const cancellationPermitSources = [
+      apiData?.cancelledPermitNumbers,
+      apiData?.cancelled_permit_numbers,
+      apiData?.cancelledPermitNumber,
+      apiData?.cancelled_permit_number
+    ];
+
+    const generalPermitSources = [
       apiData?.details_permits_number,
       apiData?.detailsPermitsNumber,
       apiData?.permit_numbers,
@@ -388,12 +395,21 @@ export class UnifiedfinalletterviewComponent implements OnInit {
       apiData?.requisition?.permitNumbers
     ];
 
+    const permitSources = this.letterType === 'cancellation'
+      ? [...cancellationPermitSources, ...generalPermitSources]
+      : generalPermitSources;
+
     for (const source of permitSources) {
       const parsed = this.parsePermitNumbersFromDetails(String(source || ''));
       if (parsed.length > 0) {
         console.log('✅ Using permit numbers from dynamic source:', source, '→', parsed);
         return parsed;
       }
+    }
+
+    if (this.letterType === 'cancellation') {
+      console.log('❌ No cancelled permit number data found in cancellation payload');
+      return [];
     }
 
     const permitCount = Number(
