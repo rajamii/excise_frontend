@@ -45,6 +45,7 @@ import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/p
 import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
 import { HologramMonthlyReportComponent } from '../licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component';
 import { HologramdetailsComponent } from '../licensee/supplyChain/HoloGram/hologramdetails/hologramdetails.component';
+import { OfficerinchargehologramreqComponent } from '../licensee/supplyChain/HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 import { OicdailyhologramregisterComponent } from '../licensee/supplyChain/registers/oicdailyhologramregister/oicdailyhologramregister.component';
 import { BrandwarehouseComponent } from '../licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component';
 import { ITCELLComponent } from '../admin/it-cell/itcell.component';
@@ -93,6 +94,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     BrandsDetailsComponent,
     HologramMonthlyReportComponent,
     HologramdetailsComponent,
+    OfficerinchargehologramreqComponent,
     OicdailyhologramregisterComponent,
     BrandwarehouseComponent,
     ITCELLComponent,
@@ -719,7 +721,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'transit-applications': 'Transit Applications',
       'brands': 'Brand Details',
       'monthly-hologram-statement': 'Monthly Hologram Statement',
-      'hologram-register': 'Hologram Register',
+      'oic-hologram-requests': 'Hologram Requests',
+      'hologram-register': 'Hologram Procurement',
       'hologram-daily-entry': 'Daily Hologram Entry',
       'stock-inventory': 'Brand Warehouse Stock',
 

@@ -85,7 +85,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'brands', label: 'Brands Details', icon: 'label' },
     { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
     { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
-    { section: 'hologram-register', label: 'Hologram Registers', icon: 'qr_code', hideForCommissioner: true },
+    { section: 'hologram-register', label: 'Hologram Procurement', icon: 'qr_code', hideForCommissioner: true },
+    { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', showOnlyForOic: true },
     { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', hideForCommissioner: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
@@ -861,8 +862,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    // Allow hologram-inventory for OIC users only
-    if (section === 'hologram-inventory' && this.isOicUser()) {
+    // Allow OIC-only hologram sections even if DB navigation tokens are incomplete.
+    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests') && this.isOicUser()) {
       return true;
     }
 
@@ -904,6 +905,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'brands': ['brand', 'brands'],
       'monthly-hologram-statement': ['hologram_monthly', 'monthly_hologram', 'hologram_statement'],
       'hologram-inventory': ['hologram_inventory', 'hologram_overview', 'hologram'],
+      'oic-hologram-requests': ['hologram_request', 'hologram_requests', 'hologram_register', 'hologram'],
       'hologram-register': ['hologram_register', 'hologram'],
       'hologram-daily-entry': ['hologram_daily', 'hologram'],
       'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],

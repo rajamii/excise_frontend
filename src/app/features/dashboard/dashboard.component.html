@@ -99,9 +99,11 @@
           *ngIf="selectedSupplyChainSection === 'monthly-hologram-statement'"></app-hologram-monthly-report>
         <app-hologramdetails
           *ngIf="selectedSupplyChainSection === 'hologram-register'"
-          (hologramRequestsClicked)="openDashboardSection('hologram-request')"
+          (hologramRequestsClicked)="openDashboardSection('oic-hologram-requests')"
           (hologramOverviewClicked)="openDashboardSection('hologram-overview')">
         </app-hologramdetails>
+        <app-officerinchargehologramreq
+          *ngIf="selectedSupplyChainSection === 'oic-hologram-requests'"></app-officerinchargehologramreq>
         <app-oicdailyhologramregister
           *ngIf="selectedSupplyChainSection === 'hologram-daily-entry'"></app-oicdailyhologramregister>
         <app-brandwarehouse *ngIf="selectedSupplyChainSection === 'stock-inventory'"></app-brandwarehouse>
