@@ -736,12 +736,12 @@ export class UnifiedfinalletterviewComponent implements OnInit {
           position: absolute;
           inset: 3mm;
           display: grid !important;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
-          grid-auto-rows: minmax(8px, 1fr);
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          grid-auto-rows: minmax(6px, 1fr);
           align-items: center;
           justify-items: center;
-          column-gap: 0.5mm;
-          row-gap: 0.5mm;
+          column-gap: 0.25mm;
+          row-gap: 0.25mm;
           pointer-events: none;
           user-select: none;
           z-index: 0;
@@ -752,12 +752,12 @@ export class UnifiedfinalletterviewComponent implements OnInit {
           width: 100%;
           text-align: center;
           font-family: Arial, sans-serif;
-          font-size: 10px;
+          font-size: 9px;
           font-weight: 700;
           letter-spacing: 0;
           line-height: 1;
           white-space: nowrap;
-          color: rgba(22, 88, 58, 0.09);
+          color: rgba(22, 88, 58, 0.11);
         }
         .letter-header,
         .letter-meta,
