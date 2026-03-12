@@ -579,7 +579,12 @@ export class FinalrequistionlettersComponent implements OnInit {
           <style>
             @page {
               size: A4;
-              margin: 6mm 8mm;
+              margin: 5mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             body {
               font-family: 'Arial', sans-serif;
@@ -587,6 +592,7 @@ export class FinalrequistionlettersComponent implements OnInit {
               line-height: 1.35;
               margin: 0;
               padding: 0;
+              background: #fff;
             }
             .letter-header {
               display: flex;
@@ -617,11 +623,14 @@ export class FinalrequistionlettersComponent implements OnInit {
             }
             .main, .permit-copy {
               border: 2px solid black !important;
-              padding: 6px 8px;
-              margin-bottom: 6mm;
+              width: 100%;
+              max-width: 100%;
+              padding: 6px 7px;
+              margin: 0 0 5mm 0;
               page-break-inside: avoid;
               break-inside: avoid-page;
               background: white;
+              overflow: hidden;
             }
             .print-page-break {
               break-after: page;
@@ -631,12 +640,12 @@ export class FinalrequistionlettersComponent implements OnInit {
               page-break-after: auto;
             }
             .permit-content {
-              transform: scale(0.92);
-              transform-origin: top center;
-              width: 108.7%;
+              width: 100%;
+              max-width: 100%;
+              overflow: hidden;
             }
             .copy-number {
-              font-size: 12px;
+              font-size: 11px;
               text-align: center;
               margin-bottom: 6px;
               border-bottom: 2px solid black;
@@ -644,35 +653,38 @@ export class FinalrequistionlettersComponent implements OnInit {
               font-weight: bold;
             }
             .permit-section {
-              margin-top: 6px;
-              font-size: 10px;
-              line-height: 1.14;
+              margin-top: 5px;
+              font-size: 9px;
+              line-height: 1.18;
               text-align: justify;
+              word-break: break-word;
             }
             .permit-table {
               width: 100%;
               border-collapse: collapse;
-              margin: 6px 0;
-              font-size: 9px;
+              table-layout: fixed;
+              margin: 5px 0;
+              font-size: 8px;
             }
             .permit-table td {
               border: 1px solid black;
               text-align: center;
-              padding: 3px 2px;
+              padding: 2px 1.5px;
               vertical-align: middle;
+              word-break: break-word;
             }
             .permit-table tr:first-child td {
               font-weight: bold;
               background-color: #f5f5f5;
               text-align: center;
-              font-size: 8px;
-              padding: 4px 2px;
+              font-size: 7px;
+              padding: 3px 1.5px;
               -webkit-print-color-adjust: exact;
               color-adjust: exact;
             }
             .permit-table td:first-child {
               text-align: left;
-              width: 20%;
+              width: 18%;
             }
             .logo {
               display: none !important;
@@ -690,6 +702,7 @@ export class FinalrequistionlettersComponent implements OnInit {
               font-size: 9px;
               margin-top: 5px;
               margin-bottom: 4px;
+              gap: 8px;
             }
             a {
               color: inherit;
@@ -731,6 +744,26 @@ export class FinalrequistionlettersComponent implements OnInit {
             .letter-separator,
             .permit-separator {
               display: none !important;
+            }
+            .permit-copy .letter-header {
+              width: 100%;
+              margin-bottom: 6px;
+              font-size: 12px;
+              line-height: 1.2;
+            }
+            .permit-copy .flex {
+              font-size: 8px;
+              margin-top: 4px;
+              margin-bottom: 4px;
+            }
+            .permit-copy .signature-section {
+              margin-top: 10px;
+              margin-right: 0;
+              font-size: 9px;
+            }
+            .permit-copy ol {
+              margin-top: 4px;
+              padding-left: 14px;
             }
           </style>
         </head>
