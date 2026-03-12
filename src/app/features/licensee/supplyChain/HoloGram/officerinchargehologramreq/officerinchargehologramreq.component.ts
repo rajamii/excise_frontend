@@ -203,6 +203,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       return false;
     }
 
+    if (!this.isUsageDateToday(request)) {
+      return false;
+    }
+
     // 1. Check Dynamic Actions (Backend)
     const actions = request.allowedActions || [];
     if (actions.includes('issue') || actions.includes('approve')) return true;
@@ -214,9 +218,29 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     return false;
   }
 
+  isUsageDateToday(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) {
+      return false;
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey === todayKey;
+  }
+
+  shouldShowUsageDateApprovalNotice(request: any): boolean {
+    return this.mapStatusToCategory(request?.status) === 'PENDING' && !this.isUsageDateToday(request);
+  }
+
   canReject(request: any): boolean {
     // Never show action buttons once request moves past pending-review stage.
     if (this.mapStatusToCategory(request?.status) !== 'PENDING') {
+      return false;
+    }
+
+    if (!this.isUsageDateToday(request)) {
       return false;
     }
 
@@ -405,6 +429,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   approveRequest(request: HologramRequest) {
+    if (!this.isUsageDateToday(request)) {
+      alert('Allocation will be approved on the usage date only. This action becomes active automatically on that day.');
+      return;
+    }
+
     this.selectedRequest = request;
     this.approvalComments = '';
     this.approvedQuantity = request.requestedQuantity;

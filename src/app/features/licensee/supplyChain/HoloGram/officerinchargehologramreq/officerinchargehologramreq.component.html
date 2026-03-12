@@ -267,6 +267,10 @@
                                             (click)="rejectRequest(request)" title="Reject Request">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
+                                        <span *ngIf="shouldShowUsageDateApprovalNotice(request)"
+                                            class="badge bg-warning text-dark">
+                                            Allocation will be approved on usage date
+                                        </span>
                                         <!-- Show status badge for COMPLETED -->
                                         <span *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
