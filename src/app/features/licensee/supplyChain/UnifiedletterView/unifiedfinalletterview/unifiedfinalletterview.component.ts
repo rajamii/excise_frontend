@@ -698,7 +698,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
       <style>
         @page {
           size: A4 portrait;
-          margin: 12mm;
+          margin: 4mm;
         }
         * {
           margin: 0;
@@ -709,50 +709,98 @@ export class UnifiedfinalletterviewComponent implements OnInit {
         }
         body {
           font-family: 'Times New Roman', serif;
-          font-size: 14px;
-          line-height: 1.6;
+          font-size: 13px;
+          line-height: 1.45;
           color: #000;
+          background: #fff;
+        }
+        .letter-container {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          background: #fff;
         }
         .final-letter-container {
-          padding: 15mm;
-          max-width: 100%;
-          border: 3px solid #2563eb;
-          border-radius: 8px;
+          width: 198mm;
+          height: auto;
+          min-height: 0;
+          margin: 0 auto;
+          padding: 9mm 11mm;
+          position: relative;
+          overflow: hidden;
+          border: 1.5px solid #555;
+          background: #fff;
+          page-break-inside: avoid;
+        }
+        .print-watermark {
+          position: absolute;
+          inset: 4mm;
+          display: grid !important;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-auto-rows: 1fr;
+          align-items: center;
+          justify-items: center;
+          column-gap: 4mm;
+          row-gap: 0;
+          pointer-events: none;
+          user-select: none;
+          z-index: 0;
+          overflow: hidden;
+        }
+        .print-watermark span {
+          display: block !important;
+          width: 100%;
+          text-align: center;
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.2px;
+          line-height: 1.1;
+          white-space: nowrap;
+          color: rgba(22, 88, 58, 0.075);
+        }
+        .letter-header,
+        .letter-meta,
+        .addressee-section,
+        .subject-section,
+        .letter-body {
+          position: relative;
+          z-index: 1;
         }
         .letter-header {
           text-align: center;
-          margin-bottom: 20px;
-          padding-bottom: 15px;
+          margin-bottom: 14px;
+          padding-bottom: 10px;
           border-bottom: 3px double #000;
         }
         .seal-container {
-          margin-bottom: 15px;
+          margin-bottom: 10px;
         }
         .govt-seal {
-          height: 70px;
+          height: 52px;
           width: auto;
           filter: invert(1) brightness(0.2);
           display: block;
           margin: 0 auto;
         }
         .dept-title {
-          font-size: 18px;
+          font-size: 15px;
           font-weight: bold;
-          margin: 8px 0 5px 0;
+          margin: 5px 0 4px 0;
           letter-spacing: 1px;
         }
         .dept-subtitle {
-          font-size: 16px;
+          font-size: 13px;
           font-weight: bold;
-          margin: 5px 0;
+          margin: 4px 0;
         }
         .dept-address {
-          font-size: 12px;
-          margin: 5px 0;
+          font-size: 10px;
+          margin: 4px 0;
         }
         .dept-contact {
-          font-size: 11px;
-          margin-top: 5px;
+          font-size: 9px;
+          margin-top: 4px;
         }
         .dept-contact div {
           display: inline;
@@ -761,40 +809,47 @@ export class UnifiedfinalletterviewComponent implements OnInit {
         .letter-meta {
           display: flex;
           justify-content: space-between;
-          margin: 20px 0;
-          font-size: 14px;
+          margin: 14px 0;
+          font-size: 12px;
         }
         .letter-number, .letter-date {
           font-weight: bold;
         }
         .addressee-section {
-          margin: 25px 0;
+          margin: 14px 0;
         }
         .to-line {
-          margin-bottom: 10px;
+          margin-bottom: 8px;
           font-weight: bold;
         }
         .addressee-details {
-          margin-left: 40px;
-          line-height: 1.8;
+          margin-left: 20px;
+          line-height: 1.55;
         }
         .addressee-name, .company-name {
           font-weight: bold;
         }
+        .addressee-name, .company-name, .company-address {
+          font-size: 12px;
+          margin: 4px 0;
+        }
         .subject-section {
-          margin: 25px 0;
+          margin: 14px 0;
         }
         .subject-line {
           font-weight: bold;
           text-decoration: underline;
+          font-size: 12px;
+          line-height: 1.5;
         }
         .letter-body {
-          margin: 30px 0;
+          margin: 14px 0 0 0;
           text-align: justify;
-          line-height: 1.8;
+          line-height: 1.55;
         }
         .body-text {
-          text-indent: 50px;
+          font-size: 12px;
+          text-indent: 28px;
         }
         .no-print {
           display: none !important;

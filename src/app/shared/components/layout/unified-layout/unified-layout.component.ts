@@ -53,9 +53,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
   readonly sidebarSectionLabels: Record<string, string> = {
-    requisition: 'Ena Requisition',
-    revalidation: 'Ena Revalidation',
-    cancellation: 'Ena Cancellation',
+    requisition: 'ENA Requisition',
+    revalidation: 'ENA Revalidation',
+    cancellation: 'ENA Cancellation',
     transit: 'Transit Permit',
     hologram: 'New Hologram Procurement'
   };
@@ -73,9 +73,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
-    { section: 'requisition', label: 'Ena Requisition', icon: 'description' },
-    { section: 'revalidation', label: 'Ena Revalidation', icon: 'refresh', hideForPermitSection: true },
-    { section: 'cancellation', label: 'Ena Cancellation', icon: 'cancel', hideForPermitSection: true },
+    { section: 'requisition', label: 'ENA Requisition', icon: 'description' },
+    { section: 'revalidation', label: 'ENA Revalidation', icon: 'refresh', hideForPermitSection: true },
+    { section: 'cancellation', label: 'ENA Cancellation', icon: 'cancel', hideForPermitSection: true },
     { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
