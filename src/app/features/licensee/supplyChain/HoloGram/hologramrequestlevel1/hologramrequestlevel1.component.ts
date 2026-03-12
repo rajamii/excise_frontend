@@ -18,6 +18,8 @@ interface HologramRequest {
   styleUrl: './hologramrequestlevel1.component.scss'
 })
 export class Hologramrequestlevel1Component implements OnInit {
+  minUsageDate = '';
+  maxUsageDate = '';
 
   requestData: HologramRequest = {
     totalHolograms: 0,
@@ -36,7 +38,32 @@ export class Hologramrequestlevel1Component implements OnInit {
   constructor(private router: Router) { }
 
   ngOnInit(): void {
+    this.initializeUsageDateWindow();
     this.loadEstablishmentName();
+  }
+
+  private initializeUsageDateWindow(): void {
+    const today = new Date();
+    const dayAfterTomorrow = new Date(today);
+    dayAfterTomorrow.setDate(today.getDate() + 2);
+
+    this.minUsageDate = this.toDateInputValue(today);
+    this.maxUsageDate = this.toDateInputValue(dayAfterTomorrow);
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private isUsageDateAllowed(): boolean {
+    const usageDate = String(this.requestData.usageDate || '').trim();
+    if (!usageDate || !this.minUsageDate || !this.maxUsageDate) {
+      return false;
+    }
+    return usageDate >= this.minUsageDate && usageDate <= this.maxUsageDate;
   }
 
 
@@ -70,6 +97,13 @@ export class Hologramrequestlevel1Component implements OnInit {
   // ... (keeping isValidForm and generateReferenceNumber as helpers if needed, though ref no comes from backend)
 
   private isValidForm(): boolean {
+    if (!this.isUsageDateAllowed()) {
+      alert(
+        `Usage date must be between ${new Date(this.minUsageDate).toLocaleDateString('en-GB')} and ${new Date(this.maxUsageDate).toLocaleDateString('en-GB')}.`
+      );
+      return false;
+    }
+
     return !!(
       this.requestData.totalHolograms > 0 &&
       this.requestData.hologramType &&
@@ -207,6 +241,7 @@ End of Application
       hologramType: 'LOCAL',
       usageDate: ''
     };
+    this.initializeUsageDateWindow();
   }
 
   closeModal(): void {
