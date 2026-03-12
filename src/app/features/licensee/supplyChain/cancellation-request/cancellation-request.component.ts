@@ -105,6 +105,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     console.log('CancellationRequestComponent: loading data for', this.referenceNo);
     this.isLoading = true;
     this.errorMessage = '';
+    this.selectedPermits = [];
+    this.newlySelectedPermits = [];
+    this.permits = [];
 
     // 1. Fetch Requisition Data
     this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/?our_ref_no=${this.referenceNo}`).subscribe({
@@ -133,10 +136,18 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       next: (cancelData) => {
         console.log('Cancellation Data:', cancelData);
         const permitStateMap = new Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>();
-        if (cancelData) {
-          if (Array.isArray(cancelData)) {
-            cancelData.forEach(c => {
-              const cancelledRaw = c.cancelled_permit_numbers || c.cancelled_permit_number || '';
+        const rows: any[] = Array.isArray(cancelData)
+          ? cancelData
+          : (Array.isArray((cancelData as any)?.results) ? (cancelData as any).results : []);
+
+        if (rows.length > 0) {
+          rows.forEach((c: any) => {
+              const cancelledRaw =
+                c.cancelledPermitNumbers ||
+                c.cancelledPermitNumber ||
+                c.cancelled_permit_numbers ||
+                c.cancelled_permit_number ||
+                '';
               if (cancelledRaw) {
                 const permitNumbers = cancelledRaw
                   .split(',')
@@ -163,9 +174,8 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
                 });
               }
             });
-          } else {
-            console.warn('Cancel Data is not an array:', cancelData);
-          }
+        } else if (cancelData) {
+          console.warn('Cancellation response had no array rows:', cancelData);
         }
         console.log('Generating permits with count:', this.requisitionData.requisitonNumberOfPermits);
         this.generatePermitsFromRequisition(permitStateMap);
@@ -182,20 +192,20 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   private isCommissionerApprovedCancellation(record: any): boolean {
     const status = String(record?.status || '').toLowerCase();
-    const stageName = String(record?.current_stage_name || '').toLowerCase();
+    const stageName = String(record?.current_stage_name || record?.currentStageName || '').toLowerCase();
     const merged = `${status} ${stageName}`;
     return merged.includes('approved') && merged.includes('commissioner');
   }
 
   private isRejectedCancellation(record: any): boolean {
     const status = String(record?.status || '').toLowerCase();
-    const stageName = String(record?.current_stage_name || '').toLowerCase();
+    const stageName = String(record?.current_stage_name || record?.currentStageName || '').toLowerCase();
     const merged = `${status} ${stageName}`;
     return merged.includes('reject');
   }
 
   private isPaidCancellation(record: any): boolean {
-    if (record?.payment_completed === true) {
+    if (record?.payment_completed === true || record?.paymentCompleted === true) {
       return true;
     }
 

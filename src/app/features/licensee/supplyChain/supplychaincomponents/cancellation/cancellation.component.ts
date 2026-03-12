@@ -155,11 +155,14 @@ export class CancellationComponent implements OnInit {
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
             permitNumber: (
+              item.cancelledPermitNumbers ||
+              item.cancelledPermitNumber ||
               item.cancelled_permit_numbers ||
               item.cancelled_permit_number ||
               item.permitNumber ||
               item.permit_no ||
               item.permitNo ||
+              item.originalPermitNumbers ||
               item.original_permit_no ||
               item.originalPermitNo ||
               '-'
