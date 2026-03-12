@@ -734,14 +734,14 @@ export class UnifiedfinalletterviewComponent implements OnInit {
         }
         .print-watermark {
           position: absolute;
-          inset: 4mm;
+          inset: 3mm;
           display: grid !important;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          grid-auto-rows: 1fr;
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+          grid-auto-rows: minmax(8px, 1fr);
           align-items: center;
           justify-items: center;
-          column-gap: 4mm;
-          row-gap: 0;
+          column-gap: 0.5mm;
+          row-gap: 0.5mm;
           pointer-events: none;
           user-select: none;
           z-index: 0;
@@ -752,12 +752,12 @@ export class UnifiedfinalletterviewComponent implements OnInit {
           width: 100%;
           text-align: center;
           font-family: Arial, sans-serif;
-          font-size: 14px;
+          font-size: 10px;
           font-weight: 700;
-          letter-spacing: 0.2px;
-          line-height: 1.1;
+          letter-spacing: 0;
+          line-height: 1;
           white-space: nowrap;
-          color: rgba(22, 88, 58, 0.075);
+          color: rgba(22, 88, 58, 0.09);
         }
         .letter-header,
         .letter-meta,
