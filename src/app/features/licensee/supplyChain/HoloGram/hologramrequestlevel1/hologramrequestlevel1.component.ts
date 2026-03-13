@@ -113,7 +113,10 @@ export class Hologramrequestlevel1Component implements OnInit {
 
   private resolveReferenceNumber(response: any): string {
     const value = String(response?.refNo || response?.ref_no || '').trim();
-    return value || this.generateReferenceNumber();
+    if (value) {
+      return value.replace(/^NHP(?=\/)/i, 'HQR');
+    }
+    return this.generateReferenceNumber();
   }
 
   private getFinancialYear(referenceDate: Date = new Date()): string {
@@ -127,7 +130,7 @@ export class Hologramrequestlevel1Component implements OnInit {
   private generateReferenceNumber(): string {
     const financialYear = this.getFinancialYear();
     const random = Math.floor(Math.random() * 9999) + 1;
-    return `NHP/1101/${financialYear}/${String(random).padStart(4, '0')}`;
+    return `HQR/1101/${financialYear}/${String(random).padStart(4, '0')}`;
   }
 
   private loadEstablishmentName(): void {

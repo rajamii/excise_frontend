@@ -200,7 +200,7 @@
                                 <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
                                 <td class="ref-number">
                                     <div class="ref-display">
-                                        <span class="ref-text">{{ request.referenceNo }}</span>
+                                        <span class="ref-text">{{ getDisplayReferenceNo(request.referenceNo) }}</span>
                                         <span class="ref-type">{{ request.requestType.replace('_', ' ') }}</span>
                                     </div>
                                 </td>
@@ -648,41 +648,36 @@
                 </div>
 
                 <!-- Insufficient Inventory Message -->
-                <div *ngIf="!allocationResult?.canAllocate" class="alert alert-danger"></div>
-                <h6 class="alert-heading">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    Insufficient Hologram Inventory
-                </h6>
-                <p class="mb-2">{{ allocationResult?.message }}</p>
-                <hr>
-                <div class="mb-0">
-                    <strong>Suggestions:</strong>
-                    <ul class="mb-0">
-                        <li>Reduce the requested quantity to {{ allocationResult?.totalAvailable | number }} or less
-                        </li>
-                        <li>Wait for new hologram arrivals</li>
-                        <li>Check if holograms are available in other types</li>
-                    </ul>
+                <div *ngIf="!allocationResult?.canAllocate" class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Insufficient Hologram Inventory
+                    </h6>
+                    <p class="mb-2">{{ allocationResult?.message }}</p>
+                    <hr>
+                    <div class="mb-0">
+                        <strong>Suggestions:</strong>
+                        <ul class="mb-0">
+                            <li>Reduce the requested quantity to {{ allocationResult?.totalAvailable | number }} or less
+                            </li>
+                            <li>Wait for new hologram arrivals</li>
+                            <li>Check if holograms are available in other types</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary me-2" (click)="closeAllocationModal()">
+                    <i class="bi bi-x-lg me-1"></i>
+                    Cancel
+                </button>
+                <button *ngIf="allocationResult?.canAllocate" type="button" class="btn btn-success"
+                    (click)="confirmHologramAllocation()">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Confirm Allocation & Issue
+                </button>
+            </div>
         </div>
-    </div>
-    <div class="modal-footer">
-
-        <button type="button" class="btn btn-secondary me-2" (click)="closeAllocationModal()">
-            <i class="bi bi-x-lg me-1"></i>
-            Cancel
-        </button>
-        <button *ngIf="allocationResult?.canAllocate" type="button" class="btn btn-success"
-            (click)="confirmHologramAllocation()">
-            <i class="bi bi-check-circle me-1"></i>
-            Confirm Allocation & Issue
-        </button>
-        <button *ngIf="!allocationResult?.canAllocate" type="button" class="btn btn-warning"
-            (click)="forceApproveWithoutInventory()">
-            <i class="bi bi-exclamation-triangle me-1"></i>
-            Force Approve (Test Mode)
-        </button>
     </div>
 </div>
 

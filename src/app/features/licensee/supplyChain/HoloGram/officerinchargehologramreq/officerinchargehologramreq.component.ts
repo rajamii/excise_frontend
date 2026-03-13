@@ -196,6 +196,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     });
   }
 
+  getDisplayReferenceNo(referenceNo: string): string {
+    return String(referenceNo || '').replace(/^NHP(?=\/)/i, 'HQR');
+  }
+
   // Helper Methods for Dynamic Workflow
   canIssue(request: any): boolean {
     // Never show action buttons once request moves past pending-review stage.
@@ -1883,29 +1887,6 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.selectedRequest = null;
     this.approvalComments = '';
     this.approvedQuantity = 0;
-  }
-
-  forceApproveWithoutInventory(): void {
-    if (!this.selectedRequest) return;
-
-    // Create a mock allocation result for testing
-    this.allocationResult = {
-      canAllocate: true,
-      totalAvailable: this.selectedRequest.requestedQuantity,
-      allocations: [{
-        cartoonNumber: 'TEST_CTN001',
-        fromSerial: 'HG1001',
-        toSerial: `HG${1001 + this.selectedRequest.requestedQuantity - 1}`,
-        quantity: this.selectedRequest.requestedQuantity,
-        remainingInCartoon: 0
-      }],
-      message: `Force approved ${this.selectedRequest.requestedQuantity} holograms for testing`
-    };
-
-    console.log('Force approving with mock allocation:', this.allocationResult);
-
-    // Now proceed with normal approval
-    this.confirmHologramAllocation();
   }
 
   editAllocationQuantity(allocation: HologramAllocation, newQuantity: number): void {
