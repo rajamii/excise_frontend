@@ -170,62 +170,94 @@ interface BlDetailRow {
         <div class="details-modal-backdrop" (click)="closeDetailsModal()"></div>
         <div class="details-modal" role="dialog" aria-modal="true">
           <div class="details-modal-card" (click)="$event.stopPropagation()">
-            <div class="details-modal-header">
+            <div class="details-hero">
               <div class="details-modal-title">
-                <span class="details-kicker">BL Entry Details</span>
+                <div class="details-kicker-row">
+                  <span class="details-kicker">BL Entry Details</span>
+                  <span class="details-status-badge"
+                    [ngClass]="{
+                      'pending': details.approvalStatus === 'PENDING',
+                      'approved': details.approvalStatus === 'APPROVED',
+                      'rejected': details.approvalStatus === 'REJECTED'
+                    }">
+                    {{ details.approvalStatus }}
+                  </span>
+                </div>
                 <h3>{{ details.referenceNo }}</h3>
                 <p>{{ details.distilleryName || '-' }}</p>
+                <div class="details-meta-pills">
+                  <div class="details-meta-pill">
+                    <span class="meta-pill-label">Licensee</span>
+                    <strong>{{ details.licenseeId || '-' }}</strong>
+                  </div>
+                  <div class="details-meta-pill">
+                    <span class="meta-pill-label">Submitted</span>
+                    <strong>{{ formatDate(details.submittedAt || '') }}</strong>
+                  </div>
+                </div>
               </div>
               <button type="button" class="details-close" (click)="closeDetailsModal()">Close</button>
             </div>
 
             <div class="details-metrics">
-              <div class="metric-card">
+              <div class="metric-card tankers">
                 <span class="metric-label">Tankers</span>
                 <strong>{{ details.tankerCount || 0 }}</strong>
+                <small>Vehicle count in this BL entry</small>
               </div>
-              <div class="metric-card">
+              <div class="metric-card quantity">
                 <span class="metric-label">Requested Qty</span>
                 <strong>{{ details.requestedTotalQuantity || 0 | number:'1.2-2' }}</strong>
+                <small>Requested in the requisition</small>
               </div>
-              <div class="metric-card">
+              <div class="metric-card total">
                 <span class="metric-label">Total BL</span>
                 <strong>{{ details.totalBulkLiter || 0 | number:'1.2-2' }}</strong>
+                <small>Submitted across tanker rows</small>
               </div>
             </div>
 
             <div class="details-info-grid">
               <div class="info-box">
-                <span class="info-label">Licensee</span>
+                <span class="info-label">Licensee ID</span>
                 <div>{{ details.licenseeId || '-' }}</div>
               </div>
               <div class="info-box">
-                <span class="info-label">Submitted</span>
+                <span class="info-label">Submission Time</span>
                 <div>{{ formatDate(details.submittedAt || '') }}</div>
               </div>
-              <div class="info-box">
-                <span class="info-label">Status</span>
-                <div>{{ details.approvalStatus || '-' }}</div>
+              <div class="info-box status-box">
+                <span class="info-label">Review Status</span>
+                <div class="status-text">{{ details.approvalStatus || '-' }}</div>
               </div>
             </div>
 
-            <div class="details-table-wrap">
-              <table class="details-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Tanker Number</th>
-                    <th>Bulk Liter</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let item of details.tankerDetails; let i = index">
-                    <td>{{ i + 1 }}</td>
-                    <td>{{ item.tanker_no || '-' }}</td>
-                    <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="details-table-card">
+              <div class="details-table-head">
+                <div>
+                  <h4>Tanker Manifest</h4>
+                  <p>Tanker-wise bulk liter information submitted by the licensee.</p>
+                </div>
+                <div class="manifest-count">{{ details.tankerDetails.length }} Row{{ details.tankerDetails.length === 1 ? '' : 's' }}</div>
+              </div>
+              <div class="details-table-wrap">
+                <table class="details-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Tanker Number</th>
+                      <th>Bulk Liter</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of details.tankerDetails; let i = index">
+                      <td>{{ i + 1 }}</td>
+                      <td>{{ item.tanker_no || '-' }}</td>
+                      <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -709,8 +741,8 @@ interface BlDetailRow {
     .details-modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.45);
-      backdrop-filter: blur(3px);
+      background: linear-gradient(180deg, rgba(241, 245, 249, 0.42), rgba(226, 232, 240, 0.62));
+      backdrop-filter: blur(10px);
       z-index: 1040;
     }
 
@@ -725,112 +757,297 @@ interface BlDetailRow {
     }
 
     .details-modal-card {
-      width: min(900px, 100%);
+      width: min(960px, 100%);
       max-height: calc(100vh - 3rem);
       overflow: auto;
       background:
-        linear-gradient(180deg, rgba(248, 251, 255, 0.95), rgba(255, 255, 255, 1)),
-        #fff;
-      border-radius: 24px;
-      border: 1px solid #dbe4ef;
-      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
-      padding: 1.35rem;
+        radial-gradient(circle at top right, rgba(191, 219, 254, 0.38), transparent 22%),
+        radial-gradient(circle at top left, rgba(224, 242, 254, 0.52), transparent 28%),
+        linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      border-radius: 30px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 28px 70px rgba(148, 163, 184, 0.28);
+      padding: 1.6rem;
     }
 
-    .details-modal-header {
+    .details-hero {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 1rem;
-      margin-bottom: 1rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid #e2e8f0;
+      padding: 1.1rem 1.15rem 1.25rem;
+      margin-bottom: 1.2rem;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(248, 250, 252, 0.98));
+      border: 1px solid #dbeafe;
     }
 
     .details-modal-title {
       min-width: 0;
+      flex: 1;
+    }
+
+    .details-kicker-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
     }
 
     .details-kicker {
       display: inline-block;
-      font-size: 0.74rem;
+      padding: 0.35rem 0.78rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #2563eb;
+      color: #1d4ed8;
+      background: #ffffff;
+      border: 1px solid #bfdbfe;
       font-weight: 800;
-      margin-bottom: 0.45rem;
     }
 
-    .details-modal-header h3 {
+    .details-status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 118px;
+      padding: 0.38rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid transparent;
+    }
+
+    .details-status-badge.pending {
+      color: #8a5a00;
+      background: #fff7d6;
+      border-color: #f6df93;
+    }
+
+    .details-status-badge.approved {
+      color: #166534;
+      background: #dcfce7;
+      border-color: #9fdfb3;
+    }
+
+    .details-status-badge.rejected {
+      color: #991b1b;
+      background: #fee2e2;
+      border-color: #f6b9b9;
+    }
+
+    .details-modal-title h3 {
       margin: 0;
-      font-size: 1.45rem;
-      font-weight: 800;
+      font-size: 2rem;
+      font-weight: 900;
       color: #0f172a;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
     }
 
-    .details-modal-header p {
-      margin: 0.3rem 0 0;
+    .details-modal-title p {
+      margin: 0.55rem 0 0;
       color: #64748b;
+      font-size: 1.03rem;
+      line-height: 1.55;
+      max-width: 44rem;
+    }
+
+    .details-meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .details-meta-pill {
+      min-width: 210px;
+      padding: 0.75rem 0.9rem;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid #dce9f7;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+
+    .meta-pill-label {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.35rem;
+      font-weight: 800;
+    }
+
+    .details-meta-pill strong {
+      color: #1e293b;
+      font-size: 0.98rem;
+      font-weight: 800;
     }
 
     .details-close {
-      border: 1px solid #cbd5e1;
+      border: 1px solid #d7e1ec;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.92);
+      background: #ffffff;
       color: #334155;
-      padding: 0.7rem 1rem;
-      font-weight: 700;
-      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+      padding: 0.82rem 1.2rem;
+      font-weight: 800;
+      box-shadow: 0 8px 22px rgba(148, 163, 184, 0.14);
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .details-close:hover {
-      background: #f8fafc;
-      border-color: #94a3b8;
+      background: #f8fbff;
+      border-color: #bfd2e6;
+      box-shadow: 0 12px 26px rgba(148, 163, 184, 0.18);
       transform: translateY(-1px);
     }
 
     .details-metrics {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.8rem;
+      gap: 1rem;
       margin-bottom: 1rem;
     }
 
     .metric-card,
     .info-box {
-      background: linear-gradient(180deg, #f8fbff, #ffffff);
-      border: 1px solid #dbe4ef;
-      border-radius: 18px;
-      padding: 0.95rem 1rem;
+      position: relative;
+      background: linear-gradient(180deg, #ffffff, #f9fbff);
+      border: 1px solid #dbe7f2;
+      border-radius: 22px;
+      padding: 1.05rem 1.1rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      border-radius: 22px 0 0 22px;
+    }
+
+    .metric-card.tankers::before {
+      background: #2563eb;
+    }
+
+    .metric-card.quantity::before {
+      background: #0f766e;
+    }
+
+    .metric-card.total::before {
+      background: #7c3aed;
     }
 
     .metric-label,
     .info-label {
       display: block;
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: #64748b;
-      margin-bottom: 0.35rem;
-      font-weight: 700;
+      margin-bottom: 0.45rem;
+      font-weight: 800;
     }
 
     .metric-card strong {
-      font-size: 1.35rem;
+      display: block;
+      font-size: 1.6rem;
       color: #0f172a;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.28rem;
+    }
+
+    .metric-card small {
+      display: block;
+      color: #64748b;
+      font-size: 0.82rem;
+      line-height: 1.45;
     }
 
     .details-info-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.8rem;
-      margin-bottom: 1rem;
+      gap: 1rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .info-box div {
+      color: #1e293b;
+      font-size: 1rem;
+      line-height: 1.5;
+      font-weight: 700;
+    }
+
+    .status-box .status-text {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .details-table-card {
+      padding: 1rem;
+      border-radius: 24px;
+      background: linear-gradient(180deg, #ffffff, #f9fbff);
+      border: 1px solid #dbe7f2;
+    }
+
+    .details-table-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .details-table-head h4 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .details-table-head p {
+      margin: 0.28rem 0 0;
+      color: #64748b;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .manifest-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 90px;
+      padding: 0.5rem 0.8rem;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #dbeafe;
+      font-size: 0.8rem;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .details-table-wrap {
-      border: 1px solid #dbe4ef;
-      border-radius: 18px;
+      border: 1px solid #dbe7f2;
+      border-radius: 20px;
       overflow: auto;
+      background: #ffffff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
     }
 
     .details-table {
@@ -840,21 +1057,26 @@ interface BlDetailRow {
 
     .details-table th,
     .details-table td {
-      padding: 0.9rem 1rem;
-      border-bottom: 1px solid #eaf0f6;
+      padding: 1rem 1.05rem;
+      border-bottom: 1px solid #edf2f7;
       text-align: left;
     }
 
     .details-table th {
-      background: #eef4ff;
-      color: #1e3a8a;
-      font-size: 0.8rem;
+      background: linear-gradient(180deg, #f5f9ff, #edf4ff);
+      color: #1e40af;
+      font-size: 0.79rem;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
+      font-weight: 800;
+    }
+
+    .details-table tbody tr {
+      background: #ffffff;
     }
 
     .details-table tbody tr:hover td {
-      background: #f8fbff;
+      background: #f9fbff;
     }
 
     .details-table tbody tr:last-child td {
@@ -869,13 +1091,20 @@ interface BlDetailRow {
         grid-template-columns: 1fr;
       }
 
-      .hero-panel {
+      .hero-panel,
+      .details-hero,
+      .details-table-head {
         flex-direction: column;
         align-items: stretch;
       }
 
-      .refresh-btn {
+      .refresh-btn,
+      .details-close {
         width: 100%;
+      }
+
+      .details-meta-pill {
+        min-width: 0;
       }
     }
 
@@ -885,14 +1114,30 @@ interface BlDetailRow {
         border-radius: 18px;
       }
 
-      .hero-copy h2 {
+      .hero-copy h2,
+      .details-modal-title h3 {
         font-size: 1.45rem;
       }
 
       .hero-panel,
       .filters-panel,
-      .table-panel {
+      .table-panel,
+      .details-modal-card,
+      .details-hero,
+      .details-table-card {
         border-radius: 18px;
+      }
+
+      .details-modal {
+        padding: 0.75rem;
+      }
+
+      .details-modal-card {
+        padding: 1rem;
+      }
+
+      .details-meta-pills {
+        flex-direction: column;
       }
 
       .bl-table {
