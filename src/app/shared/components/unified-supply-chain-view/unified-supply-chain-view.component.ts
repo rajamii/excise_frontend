@@ -1350,6 +1350,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     goBack(): void {
         const source = this.route.snapshot.queryParamMap.get('source');
+        const supplyChainDashboardTypes: ApplicationType[] = [
+            'requisition',
+            'revalidation',
+            'cancellation',
+            'transit',
+            'hologram'
+        ];
+
+        if (supplyChainDashboardTypes.includes(this.applicationType)) {
+            this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
+            return;
+        }
         
         if (source && NAVIGATION_ROUTES[source as keyof typeof NAVIGATION_ROUTES]) {
             const route = NAVIGATION_ROUTES[source as keyof typeof NAVIGATION_ROUTES];
