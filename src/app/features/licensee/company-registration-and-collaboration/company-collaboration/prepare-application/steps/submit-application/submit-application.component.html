@@ -1,9 +1,6 @@
 ﻿<mat-card>
   <mat-card-header>
     <div class="heading">Submit Application</div>
-    @if (!applicationId) {
-      <div class="validation">Review all details before final submission</div>
-    }
   </mat-card-header>
 
   <mat-card-content>
@@ -24,10 +21,6 @@
             <div class="summary-row">
               <span class="label">Financial Year:</span>
               <span class="value">{{ companyDetails.financialYear }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Application ID:</span>
-              <span class="value">{{ companyDetails.applicationId }}</span>
             </div>
             <div class="summary-row">
               <span class="label">Application Date:</span>
@@ -68,10 +61,6 @@
             <div class="detail-item">
               <span class="label">Financial Year:</span>
               <span class="value">{{ companyDetails.financialYear }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">Application ID:</span>
-              <span class="value">{{ companyDetails.applicationId }}</span>
             </div>
             <div class="detail-item">
               <span class="label">Application Date:</span>
@@ -240,4 +229,3 @@
     }
   </mat-card-actions>
 </mat-card>
-

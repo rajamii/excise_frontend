@@ -1,9 +1,6 @@
 <mat-card>
   <mat-card-header>
     <div class="heading">Brands</div>
-    <div class="validation">
-      Select the collaborating brand and its measure by choosing Liquor Category, Liquor Kind, and Liquor Type. * Marked fields are mandatory.
-    </div>
   </mat-card-header>
 
   <mat-card-content>
@@ -74,9 +71,9 @@
                 <th class="col-sl">Sl. No</th>
                 <th class="col-brand">Brand Name</th>
                 <!-- Pack size columns — rendered dynamically so any sizes returned by the API are shown -->
-                <th class="col-size">750 Ml</th>
-                <th class="col-size">375 Ml</th>
-                <th class="col-size">180 Ml</th>
+                @for (size of availableSizes; track size) {
+                  <th class="col-size">{{ size }}</th>
+                }
                 <th class="col-select">Select</th>
               </tr>
             </thead>
@@ -92,33 +89,16 @@
                       <span class="brand-type">{{ brand.type }}</span>
                     </div>
                   </td>
-                  <!-- 750 Ml -->
-                  <td class="col-size">
-                    @if (brand.sizes.includes('750 Ml')) {
-                      <mat-checkbox
-                        [checked]="isSizeSelected(brand.id, '750 Ml')"
-                        (change)="toggleBrandSize(brand.id, '750 Ml')">
-                      </mat-checkbox>
-                    }
-                  </td>
-                  <!-- 375 Ml -->
-                  <td class="col-size">
-                    @if (brand.sizes.includes('375 Ml')) {
-                      <mat-checkbox
-                        [checked]="isSizeSelected(brand.id, '375 Ml')"
-                        (change)="toggleBrandSize(brand.id, '375 Ml')">
-                      </mat-checkbox>
-                    }
-                  </td>
-                  <!-- 180 Ml -->
-                  <td class="col-size">
-                    @if (brand.sizes.includes('180 Ml')) {
-                      <mat-checkbox
-                        [checked]="isSizeSelected(brand.id, '180 Ml')"
-                        (change)="toggleBrandSize(brand.id, '180 Ml')">
-                      </mat-checkbox>
-                    }
-                  </td>
+                  @for (size of availableSizes; track size) {
+                    <td class="col-size">
+                      @if (brand.sizes.includes(size)) {
+                        <mat-checkbox
+                          [checked]="isSizeSelected(brand.id, size)"
+                          (change)="toggleBrandSize(brand.id, size)">
+                        </mat-checkbox>
+                      }
+                    </td>
+                  }
                   <!-- Row-level select checkbox — selects/deselects all available sizes for this brand only -->
                   <td class="col-select">
                     <mat-checkbox

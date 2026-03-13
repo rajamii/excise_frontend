@@ -26,6 +26,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
   showOverview = false;
   feeStructure: CompanyCollaborationFeeStructure | null = null;
   displayedColumns: string[] = ['serialNo', 'brandCode', 'brandName', 'type', 'strength', 'sizes', 'action'];
+  availableSizes: string[] = [];
 
   // Filter properties — matches PDF: Liquor Category / Liquor Kind / Liquor Type
   selectedCategory: string = '';
@@ -211,6 +212,23 @@ export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
         brand.brand_code.toLowerCase().includes(this.searchTerm.toLowerCase());
       return matchesCategory && matchesKind && matchesType && matchesSearch;
     });
+
+    this.availableSizes = this.buildAvailableSizes(this.filteredBrands);
+  }
+
+  private buildAvailableSizes(brands: CompanyCollaborationBrand[]): string[] {
+    const seen = new Set<string>();
+    const sizes: string[] = [];
+    brands.forEach((brand) => {
+      (brand.sizes || []).forEach((size) => {
+        if (size === null || size === undefined) return;
+        const label = String(size);
+        if (!label || seen.has(label)) return;
+        seen.add(label);
+        sizes.push(label);
+      });
+    });
+    return sizes;
   }
 
   // ---------------------------------------------------------------------------

@@ -45,7 +45,6 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
     this.companyDetailsForm = this.fb.group({
       financialYear:   new FormControl(this.getCurrentFinancialYear(), [Validators.required]),
-      applicationId:   new FormControl(saved.applicationId   || 'NEW'),
       applicationDate: new FormControl(saved.applicationDate || this.getTodayDate()),
       bottlerId:       new FormControl(saved.bottlerId       || '', [Validators.required]),
       bottlerName:     new FormControl(saved.bottlerName     || ''),
@@ -142,7 +141,6 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
     this.companyDetailsForm.reset({
       financialYear:   this.getCurrentFinancialYear(),
-      applicationId:   'NEW',
       applicationDate: this.getTodayDate(),
       bottlerId:       '',
       bottlerName:     '',

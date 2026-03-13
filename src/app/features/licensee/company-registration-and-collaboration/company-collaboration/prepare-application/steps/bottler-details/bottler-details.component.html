@@ -2,10 +2,6 @@
   <mat-card>
     <mat-card-header>
       <div class="heading">Company Details</div>
-      <div class="validation">
-        Select the registered collaborating company. Details will be auto-filled.
-        <em>Note: Only companies registered via Company Registration will appear in the dropdown.</em>
-      </div>
     </mat-card-header>
 
     <mat-card-content>
@@ -40,7 +36,6 @@
               <input
                 matInput
                 formControlName="brandOwnerName"
-                readonly
                 aria-label="Company name"
                 title="Company name">
               <mat-icon matSuffix>badge</mat-icon>
@@ -51,7 +46,6 @@
               <input
                 matInput
                 formControlName="brandOwnerPan"
-                readonly
                 aria-label="PAN number"
                 title="PAN number">
               <mat-icon matSuffix>fingerprint</mat-icon>
@@ -61,7 +55,6 @@
               <mat-label>Registered Office Address</mat-label>
               <textarea matInput
                 formControlName="brandOwnerOfficeAddress"
-                readonly
                 aria-label="Registered office address"
                 title="Registered office address"
                 cdkTextareaAutosize
@@ -75,7 +68,6 @@
               <mat-label>Factory Address</mat-label>
               <textarea matInput
                 formControlName="brandOwnerFactoryAddress"
-                readonly
                 aria-label="Factory address"
                 title="Factory address"
                 cdkTextareaAutosize
@@ -90,7 +82,6 @@
               <input
                 matInput
                 formControlName="brandOwnerMobile"
-                readonly
                 aria-label="Mobile number"
                 title="Mobile number">
               <mat-icon matSuffix>phone</mat-icon>
@@ -101,7 +92,6 @@
               <input
                 matInput
                 formControlName="brandOwnerEmail"
-                readonly
                 aria-label="Email address"
                 title="Email address">
               <mat-icon matSuffix>email</mat-icon>
