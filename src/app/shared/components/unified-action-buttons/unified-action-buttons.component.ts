@@ -892,7 +892,11 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       });
     }
 
-    if (include.includes('REQUEST_CANCELLATION') && !result.some(config => config.action === 'REQUEST_CANCELLATION')) {
+    if (
+      include.includes('REQUEST_CANCELLATION') &&
+      this.context === 'licensee' &&
+      !result.some(config => config.action === 'REQUEST_CANCELLATION')
+    ) {
       console.log('🔧 UNIFIED BUTTONS: Adding REQUEST_CANCELLATION fallback');
       result.push({
         action: 'REQUEST_CANCELLATION',
@@ -922,6 +926,12 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       result = result.filter(config => !exclude.includes(config.action));
     }
 
+    result = this.applyRequisitionPostPaymentActionRules(result);
+    result = this.applyContextActionRestrictions(result);
+    result = this.applyCancellationCommissionerActionRules(result);
+    result = this.applyRevalidationCommissionerActionRules(result);
+    result = this.applyHologramCommissionerActionRules(result);
+
     // Deduplicate by action so multiple transitions mapped to same action
     // (e.g., two "approve-like" paths) don't render duplicate buttons.
     const seen = new Set<string>();
@@ -935,6 +945,86 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', deduped);
     return deduped;
+  }
+
+  private applyContextActionRestrictions(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    return configs.filter(config => {
+      const action = this.normalizeActionName(config?.action);
+      if (action === 'REQUEST_CANCELLATION' && this.itemType === 'requisition') {
+        return false;
+      }
+      if (action === 'REQUEST_CANCELLATION' && this.context !== 'licensee') {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private applyRequisitionPostPaymentActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    if (this.itemType !== 'requisition') {
+      return configs;
+    }
+
+    if (!['permit-section', 'commissioner'].includes(this.context)) {
+      return configs;
+    }
+
+    if (!this.isRequisitionPostPaymentStage()) {
+      return configs;
+    }
+
+    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+  }
+
+  private applyCancellationCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    if (this.itemType !== 'cancellation') {
+      return configs;
+    }
+
+    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+  }
+
+  private applyRevalidationCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    if (this.itemType !== 'revalidation') {
+      return configs;
+    }
+
+    if (this.context !== 'commissioner') {
+      return configs;
+    }
+
+    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+  }
+
+  private applyHologramCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    if (this.itemType !== 'hologram') {
+      return configs;
+    }
+
+    if (this.context !== 'commissioner') {
+      return configs;
+    }
+
+    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+  }
+
+  private isRequisitionPostPaymentStage(): boolean {
+    const status = String(this.item?.status || '').toLowerCase().replace(/\s+/g, '');
+    const stageName = String(this.item?.['currentStageName'] || this.item?.['current_stage_name'] || '').toLowerCase().replace(/\s+/g, '');
+
+    const merged = `${status} ${stageName}`;
+    const postPaymentMarkers = [
+      'payslip',
+      'payment',
+      'paid',
+      'wallet',
+      'approvedbypermitsection',
+      'forwardedtocommissioner',
+      'approvedbycommissioner',
+      'rejectedbycommissioner'
+    ];
+
+    return postPaymentMarkers.some(marker => merged.includes(marker));
   }
 
   private normalizeActionConfig(config: any): ActionButtonConfig {

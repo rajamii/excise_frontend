@@ -47,38 +47,23 @@
         <div class="summary-card primary-card">
           <div class="card-icon">₹</div>
           <div class="card-content">
-            <p class="card-label">
-              {{ moduleType === 'requisition' ? 'Total Requisition Amount' : 
-                 moduleType === 'hologram' ? 'Total Hologram Amount' :
-                 moduleType === 'cancellation' ? 'Total Cancellation Amount' : 
-                 'Total Transit Amount' }}
-            </p>
+            <p class="card-label">{{ primarySummaryLabel }}</p>
             <h3 class="card-value">₹{{ transitSummary.total | number:'1.2-2' }}</h3>
           </div>
         </div>
         
-        <div class="summary-card success-card" *ngIf="moduleType !== 'cancellation'">
+        <div class="summary-card success-card" *ngIf="showRefundSummaryCard">
           <div class="card-icon">✓</div>
           <div class="card-content">
-            <p class="card-label">
-              {{ moduleType === 'requisition' ? 'Payable Amount' : 
-                 moduleType === 'hologram' ? 'Wallet Paid Amount' :
-                 moduleType === 'cancellation' ? 'Refund Amount' : 
-                 'Refund Amount' }}
-            </p>
+            <p class="card-label">{{ secondarySummaryLabel }}</p>
             <h3 class="card-value">₹{{ refundAmountTotal | number:'1.2-2' }}</h3>
           </div>
         </div>
         
-        <div class="summary-card info-card">
+        <div class="summary-card info-card" *ngIf="showCountSummaryCard">
           <div class="card-icon">#</div>
           <div class="card-content">
-            <p class="card-label">
-              {{ moduleType === 'requisition' ? 'No. of Permits' : 
-                 moduleType === 'hologram' ? 'Total Holograms' :
-                 moduleType === 'cancellation' ? 'Permits Cancelled' : 
-                 'Total Cases' }}
-            </p>
+            <p class="card-label">{{ tertiarySummaryLabel }}</p>
             <h3 class="card-value">{{ totalCases }}</h3>
           </div>
         </div>
@@ -109,8 +94,8 @@
             <span class="info-value">{{ requisitionRow?.transaction_id || '-' }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'revalidation'">
-            <span class="info-label">Distillery</span>
-            <span class="info-value">{{ revalidationRow?.distillery_name || '-' }}</span>
+            <span class="info-label">Factory</span>
+            <span class="info-value">{{ revalidationDisplayName }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'revalidation'">
             <span class="info-label">Original Permit Date</span>
@@ -189,7 +174,7 @@
             <tr>
               <th>Reference</th>
               <th>Date</th>
-              <th>Distillery</th>
+              <th>Factory</th>
               <th>Status</th>
               <th>Local</th>
               <th>Export</th>
@@ -224,7 +209,7 @@
             <tr>
               <th>Reference</th>
               <th>Submission Date</th>
-              <th>Distillery</th>
+              <th>Factory</th>
               <th>Status</th>
               <th>Quantity (BL)</th>
               <th>No. of Permits</th>
@@ -257,7 +242,7 @@
             <tr>
               <th>Reference</th>
               <th>Submission Date</th>
-              <th>Distillery</th>
+              <th>Factory</th>
               <th>Status</th>
               <th>Quantity (BL)</th>
               <th>Permit Numbers</th>
@@ -270,7 +255,7 @@
             <tr>
               <td>{{ revalidationRow.reference_no }}</td>
               <td>{{ revalidationRow.submission_date ? (revalidationRow.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
-              <td>{{ revalidationRow.distillery_name }}</td>
+              <td>{{ revalidationDisplayName }}</td>
               <td><span class="table-status">{{ revalidationRow.status }}</span></td>
               <td>{{ revalidationRow.quantity_bl }}</td>
               <td>{{ revalidationRow.permit_numbers }}</td>
@@ -292,7 +277,7 @@
             <tr>
               <th>Reference</th>
               <th>Cancellation Date</th>
-              <th>Distillery</th>
+              <th>Factory</th>
               <th>Status</th>
               <th>Original Requisition</th>
               <th>Cancelled Permits</th>
@@ -406,3 +391,4 @@
     </button>
   </div>
 </div>
+

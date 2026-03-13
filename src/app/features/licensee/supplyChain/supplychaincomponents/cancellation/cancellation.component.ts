@@ -12,6 +12,7 @@ interface TableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
+  establishmentName?: string;
   status: string;
   amount: string;
   workflowId?: number;
@@ -150,18 +151,27 @@ export class CancellationComponent implements OnInit {
                 (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') :
                   new Date().toLocaleDateString('en-GB'))),
             distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
+            establishmentName:
+              item.establishmentName ||
+              item.establishment_name ||
+              item.manufacturingUnitName ||
+              item.manufacturing_unit_name ||
+              item.licenseeName ||
+              item.licensee_name ||
+              'N/A',
             status: item.status || 'CancellationPending',
             amount: (item.totalCancellationAmount || item.total_cancellation_amount || item.cancellationBrAmount || item.cancellation_br_amount || '0.00').toString(),
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
             permitNumber: (
+              item.cancelledPermitNumbers ||
+              item.cancelledPermitNumber ||
               item.cancelled_permit_numbers ||
               item.cancelled_permit_number ||
-              item.details_permits_number ||
-              item.detailsPermitsNumber ||
               item.permitNumber ||
               item.permit_no ||
               item.permitNo ||
+              item.originalPermitNumbers ||
               item.original_permit_no ||
               item.originalPermitNo ||
               '-'
@@ -970,7 +980,7 @@ export class CancellationComponent implements OnInit {
 
   // Role detection methods
   isCommissioner(): boolean {
-    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    const hasRole = this.accountService.hasAnyRole('commissioner');
     const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
     return hasRole || isCommissionerRoute;
   }

@@ -1108,6 +1108,25 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           .reduce((sum, r) => sum + (r.count || 0), 0);
       }
 
+      const serialRanges = generated.serialRanges || [];
+      const approvedRefNo =
+        serialRanges.find(range => range.referenceNo && range.referenceNo !== 'N/A')?.referenceNo ||
+        this.getFallbackRequestReferenceForCartoon(availableData.cartoonNumber);
+      const approvedBrandName = approvedRefNo && approvedRefNo !== 'N/A'
+        ? this.getFallbackBrandByReference(approvedRefNo)
+        : '';
+
+      if (approvedRefNo && approvedRefNo !== 'N/A') {
+        serialRanges.forEach((range) => {
+          if (range.status !== 'AVAILABLE' && (!range.referenceNo || range.referenceNo === 'N/A')) {
+            range.referenceNo = approvedRefNo;
+          }
+          if (range.status !== 'AVAILABLE' && (!range.brandDetails || range.brandDetails === 'N/A') && approvedBrandName) {
+            range.brandDetails = approvedBrandName;
+          }
+        });
+      }
+
       this.selectedSerialData = generated;
       this.serialViewMode = 'all';
       this.currentSerialPage = 1;
@@ -1209,6 +1228,27 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     }
 
     return '';
+  }
+
+  private getFallbackRequestReferenceForCartoon(cartoonNumber: string): string {
+    const issuedEntry = this.issuedData.find((issued) => {
+      const cartons = String(issued.cartoonNumber || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      return cartons.includes(cartoonNumber);
+    });
+
+    if (issuedEntry?.referenceNo && issuedEntry.referenceNo !== 'N/A') {
+      return issuedEntry.referenceNo;
+    }
+
+    const historyEntry = this.historyData.find((history) => String(history.cartoonNumber || '').trim() === cartoonNumber);
+    if (historyEntry?.requestReference && historyEntry.requestReference !== 'N/A') {
+      return historyEntry.requestReference;
+    }
+
+    return 'N/A';
   }
 
   private sanitizeBrandName(name: string): string {

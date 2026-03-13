@@ -21,6 +21,7 @@ export interface CommissionerTableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
+  factoryName?: string;
   status: string;
   amount: string;
   priority?: string;
@@ -74,6 +75,7 @@ export interface CommissionerTableData {
   // Commissioner status tracking
   commissionerStatus?: string;
   allowedActions?: string[]; // stored from backend
+  canEditQuantity?: boolean;
 }
 
 @Component({
@@ -287,6 +289,7 @@ export class CommissionerDashboardComponent implements OnInit {
             totalQtyLakh: Number(item.localQty) + Number(item.exportQty) + Number(item.defenceQty),
             hologramType: 'Security Hologram',
             allowedActions: item.allowedActions || item.allowed_actions || [],
+            canEditQuantity: this.canCommissionerEditHologram(item),
             paymentStatus: item.paymentStatus || item.payment_status || item?.paymentDetails?.payment_status || item?.payment_details?.payment_status || '',
             paymentDetails: item.paymentDetails || item.payment_details || null,
             editHistory: item.editHistory || item.edit_history || null
@@ -563,6 +566,7 @@ export class CommissionerDashboardComponent implements OnInit {
           referenceNo: item.ourRefNo || item.our_ref_no,
           submissionDate: subDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
           expiryDate: expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+          factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || item.distilleryName || item.distillery_name || 'Unknown Factory',
           distilleryName: item.distilleryName || item.distillery_name || 'Unknown Distillery',
           status: status,
           amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
@@ -772,7 +776,8 @@ export class CommissionerDashboardComponent implements OnInit {
           referenceNo: item.referenceNo,
           submissionDate: item.submissionDate,
           distilleryName: item.distilleryName,
-          commissionerStatus: fullDetails.commissionerStatus
+          commissionerStatus: fullDetails.commissionerStatus,
+          canEditQuantity: item.canEditQuantity
         };
       } else {
         this.selectedHologramApplication = item;
@@ -804,6 +809,24 @@ export class CommissionerDashboardComponent implements OnInit {
   onHologramDataUpdated(): void {
     this.loadHologramApplications();
     this.applyHologramFilters();
+  }
+
+  private canCommissionerEditHologram(item: any): boolean {
+    const status = String(item?.status || '')
+      .toLowerCase()
+      .replace(/[_\s-]+/g, '');
+    const allowedActions = Array.isArray(item?.allowedActions || item?.allowed_actions)
+      ? (item.allowedActions || item.allowed_actions).map((action: string) => String(action || '').toLowerCase())
+      : [];
+
+    const hasCommissionerApprovalAction = allowedActions.includes('approve');
+    const reachedCommissionerAfterItCell =
+      status.includes('verified') ||
+      status.includes('approvedbyitcell') ||
+      status.includes('forwardedtocommissioner') ||
+      status.includes('forwardedbyitcelltocommissioner');
+
+    return hasCommissionerApprovalAction && reachedCommissionerAfterItCell;
   }
 
 

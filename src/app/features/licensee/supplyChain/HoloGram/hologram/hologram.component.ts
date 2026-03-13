@@ -26,7 +26,7 @@ type SeriesKey = 'local' | 'export' | 'defence';
   styleUrls: ['./hologram.component.scss']
 })
 export class HologramComponent {
-  private readonly refPrefix = 'NHP';
+  private readonly refPrefix = 'HQR';
   private readonly refDistrictCode = '1101';
 
   Math = Math;

@@ -127,8 +127,7 @@
             <th class="sl-no">Sl. No.</th>
             <th class="ref-number">Reference No</th>
             <th class="submission-date">Request Date</th>
-            <th class="licensee-name">Licensee Name</th>
-            <th class="license-type">License Type</th>
+            <th class="licensee-name">{{ isCommissioner() ? 'Factory Name' : 'Licensee Name' }}</th>
             <th class="cancellation-reason">Reason</th>
             <th class="status">Status</th>
             <th class="permit-number">Permit Number</th>
@@ -156,10 +155,7 @@
               <span class="date-text">{{ item.requestDate }}</span>
             </td>
             <td class="licensee-name">
-              <span class="company-name">{{ item.distilleryName }}</span>
-            </td>
-            <td class="license-type">
-              <span class="license-badge">{{ item.licenseType }}</span>
+              <span class="company-name">{{ isCommissioner() ? (item.establishmentName || 'N/A') : item.distilleryName }}</span>
             </td>
             <td class="cancellation-reason">
               <span class="reason-badge"

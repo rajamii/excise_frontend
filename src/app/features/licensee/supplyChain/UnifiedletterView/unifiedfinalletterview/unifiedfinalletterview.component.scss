@@ -33,11 +33,16 @@
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   overflow: hidden;
+  padding: 24px 0;
 }
 
 /* Final Letter Content */
 .final-letter-container {
   background: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-position: top center;
+  background-size: 330px 160px;
   padding: 60px 80px;
   font-family: 'Times New Roman', serif;
   font-size: 14px;
@@ -48,6 +53,45 @@
   max-width: 800px;
   margin: 0 auto;
   box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  border: 2px solid #4f4f4f;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.print-watermark {
+  display: none;
+  position: absolute;
+  inset: 24px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 22px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.print-watermark span {
+  display: block;
+  font-family: Arial, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(22, 88, 58, 0.05);
+  white-space: nowrap;
+  line-height: 1;
+  width: 100%;
+  text-align: center;
+}
+
+.letter-header,
+.letter-meta,
+.addressee-section,
+.subject-section,
+.letter-body {
+  position: relative;
+  z-index: 1;
 }
 
 /* Letter Header */
@@ -216,6 +260,11 @@
 
 /* Print Styles */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
   .no-print {
     display: none !important;
   }
@@ -228,22 +277,47 @@
   .letter-container {
     box-shadow: none !important;
     border-radius: 0 !important;
+    padding: 0 !important;
+    display: block;
+    background: white !important;
+    overflow: visible !important;
   }
   
   .final-letter-container {
-    padding: 25mm 20mm;
+    width: 198mm;
+    max-width: 198mm;
+    min-height: 285mm;
+    padding: 12mm 14mm;
     margin: 0;
     box-shadow: none;
-    border: none;
+    border: 1.5px solid #555 !important;
     background: white !important;
+    background-image: none !important;
     font-size: 12px;
-    max-width: none;
-    min-height: auto;
+    max-width: 190mm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-watermark {
+    display: flex !important;
+    inset: 8mm;
+    gap: 16px;
+  }
+
+  .print-watermark span {
+    display: block !important;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: rgba(22, 88, 58, 0.045) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .letter-header {
     border-bottom: 3px double #000;
-    margin-bottom: 30mm;
+    margin-bottom: 18mm;
   }
   
   .govt-seal {
@@ -260,19 +334,19 @@
   }
   
   .letter-meta {
-    margin: 25mm 0;
+    margin: 16mm 0;
   }
   
   .addressee-section {
-    margin: 30mm 0;
+    margin: 18mm 0;
   }
   
   .subject-section {
-    margin: 25mm 0;
+    margin: 16mm 0;
   }
   
   .letter-body {
-    margin: 30mm 0 50mm 0; /* Added bottom margin for print */
+    margin: 18mm 0 24mm 0;
   }
   
   .body-text {
@@ -300,6 +374,11 @@
     padding: 30px 20px;
     font-size: 13px;
     max-width: 100%;
+    background-size: 280px 130px;
+  }
+
+  .print-watermark {
+    gap: 20px;
   }
   
   .header-content {
@@ -336,6 +415,7 @@
   .final-letter-container {
     padding: 20px 15px;
     font-size: 12px;
+    background-size: 220px 110px;
   }
   
   .dept-title {

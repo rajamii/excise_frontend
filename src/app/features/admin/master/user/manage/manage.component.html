@@ -152,6 +152,15 @@
         </mat-error>
       </mat-form-field>
 
+      <div class="user-active-toggle">
+        <mat-checkbox
+          name="isActive"
+          [(ngModel)]="user.isActive"
+        >
+          Is Active
+        </mat-checkbox>
+      </div>
+
       <!-- Password Fields (Only in Add Mode) -->
       <ng-container *ngIf="!isEditMode">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">

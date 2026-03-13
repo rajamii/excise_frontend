@@ -30,9 +30,11 @@ type HologramRow = HologramProcurement & {
 })
 export class HologramprocurementComponent implements OnInit {
   Math = Math;
+  private readonly persistentPaymentRefsKey = 'hologramPersistentPaymentRefs';
   hologramList: HologramRow[] = [];
   filteredHologramData: HologramRow[] = [];
   private isBrowser = false;
+  private persistentPaymentRefs = new Set<string>();
   showHologramModal = false;
   selectedHologram: HologramRow | null = null;
   currentUnitName: string | null = null;
@@ -63,6 +65,7 @@ export class HologramprocurementComponent implements OnInit {
   ngOnInit(): void {
     console.log('🚀 Hologram Procurement Component initializing...');
     if (this.isBrowser) {
+      this.loadPersistentPaymentRefs();
       this.isLoading = true;
       this.profileService.getProfile().subscribe({
         next: (res) => {
@@ -356,15 +359,23 @@ export class HologramprocurementComponent implements OnInit {
 
   shouldShowMakePayment(item: HologramRow): boolean {
     const status = String(item.status || '').toLowerCase().replace(/\s+/g, '');
+    const refNo = String(item.refNo || '').trim();
+    const hasPersistentPaymentAccess = !!refNo && this.persistentPaymentRefs.has(refNo);
     return (
-      (status.includes('approvedbycommissioner') || status.includes('commissionerapproved')) &&
-      !item.paymentCompleted
+      hasPersistentPaymentAccess ||
+      status.includes('approvedbycommissioner') ||
+      status.includes('commissionerapproved') ||
+      status.includes('approved') ||
+      status.includes('payment') ||
+      status.includes('paymentcompleted') ||
+      status.includes('cartoonassigned')
     );
   }
 
   navigateToWalletRecharge(item: HologramRow, event?: Event): void {
     event?.preventDefault();
     event?.stopPropagation();
+    this.persistPaymentAccessForRef(item.refNo);
 
     const queryParams = {
       section: 'wallet',
@@ -426,5 +437,35 @@ export class HologramprocurementComponent implements OnInit {
 
   clearHologramData(): void {
     alert('Not supported in API mode');
+  }
+
+  private loadPersistentPaymentRefs(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(this.persistentPaymentRefsKey) || '[]');
+      const refs = Array.isArray(stored)
+        ? stored.map((ref: any) => String(ref || '').trim()).filter(Boolean)
+        : [];
+      this.persistentPaymentRefs = new Set(refs);
+    } catch {
+      this.persistentPaymentRefs = new Set<string>();
+    }
+  }
+
+  private persistPaymentAccessForRef(refNo: string | undefined): void {
+    const normalizedRef = String(refNo || '').trim();
+    if (!this.isBrowser || !normalizedRef) {
+      return;
+    }
+
+    this.persistentPaymentRefs.add(normalizedRef);
+    try {
+      localStorage.setItem(this.persistentPaymentRefsKey, JSON.stringify(Array.from(this.persistentPaymentRefs)));
+    } catch {
+      // Ignore storage failures and keep runtime state.
+    }
   }
 }

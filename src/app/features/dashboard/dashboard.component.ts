@@ -45,6 +45,7 @@ import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/p
 import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
 import { HologramMonthlyReportComponent } from '../licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component';
 import { HologramdetailsComponent } from '../licensee/supplyChain/HoloGram/hologramdetails/hologramdetails.component';
+import { OfficerinchargehologramreqComponent } from '../licensee/supplyChain/HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 import { OicdailyhologramregisterComponent } from '../licensee/supplyChain/registers/oicdailyhologramregister/oicdailyhologramregister.component';
 import { BrandwarehouseComponent } from '../licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component';
 import { ITCELLComponent } from '../admin/it-cell/itcell.component';
@@ -95,6 +96,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     BrandsDetailsComponent,
     HologramMonthlyReportComponent,
     HologramdetailsComponent,
+    OfficerinchargehologramreqComponent,
     OicdailyhologramregisterComponent,
     BrandwarehouseComponent,
     ITCELLComponent,
@@ -387,6 +389,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    if (this.currentUser?.roleId === 5 && ['transit-applications'].includes(String(this.selectedSupplyChainSection || ''))) {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
+
     if (this.selectedSupplyChainSection !== 'wallet') {
       return;
     }
@@ -714,7 +727,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'transit-applications': 'Transit Applications',
       'brands': 'Brand Details',
       'monthly-hologram-statement': 'Monthly Hologram Statement',
-      'hologram-register': 'Hologram Register',
+      'oic-hologram-requests': 'Hologram Requests',
+      'hologram-register': 'Hologram Procurement',
       'hologram-daily-entry': 'Daily Hologram Entry',
       'stock-inventory': 'Brand Warehouse Stock',
 
@@ -864,7 +878,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 5: // Permit Section
         this.quickActions = [
           { id: 'review-permits', label: 'Review Permits', icon: 'assignment', color: 'primary', action: () => this.navigateToSection('requisition') },
-          { id: 'approve-transit', label: 'Transit Approvals', icon: 'local_shipping', color: 'accent', action: () => this.navigateToSection('transit') },
           { id: 'generate-report', label: 'Generate Report', icon: 'assessment', color: 'warn', action: () => this.generateReport() }
         ];
         break;

@@ -20,6 +20,7 @@ interface TableData {
   approvalDateRaw?: string;
   updatedAtRaw?: string;
   distilleryName: string;
+  factoryName?: string;
   status: string;
   statusCode?: string;
   amount: string;
@@ -117,6 +118,7 @@ export class RevalidationComponent implements OnInit {
           requisitionDateRaw: item.requisitionDate || item.requisition_date || '',
           approvalDateRaw: item.approvalDate || item.approval_date || '',
           updatedAtRaw: item.updatedAt || item.updated_at || '',
+          factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || '',
           distilleryName: item.distilleryName || item.distillery_name,
           status: item.status,
           statusCode: item.statusCode || item.status_code || '',
@@ -394,7 +396,17 @@ export class RevalidationComponent implements OnInit {
 
   // Role detection methods
   isCommissioner(): boolean {
-    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    const hasRole = this.accountService.hasAnyRole([
+      10,
+      'commissioner',
+      'joint_commissioner',
+      'level_1',
+      'level_2',
+      'level_3',
+      'level_4',
+      'level_5',
+      'site_admin'
+    ]);
     const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
     return hasRole || isCommissionerRoute;
   }
@@ -407,6 +419,17 @@ export class RevalidationComponent implements OnInit {
     if (this.isCommissioner()) return 'commissioner';
     if (this.isPermitSection()) return 'permit-section';
     return 'licensee';
+  }
+
+  getCompanyColumnLabel(): string {
+    return this.isCommissioner() ? 'Factory Name' : 'Distillery Name';
+  }
+
+  getCompanyDisplayName(item: TableData): string {
+    if (this.isCommissioner()) {
+      return item.factoryName || '-';
+    }
+    return item.distilleryName || '-';
   }
 
   // Workflow actions

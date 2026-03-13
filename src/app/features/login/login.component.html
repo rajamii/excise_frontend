@@ -22,7 +22,8 @@
         <input formControlName="middleName" placeholder="Middle Name" />
         <input formControlName="lastName" placeholder="Last Name" required />
 
-        <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required />
+        <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" inputmode="numeric"
+          autocomplete="tel" required (input)="sanitizePhoneNumberInput('registration', $event)" />
 
         <button mat-raised-button color="primary" class="filled-button" type="button" (click)="sendRegistrationOtp()"
           [disabled]="isSendingOtp || 
@@ -216,7 +217,8 @@
       <!-- OTP login -->
       @if (!isPasswordMode) {
       @if (!otpSent) {
-      <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric" required />
+      <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric" autocomplete="tel"
+        required (input)="sanitizePhoneNumberInput('login', $event)" (keydown.enter)="onOtpPhoneEnter($event)" />
       <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
         [disabled]="isSendingOtp">Send OTP</button>
       }

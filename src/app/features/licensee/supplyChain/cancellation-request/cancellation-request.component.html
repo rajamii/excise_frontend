@@ -24,7 +24,7 @@
         [disabled]="isPermitSelectionLocked()"
         aria-expanded="false"
       >
-        {{ isPermitSelectionLocked() ? 'All permits already cancelled' : 'Select Permits' }}
+        {{ isPermitSelectionLocked() ? 'No permits available for cancellation' : 'Select Permits' }}
       </button>
       <div class="dropdown-menu p-2 w-100">
         <div *ngFor="let permit of permits" class="form-check">
@@ -34,12 +34,13 @@
             [id]="'chkPermit_' + permit.number"
             [value]="permit.number"
             [checked]="permit.isCancelled || permit.isSelected"
-            [disabled]="permit.isCancelled"
+            [disabled]="permit.isLocked"
             (change)="togglePermit(permit, $event)"
           />
           <label class="form-check-label" [for]="'chkPermit_' + permit.number">
             Permit No. {{ permit.number }} - ₹{{ permit.amount }}
             <span *ngIf="permit.isCancelled">(Cancelled)</span>
+            <span *ngIf="!permit.isCancelled && permit.isLocked">({{ permit.lockReason }})</span>
           </label>
         </div>
       </div>

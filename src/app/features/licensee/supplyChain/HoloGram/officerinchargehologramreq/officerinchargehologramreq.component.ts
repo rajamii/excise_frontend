@@ -196,10 +196,18 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     });
   }
 
+  getDisplayReferenceNo(referenceNo: string): string {
+    return String(referenceNo || '').replace(/^NHP(?=\/)/i, 'HQR');
+  }
+
   // Helper Methods for Dynamic Workflow
   canIssue(request: any): boolean {
     // Never show action buttons once request moves past pending-review stage.
     if (this.mapStatusToCategory(request?.status) !== 'PENDING') {
+      return false;
+    }
+
+    if (!this.isUsageDateToday(request)) {
       return false;
     }
 
@@ -214,9 +222,29 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     return false;
   }
 
+  isUsageDateToday(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) {
+      return false;
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey === todayKey;
+  }
+
+  shouldShowUsageDateApprovalNotice(request: any): boolean {
+    return this.mapStatusToCategory(request?.status) === 'PENDING' && !this.isUsageDateToday(request);
+  }
+
   canReject(request: any): boolean {
     // Never show action buttons once request moves past pending-review stage.
     if (this.mapStatusToCategory(request?.status) !== 'PENDING') {
+      return false;
+    }
+
+    if (!this.isUsageDateToday(request)) {
       return false;
     }
 
@@ -405,6 +433,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   approveRequest(request: HologramRequest) {
+    if (!this.isUsageDateToday(request)) {
+      alert('Allocation will be approved on the usage date only. This action becomes active automatically on that day.');
+      return;
+    }
+
     this.selectedRequest = request;
     this.approvalComments = '';
     this.approvedQuantity = request.requestedQuantity;
@@ -1854,29 +1887,6 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.selectedRequest = null;
     this.approvalComments = '';
     this.approvedQuantity = 0;
-  }
-
-  forceApproveWithoutInventory(): void {
-    if (!this.selectedRequest) return;
-
-    // Create a mock allocation result for testing
-    this.allocationResult = {
-      canAllocate: true,
-      totalAvailable: this.selectedRequest.requestedQuantity,
-      allocations: [{
-        cartoonNumber: 'TEST_CTN001',
-        fromSerial: 'HG1001',
-        toSerial: `HG${1001 + this.selectedRequest.requestedQuantity - 1}`,
-        quantity: this.selectedRequest.requestedQuantity,
-        remainingInCartoon: 0
-      }],
-      message: `Force approved ${this.selectedRequest.requestedQuantity} holograms for testing`
-    };
-
-    console.log('Force approving with mock allocation:', this.allocationResult);
-
-    // Now proceed with normal approval
-    this.confirmHologramAllocation();
   }
 
   editAllocationQuantity(allocation: HologramAllocation, newQuantity: number): void {

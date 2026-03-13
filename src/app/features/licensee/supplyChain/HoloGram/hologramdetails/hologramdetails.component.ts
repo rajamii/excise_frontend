@@ -1295,11 +1295,19 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   openHologramRequests(): void {
-    this.router.navigate(['/dev-hologram-request-list']);
+    if (this.hologramRequestsClicked.observed) {
+      this.hologramRequestsClicked.emit();
+      return;
+    }
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'oic-hologram-requests' } });
   }
 
   openHologramOverview(): void {
-    this.router.navigate(['/dev-hologram-overview']);
+    if (this.hologramOverviewClicked.observed) {
+      this.hologramOverviewClicked.emit();
+      return;
+    }
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-overview' } });
   }
 
   // Add test data for arrival testing - Simple 30 holograms for easy testing
