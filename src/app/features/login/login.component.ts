@@ -557,7 +557,19 @@ export class LoginComponent extends BaseComponent {
       localStorage.setItem('access', accessToken);
       localStorage.setItem('refresh', refreshToken);
 
-      this.accountService.identity(true).subscribe({
+      const currentUser = this.accountService.getUserProfileSync();
+      if (currentUser) {
+        const previousUrl = this.stateStorgeService.getUrl();
+        if (previousUrl && previousUrl !== '/login') {
+          this.stateStorgeService.clearUrl();
+          this.router.navigateByUrl(previousUrl);
+          return;
+        }
+        this.redirectBasedOnRole(currentUser.role?.id);
+        return;
+      }
+
+      this.accountService.identity().subscribe({
         next: (user) => {
           if (user) {
             const previousUrl = this.stateStorgeService.getUrl();
