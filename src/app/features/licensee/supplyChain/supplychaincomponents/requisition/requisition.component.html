@@ -170,7 +170,7 @@
             <th class="ref-number">Ref. No</th>
             <th class="submission-date">{{ isCommissioner() ? 'Submission Date' : 'App. Sub. Date' }}</th>
             <th class="approval-date">Approval Date</th>
-            <th class="distillery-name">{{ isCommissioner() ? 'Licensee Name' : 'Distillery Name' }}</th>
+            <th class="distillery-name">{{ isCommissioner() || isPermitSection() ? 'Factory Name' : 'Distillery Name' }}</th>
             <th class="status">Status</th>
             <th class="amount">{{ isCommissioner() ? 'Amount' : 'Imp. Pass Fee Amt.' }}</th>
             <th class="actions">Actions</th>
@@ -195,7 +195,7 @@
               <span class="date-text">{{ getCommissionerApprovalDate(item) }}</span>
             </td>
             <td class="distillery-name">
-              <span class="company-name">{{ item.distilleryName }}</span>
+              <span class="company-name">{{ isCommissioner() || isPermitSection() ? (item.establishmentName || 'N/A') : item.distilleryName }}</span>
             </td>
             <td class="status">
               <span
@@ -220,6 +220,13 @@
                 [includeActions]="getActionIncludeList(item)"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
+              <button
+                *ngIf="!isCommissioner() && !isPermitSection() && canCancelRequisition(item)"
+                type="button"
+                class="btn btn-sm mt-2 cancel-permit-btn"
+                (click)="openCancellationModal(item)">
+                Cancel Permit
+              </button>
               <button
                 *ngIf="canUpdateArrival(item)"
                 type="button"

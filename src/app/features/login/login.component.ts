@@ -28,6 +28,7 @@ import { HttpErrorResponse } from '@angular/common/http';
   styleUrl: './login.component.scss',
 })
 export class LoginComponent extends BaseComponent {
+  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
   loginForm: FormGroup;
   registrationForm: FormGroup;
   isPasswordMode = true;
@@ -220,6 +221,66 @@ export class LoginComponent extends BaseComponent {
     this.hidePassword = !this.hidePassword;
   }
 
+  sanitizePhoneNumberInput(form: 'login' | 'registration', event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    const sanitizedValue = input.value.replace(/\D/g, '').slice(0, 10);
+    if (input.value !== sanitizedValue) {
+      input.value = sanitizedValue;
+    }
+
+    const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
+    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: false });
+    targetForm.get('phoneNumber')?.markAsDirty();
+    targetForm.get('phoneNumber')?.updateValueAndValidity();
+  }
+
+  onOtpPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.isPasswordMode && !this.otpSent) {
+      this.sendOtp();
+    }
+  }
+
+  private getBlockedUsers(): Array<{ id?: number; username?: string; phoneNumber?: string; email?: string }> {
+    try {
+      const raw = localStorage.getItem(this.blockedUsersStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private isLocallyBlockedByUsername(username: string): boolean {
+    const normalized = String(username || '').trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.username || '').trim().toLowerCase() === normalized);
+  }
+
+  private isLocallyBlockedByPhone(phoneNumber: string): boolean {
+    const normalized = String(phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10) === normalized);
+  }
+
+  private isLocallyBlockedUser(user: any): boolean {
+    const username = String(user?.username || user?.login || '').trim().toLowerCase();
+    const phone = String(user?.phoneNumber || user?.phone_number || '').replace(/\D/g, '').slice(0, 10);
+    return this.getBlockedUsers().some(entry => {
+      const blockedUsername = String(entry?.username || '').trim().toLowerCase();
+      const blockedPhone = String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+      return (!!username && blockedUsername === username) || (!!phone && blockedPhone === phone);
+    });
+  }
+
   // Fetch districts
   fetchDistricts(): void {
     this.loadingDistricts = true;
@@ -263,14 +324,25 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    if (this.loginForm.controls['phoneNumber'].invalid) {
+    const phoneControl = this.loginForm.controls['phoneNumber'];
+    const sanitizedPhoneNumber = String(phoneControl.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl.value !== sanitizedPhoneNumber) {
+      phoneControl.setValue(sanitizedPhoneNumber);
+    }
+
+    if (phoneControl.invalid) {
       this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
+      return;
+    }
+
+    if (this.isLocallyBlockedByPhone(sanitizedPhoneNumber)) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
       return;
     }
 
     this.isSendingOtp = true;
     this.clearLoginErrors();
-    const phoneNumber = this.loginForm.value.phoneNumber;
+    const phoneNumber = sanitizedPhoneNumber;
     const formData = FormDataUtil.buildFormData({ phoneNumber });
 
     this.authService.sendOtp(formData).subscribe({
@@ -295,12 +367,18 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendRegistrationOtp() {
+    const phoneControl = this.registrationForm.get('phoneNumber');
+    const sanitizedPhoneNumber = String(phoneControl?.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl?.value !== sanitizedPhoneNumber) {
+      phoneControl?.setValue(sanitizedPhoneNumber);
+    }
+
     if (this.registrationForm.invalid) {
       this.registrationError = true;
       this.registrationErrorMessages = this.getRegistrationValidationErrors();
       return;
     }
-    const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
+    const phoneNumber = sanitizedPhoneNumber;
     this.isSendingOtp = true;
     this.registrationError = false;
     this.authService.sendRegistrationOtp({
@@ -460,6 +538,11 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
+    if (this.isLocallyBlockedByUsername(String(this.loginForm.value.username || ''))) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+      return;
+    }
+
     this.clearLoginErrors();
     this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
@@ -572,6 +655,11 @@ export class LoginComponent extends BaseComponent {
       this.accountService.identity().subscribe({
         next: (user) => {
           if (user) {
+            if (this.isLocallyBlockedUser(user)) {
+              this.accountService.clearAppData();
+              this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+              return;
+            }
             const previousUrl = this.stateStorgeService.getUrl();
             if (previousUrl && previousUrl !== '/login') {
               this.stateStorgeService.clearUrl();
@@ -641,6 +729,9 @@ export class LoginComponent extends BaseComponent {
     const hasAny = (terms: string[]) => terms.some((term) => normalizedText.includes(term));
 
     if (flow === 'password') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (status === 401 || hasAny(['invalid credentials', 'incorrect password', 'invalid password', 'wrong password'])) {
         return ['Incorrect user ID or password. Please try again.'];
       }
@@ -653,6 +744,9 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'sendOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (hasAny(['invalid phone', 'invalid mobile', 'phone number', 'mobile number', 'format'])) {
         return ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
       }
@@ -665,6 +759,9 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'verifyOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp'])) {
         return ['Invalid OTP. Enter the correct OTP and try again.'];
       }

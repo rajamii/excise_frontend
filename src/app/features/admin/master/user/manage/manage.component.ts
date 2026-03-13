@@ -208,6 +208,7 @@ export class ManageComponent extends BaseComponent implements OnInit {
         district: this.getDistrictCode(),
         subdivision: this.getSubdivisionCode(),
         address: this.user.address,
+        isActive: this.user.isActive,
       };
 
       // Password fields are required only while creating a new user

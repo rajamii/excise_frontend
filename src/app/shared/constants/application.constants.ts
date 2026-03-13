@@ -81,6 +81,7 @@ export const PAGE_TITLES = {
  */
 export const NAVIGATION_ROUTES = {
     'commissioner-dashboard': '/dev-commissioner-dashboard',
+    'commissioner': '/dev-commissioner-dashboard',
     'permit-section': '/app-permit-section',
     'licensee-dashboard': '/dashboard',
     'licensee': '/dashboard'

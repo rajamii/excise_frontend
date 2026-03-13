@@ -1285,20 +1285,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (!this.applicationData) {
             return null;
         }
-
-        const actions: string[] = [];
-
-        // For requisitions, use backend-driven eligibility flags.
-        if (this.applicationType === 'requisition') {
-            const isLicensee = this.getUserContext() === 'licensee';
-            const canRequestCancellation = this.canRequestRequisitionCancellation();
-
-            if (isLicensee && canRequestCancellation) {
-                actions.push('REQUEST_CANCELLATION');
-            }
-        }
-
-        return actions.length > 0 ? actions : null;
+        return null;
     }
 
     private canRequestRequisitionCancellation(): boolean {
@@ -1363,6 +1350,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     goBack(): void {
         const source = this.route.snapshot.queryParamMap.get('source');
+        const supplyChainDashboardTypes: ApplicationType[] = [
+            'requisition',
+            'revalidation',
+            'cancellation',
+            'transit',
+            'hologram'
+        ];
+
+        if (supplyChainDashboardTypes.includes(this.applicationType)) {
+            this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
+            return;
+        }
         
         if (source && NAVIGATION_ROUTES[source as keyof typeof NAVIGATION_ROUTES]) {
             const route = NAVIGATION_ROUTES[source as keyof typeof NAVIGATION_ROUTES];

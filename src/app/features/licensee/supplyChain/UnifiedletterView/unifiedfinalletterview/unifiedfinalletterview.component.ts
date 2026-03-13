@@ -1,7 +1,10 @@
 import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, map, of } from 'rxjs';
 import { SupplyChainService } from '../../services/supplychain.service';
+import { environment } from '../../../../../../environments/environment';
 
 interface CancellationFinalLetterData {
   id: string;
@@ -44,6 +47,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private supplyChainService: SupplyChainService,
+    private http: HttpClient,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -235,8 +239,34 @@ export class UnifiedfinalletterviewComponent implements OnInit {
             }
           }
           
-          this.mapApiDataToFinalLetter(foundItem);
-          this.isLoading = false;
+          const resolvedRefNo = String(
+            this.route.snapshot.queryParamMap.get('refNo') ||
+            foundItem.ourRefNo ||
+            foundItem.our_ref_no ||
+            foundItem.referenceNo ||
+            foundItem.ref_no ||
+            ''
+          ).trim();
+
+          if (this.resolvePermitNumbers(foundItem).length > 0 || !resolvedRefNo) {
+            this.mapApiDataToFinalLetter(foundItem);
+            this.isLoading = false;
+            return;
+          }
+
+          this.fetchPermitNumbersFromRequisition(resolvedRefNo).subscribe({
+            next: (permitNumbers) => {
+              if (permitNumbers.length > 0) {
+                foundItem.details_permits_number = permitNumbers.join(',');
+              }
+              this.mapApiDataToFinalLetter(foundItem);
+              this.isLoading = false;
+            },
+            error: () => {
+              this.mapApiDataToFinalLetter(foundItem);
+              this.isLoading = false;
+            }
+          });
         } else {
           console.warn('Revalidation not found for ID:', revalidationId);
           
@@ -293,17 +323,9 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     const referenceNo = passedRefNo ? decodeURIComponent(passedRefNo) : 
                        (apiData.ourRefNo || apiData.our_ref_no || 'CAN/001/2025');
     
-    // Get permit numbers from details_permits_number field ONLY - no fallback
-    let permitNumbers: string[] = [];
-    if (apiData.details_permits_number || apiData.detailsPermitsNumber) {
-      const detailsPermits = apiData.details_permits_number || apiData.detailsPermitsNumber;
-      permitNumbers = this.parsePermitNumbersFromDetails(detailsPermits);
-      console.log('✅ Using permit numbers from details_permits_number:', detailsPermits, '→', permitNumbers);
-    } else {
-      // No details_permits_number in database - show empty or error
-      console.log('❌ details_permits_number not found in database');
-      permitNumbers = []; // Empty array - will show "No data" in the letter
-    }
+    const permitNumbers = this.resolvePermitNumbers(apiData);
+    const originalPermitDate = this.resolveOriginalPermitDate(apiData);
+    const revalidatedUpToDate = this.resolveRevalidationValidUpToDate(apiData, originalPermitDate);
     
     console.log('📋 Mapping API data to final letter:', {
       establishment_name: apiData.establishment_name,
@@ -324,10 +346,10 @@ export class UnifiedfinalletterviewComponent implements OnInit {
       distilleryAddress: this.generateDistilleryAddress(establishmentName),
       exciseOfficerName: 'The Excise Officer-in-Charge',
       permitNumbers: permitNumbers,
-      originalPermitDate: new Date(apiData.requisitionDate || apiData.requisition_date || Date.now()),
+      originalPermitDate: originalPermitDate,
       cancellationReason: apiData.reasonForCancellation || apiData.reason_for_cancellation || 'As per your request',
       approvedBy: '',
-      approvedDate: new Date(),
+      approvedDate: revalidatedUpToDate,
       fileNumber: '',
       commissionerName: '',
       commissionerDesignation: '',
@@ -352,6 +374,129 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     
     console.log('✅ Parsed permits:', permits);
     return permits;
+  }
+
+  private resolvePermitNumbers(apiData: any): string[] {
+    const cancellationPermitSources = [
+      apiData?.cancelledPermitNumbers,
+      apiData?.cancelled_permit_numbers,
+      apiData?.cancelledPermitNumber,
+      apiData?.cancelled_permit_number
+    ];
+
+    const generalPermitSources = [
+      apiData?.details_permits_number,
+      apiData?.detailsPermitsNumber,
+      apiData?.permit_numbers,
+      apiData?.permitNumbers,
+      apiData?.requisition?.details_permits_number,
+      apiData?.requisition?.detailsPermitsNumber,
+      apiData?.requisition?.permit_numbers,
+      apiData?.requisition?.permitNumbers
+    ];
+
+    const permitSources = this.letterType === 'cancellation'
+      ? [...cancellationPermitSources, ...generalPermitSources]
+      : generalPermitSources;
+
+    for (const source of permitSources) {
+      const parsed = this.parsePermitNumbersFromDetails(String(source || ''));
+      if (parsed.length > 0) {
+        console.log('✅ Using permit numbers from dynamic source:', source, '→', parsed);
+        return parsed;
+      }
+    }
+
+    if (this.letterType === 'cancellation') {
+      console.log('❌ No cancelled permit number data found in cancellation payload');
+      return [];
+    }
+
+    const permitCount = Number(
+      apiData?.requisiton_number_of_permits ??
+      apiData?.requisition_number_of_permits ??
+      apiData?.number_of_permits ??
+      apiData?.numberOfPermits ??
+      apiData?.requisition?.requisiton_number_of_permits ??
+      apiData?.requisition?.requisition_number_of_permits ??
+      apiData?.requisition?.number_of_permits ??
+      apiData?.requisition?.numberOfPermits ??
+      0
+    );
+
+    if (permitCount > 0) {
+      const generated = Array.from({ length: permitCount }, (_, index) => String(index + 1));
+      console.log('⚠️ Permit numbers missing, generated from permit count:', permitCount, '→', generated);
+      return generated;
+    }
+
+    console.log('❌ No permit number data found in revalidation/requisition payload');
+    return [];
+  }
+
+  private fetchPermitNumbersFromRequisition(referenceNo: string) {
+    const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/`;
+    return this.http.get<any>(url, {
+      params: { our_ref_no: referenceNo }
+    }).pipe(
+      map((response: any) => {
+        const rows = Array.isArray(response)
+          ? response
+          : (Array.isArray(response?.results) ? response.results : []);
+        const matched = rows.find((row: any) => {
+          const ref = String(
+            row?.our_ref_no ||
+            row?.ourRefNo ||
+            row?.referenceNo ||
+            row?.ref_no ||
+            ''
+          ).trim().toUpperCase();
+          return ref === String(referenceNo || '').trim().toUpperCase();
+        }) || rows[0];
+
+        if (!matched) {
+          return [];
+        }
+
+        return this.resolvePermitNumbers(matched);
+      }),
+      catchError((error) => {
+        console.error('Error fetching requisition permit numbers:', error);
+        return of([]);
+      })
+    );
+  }
+
+  private resolveOriginalPermitDate(apiData: any): Date {
+    return new Date(
+      apiData?.requisitionDate ||
+      apiData?.requisition_date ||
+      apiData?.approvalDate ||
+      apiData?.approval_date ||
+      apiData?.revalidationDate ||
+      apiData?.revalidation_date ||
+      Date.now()
+    );
+  }
+
+  private resolveRevalidationValidUpToDate(apiData: any, baseDate: Date): Date {
+    const explicitDate = new Date(
+      apiData?.expiryDate ||
+      apiData?.expiry_date ||
+      apiData?.validTo ||
+      apiData?.valid_to ||
+      apiData?.validityDate ||
+      apiData?.validity_date ||
+      ''
+    );
+
+    if (!Number.isNaN(explicitDate.getTime())) {
+      return explicitDate;
+    }
+
+    const validUpTo = new Date(baseDate);
+    validUpTo.setDate(validUpTo.getDate() + 45);
+    return validUpTo;
   }
 
   private loadSampleFinalLetterData(cancellationId: string): void {
@@ -553,7 +698,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
       <style>
         @page {
           size: A4 portrait;
-          margin: 12mm;
+          margin: 4mm;
         }
         * {
           margin: 0;
@@ -564,50 +709,98 @@ export class UnifiedfinalletterviewComponent implements OnInit {
         }
         body {
           font-family: 'Times New Roman', serif;
-          font-size: 14px;
-          line-height: 1.6;
+          font-size: 13px;
+          line-height: 1.45;
           color: #000;
+          background: #fff;
+        }
+        .letter-container {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          background: #fff;
         }
         .final-letter-container {
-          padding: 15mm;
-          max-width: 100%;
-          border: 3px solid #2563eb;
-          border-radius: 8px;
+          width: 198mm;
+          height: auto;
+          min-height: 0;
+          margin: 0 auto;
+          padding: 9mm 11mm;
+          position: relative;
+          overflow: hidden;
+          border: 1.5px solid #555;
+          background: #fff;
+          page-break-inside: avoid;
+        }
+        .print-watermark {
+          position: absolute;
+          inset: 3mm;
+          display: grid !important;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          grid-auto-rows: minmax(6px, 1fr);
+          align-items: center;
+          justify-items: center;
+          column-gap: 0.25mm;
+          row-gap: 0.25mm;
+          pointer-events: none;
+          user-select: none;
+          z-index: 0;
+          overflow: hidden;
+        }
+        .print-watermark span {
+          display: block !important;
+          width: 100%;
+          text-align: center;
+          font-family: Arial, sans-serif;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0;
+          line-height: 1;
+          white-space: nowrap;
+          color: rgba(22, 88, 58, 0.11);
+        }
+        .letter-header,
+        .letter-meta,
+        .addressee-section,
+        .subject-section,
+        .letter-body {
+          position: relative;
+          z-index: 1;
         }
         .letter-header {
           text-align: center;
-          margin-bottom: 20px;
-          padding-bottom: 15px;
+          margin-bottom: 14px;
+          padding-bottom: 10px;
           border-bottom: 3px double #000;
         }
         .seal-container {
-          margin-bottom: 15px;
+          margin-bottom: 10px;
         }
         .govt-seal {
-          height: 70px;
+          height: 52px;
           width: auto;
           filter: invert(1) brightness(0.2);
           display: block;
           margin: 0 auto;
         }
         .dept-title {
-          font-size: 18px;
+          font-size: 15px;
           font-weight: bold;
-          margin: 8px 0 5px 0;
+          margin: 5px 0 4px 0;
           letter-spacing: 1px;
         }
         .dept-subtitle {
-          font-size: 16px;
+          font-size: 13px;
           font-weight: bold;
-          margin: 5px 0;
+          margin: 4px 0;
         }
         .dept-address {
-          font-size: 12px;
-          margin: 5px 0;
+          font-size: 10px;
+          margin: 4px 0;
         }
         .dept-contact {
-          font-size: 11px;
-          margin-top: 5px;
+          font-size: 9px;
+          margin-top: 4px;
         }
         .dept-contact div {
           display: inline;
@@ -616,40 +809,47 @@ export class UnifiedfinalletterviewComponent implements OnInit {
         .letter-meta {
           display: flex;
           justify-content: space-between;
-          margin: 20px 0;
-          font-size: 14px;
+          margin: 14px 0;
+          font-size: 12px;
         }
         .letter-number, .letter-date {
           font-weight: bold;
         }
         .addressee-section {
-          margin: 25px 0;
+          margin: 14px 0;
         }
         .to-line {
-          margin-bottom: 10px;
+          margin-bottom: 8px;
           font-weight: bold;
         }
         .addressee-details {
-          margin-left: 40px;
-          line-height: 1.8;
+          margin-left: 20px;
+          line-height: 1.55;
         }
         .addressee-name, .company-name {
           font-weight: bold;
         }
+        .addressee-name, .company-name, .company-address {
+          font-size: 12px;
+          margin: 4px 0;
+        }
         .subject-section {
-          margin: 25px 0;
+          margin: 14px 0;
         }
         .subject-line {
           font-weight: bold;
           text-decoration: underline;
+          font-size: 12px;
+          line-height: 1.5;
         }
         .letter-body {
-          margin: 30px 0;
+          margin: 14px 0 0 0;
           text-align: justify;
-          line-height: 1.8;
+          line-height: 1.55;
         }
         .body-text {
-          text-indent: 50px;
+          font-size: 12px;
+          text-indent: 28px;
         }
         .no-print {
           display: none !important;

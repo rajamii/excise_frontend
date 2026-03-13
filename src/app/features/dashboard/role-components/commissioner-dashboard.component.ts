@@ -17,7 +17,7 @@ interface CommissionerData {
   distilleryName: string;
   status: string;
   amount: string;
-  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
+  type: 'requisition' | 'revalidation' | 'transit' | 'hologram';
   localQtyLakh?: number;
   exportQtyLakh?: number;
   defenceQtyLakh?: number;
@@ -101,7 +101,7 @@ interface CommissionerData {
                       </div>
                     </td>
                     <td class="status">
-                      <span class="status-badge" [ngClass]="getStatusClass(application.status)">
+                      <span class="status-badge" [ngClass]="getStatusClass(application.status)" [class.text-white]="getStatusClass(application.status) === 'bg-success'">
                         {{ application.status }}
                       </span>
                     </td>
@@ -260,7 +260,7 @@ interface CommissionerData {
                 </div>
                 <div class="holo-bottom-panel">
                   <h6 class="text-success mb-2"><i class="bi bi-clipboard-check me-1"></i>Additional Information</h6>
-                  <p class="mb-0">Verified and approved by IT Cell. Upload slip enabled for supply chain user.</p>
+                  <p class="mb-0">Verified and approved by IT Cells. Upload slip enabled for supply chain user.</p>
                 </div>
               </div>
 
@@ -326,7 +326,7 @@ interface CommissionerData {
                 <td>{{ application.submissionDate }}</td>
                 <td>{{ application.distilleryName }}</td>
                 <td>
-                  <span class="badge" [ngClass]="getStatusClass(application.status)">
+                  <span class="badge" [ngClass]="getStatusClass(application.status)" [class.text-white]="getStatusClass(application.status) === 'bg-success'">
                     {{ application.status }}
                   </span>
                 </td>
@@ -590,7 +590,6 @@ export class CommissionerDashboardComponent implements OnInit {
     // Load all types of applications for commissioner review
     this.loadRequisitions();
     this.loadRevalidations();
-    this.loadCancellations();
     this.loadTransitPermits();
     this.loadHolograms();
   }
@@ -647,34 +646,6 @@ export class CommissionerDashboardComponent implements OnInit {
         this.updateApplications('revalidation', revalidations);
       },
       error: (error) => console.error('Error loading revalidations:', error)
-    });
-  }
-
-  loadCancellations(): void {
-    this.supplyChainService.getCancellations().subscribe({
-      next: (data: any[]) => {
-        const cancellations: CommissionerData[] = data
-          .filter((item: any) => this.requiresCommissionerReview(item.status))
-          .map((item: any) => ({
-            id: item.id,
-            referenceNo: item.ourRefNo || item.our_ref_no || `CAN-${item.id}`,
-            submissionDate: this.formatDate(item.cancellationDate || item.cancellation_date),
-            distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
-            status: item.status || 'PENDING',
-            amount: item.totalCancellationAmount || item.total_cancellation_amount || '0.00',
-            type: 'cancellation',
-            allowedActions: item.allowedActions || item.allowed_actions || [],
-            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
-            workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-            payment_details: item.payment_details || null,
-            editHistory: item.editHistory || item.edit_history || item?.payment_details?.edit_history || null,
-            edit_history: item.edit_history || item.editHistory || item?.payment_details?.edit_history || null
-          }));
-        
-        this.updateApplications('cancellation', cancellations);
-      },
-      error: (error) => console.error('Error loading cancellations:', error)
     });
   }
 
@@ -801,7 +772,6 @@ export class CommissionerDashboardComponent implements OnInit {
       { value: 'all', label: 'All Applications' },
       { value: 'requisition', label: 'Requisitions' },
       { value: 'revalidation', label: 'Revalidations' },
-      { value: 'cancellation', label: 'Cancellations' },
       { value: 'transit', label: 'Transit Permits' },
       { value: 'hologram', label: 'Holograms' }
     ];
@@ -882,14 +852,21 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   canEditHologramDetails(application: CommissionerData): boolean {
-    const status = String(application?.status || '').toLowerCase();
-    const isFinalized =
-      status.includes('approved by commissioner') ||
-      status.includes('cartoon assigned') ||
-      status.includes('payment completed') ||
-      status.includes('rejected') ||
-      status.includes('arrived');
-    return !isFinalized;
+    const status = String(application?.status || '')
+      .toLowerCase()
+      .replace(/[_\s-]+/g, '');
+    const allowedActions = Array.isArray(application?.allowedActions)
+      ? application.allowedActions.map((action: string) => String(action || '').toLowerCase())
+      : [];
+
+    const hasCommissionerApprovalAction = allowedActions.includes('approve');
+    const reachedCommissionerAfterItCell =
+      status.includes('verified') ||
+      status.includes('approvedbyitcell') ||
+      status.includes('forwardedtocommissioner') ||
+      status.includes('forwardedbyitcelltocommissioner');
+
+    return hasCommissionerApprovalAction && reachedCommissionerAfterItCell;
   }
 
   private parseQty(value: any): number {
@@ -901,7 +878,7 @@ export class CommissionerDashboardComponent implements OnInit {
     event?.preventDefault();
     event?.stopPropagation();
     const target = application || this.selectedHologramDetails;
-    if (!target) return;
+    if (!target || !this.canEditHologramDetails(target)) return;
 
     this.isHologramEditMode = true;
     this.hologramEditForm = {

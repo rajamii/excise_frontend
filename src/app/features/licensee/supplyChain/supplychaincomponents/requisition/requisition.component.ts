@@ -18,6 +18,7 @@ interface TableData {
   submissionDateRaw?: string;
   approvalDateRaw?: string;
   distilleryName: string;
+  establishmentName?: string;
   status: string;
   amount: string;
   workflowId?: number;
@@ -247,6 +248,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             submissionDateRaw: dateVal || '',
             approvalDateRaw: item.approvalDate || item.approval_date || '',
             distilleryName: item.liftedFromDistilleryName || item.lifted_from_distillery_name || item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
+            establishmentName:
+              item.establishmentName ||
+              item.establishment_name ||
+              item.manufacturingUnitName ||
+              item.manufacturing_unit_name ||
+              item.licenseeName ||
+              item.licensee_name ||
+              'N/A',
             status: item.status || 'PENDING',
             amount: item.amount || item.paymentAmount || item.payment_amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
             workflowId: item.workflow || item.workflow_id || item.workflowId,
@@ -262,12 +271,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
               false
             ),
             statusCode: item.status_code || item.statusCode || '',
-            canInitiateCancellation: Boolean(
-              item.can_initiate_cancellation ?? item.canInitiateCancellation ?? false
-            ),
+            canInitiateCancellation:
+              item.can_initiate_cancellation ??
+              item.canInitiateCancellation ??
+              item.canCancel ??
+              item.can_cancel,
             commissionerStatus: item.commissionerStatus || item.commissioner_status,
             forwardedToCommissioner: item.forwardedToCommissioner || item.forwarded_to_commissioner || false,
-            canCancel: item.canCancel || item.can_cancel || false,
+            canCancel: item.canCancel ?? item.can_cancel,
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             // Additional properties that might be needed
@@ -480,15 +491,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     
     const hasPayment = this.hasPaymentBeenMade(item);
     const isFinalApproved = this.isCommissionerFinalApproval(item);
-    const canCancel = this.canCancelRequisition(item);
-    
     console.log('🔍 getActionIncludeList:', {
       itemId: item.id,
       refNo: item.referenceNo,
       status: item.status,
       hasPayment,
       isFinalApproved,
-      canCancel,
       isCommissioner: this.isCommissioner()
     });
     
@@ -502,47 +510,59 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       actions.push('VIEW_SLIP');
     }
     
-    // Show "Cancel" button for approved requisitions (if allowed)
-    if (canCancel) {
-      actions.push('REQUEST_CANCELLATION');
-    }
-    
     console.log('🔍 Final actions array:', actions);
     return actions;
   }
 
   canCancelRequisition(item: TableData): boolean {
     const backendEligibility = item.canInitiateCancellation ?? item.canCancel;
-    if (backendEligibility !== undefined && backendEligibility !== null) {
-      return Boolean(backendEligibility);
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
+    const statusCode = (item.statusCode || '').toUpperCase();
+    const isCommissionerApproved =
+      this.isCommissionerFinalApproval(item) ||
+      statusCode === 'RQ_09' ||
+      status.includes('approvedbycommissioner') ||
+      stageName.includes('approvedbycommissioner');
+
+    if (isCommissionerApproved) {
+      console.log('canCancelRequisition: Hidden for commissioner-approved requisitions');
+      return false;
+    }
+
+    if (backendEligibility === true) {
+      return true;
     }
 
     // Check if cancellation is allowed for this requisition
-    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    const isFinalApproved = this.isCommissionerFinalApproval(item);
+    const isFinalApproved =
+      status === 'approved';
     
     // Must be approved first
     if (!isFinalApproved) {
-      console.log('🔍 canCancelRequisition: Not approved yet');
+      console.log('canCancelRequisition: Not approved yet');
       return false;
     }
     
     // Check if already cancelled or cancellation in progress
     const isCancelled = status.includes('cancel') || status.includes('cancelled');
     if (isCancelled) {
-      console.log('🔍 canCancelRequisition: Already cancelled or in progress');
+      console.log('canCancelRequisition: Already cancelled or in progress');
       return false;
     }
     
     // Check if there's an active revalidation
-    // This would need to be checked via backend API or item property
     const hasActiveRevalidation = item['hasActiveRevalidation'] || item['has_active_revalidation'];
     if (hasActiveRevalidation) {
-      console.log('🔍 canCancelRequisition: Active revalidation in progress');
+      console.log('canCancelRequisition: Active revalidation in progress');
       return false;
     }
+
+    if (backendEligibility === false) {
+      console.log('canCancelRequisition: Backend returned false, using approved-state fallback for licensee view');
+    }
     
-    console.log('🔍 canCancelRequisition: Cancellation allowed');
+    console.log('canCancelRequisition: Cancellation allowed');
     return true;
   }
 

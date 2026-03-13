@@ -96,9 +96,9 @@
     overflow: hidden;
 
     .register-header-bar {
-      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      background: #000;
       padding: 1.5rem;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #000;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -106,18 +106,18 @@
       .register-table-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #111827;
+        color: #fff;
         margin: 0;
 
         i {
-          color: #3b82f6;
+          color: #fff;
         }
       }
 
       .register-info {
         .entries-count {
-          background: #dbeafe;
-          color: #1e40af;
+          background: rgba(255, 255, 255, 0.14);
+          color: #fff;
           padding: 0.5rem 1rem;
           border-radius: 20px;
           font-size: 0.875rem;

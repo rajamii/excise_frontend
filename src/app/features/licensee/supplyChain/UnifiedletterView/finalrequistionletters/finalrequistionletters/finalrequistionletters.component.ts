@@ -546,11 +546,17 @@ export class FinalrequistionlettersComponent implements OnInit {
     let allContent = "";
     printContents.forEach((element, index) => {
       allContent += element.outerHTML;
-      // Add page break between letters except for the last one
+      // Add exactly one page break between sections except for the last one
       if (index < printContents.length - 1) {
-        allContent += '<div style="page-break-after: always;"></div>';
+        allContent += '<div class="print-page-break"></div>';
       }
     });
+
+    const assetBaseUrl = `${window.location.origin}/`;
+    allContent = allContent.replace(
+      /src="assets\//g,
+      `src="${assetBaseUrl}assets/`
+    );
 
     // Get styles from the current document
     const styles = Array.from(document.styleSheets)
@@ -573,14 +579,26 @@ export class FinalrequistionlettersComponent implements OnInit {
           <style>
             @page {
               size: A4;
-              margin: 20mm;
+              margin: 5mm 4mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             body {
               font-family: 'Arial', sans-serif;
-              font-size: 14px;
-              line-height: 1.6;
+              font-size: 12px;
+              line-height: 1.35;
               margin: 0;
               padding: 0;
+              background: #fff !important;
+            }
+            html {
+              background: #fff !important;
+            }
+            .forwarding-letter-container {
+              background: #fff !important;
             }
             .letter-header {
               display: flex;
@@ -594,79 +612,89 @@ export class FinalrequistionlettersComponent implements OnInit {
             }
             .sub-header {
               text-align: center;
-              font-size: 12px;
-              margin-top: 10px;
-              margin-bottom: 15px;
+              font-size: 10px;
+              margin-top: 6px;
+              margin-bottom: 8px;
             }
             .letter-content {
-              margin-top: 20px;
+              margin-top: 10px;
               text-align: left;
+              line-height: 1.35;
             }
             .signature-section {
-              margin-top: 50px;
+              margin-top: 14px;
               text-align: right;
-              margin-right: 20px;
+              margin-right: 6px;
+              font-size: 10px;
+              line-height: 1.2;
             }
             .main, .permit-copy {
-              border: 2px solid black !important;
-              padding: 15px;
-              margin-bottom: 30px;
+              border: 2.5px solid #222 !important;
+              width: calc(100% - 8mm);
+              max-width: calc(100% - 8mm);
+              padding: 8px 10px 10px;
+              margin: 0 auto;
               page-break-inside: avoid;
+              break-inside: avoid-page;
               background: white;
+              overflow: hidden;
             }
-            .permit-copy {
-              page-break-before: always;
+            .print-page-break {
+              break-after: page;
+              page-break-after: always;
             }
             .permit-copy.last-copy {
               page-break-after: auto;
             }
+            .permit-content {
+              width: 100%;
+              max-width: 100%;
+              overflow: hidden;
+            }
             .copy-number {
-              font-size: 18px;
+              font-size: 11px;
               text-align: center;
-              margin-bottom: 20px;
-              border-bottom: 2px solid black;
-              padding-bottom: 10px;
+              margin-bottom: 6px;
+              border-bottom: 2px solid #222;
+              padding-bottom: 4px;
               font-weight: bold;
             }
             .permit-section {
-              margin-top: 20px;
-              font-size: 14px;
-              line-height: 1.6;
+              margin-top: 5px;
+              font-size: 9px;
+              line-height: 1.18;
               text-align: justify;
+              word-break: break-word;
             }
             .permit-table {
               width: 100%;
               border-collapse: collapse;
-              margin: 20px 0;
-              font-size: 12px;
+              table-layout: fixed;
+              margin: 5px 0;
+              font-size: 8px;
             }
             .permit-table td {
               border: 1px solid black;
               text-align: center;
-              padding: 8px 5px;
+              padding: 2px 1.5px;
               vertical-align: middle;
+              word-break: break-word;
             }
             .permit-table tr:first-child td {
               font-weight: bold;
               background-color: #f5f5f5;
               text-align: center;
-              font-size: 11px;
-              padding: 10px 5px;
+              font-size: 7px;
+              padding: 3px 1.5px;
               -webkit-print-color-adjust: exact;
               color-adjust: exact;
             }
             .permit-table td:first-child {
               text-align: left;
-              width: 20%;
+              width: 18%;
             }
             .logo {
-              text-align: center;
-              margin-bottom: 10px;
-            }
-            .logo img {
-              height: 80px;
-              display: block !important;
-              margin: 0 auto !important;
+              display: none !important;
             }
             .bold-text {
               font-weight: bold;
@@ -678,22 +706,101 @@ export class FinalrequistionlettersComponent implements OnInit {
             .flex {
               display: flex;
               justify-content: space-between;
-              font-size: 12px;
-              margin-top: 15px;
-              margin-bottom: 10px;
+              font-size: 9px;
+              margin-top: 8px;
+              margin-bottom: 6px;
+              gap: 6px;
             }
             a {
               color: inherit;
               text-decoration: none;
             }
             p {
-              margin-bottom: 15px;
+              margin-bottom: 8px;
               text-align: justify;
             }
+            ol {
+              margin: 2px 0 0 14px;
+              padding-left: 8px;
+            }
+            li {
+              margin-bottom: 2px;
+            }
+            ${styles}
             strong {
               font-weight: bold;
             }
-            ${styles}
+            .main,
+            .permit-copy {
+              page-break-before: auto !important;
+              break-before: auto !important;
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            .main:not(:last-child),
+            .permit-copy:not(.last-copy) {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            .print-page-break {
+              page-break-before: auto !important;
+              break-before: auto !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            .letter-separator,
+            .permit-separator {
+              display: none !important;
+            }
+            .permit-copy .letter-header {
+              width: 100%;
+              margin-bottom: 10px;
+              font-size: 15px;
+              line-height: 1.34;
+            }
+            .permit-copy {
+              width: calc(100% - 8mm) !important;
+              max-width: calc(100% - 8mm) !important;
+              margin: 0 auto !important;
+              min-height: 180mm !important;
+            }
+            .permit-copy .permit-content {
+              min-height: 158mm;
+              display: flex;
+              flex-direction: column;
+            }
+            .permit-copy .flex {
+              font-size: 10.75px;
+              margin-top: 5px;
+              margin-bottom: 6px;
+              gap: 6px;
+            }
+            .permit-copy .permit-section {
+              font-size: 12px;
+              line-height: 1.45;
+              margin-top: 10px;
+            }
+            .permit-copy .permit-table {
+              margin: 10px 0;
+              font-size: 9.75px;
+            }
+            .permit-copy .permit-table tr:first-child td {
+              font-size: 8.5px;
+              padding: 5px 3px;
+            }
+            .permit-copy .permit-table td {
+              padding: 5px 3px;
+            }
+            .permit-copy .signature-section {
+              margin-top: auto;
+              padding-top: 18px;
+              margin-right: 0;
+              font-size: 11.5px;
+            }
+            .permit-copy ol {
+              margin-top: 4px;
+              padding-left: 14px;
+            }
           </style>
         </head>
         <body>

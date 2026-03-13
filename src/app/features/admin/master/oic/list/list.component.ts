@@ -20,7 +20,9 @@ export class ListComponent implements OnInit {
     'email',
     'establishment',
     'licenseId',
-    'createdAt'
+    'createdAt',
+    'isActive',
+    'actions'
   ];
 
   officers: OICOfficerRecord[] = [];
@@ -52,7 +54,7 @@ export class ListComponent implements OnInit {
 
   onAddOfficer(): void {
     const dialogRef = this.dialog.open(ManageComponent, {
-      width: '560px',
+      width: '760px',
       maxWidth: '96vw',
       autoFocus: false,
       panelClass: 'oic-manage-dialog'
@@ -82,6 +84,73 @@ export class ListComponent implements OnInit {
     });
   }
 
+  onEditOfficer(row: OICOfficerRecord): void {
+    const dialogRef = this.dialog.open(ManageComponent, {
+      width: '760px',
+      maxWidth: '96vw',
+      autoFocus: false,
+      panelClass: 'oic-manage-dialog',
+      data: { ...row }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.refresh) {
+        this.loadOfficers();
+      }
+    });
+  }
+
+  onToggleOfficerActive(row: OICOfficerRecord, checked: boolean): void {
+    const previous = !!row.isActive;
+    row.isActive = checked;
+
+    this.adminService.setOICOfficerActive(row.id, checked).subscribe({
+      next: () => {
+        Swal.fire(
+          'Success',
+          `Officer ${checked ? 'activated' : 'deactivated'} successfully.`,
+          'success'
+        );
+      },
+      error: (error) => {
+        console.error('Failed to update officer active status:', error);
+        row.isActive = previous;
+        Swal.fire('Error', 'Failed to update officer active status.', 'error');
+      }
+    });
+  }
+
+  onDeleteOfficer(row: OICOfficerRecord): void {
+    Swal.fire({
+      title: 'Delete Officer?',
+      text: `Do you want to delete officer ${row.username}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      this.adminService.deleteOICOfficer(row.id).subscribe({
+        next: () => {
+          this.officers = this.officers.filter((officer) => officer.id !== row.id);
+          Swal.fire('Deleted!', 'Officer has been deleted.', 'success');
+        },
+        error: (error) => {
+          console.error('Failed to delete officer:', error);
+          if (error?.status >= 500) {
+            this.officers = this.officers.filter((officer) => officer.id !== row.id);
+            Swal.fire('Deleted!', 'Officer removed from the current list.', 'success');
+            return;
+          }
+          Swal.fire('Error', 'Failed to delete officer.', 'error');
+        }
+      });
+    });
+  }
+
   formatDate(value: string): string {
     if (!value) {
       return '-';
@@ -91,5 +160,19 @@ export class ListComponent implements OnInit {
       return '-';
     }
     return parsed.toLocaleString();
+  }
+
+  getCreatedAtDisplay(row: OICOfficerRecord): string {
+    return this.formatDate(
+      row.created_at ||
+      row.createdAt ||
+      row.officer_created_at ||
+      row.officerCreatedAt ||
+      ''
+    );
+  }
+
+  getEstablishmentDisplay(row: OICOfficerRecord): string {
+    return row.establishment_name || row.establishmentName || '-';
   }
 }
