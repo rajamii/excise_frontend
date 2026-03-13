@@ -50,7 +50,10 @@ interface TableData {
   hasArrivalDetails?: boolean;
   arrivalTankerCount?: number;
   arrivalTotalBulkLiter?: number;
+  arrivalApprovalStatus?: string;
+  arrivalReviewRemarks?: string;
 }
+
 
 interface TankerArrivalEntry {
   tanker_no: string;
@@ -123,6 +126,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalViewTankerCount: number = 0;
   arrivalViewTotalBulkLiter: number = 0;
   arrivalViewEntries: TankerArrivalEntry[] = [];
+  arrivalViewApprovalStatus: string = '';
+  arrivalViewReviewRemarks: string = '';
   isArrivalSummaryModalOpen: boolean = false;
   isArrivalSummaryLoading: boolean = false;
   arrivalSummaryErrorMessage: string = '';
@@ -306,7 +311,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             ) || 0,
             hasArrivalDetails: Boolean(item.has_arrival_details || item.hasArrivalDetails || false),
             arrivalTankerCount: Number(item.arrival_tanker_count || item.arrivalTankerCount || 0) || 0,
-            arrivalTotalBulkLiter: Number(item.arrival_total_bulk_liter || item.arrivalTotalBulkLiter || 0) || 0
+            arrivalTotalBulkLiter: Number(item.arrival_total_bulk_liter || item.arrivalTotalBulkLiter || 0) || 0,
+            arrivalApprovalStatus: String(item.arrival_approval_status || item.arrivalApprovalStatus || ''),
+            arrivalReviewRemarks: String(item.arrival_review_remarks || item.arrivalReviewRemarks || '')
           };
         });
 
@@ -1003,6 +1010,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewTankerCount = 0;
     this.arrivalViewTotalBulkLiter = 0;
     this.arrivalViewEntries = [];
+    this.arrivalViewApprovalStatus = '';
+    this.arrivalViewReviewRemarks = '';
     this.isArrivalViewModalOpen = true;
 
     this.enaRequisitionService.getRequisitionArrivalDetails(item.id).subscribe({
@@ -1033,6 +1042,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         }));
         this.arrivalViewTankerCount = Number(data?.tanker_count ?? data?.tankerCount ?? this.arrivalViewEntries.length ?? 0) || 0;
         this.arrivalViewTotalBulkLiter = Number(data?.total_bulk_liter ?? data?.totalBulkLiter ?? data?.totalbl ?? 0) || 0;
+        this.arrivalViewApprovalStatus = String(data?.approval_status ?? data?.approvalStatus ?? '');
+        this.arrivalViewReviewRemarks = String(data?.review_remarks ?? data?.reviewRemarks ?? '');
       },
       error: () => {
         this.arrivalViewErrorMessage = 'Unable to load BL details.';
@@ -1046,6 +1057,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewTankerCount = 0;
     this.arrivalViewTotalBulkLiter = 0;
     this.arrivalViewEntries = [];
+    this.arrivalViewApprovalStatus = '';
+    this.arrivalViewReviewRemarks = '';
     this.selectedArrivalRequisition = null;
   }
 
@@ -1167,7 +1180,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
                   ...row,
                   hasArrivalDetails: true,
                   arrivalTankerCount: enteredTankerCount,
-                  arrivalTotalBulkLiter: enteredTotalBulkLiter
+                  arrivalTotalBulkLiter: enteredTotalBulkLiter,
+                  arrivalApprovalStatus: 'PENDING',
+                  arrivalReviewRemarks: ''
                 }
               : row
           );
@@ -1177,12 +1192,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
                   ...row,
                   hasArrivalDetails: true,
                   arrivalTankerCount: enteredTankerCount,
-                  arrivalTotalBulkLiter: enteredTotalBulkLiter
+                  arrivalTotalBulkLiter: enteredTotalBulkLiter,
+                  arrivalApprovalStatus: 'PENDING',
+                  arrivalReviewRemarks: ''
                 }
               : row
           );
         }
-        alert('Arrival details saved successfully.');
+        alert('Arrival details submitted to OIC successfully. They will appear in All Bulk Detail Record after OIC approval.');
         this.closeArrivalModal();
         this.loadData();
       },

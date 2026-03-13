@@ -89,6 +89,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', showOnlyForOic: true },
     { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', hideForCommissioner: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
+    { section: 'bl-details', label: 'BL Details Information', icon: 'water_drop', showOnlyForOic: true },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
     { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
     { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
@@ -862,8 +863,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    // Allow OIC-only hologram sections even if DB navigation tokens are incomplete.
-    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests') && this.isOicUser()) {
+    // Allow OIC-only sections even if DB navigation tokens are incomplete.
+    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests' || section === 'bl-details') && this.isOicUser()) {
       return true;
     }
 
@@ -909,6 +910,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'hologram-register': ['hologram_register', 'hologram'],
       'hologram-daily-entry': ['hologram_daily', 'hologram'],
       'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],
+      'bl-details': ['bl_details', 'bulk_liter', 'bulk_detail', 'arrival_bulk_liter', 'arrival_details', 'bl'],
       'officer-activity': ['officer_activity', 'officer'],
       'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
       'company-registration': ['company_registration', 'company-registration', 'companyregistration'],

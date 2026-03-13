@@ -91,12 +91,32 @@ export class EnaRequisitionService {
       .pipe(catchError(this.handleError));
   }
 
+  getRequisitionArrivalDetailsByStatus(reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'): Observable<any> {
+    return this.http
+      .get(`${this.apiUrl}arrival-bulk-liter-details/?review_status=${encodeURIComponent(reviewStatus)}`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   saveRequisitionArrivalDetails(
     id: number,
     payload: { tanker_count: number; tanker_details: Array<{ tanker_no: string; bulk_liter: number }> }
   ): Observable<any> {
     return this.http
       .post(`${this.apiUrl}${id}/arrival-bulk-liter-details/`, payload, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  reviewRequisitionArrivalDetails(
+    detailId: number,
+    action: 'APPROVE' | 'REJECT',
+    remarks: string = ''
+  ): Observable<any> {
+    return this.http
+      .post(
+        `${this.apiUrl}arrival-bulk-liter-details/${detailId}/review/`,
+        { action, remarks },
+        this.httpOptions
+      )
       .pipe(catchError(this.handleError));
   }
 }
