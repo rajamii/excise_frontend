@@ -1019,7 +1019,6 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'paid',
       'wallet',
       'approvedbypermitsection',
-      'forwardedtocommissioner',
       'approvedbycommissioner',
       'rejectedbycommissioner'
     ];
