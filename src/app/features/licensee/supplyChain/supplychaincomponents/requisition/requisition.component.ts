@@ -516,19 +516,26 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   canCancelRequisition(item: TableData): boolean {
     const backendEligibility = item.canInitiateCancellation ?? item.canCancel;
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
+    const statusCode = (item.statusCode || '').toUpperCase();
+    const isCommissionerApproved =
+      this.isCommissionerFinalApproval(item) ||
+      statusCode === 'RQ_09' ||
+      status.includes('approvedbycommissioner') ||
+      stageName.includes('approvedbycommissioner');
+
+    if (isCommissionerApproved) {
+      console.log('canCancelRequisition: Hidden for commissioner-approved requisitions');
+      return false;
+    }
+
     if (backendEligibility === true) {
       return true;
     }
 
     // Check if cancellation is allowed for this requisition
-    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
-    const statusCode = (item.statusCode || '').toUpperCase();
     const isFinalApproved =
-      this.isCommissionerFinalApproval(item) ||
-      statusCode === 'RQ_09' ||
-      status.includes('approvedbycommissioner') ||
-      stageName.includes('approvedbycommissioner') ||
       status === 'approved';
     
     // Must be approved first
