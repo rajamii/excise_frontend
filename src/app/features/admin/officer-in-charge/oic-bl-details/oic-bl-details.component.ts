@@ -34,8 +34,8 @@ interface BlDetailRow {
           <p>Review arrival bulk-liter submissions before they move into the licensee bulk record and permanent BL history.</p>
         </div>
         <button type="button" class="refresh-btn" (click)="loadRows()" [disabled]="loading">
-          <span class="refresh-icon">?</span>
-          Refresh
+          <span class="refresh-icon" aria-hidden="true">R</span>
+          <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
         </button>
       </section>
 
@@ -105,10 +105,6 @@ interface BlDetailRow {
                 <th>Ref. No</th>
                 <th>Licensee</th>
                 <th>Distillery</th>
-                <th>Tankers</th>
-                <th>Tanker Number</th>
-                <th>Requested Qty</th>
-                <th>Total BL</th>
                 <th>Submitted</th>
                 <th>Status</th>
                 <th>Remarks</th>
@@ -128,14 +124,6 @@ interface BlDetailRow {
                   <div class="primary-text">{{ row.distilleryName || '-' }}</div>
                 </td>
                 <td>
-                  <span class="count-chip">{{ row.tankerCount }}</span>
-                </td>
-                <td>
-                  <div class="tanker-badge">{{ row.tankerNumbers || formatTankerNumbers(row.tankerDetails) }}</div>
-                </td>
-                <td class="numeric">{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
-                <td class="numeric strong">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
-                <td>
                   <div class="primary-text">{{ formatDate(row.submittedAt) }}</div>
                 </td>
                 <td>
@@ -152,26 +140,96 @@ interface BlDetailRow {
                   <div class="remarks-cell">{{ row.reviewRemarks || 'No remarks added' }}</div>
                 </td>
                 <td class="actions-cell">
-                  <div class="action-row" *ngIf="row.approvalStatus === 'PENDING'; else reviewedInfo">
-                    <button type="button" class="action-btn approve" (click)="approve(row)" [disabled]="actingId === row.id">
-                      Approve
+                  <div class="action-stack">
+                    <button type="button" class="action-btn details" (click)="openDetailsModal(row)">
+                      View Details
                     </button>
-                    <button type="button" class="action-btn reject" (click)="reject(row)" [disabled]="actingId === row.id">
-                      Reject
-                    </button>
-                  </div>
-                  <ng-template #reviewedInfo>
-                    <div class="review-meta">
-                      <div class="review-user">{{ row.reviewedBy || 'Reviewed' }}</div>
-                      <div class="review-time">{{ formatDate(row.reviewedAt) }}</div>
+                    <div class="action-row" *ngIf="row.approvalStatus === 'PENDING'; else reviewedInfo">
+                      <button type="button" class="action-btn approve" (click)="approve(row)" [disabled]="actingId === row.id">
+                        Approve
+                      </button>
+                      <button type="button" class="action-btn reject" (click)="reject(row)" [disabled]="actingId === row.id">
+                        Reject
+                      </button>
                     </div>
-                  </ng-template>
+                    <ng-template #reviewedInfo>
+                      <div class="review-meta">
+                        <div class="review-time">{{ formatDate(row.reviewedAt) }}</div>
+                      </div>
+                    </ng-template>
+                  </div>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
+
+
+      <ng-container *ngIf="selectedDetailsRow as details">
+        <div class="details-modal-backdrop" (click)="closeDetailsModal()"></div>
+        <div class="details-modal" role="dialog" aria-modal="true">
+          <div class="details-modal-card" (click)="$event.stopPropagation()">
+            <div class="details-modal-header">
+              <div class="details-modal-title">
+                <span class="details-kicker">BL Entry Details</span>
+                <h3>{{ details.referenceNo }}</h3>
+                <p>{{ details.distilleryName || '-' }}</p>
+              </div>
+              <button type="button" class="details-close" (click)="closeDetailsModal()">Close</button>
+            </div>
+
+            <div class="details-metrics">
+              <div class="metric-card">
+                <span class="metric-label">Tankers</span>
+                <strong>{{ details.tankerCount || 0 }}</strong>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">Requested Qty</span>
+                <strong>{{ details.requestedTotalQuantity || 0 | number:'1.2-2' }}</strong>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">Total BL</span>
+                <strong>{{ details.totalBulkLiter || 0 | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+
+            <div class="details-info-grid">
+              <div class="info-box">
+                <span class="info-label">Licensee</span>
+                <div>{{ details.licenseeId || '-' }}</div>
+              </div>
+              <div class="info-box">
+                <span class="info-label">Submitted</span>
+                <div>{{ formatDate(details.submittedAt || '') }}</div>
+              </div>
+              <div class="info-box">
+                <span class="info-label">Status</span>
+                <div>{{ details.approvalStatus || '-' }}</div>
+              </div>
+            </div>
+
+            <div class="details-table-wrap">
+              <table class="details-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Tanker Number</th>
+                    <th>Bulk Liter</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of details.tankerDetails; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ item.tanker_no || '-' }}</td>
+                    <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </ng-container>
 
       <ng-template #emptyState>
         <div class="empty-state">
@@ -285,9 +343,16 @@ interface BlDetailRow {
     }
 
     .refresh-icon {
-      display: inline-block;
+      display: inline-grid;
+      place-items: center;
+      width: 1.55rem;
+      height: 1.55rem;
       margin-right: 0.45rem;
-      font-size: 1rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #dbeafe, #e0f2fe);
+      color: #0f3b78;
+      font-size: 0.78rem;
+      font-weight: 800;
     }
 
     .stats-grid {
@@ -501,8 +566,7 @@ interface BlDetailRow {
     }
 
     .ref-primary,
-    .primary-text,
-    .review-user {
+    .primary-text {
       font-weight: 700;
       color: #0f172a;
     }
@@ -512,43 +576,6 @@ interface BlDetailRow {
       margin-top: 0.2rem;
       font-size: 0.8rem;
       color: var(--muted);
-    }
-
-    .count-chip {
-      display: inline-flex;
-      min-width: 36px;
-      height: 36px;
-      align-items: center;
-      justify-content: center;
-      padding: 0 0.7rem;
-      border-radius: 999px;
-      font-weight: 800;
-      color: #1d4ed8;
-      background: #dbeafe;
-      border: 1px solid #bfdbfe;
-    }
-
-    .tanker-badge {
-      display: inline-block;
-      max-width: 260px;
-      padding: 0.48rem 0.72rem;
-      border-radius: 12px;
-      background: #eef6ff;
-      border: 1px solid #d4e5ff;
-      color: #0f3b78;
-      font-weight: 600;
-      line-height: 1.45;
-      word-break: break-word;
-    }
-
-    .numeric {
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .numeric.strong {
-      font-weight: 800;
-      color: #0b6b46;
     }
 
     .status-chip {
@@ -592,7 +619,14 @@ interface BlDetailRow {
 
     .actions-cell {
       text-align: right;
-      min-width: 170px;
+      min-width: 190px;
+    }
+
+    .action-stack {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.55rem;
     }
 
     .action-row {
@@ -632,6 +666,14 @@ interface BlDetailRow {
       border: 1px solid #fecdd3;
     }
 
+
+    .action-btn.details {
+      color: #1d4ed8;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      min-width: 118px;
+    }
+
     .empty-state {
       margin-top: 0.5rem;
     }
@@ -663,9 +705,167 @@ interface BlDetailRow {
       line-height: 1.6;
     }
 
+
+    .details-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(3px);
+      z-index: 1040;
+    }
+
+    .details-modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 1050;
+    }
+
+    .details-modal-card {
+      width: min(900px, 100%);
+      max-height: calc(100vh - 3rem);
+      overflow: auto;
+      background:
+        linear-gradient(180deg, rgba(248, 251, 255, 0.95), rgba(255, 255, 255, 1)),
+        #fff;
+      border-radius: 24px;
+      border: 1px solid #dbe4ef;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+      padding: 1.35rem;
+    }
+
+    .details-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .details-modal-title {
+      min-width: 0;
+    }
+
+    .details-kicker {
+      display: inline-block;
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #2563eb;
+      font-weight: 800;
+      margin-bottom: 0.45rem;
+    }
+
+    .details-modal-header h3 {
+      margin: 0;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .details-modal-header p {
+      margin: 0.3rem 0 0;
+      color: #64748b;
+    }
+
+    .details-close {
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #334155;
+      padding: 0.7rem 1rem;
+      font-weight: 700;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .details-close:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      transform: translateY(-1px);
+    }
+
+    .details-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .metric-card,
+    .info-box {
+      background: linear-gradient(180deg, #f8fbff, #ffffff);
+      border: 1px solid #dbe4ef;
+      border-radius: 18px;
+      padding: 0.95rem 1rem;
+    }
+
+    .metric-label,
+    .info-label {
+      display: block;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin-bottom: 0.35rem;
+      font-weight: 700;
+    }
+
+    .metric-card strong {
+      font-size: 1.35rem;
+      color: #0f172a;
+    }
+
+    .details-info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .details-table-wrap {
+      border: 1px solid #dbe4ef;
+      border-radius: 18px;
+      overflow: auto;
+    }
+
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .details-table th,
+    .details-table td {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid #eaf0f6;
+      text-align: left;
+    }
+
+    .details-table th {
+      background: #eef4ff;
+      color: #1e3a8a;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .details-table tbody tr:hover td {
+      background: #f8fbff;
+    }
+
+    .details-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
     @media (max-width: 1024px) {
       .stats-grid,
-      .filters-grid {
+      .filters-grid,
+      .details-metrics,
+      .details-info-grid {
         grid-template-columns: 1fr;
       }
 
@@ -710,6 +910,7 @@ export class OicBlDetailsComponent implements OnInit {
   reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL' = 'ALL';
   searchTerm = '';
   actingId: number | null = null;
+  selectedDetailsRow: BlDetailRow | null = null;
 
   ngOnInit(): void {
     this.loadRows();
@@ -750,6 +951,14 @@ export class OicBlDetailsComponent implements OnInit {
 
   getCount(status: 'PENDING' | 'APPROVED' | 'REJECTED'): number {
     return this.rows.filter((row) => row.approvalStatus === status).length;
+  }
+
+  openDetailsModal(row: BlDetailRow): void {
+    this.selectedDetailsRow = row;
+  }
+
+  closeDetailsModal(): void {
+    this.selectedDetailsRow = null;
   }
 
   approve(row: BlDetailRow): void {
@@ -827,17 +1036,22 @@ export class OicBlDetailsComponent implements OnInit {
 
   private mapRow(row: any): BlDetailRow {
     const tankerDetailsRaw = row?.tanker_details ?? row?.tankerDetails ?? [];
-    let tankerDetails: Array<{ tanker_no: string; bulk_liter: number }> = [];
+    let tankerDetailsSource: any[] = [];
     if (Array.isArray(tankerDetailsRaw)) {
-      tankerDetails = tankerDetailsRaw;
+      tankerDetailsSource = tankerDetailsRaw;
     } else if (typeof tankerDetailsRaw === 'string') {
       try {
         const parsed = JSON.parse(tankerDetailsRaw);
-        tankerDetails = Array.isArray(parsed) ? parsed : [];
+        tankerDetailsSource = Array.isArray(parsed) ? parsed : [];
       } catch {
-        tankerDetails = [];
+        tankerDetailsSource = [];
       }
     }
+    const tankerDetails = this.normalizeTankerDetails(
+      tankerDetailsSource,
+      row?.tanker_numbers ?? row?.tankerNumbers ?? '',
+      row?.total_bulk_liter ?? row?.totalBulkLiter ?? 0
+    );
 
     return {
       id: Number(row?.id || 0) || 0,
@@ -856,5 +1070,46 @@ export class OicBlDetailsComponent implements OnInit {
       reviewedBy: String(row?.reviewed_by ?? row?.reviewedBy ?? ''),
       reviewRemarks: String(row?.review_remarks ?? row?.reviewRemarks ?? '')
     };
+  }
+
+  private normalizeTankerDetails(rawDetails: any[], tankerNumbersValue: any, totalBulkLiterValue: any): Array<{ tanker_no: string; bulk_liter: number }> {
+    const normalized = (Array.isArray(rawDetails) ? rawDetails : [])
+      .map((item: any) => {
+        const tankerNo = String(
+          item?.tanker_no ??
+          item?.tankerNo ??
+          item?.tanker_number ??
+          item?.tankerNumber ??
+          ''
+        ).trim();
+        const bulkLiter = Number(
+          item?.bulk_liter ??
+          item?.bulkLiter ??
+          item?.bulk_litre ??
+          item?.bulkLitre ??
+          0
+        ) || 0;
+        return { tanker_no: tankerNo, bulk_liter: bulkLiter };
+      })
+      .filter((item) => item.tanker_no || item.bulk_liter > 0);
+
+    if (normalized.length > 0) {
+      return normalized;
+    }
+
+    const tankerNumbers = String(tankerNumbersValue ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (tankerNumbers.length === 0) {
+      return [];
+    }
+
+    const totalBulkLiter = Number(totalBulkLiterValue ?? 0) || 0;
+    return tankerNumbers.map((tankerNo, index) => ({
+      tanker_no: tankerNo,
+      bulk_liter: index === 0 ? totalBulkLiter : 0
+    }));
   }
 }
