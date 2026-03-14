@@ -42,7 +42,6 @@ import { RegistrationManagementComponent } from '../licensee/supplyChain/supplyc
 import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
 // Officer-specific Components
-import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
 import { HologramMonthlyReportComponent } from '../licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component';
 import { HologramdetailsComponent } from '../licensee/supplyChain/HoloGram/hologramdetails/hologramdetails.component';
 import { OfficerinchargehologramreqComponent } from '../licensee/supplyChain/HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
@@ -92,7 +91,6 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     RegistrationManagementComponent,
     PaymentConfirmationComponent,
     // Officer-specific Components
-    BrandsDetailsComponent,
     HologramMonthlyReportComponent,
     HologramdetailsComponent,
     OfficerinchargehologramreqComponent,

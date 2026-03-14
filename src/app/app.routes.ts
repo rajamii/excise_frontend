@@ -241,14 +241,7 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/registers/beer-production-register/beer-production-register.component"
       ).then((m) => m.BeerProductionRegisterComponent),
   },
-  {
-    path: "dev-brands-details",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/registers/brands-details/brands-details.component"
-      ).then((m) => m.BrandsDetailsComponent),
-  },
-  {
+    {
     path: "app-permit-section",
     loadComponent: () =>
       import(
