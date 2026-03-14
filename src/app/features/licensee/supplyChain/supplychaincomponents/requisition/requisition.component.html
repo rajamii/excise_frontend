@@ -232,14 +232,14 @@
                 type="button"
                 class="btn btn-sm mt-2 arrival-update-btn"
                 (click)="openArrivalModal(item)">
-                Update Arrival
+                Update BL Arrival
               </button>
               <button
                 *ngIf="canViewArrivalDetails(item)"
                 type="button"
                 class="btn btn-sm mt-2 arrival-view-btn"
                 (click)="openArrivalViewModal(item)">
-               View ENA Inventory
+               View BL Inventory
               </button>
             </td>
           </tr>
@@ -732,9 +732,13 @@
                   <td class="requested-col">{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
                   <td class="bl-col">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
                   <td class="tanker-details-col">
-                    <div class="tanker-details-highlight" [title]="row.tankerDetails || formatTankerDetailsShort(row.tankerDetails)">
+                    <div class="tanker-details-highlight" [title]="formatTankerDetailsShort(row.tankerDetails)">
                       <i class="bi bi-truck tanker-details-icon"></i>
-                      <span class="tanker-details-text">{{ formatTankerDetailsShort(row.tankerDetails) }}</span>
+                      <div class="tanker-details-lines">
+                        <span class="tanker-details-line" *ngFor="let line of getTankerDetailsDisplayLines(row.tankerDetails)">
+                          {{ line }}
+                        </span>
+                      </div>
                     </div>
                   </td>
                 </tr>

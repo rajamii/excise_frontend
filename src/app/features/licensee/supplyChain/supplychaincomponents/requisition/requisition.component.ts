@@ -873,6 +873,23 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       .join(', ');
   }
 
+  getTankerDetailsDisplayLines(rows: TankerArrivalEntry[], itemsPerLine: number = 2): string[] {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return ['-'];
+    }
+
+    const formattedRows = rows.map((row) =>
+      `${String(row?.tanker_no || '').trim()}: ${Number(row?.bulk_liter || 0).toFixed(2)} Bulk Liter`
+    );
+
+    const lines: string[] = [];
+    for (let index = 0; index < formattedRows.length; index += itemsPerLine) {
+      lines.push(formattedRows.slice(index, index + itemsPerLine).join(', '));
+    }
+
+    return lines;
+  }
+
   private mapArrivalSummaryRow(row: any): ArrivalDetailsRow {
     const tankerDetailsRaw =
       row?.tanker_details ??
