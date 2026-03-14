@@ -3,7 +3,7 @@
   <div class="container-fluid py-4">
     <div class="wallet-cards-grid">
       <!-- Excise Duty Card -->
-      <div class="wallet-summary-card excise-card">
+      <div class="wallet-summary-card excise-card history-hover" (click)="openWalletHistory('excise')">
         <div class="wallet-summary-header">
           <div class="wallet-summary-title-wrap">
             <span class="wallet-summary-icon text-primary"><i class="bi bi-wallet2"></i></span>
@@ -23,7 +23,7 @@
       </div>
 
       <!-- Education Cess Card -->
-      <div class="wallet-summary-card education-card">
+      <div class="wallet-summary-card education-card history-hover" (click)="openWalletHistory('education')">
         <div class="wallet-summary-header">
           <div class="wallet-summary-title-wrap">
             <span class="wallet-summary-icon text-info"><i class="bi bi-bank2"></i></span>
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Hologram Card -->
-      <div class="wallet-summary-card hologram-card">
+      <div class="wallet-summary-card hologram-card history-hover" (click)="openWalletHistory('hologram')">
         <div class="wallet-summary-header">
           <div class="wallet-summary-title-wrap">
             <span class="wallet-summary-icon text-warning"><i class="bi bi-shield-check"></i></span>
