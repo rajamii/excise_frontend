@@ -1,11 +1,8 @@
 <div class="main-wrapper">
-  <!-- Message Alert -->
-  <div *ngIf="message" [class]="'alert alert-' + messageType + ' w-100'"
-    style="max-width: 700px; margin-bottom: 1.5rem">
+  <div *ngIf="message" [class]="'alert alert-' + messageType + ' w-100'" style="max-width: 700px; margin-bottom: 1.5rem">
     {{ message }}
   </div>
 
-  <!-- Main Letter Card -->
   <div class="card main-card shadow mb-4 w-100">
     <div class="card-header bg-white text-center">
       <span class="letter-header">DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
@@ -18,9 +15,7 @@
         </div>
         <div class="col text-end">
           <b>Date:</b>
-          <span class="fw-bold text-dark">{{
-            displayData.date | date : "dd.MM.yyyy"
-            }}</span>
+          <span class="fw-bold text-dark">{{ displayData.date | date : "dd.MM.yyyy" }}</span>
         </div>
       </div>
 
@@ -36,9 +31,7 @@
         <b>Sub:</b> REQUEST FOR REVALIDATION OF IMPORT PERMITS
         <span class="fw-bold text-dark">{{ displayData.permitNumbers }}</span>
         DATED
-        <span class="fw-bold text-dark">{{
-          displayData.permitDate | date : "dd.MM.yyyy"
-          }}</span>
+        <span class="fw-bold text-dark">{{ displayData.permitDate | date : "dd.MM.yyyy" }}</span>
       </p>
 
       <p>Respected Madam,</p>
@@ -47,24 +40,16 @@
         Due to unavoidable circumstances, we could not procure
         <span class="fw-bold text-dark">{{ displayData.totalENA }}</span>
         BL
-        <b><span class="fw-bold text-dark">{{
-            displayData.bulk_spirit_type
-            }}</span></b>
+        <b><span class="fw-bold text-dark">{{ displayData.bulk_spirit_type }}</span></b>
         against Import Permits No.
         <span class="fw-bold text-dark">{{ displayData.permitNumbers }}</span>
         dated
-        <span class="fw-bold text-dark">{{
-          displayData.permitDate | date : "dd.MM.yyyy"
-          }}</span>
+        <span class="fw-bold text-dark">{{ displayData.permitDate | date : "dd.MM.yyyy" }}</span>
         which expired on
-        <span class="fw-bold text-dark">{{
-          displayData.expiryDate | date : "dd.MM.yyyy"
-          }}</span>.
+        <span class="fw-bold text-dark">{{ displayData.expiryDate | date : "dd.MM.yyyy" }}</span>.
       </p>
 
-      <p>
-        Hence, we request you to revalidate the above mentioned import permits.
-      </p>
+      <p>Hence, we request you to revalidate the above mentioned import permits.</p>
 
       <p>Your co-operation will be highly appreciable.</p>
 
@@ -86,7 +71,6 @@
     </div>
   </div>
 
-  <!-- Action Buttons -->
   <div class="btn-group-custom no-print">
     <button *ngIf="!isViewMode" class="btn btn-success px-4" (click)="showDeclarationModal()">
       Submit for Revalidation
@@ -94,34 +78,156 @@
     <button class="btn btn-outline-secondary" (click)="goBack()">Back</button>
   </div>
 
-  <!-- Declaration Modal -->
-  <div class="modal fade" id="declarationModal" tabindex="-1" aria-labelledby="declarationModalLabel"
-    aria-hidden="true">
+  <div
+    class="modal fade"
+    [class.show]="showDeclaration"
+    [style.display]="showDeclaration ? 'block' : 'none'"
+    tabindex="-1"
+  >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header bg-warning text-dark">
-          <h5 class="modal-title" id="declarationModalLabel">
+          <h5 class="modal-title">
             <i class="bi bi-exclamation-triangle me-2"></i>Important Declaration
           </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" (click)="closeDeclarationModal()"></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-warning">
-            <strong>Note:</strong> By submitting this revalidation request, you
-            acknowledge that <b>₹1000 will be deducted</b> from your account for
-            revalidation charges.
+            <strong>Note:</strong> By submitting this revalidation request, you acknowledge that
+            <b>{{ formatCurrency(revalidationCharge) }} will be deducted</b> from your account for revalidation charges.
           </div>
           <p class="mb-0">Do you wish to proceed?</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-secondary" (click)="closeDeclarationModal()">
             Cancel
           </button>
-          <button type="button" class="btn btn-success" (click)="submitRevalidation()">
+          <button type="button" class="btn btn-success" (click)="openWalletConfirmation()">
             Yes, Proceed
           </button>
         </div>
       </div>
     </div>
   </div>
+
+  <div
+    class="modal fade"
+    [class.show]="showWalletConfirmation"
+    [style.display]="showWalletConfirmation ? 'block' : 'none'"
+    tabindex="-1"
+  >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content wallet-confirmation-modal">
+        <div class="wallet-confirmation-header">
+          <div>
+            <h5 class="wallet-confirmation-title">
+              <i class="bi bi-wallet2 me-2"></i>Final Confirmation
+            </h5>
+            <p class="wallet-confirmation-subtitle mb-0">Review wallet balance and deduction details before you proceed.</p>
+          </div>
+          <button type="button" class="btn-close btn-close-white" (click)="closeWalletConfirmation()"></button>
+        </div>
+
+        <div class="wallet-confirmation-body">
+          <div *ngIf="isSubmittingRevalidation" class="wallet-submit-loader">
+            <div class="spinner-border text-success" role="status">
+              <span class="visually-hidden">Processing...</span>
+            </div>
+            <p class="mb-0 mt-3">Deducting revalidation amount and submitting request...</p>
+          </div>
+
+          <div *ngIf="isWalletLoading" class="text-center py-4">
+            <div class="spinner-border text-success" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 mb-0">Fetching live wallet balance...</p>
+          </div>
+
+          <ng-container *ngIf="!isWalletLoading">
+            <div *ngIf="walletErrorMessage" class="alert alert-danger mb-3">
+              {{ walletErrorMessage }}
+            </div>
+
+            <div class="wallet-summary-grid">
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Payment For</span>
+                <strong>Revalidation</strong>
+              </div>
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Reference No.</span>
+                <strong>{{ displayData.refNo }}</strong>
+              </div>
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Wallet Source</span>
+                <strong>{{ walletSourceLabel }}</strong>
+              </div>
+            </div>
+
+            <div class="wallet-balance-grid">
+              <div class="wallet-balance-card current">
+                <span class="wallet-summary-label">Current Balance</span>
+                <strong>{{ formatCurrency(availableWalletBalance) }}</strong>
+              </div>
+              <div class="wallet-balance-card deduct">
+                <span class="wallet-summary-label">Deduction on Proceed</span>
+                <strong>- {{ formatCurrency(revalidationCharge) }}</strong>
+              </div>
+              <div class="wallet-balance-card after" [class.insufficient]="!hasSufficientWalletBalance()">
+                <span class="wallet-summary-label">Balance After Proceed</span>
+                <strong>{{ formatCurrency(getBalanceAfterDeduction()) }}</strong>
+              </div>
+            </div>
+
+            <div class="wallet-info-banner mb-3">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              This wallet deduction will be applied immediately after you click proceed.
+            </div>
+
+            <div *ngIf="!hasSufficientWalletBalance()" class="alert alert-danger mb-3">
+              Insufficient wallet balance. Please add money before proceeding with this revalidation request.
+            </div>
+
+            <div class="form-check wallet-declaration-box">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="revalidationWalletDeclaration"
+                [(ngModel)]="walletDeclarationAccepted"
+              />
+              <label class="form-check-label" for="revalidationWalletDeclaration">
+                I confirm that the above amount may be deducted from my wallet and this request may be forwarded to the next stage.
+              </label>
+            </div>
+          </ng-container>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeWalletConfirmation()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-success"
+            [disabled]="!canProceedWithWalletConfirmation()"
+            (click)="submitRevalidation()"
+          >
+            <span
+              *ngIf="isSubmittingRevalidation"
+              class="spinner-border spinner-border-sm me-2"
+              role="status"
+              aria-hidden="true"
+            ></span>
+            {{ isSubmittingRevalidation ? 'Processing...' : 'Proceed' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="modal-backdrop fade"
+    [class.show]="showDeclaration || showWalletConfirmation"
+    [style.display]="showDeclaration || showWalletConfirmation ? 'block' : 'none'"
+  ></div>
 </div>

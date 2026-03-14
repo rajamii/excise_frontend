@@ -180,6 +180,13 @@
       </div>
 
       <div class="wallet-confirmation-body">
+        <div *ngIf="isSubmittingCancellation" class="wallet-submit-loader">
+          <div class="spinner-border text-success" role="status">
+            <span class="visually-hidden">Processing...</span>
+          </div>
+          <p class="mb-0 mt-3">Deducting cancellation amount and submitting request...</p>
+        </div>
+
         <div *ngIf="isWalletLoading" class="text-center py-4">
           <div class="spinner-border text-success" role="status">
             <span class="visually-hidden">Loading...</span>
@@ -255,6 +262,12 @@
           [disabled]="!canProceedWithWalletConfirmation()"
           (click)="confirmCancellation()"
         >
+          <span
+            *ngIf="isSubmittingCancellation"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          ></span>
           {{ isSubmittingCancellation ? 'Processing...' : 'Proceed' }}
         </button>
       </div>
