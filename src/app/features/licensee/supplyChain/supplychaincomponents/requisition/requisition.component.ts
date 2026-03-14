@@ -869,7 +869,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return '-';
     }
     return rows
-      .map((r) => `${String(r?.tanker_no || '').trim()}: ${Number(r?.bulk_liter || 0).toFixed(2)} Bulk Liter`)
+      .map((r) => `${String(r?.tanker_no || '').trim()}: ${Number(r?.bulk_liter || 0).toFixed(2)} BL`)
       .join(', ');
   }
 
@@ -879,7 +879,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
 
     const formattedRows = rows.map((row) =>
-      `${String(row?.tanker_no || '').trim()}: ${Number(row?.bulk_liter || 0).toFixed(2)} Bulk Liter`
+      `${String(row?.tanker_no || '').trim()}: ${Number(row?.bulk_liter || 0).toFixed(2)} BL`
     );
 
     const lines: string[] = [];
