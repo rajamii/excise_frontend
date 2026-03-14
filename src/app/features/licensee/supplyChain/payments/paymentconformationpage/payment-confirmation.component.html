@@ -137,7 +137,7 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
@@ -184,7 +184,7 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
@@ -231,7 +231,7 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
@@ -278,7 +278,7 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
@@ -326,7 +326,7 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
@@ -412,6 +412,93 @@
         </table>
       </div>
       }
+    </div>
+  </div>
+</div>
+
+<div class="wallet-deduction-overlay" *ngIf="showPendingWalletConfirmationModal">
+  <div class="wallet-deduction-modal">
+    <div class="wallet-deduction-header">
+      <div>
+        <h5 class="wallet-deduction-title">
+          <i class="bi bi-wallet2 me-2"></i>Final Confirmation
+        </h5>
+        <p class="wallet-deduction-subtitle">Review wallet balance and deduction details before you proceed.</p>
+      </div>
+      <button type="button" class="btn-close btn-close-white" (click)="closePendingWalletPaymentConfirmation()" aria-label="Close"></button>
+    </div>
+
+    <div class="wallet-deduction-body" *ngIf="pendingWalletPaymentPreview as preview">
+      <div class="wallet-deduction-summary">
+        <div class="wallet-deduction-summary-card">
+          <span class="wallet-deduction-label">Payment For</span>
+          <span class="wallet-deduction-value">{{ preview.moduleLabel }}</span>
+        </div>
+        <div class="wallet-deduction-summary-card">
+          <span class="wallet-deduction-label">Reference No.</span>
+          <span class="wallet-deduction-value">{{ preview.referenceNo }}</span>
+        </div>
+        <div class="wallet-deduction-summary-card">
+          <span class="wallet-deduction-label">Wallet Source</span>
+          <span class="wallet-deduction-value">{{ preview.walletLabel }}</span>
+        </div>
+      </div>
+
+      <div class="wallet-deduction-grid">
+        <div class="wallet-balance-card current">
+          <span class="wallet-balance-caption">Current Balance</span>
+          <span class="wallet-balance-amount">Rs {{ preview.currentBalance | number:'1.2-2' }}</span>
+        </div>
+        <div class="wallet-balance-card deduct">
+          <span class="wallet-balance-caption">Deduction On Proceed</span>
+          <span class="wallet-balance-amount">- Rs {{ preview.deductionAmount | number:'1.2-2' }}</span>
+        </div>
+        <div class="wallet-balance-card after" [class.insufficient]="preview.shortfall > 0">
+          <span class="wallet-balance-caption">Balance After Proceed</span>
+          <span class="wallet-balance-amount">Rs {{ preview.balanceAfter | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="alert alert-danger wallet-deduction-alert" *ngIf="preview.shortfall > 0">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Insufficient balance. Add Rs {{ preview.shortfall | number:'1.2-2' }} more to continue.
+      </div>
+
+      <div class="alert alert-info wallet-deduction-alert" *ngIf="preview.shortfall <= 0">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        This wallet deduction will be applied immediately after you click proceed.
+      </div>
+
+      <div class="wallet-deduction-declaration">
+        <div class="form-check mb-0">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="pendingWalletPaymentDeclaration"
+            [(ngModel)]="pendingWalletPaymentDeclarationAccepted">
+          <label class="form-check-label" for="pendingWalletPaymentDeclaration">
+            {{ getPendingWalletDeclarationText() }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="wallet-deduction-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closePendingWalletPaymentConfirmation()">Back</button>
+      <button
+        *ngIf="(pendingWalletPaymentPreview?.shortfall || 0) > 0"
+        type="button"
+        class="btn btn-warning"
+        (click)="goToAddMoneyForPendingPayment()">
+        <i class="bi bi-plus-circle me-1"></i>Add Money
+      </button>
+      <button
+        type="button"
+        class="btn btn-success"
+        (click)="proceedPendingWalletPayment()"
+        [disabled]="!canConfirmPendingWalletPayment()">
+        <i class="bi bi-check-circle me-1"></i>Proceed
+      </button>
     </div>
   </div>
 </div>

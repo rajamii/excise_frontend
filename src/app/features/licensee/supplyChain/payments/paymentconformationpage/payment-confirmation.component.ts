@@ -113,6 +113,16 @@ interface PendingWalletPaymentContext {
   amount: number;
 }
 
+interface PendingWalletPaymentPreview {
+  moduleLabel: string;
+  walletLabel: string;
+  referenceNo: string;
+  currentBalance: number;
+  deductionAmount: number;
+  balanceAfter: number;
+  shortfall: number;
+}
+
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   excise: '',
   brewery: '',
@@ -135,8 +145,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   activeTab = 'requisition';
   private walletDataLoaded = false;
   pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
+  pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
   private hasHandledPendingWalletPayment = false;
   private isHandlingPendingWalletPayment = false;
+  showPendingWalletConfirmationModal = false;
+  pendingWalletPaymentDeclarationAccepted = false;
   private autoSelectLastPaidTabOnLoad = false;
   private pendingHologramAutoPayRefNo = '';
   private pendingHologramAutoPayType = '';
@@ -1149,6 +1162,56 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return Math.max(0, required - available);
   }
 
+  openPendingWalletPaymentConfirmation(): void {
+    if (!this.walletDataLoaded || this.hasHandledPendingWalletPayment || this.isHandlingPendingWalletPayment) {
+      return;
+    }
+
+    const context = this.pendingWalletPaymentContext;
+    if (!context) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    const deductionAmount = Number(context.amount || 0);
+    const currentBalance = this.getAvailableBalanceForModuleTab(context.tab);
+    if (deductionAmount <= 0) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    this.pendingWalletPaymentPreview = {
+      moduleLabel: this.getModuleLabelForTab(context.tab),
+      walletLabel: this.getWalletLabelForModuleTab(context.tab),
+      referenceNo: context.referenceNo || '-',
+      currentBalance,
+      deductionAmount,
+      balanceAfter: currentBalance - deductionAmount,
+      shortfall: Math.max(0, deductionAmount - currentBalance)
+    };
+    this.pendingWalletPaymentDeclarationAccepted = false;
+    this.showPendingWalletConfirmationModal = true;
+  }
+
+  closePendingWalletPaymentConfirmation(): void {
+    this.showPendingWalletConfirmationModal = false;
+    this.pendingWalletPaymentDeclarationAccepted = false;
+    this.pendingWalletPaymentPreview = null;
+  }
+
+  canConfirmPendingWalletPayment(): boolean {
+    if (!this.pendingWalletPaymentDeclarationAccepted) return false;
+    if (this.isHandlingPendingWalletPayment) return false;
+    const preview = this.pendingWalletPaymentPreview;
+    if (!preview) return false;
+    return preview.deductionAmount > 0 && preview.shortfall <= 0;
+  }
+
+  getPendingWalletDeclarationText(): string {
+    const moduleLabel = this.pendingWalletPaymentPreview?.moduleLabel || this.getPendingPaymentModuleLabel();
+    return `I understand that wallet amount will be deducted immediately when I proceed with this ${moduleLabel.toLowerCase()} payment.`;
+  }
+
   proceedPendingWalletPayment(): void {
     if (!this.walletDataLoaded || this.hasHandledPendingWalletPayment || this.isHandlingPendingWalletPayment) {
       return;
@@ -1172,6 +1235,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
 
     if (availableBalance < requiredAmount) {
+      this.closePendingWalletPaymentConfirmation();
       const shortage = Math.max(0, requiredAmount - availableBalance);
       Swal.fire({
         icon: 'error',
@@ -1198,6 +1262,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.executeWalletPaymentFromContext(context).subscribe({
       next: () => {
+        this.closePendingWalletPaymentConfirmation();
         this.addOptimisticPaymentHistoryRow(context);
         Swal.fire({
           icon: 'success',
@@ -1210,6 +1275,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.finishPendingWalletPaymentHandling();
       },
       error: (err) => {
+        this.closePendingWalletPaymentConfirmation();
         const errorMessage =
           err?.error?.error ||
           err?.error?.detail ||
@@ -1352,6 +1418,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   goToAddMoneyForPendingPayment(): void {
     const context = this.pendingWalletPaymentContext;
     if (!context) return;
+    this.closePendingWalletPaymentConfirmation();
 
     if (context.tab === 'hologram') {
       this.addMoney('hologram');
@@ -1392,6 +1459,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return this.getTotalWalletBalance();
   }
 
+  private getWalletLabelForModuleTab(tab: PaymentModuleTab): string {
+    if (tab === 'hologram') {
+      return 'Hologram Wallet';
+    }
+    if (tab === 'transit') {
+      return 'Combined Excise and Education Wallet Balance';
+    }
+    return 'Available Wallet Balance';
+  }
+
   private getModuleLabelForTab(tab: PaymentModuleTab): string {
     if (tab === 'requisition') return 'Requisition';
     if (tab === 'revalidation') return 'Revalidation';
@@ -1404,6 +1481,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.hasHandledPendingWalletPayment = true;
     this.isHandlingPendingWalletPayment = false;
     this.pendingWalletPaymentContext = null;
+    this.closePendingWalletPaymentConfirmation();
     this.pendingHologramAutoPayRefNo = '';
     this.pendingHologramAutoPayType = '';
     this.clearPendingPaymentContextFromStorage();

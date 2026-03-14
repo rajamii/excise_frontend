@@ -277,13 +277,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             ),
             statusCode: item.status_code || item.statusCode || '',
             canInitiateCancellation:
-              item.can_initiate_cancellation ??
-              item.canInitiateCancellation ??
-              item.canCancel ??
-              item.can_cancel,
+              this.toBooleanFlag(
+                item.can_initiate_cancellation ??
+                item.canInitiateCancellation ??
+                item.canCancel ??
+                item.can_cancel,
+                undefined
+              ) ?? undefined,
             commissionerStatus: item.commissionerStatus || item.commissioner_status,
             forwardedToCommissioner: item.forwardedToCommissioner || item.forwarded_to_commissioner || false,
-            canCancel: item.canCancel ?? item.can_cancel,
+            canCancel: this.toBooleanFlag(item.canCancel ?? item.can_cancel, undefined) ?? undefined,
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             // Additional properties that might be needed
@@ -298,8 +301,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             paymentStatus: item.paymentStatus || item.payment_status || '',
             paymentId: item.paymentId || item.payment_id || item.transactionId || item.transaction_id || '',
             paymentDate: item.paymentDate || item.payment_date || '',
-            hasActiveRevalidation: Boolean(item.hasActiveRevalidation || item.has_active_revalidation || false),
-            has_active_revalidation: Boolean(item.has_active_revalidation || false),
+            hasActiveRevalidation: this.toBooleanFlag(item.hasActiveRevalidation ?? item.has_active_revalidation, false) ?? false,
+            has_active_revalidation: this.toBooleanFlag(item.has_active_revalidation, false) ?? false,
             licenseeId: item.licensee_id || item.licenseeId || '',
             requestedTotalQuantity: Number(
               item.totalbl ??
@@ -522,47 +525,35 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   canCancelRequisition(item: TableData): boolean {
-    const backendEligibility = item.canInitiateCancellation ?? item.canCancel;
+    const backendEligibility = this.toBooleanFlag(item.canInitiateCancellation ?? item.canCancel, undefined);
     const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
-    const statusCode = (item.statusCode || '').toUpperCase();
-    const isCommissionerApproved =
-      this.isCommissionerFinalApproval(item) ||
-      statusCode === 'RQ_09' ||
-      status.includes('approvedbycommissioner') ||
-      stageName.includes('approvedbycommissioner');
-
-    if (isCommissionerApproved) {
-      console.log('canCancelRequisition: Hidden for commissioner-approved requisitions');
-      return false;
-    }
 
     if (backendEligibility === true) {
       return true;
     }
 
-    // Check if cancellation is allowed for this requisition
-    const isFinalApproved =
-      status === 'approved';
-    
-    // Must be approved first
+    const isApprovedLike =
+      status === 'approved' ||
+      status.includes('approved') ||
+      status.includes('issued') ||
+      status.includes('complete');
+
+    const isFinalApproved = this.isCommissionerFinalApproval(item) || isApprovedLike;
+
     if (!isFinalApproved) {
       console.log('canCancelRequisition: Not approved yet');
       return false;
     }
-    
-    // Check if already cancelled or cancellation in progress
+
     const isCancelled = status.includes('cancel') || status.includes('cancelled');
     if (isCancelled) {
       console.log('canCancelRequisition: Already cancelled or in progress');
       return false;
     }
-    
-    // Check if there's an active revalidation
-    const hasActiveRevalidation = item['hasActiveRevalidation'] || item['has_active_revalidation'];
+
+    const hasActiveRevalidation = this.toBooleanFlag(item['hasActiveRevalidation'] ?? item['has_active_revalidation']);
     if (hasActiveRevalidation) {
-      console.log('canCancelRequisition: Active revalidation in progress');
-      return false;
+      console.log('canCancelRequisition: Active revalidation flag present, but keeping cancel visible for approved licensee fallback');
     }
 
     if (backendEligibility === false) {
@@ -1469,6 +1460,28 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   private normalizeStageToken(value: any): string {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private toBooleanFlag(value: any, fallback?: boolean): boolean | undefined {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return value !== 0;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+    if (['true', '1', 'yes', 'y'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'n', 'null', 'none'].includes(normalized)) {
+      return false;
+    }
+
+    return fallback;
   }
 
   viewSlip(item: TableData): void {
