@@ -1227,8 +1227,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
 
 
 
-  goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+  refreshData(): void {
+    this.loadApprovedEntries();
+    this.loadLiquorBrandsData();
+    this.loadFilteredData();
   }
 
   getPagedEntries(): RegisterEntry[] {
