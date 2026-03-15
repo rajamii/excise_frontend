@@ -210,8 +210,8 @@
 
                                     <!-- Status Badge (hide for pending arrival to avoid duplicate label under action buttons) -->
                                     @if (!isPendingArrivalStage(record)) {
-                                    <span class="badge ms-1" [class]="getStatusClass(record.status)">
-                                        <i [class]="getStatusIcon(record.status)" class="me-1"></i>
+                                    <span class="badge ms-1" [class]="getStatusClass(record)">
+                                        <i [class]="getStatusIcon(record)" class="me-1"></i>
                                         <span class="d-none d-md-inline">{{ getStatusLabel(record.status) }}</span>
                                         <span class="d-md-none">{{ getStatusLabel(record.status).substring(0, 3)
                                             }}</span>
@@ -610,7 +610,7 @@
                             <div class="card-label">STATUS:</div>
                             <div class="card-value">
                                 <span class="modern-status-badge"
-                                    [class]="getModernStatusClass(selectedRecordForRollDetails.status)">
+                                    [class]="getModernStatusClass(selectedRecordForRollDetails)">
                                     {{ getStatusLabel(selectedRecordForRollDetails.status) }}
                                 </span>
                             </div>

@@ -6,6 +6,9 @@ import { HologramDataService } from '../../services/hologram-data.service';
 
 export interface HologramRecord {
   id: number;
+  stageId?: number;
+  isInitialStage?: boolean;
+  isFinalStage?: boolean;
   date: string;
   ourRefNo: string;
   cartoonNumber?: string;
@@ -168,6 +171,9 @@ export class HologramdetailsComponent implements OnInit {
 
           return {
             id: p.id!,
+            stageId: Number((p as any).stage_id ?? (p as any).stageId ?? (p as any).current_stage ?? (p as any).currentStage ?? 0) || undefined,
+            isInitialStage: Boolean((p as any).current_stage_is_initial),
+            isFinalStage: Boolean((p as any).current_stage_is_final),
             date: (p as any).date || (p as any).created_at || '',
             ourRefNo: (p as any).refNo || (p as any).ref_no || `REF-${p.id}`,
             cartoonNumber: rawDetails[0]?.cartoonNumber || rawDetails[0]?.cartoon_number || '', // Handle both camelCase and snake_case keys
@@ -239,19 +245,8 @@ export class HologramdetailsComponent implements OnInit {
 
   // Determine which record to keep when deduplicating
   shouldReplaceRecord(existing: HologramRecord, newRecord: HologramRecord): boolean {
-    // Priority order based on backend stage progression.
-    const statusPriority = {
-      'cartoon assigned': 6,
-      'payment completed': 5,
-      'approved by commissioner': 4,
-      'forwarded to commissioner': 3,
-      'under it cell review': 2,
-      'submitted': 1,
-      'rejected by commissioner': 0
-    };
-
-    const existingPriority = (statusPriority as any)[this.normalizeStageName(existing.status)] || 0;
-    const newPriority = (statusPriority as any)[this.normalizeStageName(newRecord.status)] || 0;
+    const existingPriority = this.getRecordPriority(existing);
+    const newPriority = this.getRecordPriority(newRecord);
 
     // Keep the record with higher status priority
     if (newPriority > existingPriority) {
@@ -267,6 +262,14 @@ export class HologramdetailsComponent implements OnInit {
     }
 
     return false;
+  }
+
+  private getRecordPriority(record: HologramRecord): number {
+    if (this.hasRollDetails(record)) return 4;
+    if (this.hasAllowedAction(record, 'assign_cartons')) return 3;
+    if (record.isFinalStage) return 2;
+    if (record.isInitialStage) return 1;
+    return 0;
   }
 
   // Create unique key for deduplication that includes type
@@ -339,10 +342,6 @@ export class HologramdetailsComponent implements OnInit {
     return backendAllowsAssign || this.isPendingArrivalStage(record);
   }
 
-  private normalizeStageName(status: string): string {
-    return String(status || '').trim().toLowerCase();
-  }
-
   private hasAllowedAction(record: HologramRecord, action: string): boolean {
     const actions = record?.supplyChainData?.allowed_actions ?? record?.supplyChainData?.allowedActions ?? [];
     if (!Array.isArray(actions)) {
@@ -352,16 +351,15 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   isPendingArrivalStage(record: HologramRecord): boolean {
-    return this.normalizeStageName(record.status) === 'payment completed';
+    return this.hasAllowedAction(record, 'assign_cartons') && !this.hasRollDetails(record);
   }
 
   isPendingApprovalStage(record: HologramRecord): boolean {
-    const stage = this.normalizeStageName(record.status);
-    return ['submitted', 'under it cell review', 'forwarded to commissioner'].includes(stage);
+    return !record.isFinalStage && !this.hasAllowedAction(record, 'assign_cartons') && !this.hasRollDetails(record);
   }
 
   isArrivedStage(record: HologramRecord): boolean {
-    return this.normalizeStageName(record.status) === 'cartoon assigned';
+    return this.hasRollDetails(record);
   }
 
   // Check if payment has been COMPLETED for this hologram record
@@ -1079,23 +1077,21 @@ export class HologramdetailsComponent implements OnInit {
     return this.filteredRecords.filter(record => record.status === status).length;
   }
 
-  getStatusClass(status: string): string {
-    const stage = this.normalizeStageName(status);
-    if (stage === 'cartoon assigned') return 'bg-success';
-    if (stage === 'payment completed') return 'bg-warning text-dark';
-    if (stage.includes('reject')) return 'bg-danger';
-    if (stage.includes('approve')) return 'bg-info';
-    if (['submitted', 'under it cell review', 'forwarded to commissioner'].includes(stage)) return 'bg-secondary';
+  getStatusClass(record: HologramRecord): string {
+    if (this.isArrivedStage(record)) return 'bg-success';
+    if (this.isPendingArrivalStage(record)) return 'bg-warning text-dark';
+    if (record.isFinalStage && !this.hasRollDetails(record)) return 'bg-danger';
+    if (record.isInitialStage) return 'bg-secondary';
+    if (!record.isFinalStage) return 'bg-info';
     return 'bg-secondary';
   }
 
-  getStatusIcon(status: string): string {
-    const stage = this.normalizeStageName(status);
-    if (stage === 'cartoon assigned') return 'bi bi-check-circle';
-    if (stage === 'payment completed') return 'bi bi-receipt';
-    if (stage.includes('reject')) return 'bi bi-x-circle';
-    if (stage.includes('approve')) return 'bi bi-check-circle-fill';
-    if (['submitted', 'under it cell review', 'forwarded to commissioner'].includes(stage)) return 'bi bi-hourglass-split';
+  getStatusIcon(record: HologramRecord): string {
+    if (this.isArrivedStage(record)) return 'bi bi-check-circle';
+    if (this.isPendingArrivalStage(record)) return 'bi bi-receipt';
+    if (record.isFinalStage && !this.hasRollDetails(record)) return 'bi bi-x-circle';
+    if (record.isInitialStage) return 'bi bi-hourglass-split';
+    if (!record.isFinalStage) return 'bi bi-arrow-repeat';
     return 'bi bi-question-circle';
   }
 
@@ -1400,12 +1396,11 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   // Modern styling methods for the new design
-  getModernStatusClass(status: string): string {
-    const stage = this.normalizeStageName(status);
-    if (stage === 'cartoon assigned') return 'status-arrived';
-    if (stage === 'payment completed') return 'status-pending';
-    if (stage.includes('approve')) return 'status-approved';
-    if (stage.includes('reject')) return 'status-rejected';
+  getModernStatusClass(record: HologramRecord): string {
+    if (this.isArrivedStage(record)) return 'status-arrived';
+    if (this.isPendingArrivalStage(record)) return 'status-pending';
+    if (record.isFinalStage && !this.hasRollDetails(record)) return 'status-rejected';
+    if (!record.isFinalStage) return 'status-approved';
     return 'status-default';
   }
 
