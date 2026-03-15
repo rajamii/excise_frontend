@@ -943,8 +943,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // Map backend data to PaymentItem interface
         this.cancellationData = data.filter(item =>
           this.isForActiveLicense(item) && (
-          item.status === 'ApprovedCancellationByCommissioner' ||
-          item.status === 'ForwardedCancellationPaySLipToCommissioner'
+          this.isCancellationPaymentQueueStatus(item.status)
           )
         ).map(item => ({
           id: item.id,
@@ -969,6 +968,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       },
       error: (err) => console.error('Error fetching cancellation data', err)
     });
+  }
+
+  private normalizeStatus(status: string | null | undefined): string {
+    return String(status || '').toLowerCase().replace(/[\s_-]+/g, '');
+  }
+
+  private isCancellationPaymentQueueStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return false;
+    const isCancellationFlow = value.includes('cancellation');
+    const isCommissionerFlow = value.includes('commissioner');
+    const isApproved = value.includes('approv') && !value.includes('reject');
+    const isForwardedPaySlip = value.includes('forward') && value.includes('payslip');
+    return isCancellationFlow && isCommissionerFlow && (isApproved || isForwardedPaySlip);
   }
 
   // Process hologram payment - called when user completes payment
@@ -1524,6 +1537,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   canPay(item: PaymentItem): boolean {
+    if (this.activeTab === 'cancellation') {
+      return this.isCancellationPaymentQueueStatus(item.status) && item.amount > 0;
+    }
+
     const payableStatuses = [
       'ApprovedByCommissioner',
       'ApprovedByJointCommissioner',
@@ -1532,7 +1549,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       'ApprovedCancellationByCommissioner',
       'ApprovedCancellationByJointCommissioner'
     ];
-    return payableStatuses.includes(item.status) && item.amount > 0;
+    if (payableStatuses.includes(item.status)) {
+      return item.amount > 0;
+    }
+
+    const normalized = this.normalizeStatus(item.status);
+    return normalized.includes('approv') && !normalized.includes('reject') && item.amount > 0;
   }
 
   payItem(item: PaymentItem): void {
@@ -1607,7 +1629,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee').subscribe({
         next: (res) => {
           this.showSuccessMessage(`Cancellation Payment of Rs ${item.amount} processed successfully!`);
-          item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
+          item.status = String(res?.new_status || res?.status || 'SUBMITTED_PAYSLIP');
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
           this.refreshWalletData();
