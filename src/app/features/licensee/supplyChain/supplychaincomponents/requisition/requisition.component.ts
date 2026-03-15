@@ -431,7 +431,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
 
       if (this.requisitionStatusFilter) {
-        matches = matches && item.status.toLowerCase().includes(this.requisitionStatusFilter.toLowerCase());
+        const filter = this.normalizeStageToken(this.requisitionStatusFilter);
+        if (filter === 'pending' || filter === 'review') {
+          matches = matches && this.isPendingLikeStatus(item);
+        } else if (filter === 'approved') {
+          matches = matches && this.isApprovedLikeStatus(item);
+        } else if (filter === 'rejected') {
+          matches = matches && this.isRejectedLikeStatus(item);
+        } else {
+          matches = matches && this.normalizeStageToken(item.status).includes(filter);
+        }
       }
 
       return matches;
@@ -473,8 +482,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   isForwardedToCommissioner(item: TableData): boolean {
-    return item.status.toLowerCase().includes('forwarded') ||
-      item.status.toLowerCase().includes('commissioner');
+    const token = this.normalizeStageToken(item.status);
+    return token.includes('forward') && token.includes('commissioner');
   }
 
   canPerformAction(item: TableData): boolean {
@@ -532,16 +541,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    const isApprovedLike =
-      status === 'approved' ||
-      status.includes('approved') ||
-      status.includes('issued') ||
-      status.includes('complete');
-
-    const isFinalApproved = this.isCommissionerFinalApproval(item) || isApprovedLike;
+    const isFinalApproved = this.isCommissionerFinalApproval(item);
 
     if (!isFinalApproved) {
-      console.log('canCancelRequisition: Not approved yet');
+      console.log('canCancelRequisition: Not in final approved stage');
       return false;
     }
 
@@ -556,11 +559,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       console.log('canCancelRequisition: Active revalidation flag present, but keeping cancel visible for approved licensee fallback');
     }
 
+    // Respect backend eligibility flag when present.
     if (backendEligibility === false) {
-      console.log('canCancelRequisition: Backend returned false, using approved-state fallback for licensee view');
+      console.log('canCancelRequisition: Backend explicitly disallowed cancellation');
+      return false;
     }
-    
-    console.log('canCancelRequisition: Cancellation allowed');
+
+    console.log('canCancelRequisition: Cancellation allowed (final approved stage)');
     return true;
   }
 
@@ -601,8 +606,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   isCommissionerFinalApproval(item: TableData): boolean {
     // Check if commissioner has given final approval
     const isFinalStage = Boolean(item.currentStageIsFinal);
-    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
+    const status = this.normalizeStageToken(item.status);
+    const stageName = this.normalizeStageToken(item.currentStageName);
     
     // STRICT CHECK: Must be explicitly marked as final stage by backend
     // Don't rely on status alone - backend must set currentStageIsFinal = true
@@ -616,14 +621,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
     
     // Final approval indicators (only checked if isFinalStage is true)
-    const isApprovedStatus = status === 'approved' || 
-                             status.includes('approvedbycommissioner') ||
-                             status.includes('commissionerapproved') ||
-                             status.includes('issued') || 
-                             status.includes('complete') ||
-                             stageName.includes('issued') || 
-                             stageName.includes('complete') ||
-                             stageName.includes('approved');
+    const isApprovedStatus = (
+      (status.includes('approv') || status.includes('issued') || status.includes('complete')) ||
+      (stageName.includes('approv') || stageName.includes('issued') || stageName.includes('complete'))
+    ) && !status.includes('reject') && !stageName.includes('reject');
     
     console.log('🔍 isCommissionerFinalApproval check:', {
       status,
@@ -1252,8 +1253,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   getRequisitionStatusCount(status: string): number {
-    return this.filteredRequisitionData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'pending' || filter === 'review') {
+      return this.filteredRequisitionData.filter(item => this.isPendingLikeStatus(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.filteredRequisitionData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    if (filter === 'rejected') {
+      return this.filteredRequisitionData.filter(item => this.isRejectedLikeStatus(item)).length;
+    }
+    return this.filteredRequisitionData.filter(
+      item => this.normalizeStageToken(item.status).includes(filter)
     ).length;
   }
 
@@ -1462,6 +1473,40 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
+  private isApprovedLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    return (
+      status.includes('approv') ||
+      stage.includes('approv') ||
+      status.includes('issued') ||
+      stage.includes('issued') ||
+      status.includes('complete') ||
+      stage.includes('complete')
+    ) && !this.isRejectedLikeStatus(item);
+  }
+
+  private isRejectedLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    return status.includes('reject') || stage.includes('reject');
+  }
+
+  private isPendingLikeStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+    return (
+      combined.includes('pending') ||
+      combined.includes('review') ||
+      combined.includes('submit') ||
+      combined.includes('forward')
+    );
+  }
+
   private toBooleanFlag(value: any, fallback?: boolean): boolean | undefined {
     if (value === null || value === undefined || value === '') {
       return fallback;
@@ -1558,9 +1603,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   getDashboardStatistics() {
     return {
       applied: this.getRequisitionStatusCount('APPLIED') + this.getRequisitionStatusCount('SUBMITTED'),
-      pending: this.getRequisitionStatusCount('PENDING') + this.getRequisitionStatusCount('UNDER_REVIEW'),
-      approved: this.getRequisitionStatusCount('APPROVED') + this.getRequisitionStatusCount('APPROVED_BY_COMMISSIONER'),
-      rejected: this.getRequisitionStatusCount('REJECTED') + this.getRequisitionStatusCount('REJECTED_BY_COMMISSIONER')
+      pending: this.getRequisitionStatusCount('PENDING'),
+      approved: this.getRequisitionStatusCount('APPROVED'),
+      rejected: this.getRequisitionStatusCount('REJECTED')
     };
   }
 

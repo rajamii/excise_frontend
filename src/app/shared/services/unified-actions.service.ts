@@ -118,6 +118,47 @@ export class UnifiedActionsService {
     }
   }
 
+  private normalizeActionResult(response: any, fallbackMessage: string): ActionResult {
+    if (response && typeof response.success === 'boolean') {
+      return {
+        success: response.success,
+        message: response.message || fallbackMessage,
+        data: response.data ?? response
+      };
+    }
+
+    const statusToken = String(response?.status || '').toLowerCase();
+    const isSuccess = statusToken === 'success' || statusToken === 'ok';
+
+    return {
+      success: isSuccess || Boolean(response),
+      message: response?.message || fallbackMessage,
+      data: response
+    };
+  }
+
+  private normalizeActionError(error: any, fallbackMessage: string): ActionResult {
+    const message =
+      error?.error?.message ||
+      error?.error?.detail ||
+      error?.error?.error ||
+      error?.message ||
+      fallbackMessage;
+
+    return {
+      success: false,
+      message,
+      data: error
+    };
+  }
+
+  private toActionResult(source$: Observable<any>, successMessage: string, errorMessage: string): Observable<ActionResult> {
+    return source$.pipe(
+      map((response: any) => this.normalizeActionResult(response, successMessage)),
+      catchError((error: any) => of(this.normalizeActionError(error, errorMessage)))
+    );
+  }
+
   private handleViewAction(item: any, itemType: string, context?: string): Observable<ActionResult> {
     const ref =
       item?.referenceNo ??
@@ -206,16 +247,32 @@ export class UnifiedActionsService {
 
     switch (itemType) {
       case 'requisition':
-        return this.enaRequisitionService.performAction(item.id, 'APPROVE');
+        return this.toActionResult(
+          this.enaRequisitionService.performAction(item.id, 'APPROVE'),
+          'Requisition approved successfully',
+          'Failed to approve requisition'
+        );
 
       case 'revalidation':
-        return this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', 'Approved');
+        return this.toActionResult(
+          this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', 'Approved'),
+          'Revalidation approved successfully',
+          'Failed to approve revalidation'
+        );
 
       case 'cancellation':
-        return this.supplyChainService.performCancellationAction(item.id, 'APPROVE', 'Approved');
+        return this.toActionResult(
+          this.supplyChainService.performCancellationAction(item.id, 'APPROVE', 'Approved'),
+          'Cancellation approved successfully',
+          'Failed to approve cancellation'
+        );
 
       case 'transit':
-        return this.supplyChainService.performTransitPermitAction(item.id, 'APPROVE', 'Approved');
+        return this.toActionResult(
+          this.supplyChainService.performTransitPermitAction(item.id, 'APPROVE', 'Approved'),
+          'Transit permit approved successfully',
+          'Failed to approve transit permit'
+        );
 
       case 'hologram':
         return this.performHologramWorkflowAction(item, 'approve', 'Approved', 'Approved');
@@ -248,16 +305,32 @@ export class UnifiedActionsService {
 
     switch (itemType) {
       case 'requisition':
-        return this.enaRequisitionService.performAction(item.id, 'REJECT');
+        return this.toActionResult(
+          this.enaRequisitionService.performAction(item.id, 'REJECT'),
+          'Requisition rejected successfully',
+          'Failed to reject requisition'
+        );
 
       case 'revalidation':
-        return this.supplyChainService.performRevalidationAction(item.id, 'REJECT', reason);
+        return this.toActionResult(
+          this.supplyChainService.performRevalidationAction(item.id, 'REJECT', reason),
+          'Revalidation rejected successfully',
+          'Failed to reject revalidation'
+        );
 
       case 'cancellation':
-        return this.supplyChainService.performCancellationAction(item.id, 'REJECT', reason);
+        return this.toActionResult(
+          this.supplyChainService.performCancellationAction(item.id, 'REJECT', reason),
+          'Cancellation rejected successfully',
+          'Failed to reject cancellation'
+        );
 
       case 'transit':
-        return this.supplyChainService.performTransitPermitAction(item.id, 'REJECT', reason);
+        return this.toActionResult(
+          this.supplyChainService.performTransitPermitAction(item.id, 'REJECT', reason),
+          'Transit permit rejected successfully',
+          'Failed to reject transit permit'
+        );
 
       case 'hologram':
         return this.performHologramWorkflowAction(item, 'reject', reason, 'Rejected');
@@ -638,7 +711,11 @@ export class UnifiedActionsService {
     }
 
     if (itemType === 'cancellation') {
-      return this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee');
+      return this.toActionResult(
+        this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee'),
+        'Pay slip submitted successfully',
+        'Failed to submit pay slip'
+      );
     }
 
     return of({ success: false, message: `Submit pay slip not implemented for ${itemType}` });
@@ -650,7 +727,11 @@ export class UnifiedActionsService {
     }
 
     if (itemType === 'cancellation') {
-      return this.supplyChainService.performCancellationAction(item.id, 'ApprovePayslip', 'commissioner');
+      return this.toActionResult(
+        this.supplyChainService.performCancellationAction(item.id, 'ApprovePayslip', 'commissioner'),
+        'Pay slip approved successfully',
+        'Failed to approve pay slip'
+      );
     }
 
     return of({ success: false, message: `Approve pay slip not implemented for ${itemType}` });
@@ -662,7 +743,11 @@ export class UnifiedActionsService {
     }
 
     if (itemType === 'cancellation') {
-      return this.supplyChainService.performCancellationAction(item.id, 'RejectPayslip', 'commissioner');
+      return this.toActionResult(
+        this.supplyChainService.performCancellationAction(item.id, 'RejectPayslip', 'commissioner'),
+        'Pay slip rejected successfully',
+        'Failed to reject pay slip'
+      );
     }
 
     return of({ success: false, message: `Reject pay slip not implemented for ${itemType}` });
