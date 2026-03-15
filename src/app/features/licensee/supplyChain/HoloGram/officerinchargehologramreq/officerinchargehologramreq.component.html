@@ -377,7 +377,7 @@
 </div>
 
 <!-- Allocation Details Modal (Only for Completed Requests) -->
-<div class="modal fade show" *ngIf="selectedRequest && mapStatusToCategory(selectedRequest.status) === 'APPROVED'"
+<div class="modal fade show" *ngIf="selectedRequest && mapStatusToCategory(selectedRequest) === 'APPROVED'"
     style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
     <div class="modal-dialog modal-lg" style="z-index: 1051;" (click)="$event.stopPropagation()">
         <div class="modal-content" style="z-index: 1052;">

@@ -1977,17 +1977,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const rolls = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
     const hasRolls = Array.isArray(rolls) && rolls.length > 0;
     
-    // Also check status - if approved/in_use/completed, it should have rolls
-    const status = (request.status || '').toUpperCase();
-    const isApprovedStatus = status.includes('APPROVED') || 
-                            status === 'IN_USE' || 
-                            status === 'COMPLETED' ||
-                            status === 'IN USE';
+    // Also check workflow category from metadata/actions.
+    const statusCategory = this.mapStatusToCategory(request);
+    const isApprovedStatus = statusCategory === 'APPROVED' || statusCategory === 'UNDER_PROCESS';
     
     // Debug logging
     console.log('hasRollsAssigned check:', {
       refNo: request.referenceNo,
       status: request.status,
+      statusCategory,
       hasRolls,
       isApprovedStatus,
       rollsData: rolls
