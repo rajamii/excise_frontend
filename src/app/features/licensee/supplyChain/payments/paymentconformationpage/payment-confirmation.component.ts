@@ -104,6 +104,7 @@ interface MyLicenseRow {
 
 type WalletModuleType = 'distillery' | 'brewery' | '';
 type PaymentModuleTab = 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
+type WalletTableTab = PaymentModuleTab | 'recharge' | 'history';
 
 interface PendingWalletPaymentContext {
   id: string;
@@ -139,10 +140,30 @@ const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   styleUrls: ['./payment-confirmation.component.scss']
 })
 export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
+  Math = Math;
   private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
   private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
   private readonly isBrowser = typeof window !== 'undefined';
   activeTab = 'requisition';
+  tablePageSizeOptions: number[] = [5, 10, 15];
+  private tablePageSizeByTab: Record<WalletTableTab, number> = {
+    requisition: 5,
+    revalidation: 5,
+    cancellation: 5,
+    transit: 5,
+    hologram: 5,
+    recharge: 5,
+    history: 5
+  };
+  private tableCurrentPageByTab: Record<WalletTableTab, number> = {
+    requisition: 1,
+    revalidation: 1,
+    cancellation: 1,
+    transit: 1,
+    hologram: 1,
+    recharge: 1,
+    history: 1
+  };
   private walletDataLoaded = false;
   pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
   pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
@@ -1228,6 +1249,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
     this.activeTab = requested;
+    const walletTab = this.getCurrentWalletTableTab();
+    if (walletTab) {
+      this.tableCurrentPageByTab[walletTab] = 1;
+    }
   }
 
   private normalizePaymentModuleTab(value: string): PaymentModuleTab | null {
@@ -2239,7 +2264,90 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         type.includes('debit');
       const isRefundLike = type.includes('refund');
       return paymentFor.includes(keyword) && (isDebitLike || isRefundLike);
-    });
+    }).sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+  }
+
+  private isWalletTableTab(value: string): value is WalletTableTab {
+    return ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'recharge', 'history'].includes(String(value || '').toLowerCase());
+  }
+
+  private getCurrentWalletTableTab(): WalletTableTab | null {
+    const current = String(this.activeTab || '').toLowerCase();
+    return this.isWalletTableTab(current) ? current : null;
+  }
+
+  getRowsForTab(tab: WalletTableTab): any[] {
+    switch (tab) {
+      case 'requisition':
+      case 'revalidation':
+      case 'cancellation':
+      case 'transit':
+      case 'hologram':
+        return this.getPaymentTransactionsFor(tab);
+      case 'recharge':
+        return [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      case 'history':
+        return [...this.historyData].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+      default:
+        return [];
+    }
+  }
+
+  getPaginatedRowsForTab(tab: WalletTableTab): any[] {
+    const rows = this.getRowsForTab(tab);
+    const pageSize = this.tablePageSizeByTab[tab] || 5;
+    const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+    const currentPage = Math.min(Math.max(1, this.tableCurrentPageByTab[tab] || 1), totalPages);
+    if (currentPage !== this.tableCurrentPageByTab[tab]) {
+      this.tableCurrentPageByTab[tab] = currentPage;
+    }
+    const start = (currentPage - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }
+
+  getActiveTabTotalRows(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 0;
+    return this.getRowsForTab(tab).length;
+  }
+
+  getActiveTabTotalPages(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 1;
+    const totalRows = this.getRowsForTab(tab).length;
+    const pageSize = this.tablePageSizeByTab[tab] || 5;
+    return Math.max(1, Math.ceil(totalRows / pageSize));
+  }
+
+  getActiveTabCurrentPage(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 1;
+    const totalPages = this.getActiveTabTotalPages();
+    const page = this.tableCurrentPageByTab[tab] || 1;
+    return Math.min(Math.max(1, page), totalPages);
+  }
+
+  getActiveTabPageSize(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 5;
+    return this.tablePageSizeByTab[tab] || 5;
+  }
+
+  changeActiveTabPageSize(size: string | number): void {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return;
+    const parsed = typeof size === 'string' ? parseInt(size, 10) : size;
+    if (!parsed || !this.tablePageSizeOptions.includes(parsed)) return;
+    this.tablePageSizeByTab[tab] = parsed;
+    this.tableCurrentPageByTab[tab] = 1;
+  }
+
+  goToActiveTabPage(page: number): void {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return;
+    const totalPages = this.getActiveTabTotalPages();
+    if (page < 1 || page > totalPages) return;
+    this.tableCurrentPageByTab[tab] = page;
   }
 
   private applyLastPaidTabAsDefault(): void {
