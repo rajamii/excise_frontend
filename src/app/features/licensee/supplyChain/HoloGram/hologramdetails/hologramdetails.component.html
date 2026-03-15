@@ -178,7 +178,7 @@
                             </td>
                             <td class="actions">
                                 <div class="d-flex gap-1 align-items-center flex-wrap">
-                                    <!-- Update Arrival Button - Only for PENDING_ARRIVAL status with payment slip uploaded -->
+                                    <!-- Update Arrival Button driven by backend workflow action/stage -->
                                     @if (canUpdateRecord(record)) {
                                     <button class="btn btn-success btn-sm" (click)="updateArrivalDetails(record)"
                                         title="Update Arrival Details - Ready for Physical Arrival">
@@ -188,18 +188,18 @@
                                     </button>
                                     }
 
-                                    <!-- Disabled Button for Pending Arrival without Payment Slip -->
-                                    @if (record.status === 'PENDING_ARRIVAL' && !canUpdateRecord(record)) {
+                                    <!-- Disabled Button for Payment Completed stage when action is not yet allowed -->
+                                    @if (isPendingArrivalStage(record) && !canUpdateRecord(record)) {
                                     <button class="btn btn-warning btn-sm" disabled
-                                        title="Pending Arrival - payment is not completed yet">
+                                        title="Pending Arrival - action is controlled by backend workflow">
                                         <i class="bi bi-receipt me-1"></i>
                                         <span class="d-none d-lg-inline">Pending Arrival</span>
                                         <span class="d-lg-none">Pending</span>
                                     </button>
                                     }
 
-                                    <!-- Disabled Button for Pending Approval -->
-                                    @if (record.status === 'PENDING_APPROVAL') {
+                                    <!-- Disabled Button for approval pipeline stages -->
+                                    @if (isPendingApprovalStage(record)) {
                                     <button class="btn btn-secondary btn-sm" disabled
                                         title="Waiting for Commissioner Approval">
                                         <i class="bi bi-hourglass-split me-1"></i>
@@ -209,7 +209,7 @@
                                     }
 
                                     <!-- Status Badge (hide for pending arrival to avoid duplicate label under action buttons) -->
-                                    @if (record.status !== 'PENDING_ARRIVAL') {
+                                    @if (!isPendingArrivalStage(record)) {
                                     <span class="badge ms-1" [class]="getStatusClass(record.status)">
                                         <i [class]="getStatusIcon(record.status)" class="me-1"></i>
                                         <span class="d-none d-md-inline">{{ getStatusLabel(record.status) }}</span>
