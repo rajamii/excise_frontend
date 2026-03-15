@@ -147,6 +147,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
   pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
   private hasHandledPendingWalletPayment = false;
+
+  // Monthly filter method - declared early to avoid TypeScript issues
+  private setCurrentMonthAutomatically(): void {
+    const currentDate = new Date();
+    const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0'); // Current month as 01-12
+    
+    this.walletHistoryFilters.month = currentMonth;
+    this.applyWalletHistoryFilters();
+  }
   private isHandlingPendingWalletPayment = false;
   showPendingWalletConfirmationModal = false;
   pendingWalletPaymentDeclarationAccepted = false;
@@ -994,10 +1003,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   walletHistoryFilters = {
     from: '',
     to: '',
+    month: '', // Monthly filter
     type: '', // Added | Utilized | Refunded
     minAmount: '',
     maxAmount: ''
   };
+
+  // Pagination properties
+  walletHistoryPageSize = 10;
+  walletHistoryCurrentPage = 1;
+  walletHistoryTotalItems = 0;
+  walletHistoryTotalPages = 0;
+
+  // Monthly filter properties
+  private _currentMonthCache: string = '';
 
   exciseWalletTransactions: WalletHistoryTransaction[] = [];
 
@@ -1013,6 +1032,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    
+    // Set current month automatically when opening wallet history
+    this.setCurrentMonthAutomatically();
+    
+    this.updateWalletHistoryPagination();
     const modalEl = document.getElementById('walletHistoryModal');
     if (modalEl) {
       if (modalEl.parentNode !== document.body) {
@@ -1030,6 +1054,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    
+    // Set current month automatically when switching wallets
+    this.setCurrentMonthAutomatically();
+    
+    this.updateWalletHistoryPagination();
   }
 
   openHologramHistory(): void {
@@ -1052,21 +1081,128 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   applyWalletHistoryFilters(): void {
     const txns = this.getActiveWalletTxns();
     const f = this.walletHistoryFilters;
+    
     this.walletHistoryFiltered = txns.filter(t => {
+      // Handle monthly filter
+      const monthOk = f.month ? this.isTransactionInMonth(t.date, f.month) : true;
+      
+      // Handle date range filter
       const tDate = t.date;
       const afterFrom = f.from ? tDate >= f.from : true;
       const beforeTo = f.to ? tDate <= f.to : true;
+      
+      // Handle other filters
       const typeOk = f.type ? t.type === (f.type as any) : true;
       const minOk = f.minAmount ? t.amount >= Number(f.minAmount) : true;
       const maxOk = f.maxAmount ? t.amount <= Number(f.maxAmount) : true;
-      return afterFrom && beforeTo && typeOk && minOk && maxOk;
+      
+      return monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
     });
+    
+    // Reset to first page when filters change
+    this.walletHistoryCurrentPage = 1;
+    this.updateWalletHistoryPagination();
   }
 
   clearWalletHistoryFilters(apply: boolean = true): void {
-    this.walletHistoryFilters = { from: '', to: '', type: '', minAmount: '', maxAmount: '' };
+    this.walletHistoryFilters = { from: '', to: '', month: '', type: '', minAmount: '', maxAmount: '' };
     if (apply) {
       this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    }
+    // Reset to first page when clearing filters
+    this.walletHistoryCurrentPage = 1;
+    this.updateWalletHistoryPagination();
+  }
+
+  // Pagination methods
+  updateWalletHistoryPagination(): void {
+    this.walletHistoryTotalItems = this.walletHistoryFiltered.length;
+    this.walletHistoryTotalPages = Math.ceil(this.walletHistoryTotalItems / this.walletHistoryPageSize);
+  }
+
+  getPaginatedWalletHistory(): WalletHistoryTransaction[] {
+    const startIndex = (this.walletHistoryCurrentPage - 1) * this.walletHistoryPageSize;
+    const endIndex = startIndex + this.walletHistoryPageSize;
+    return this.walletHistoryFiltered.slice(startIndex, endIndex);
+  }
+
+  onWalletHistoryPageSizeChange(pageSize: string): void {
+    this.walletHistoryPageSize = parseInt(pageSize, 10);
+    this.walletHistoryCurrentPage = 1;
+    this.updateWalletHistoryPagination();
+  }
+
+  onWalletHistoryPageChange(page: number): void {
+    this.walletHistoryCurrentPage = page;
+    this.updateWalletHistoryPagination();
+  }
+
+  getWalletHistoryPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisiblePages = 5;
+    const startPage = Math.max(1, this.walletHistoryCurrentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(this.walletHistoryTotalPages, startPage + maxVisiblePages - 1);
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  }
+
+  // Monthly filter methods
+  getAvailableMonths(): Array<{value: string, label: string}> {
+    const months: Array<{value: string, label: string}> = [];
+    
+    // Simple month names from January to December
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    // Add all months option
+    months.push({ value: '', label: 'All Months' });
+    
+    // Add each month
+    monthNames.forEach((monthName, index) => {
+      const monthValue = String(index + 1).padStart(2, '0'); // 01, 02, etc.
+      months.push({ value: monthValue, label: monthName });
+    });
+    
+    return months;
+  }
+
+  isTransactionInMonth(transactionDate: string, selectedMonth: string): boolean {
+    if (!transactionDate || !selectedMonth) return false;
+    
+    try {
+      // Handle different date formats to extract month number
+      let monthNumber: string | undefined;
+      
+      if (transactionDate.includes('-')) {
+        // Format: "2026-03-15" - extract month (03)
+        const parts = transactionDate.split('-');
+        monthNumber = parts[1];
+      } else if (transactionDate.includes('/')) {
+        // Format: "15/03/2026" or "03/2026" - extract month (03)
+        const parts = transactionDate.split('/');
+        if (parts.length === 3) {
+          monthNumber = parts[1];
+        } else if (parts.length === 2) {
+          monthNumber = parts[0];
+        }
+      } else {
+        // Try parsing as Date object
+        const date = new Date(transactionDate);
+        if (!isNaN(date.getTime())) {
+          monthNumber = String(date.getMonth() + 1).padStart(2, '0');
+        }
+      }
+      
+      return monthNumber === selectedMonth;
+    } catch (error) {
+      console.warn('Error parsing transaction date:', transactionDate, error);
+      return false;
     }
   }
 

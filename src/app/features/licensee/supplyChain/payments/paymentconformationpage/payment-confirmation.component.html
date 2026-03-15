@@ -533,6 +533,20 @@
           <div class="card-body py-2">
             <div class="d-flex flex-wrap align-items-end gap-2">
               <div class="col-auto">
+                <label class="form-label small">Month</label>
+                <select class="form-select form-select-sm" [(ngModel)]="walletHistoryFilters.month"
+                        (ngModelChange)="applyWalletHistoryFilters()">
+                  <option value="">All Months</option>
+                  <option *ngFor="let month of getAvailableMonths()" [value]="month.value">
+                    {{ month.label }}
+                  </option>
+                </select>
+                <!-- Debug: Show current selection -->
+                <small class="text-muted d-block mt-1" *ngIf="walletHistoryFilters.month">
+                  Selected: {{ walletHistoryFilters.month }}
+                </small>
+              </div>
+              <div class="col-auto">
                 <label class="form-label small">From</label>
                 <input type="date" class="form-control form-control-sm" [(ngModel)]="walletHistoryFilters.from"
                   (ngModelChange)="applyWalletHistoryFilters()">
@@ -585,7 +599,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let t of walletHistoryFiltered">
+              <tr *ngFor="let t of getPaginatedWalletHistory()">
                 <td>{{ t.date | date:'dd-MMM-yyyy' }}</td>
                 <td>
                   <span class="history-type-badge"
@@ -600,11 +614,60 @@
                 <td class="text-end">₹{{ t.balanceAfter | number:'1.2-2' }}</td>
                 <td>{{ t.reference }}</td>
               </tr>
-              <tr *ngIf="walletHistoryFiltered.length === 0">
+              <tr *ngIf="getPaginatedWalletHistory().length === 0">
                 <td colspan="6" class="text-center text-muted">No transactions found</td>
               </tr>
             </tbody>
           </table>
+        </div>
+        
+        <!-- Pagination Controls -->
+        <div class="wallet-history-pagination">
+          <div class="pagination-controls">
+            <label class="form-label small mb-0">Show</label>
+            <select class="form-select form-select-sm" [value]="walletHistoryPageSize" 
+                    (change)="onWalletHistoryPageSizeChange($any($event).target.value)">
+              <option [ngValue]="5">5</option>
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="15">15</option>
+            </select>
+            <label class="form-label small mb-0">entries</label>
+          </div>
+          
+          <div class="pagination-info">
+            <span class="small text-muted">
+              Showing {{ getPaginatedWalletHistory().length }} of {{ walletHistoryTotalItems }} entries
+            </span>
+          </div>
+          
+          <!-- Pagination Buttons -->
+          <nav *ngIf="walletHistoryTotalPages > 1">
+            <ul class="pagination pagination-sm mb-0">
+              <!-- Previous Button -->
+              <li class="page-item" [class.disabled]="walletHistoryCurrentPage === 1">
+                <button class="page-link" (click)="onWalletHistoryPageChange(walletHistoryCurrentPage - 1)"
+                        [disabled]="walletHistoryCurrentPage === 1">
+                  <span aria-hidden="true">&laquo;</span>
+                </button>
+              </li>
+              
+              <!-- Page Numbers -->
+              <li class="page-item" *ngFor="let page of getWalletHistoryPageNumbers()" 
+                  [class.active]="page === walletHistoryCurrentPage">
+                <button class="page-link" (click)="onWalletHistoryPageChange(page)">
+                  {{ page }}
+                </button>
+              </li>
+              
+              <!-- Next Button -->
+              <li class="page-item" [class.disabled]="walletHistoryCurrentPage === walletHistoryTotalPages">
+                <button class="page-link" (click)="onWalletHistoryPageChange(walletHistoryCurrentPage + 1)"
+                        [disabled]="walletHistoryCurrentPage === walletHistoryTotalPages">
+                  <span aria-hidden="true">&raquo;</span>
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
       <div class="modal-footer">
