@@ -72,8 +72,19 @@
   </div>
 
   <div class="btn-group-custom no-print">
-    <button *ngIf="canSubmitRevalidation()" class="btn btn-success px-4" (click)="showDeclarationModal()">
-      Submit for Revalidation
+    <button
+      *ngIf="canSubmitRevalidation()"
+      class="btn btn-success px-4"
+      [disabled]="isSubmittingRevalidation"
+      (click)="showDeclarationModal()"
+    >
+      <span
+        *ngIf="isSubmittingRevalidation"
+        class="spinner-border spinner-border-sm me-2"
+        role="status"
+        aria-hidden="true"
+      ></span>
+      {{ isSubmittingRevalidation ? 'Submitting...' : 'Submit for Revalidation' }}
     </button>
     <button class="btn btn-outline-secondary" (click)="goBack()">Back</button>
   </div>
@@ -90,7 +101,7 @@
           <h5 class="modal-title">
             <i class="bi bi-exclamation-triangle me-2"></i>Important Declaration
           </h5>
-          <button type="button" class="btn-close" (click)="closeDeclarationModal()"></button>
+          <button type="button" class="btn-close" [disabled]="isSubmittingRevalidation" (click)="closeDeclarationModal()"></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-warning">
@@ -100,11 +111,17 @@
           <p class="mb-0">Do you wish to proceed?</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeDeclarationModal()">
+          <button type="button" class="btn btn-secondary" [disabled]="isSubmittingRevalidation" (click)="closeDeclarationModal()">
             Cancel
           </button>
-          <button type="button" class="btn btn-success" (click)="openWalletConfirmation()">
-            Yes, Proceed
+          <button type="button" class="btn btn-success" [disabled]="isSubmittingRevalidation" (click)="openWalletConfirmation()">
+            <span
+              *ngIf="isSubmittingRevalidation"
+              class="spinner-border spinner-border-sm me-2"
+              role="status"
+              aria-hidden="true"
+            ></span>
+            {{ isSubmittingRevalidation ? 'Please wait...' : 'Yes, Proceed' }}
           </button>
         </div>
       </div>
@@ -126,7 +143,7 @@
             </h5>
             <p class="wallet-confirmation-subtitle mb-0">Review wallet balance and deduction details before you proceed.</p>
           </div>
-          <button type="button" class="btn-close btn-close-white" (click)="closeWalletConfirmation()"></button>
+          <button type="button" class="btn-close btn-close-white" [disabled]="isSubmittingRevalidation" (click)="closeWalletConfirmation()"></button>
         </div>
 
         <div class="wallet-confirmation-body">
@@ -137,7 +154,7 @@
             <p class="mb-0 mt-3">Deducting revalidation amount and submitting request...</p>
           </div>
 
-          <div *ngIf="isWalletLoading" class="text-center py-4">
+          <div *ngIf="isWalletLoading && !isSubmittingRevalidation" class="text-center py-4">
             <div class="spinner-border text-success" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
@@ -149,6 +166,7 @@
               {{ walletErrorMessage }}
             </div>
 
+            <div class="wallet-confirmation-content" [class.is-submitting]="isSubmittingRevalidation">
             <div class="wallet-summary-grid">
               <div class="wallet-summary-tile">
                 <span class="wallet-summary-label">Payment For</span>
@@ -193,17 +211,19 @@
                 class="form-check-input"
                 type="checkbox"
                 id="revalidationWalletDeclaration"
+                [disabled]="isSubmittingRevalidation"
                 [(ngModel)]="walletDeclarationAccepted"
               />
               <label class="form-check-label" for="revalidationWalletDeclaration">
                 I confirm that the above amount may be deducted from my wallet and this request may be forwarded to the next stage.
               </label>
             </div>
+            </div>
           </ng-container>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" (click)="closeWalletConfirmation()">
+          <button type="button" class="btn btn-outline-secondary" [disabled]="isSubmittingRevalidation" (click)="closeWalletConfirmation()">
             Cancel
           </button>
           <button

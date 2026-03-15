@@ -109,9 +109,15 @@
     <button
       *ngIf="!isPermitSelectionLocked()"
       class="btn btn-danger"
-      [disabled]="newlySelectedPermits.length === 0"
+      [disabled]="newlySelectedPermits.length === 0 || isSubmittingCancellation"
       (click)="showDeclaration()">
-      Submit Cancellation Request
+      <span
+        *ngIf="isSubmittingCancellation"
+        class="spinner-border spinner-border-sm me-2"
+        role="status"
+        aria-hidden="true"
+      ></span>
+      {{ isSubmittingCancellation ? 'Submitting...' : 'Submit Cancellation Request' }}
     </button>
   </div>
 </div>
@@ -129,7 +135,7 @@
         <h5 class="modal-title">
           <i class="bi bi-exclamation-triangle me-2"></i>Important Declaration
         </h5>
-        <button type="button" class="btn-close" (click)="showDeclarationModal = false"></button>
+        <button type="button" class="btn-close" [disabled]="isSubmittingCancellation" (click)="showDeclarationModal = false"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-warning" *ngIf="newlySelectedPermits.length > 0">
@@ -149,11 +155,17 @@
         <p class="mb-0">Do you wish to proceed?</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="showDeclarationModal = false">
+        <button type="button" class="btn btn-secondary" [disabled]="isSubmittingCancellation" (click)="showDeclarationModal = false">
           Cancel
         </button>
-        <button type="button" class="btn btn-success" (click)="openWalletConfirmation()">
-          Yes, Proceed
+        <button type="button" class="btn btn-success" [disabled]="isSubmittingCancellation" (click)="openWalletConfirmation()">
+          <span
+            *ngIf="isSubmittingCancellation"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          ></span>
+          {{ isSubmittingCancellation ? 'Please wait...' : 'Yes, Proceed' }}
         </button>
       </div>
     </div>
@@ -176,7 +188,7 @@
           </h5>
           <p class="wallet-confirmation-subtitle mb-0">Review wallet balance and deduction details before you proceed.</p>
         </div>
-        <button type="button" class="btn-close btn-close-white" (click)="closeWalletConfirmation()"></button>
+        <button type="button" class="btn-close btn-close-white" [disabled]="isSubmittingCancellation" (click)="closeWalletConfirmation()"></button>
       </div>
 
       <div class="wallet-confirmation-body">
@@ -187,7 +199,7 @@
           <p class="mb-0 mt-3">Deducting cancellation amount and submitting request...</p>
         </div>
 
-        <div *ngIf="isWalletLoading" class="text-center py-4">
+        <div *ngIf="isWalletLoading && !isSubmittingCancellation" class="text-center py-4">
           <div class="spinner-border text-success" role="status">
             <span class="visually-hidden">Loading...</span>
           </div>
@@ -199,6 +211,7 @@
             {{ walletErrorMessage }}
           </div>
 
+          <div class="wallet-confirmation-content" [class.is-submitting]="isSubmittingCancellation">
           <div class="wallet-summary-grid">
             <div class="wallet-summary-tile">
               <span class="wallet-summary-label">Payment For</span>
@@ -243,17 +256,19 @@
               class="form-check-input"
               type="checkbox"
               id="walletDeclarationAccepted"
+              [disabled]="isSubmittingCancellation"
               [(ngModel)]="walletDeclarationAccepted"
             />
             <label class="form-check-label" for="walletDeclarationAccepted">
               I confirm that the above amount may be deducted from my wallet and this request may be forwarded to the next stage.
             </label>
           </div>
+          </div>
         </ng-container>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" (click)="closeWalletConfirmation()">
+        <button type="button" class="btn btn-outline-secondary" [disabled]="isSubmittingCancellation" (click)="closeWalletConfirmation()">
           Cancel
         </button>
         <button

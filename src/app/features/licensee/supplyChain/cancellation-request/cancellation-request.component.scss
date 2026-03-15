@@ -177,6 +177,13 @@
   font-weight: 600;
 }
 
+.wallet-confirmation-content.is-submitting {
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
 @media (max-width: 600px) {
   .letter-card {
     padding: 1rem 0.5rem;

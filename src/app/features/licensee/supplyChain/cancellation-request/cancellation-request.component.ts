@@ -352,12 +352,18 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   showDeclaration() {
+    if (this.isSubmittingCancellation) {
+      return;
+    }
     const cancellationCharges = this.newlySelectedPermits.length * 1000;
     this.successMessage = `Refund of Rs ${cancellationCharges.toLocaleString()} will be processed after approval by the Commissioner.`;
     this.showDeclarationModal = true;
   }
 
   openWalletConfirmation() {
+    if (this.isSubmittingCancellation) {
+      return;
+    }
     this.showDeclarationModal = false;
 
     if (!this.currentLicenseeId) {
@@ -409,6 +415,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   confirmCancellation() {
+    if (this.isSubmittingCancellation) {
+      return;
+    }
     if (!this.canProceedWithWalletConfirmation()) {
       return;
     }

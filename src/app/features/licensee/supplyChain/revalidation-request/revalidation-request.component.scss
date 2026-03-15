@@ -156,9 +156,16 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 1rem 0 1.5rem;
+  padding: 1.25rem 0 1.5rem;
   color: #1f3b2f;
   font-weight: 600;
+}
+
+.wallet-confirmation-content.is-submitting {
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.2s ease;
 }
 
 .no-print {

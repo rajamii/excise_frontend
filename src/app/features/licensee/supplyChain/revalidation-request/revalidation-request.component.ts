@@ -128,6 +128,9 @@ export class RevalidationRequestComponent implements OnInit {
   }
 
   showDeclarationModal() {
+    if (this.isSubmittingRevalidation) {
+      return;
+    }
     if (!this.canSubmitRevalidation()) {
       return;
     }
@@ -142,6 +145,9 @@ export class RevalidationRequestComponent implements OnInit {
   }
 
   openWalletConfirmation() {
+    if (this.isSubmittingRevalidation) {
+      return;
+    }
     this.showDeclaration = false;
 
     if (!this.currentLicenseeId) {
@@ -189,6 +195,9 @@ export class RevalidationRequestComponent implements OnInit {
   }
 
   submitRevalidation() {
+    if (this.isSubmittingRevalidation) {
+      return;
+    }
     if (!this.canProceedWithWalletConfirmation()) {
       return;
     }
