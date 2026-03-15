@@ -1929,7 +1929,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         if (found) {
           console.log('Transit Permit Found:', found);
           this.transitId = found.id;
-          this.transitBillStatus = found.status;
+          this.transitBillStatus = found.current_stage_name || found.status;
+          const transitAllowedActions = Array.isArray(found.allowed_actions || found.allowedActions)
+            ? (found.allowed_actions || found.allowedActions).map((a: any) => String(a).toUpperCase())
+            : [];
+          const isInitialStage = Boolean(found.current_stage_is_initial ?? found.currentStageIsInitial ?? false);
           // Map backend fields to frontend model
           this.transitData = [{
             id: found.id,
@@ -1939,7 +1943,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
             portions: 0,
             nips: (found.size_ml || found.size) + 'ml',
             licenseeId: found.licensee_id || found.licenseeId || 'Unknown',
-            status: found.status,
+            status: found.current_stage_name || found.status,
             paymentDate: null,
             totalAmount: parseFloat(found.total_amount || found.totalAmount || 0)
           }];
@@ -1948,7 +1952,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
           this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
           this.transitItemCount = 1;
-          this.showTransitPayment = String(found.status || '').trim() === 'Ready for Payment';
+          this.showTransitPayment = transitAllowedActions.includes('PAY') || isInitialStage;
         } else {
           console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
           alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
