@@ -554,15 +554,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    const hasActiveRevalidation = this.toBooleanFlag(item['hasActiveRevalidation'] ?? item['has_active_revalidation']);
-    if (hasActiveRevalidation) {
-      console.log('canCancelRequisition: Active revalidation flag present, but keeping cancel visible for approved licensee fallback');
+    const hasRevalidationOnSameRef = this.isRevalidationApprovedByCommissioner(item);
+    if (hasRevalidationOnSameRef) {
+      console.log('canCancelRequisition: Revalidation already approved for same requisition ref');
+      return false;
     }
 
-    // Respect backend eligibility flag when present.
+    // Respect backend flag when it explicitly blocks.
+    // Fallback keeps cancel visible for final-approved row if backend flag is stale.
     if (backendEligibility === false) {
-      console.log('canCancelRequisition: Backend explicitly disallowed cancellation');
-      return false;
+      console.log('canCancelRequisition: Backend disallowed, using final-approved fallback');
     }
 
     console.log('canCancelRequisition: Cancellation allowed (final approved stage)');
