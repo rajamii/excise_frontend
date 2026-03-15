@@ -49,6 +49,8 @@ export class RevalidationRequestComponent implements OnInit {
   showDeclaration = false;
   showWalletConfirmation = false;
   walletDeclarationAccepted = false;
+  currentStatus = '';
+  currentAllowedActions: string[] = [];
 
   displayData: DisplayData = {
     refNo: '',
@@ -86,6 +88,8 @@ export class RevalidationRequestComponent implements OnInit {
   private loadRevalidationData(id: string) {
     this.supplyChainService.getRevalidationDetail(id).subscribe({
       next: (data) => {
+        this.currentStatus = data.status || '';
+        this.currentAllowedActions = data.allowedActions || data.allowed_actions || [];
         this.displayData = {
           refNo: data.ourRefNo || data.our_ref_no,
           date: new Date(data.revalidationDate || data.revalidation_date),
@@ -124,6 +128,9 @@ export class RevalidationRequestComponent implements OnInit {
   }
 
   showDeclarationModal() {
+    if (!this.canSubmitRevalidation()) {
+      return;
+    }
     this.showDeclaration = true;
   }
 
@@ -230,6 +237,12 @@ export class RevalidationRequestComponent implements OnInit {
       this.walletDeclarationAccepted &&
       this.hasSufficientWalletBalance()
     );
+  }
+
+  canSubmitRevalidation(): boolean {
+    const normalizedStatus = String(this.currentStatus || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return this.currentAllowedActions.includes('REQUEST_REVALIDATION') ||
+      normalizedStatus === 'importpermitextends45daysinvalid';
   }
 
   formatCurrency(amount: number): string {

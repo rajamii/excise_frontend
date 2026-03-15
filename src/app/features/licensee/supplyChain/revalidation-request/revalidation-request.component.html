@@ -72,7 +72,7 @@
   </div>
 
   <div class="btn-group-custom no-print">
-    <button *ngIf="!isViewMode" class="btn btn-success px-4" (click)="showDeclarationModal()">
+    <button *ngIf="canSubmitRevalidation()" class="btn btn-success px-4" (click)="showDeclarationModal()">
       Submit for Revalidation
     </button>
     <button class="btn btn-outline-secondary" (click)="goBack()">Back</button>

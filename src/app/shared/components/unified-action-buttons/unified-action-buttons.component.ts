@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -160,7 +161,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
   constructor(
     private workflowActionService: WorkflowActionService,
-    private unifiedActionsService: UnifiedActionsService
+    private unifiedActionsService: UnifiedActionsService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -1012,6 +1014,16 @@ private getTransitRejectSummary(): {
       });
     }
 
+    if (include.includes('REQUEST_REVALIDATION') && !result.some(config => config.action === 'REQUEST_REVALIDATION')) {
+      result.push({
+        action: 'REQUEST_REVALIDATION',
+        label: 'Request Revalidation',
+        icon: 'restore',
+        color: 'warn',
+        tooltip: 'Request Revalidation'
+      });
+    }
+
     if (include.length) {
       result = result.filter(config => include.includes(config.action));
     }
@@ -1087,7 +1099,19 @@ private getTransitRejectSummary(): {
       return configs;
     }
 
-    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+    const currentUrl = this.router.url || '';
+    const isDetailView = currentUrl.includes('/supply-chain-view');
+
+    return configs.filter(config => {
+      const action = this.normalizeActionName(config?.action);
+      if (action === 'REJECT') {
+        return false;
+      }
+      if (!isDetailView && action === 'APPROVE') {
+        return false;
+      }
+      return true;
+    });
   }
 
   private applyHologramCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {

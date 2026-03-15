@@ -493,7 +493,7 @@ export class RevalidationComponent implements OnInit {
   }
 
   getActionIncludeList(item: TableData): string[] {
-    const actions = ['VIEW'];
+    const actions = ['VIEW', ...(item.allowedActions || [])];
     
     // For revalidation, show payment slip after submission (₹1000 deduction)
     const hasPayment = this.hasPaymentBeenMade(item);
@@ -519,7 +519,7 @@ export class RevalidationComponent implements OnInit {
     }
     
     console.log('🔍 Final actions array:', actions);
-    return actions;
+    return Array.from(new Set(actions));
   }
 
   hasPaymentBeenMade(item: TableData): boolean {
