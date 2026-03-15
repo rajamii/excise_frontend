@@ -193,8 +193,8 @@
               }
             </td>
             <td class="status">
-              <span class="status-badge" [ngClass]="getRequestStatusClass(request.status)">
-                <i [class]="getStatusIcon(request.status)" class="me-1"></i>
+              <span class="status-badge" [ngClass]="getRequestStatusClass(request)">
+                <i [class]="getStatusIcon(request)" class="me-1"></i>
                 {{ request.status }}
               </span>
             </td>
@@ -338,12 +338,12 @@
               <div class="col-md-6">
                 <div class="info-card status-info">
                   <div class="info-icon">
-                    <i [class]="getStatusIcon(selectedRequest.status)"></i>
+                    <i [class]="getStatusIcon(selectedRequest)"></i>
                   </div>
                   <div class="info-content">
                     <h6 class="info-label">Status</h6>
                     <p class="info-value">
-                      <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequest.status)">
+                      <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequest)">
                         {{ selectedRequest.status }}
                       </span>
                     </p>
@@ -445,7 +445,7 @@
                 <div class="info-card">
                   <label class="info-label">Status:</label>
                   <div class="info-value">
-                    <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequestForRolls.status)">
+                    <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequestForRolls)">
                       {{ selectedRequestForRolls.status }}
                     </span>
                   </div>

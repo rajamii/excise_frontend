@@ -246,15 +246,15 @@
                                     </ng-template>
                                 </td>
                                 <td class="status">
-                                <span class="status-badge" [ngClass]="getStatusClass(request.status)">
-                                    <i [class]="getStatusIcon(request.status)" class="me-1"></i>
-                                    {{ getDisplayStatus(request.status) }}
+                                <span class="status-badge" [ngClass]="getStatusClass(request)">
+                                    <i [class]="getStatusIcon(request)" class="me-1"></i>
+                                    {{ getDisplayStatus(request) }}
                                 </span>
                                 </td>
                                 <td class="actions">
                                     <div class="action-buttons">
                                         <!-- Show view details button only for COMPLETED requests (has allocation data) -->
-                                        <button *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="btn-action view"
+                                        <button *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="btn-action view"
                                             (click)="viewRequestDetails(request)" title="View Allocation Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -272,18 +272,18 @@
                                             Allocation will be approved on usage date
                                         </span>
                                         <!-- Show status badge for COMPLETED -->
-                                        <span *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="badge bg-success text-white">
+                                        <span *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
                                             Completed
                                         </span>
                                         <!-- Show status badge for UNDER_PROCESS -->
-                                        <span *ngIf="mapStatusToCategory(request.status) === 'UNDER_PROCESS'"
+                                        <span *ngIf="mapStatusToCategory(request) === 'UNDER_PROCESS'"
                                             class="badge bg-info text-white">
                                             <i class="bi bi-hourglass-split me-1"></i>
                                             Under Process
                                         </span>
                                         <!-- Show status badge for REJECTED -->
-                                        <span *ngIf="mapStatusToCategory(request.status) === 'REJECTED'" class="badge bg-danger text-white">
+                                        <span *ngIf="mapStatusToCategory(request) === 'REJECTED'" class="badge bg-danger text-white">
                                             <i class="bi bi-x-circle-fill me-1"></i>
                                             Rejected
                                         </span>
@@ -716,8 +716,8 @@
                                 <div class="info-card">
                                     <label class="info-label">Status:</label>
                                     <div class="info-value">
-                                        <span class="status-badge" [ngClass]="getStatusClass(selectedRequestForRolls.status)">
-                                            {{ getDisplayStatus(selectedRequestForRolls.status) }}
+                                        <span class="status-badge" [ngClass]="getStatusClass(selectedRequestForRolls)">
+                                            {{ getDisplayStatus(selectedRequestForRolls) }}
                                         </span>
                                     </div>
                                 </div>

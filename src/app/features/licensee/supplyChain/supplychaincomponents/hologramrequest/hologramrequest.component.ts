@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
 
+const normalizeActionTokens = (actions: any): string[] => {
+  if (!Array.isArray(actions)) return [];
+  return actions.map(a => String(a).trim().toUpperCase()).filter(Boolean);
+};
+
 @Component({
   selector: 'app-hologramrequest',
   standalone: true,
@@ -53,12 +58,19 @@ export class HologramrequestComponent implements OnInit {
         console.log('📦 Loading hologram requests from API:', data.length, 'items');
 
         let mapped = data.map((item: any) => {
+          const stageName = item.current_stage_name || item.currentStageName || item.status || 'Unknown';
           return {
             ...item,
             // UI compatibility mapping
             refNumber: item.refNo, // Template uses refNumber
             totalHolograms: item.quantity, // Template uses totalHolograms
             hologramType: item.hologram_type || item.hologramType || 'LOCAL', // Use backend type
+            status: stageName, // Keep DB stage name for display
+            currentStageName: stageName,
+            currentStageIsInitial: Boolean(item.current_stage_is_initial ?? item.currentStageIsInitial ?? false),
+            currentStageIsFinal: Boolean(item.current_stage_is_final ?? item.currentStageIsFinal ?? false),
+            currentStageEntryActions: normalizeActionTokens(item.current_stage_entry_actions || item.currentStageEntryActions || []),
+            allowedActions: normalizeActionTokens(item.allowed_actions || item.allowedActions || [])
           };
         });
 
@@ -81,26 +93,41 @@ export class HologramrequestComponent implements OnInit {
   navigateToHologramRequest(): void {
     this.router.navigate(['/dev-hologramrequestlevel1']);
   }
+  private getRequestStatusCategory(requestOrStatus: any): string {
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      const isInitial = Boolean(requestOrStatus.currentStageIsInitial ?? requestOrStatus.current_stage_is_initial ?? false);
+      const isFinal = Boolean(requestOrStatus.currentStageIsFinal ?? requestOrStatus.current_stage_is_final ?? false);
+      const entryActions = normalizeActionTokens(requestOrStatus.currentStageEntryActions || requestOrStatus.current_stage_entry_actions || []);
+      const allowedActions = normalizeActionTokens(requestOrStatus.allowedActions || requestOrStatus.allowed_actions || []);
 
+      if (isFinal && entryActions.includes('REJECT')) return 'REJECTED';
+      if (isFinal) return 'APPROVED';
+      if (allowedActions.includes('ISSUE') || allowedActions.includes('APPROVE') || allowedActions.includes('REJECT')) return 'PENDING';
+      if (isInitial) return 'PENDING';
+      return 'PROCESSING';
+    }
 
+    // Fallback for legacy data with only status text.
+    const s = String(requestOrStatus || '').toUpperCase();
+    if (s.includes('REJECT')) return 'REJECTED';
+    if (s.includes('COMPLETE') || s.includes('APPROVE')) return 'APPROVED';
+    if (s.includes('SUBMIT') || s.includes('PENDING')) return 'PENDING';
+    return 'PROCESSING';
+  }
 
-  getRequestStatusClass(status: string): string {
-    // Basic mapping, assuming backend returns standard statuses
-    // Backend statuses: Submitted, Approved by Permit Section, etc.
-    // Frontend expects: PENDING, APPROVED, REJECTED, PROCESSING
-
-    const s = (status || '').toUpperCase();
-    if (s.includes('APPROVED')) return 'bg-success-subtle text-success';
-    if (s.includes('REJECTED')) return 'bg-danger-subtle text-danger';
-    if (s.includes('SUBMITTED') || s.includes('PENDING')) return 'bg-warning-subtle text-warning';
+  getRequestStatusClass(request: any): string {
+    const category = this.getRequestStatusCategory(request);
+    if (category === 'APPROVED') return 'bg-success-subtle text-success';
+    if (category === 'REJECTED') return 'bg-danger-subtle text-danger';
+    if (category === 'PENDING') return 'bg-warning-subtle text-warning';
     return 'bg-secondary-subtle text-secondary';
   }
 
-  getStatusIcon(status: string): string {
-    const s = (status || '').toUpperCase();
-    if (s.includes('APPROVED')) return 'bi-check-circle-fill';
-    if (s.includes('REJECTED')) return 'bi-x-circle-fill';
-    if (s.includes('SUBMITTED') || s.includes('PENDING')) return 'bi-clock-fill';
+  getStatusIcon(request: any): string {
+    const category = this.getRequestStatusCategory(request);
+    if (category === 'APPROVED') return 'bi-check-circle-fill';
+    if (category === 'REJECTED') return 'bi-x-circle-fill';
+    if (category === 'PENDING') return 'bi-clock-fill';
     return 'bi-info-circle-fill';
   }
 
@@ -204,7 +231,7 @@ End of Application
   }
 
   getRequestStatusCount(status: string): number {
-    return this.hologramRequestList.filter(request => request.status === status).length;
+    return this.hologramRequestList.filter(request => this.getRequestStatusCategory(request) === status).length;
   }
 
   getTotalRequestedHolograms(): number {
@@ -237,7 +264,7 @@ End of Application
 
       // Status filter
       if (this.statusFilter) {
-        matchesStatus = request.status === this.statusFilter;
+        matchesStatus = this.getRequestStatusCategory(request) === this.statusFilter;
       }
 
       return matchesDate && matchesMonth && matchesStatus;
