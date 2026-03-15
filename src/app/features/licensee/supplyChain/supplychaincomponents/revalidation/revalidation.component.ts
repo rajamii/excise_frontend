@@ -19,6 +19,8 @@ interface TableData {
   requisitionDateRaw?: string;
   approvalDateRaw?: string;
   updatedAtRaw?: string;
+  expiryDateRaw?: string;
+  validityPeriodDays?: number;
   distilleryName: string;
   factoryName?: string;
   status: string;
@@ -118,6 +120,8 @@ export class RevalidationComponent implements OnInit {
           requisitionDateRaw: item.requisitionDate || item.requisition_date || '',
           approvalDateRaw: item.approvalDate || item.approval_date || '',
           updatedAtRaw: item.updatedAt || item.updated_at || '',
+          expiryDateRaw: item.expiryDate || item.expiry_date || '',
+          validityPeriodDays: Number(item.validityPeriodDays || item.validity_period_days || 45),
           factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || '',
           distilleryName: item.distilleryName || item.distillery_name,
           status: item.status,
@@ -282,7 +286,7 @@ export class RevalidationComponent implements OnInit {
 
     const refNo = item.referenceNo;
 
-    if (item.status && item.status.toLowerCase() === 'approvedrevalidationbycommissioner') {
+    if (this.isCommissionerApprovedRevalidation(item)) {
       this.router.navigate(["/dev-revalidation-permit-slip"], {
         queryParams: {
           id: item.id,
@@ -554,9 +558,13 @@ export class RevalidationComponent implements OnInit {
     
     // Check if it's at final approved stage
     // For revalidation, show permit slip when forwarded to commissioner OR approved by commissioner
+    const isApprovedByCommissioner =
+      status.includes('approv') && status.includes('commissioner') && !status.includes('reject');
+    const isForwardedToCommissioner =
+      status.includes('forward') && status.includes('commissioner') && !status.includes('reject');
     const isFinalApproved = (status.includes('approved') && currentStageIsFinal) ||
-                           status.includes('approvedrevalidationbycommissioner') ||
-                           status.includes('forwardedrevalidationtocommissioner') || // Show for commissioner review
+                           isApprovedByCommissioner ||
+                           isForwardedToCommissioner ||
                            status.includes('finalapproved');
     
     console.log('🔍 canViewPermitSlip (revalidation):', {
@@ -587,15 +595,25 @@ export class RevalidationComponent implements OnInit {
       return '-';
     }
 
+    const toDateFromApi = this.parseDate(item.expiryDateRaw);
+    if (toDateFromApi) {
+      return `${this.formatDisplayDate(fromDate)} to ${this.formatDisplayDate(toDateFromApi)}`;
+    }
+
+    const validityDays = Number.isFinite(item.validityPeriodDays) ? Number(item.validityPeriodDays) : 45;
     const toDate = new Date(fromDate);
-    toDate.setDate(toDate.getDate() + 45);
+    toDate.setDate(toDate.getDate() + Math.max(validityDays, 0));
     return `${this.formatDisplayDate(fromDate)} to ${this.formatDisplayDate(toDate)}`;
   }
 
   private isCommissionerApprovedRevalidation(item: TableData): boolean {
     const status = this.normalizeToken(item.status);
     const statusCode = this.normalizeToken(item.statusCode);
-    return status.includes('approvedrevalidationbycommissioner') || statusCode === 'rv09';
+    const looksApprovedByCommissioner =
+      status.includes('approv') &&
+      status.includes('commissioner') &&
+      !status.includes('reject');
+    return looksApprovedByCommissioner || statusCode === 'rv09';
   }
 
   private parseDate(value: string | undefined): Date | null {
