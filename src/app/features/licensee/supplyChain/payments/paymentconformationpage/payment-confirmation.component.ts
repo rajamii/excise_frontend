@@ -1276,7 +1276,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.executeWalletPaymentFromContext(context).subscribe({
       next: () => {
         this.closePendingWalletPaymentConfirmation();
-        this.addOptimisticPaymentHistoryRow(context);
         Swal.fire({
           icon: 'success',
           title: 'Payment Successful',
@@ -1307,26 +1306,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private addOptimisticPaymentHistoryRow(context: PendingWalletPaymentContext): void {
-    // Hologram payment API writes wallet transaction immediately; avoid temporary duplicate row.
-    if (context.tab === 'hologram') {
-      return;
-    }
-
-    const now = new Date();
-    const row: HistoryItem = {
-      id: `local-${now.getTime()}`,
-      txnId: `LOCAL-${now.getTime()}`,
-      userId: '-',
-      type: 'Wallet Utilization',
-      paymentFor: this.getModuleLabelForTab(context.tab),
-      amount: Number(context.amount || 0),
-      reference: context.referenceNo || '-',
-      status: 'Payment Successful',
-      dateTime: now,
-      licenseeId: this.activeLicenseeId || '-'
-    };
-    this.optimisticPaymentHistory = [row, ...this.optimisticPaymentHistory];
-    this.persistOptimisticPaymentsToStorage();
+    // Disabled intentionally: wallet history must only show backend transaction IDs.
+    return;
   }
 
   private reconcileOptimisticPayments(): void {
@@ -1358,17 +1339,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private loadOptimisticPaymentsFromStorage(): void {
     if (!this.isBrowser) return;
     try {
-      const raw = sessionStorage.getItem(this.optimisticPaymentStorageKey);
-      if (!raw) {
-        this.optimisticPaymentHistory = [];
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      const rows = Array.isArray(parsed) ? parsed : [];
-      this.optimisticPaymentHistory = rows.map((item: any) => ({
-        ...item,
-        dateTime: this.toDate(item?.dateTime)
-      }));
+      // Clear old LOCAL-* placeholder rows and rely fully on backend history.
+      this.optimisticPaymentHistory = [];
+      sessionStorage.removeItem(this.optimisticPaymentStorageKey);
     } catch {
       this.optimisticPaymentHistory = [];
     }

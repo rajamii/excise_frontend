@@ -1027,7 +1027,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
 
           const sourceModule = String(row?.source_module || row?.sourceModule || '').toLowerCase();
           const txnId = String(row?.transaction_id || row?.transactionId || '').toUpperCase();
-          const looksRequisition = sourceModule.includes('requisition') || txnId.startsWith('REQ-') || rowRef.startsWith('REQ/');
+          // Strict requisition match to avoid picking revalidation/cancellation txns
+          // that can share the same requisition reference number.
+          const looksRequisition = sourceModule.includes('requisition') || txnId.startsWith('REQ-');
 
           return isDebitLike && looksRequisition;
         });
