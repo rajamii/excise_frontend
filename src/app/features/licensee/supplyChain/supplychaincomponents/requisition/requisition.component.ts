@@ -1271,6 +1271,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return Boolean(refKey && this.revalidationApprovedDateByRef[refKey]);
   }
 
+  shouldShowRevalidatedBadge(item: TableData): boolean {
+    // Badge is for licensee view only.
+    if (this.isCommissioner() || this.isPermitSection()) {
+      return false;
+    }
+    return this.isRevalidationApprovedByCommissioner(item);
+  }
+
   private hasActiveRevalidationOnSameRef(item: TableData): boolean {
     const refKey = this.normalizeRefToken(item.referenceNo);
     return Boolean(refKey && this.revalidationActiveByRef[refKey]);
@@ -1340,10 +1348,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       const status = this.normalizeStageToken(row?.status);
       const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
       const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
-      const approved =
-        status.includes('approvedrevalidationbycommissioner') ||
-        stageName.includes('approvedrevalidationbycommissioner') ||
-        statusCode === 'rv09';
+      const combined = `${status} ${stageName}`;
+      const approvedByCommissioner =
+        combined.includes('approv') &&
+        combined.includes('commissioner') &&
+        !combined.includes('reject');
+      const approved = approvedByCommissioner || statusCode === 'rv09';
 
       if (!approved) {
         continue;

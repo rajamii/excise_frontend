@@ -183,7 +183,7 @@
             <td class="ref-number">
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="ref-text">{{ item.referenceNo }}</span>
-                @if (isRevalidationApprovedByCommissioner(item)) {
+                @if (shouldShowRevalidatedBadge(item)) {
                   <span class="badge revalidated-badge">REVALIDATED</span>
                 }
               </div>
