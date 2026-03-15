@@ -104,6 +104,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   requisitionData: TableData[] = [];
   filteredRequisitionData: TableData[] = [];
   private revalidationApprovedDateByRef: Record<string, string> = {};
+  private revalidationActiveByRef: Record<string, boolean> = {};
 
   // Filter properties
   requisitionDateFilter: string = '';
@@ -231,6 +232,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         }
 
         this.revalidationApprovedDateByRef = this.buildRevalidationApprovedDateIndex(revalidations || []);
+        this.revalidationActiveByRef = this.buildRevalidationActiveRefIndex(revalidations || []);
 
         this.requisitionData = (data || []).map((item: any) => {
           // Format date properly
@@ -336,6 +338,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.requisitionData = [];
         this.filteredRequisitionData = [];
         this.revalidationApprovedDateByRef = {};
+        this.revalidationActiveByRef = {};
       }
     });
   }
@@ -549,9 +552,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    const hasRevalidationOnSameRef = this.isRevalidationApprovedByCommissioner(item);
+    const hasRevalidationOnSameRef = this.hasActiveRevalidationOnSameRef(item);
     if (hasRevalidationOnSameRef) {
-      console.log('canCancelRequisition: Revalidation already approved for same requisition ref');
+      console.log('canCancelRequisition: Revalidation already placed for same requisition ref');
       return false;
     }
 
@@ -1268,6 +1271,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return Boolean(refKey && this.revalidationApprovedDateByRef[refKey]);
   }
 
+  private hasActiveRevalidationOnSameRef(item: TableData): boolean {
+    const refKey = this.normalizeRefToken(item.referenceNo);
+    return Boolean(refKey && this.revalidationActiveByRef[refKey]);
+  }
+
   getCommissionerApprovalDate(item: TableData): string {
     if (!this.isCommissionerFinalApproval(item)) {
       return '-';
@@ -1341,12 +1349,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         continue;
       }
 
-      const rawRef =
-        row?.our_ref_no ||
-        row?.ourRefNo ||
-        row?.referenceNo ||
-        row?.ref_no ||
-        '';
+      const rawRef = this.resolveRevalidationLinkedRequisitionRef(row);
       const refKey = this.normalizeRefToken(rawRef);
       if (!refKey) {
         continue;
@@ -1368,6 +1371,57 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
     }
     return index;
+  }
+
+  private buildRevalidationActiveRefIndex(rows: any[]): Record<string, boolean> {
+    const index: Record<string, boolean> = {};
+    for (const row of rows || []) {
+      const rawRef = this.resolveRevalidationLinkedRequisitionRef(row);
+      const refKey = this.normalizeRefToken(rawRef);
+      if (!refKey) continue;
+
+      const status = this.normalizeStageToken(row?.status);
+      const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
+      const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
+      const combined = `${status} ${stageName} ${statusCode}`;
+
+      // Consider revalidation "active/placed" for this requisition ref unless explicitly rejected/cancelled.
+      const isRejectedOrCancelled =
+        combined.includes('reject') ||
+        combined.includes('cancel');
+
+      if (!isRejectedOrCancelled) {
+        index[refKey] = true;
+      }
+    }
+    return index;
+  }
+
+  private resolveRevalidationLinkedRequisitionRef(row: any): string {
+    const candidates = [
+      row?.requisition_ref_no,
+      row?.requisitionRefNo,
+      row?.original_requisition_ref,
+      row?.originalRequisitionRef,
+      row?.reference_no,
+      row?.referenceNo,
+      row?.ref_no,
+      row?.refNo,
+      row?.our_ref_no,
+      row?.ourRefNo
+    ];
+
+    for (const value of candidates) {
+      const ref = String(value || '').trim();
+      if (!ref) continue;
+      // Prefer requisition-style refs for linkage.
+      if (ref.toUpperCase().startsWith('REQ/')) {
+        return ref;
+      }
+    }
+
+    // fallback
+    return String(candidates.find((v) => String(v || '').trim()) || '').trim();
   }
 
   private normalizeRefToken(value: any): string {
