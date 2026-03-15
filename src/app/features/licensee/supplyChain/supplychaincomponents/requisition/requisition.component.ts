@@ -534,12 +534,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   canCancelRequisition(item: TableData): boolean {
-    const backendEligibility = this.toBooleanFlag(item.canInitiateCancellation ?? item.canCancel, undefined);
     const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-
-    if (backendEligibility === true) {
-      return true;
-    }
 
     const isFinalApproved = this.isCommissionerFinalApproval(item);
 
@@ -558,12 +553,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (hasRevalidationOnSameRef) {
       console.log('canCancelRequisition: Revalidation already approved for same requisition ref');
       return false;
-    }
-
-    // Respect backend flag when it explicitly blocks.
-    // Fallback keeps cancel visible for final-approved row if backend flag is stale.
-    if (backendEligibility === false) {
-      console.log('canCancelRequisition: Backend disallowed, using final-approved fallback');
     }
 
     console.log('canCancelRequisition: Cancellation allowed (final approved stage)');
