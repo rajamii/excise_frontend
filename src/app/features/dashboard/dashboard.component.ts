@@ -725,7 +725,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-register': 'Hologram Procurement',
       'hologram-daily-entry': 'Daily Hologram Entry',
       'stock-inventory': 'Brand Warehouse Stock',
-      'bl-details': 'BL Details Information',
+      'bl-details': 'ENA Details Information',
 
       'hologram-overview': 'Hologram Overview',
       'officer-activity': 'Officer Activity',

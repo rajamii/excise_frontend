@@ -30,8 +30,8 @@ interface BlDetailRow {
       <section class="hero-panel">
         <div class="hero-copy">
           <span class="eyebrow">Officer Review Desk</span>
-          <h2>BL Details Information</h2>
-          <p>Review arrival bulk-liter submissions before they move into the licensee bulk record and permanent BL history.</p>
+          <h2>ENA Details Information</h2>
+          <p>Review arrival ENA submissions before they move into the licensee ENA record and permanent ENA history.</p>
         </div>
         <button type="button" class="refresh-btn" (click)="loadRows()" [disabled]="loading">
           <span class="refresh-icon" aria-hidden="true">R</span>
@@ -88,7 +88,7 @@ interface BlDetailRow {
       </section>
 
       <div *ngIf="errorMessage" class="status-banner error">{{ errorMessage }}</div>
-      <div *ngIf="loading" class="loading-state">Loading BL details...</div>
+      <div *ngIf="loading" class="loading-state">Loading ENA details...</div>
 
       <section class="table-panel" *ngIf="!loading">
         <div class="table-panel-header" *ngIf="filteredRows.length > 0">
@@ -115,7 +115,7 @@ interface BlDetailRow {
               <tr *ngFor="let row of filteredRows">
                 <td class="ref-cell">
                   <div class="ref-primary">{{ row.referenceNo }}</div>
-                  <div class="ref-secondary">BL submission</div>
+                  <div class="ref-secondary">ENA submission</div>
                 </td>
                 <td>
                   <div class="primary-text">{{ row.licenseeId || '-' }}</div>
@@ -173,7 +173,7 @@ interface BlDetailRow {
             <div class="details-hero">
               <div class="details-modal-title">
                 <div class="details-kicker-row">
-                  <span class="details-kicker">BL Entry Details</span>
+                  <span class="details-kicker">ENA Entry Details</span>
                   <span class="details-status-badge"
                     [ngClass]="{
                       'pending': details.approvalStatus === 'PENDING',
@@ -203,7 +203,7 @@ interface BlDetailRow {
               <div class="metric-card tankers">
                 <span class="metric-label">Tankers</span>
                 <strong>{{ details.tankerCount || 0 }}</strong>
-                <small>Vehicle count in this BL entry</small>
+                <small>Vehicle count in this ENA entry</small>
               </div>
               <div class="metric-card quantity">
                 <span class="metric-label">Requested Qty</span>
@@ -211,7 +211,7 @@ interface BlDetailRow {
                 <small>Requested in the requisition</small>
               </div>
               <div class="metric-card total">
-                <span class="metric-label">Total BL</span>
+                <span class="metric-label">Total ENA</span>
                 <strong>{{ details.totalBulkLiter || 0 | number:'1.2-2' }}</strong>
                 <small>Submitted across tanker rows</small>
               </div>
@@ -236,7 +236,7 @@ interface BlDetailRow {
               <div class="details-table-head">
                 <div>
                   <h4>Tanker Manifest</h4>
-                  <p>Tanker-wise bulk liter information submitted by the licensee.</p>
+                  <p>Tanker-wise ENA information submitted by the licensee.</p>
                 </div>
                 <div class="manifest-count">{{ details.tankerDetails.length }} Row{{ details.tankerDetails.length === 1 ? '' : 's' }}</div>
               </div>
@@ -265,8 +265,8 @@ interface BlDetailRow {
 
       <ng-template #emptyState>
         <div class="empty-state">
-          <div class="empty-orb">BL</div>
-          <div class="empty-title">No BL detail entries found</div>
+          <div class="empty-orb">ENA</div>
+          <div class="empty-title">No ENA detail entries found</div>
           <div class="empty-subtitle">New arrival submissions routed to this OIC will appear here for review.</div>
         </div>
       </ng-template>
@@ -1172,7 +1172,7 @@ export class OicBlDetailsComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        this.errorMessage = 'Unable to load BL details for OIC review.';
+        this.errorMessage = 'Unable to load ENA details for OIC review.';
       }
     });
   }
@@ -1219,7 +1219,7 @@ export class OicBlDetailsComponent implements OnInit {
       },
       error: () => {
         this.actingId = null;
-        this.errorMessage = `Unable to approve BL details for ${row.referenceNo}.`;
+        this.errorMessage = `Unable to approve ENA details for ${row.referenceNo}.`;
       }
     });
   }
@@ -1228,7 +1228,7 @@ export class OicBlDetailsComponent implements OnInit {
     if (!row.id || this.actingId === row.id) {
       return;
     }
-    const remarks = window.prompt('Enter rejection reason for BL details:', row.reviewRemarks || '');
+    const remarks = window.prompt('Enter rejection reason for ENA details:', row.reviewRemarks || '');
     if (remarks === null) {
       return;
     }
@@ -1241,7 +1241,7 @@ export class OicBlDetailsComponent implements OnInit {
       },
       error: () => {
         this.actingId = null;
-        this.errorMessage = `Unable to reject BL details for ${row.referenceNo}.`;
+        this.errorMessage = `Unable to reject ENA details for ${row.referenceNo}.`;
       }
     });
   }
@@ -1258,7 +1258,7 @@ export class OicBlDetailsComponent implements OnInit {
       return '-';
     }
     return details
-      .map((item) => `${String(item?.tanker_no || '').trim()} (${Number(item?.bulk_liter || 0).toFixed(2)} BL)`)
+      .map((item) => `${String(item?.tanker_no || '').trim()} (${Number(item?.bulk_liter || 0).toFixed(2)} ENA)`)
       .join(', ');
   }
 
@@ -1358,3 +1358,4 @@ export class OicBlDetailsComponent implements OnInit {
     }));
   }
 }
+
