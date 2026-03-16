@@ -148,7 +148,7 @@ export class BrandWarehouseService {
                             totalStock: 0,
                             totalCapacity: 0,
                             totalUtilized: 0,
-                            lastUpdated: brand.updatedAt || brand.updated_at || brand.createdAt || brand.created_at || new Date().toISOString(),
+                            lastUpdated: brand.updatedAt || brand.updated_at || brand.createdAt || brand.created_at || '',
                             overallStatus: 'OUT_OF_STOCK',
                             isNew: false
                         });

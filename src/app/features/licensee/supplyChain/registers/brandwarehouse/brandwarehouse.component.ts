@@ -90,6 +90,7 @@ interface FilterOptions {
 })
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
+  private static readonly NEW_UPDATE_BADGE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
   // Current distillery context resolved from active user profile.
   private currentDistilleryName = '';
@@ -480,15 +481,15 @@ export class BrandwarehouseComponent implements OnInit {
 
   isRecentlyUpdatedStock(stock: GroupedBrandStock): boolean {
     if (!stock) return false;
-    if (stock.isNew === true) return true;
-    const updatedTs = new Date(stock.lastUpdated || 0).getTime();
+    const updatedTs = new Date(stock.lastUpdated || '').getTime();
     if (!updatedTs) return false;
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    return (Date.now() - updatedTs) <= oneDayMs;
+    const ageMs = Date.now() - updatedTs;
+    return ageMs >= 0 && ageMs <= BrandwarehouseComponent.NEW_UPDATE_BADGE_WINDOW_MS;
   }
 
   getNewUpdateTag(stock: GroupedBrandStock): string {
     if (!stock) return '';
+    if (!this.isRecentlyUpdatedStock(stock)) return '';
     if (stock.isNew === true) return 'NEW';
     return 'UPDATED';
   }

@@ -177,6 +177,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   availableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
+  private savedDailyRegisterEntries: any[] = [];
   showHistoryBrandsModal: boolean = false;
   selectedHistoryForBrands: HistoryHologram | null = null;
 
@@ -745,6 +746,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         const savedEntries = entries.filter((entry: any) =>
           (entry.is_fixed === true || entry.isFixed === true)
         );
+        this.savedDailyRegisterEntries = savedEntries;
 
         console.log('📊 Saved entries (is_fixed=true):', savedEntries.length);
 
@@ -959,6 +961,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           url: error.url
         });
         this.historyData = [];
+        this.savedDailyRegisterEntries = [];
       }
     });
   }
@@ -1189,11 +1192,15 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     }
 
     const referenceNo = range.referenceNo || range.reference_no || 'N/A';
-    let resolvedBrand = range.brandDetails || range.brand_details || range.brand_name || '';
-    if (!resolvedBrand || resolvedBrand === 'N/A') {
-      resolvedBrand = this.getFallbackBrandByReference(referenceNo);
-    }
-    resolvedBrand = this.sanitizeBrandName(resolvedBrand);
+    const cartoonNumber = range.cartoonNumber || range.cartoon_number || range.roll_range || range.rollRange || '';
+    const incomingBrand = range.brandDetails || range.brand_details || range.brand_name || '';
+    const resolvedBrand = this.resolveBrandBySerialContext(
+      referenceNo,
+      cartoonNumber,
+      fromSerial,
+      toSerial,
+      incomingBrand
+    );
 
     return {
       fromSerial,
@@ -1210,6 +1217,86 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       brandDetails: resolvedBrand || '',
       bottleSize: range.bottleSize || range.bottle_size || ''
     };
+  }
+
+  private normalizeSerialValue(value: any): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    if (!/^\d+$/.test(raw)) return raw.toUpperCase();
+    const parsed = parseInt(raw, 10);
+    return Number.isNaN(parsed) ? raw : String(parsed);
+  }
+
+  private parseRangeArrayField(field: any): any[] {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  private isMatchingCartoonNumber(candidate: string, target: string): boolean {
+    const c = String(candidate || '').trim();
+    const t = String(target || '').trim();
+    if (!c || !t) return true;
+    if (c === t) return true;
+    return c.split('_')[0] === t.split('_')[0];
+  }
+
+  private hasExactRangeMatch(range: any, fromSerial: string, toSerial: string): boolean {
+    const rangeFrom = this.normalizeSerialValue(range?.fromSerial ?? range?.from_serial ?? range?.from ?? '');
+    const rangeTo = this.normalizeSerialValue(range?.toSerial ?? range?.to_serial ?? range?.to ?? '');
+    const fromNorm = this.normalizeSerialValue(fromSerial);
+    const toNorm = this.normalizeSerialValue(toSerial);
+    return !!(rangeFrom && rangeTo && rangeFrom === fromNorm && rangeTo === toNorm);
+  }
+
+  private resolveBrandBySerialContext(
+    referenceNo: string,
+    cartoonNumber: string,
+    fromSerial: string,
+    toSerial: string,
+    currentBrand: string
+  ): string {
+    // Priority 1: exact daily register entry match (reference + cartoon + range)
+    const candidates = this.savedDailyRegisterEntries.filter((entry: any) => {
+      const entryRef = entry.reference_no || entry.referenceNo || '';
+      const entryCartoon = entry.cartoon_number || entry.cartoonNumber || entry.roll_range || entry.rollRange || '';
+      const refMatches = referenceNo && referenceNo !== 'N/A' ? entryRef === referenceNo : true;
+      const cartoonMatches = this.isMatchingCartoonNumber(entryCartoon, cartoonNumber);
+      return refMatches && cartoonMatches;
+    });
+
+    for (const entry of candidates) {
+      const issuedRanges = this.parseRangeArrayField(entry.issued_ranges || entry.issuedRanges);
+      const wastageRanges = this.parseRangeArrayField(entry.wastage_ranges || entry.wastageRanges);
+      const listToCheck = [...issuedRanges, ...wastageRanges];
+      const exactFromRanges = listToCheck.some((r) => this.hasExactRangeMatch(r, fromSerial, toSerial));
+
+      const fromSingle = this.normalizeSerialValue(entry.issued_from || entry.issuedFrom || entry.wastage_from || entry.wastageFrom || '');
+      const toSingle = this.normalizeSerialValue(entry.issued_to || entry.issuedTo || entry.wastage_to || entry.wastageTo || '');
+      const fromNorm = this.normalizeSerialValue(fromSerial);
+      const toNorm = this.normalizeSerialValue(toSerial);
+      const exactFromSingle = !!(fromSingle && toSingle && fromSingle === fromNorm && toSingle === toNorm);
+
+      if (exactFromRanges || exactFromSingle) {
+        const name = this.sanitizeBrandName(entry.brand_details || entry.brandDetails || '');
+        if (name) return name;
+      }
+    }
+
+    // Priority 2: fallback brand by reference (old behavior)
+    let resolved = currentBrand || '';
+    if (!resolved || resolved === 'N/A') {
+      resolved = this.getFallbackBrandByReference(referenceNo);
+    }
+    return this.sanitizeBrandName(resolved);
   }
 
   private getFallbackBrandByReference(referenceNo: string): string {
@@ -2299,6 +2386,71 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // Use a Set to track unique ranges and prevent duplicates
     const processedRanges = new Set<string>();
 
+    const normalizeSerial = (value: any): string => {
+      const raw = String(value ?? '').trim();
+      if (!raw) return '';
+      const digitsOnly = /^\d+$/.test(raw);
+      if (!digitsOnly) return raw.toUpperCase();
+      const normalized = String(parseInt(raw, 10));
+      return Number.isNaN(Number(normalized)) ? raw : normalized;
+    };
+
+    const parseRangesFromText = (text: string): Array<{ from: string; to: string }> => {
+      if (!text) return [];
+      const matches = text.match(/\d+\s*-\s*\d+/g) || [];
+      return matches
+        .map((segment) => {
+          const parts = segment.split('-').map((p) => normalizeSerial(p));
+          return { from: parts[0] || '', to: parts[1] || '' };
+        })
+        .filter((r) => !!r.from && !!r.to);
+    };
+
+    const isSameCartoon = (candidate: string, target: string): boolean => {
+      const c = String(candidate || '').trim();
+      const t = String(target || '').trim();
+      if (!c || !t) return true;
+      if (c === t) return true;
+      return c.split('_')[0] === t.split('_')[0];
+    };
+
+    const findBrandInfoBySerialRange = (
+      referenceNo: string,
+      fromSerial: string,
+      toSerial: string,
+      currentCartoon: string
+    ): { brandName: string; bottleSize: string } | null => {
+      const fromNorm = normalizeSerial(fromSerial);
+      const toNorm = normalizeSerial(toSerial);
+
+      const candidateHistory = this.historyData.filter((history) =>
+        referenceNo && referenceNo !== 'N/A'
+          ? history.requestReference === referenceNo
+          : String(history.cartoonNumber || '').includes(currentCartoon)
+      );
+
+      for (const historyEntry of candidateHistory) {
+        const details = historyEntry.brandDetailsList || [];
+        for (const brand of details) {
+          if (!isSameCartoon(brand.cartonNumber || '', currentCartoon)) continue;
+          const parsedRanges = parseRangesFromText(brand.serialRanges || '');
+          const hasExactMatch = parsedRanges.some((r) => {
+            const rangeFrom = normalizeSerial(r.from);
+            const rangeTo = normalizeSerial(r.to);
+            return rangeFrom === fromNorm && rangeTo === toNorm;
+          });
+          if (hasExactMatch) {
+            return {
+              brandName: this.sanitizeBrandName(brand.brandName || 'N/A'),
+              bottleSize: brand.bottleSize || ''
+            };
+          }
+        }
+      }
+
+      return null;
+    };
+
     // Helper method to get brand information from issued/history data as fallback
     const getBrandInfoFromIssuedData = (referenceNo: string): { brandName: string, bottleSize: string } => {
       // Try to find brand info from issued data (requests)
@@ -2376,7 +2528,16 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
             let bottleSize = historyEntry.bottleSize || historyEntry.bottle_size || '';
             let referenceNo = historyEntry.referenceNo || historyEntry.refNo || historyEntry.ref_no || 'N/A';
 
-            // If brand details are missing, try to get from issued/history data
+            // First resolve brand from exact serial-range + cartoon mapping (most accurate for multi-brand)
+            const rangeBasedBrandInfo = findBrandInfoBySerialRange(referenceNo, fromSerial, toSerial, cartoonNumber);
+            if (rangeBasedBrandInfo && rangeBasedBrandInfo.brandName !== 'N/A') {
+              brandDetails = rangeBasedBrandInfo.brandName;
+              if (!bottleSize && rangeBasedBrandInfo.bottleSize) {
+                bottleSize = rangeBasedBrandInfo.bottleSize;
+              }
+            }
+
+            // If brand details are still missing, try to get from issued/history data
             if (!brandDetails || brandDetails === 'N/A' || brandDetails.trim() === '') {
               const brandInfo = getBrandInfoFromIssuedData(referenceNo);
               if (brandInfo.brandName !== 'N/A') {

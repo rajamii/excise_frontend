@@ -25,6 +25,7 @@ interface BrandEntry {
   wastageRanges: RollRange[];
   issuedQty: number;
   wastageQty: number;
+  damageReason: string;
   colorIndex: number;
 }
 
@@ -2499,6 +2500,7 @@ After editing, click "Lock" to save your changes.`);
         wastageRanges: existingWastageRanges,
         issuedQty: rollInput.issuedQty || 0,
         wastageQty: rollInput.wastageQty || 0,
+        damageReason: rollInput.damageReason || '',
         colorIndex: 0
       }];
 
@@ -2530,6 +2532,7 @@ After editing, click "Lock" to save your changes.`);
       wastageRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
       issuedQty: 0,
       wastageQty: 0,
+      damageReason: '',
       colorIndex: rollInput.brands!.length // Use array length as color index
     };
 
@@ -2979,7 +2982,7 @@ After editing, click "Lock" to save your changes.`);
               wastage_qty: brand.wastageQty || 0,
               wastage_ranges: brand.wastageRanges || [],
 
-              damage_reason: roll.damageReason || '',
+              damage_reason: brand.damageReason || '',
               is_fixed: true,
 
               // Store original roll info for tracking
