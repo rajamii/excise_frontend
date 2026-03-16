@@ -587,7 +587,6 @@
                                     <th>Serial Range</th>
                                     <th>Quantity</th>
                                     <th>Remaining in Cartoon</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -620,11 +619,6 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
-                                        <button class="btn btn-outline-info btn-sm" title="View cartoon details">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                    </td>
                                 </tr>
                             </tbody>
                             <tfoot class="table-light">
@@ -633,17 +627,10 @@
                                     <td class="fw-bold text-success">
                                         {{ getTotalAllocatedQuantity() | number }} units
                                     </td>
-                                    <td colspan="2"></td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
-                    </div>
-
-                    <!-- Comments Section -->
-                    <div class="mt-4">
-                        <label class="form-label fw-bold">Approval Comments (Optional)</label>
-                        <textarea class="form-control" rows="3" [(ngModel)]="approvalComments"
-                            placeholder="Enter any comments for this hologram allocation..."></textarea>
                     </div>
                 </div>
 
