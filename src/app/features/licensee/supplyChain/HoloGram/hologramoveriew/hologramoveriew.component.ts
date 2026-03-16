@@ -198,10 +198,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     brandReferenceNo: string;
     brandName: string;
     qty: number | null;
+    rollRange: string;
   } = {
       brandReferenceNo: '',
       brandName: '',
-      qty: null
+      qty: null,
+      rollRange: ''
     };
 
   // Autocomplete suggestions
@@ -1170,7 +1172,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.serialFilters = {
       brandReferenceNo: '',
       brandName: '',
-      qty: null
+      qty: null,
+      rollRange: ''
     };
   }
 
@@ -1774,11 +1777,20 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   getFilteredSerialRanges(): SerialRange[] {
+    const filtered = this.getFilteredSerialRangesRaw();
+
+    // Apply pagination
+    const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
+    const endIndex = startIndex + this.serialPageSize;
+
+    return filtered.slice(startIndex, endIndex);
+  }
+
+  private getFilteredSerialRangesRaw(): SerialRange[] {
     if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return [];
 
     let filtered = this.selectedSerialData.serialRanges;
 
-    // Filter by view mode
     if (this.serialViewMode !== 'all') {
       filtered = filtered.filter(range => {
         switch (this.serialViewMode) {
@@ -1794,7 +1806,6 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Filter by brand reference no
     if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
       filtered = filtered.filter(range =>
         range.referenceNo &&
@@ -1802,7 +1813,6 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       );
     }
 
-    // Filter by brand name
     if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
       filtered = filtered.filter(range => {
         const brandMatch = range.brandDetails &&
@@ -1813,16 +1823,69 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Filter by quantity
     if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
       filtered = filtered.filter(range => range.count === this.serialFilters.qty);
     }
 
-    // Apply pagination
-    const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
-    const endIndex = startIndex + this.serialPageSize;
+    if (this.serialFilters.rollRange && this.serialFilters.rollRange.trim() !== '') {
+      filtered = filtered.filter(range => this.matchesRollRangeFilter(range, this.serialFilters.rollRange));
+    }
 
-    return filtered.slice(startIndex, endIndex);
+    return filtered;
+  }
+
+  private matchesRollRangeFilter(range: SerialRange, input: string): boolean {
+    const query = String(input || '').trim();
+    if (!query) return true;
+
+    const rangeFrom = this.extractOptionalSerialNumber(range.fromSerial);
+    const rangeTo = this.extractOptionalSerialNumber(range.toSerial);
+    if (rangeFrom === null || rangeTo === null) {
+      const text = `${range.fromSerial}-${range.toSerial}`.toLowerCase();
+      return text.includes(query.toLowerCase());
+    }
+
+    const serialBounds: [number, number] = rangeFrom <= rangeTo ? [rangeFrom, rangeTo] : [rangeTo, rangeFrom];
+    const normalized = query.toLowerCase().replace(/\s+/g, '');
+
+    const pairMatch = normalized.match(/^(\d+)(?:-|to)(\d+)$/i);
+    if (pairMatch) {
+      const q1 = Number(pairMatch[1]);
+      const q2 = Number(pairMatch[2]);
+      if (Number.isFinite(q1) && Number.isFinite(q2)) {
+        const queryBounds: [number, number] = q1 <= q2 ? [q1, q2] : [q2, q1];
+        // Show ranges that overlap with entered roll range
+        return serialBounds[0] <= queryBounds[1] && queryBounds[0] <= serialBounds[1];
+      }
+    }
+
+    const singleMatch = normalized.match(/^(\d+)$/);
+    if (singleMatch) {
+      const value = Number(singleMatch[1]);
+      return Number.isFinite(value) && value >= serialBounds[0] && value <= serialBounds[1];
+    }
+
+    const queryNumbers = query.match(/\d+/g);
+    if (queryNumbers && queryNumbers.length >= 2) {
+      const q1 = Number(queryNumbers[0]);
+      const q2 = Number(queryNumbers[1]);
+      if (Number.isFinite(q1) && Number.isFinite(q2)) {
+        const queryBounds: [number, number] = q1 <= q2 ? [q1, q2] : [q2, q1];
+        return serialBounds[0] <= queryBounds[1] && queryBounds[0] <= serialBounds[1];
+      }
+    }
+
+    const text = `${range.fromSerial}-${range.toSerial}`.toLowerCase();
+    return text.includes(query.toLowerCase());
+  }
+
+  private extractOptionalSerialNumber(value: string): number | null {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const match = raw.match(/\d+/);
+    if (!match) return null;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   getSerialStatusClass(status: string): string {
@@ -1878,51 +1941,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   getTotalSerialPages(): number {
-    if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return 1;
-
-    let filtered = this.selectedSerialData.serialRanges;
-
-    // Filter by view mode
-    if (this.serialViewMode !== 'all') {
-      filtered = filtered.filter(range => {
-        switch (this.serialViewMode) {
-          case 'available':
-            return range.status === 'AVAILABLE';
-          case 'used':
-            return range.status === 'USED';
-          case 'damaged':
-            return range.status === 'DAMAGED';
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filter by brand reference no
-    if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
-      filtered = filtered.filter(range =>
-        range.referenceNo &&
-        range.referenceNo.toLowerCase().includes(this.serialFilters.brandReferenceNo.toLowerCase())
-      );
-    }
-
-    // Filter by brand name
-    if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
-      filtered = filtered.filter(range => {
-        const brandMatch = range.brandDetails &&
-          range.brandDetails.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        const productionLineMatch = range.productionLine &&
-          range.productionLine.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        return brandMatch || productionLineMatch;
-      });
-    }
-
-    // Filter by quantity
-    if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
-      filtered = filtered.filter(range => range.count === this.serialFilters.qty);
-    }
-
-    return Math.ceil(filtered.length / this.serialPageSize);
+    const filtered = this.getFilteredSerialRangesRaw();
+    return Math.max(1, Math.ceil(filtered.length / this.serialPageSize));
   }
 
   getSerialPageNumbers(): number[] {
