@@ -831,6 +831,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     totalAmount: mappedData['brAmount']
                 };
                 mappedData['transitProducts'] = [transitProduct];
+
+                // Approved / Cancelled by OIC — from serializer method fields
+                mappedData['approvedByDisplay'] = this.extractFieldValue(apiData, ['approvedByDisplay', 'approved_by_display']) || '';
+                mappedData['cancelledByDisplay'] = this.extractFieldValue(apiData, ['cancelledByDisplay', 'cancelled_by_display']) || '';
                 break;
                 
             case 'hologram':

@@ -311,6 +311,7 @@
 
                 <!-- ========== TRANSIT DETAILS SECTION ========== -->
                 @if (isTransit()) {
+
                 <div class="section-card mb-4">
                     <h5 class="section-title">Transit Details</h5>
                     <div class="table-responsive">
@@ -932,6 +933,26 @@
         </div>
         }
     </div>
-    
+
+    <!-- Right-side sticky OIC action panel (transit only) -->
+    @if (applicationData && isTransit() && (applicationData['approvedByDisplay'] || applicationData['cancelledByDisplay'])) {
+    <div class="oic-action-sidebar" [class.sidebar-approved]="applicationData['approvedByDisplay'] && !applicationData['cancelledByDisplay']"
+        [class.sidebar-cancelled]="applicationData['cancelledByDisplay']">
+        <div class="oic-sidebar-inner">
+            <div class="oic-sidebar-icon">
+                <i class="bi" [class.bi-check-circle-fill]="!applicationData['cancelledByDisplay']"
+                    [class.bi-x-circle-fill]="applicationData['cancelledByDisplay']"></i>
+            </div>
+            <div class="oic-sidebar-label">
+                {{ applicationData['cancelledByDisplay'] ? 'Cancelled By' : 'Approved By' }}
+            </div>
+            <div class="oic-sidebar-name">
+                {{ applicationData['cancelledByDisplay'] || applicationData['approvedByDisplay'] }}
+            </div>
+            <div class="oic-sidebar-role">Officer In-Charge</div>
+        </div>
+    </div>
+    }
+
 </div>
 
