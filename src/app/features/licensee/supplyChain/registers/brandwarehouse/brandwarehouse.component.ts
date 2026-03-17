@@ -723,8 +723,8 @@ export class BrandwarehouseComponent implements OnInit {
               bottlesPerCase: util.bottles_per_case || util.bottlesPerCase || 12, // Default if missing
               totalBottles: (util.cases * (util.bottles_per_case || util.bottlesPerCase || 12)) || util.quantity,
               status: util.status,
-              approvedBy: util.approved_by || util.approvedBy,
-              approvalDate: util.approval_date || util.approvalDate
+              approvedBy: util.approvedByDisplay || util.approved_by_display || util.approvedBy || util.approved_by,
+              approvalDate: util.approvalDate || util.approval_date
             });
           });
 
