@@ -169,7 +169,20 @@ export class BrandwarehouseComponent implements OnInit {
     { value: '11', label: 'November' },{ value: '12', label: 'December' },
   ];
 
-  // Production data
+  // Recent Entries modal pagination & filter
+  entryPageSize = 5;
+  entryPageSizeOptions = [5, 10, 15];
+  entryCurrentPage = 1;
+  entrySelectedMonth = 'ALL';
+  entryMonthOptions = [
+    { value: 'ALL', label: 'All Months' },
+    { value: '01', label: 'January' }, { value: '02', label: 'February' },
+    { value: '03', label: 'March' },   { value: '04', label: 'April' },
+    { value: '05', label: 'May' },     { value: '06', label: 'June' },
+    { value: '07', label: 'July' },    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },{ value: '10', label: 'October' },
+    { value: '11', label: 'November' },{ value: '12', label: 'December' },
+  ];  // Production data
   productionHistory: ProductionBatch[] = [];
   currentPackSizeId: string = '';
   productionSummary = {
@@ -966,24 +979,55 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   finalizeLastEntries(entries: LastEntryDetail[]): void {
-    // Sort by true activity time descending (across all event types).
-    // This keeps utilization, cancellation and production interleaved by when they happened.
     entries.sort((a, b) => {
       const timeDiff = this.getEntrySortTimestamp(b) - this.getEntrySortTimestamp(a);
       if (timeDiff !== 0) return timeDiff;
-
-      // Tie-breaker so equal timestamps don't appear grouped by fetch order/type.
       const idDiff = this.extractEntryNumericId(b.id) - this.extractEntryNumericId(a.id);
       if (idDiff !== 0) return idDiff;
-
       return String(a.id).localeCompare(String(b.id));
     });
 
-    // Take only the most recent 10 entries
-    this.selectedLastEntries = entries.slice(0, 10);
+    this.selectedLastEntries = entries;
     this.isLoadingLastEntries = false;
+    // Reset pagination & auto-select current month
+    this.entryCurrentPage = 1;
+    const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    const hasCurrentMonth = entries.some(e => this.getEntryMonth(e.date) === currentMonth);
+    this.entrySelectedMonth = hasCurrentMonth ? currentMonth : 'ALL';
+  }
 
-    console.log('Finalized recent entries:', this.selectedLastEntries);
+  getEntryMonth(dateStr: string): string {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? '' : String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  getFilteredEntries(): LastEntryDetail[] {
+    if (this.entrySelectedMonth === 'ALL') return this.selectedLastEntries;
+    return this.selectedLastEntries.filter(e => this.getEntryMonth(e.date) === this.entrySelectedMonth);
+  }
+
+  getPaginatedEntries(): LastEntryDetail[] {
+    const filtered = this.getFilteredEntries();
+    const start = (this.entryCurrentPage - 1) * this.entryPageSize;
+    return filtered.slice(start, start + this.entryPageSize);
+  }
+
+  getEntryTotalPages(): number {
+    return Math.max(1, Math.ceil(this.getFilteredEntries().length / this.entryPageSize));
+  }
+
+  getEntrySummary(): string {
+    const filtered = this.getFilteredEntries();
+    if (!filtered.length) return 'No entries';
+    const start = (this.entryCurrentPage - 1) * this.entryPageSize + 1;
+    const end = Math.min(filtered.length, start + this.entryPageSize - 1);
+    return `${start}–${end} of ${filtered.length}`;
+  }
+
+  onEntryMonthChange(): void { this.entryCurrentPage = 1; }
+  onEntryPageSizeChange(): void { this.entryCurrentPage = 1; }
+  changeEntryPage(page: number): void {
+    if (page >= 1 && page <= this.getEntryTotalPages()) this.entryCurrentPage = page;
   }
 
   private resolveEntryDate(...candidates: any[]): string {

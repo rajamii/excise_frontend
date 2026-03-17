@@ -760,13 +760,32 @@
     <div class="modal-body">
       <div class="entries-summary">
         <div class="summary-card">
-          <h3>{{ selectedLastEntries.length }} Recent Entries</h3>
+          <h3>{{ getFilteredEntries().length }} Recent Entries</h3>
           <p>Latest stock movements and transactions</p>
         </div>
       </div>
 
-      <div class="entries-timeline">
-        <div *ngFor="let entry of selectedLastEntries; let i = index" class="timeline-item"
+      <!-- Filter & Page Size Controls -->
+      <div class="permits-controls" *ngIf="!isLoadingLastEntries">
+        <div class="permits-filter-row">
+          <div class="permits-filter-item">
+            <label>Month</label>
+            <select class="form-control" [(ngModel)]="entrySelectedMonth" (change)="onEntryMonthChange()">
+              <option *ngFor="let opt of entryMonthOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="permits-filter-item">
+            <label>Per Page</label>
+            <select class="form-control" [(ngModel)]="entryPageSize" (change)="onEntryPageSizeChange()">
+              <option *ngFor="let s of entryPageSizeOptions" [ngValue]="s">{{ s }}</option>
+            </select>
+          </div>
+          <div class="permits-filter-summary">{{ getEntrySummary() }}</div>
+        </div>
+      </div>
+
+      <div class="entries-timeline" *ngIf="!isLoadingLastEntries">
+        <div *ngFor="let entry of getPaginatedEntries(); let i = index" class="timeline-item"
           [class.timeline-production]="entry.type === 'PRODUCTION'"
           [class.timeline-consumption]="entry.type === 'CONSUMPTION'"
           [class.timeline-adjustment]="entry.type === 'ADJUSTMENT'"
@@ -829,13 +848,32 @@
         </div>
       </div>
 
-      <div class="empty-state" *ngIf="selectedLastEntries.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-clock-history"></i>
-        </div>
+      <div class="empty-state" *ngIf="!isLoadingLastEntries && getFilteredEntries().length === 0">
+        <div class="empty-icon"><i class="bi bi-clock-history"></i></div>
         <h3>No Recent Entries</h3>
-        <p>No recent entries found for this brand</p>
+        <p>No entries found{{ entrySelectedMonth !== 'ALL' ? ' for the selected month' : '' }}</p>
       </div>
+
+      <div class="loading-container" *ngIf="isLoadingLastEntries" style="padding: 40px; text-align: center;">
+        <i class="bi bi-arrow-repeat spin" style="font-size: 2rem; color: #666;"></i>
+        <p style="margin-top: 15px; color: #666;">Loading entries...</p>
+      </div>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="modal-footer" *ngIf="!isLoadingLastEntries && getEntryTotalPages() > 1">
+      <div class="permits-pagination">
+        <button class="btn btn-outline btn-sm" (click)="changeEntryPage(entryCurrentPage - 1)"
+          [disabled]="entryCurrentPage <= 1">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        <span class="permits-page-indicator">Page {{ entryCurrentPage }} / {{ getEntryTotalPages() }}</span>
+        <button class="btn btn-outline btn-sm" (click)="changeEntryPage(entryCurrentPage + 1)"
+          [disabled]="entryCurrentPage >= getEntryTotalPages()">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+      <button class="btn btn-outline" (click)="showLastEntriesModal = false">Close</button>
     </div>
   </div>
 </div>
