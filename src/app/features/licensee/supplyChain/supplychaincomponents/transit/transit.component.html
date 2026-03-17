@@ -172,7 +172,8 @@
             </td>
             <td class="status">
               <div class="status-badge-container">
-                <span class="status-badge status-{{ getStatusClass(item.status) }}">
+                <span class="status-badge status-{{ getStatusClass(item.status) }}"
+                  [class.status-cancelled-long]="getStatusClass(item.status) === 'rejected'">
                   <i class="status-icon {{ getStatusIcon(item.status) }} me-1"></i>
                   {{ item.status }}
                 </span>

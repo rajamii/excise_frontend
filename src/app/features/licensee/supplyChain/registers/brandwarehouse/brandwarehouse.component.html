@@ -748,8 +748,8 @@
 
           <div class="timeline-content">
             <div class="entry-header">
-              <div class="entry-type-badge" [class]="'badge-' + entry.type.toLowerCase()">
-                {{ entry.type.replace('_', ' ') }}
+              <div class="entry-type-badge" [ngClass]="'badge-' + entry.type.toLowerCase()">
+                {{ entry.type === 'CANCELLATION' ? 'CANCELLED' : entry.type.replace('_', ' ') }}
               </div>
               <div class="entry-date">{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</div>
             </div>
@@ -765,8 +765,7 @@
                   <span class="label">Quantity:</span>
                   <span class="value" [class.positive]="entry.type === 'PRODUCTION' || entry.type === 'CANCELLATION'"
                     [class.negative]="entry.type === 'CONSUMPTION' || entry.type === 'TRANSIT_PERMIT'">
-                    {{ (entry.type === 'PRODUCTION' || entry.type === 'CANCELLATION') ? '+' : '-' }}{{ entry.quantity |
-                    number }}
+                    {{ (entry.type === 'PRODUCTION' || entry.type === 'CANCELLATION') ? '+' : '-' }}{{ (entry.quantity || 0) | number }}
                   </span>
                 </div>
                 <div class="stock-change">
@@ -777,7 +776,7 @@
                 </div>
                 <div class="reference">
                   <span class="label">Reference:</span>
-                  <span class="value">{{ entry.referenceNo }}</span>
+                  <span class="value">{{ entry.referenceNo || '—' }}</span>
                 </div>
                 <div class="activity" *ngIf="entry.activity">
                   <span class="label">Activity:</span>

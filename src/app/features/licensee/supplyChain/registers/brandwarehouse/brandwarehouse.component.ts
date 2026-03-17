@@ -863,24 +863,24 @@ export class BrandwarehouseComponent implements OnInit {
           cancellations.forEach((cancel: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
             const eventDate = this.resolveEntryDate(
-              cancel.cancellation_date,
               cancel.cancellationDate,
-              cancel.updated_at,
+              cancel.cancellation_date,
               cancel.updatedAt,
-              cancel.created_at,
-              cancel.createdAt
+              cancel.updated_at,
+              cancel.createdAt,
+              cancel.created_at
             );
             allEntries.push({
               id: `cancel-${cancel.id}`,
               date: eventDate,
               type: 'CANCELLATION',
               activity: 'Stock Restored',
-              quantity: cancel.bottles_reversed,
-              previousStock: cancel.previousStock || 0,
-              newStock: cancel.newStock || 0,
-              referenceNo: cancel.permit_no,
-              description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || 'N/A'})`,
-              transitPermitNo: cancel.permit_no,
+              quantity: cancel.bottlesReversed || cancel.bottles_reversed || cancel.quantityBottles || cancel.quantity_bottles || 0,
+              previousStock: cancel.previousStock || cancel.previous_stock || 0,
+              newStock: cancel.newStock || cancel.new_stock || 0,
+              referenceNo: cancel.permitNo || cancel.permit_no || cancel.referenceNo || cancel.reference_no || '',
+              description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || cancel.reason || 'N/A'})`,
+              transitPermitNo: cancel.permitNo || cancel.permit_no || cancel.referenceNo || cancel.reference_no || '',
               packSize: packSize,
               sortTimestamp: this.toSortTimestamp(eventDate)
             });
