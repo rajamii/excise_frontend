@@ -2432,3 +2432,59 @@
     }
   }
 }
+
+
+// Transit Permits Modal — filter controls & pagination
+.permits-controls {
+  margin-bottom: 16px;
+
+  .permits-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .permits-filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-control {
+      min-width: 140px;
+      height: 36px;
+      font-size: 13px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 0 10px;
+    }
+  }
+
+  .permits-filter-summary {
+    margin-left: auto;
+    font-size: 13px;
+    color: #666;
+    align-self: flex-end;
+    padding-bottom: 4px;
+  }
+}
+
+.permits-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .permits-page-indicator {
+    font-size: 13px;
+    color: #555;
+    white-space: nowrap;
+  }
+}

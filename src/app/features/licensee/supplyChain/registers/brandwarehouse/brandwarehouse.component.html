@@ -642,8 +642,27 @@
         </div>
       </div>
 
+      <!-- Filter & Page Size Controls -->
+      <div class="permits-controls" *ngIf="!isLoadingPermits">
+        <div class="permits-filter-row">
+          <div class="permits-filter-item">
+            <label>Month</label>
+            <select class="form-control" [(ngModel)]="permitSelectedMonth" (change)="onPermitMonthChange()">
+              <option *ngFor="let opt of permitMonthOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="permits-filter-item">
+            <label>Per Page</label>
+            <select class="form-control" [(ngModel)]="permitPageSize" (change)="onPermitPageSizeChange()">
+              <option *ngFor="let s of permitPageSizeOptions" [ngValue]="s">{{ s }}</option>
+            </select>
+          </div>
+          <div class="permits-filter-summary">{{ getPermitSummary() }}</div>
+        </div>
+      </div>
+
       <div class="permits-table-container" *ngIf="!isLoadingPermits; else loadingPermits">
-        <table class="permits-table" *ngIf="selectedTransitPermits.length > 0">
+        <table class="permits-table" *ngIf="getPaginatedPermits().length > 0">
           <thead>
             <tr>
               <th>Permit No</th>
@@ -657,7 +676,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let permit of selectedTransitPermits" class="permit-row">
+            <tr *ngFor="let permit of getPaginatedPermits()" class="permit-row">
               <td class="permit-no">{{ permit.permitNo }}</td>
               <td class="permit-date">{{ permit.date | date:'dd/MM/yyyy' }}</td>
               <td class="distributor-name">{{ permit.distributorName }}</td>
@@ -690,12 +709,10 @@
           </tbody>
         </table>
 
-        <div class="empty-state" *ngIf="selectedTransitPermits.length === 0">
-          <div class="empty-icon">
-            <i class="bi bi-truck"></i>
-          </div>
+        <div class="empty-state" *ngIf="getPaginatedPermits().length === 0">
+          <div class="empty-icon"><i class="bi bi-truck"></i></div>
           <h3>No Transit Permits</h3>
-          <p>No transit permits found for this brand</p>
+          <p>No permits found{{ permitSelectedMonth !== 'ALL' ? ' for the selected month' : '' }}</p>
         </div>
       </div>
 
@@ -707,6 +724,22 @@
           <p style="margin-top: 15px; color: #666;">Loading transit permits...</p>
         </div>
       </ng-template>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="modal-footer" *ngIf="!isLoadingPermits && getPermitTotalPages() > 1">
+      <div class="permits-pagination">
+        <button class="btn btn-outline btn-sm" (click)="changePermitPage(permitCurrentPage - 1)"
+          [disabled]="permitCurrentPage <= 1">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        <span class="permits-page-indicator">Page {{ permitCurrentPage }} / {{ getPermitTotalPages() }}</span>
+        <button class="btn btn-outline btn-sm" (click)="changePermitPage(permitCurrentPage + 1)"
+          [disabled]="permitCurrentPage >= getPermitTotalPages()">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+      <button class="btn btn-outline" (click)="showTransitPermitsModal = false">Close</button>
     </div>
   </div>
 </div>

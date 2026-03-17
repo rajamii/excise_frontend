@@ -154,6 +154,21 @@ export class BrandwarehouseComponent implements OnInit {
   selectedTransitPermits: TransitPermitDetail[] = [];
   selectedLastEntries: LastEntryDetail[] = [];
 
+  // Transit permits modal pagination & filter
+  permitPageSize = 5;
+  permitPageSizeOptions = [5, 10, 15];
+  permitCurrentPage = 1;
+  permitSelectedMonth = 'ALL';
+  permitMonthOptions = [
+    { value: 'ALL', label: 'All Months' },
+    { value: '01', label: 'January' }, { value: '02', label: 'February' },
+    { value: '03', label: 'March' },   { value: '04', label: 'April' },
+    { value: '05', label: 'May' },     { value: '06', label: 'June' },
+    { value: '07', label: 'July' },    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },{ value: '10', label: 'October' },
+    { value: '11', label: 'November' },{ value: '12', label: 'December' },
+  ];
+
   // Production data
   productionHistory: ProductionBatch[] = [];
   currentPackSizeId: string = '';
@@ -745,12 +760,48 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   finalizeTransitPermits(permits: TransitPermitDetail[]): void {
-    // Sort by date descending (most recent first)
     permits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
     this.selectedTransitPermits = permits;
     this.isLoadingPermits = false;
-    console.log('Finalized transit permits:', this.selectedTransitPermits);
+    // Reset pagination & auto-select current month if data exists
+    this.permitCurrentPage = 1;
+    const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    const hasCurrentMonth = permits.some(p => this.getPermitMonth(p.date) === currentMonth);
+    this.permitSelectedMonth = hasCurrentMonth ? currentMonth : 'ALL';
+  }
+
+  getPermitMonth(dateStr: string): string {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? '' : String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  getFilteredPermits(): TransitPermitDetail[] {
+    if (this.permitSelectedMonth === 'ALL') return this.selectedTransitPermits;
+    return this.selectedTransitPermits.filter(p => this.getPermitMonth(p.date) === this.permitSelectedMonth);
+  }
+
+  getPaginatedPermits(): TransitPermitDetail[] {
+    const filtered = this.getFilteredPermits();
+    const start = (this.permitCurrentPage - 1) * this.permitPageSize;
+    return filtered.slice(start, start + this.permitPageSize);
+  }
+
+  getPermitTotalPages(): number {
+    return Math.max(1, Math.ceil(this.getFilteredPermits().length / this.permitPageSize));
+  }
+
+  getPermitSummary(): string {
+    const filtered = this.getFilteredPermits();
+    if (!filtered.length) return 'No permits';
+    const start = (this.permitCurrentPage - 1) * this.permitPageSize + 1;
+    const end = Math.min(filtered.length, start + this.permitPageSize - 1);
+    return `${start}–${end} of ${filtered.length}`;
+  }
+
+  onPermitMonthChange(): void { this.permitCurrentPage = 1; }
+  onPermitPageSizeChange(): void { this.permitCurrentPage = 1; }
+  changePermitPage(page: number): void {
+    if (page >= 1 && page <= this.getPermitTotalPages()) this.permitCurrentPage = page;
   }
 
   viewLastEntries(brand: GroupedBrandStock): void {
