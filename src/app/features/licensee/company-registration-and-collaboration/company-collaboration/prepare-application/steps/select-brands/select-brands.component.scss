@@ -6,13 +6,25 @@ mat-card {
     color: #ffffff;
     font-size: 24px;
     font-weight: 500;
-    align-items: center;
-    justify-content: space-between;
+    align-items: flex-start;
+    justify-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+
+    .heading {
+      flex: 1 1 100%;
+      font-size: 22px;
+      line-height: 1.2;
+    }
     
     .validation {
       font-size: 12px;
       color: rgba(255, 255, 255, 0.9);
       font-style: italic;
+      line-height: 1.4;
+      flex: 1 1 100%;
+      margin-top: 2px;
     }
   }
   
@@ -21,19 +33,29 @@ mat-card {
 
     .filter-section {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px 20px;
       margin-bottom: 20px;
-      padding: 15px;
+      padding: 16px;
       background-color: #f8f9fa;
       border-radius: 8px;
+      border-left: 4px solid #1C2B78;
 
       mat-form-field {
         width: 100%;
       }
+
+      .filter-search {
+        grid-column: span 2;
+      }
     }
 
     .brands-table {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+
       .table-header {
         padding: 15px;
         background-color: #1C2B78;
@@ -46,98 +68,89 @@ mat-card {
           ::ng-deep .mat-checkbox-label {
             color: white;
           }
+
+          ::ng-deep .mdc-label {
+            color: white;
+          }
         }
       }
 
-      .brands-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 15px;
-        padding: 20px;
-        background-color: #f8f9fa;
-        border-radius: 0 0 8px 8px;
-        max-height: 600px;
-        overflow-y: auto;
+      .brands-selection-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+        background-color: #ffffff;
 
-        .brand-card {
-          background: white;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          padding: 15px;
-          transition: all 0.3s ease;
-          cursor: pointer;
+        th {
+          background-color: #1C2B78;
+          color: #ffffff;
+          font-weight: 600;
+          font-size: 13px;
+          padding: 12px 14px;
+          text-align: left;
+          white-space: nowrap;
+        }
+
+        td {
+          padding: 12px 14px;
+          border-bottom: 1px solid #e0e0e0;
+          vertical-align: top;
+          font-size: 13px;
+          color: #333;
+        }
+
+        tbody tr {
+          transition: background-color 0.2s ease;
 
           &:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-          }
-
-          &.selected {
-            border-color: #1C2B78;
-            background-color: #f0f2ff;
-            box-shadow: 0 4px 12px rgba(28, 43, 120, 0.2);
-          }
-
-          .brand-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 12px;
-
-            .brand-info {
-              flex: 1;
-
-              .brand-name {
-                font-weight: 600;
-                font-size: 16px;
-                color: #1C2B78;
-                margin-bottom: 4px;
-              }
-
-              .brand-details {
-                font-size: 12px;
-                color: #666;
-              }
-            }
-          }
-
-          .brand-content {
-            .brand-meta {
-              display: flex;
-              gap: 8px;
-              margin-bottom: 8px;
-
-              .category, .type {
-                padding: 4px 8px;
-                border-radius: 12px;
-                font-size: 11px;
-                font-weight: 500;
-              }
-
-              .category {
-                background-color: #e3f2fd;
-                color: #1976d2;
-              }
-
-              .type {
-                background-color: #f3e5f5;
-                color: #7b1fa2;
-              }
-            }
-
-            .brand-strength {
-              font-size: 14px;
-              font-weight: 500;
-              color: #d32f2f;
-              margin-bottom: 4px;
-            }
-
-            .brand-sizes {
-              font-size: 12px;
-              color: #666;
-            }
+            background-color: #f5f7ff;
           }
         }
+
+        tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .row-selected {
+          background-color: #f0f4ff;
+        }
+
+        .col-size,
+        .col-select {
+          text-align: center;
+        }
+
+        .brand-name {
+          font-weight: 600;
+          color: #1C2B78;
+        }
+
+        .brand-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 4px;
+          font-size: 12px;
+          color: #666;
+
+          .brand-code {
+            font-weight: 600;
+            color: #1C2B78;
+          }
+
+          .brand-category,
+          .brand-type {
+            background-color: #eef2ff;
+            color: #3f51b5;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+          }
+        }
+      }
+
+      .brands-selection-table .mat-mdc-checkbox {
+        display: inline-flex;
       }
 
       .no-brands {
@@ -153,47 +166,145 @@ mat-card {
       }
     }
 
-    .selected-summary {
-      margin-top: 20px;
-      padding: 20px;
-      background-color: #e8f5e8;
-      border-radius: 8px;
-      border-left: 4px solid #4caf50;
 
-      .summary-header {
+    .overview-section {
+      margin-bottom: 30px;
+
+      .section-header {
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 15px;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #1C2B78;
 
         mat-icon {
-          color: #4caf50;
+          color: #1C2B78;
+          font-size: 24px;
         }
 
         h3 {
           margin: 0;
-          color: #2e7d32;
+          color: #1C2B78;
+          font-weight: 600;
+          font-size: 20px;
         }
       }
 
-      .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 8px;
+      .brands-overview-table {
+        overflow-x: auto;
 
-        .summary-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 12px;
-          background: white;
-          border-radius: 4px;
-          font-size: 14px;
+        table {
+          width: 100%;
+          background-color: white;
 
-          button {
-            color: #d32f2f;
+          th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #1C2B78;
+          }
+
+          .brand-name-cell {
+            .name {
+              display: block;
+              font-weight: 600;
+              color: #1C2B78;
+            }
+
+            .category {
+              display: block;
+              font-size: 12px;
+              color: #666;
+              margin-top: 2px;
+            }
+          }
+
+          .sizes-cell {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+
+            .size-badge {
+              background-color: #e3f2fd;
+              color: #1976d2;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 500;
+            }
           }
         }
+      }
+
+      .fee-breakdown {
+        .fee-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+          background-color: #f8f9fa;
+          padding: 20px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+
+          .fee-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            &.highlight {
+              background: linear-gradient(135deg, #1C2B78 0%, #2a3d8f 100%);
+              color: white;
+              padding: 16px;
+              border-radius: 8px;
+              margin-top: 12px;
+              border-bottom: none;
+              font-weight: 600;
+              font-size: 16px;
+            }
+
+            .fee-label {
+              font-weight: 500;
+              color: #555;
+            }
+
+            .fee-value {
+              font-weight: 600;
+              color: #1C2B78;
+              font-size: 16px;
+            }
+
+            &.highlight .fee-label,
+            &.highlight .fee-value {
+              color: white;
+            }
+          }
+        }
+      }
+    }
+
+    .no-brands-warning {
+      text-align: center;
+      padding: 40px;
+      background-color: #fff3e0;
+      border-radius: 8px;
+      border-left: 4px solid #ff9800;
+
+      mat-icon {
+        font-size: 48px;
+        color: #ff9800;
+        margin-bottom: 16px;
+      }
+
+      p {
+        color: #e65100;
+        font-weight: 500;
+        margin: 0;
       }
     }
   }
@@ -203,22 +314,48 @@ mat-card {
     justify-content: center;
     gap: 8px;
     padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #fafafa;
   }
 }
 
 @media(max-width: 768px) {
-  mat-card mat-card-content {
-    .filter-section {
-      grid-template-columns: 1fr;
-      gap: 15px;
+  mat-card {
+    mat-card-content {
+      .filter-section {
+        grid-template-columns: 1fr;
+        gap: 15px;
+
+        .filter-search {
+          grid-column: 1 / -1;
+        }
+      }
+
+      .brands-table {
+        overflow-x: auto;
+      }
+
+      .brands-overview-table {
+        font-size: 12px;
+      }
+
+      .fee-grid {
+        .fee-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+        }
+      }
     }
 
-    .brands-grid {
-      grid-template-columns: 1fr !important;
-    }
+    mat-card-actions {
+      flex-wrap: wrap;
+      gap: 10px;
 
-    .summary-grid {
-      grid-template-columns: 1fr !important;
+      button {
+        flex: 1;
+        min-width: 120px;
+      }
     }
   }
 }

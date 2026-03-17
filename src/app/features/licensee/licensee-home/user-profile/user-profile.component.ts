@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { Subscription, catchError, throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 
@@ -19,6 +19,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MasterService } from '../../../../core/services/master.service';
 import { BaseComponent } from '../../../../base/base.components';
 import { BaseDependency } from '../../../../base/dependency/base.dependency';
+import { MyLicensesComponent } from '../../my-licenses/my-licenses.component';
 
 /**
  * UserProfileComponent
@@ -61,6 +62,7 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   private fb            = inject(FormBuilder);
   private mastersService = inject(MasterService);
   public  dialogRef     = inject(MatDialogRef<UserProfileComponent>);
+  private dialog        = inject(MatDialog);
 
   // =========================================================================
   // STATE
@@ -390,7 +392,10 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
 
   openMyLicenses(): void {
     this.dialogRef.close();
-    this.router.navigate(['/licensee/my-licenses']);
+    this.dialog.open(MyLicensesComponent, {
+      width: '900px',
+      maxHeight: '90vh'
+    });
   }
 
   // =========================================================================

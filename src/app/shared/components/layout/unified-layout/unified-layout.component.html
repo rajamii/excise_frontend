@@ -10,7 +10,7 @@
 
         <!-- User Profile -->
         <div class="user-profile">
-          <div class="user-info" (click)="openUserProfile()" style="cursor: pointer;">
+          <div class="user-info" (click)="openUserProfile()">
             <div class="user-avatar">
               <span class="avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
             </div>
@@ -121,6 +121,10 @@
               <mat-icon class="nav-icon">apartment</mat-icon>
               <span class="nav-text">Company Registration</span>
             </button>
+            <button class="nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
+              <mat-icon class="nav-icon">groups</mat-icon>
+              <span class="nav-text">Company Collaboration</span>
+            </button>
             <button class="nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
@@ -217,7 +221,7 @@
 
           <!-- Right Section with User Info -->
           <div class="nav-right">
-            <div class="top-user-info" (click)="openUserProfile()" style="cursor: pointer;">
+            <div class="top-user-info" (click)="openUserProfile()">
               <div class="top-user-avatar">
                 <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
               </div>

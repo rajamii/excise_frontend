@@ -1,13 +1,23 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../../../shared/material.module';
-import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
 import {
   COMPANY_COLLAB_STORAGE_KEYS,
   CompanyCollaborationCompanyDetails
 } from '../../../../../../../core/models/company-collaboration.model';
+import {
+  CompanyCollaborationBrandOwner
+} from '../../../../../../../core/models/company-collaboration.model';
+import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
+
+interface BottlerOption {
+  id: string | number;
+  code: string;
+  name: string;
+  address: string;
+}
 
 @Component({
   selector: 'app-company-details',
@@ -17,138 +27,132 @@ import {
   styleUrl: './company-details.component.scss'
 })
 export class CompanyDetailsComponent implements OnInit, OnDestroy {
-  companyDetailsForm: FormGroup;
-  
+  @Input() showBack: boolean = true;
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
-  
+
+  companyDetailsForm: FormGroup;
+  bottlerOptions: BottlerOption[] = [];
+  isLoadingBottlers = false;
+
   private destroy$ = new Subject<void>();
 
-  licenseTypes = [
-    { value: 'retail', label: 'Retail License' },
-    { value: 'wholesale', label: 'Wholesale License' },
-    { value: 'bar', label: 'Bar License' },
-    { value: 'restaurant', label: 'Restaurant License' }
-  ];
+  constructor(
+    private fb: FormBuilder,
+    private companyCollaborationService: CompanyCollaborationService
+  ) {
+    const saved = this.getFromSessionStorage();
 
-  establishmentTypes = [
-    { value: 'shop', label: 'Liquor Shop' },
-    { value: 'bar', label: 'Bar' },
-    { value: 'restaurant', label: 'Restaurant' },
-    { value: 'hotel', label: 'Hotel' },
-    { value: 'club', label: 'Club' }
-  ];
-
-  errorMessages = {
-    licenseeName: signal(''),
-    licenseeAddress: signal(''),
-    contactPerson: signal(''),
-    contactNumber: signal(''),
-    emailAddress: signal(''),
-    licenseNumber: signal(''),
-    licenseType: signal(''),
-    establishmentType: signal(''),
-    businessRegNumber: signal('')
-  };
-
-  constructor(private fb: FormBuilder) {
-    const storedValues = this.getFromSessionStorage();
-    
     this.companyDetailsForm = this.fb.group({
-      licenseeName: new FormControl(storedValues.licenseeName, [Validators.required, Validators.pattern(PatternConstants.NAME)]),
-      licenseeAddress: new FormControl(storedValues.licenseeAddress, [Validators.required, Validators.maxLength(500)]),
-      contactPerson: new FormControl(storedValues.contactPerson, [Validators.required, Validators.pattern(PatternConstants.NAME)]),
-      contactNumber: new FormControl(storedValues.contactNumber, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
-      emailAddress: new FormControl(storedValues.emailAddress, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]),
-      licenseNumber: new FormControl(storedValues.licenseNumber, [Validators.required]),
-      licenseType: new FormControl(storedValues.licenseType, [Validators.required]),
-      establishmentType: new FormControl(storedValues.establishmentType, [Validators.required]),
-      businessRegNumber: new FormControl(storedValues.businessRegNumber, [Validators.required])
+      financialYear:   new FormControl(this.getCurrentFinancialYear(), [Validators.required]),
+      applicationDate: new FormControl(saved.applicationDate || this.getTodayDate()),
+      bottlerId:       new FormControl(saved.bottlerId       || '', [Validators.required]),
+      bottlerName:     new FormControl(saved.bottlerName     || ''),
+      bottlerAddress:  new FormControl(saved.bottlerAddress  || '')
     });
 
-    this.companyDetailsForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.saveToSessionStorage();
-      this.updateAllErrorMessages();
-    });
+    this.companyDetailsForm.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.saveToSessionStorage());
   }
 
-  ngOnInit() {
-    // Load saved data
-    const savedData = this.getFromSessionStorage();
-    if (Object.keys(savedData).length > 0) {
-      this.companyDetailsForm.patchValue(savedData);
-    }
+  ngOnInit(): void {
+    this.loadBottlerOptions();
+
+    // Watch bottler selection and auto-fill address
+    this.companyDetailsForm.get('bottlerId')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((id) => this.applyBottlerDetails(id));
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
+  private getCurrentFinancialYear(): string {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    return m >= 4
+      ? `${y}-${(y + 1).toString().slice(-2)}`
+      : `${y - 1}-${y.toString().slice(-2)}`;
+  }
+
+  private getTodayDate(): string {
+    return new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
+  }
+
+  private loadBottlerOptions(): void {
+    this.isLoadingBottlers = true;
+    this.companyCollaborationService.getBrandOwners()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (owners) => {
+          this.bottlerOptions = this.mapBottlerOptions(owners);
+          this.isLoadingBottlers = false;
+
+          const current = this.companyDetailsForm.get('bottlerId')?.value;
+          if (!current && this.bottlerOptions.length > 0) {
+            this.companyDetailsForm.patchValue({ bottlerId: this.bottlerOptions[0].id }, { emitEvent: true });
+          } else {
+            this.applyBottlerDetails(current);
+          }
+        },
+        error: () => {
+          this.bottlerOptions = [];
+          this.isLoadingBottlers = false;
+        }
+      });
+  }
+
+  private mapBottlerOptions(owners: CompanyCollaborationBrandOwner[]): BottlerOption[] {
+    return owners.map((owner) => ({
+      id: String(owner.brand_owner_code || owner.id || owner.company_name || ''),
+      code: String(owner.brand_owner_code || ''),
+      name: String(owner.company_name || ''),
+      address: String(owner.office_address || owner.location || '')
+    }));
+  }
+
+  private applyBottlerDetails(id: string | number | null): void {
+    const found = this.bottlerOptions.find((b) => String(b.id) === String(id));
+    this.companyDetailsForm.patchValue({
+      bottlerName:    found?.name    || '',
+      bottlerAddress: found?.address || ''
+    }, { emitEvent: false });
+    this.saveToSessionStorage();
+  }
+
   private getFromSessionStorage(): Partial<CompanyCollaborationCompanyDetails> {
-    const storedData = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
-    if (!storedData) {
-      return {};
-    }
-    try {
-      return JSON.parse(storedData) as Partial<CompanyCollaborationCompanyDetails>;
-    } catch (error) {
-      console.error('Unable to parse company collaboration company details from sessionStorage:', error);
-      return {};
-    }
+    const raw = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
+    if (!raw) return {};
+    try { return JSON.parse(raw); } catch { return {}; }
   }
 
-  private saveToSessionStorage() {
-    const formData = this.companyDetailsForm.getRawValue();
-    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails, JSON.stringify(formData));
+  private saveToSessionStorage(): void {
+    sessionStorage.setItem(
+      COMPANY_COLLAB_STORAGE_KEYS.companyDetails,
+      JSON.stringify(this.companyDetailsForm.getRawValue())
+    );
   }
 
-  private updateErrorMessage(field: keyof typeof this.errorMessages) {
-    const control = this.companyDetailsForm.get(field);
-    if (control?.hasError('required')) {
-      this.errorMessages[field].set('This field is required');
-    } else if (control?.hasError('pattern')) {
-      this.errorMessages[field].set('Please enter a valid value');
-    } else if (control?.hasError('email')) {
-      this.errorMessages[field].set('Please enter a valid email address');
-    } else if (control?.hasError('maxlength')) {
-      this.errorMessages[field].set('Maximum 500 characters allowed');
-    } else {
-      this.errorMessages[field].set('');
-    }
-  }
-
-  private updateAllErrorMessages() {
-    Object.keys(this.errorMessages).forEach((field) => {
-      this.updateErrorMessage(field as keyof typeof this.errorMessages);
+  resetForm(): void {
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
+    this.companyDetailsForm.reset({
+      financialYear:   this.getCurrentFinancialYear(),
+      applicationDate: this.getTodayDate(),
+      bottlerId:       '',
+      bottlerName:     '',
+      bottlerAddress:  ''
     });
   }
 
-  getErrorMessage(field: keyof typeof this.errorMessages) {
-    return this.errorMessages[field]();
-  }
+  goBack(): void { this.back.emit(); }
 
-  getLicenseTypeLabel(value: string): string {
-    const type = this.licenseTypes.find(t => t.value === value);
-    return type?.label || '';
-  }
-
-  getEstablishmentTypeLabel(value: string): string {
-    const type = this.establishmentTypes.find(t => t.value === value);
-    return type?.label || '';
-  }
-
-  resetForm() {
-    this.companyDetailsForm.reset();
-    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
-  }
-
-  goBack() {
-    this.back.emit();
-  }
-
-  proceedToNext() {
+  proceedToNext(): void {
     if (this.companyDetailsForm.valid) {
+      this.saveToSessionStorage();
       this.next.emit();
     }
   }

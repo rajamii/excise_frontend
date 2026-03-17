@@ -401,9 +401,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
-  navigateToLicenseeRegistration(type: 'company' | 'salesman-barman' | 'label'): void {
-    const sectionMap: Record<'company' | 'salesman-barman' | 'label', string> = {
+  navigateToLicenseeRegistration(type: 'company' | 'collaboration' | 'salesman-barman' | 'label'): void {
+    const sectionMap: Record<'company' | 'collaboration' | 'salesman-barman' | 'label', string> = {
       company: 'company-registration',
+      collaboration: 'company-collaboration',
       'salesman-barman': 'salesman-barman-registration',
       label: 'label-registration'
     };

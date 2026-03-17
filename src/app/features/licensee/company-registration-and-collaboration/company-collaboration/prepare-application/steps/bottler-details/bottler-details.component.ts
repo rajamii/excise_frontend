@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, signal } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -6,8 +6,10 @@ import { MaterialModule } from '../../../../../../../shared/material.module';
 import {
   COMPANY_COLLAB_STORAGE_KEYS,
   CompanyCollaborationBottlerDetails,
-  CompanyCollaborationBrandOwner
+  CompanyCollaborationBrandOwner,
+  CompanyCollaborationMember
 } from '../../../../../../../core/models/company-collaboration.model';
+import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
 
 @Component({
   selector: 'app-bottler-details',
@@ -17,165 +19,148 @@ import {
   styleUrl: './bottler-details.component.scss'
 })
 export class BottlerDetailsComponent implements OnInit, OnDestroy {
-  bottlerDetailsForm: FormGroup;
-  
   @Output() readonly next = new EventEmitter<void>();
-  
+  @Output() readonly back = new EventEmitter<void>();
+
+  bottlerDetailsForm: FormGroup;
+  brandOwners: CompanyCollaborationBrandOwner[] = [];
+  selectedOwner: CompanyCollaborationBrandOwner | null = null;
+  members: CompanyCollaborationMember[] = [];
+  isLoadingBrandOwners = false;
+
   private destroy$ = new Subject<void>();
-  
-  // Sample brand owners data - replace with actual service call
-  brandOwners: CompanyCollaborationBrandOwner[] = [
-    {
-      id: 1,
-      brand_owner_code: 'NA',
-      company_name: 'NA',
-      company_address: 'NA',
-      location: 'NA',
-      status: 'Active',
-      brand_count: 1
-    },
-    {
-      id: 2,
-      brand_owner_code: 'NA', 
-      company_name: 'NA',
-      company_address: 'NA',
-      location: 'NA',
-      status: 'Active',
-      brand_count: 2
-    },
-    {
-      id: 3,
-      brand_owner_code: 'NA',
-      company_name: 'NA',
-      company_address: 'NA',
-      location: 'NA', 
-      status: 'Active',
-      brand_count: 3
-    }
-  ];
 
-  errorMessages = {
-    financialYear: signal(''),
-    brandOwner: signal(''),
-    brandOwnerCode: signal(''),
-    brandOwnerName: signal(''),
-    brandOwnerAddress: signal('')
-  };
+  constructor(
+    private fb: FormBuilder,
+    private companyCollaborationService: CompanyCollaborationService
+  ) {
+    const saved = this.getFromSessionStorage();
 
-  constructor(private fb: FormBuilder) {
-    const storedValues = this.getFromSessionStorage();
-    
     this.bottlerDetailsForm = this.fb.group({
-      financialYear: new FormControl(this.getCurrentFinancialYear(), [Validators.required]),
-      brandOwner: new FormControl(storedValues.brandOwner, [Validators.required]),
-      brandOwnerCode: new FormControl(storedValues.brandOwnerCode),
-      brandOwnerName: new FormControl(storedValues.brandOwnerName),
-      brandOwnerAddress: new FormControl(storedValues.brandOwnerAddress)
+      financialYear:             new FormControl(this.getCurrentFinancialYear(), [Validators.required]),
+      brandOwner:                new FormControl(saved.brandOwner || '', [Validators.required]),
+      brandOwnerCode:            new FormControl(saved.brandOwnerCode || ''),
+      brandOwnerName:            new FormControl(saved.brandOwnerName || ''),
+      brandOwnerPan:             new FormControl(saved.brandOwnerPan || ''),
+      brandOwnerOfficeAddress:   new FormControl(saved.brandOwnerOfficeAddress || ''),
+      brandOwnerFactoryAddress:  new FormControl(saved.brandOwnerFactoryAddress || ''),
+      brandOwnerMobile:          new FormControl(saved.brandOwnerMobile || ''),
+      brandOwnerEmail:           new FormControl(saved.brandOwnerEmail || '')
     });
 
-    this.bottlerDetailsForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.saveToSessionStorage();
-      this.updateAllErrorMessages();
-    });
+    this.bottlerDetailsForm.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.saveToSessionStorage());
   }
 
-  ngOnInit() {
-    // Watch for brand owner selection changes
-    this.bottlerDetailsForm.get('brandOwner')?.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((selectedId) => {
-      if (selectedId) {
-        const selectedOwner = this.brandOwners.find(owner => owner.id.toString() === selectedId.toString());
-        if (selectedOwner) {
-          this.bottlerDetailsForm.patchValue({
-            brandOwnerCode: selectedOwner.brand_owner_code,
-            brandOwnerName: selectedOwner.company_name,
-            brandOwnerAddress: selectedOwner.company_address
-          });
-        }
-      } else {
-        this.bottlerDetailsForm.patchValue({
-          brandOwnerCode: '',
-          brandOwnerName: '',
-          brandOwnerAddress: ''
-        });
-      }
-    });
-
-    // Load saved data and trigger brand owner selection
-    const savedData = this.getFromSessionStorage();
-    if (savedData.brandOwner) {
-      this.bottlerDetailsForm.patchValue(savedData);
-    }
+  ngOnInit(): void {
+    this.watchBrandOwnerChanges();
+    this.loadBrandOwners();
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  getCurrentFinancialYear(): string {
+  private getCurrentFinancialYear(): string {
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
+    const y = now.getFullYear();
+    return (now.getMonth() + 1) >= 4
+      ? `${y}-${(y + 1).toString().slice(-2)}`
+      : `${y - 1}-${y.toString().slice(-2)}`;
+  }
 
-    if (currentMonth >= 4) {
-      return `${currentYear}-${(currentYear + 1).toString().substring(2)}`;
-    } else {
-      return `${currentYear - 1}-${currentYear.toString().substring(2)}`;
+  private watchBrandOwnerChanges(): void {
+    this.bottlerDetailsForm.get('brandOwner')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((id) => this.applySelectedOwnerDetails(id));
+  }
+
+  private loadBrandOwners(): void {
+    this.isLoadingBrandOwners = true;
+    this.companyCollaborationService.getBrandOwners()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (owners) => {
+          this.brandOwners = owners;
+          // Restore previously selected owner
+          const savedId = this.bottlerDetailsForm.get('brandOwner')?.value;
+          if (savedId) this.applySelectedOwnerDetails(savedId);
+          this.isLoadingBrandOwners = false;
+        },
+        error: (err) => {
+          console.error('Failed to load brand owners:', err);
+          this.brandOwners = [];
+          this.isLoadingBrandOwners = false;
+        }
+      });
+  }
+
+  private applySelectedOwnerDetails(selectedId: string | number | null | undefined): void {
+    if (!selectedId) {
+      this.selectedOwner = null;
+      this.members = [];
+      this.bottlerDetailsForm.patchValue({
+        brandOwnerCode: '', brandOwnerName: '', brandOwnerPan: '',
+        brandOwnerOfficeAddress: '', brandOwnerFactoryAddress: '',
+        brandOwnerMobile: '', brandOwnerEmail: ''
+      }, { emitEvent: false });
+      this.saveToSessionStorage();
+      return;
     }
+
+    const owner = this.brandOwners.find(
+      (o) => String(o.id) === String(selectedId) || String(o.brand_owner_code) === String(selectedId)
+    );
+
+    this.selectedOwner = owner || null;
+    this.members = owner?.members || [];
+
+    if (owner) {
+      this.bottlerDetailsForm.patchValue({
+        brandOwnerCode:           owner.brand_owner_code,
+        brandOwnerName:           owner.company_name,
+        brandOwnerPan:            owner.pan_no,
+        brandOwnerOfficeAddress:  owner.office_address,
+        brandOwnerFactoryAddress: owner.factory_address,
+        brandOwnerMobile:         owner.mobile,
+        brandOwnerEmail:          owner.email
+      }, { emitEvent: false });
+    }
+
+    this.saveToSessionStorage();
   }
 
   private getFromSessionStorage(): Partial<CompanyCollaborationBottlerDetails> {
-    const storedData = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
-    if (!storedData) {
-      return {};
-    }
-    try {
-      return JSON.parse(storedData) as Partial<CompanyCollaborationBottlerDetails>;
-    } catch (error) {
-      console.error('Unable to parse company collaboration bottler details from sessionStorage:', error);
-      return {};
-    }
+    const raw = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
+    if (!raw) return {};
+    try { return JSON.parse(raw); } catch { return {}; }
   }
 
-  private saveToSessionStorage() {
-    const formData = this.bottlerDetailsForm.getRawValue();
-    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails, JSON.stringify(formData));
+  private saveToSessionStorage(): void {
+    const value = {
+      ...this.bottlerDetailsForm.getRawValue(),
+      brandOwnerMembers: this.members
+    };
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails, JSON.stringify(value));
   }
 
-  private updateErrorMessage(field: keyof typeof this.errorMessages) {
-    const control = this.bottlerDetailsForm.get(field);
-    if (control?.hasError('required')) {
-      this.errorMessages[field].set('This field is required');
-    } else {
-      this.errorMessages[field].set('');
-    }
-  }
-
-  private updateAllErrorMessages() {
-    Object.keys(this.errorMessages).forEach((field) => {
-      this.updateErrorMessage(field as keyof typeof this.errorMessages);
-    });
-  }
-
-  getErrorMessage(field: keyof typeof this.errorMessages) {
-    return this.errorMessages[field]();
-  }
-
-  getSelectedBrandOwnerDetails(): CompanyCollaborationBrandOwner | undefined {
-    const selectedId = this.bottlerDetailsForm.get('brandOwner')?.value;
-    return this.brandOwners.find(owner => owner.id.toString() === selectedId?.toString());
-  }
-
-  resetForm() {
-    this.bottlerDetailsForm.reset();
-    this.bottlerDetailsForm.patchValue({
-      financialYear: this.getCurrentFinancialYear()
-    });
+  resetForm(): void {
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
+    this.selectedOwner = null;
+    this.members = [];
+    this.bottlerDetailsForm.reset({
+      financialYear: this.getCurrentFinancialYear(),
+      brandOwner: ''
+    });
   }
 
-  proceedToNext() {
+  goBack(): void { this.back.emit(); }
+
+  proceedToNext(): void {
     if (this.bottlerDetailsForm.valid) {
+      this.saveToSessionStorage();
       this.next.emit();
     }
   }
