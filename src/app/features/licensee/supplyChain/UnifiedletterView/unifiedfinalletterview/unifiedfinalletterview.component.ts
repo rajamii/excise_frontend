@@ -144,7 +144,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
             // If coming from commissioner dashboard, assume it was just approved
             if (this.route.snapshot.queryParamMap.get('source') === 'commissioner-dashboard') {
               console.log('Allowing final letter generation from commissioner dashboard');
-              foundItem.status = 'ApprovedCancellationByCommissioner'; // Update status locally
+              foundItem.status = 'APPROVED'; // Update status locally
             } else {
               this.errorMessage = `Cannot generate final letter: Cancellation status is "${foundItem.status}". Only approved cancellations can generate final letters.`;
               this.isLoading = false;
@@ -515,7 +515,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     // Get passed parameters for more realistic data
     const passedRefNo = this.route.snapshot.queryParamMap.get('refNo') || 'CAN/001/2025';
     const passedDistillery = this.route.snapshot.queryParamMap.get('distillery') || 'M/s Sikkim Distilleries Ltd';
-    const passedStatus = this.route.snapshot.queryParamMap.get('status') || 'ApprovedCancellationByCommissioner';
+    const passedStatus = this.route.snapshot.queryParamMap.get('status') || 'APPROVED';
     const passedReason = this.route.snapshot.queryParamMap.get('reason') || 'As per your request for business closure';
     const passedLicenseType = this.route.snapshot.queryParamMap.get('licenseType') || 'Import Permit';
     

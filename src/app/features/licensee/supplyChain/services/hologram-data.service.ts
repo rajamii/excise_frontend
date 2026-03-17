@@ -85,6 +85,7 @@ export interface HologramRequest {
   id?: number;
   refNo?: string;
   licensee?: number;
+  licenseId?: string;
   licenseeName?: string;
   submissionDate?: string;
   usageDate: string;
@@ -95,6 +96,13 @@ export interface HologramRequest {
   stageId?: number;
   workflow?: number;
   currentStage?: number;
+  current_stage_name?: string;
+  current_stage_is_initial?: boolean;
+  current_stage_is_final?: boolean;
+  current_stage_entry_actions?: string[];
+  allowed_actions?: string[];
+  rolls_assigned?: any[];
+  issued_assets?: any[];
 }
 
 // Keep legacy interfaces for compatibility if needed, but we are moving to API

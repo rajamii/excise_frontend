@@ -4,7 +4,7 @@
     <div class="header-actions d-flex gap-2" *ngIf="canViewArrivalSummary()">
       <button type="button" class="btn btn-sm all-bulk-record-btn" (click)="openArrivalSummaryModal()">
         <i class="bi bi-clipboard-data me-1"></i>
-        All Bulk Detail Record
+        ENA Inventory Records
       </button>
     </div>
   </div>
@@ -183,7 +183,7 @@
             <td class="ref-number">
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="ref-text">{{ item.referenceNo }}</span>
-                @if (isRevalidationApprovedByCommissioner(item)) {
+                @if (shouldShowRevalidatedBadge(item)) {
                   <span class="badge revalidated-badge">REVALIDATED</span>
                 }
               </div>
@@ -232,14 +232,14 @@
                 type="button"
                 class="btn btn-sm mt-2 arrival-update-btn"
                 (click)="openArrivalModal(item)">
-                Update Arrival
+                Update BL Arrival
               </button>
               <button
                 *ngIf="canViewArrivalDetails(item)"
                 type="button"
                 class="btn btn-sm mt-2 arrival-view-btn"
                 (click)="openArrivalViewModal(item)">
-                View BL Details
+               View BL Inventory
               </button>
             </td>
           </tr>
@@ -349,7 +349,7 @@
           <i class="bi bi-truck-front-fill header-icon"></i>
           <div>
             <h5 class="modal-title">Update Arrival Details</h5>
-            <p class="modal-subtitle">Enter tanker-wise arrival information</p>
+            <p class="modal-subtitle">Enter tanker-wise arrival information for OIC approval</p>
           </div>
         </div>
         <button type="button" class="btn-close btn-close-white" (click)="closeArrivalModal()" aria-label="Close"></button>
@@ -391,7 +391,7 @@
           </div>
           <div class="helper-text">
             <i class="bi bi-info-circle me-1"></i>
-            Fill tanker-wise arrival details below
+            Fill tanker-wise arrival details below. They will be routed to the mapped OIC for approval
           </div>
         </div>
 
@@ -473,7 +473,7 @@
           <i class="bi bi-x-circle me-2"></i>Cancel
         </button>
         <button type="button" class="btn btn-success save-btn" (click)="saveArrivalDetails()" [disabled]="!canSaveArrivalDetails()">
-          <i class="bi bi-check-circle me-2"></i>{{ isArrivalSaving ? 'Saving...' : 'Save Arrival Details' }}
+          <i class="bi bi-check-circle me-2"></i>{{ isArrivalSaving ? 'Submitting...' : 'Submit to OIC' }}
         </button>
       </div>
     </div>
@@ -516,6 +516,25 @@
               <div class="info-value">{{ selectedArrivalRequisition?.licenseeId || '-' }}</div>
             </div>
           </div>
+        </div>
+
+        <div class="alert alert-info d-flex align-items-center mb-4">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <span>Submitted BL details will move to OIC review first. Only approved entries will appear in All Bulk Detail Record.</span>
+        </div>
+
+        <div class="alert d-flex align-items-center mb-4"
+          [ngClass]="{
+            'alert-warning': arrivalViewApprovalStatus === 'PENDING',
+            'alert-success': arrivalViewApprovalStatus === 'APPROVED',
+            'alert-danger': arrivalViewApprovalStatus === 'REJECTED',
+            'alert-secondary': !arrivalViewApprovalStatus
+          }">
+          <i class="bi bi-hourglass-split me-2" *ngIf="arrivalViewApprovalStatus === 'PENDING'"></i>
+          <i class="bi bi-check-circle-fill me-2" *ngIf="arrivalViewApprovalStatus === 'APPROVED'"></i>
+          <i class="bi bi-x-circle-fill me-2" *ngIf="arrivalViewApprovalStatus === 'REJECTED'"></i>
+          <i class="bi bi-info-circle-fill me-2" *ngIf="!arrivalViewApprovalStatus"></i>
+          <span>BL approval status: <strong>{{ arrivalViewApprovalStatus || 'N/A' }}</strong><span *ngIf="arrivalViewReviewRemarks"> | Remarks: {{ arrivalViewReviewRemarks }}</span></span>
         </div>
 
         <div class="summary-stats-grid mb-4">
@@ -588,7 +607,7 @@
         <div class="header-content">
           <i class="bi bi-clipboard-data header-icon"></i>
           <div class="header-text">
-            <h5 class="modal-title">All Bulk Detail Record</h5>
+            <h5 class="modal-title">ENA Bulk Inventory Records</h5>
             <p class="modal-subtitle">View and filter all bulk liquor arrival details</p>
           </div>
         </div>
@@ -713,9 +732,13 @@
                   <td class="requested-col">{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>
                   <td class="bl-col">{{ row.totalBulkLiter | number:'1.2-2' }}</td>
                   <td class="tanker-details-col">
-                    <div class="tanker-details-highlight" [title]="row.tankerDetails || formatTankerDetailsShort(row.tankerDetails)">
+                    <div class="tanker-details-highlight" [title]="formatTankerDetailsShort(row.tankerDetails)">
                       <i class="bi bi-truck tanker-details-icon"></i>
-                      <span class="tanker-details-text">{{ formatTankerDetailsShort(row.tankerDetails) }}</span>
+                      <div class="tanker-details-lines">
+                        <span class="tanker-details-line" *ngFor="let line of getTankerDetailsDisplayLines(row.tankerDetails)">
+                          {{ line }}
+                        </span>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -728,7 +751,7 @@
         <div class="empty-state" *ngIf="!isArrivalSummaryLoading && filteredArrivalDetailsRows.length === 0 && !arrivalSummaryErrorMessage">
           <i class="bi bi-inbox empty-icon"></i>
           <h6 class="empty-title">No Records Found</h6>
-          <p class="empty-message">No BL details found for selected filters. Try adjusting your filter criteria.</p>
+          <p class="empty-message">No approved BL details found for selected filters. Try adjusting your filter criteria.</p>
         </div>
 
         <!-- Alert Messages -->

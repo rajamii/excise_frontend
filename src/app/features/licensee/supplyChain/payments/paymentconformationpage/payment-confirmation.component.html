@@ -3,7 +3,7 @@
   <div class="container-fluid py-4">
     <div class="wallet-cards-grid">
       <!-- Excise Duty Card -->
-      <div class="wallet-summary-card excise-card">
+      <div class="wallet-summary-card excise-card history-hover" (click)="openWalletHistory('excise')">
         <div class="wallet-summary-header">
           <div class="wallet-summary-title-wrap">
             <span class="wallet-summary-icon text-primary"><i class="bi bi-wallet2"></i></span>
@@ -23,7 +23,7 @@
       </div>
 
       <!-- Education Cess Card -->
-      <div class="wallet-summary-card education-card">
+      <div class="wallet-summary-card education-card history-hover" (click)="openWalletHistory('education')">
         <div class="wallet-summary-header">
           <div class="wallet-summary-title-wrap">
             <span class="wallet-summary-icon text-info"><i class="bi bi-bank2"></i></span>
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Hologram Card -->
-      <div class="wallet-summary-card hologram-card">
+      <div class="wallet-summary-card hologram-card history-hover" (click)="openWalletHistory('hologram')">
         <div class="wallet-summary-header">
           <div class="wallet-summary-title-wrap">
             <span class="wallet-summary-icon text-warning"><i class="bi bi-shield-check"></i></span>
@@ -137,12 +137,12 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
             </tr>
-            @for (item of getPaymentTransactionsFor('requisition'); track item.id) {
+            @for (item of getPaginatedRowsForTab('requisition'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
@@ -153,7 +153,7 @@
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
             }
-            @if (getPaymentTransactionsFor('requisition').length === 0) {
+            @if (getRowsForTab('requisition').length === 0) {
             <tr><td colspan="7" class="text-center text-muted py-4">No requisition wallet payment transactions found.</td></tr>
             }
           </tbody>
@@ -184,12 +184,12 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
             </tr>
-            @for (item of getPaymentTransactionsFor('revalidation'); track item.id) {
+            @for (item of getPaginatedRowsForTab('revalidation'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
@@ -200,7 +200,7 @@
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
             }
-            @if (getPaymentTransactionsFor('revalidation').length === 0) {
+            @if (getRowsForTab('revalidation').length === 0) {
             <tr><td colspan="7" class="text-center text-muted py-4">No revalidation wallet payment transactions found.</td></tr>
             }
           </tbody>
@@ -231,12 +231,12 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
             </tr>
-            @for (item of getPaymentTransactionsFor('cancellation'); track item.id) {
+            @for (item of getPaginatedRowsForTab('cancellation'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
@@ -247,7 +247,7 @@
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
             }
-            @if (getPaymentTransactionsFor('cancellation').length === 0) {
+            @if (getRowsForTab('cancellation').length === 0) {
             <tr><td colspan="7" class="text-center text-muted py-4">No cancellation wallet payment transactions found.</td></tr>
             }
           </tbody>
@@ -278,12 +278,12 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
             </tr>
-            @for (item of getPaymentTransactionsFor('transit'); track item.id) {
+            @for (item of getPaginatedRowsForTab('transit'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
@@ -294,7 +294,7 @@
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
             }
-            @if (getPaymentTransactionsFor('transit').length === 0) {
+            @if (getRowsForTab('transit').length === 0) {
             <tr><td colspan="7" class="text-center text-muted py-4">No transit wallet payment transactions found.</td></tr>
             }
           </tbody>
@@ -326,12 +326,12 @@
               <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
               <td><span class="badge bg-warning text-dark">Pending</span></td>
               <td class="text-end">
-                <button class="btn btn-success btn-sm" (click)="proceedPendingWalletPayment()">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
                   <i class="bi bi-check-circle me-1"></i>Pay Now
                 </button>
               </td>
             </tr>
-            @for (item of getPaymentTransactionsFor('hologram'); track item.id) {
+            @for (item of getPaginatedRowsForTab('hologram'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
@@ -342,7 +342,7 @@
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
             </tr>
             }
-            @if (getPaymentTransactionsFor('hologram').length === 0) {
+            @if (getRowsForTab('hologram').length === 0) {
             <tr><td colspan="7" class="text-center text-muted py-4">No hologram wallet payment transactions found.</td></tr>
             }
           </tbody>
@@ -363,7 +363,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (item of rechargeData; track item.id) {
+            @for (item of getPaginatedRowsForTab('recharge'); track item.id) {
             <tr>
               <td>{{ item.transactionType }}</td>
               <td>{{ item.hoa }}</td>
@@ -395,7 +395,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (item of historyData; track item.id) {
+            @for (item of getPaginatedRowsForTab('history'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
@@ -412,6 +412,123 @@
         </table>
       </div>
       }
+
+      @if (getActiveTabTotalRows() > 0) {
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+        <div class="text-muted small">
+          Showing
+          {{ (getActiveTabCurrentPage() - 1) * getActiveTabPageSize() + 1 }}
+          -
+          {{ Math.min(getActiveTabCurrentPage() * getActiveTabPageSize(), getActiveTabTotalRows()) }}
+          of {{ getActiveTabTotalRows() }} entries
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <label class="small text-muted mb-0">Rows:</label>
+          <select class="form-select form-select-sm w-auto" [ngModel]="getActiveTabPageSize()"
+            (ngModelChange)="changeActiveTabPageSize($event)">
+            <option *ngFor="let opt of tablePageSizeOptions" [value]="opt">{{ opt }}</option>
+          </select>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" (click)="goToActiveTabPage(1)"
+              [disabled]="getActiveTabCurrentPage() === 1">«</button>
+            <button class="btn btn-outline-secondary" (click)="goToActiveTabPage(getActiveTabCurrentPage() - 1)"
+              [disabled]="getActiveTabCurrentPage() === 1">‹</button>
+            <span class="btn btn-light disabled">{{ getActiveTabCurrentPage() }} / {{ getActiveTabTotalPages() }}</span>
+            <button class="btn btn-outline-secondary" (click)="goToActiveTabPage(getActiveTabCurrentPage() + 1)"
+              [disabled]="getActiveTabCurrentPage() === getActiveTabTotalPages()">›</button>
+            <button class="btn btn-outline-secondary" (click)="goToActiveTabPage(getActiveTabTotalPages())"
+              [disabled]="getActiveTabCurrentPage() === getActiveTabTotalPages()">»</button>
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="wallet-deduction-overlay" *ngIf="showPendingWalletConfirmationModal">
+  <div class="wallet-deduction-modal">
+    <div class="wallet-deduction-header">
+      <div>
+        <h5 class="wallet-deduction-title">
+          <i class="bi bi-wallet2 me-2"></i>Final Confirmation
+        </h5>
+        <p class="wallet-deduction-subtitle">Review wallet balance and deduction details before you proceed.</p>
+      </div>
+      <button type="button" class="btn-close btn-close-white" (click)="closePendingWalletPaymentConfirmation()" aria-label="Close"></button>
+    </div>
+
+    <div class="wallet-deduction-body" *ngIf="pendingWalletPaymentPreview as preview">
+      <div class="wallet-deduction-summary">
+        <div class="wallet-deduction-summary-card">
+          <span class="wallet-deduction-label">Payment For</span>
+          <span class="wallet-deduction-value">{{ preview.moduleLabel }}</span>
+        </div>
+        <div class="wallet-deduction-summary-card">
+          <span class="wallet-deduction-label">Reference No.</span>
+          <span class="wallet-deduction-value">{{ preview.referenceNo }}</span>
+        </div>
+        <div class="wallet-deduction-summary-card">
+          <span class="wallet-deduction-label">Wallet Source</span>
+          <span class="wallet-deduction-value">{{ preview.walletLabel }}</span>
+        </div>
+      </div>
+
+      <div class="wallet-deduction-grid">
+        <div class="wallet-balance-card current">
+          <span class="wallet-balance-caption">Current Balance</span>
+          <span class="wallet-balance-amount">Rs {{ preview.currentBalance | number:'1.2-2' }}</span>
+        </div>
+        <div class="wallet-balance-card deduct">
+          <span class="wallet-balance-caption">Deduction On Proceed</span>
+          <span class="wallet-balance-amount">- Rs {{ preview.deductionAmount | number:'1.2-2' }}</span>
+        </div>
+        <div class="wallet-balance-card after" [class.insufficient]="preview.shortfall > 0">
+          <span class="wallet-balance-caption">Balance After Proceed</span>
+          <span class="wallet-balance-amount">Rs {{ preview.balanceAfter | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="alert alert-danger wallet-deduction-alert" *ngIf="preview.shortfall > 0">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Insufficient balance. Add Rs {{ preview.shortfall | number:'1.2-2' }} more to continue.
+      </div>
+
+      <div class="alert alert-info wallet-deduction-alert" *ngIf="preview.shortfall <= 0">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        This wallet deduction will be applied immediately after you click proceed.
+      </div>
+
+      <div class="wallet-deduction-declaration">
+        <div class="form-check mb-0">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="pendingWalletPaymentDeclaration"
+            [(ngModel)]="pendingWalletPaymentDeclarationAccepted">
+          <label class="form-check-label" for="pendingWalletPaymentDeclaration">
+            {{ getPendingWalletDeclarationText() }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="wallet-deduction-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closePendingWalletPaymentConfirmation()">Back</button>
+      <button
+        *ngIf="(pendingWalletPaymentPreview?.shortfall || 0) > 0"
+        type="button"
+        class="btn btn-warning"
+        (click)="goToAddMoneyForPendingPayment()">
+        <i class="bi bi-plus-circle me-1"></i>Add Money
+      </button>
+      <button
+        type="button"
+        class="btn btn-success"
+        (click)="proceedPendingWalletPayment()"
+        [disabled]="!canConfirmPendingWalletPayment()">
+        <i class="bi bi-check-circle me-1"></i>Proceed
+      </button>
     </div>
   </div>
 </div>
@@ -445,6 +562,20 @@
         <div class="card mb-3 wallet-history-filter-card">
           <div class="card-body py-2">
             <div class="d-flex flex-wrap align-items-end gap-2">
+              <div class="col-auto">
+                <label class="form-label small">Month</label>
+                <select class="form-select form-select-sm" [(ngModel)]="walletHistoryFilters.month"
+                        (ngModelChange)="applyWalletHistoryFilters()">
+                  <option value="">All Months</option>
+                  <option *ngFor="let month of getAvailableMonths()" [value]="month.value">
+                    {{ month.label }}
+                  </option>
+                </select>
+                <!-- Debug: Show current selection -->
+                <small class="text-muted d-block mt-1" *ngIf="walletHistoryFilters.month">
+                  Selected: {{ walletHistoryFilters.month }}
+                </small>
+              </div>
               <div class="col-auto">
                 <label class="form-label small">From</label>
                 <input type="date" class="form-control form-control-sm" [(ngModel)]="walletHistoryFilters.from"
@@ -498,7 +629,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let t of walletHistoryFiltered">
+              <tr *ngFor="let t of getPaginatedWalletHistory()">
                 <td>{{ t.date | date:'dd-MMM-yyyy' }}</td>
                 <td>
                   <span class="history-type-badge"
@@ -513,11 +644,60 @@
                 <td class="text-end">₹{{ t.balanceAfter | number:'1.2-2' }}</td>
                 <td>{{ t.reference }}</td>
               </tr>
-              <tr *ngIf="walletHistoryFiltered.length === 0">
+              <tr *ngIf="getPaginatedWalletHistory().length === 0">
                 <td colspan="6" class="text-center text-muted">No transactions found</td>
               </tr>
             </tbody>
           </table>
+        </div>
+        
+        <!-- Pagination Controls -->
+        <div class="wallet-history-pagination">
+          <div class="pagination-controls">
+            <label class="form-label small mb-0">Show</label>
+            <select class="form-select form-select-sm" [value]="walletHistoryPageSize" 
+                    (change)="onWalletHistoryPageSizeChange($any($event).target.value)">
+              <option [ngValue]="5">5</option>
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="15">15</option>
+            </select>
+            <label class="form-label small mb-0">entries</label>
+          </div>
+          
+          <div class="pagination-info">
+            <span class="small text-muted">
+              Showing {{ getPaginatedWalletHistory().length }} of {{ walletHistoryTotalItems }} entries
+            </span>
+          </div>
+          
+          <!-- Pagination Buttons -->
+          <nav *ngIf="walletHistoryTotalPages > 1">
+            <ul class="pagination pagination-sm mb-0">
+              <!-- Previous Button -->
+              <li class="page-item" [class.disabled]="walletHistoryCurrentPage === 1">
+                <button class="page-link" (click)="onWalletHistoryPageChange(walletHistoryCurrentPage - 1)"
+                        [disabled]="walletHistoryCurrentPage === 1">
+                  <span aria-hidden="true">&laquo;</span>
+                </button>
+              </li>
+              
+              <!-- Page Numbers -->
+              <li class="page-item" *ngFor="let page of getWalletHistoryPageNumbers()" 
+                  [class.active]="page === walletHistoryCurrentPage">
+                <button class="page-link" (click)="onWalletHistoryPageChange(page)">
+                  {{ page }}
+                </button>
+              </li>
+              
+              <!-- Next Button -->
+              <li class="page-item" [class.disabled]="walletHistoryCurrentPage === walletHistoryTotalPages">
+                <button class="page-link" (click)="onWalletHistoryPageChange(walletHistoryCurrentPage + 1)"
+                        [disabled]="walletHistoryCurrentPage === walletHistoryTotalPages">
+                  <span aria-hidden="true">&raquo;</span>
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
       <div class="modal-footer">

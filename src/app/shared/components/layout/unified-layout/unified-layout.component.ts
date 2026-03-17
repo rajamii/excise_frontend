@@ -81,9 +81,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
+    { section: 'bl-details', label: 'ENA Details Information', icon: 'water_drop', showOnlyForOic: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
-    { section: 'brands', label: 'Brands Details', icon: 'label' },
-    { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
+        { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
     { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
     { section: 'hologram-register', label: 'Hologram Procurement', icon: 'qr_code', hideForCommissioner: true },
     { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', showOnlyForOic: true },
@@ -446,9 +446,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         break;
       case 'daily-production-register':
         this.router.navigate(['/dev-daily-production-register']);
-        break;
-      case 'brands-details':
-        this.router.navigate(['/dev-brands-details']);
         break;
       case 'yuksom-local-sales-register':
         this.router.navigate(['/dev-local-sales-register']);
@@ -865,8 +862,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    // Allow OIC-only hologram sections even if DB navigation tokens are incomplete.
-    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests') && this.isOicUser()) {
+    // Allow OIC-only sections even if DB navigation tokens are incomplete.
+    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests' || section === 'bl-details') && this.isOicUser()) {
       return true;
     }
 
@@ -905,13 +902,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'commissioner-monthly-view-details': ['hologram_monthly', 'monthly_hologram', 'hologram_statement', 'hologram'],
       'itcell-hologram': ['hologram_procurement', 'itcell_hologram', 'it_cell', 'hologram'],
       'transit-applications': ['transit_permit', 'transit'],
-      'brands': ['brand', 'brands'],
-      'monthly-hologram-statement': ['hologram_monthly', 'monthly_hologram', 'hologram_statement'],
+            'monthly-hologram-statement': ['hologram_monthly', 'monthly_hologram', 'hologram_statement'],
       'hologram-inventory': ['hologram_inventory', 'hologram_overview', 'hologram'],
       'oic-hologram-requests': ['hologram_request', 'hologram_requests', 'hologram_register', 'hologram'],
       'hologram-register': ['hologram_register', 'hologram'],
       'hologram-daily-entry': ['hologram_daily', 'hologram'],
       'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],
+      'bl-details': ['bl_details', 'bulk_liter', 'bulk_detail', 'arrival_bulk_liter', 'arrival_details', 'bl'],
       'officer-activity': ['officer_activity', 'officer'],
       'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
       'company-registration': ['company_registration', 'company-registration', 'companyregistration'],

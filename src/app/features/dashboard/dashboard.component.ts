@@ -42,12 +42,12 @@ import { RegistrationManagementComponent } from '../licensee/supplyChain/supplyc
 import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
 // Officer-specific Components
-import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
 import { HologramMonthlyReportComponent } from '../licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component';
 import { HologramdetailsComponent } from '../licensee/supplyChain/HoloGram/hologramdetails/hologramdetails.component';
 import { OfficerinchargehologramreqComponent } from '../licensee/supplyChain/HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 import { OicdailyhologramregisterComponent } from '../licensee/supplyChain/registers/oicdailyhologramregister/oicdailyhologramregister.component';
 import { BrandwarehouseComponent } from '../licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component';
+import { OicBlDetailsComponent } from '../admin/officer-in-charge/oic-bl-details/oic-bl-details.component';
 import { ITCELLComponent } from '../admin/it-cell/itcell.component';
 import { HologramoveriewComponent } from '../licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component';
 import { DailyhologramrecordregisterComponent } from '../admin/commissioner/dailyhologramrecordregister/dailyhologramrecordregister.component';
@@ -93,12 +93,12 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     RegistrationManagementComponent,
     PaymentConfirmationComponent,
     // Officer-specific Components
-    BrandsDetailsComponent,
     HologramMonthlyReportComponent,
     HologramdetailsComponent,
     OfficerinchargehologramreqComponent,
     OicdailyhologramregisterComponent,
     BrandwarehouseComponent,
+    OicBlDetailsComponent,
     ITCELLComponent,
     HologramoveriewComponent,
     DailyhologramrecordregisterComponent,
@@ -731,6 +731,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-register': 'Hologram Procurement',
       'hologram-daily-entry': 'Daily Hologram Entry',
       'stock-inventory': 'Brand Warehouse Stock',
+      'bl-details': 'ENA Details Information',
 
       'hologram-overview': 'Hologram Overview',
       'officer-activity': 'Officer Activity',

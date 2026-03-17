@@ -252,12 +252,40 @@ export class CancellationComponent implements OnInit {
     return 'licensee';
   }
 
-  private getDefaultActions(status: string): string[] {
-    const statusUpper = status?.toUpperCase();
+  private normalizeStatus(status: string | null | undefined): string {
+    return String(status || '').toLowerCase().replace(/[\s_-]+/g, '');
+  }
 
-    if (statusUpper?.includes('APPROVED') || statusUpper?.includes('REJECTED')) {
+  private isRejectedStatus(status: string | null | undefined): boolean {
+    return this.normalizeStatus(status).includes('reject');
+  }
+
+  private isApprovedStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    return value.includes('approv') && !value.includes('reject');
+  }
+
+  private isForwardedPaySlipStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    return value.includes('forward') && value.includes('payslip');
+  }
+
+  private isPendingLikeStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return true;
+    if (this.isApprovedStatus(value) || this.isRejectedStatus(value)) return false;
+    return (
+      value.includes('pending') ||
+      value.includes('processing') ||
+      value.includes('submitted') ||
+      value.includes('forward')
+    );
+  }
+
+  private getDefaultActions(status: string): string[] {
+    if (this.isApprovedStatus(status) || this.isRejectedStatus(status)) {
       return []; // No actions for completed items
-    } else if (statusUpper?.includes('PENDING') || statusUpper?.includes('PROCESSING') || statusUpper === 'FORWARDEDCANCELLATIONTOCOMMISSIONER' || !status) {
+    } else if (this.isPendingLikeStatus(status)) {
       return ['APPROVE', 'REJECT']; // Default actions for pending items
     } else {
       return [];
@@ -315,18 +343,16 @@ export class CancellationComponent implements OnInit {
     // Status filter
     if (this.cancellationStatusFilter) {
       filtered = filtered.filter(item => {
-        const itemStatus = item.status?.toUpperCase();
-        const filterStatus = this.cancellationStatusFilter.toUpperCase();
+        const itemStatus = this.normalizeStatus(item.status);
+        const filterStatus = this.normalizeStatus(this.cancellationStatusFilter);
 
         // Handle different status variations
-        if (filterStatus === 'PENDING') {
-          return itemStatus === 'PENDING' ||
-            itemStatus === 'CANCELLATIONPENDING' ||
-            itemStatus === 'FORWARDEDCANCELLATIONTOCOMMISSIONER';
-        } else if (filterStatus === 'APPROVED') {
-          return itemStatus === 'APPROVED' || itemStatus === 'APPROVEDCANCELLATIONBYCOMMISSIONER';
-        } else if (filterStatus === 'REJECTED') {
-          return itemStatus === 'REJECTED' || itemStatus === 'REJECTEDCANCELLATIONBYCOMMISSIONER';
+        if (filterStatus === 'pending') {
+          return this.isPendingLikeStatus(item.status);
+        } else if (filterStatus === 'approved') {
+          return this.isApprovedStatus(item.status);
+        } else if (filterStatus === 'rejected') {
+          return this.isRejectedStatus(item.status);
         } else {
           return itemStatus === filterStatus;
         }
@@ -366,23 +392,15 @@ export class CancellationComponent implements OnInit {
   // Summary methods
   getCancellationStatusCount(status: string): number {
     if (status === 'PENDING') {
-      return this.filteredCancellationData.filter(item =>
-        item.status === 'PENDING' || item.status === 'CancellationPending'
-      ).length;
+      return this.filteredCancellationData.filter(item => this.isPendingLikeStatus(item.status)).length;
     } else if (status === 'APPROVED') {
-      return this.filteredCancellationData.filter(item =>
-        item.status === 'APPROVED' ||
-        item.status === 'ApprovedCancellationByCommissioner' ||
-        item.status?.toUpperCase().includes('APPROVED')
-      ).length;
+      return this.filteredCancellationData.filter(item => this.isApprovedStatus(item.status)).length;
     } else if (status === 'REJECTED') {
-      return this.filteredCancellationData.filter(item =>
-        item.status === 'REJECTED' ||
-        item.status === 'RejectedCancellationByCommissioner' ||
-        item.status?.toUpperCase().includes('REJECTED')
-      ).length;
+      return this.filteredCancellationData.filter(item => this.isRejectedStatus(item.status)).length;
     }
-    return this.filteredCancellationData.filter(item => item.status === status).length;
+    return this.filteredCancellationData.filter(
+      item => this.normalizeStatus(item.status) === this.normalizeStatus(status)
+    ).length;
   }
 
   getUrgentCancellationCount(): number {
@@ -437,13 +455,13 @@ export class CancellationComponent implements OnInit {
     const originalActions = [...(item.allowedActions || [])];
 
     // Determine action based on status
-    const itemStatus = item.status?.toUpperCase();
+    const itemStatus = item.status || '';
     let action: 'APPROVE' | 'ApprovePayslip' = 'APPROVE';
-    let targetStatus = 'ApprovedCancellationByCommissioner';
+    let targetStatus = 'APPROVED';
 
-    if (itemStatus === 'FORWARDEDCANCELLATIONPAYSLIPTOCOMMISSIONER') {
+    if (this.isForwardedPaySlipStatus(itemStatus)) {
       action = 'ApprovePayslip';
-      targetStatus = 'ApprovedCancellationPaySLipByCommissioner';
+      targetStatus = 'APPROVED_PAYSLIP';
     }
 
     // Optimistically update the UI immediately
@@ -577,24 +595,24 @@ export class CancellationComponent implements OnInit {
 
     // Optimistically update the UI immediately
     if (index !== -1) {
-      this.cancellationData[index].status = 'RejectedCancellationByCommissioner';
+      this.cancellationData[index].status = 'REJECTED';
       this.cancellationData[index].allowedActions = [];
     }
 
     if (filteredIndex !== -1) {
-      this.filteredCancellationData[filteredIndex].status = 'RejectedCancellationByCommissioner';
+      this.filteredCancellationData[filteredIndex].status = 'REJECTED';
       this.filteredCancellationData[filteredIndex].allowedActions = [];
     }
 
     // Force UI refresh immediately
     // Determine action based on status
-    const itemStatus = item.status?.toUpperCase();
+    const itemStatus = item.status || '';
     let action: 'REJECT' | 'RejectPayslip' = 'REJECT';
-    let targetStatus = 'RejectedCancellationByCommissioner';
+    let targetStatus = 'REJECTED';
 
-    if (itemStatus === 'FORWARDEDCANCELLATIONPAYSLIPTOCOMMISSIONER') {
+    if (this.isForwardedPaySlipStatus(itemStatus)) {
       action = 'RejectPayslip';
-      targetStatus = 'RejectedCancellationPaySlipByCommissioner';
+      targetStatus = 'REJECTED_PAYSLIP';
     }
 
     // Optimistically update status
@@ -669,17 +687,17 @@ export class CancellationComponent implements OnInit {
           if (confirm('Backend server error occurred. The rejection might have been processed. Would you like to keep the rejection status?')) {
             // Keep the optimistic update
             if (index !== -1) {
-              this.cancellationData[index].status = 'RejectedCancellationByCommissioner';
+              this.cancellationData[index].status = targetStatus;
               this.cancellationData[index].allowedActions = [];
             }
 
             if (filteredIndex !== -1) {
-              this.filteredCancellationData[filteredIndex].status = 'RejectedCancellationByCommissioner';
+              this.filteredCancellationData[filteredIndex].status = targetStatus;
               this.filteredCancellationData[filteredIndex].allowedActions = [];
             }
 
             if (item.id) {
-              this.storeApprovedCancellation(item.id, 'RejectedCancellationByCommissioner');
+              this.storeApprovedCancellation(item.id, targetStatus);
             }
             this.applyCancellationFilters();
           }
@@ -692,26 +710,14 @@ export class CancellationComponent implements OnInit {
 
   // Helper methods
   getStatusClass(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-      case 'CANCELLATIONPENDING':
-      case 'FORWARDEDCANCELLATIONTOCOMMISSIONER':
-        return 'pending';
-      case 'APPROVED':
-      case 'APPROVEDCANCELLATIONBYCOMMISSIONER':
-        return 'approved';
-      case 'REJECTED':
-      case 'REJECTEDCANCELLATIONBYCOMMISSIONER':
-        return 'rejected';
-      case 'PROCESSING':
-        return 'processing';
-      case 'EXPIRED':
-        return 'expired';
-      case 'CANCELLED':
-        return 'cancelled';
-      default:
-        return 'default';
-    }
+    const normalizedStatus = this.normalizeStatus(status);
+    if (this.isRejectedStatus(normalizedStatus)) return 'rejected';
+    if (this.isApprovedStatus(normalizedStatus)) return 'approved';
+    if (normalizedStatus.includes('processing')) return 'processing';
+    if (this.isPendingLikeStatus(normalizedStatus)) return 'pending';
+    if (normalizedStatus.includes('expired')) return 'expired';
+    if (normalizedStatus.includes('cancelled')) return 'cancelled';
+    return 'default';
   }
 
   // Check if approve/reject buttons should be shown
@@ -724,7 +730,7 @@ export class CancellationComponent implements OnInit {
       if (hasAction) return true;
     }
 
-    const status = item.status?.toUpperCase();
+    const status = item.status || '';
 
     // Check if already processed locally
     if (item.id && this.isApprovedInStorage(item.id)) {
@@ -732,20 +738,12 @@ export class CancellationComponent implements OnInit {
     }
 
     // Don't show buttons if already approved or rejected (Fallback)
-    if (status?.includes('APPROVED') || status?.includes('REJECTED')) {
+    if (this.isApprovedStatus(status) || this.isRejectedStatus(status)) {
       return false;
     }
 
     // Fallback: Only show if user is commissioner and status allows actions
-    return this.isCommissioner() && (
-      status === 'PENDING' ||
-      status === 'CANCELLATIONPENDING' ||
-      status === 'FORWARDEDCANCELLATIONTOCOMMISSIONER' ||
-      status === 'FORWARDEDCANCELLATIONPAYSLIPTOCOMMISSIONER' || // Enable for payment slip review
-      status === 'PROCESSING' ||
-      !status || // Handle cases where status might be undefined
-      status === 'SUBMITTED'
-    );
+    return this.isCommissioner() && this.isPendingLikeStatus(status);
   }
 
   // Check if approve button should be shown
@@ -817,16 +815,14 @@ export class CancellationComponent implements OnInit {
 
   // Check if final letter can be generated (only for approved cancellations)
   canGenerateFinalLetter(item: TableData): boolean {
-    const status = item.status?.toUpperCase();
+    const status = item.status || '';
 
     // Check if approved locally first
     const storedStatus = item.id ? this.getStoredStatus(item.id) : null;
-    const isApprovedLocally = storedStatus?.toUpperCase().includes('APPROVED') || false;
+    const isApprovedLocally = this.isApprovedStatus(storedStatus || '');
 
     // Must be approved (either from API or locally stored) and user must be commissioner
-    const isApproved = status?.includes('APPROVED') ||
-      status === 'APPROVEDCANCELLATIONBYCOMMISSIONER' ||
-      isApprovedLocally;
+    const isApproved = this.isApprovedStatus(status) || isApprovedLocally;
     const isCommissioner = this.isCommissioner();
     const hasId = !!item.id;
 
@@ -834,8 +830,8 @@ export class CancellationComponent implements OnInit {
   }
 
   canPay(item: TableData): boolean {
-    const status = item.status?.toUpperCase();
-    const isApproved = status?.includes('APPROVED') || status === 'APPROVEDCANCELLATIONBYCOMMISSIONER';
+    const status = item.status || '';
+    const isApproved = this.isApprovedStatus(status);
     // Ensure we are in licensee mode/dashboard if we strictly want to limit it
     const isLicensee = !this.isCommissioner(); // Rough check based on component usage
     return isApproved && isLicensee;
@@ -1130,15 +1126,9 @@ export class CancellationComponent implements OnInit {
       return false;
     }
     
-    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    
-    // Check if it's at final approved stage
-    // For cancellation, show permit slip when forwarded to commissioner OR approved by commissioner
-    const isFinalApproved = status.includes('approvedcancellationbycommissioner') ||
-                           status.includes('approvedcancellationpayslipbycommissioner') ||
-                           status.includes('forwardedcancellationtocommissioner') || // Show for commissioner review
-                           status.includes('forwardedcancellationpaysliptocommissioner') || // Show for payment slip review
-                           status.includes('finalapproved');
+    const status = this.normalizeStatus(item.status || '');
+    const isCommissionerApproved = status.includes('commissioner') && status.includes('approv');
+    const isFinalApproved = (isCommissionerApproved || status.includes('finalapproved')) && !this.isRejectedStatus(status);
     
     console.log('🔍 canViewPermitSlip (cancellation):', {
       status: item.status,

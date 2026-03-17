@@ -50,7 +50,10 @@ interface TableData {
   hasArrivalDetails?: boolean;
   arrivalTankerCount?: number;
   arrivalTotalBulkLiter?: number;
+  arrivalApprovalStatus?: string;
+  arrivalReviewRemarks?: string;
 }
+
 
 interface TankerArrivalEntry {
   tanker_no: string;
@@ -101,6 +104,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   requisitionData: TableData[] = [];
   filteredRequisitionData: TableData[] = [];
   private revalidationApprovedDateByRef: Record<string, string> = {};
+  private revalidationActiveByRef: Record<string, boolean> = {};
 
   // Filter properties
   requisitionDateFilter: string = '';
@@ -123,6 +127,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalViewTankerCount: number = 0;
   arrivalViewTotalBulkLiter: number = 0;
   arrivalViewEntries: TankerArrivalEntry[] = [];
+  arrivalViewApprovalStatus: string = '';
+  arrivalViewReviewRemarks: string = '';
   isArrivalSummaryModalOpen: boolean = false;
   isArrivalSummaryLoading: boolean = false;
   arrivalSummaryErrorMessage: string = '';
@@ -226,6 +232,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         }
 
         this.revalidationApprovedDateByRef = this.buildRevalidationApprovedDateIndex(revalidations || []);
+        this.revalidationActiveByRef = this.buildRevalidationActiveRefIndex(revalidations || []);
 
         this.requisitionData = (data || []).map((item: any) => {
           // Format date properly
@@ -272,13 +279,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             ),
             statusCode: item.status_code || item.statusCode || '',
             canInitiateCancellation:
-              item.can_initiate_cancellation ??
-              item.canInitiateCancellation ??
-              item.canCancel ??
-              item.can_cancel,
+              this.toBooleanFlag(
+                item.can_initiate_cancellation ??
+                item.canInitiateCancellation ??
+                item.canCancel ??
+                item.can_cancel,
+                undefined
+              ) ?? undefined,
             commissionerStatus: item.commissionerStatus || item.commissioner_status,
             forwardedToCommissioner: item.forwardedToCommissioner || item.forwarded_to_commissioner || false,
-            canCancel: item.canCancel ?? item.can_cancel,
+            canCancel: this.toBooleanFlag(item.canCancel ?? item.can_cancel, undefined) ?? undefined,
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             // Additional properties that might be needed
@@ -293,8 +303,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             paymentStatus: item.paymentStatus || item.payment_status || '',
             paymentId: item.paymentId || item.payment_id || item.transactionId || item.transaction_id || '',
             paymentDate: item.paymentDate || item.payment_date || '',
-            hasActiveRevalidation: Boolean(item.hasActiveRevalidation || item.has_active_revalidation || false),
-            has_active_revalidation: Boolean(item.has_active_revalidation || false),
+            hasActiveRevalidation: this.toBooleanFlag(item.hasActiveRevalidation ?? item.has_active_revalidation, false) ?? false,
+            has_active_revalidation: this.toBooleanFlag(item.has_active_revalidation, false) ?? false,
             licenseeId: item.licensee_id || item.licenseeId || '',
             requestedTotalQuantity: Number(
               item.totalbl ??
@@ -306,7 +316,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             ) || 0,
             hasArrivalDetails: Boolean(item.has_arrival_details || item.hasArrivalDetails || false),
             arrivalTankerCount: Number(item.arrival_tanker_count || item.arrivalTankerCount || 0) || 0,
-            arrivalTotalBulkLiter: Number(item.arrival_total_bulk_liter || item.arrivalTotalBulkLiter || 0) || 0
+            arrivalTotalBulkLiter: Number(item.arrival_total_bulk_liter || item.arrivalTotalBulkLiter || 0) || 0,
+            arrivalApprovalStatus: String(item.arrival_approval_status || item.arrivalApprovalStatus || ''),
+            arrivalReviewRemarks: String(item.arrival_review_remarks || item.arrivalReviewRemarks || '')
           };
         });
 
@@ -326,6 +338,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.requisitionData = [];
         this.filteredRequisitionData = [];
         this.revalidationApprovedDateByRef = {};
+        this.revalidationActiveByRef = {};
       }
     });
   }
@@ -421,7 +434,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
 
       if (this.requisitionStatusFilter) {
-        matches = matches && item.status.toLowerCase().includes(this.requisitionStatusFilter.toLowerCase());
+        const filter = this.normalizeStageToken(this.requisitionStatusFilter);
+        if (filter === 'pending' || filter === 'review') {
+          matches = matches && this.isPendingLikeStatus(item);
+        } else if (filter === 'approved') {
+          matches = matches && this.isApprovedLikeStatus(item);
+        } else if (filter === 'rejected') {
+          matches = matches && this.isRejectedLikeStatus(item);
+        } else {
+          matches = matches && this.normalizeStageToken(item.status).includes(filter);
+        }
       }
 
       return matches;
@@ -463,8 +485,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   isForwardedToCommissioner(item: TableData): boolean {
-    return item.status.toLowerCase().includes('forwarded') ||
-      item.status.toLowerCase().includes('commissioner');
+    const token = this.normalizeStageToken(item.status);
+    return token.includes('forward') && token.includes('commissioner');
   }
 
   canPerformAction(item: TableData): boolean {
@@ -515,54 +537,28 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   canCancelRequisition(item: TableData): boolean {
-    const backendEligibility = item.canInitiateCancellation ?? item.canCancel;
     const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
-    const statusCode = (item.statusCode || '').toUpperCase();
-    const isCommissionerApproved =
-      this.isCommissionerFinalApproval(item) ||
-      statusCode === 'RQ_09' ||
-      status.includes('approvedbycommissioner') ||
-      stageName.includes('approvedbycommissioner');
 
-    if (isCommissionerApproved) {
-      console.log('canCancelRequisition: Hidden for commissioner-approved requisitions');
-      return false;
-    }
+    const isFinalApproved = this.isCommissionerFinalApproval(item);
 
-    if (backendEligibility === true) {
-      return true;
-    }
-
-    // Check if cancellation is allowed for this requisition
-    const isFinalApproved =
-      status === 'approved';
-    
-    // Must be approved first
     if (!isFinalApproved) {
-      console.log('canCancelRequisition: Not approved yet');
+      console.log('canCancelRequisition: Not in final approved stage');
       return false;
     }
-    
-    // Check if already cancelled or cancellation in progress
+
     const isCancelled = status.includes('cancel') || status.includes('cancelled');
     if (isCancelled) {
       console.log('canCancelRequisition: Already cancelled or in progress');
       return false;
     }
-    
-    // Check if there's an active revalidation
-    const hasActiveRevalidation = item['hasActiveRevalidation'] || item['has_active_revalidation'];
-    if (hasActiveRevalidation) {
-      console.log('canCancelRequisition: Active revalidation in progress');
+
+    const hasRevalidationOnSameRef = this.hasActiveRevalidationOnSameRef(item);
+    if (hasRevalidationOnSameRef) {
+      console.log('canCancelRequisition: Revalidation already placed for same requisition ref');
       return false;
     }
 
-    if (backendEligibility === false) {
-      console.log('canCancelRequisition: Backend returned false, using approved-state fallback for licensee view');
-    }
-    
-    console.log('canCancelRequisition: Cancellation allowed');
+    console.log('canCancelRequisition: Cancellation allowed (final approved stage)');
     return true;
   }
 
@@ -603,8 +599,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   isCommissionerFinalApproval(item: TableData): boolean {
     // Check if commissioner has given final approval
     const isFinalStage = Boolean(item.currentStageIsFinal);
-    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    const stageName = (item.currentStageName || '').toLowerCase().replace(/\s+/g, '');
+    const status = this.normalizeStageToken(item.status);
+    const stageName = this.normalizeStageToken(item.currentStageName);
     
     // STRICT CHECK: Must be explicitly marked as final stage by backend
     // Don't rely on status alone - backend must set currentStageIsFinal = true
@@ -618,14 +614,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
     
     // Final approval indicators (only checked if isFinalStage is true)
-    const isApprovedStatus = status === 'approved' || 
-                             status.includes('approvedbycommissioner') ||
-                             status.includes('commissionerapproved') ||
-                             status.includes('issued') || 
-                             status.includes('complete') ||
-                             stageName.includes('issued') || 
-                             stageName.includes('complete') ||
-                             stageName.includes('approved');
+    const isApprovedStatus = (
+      (status.includes('approv') || status.includes('issued') || status.includes('complete')) ||
+      (stageName.includes('approv') || stageName.includes('issued') || stageName.includes('complete'))
+    ) && !status.includes('reject') && !stageName.includes('reject');
     
     console.log('🔍 isCommissionerFinalApproval check:', {
       status,
@@ -862,8 +854,25 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return '-';
     }
     return rows
-      .map((r) => `${String(r?.tanker_no || '').trim()}: ${Number(r?.bulk_liter || 0).toFixed(2)} Bulk Liter`)
+      .map((r) => `${String(r?.tanker_no || '').trim()}: ${Number(r?.bulk_liter || 0).toFixed(2)} BL`)
       .join(', ');
+  }
+
+  getTankerDetailsDisplayLines(rows: TankerArrivalEntry[], itemsPerLine: number = 2): string[] {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return ['-'];
+    }
+
+    const formattedRows = rows.map((row) =>
+      `${String(row?.tanker_no || '').trim()}: ${Number(row?.bulk_liter || 0).toFixed(2)} BL`
+    );
+
+    const lines: string[] = [];
+    for (let index = 0; index < formattedRows.length; index += itemsPerLine) {
+      lines.push(formattedRows.slice(index, index + itemsPerLine).join(', '));
+    }
+
+    return lines;
   }
 
   private mapArrivalSummaryRow(row: any): ArrivalDetailsRow {
@@ -1003,6 +1012,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewTankerCount = 0;
     this.arrivalViewTotalBulkLiter = 0;
     this.arrivalViewEntries = [];
+    this.arrivalViewApprovalStatus = '';
+    this.arrivalViewReviewRemarks = '';
     this.isArrivalViewModalOpen = true;
 
     this.enaRequisitionService.getRequisitionArrivalDetails(item.id).subscribe({
@@ -1033,6 +1044,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         }));
         this.arrivalViewTankerCount = Number(data?.tanker_count ?? data?.tankerCount ?? this.arrivalViewEntries.length ?? 0) || 0;
         this.arrivalViewTotalBulkLiter = Number(data?.total_bulk_liter ?? data?.totalBulkLiter ?? data?.totalbl ?? 0) || 0;
+        this.arrivalViewApprovalStatus = String(data?.approval_status ?? data?.approvalStatus ?? '');
+        this.arrivalViewReviewRemarks = String(data?.review_remarks ?? data?.reviewRemarks ?? '');
       },
       error: () => {
         this.arrivalViewErrorMessage = 'Unable to load BL details.';
@@ -1046,6 +1059,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewTankerCount = 0;
     this.arrivalViewTotalBulkLiter = 0;
     this.arrivalViewEntries = [];
+    this.arrivalViewApprovalStatus = '';
+    this.arrivalViewReviewRemarks = '';
     this.selectedArrivalRequisition = null;
   }
 
@@ -1167,7 +1182,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
                   ...row,
                   hasArrivalDetails: true,
                   arrivalTankerCount: enteredTankerCount,
-                  arrivalTotalBulkLiter: enteredTotalBulkLiter
+                  arrivalTotalBulkLiter: enteredTotalBulkLiter,
+                  arrivalApprovalStatus: 'PENDING',
+                  arrivalReviewRemarks: ''
                 }
               : row
           );
@@ -1177,12 +1194,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
                   ...row,
                   hasArrivalDetails: true,
                   arrivalTankerCount: enteredTankerCount,
-                  arrivalTotalBulkLiter: enteredTotalBulkLiter
+                  arrivalTotalBulkLiter: enteredTotalBulkLiter,
+                  arrivalApprovalStatus: 'PENDING',
+                  arrivalReviewRemarks: ''
                 }
               : row
           );
         }
-        alert('Arrival details saved successfully.');
+        alert('Arrival details submitted to OIC successfully. They will appear in All Bulk Detail Record after OIC approval.');
         this.closeArrivalModal();
         this.loadData();
       },
@@ -1227,8 +1246,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   getRequisitionStatusCount(status: string): number {
-    return this.filteredRequisitionData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'pending' || filter === 'review') {
+      return this.filteredRequisitionData.filter(item => this.isPendingLikeStatus(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.filteredRequisitionData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    if (filter === 'rejected') {
+      return this.filteredRequisitionData.filter(item => this.isRejectedLikeStatus(item)).length;
+    }
+    return this.filteredRequisitionData.filter(
+      item => this.normalizeStageToken(item.status).includes(filter)
     ).length;
   }
 
@@ -1240,6 +1269,19 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   isRevalidationApprovedByCommissioner(item: TableData): boolean {
     const refKey = this.normalizeRefToken(item.referenceNo);
     return Boolean(refKey && this.revalidationApprovedDateByRef[refKey]);
+  }
+
+  shouldShowRevalidatedBadge(item: TableData): boolean {
+    // Badge is for licensee view only.
+    if (this.isCommissioner() || this.isPermitSection()) {
+      return false;
+    }
+    return this.isRevalidationApprovedByCommissioner(item);
+  }
+
+  private hasActiveRevalidationOnSameRef(item: TableData): boolean {
+    const refKey = this.normalizeRefToken(item.referenceNo);
+    return Boolean(refKey && this.revalidationActiveByRef[refKey]);
   }
 
   getCommissionerApprovalDate(item: TableData): string {
@@ -1306,21 +1348,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       const status = this.normalizeStageToken(row?.status);
       const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
       const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
-      const approved =
-        status.includes('approvedrevalidationbycommissioner') ||
-        stageName.includes('approvedrevalidationbycommissioner') ||
-        statusCode === 'rv09';
+      const combined = `${status} ${stageName}`;
+      const approvedByCommissioner =
+        combined.includes('approv') &&
+        combined.includes('commissioner') &&
+        !combined.includes('reject');
+      const approved = approvedByCommissioner || statusCode === 'rv09';
 
       if (!approved) {
         continue;
       }
 
-      const rawRef =
-        row?.our_ref_no ||
-        row?.ourRefNo ||
-        row?.referenceNo ||
-        row?.ref_no ||
-        '';
+      const rawRef = this.resolveRevalidationLinkedRequisitionRef(row);
       const refKey = this.normalizeRefToken(rawRef);
       if (!refKey) {
         continue;
@@ -1342,6 +1381,57 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
     }
     return index;
+  }
+
+  private buildRevalidationActiveRefIndex(rows: any[]): Record<string, boolean> {
+    const index: Record<string, boolean> = {};
+    for (const row of rows || []) {
+      const rawRef = this.resolveRevalidationLinkedRequisitionRef(row);
+      const refKey = this.normalizeRefToken(rawRef);
+      if (!refKey) continue;
+
+      const status = this.normalizeStageToken(row?.status);
+      const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
+      const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
+      const combined = `${status} ${stageName} ${statusCode}`;
+
+      // Consider revalidation "active/placed" for this requisition ref unless explicitly rejected/cancelled.
+      const isRejectedOrCancelled =
+        combined.includes('reject') ||
+        combined.includes('cancel');
+
+      if (!isRejectedOrCancelled) {
+        index[refKey] = true;
+      }
+    }
+    return index;
+  }
+
+  private resolveRevalidationLinkedRequisitionRef(row: any): string {
+    const candidates = [
+      row?.requisition_ref_no,
+      row?.requisitionRefNo,
+      row?.original_requisition_ref,
+      row?.originalRequisitionRef,
+      row?.reference_no,
+      row?.referenceNo,
+      row?.ref_no,
+      row?.refNo,
+      row?.our_ref_no,
+      row?.ourRefNo
+    ];
+
+    for (const value of candidates) {
+      const ref = String(value || '').trim();
+      if (!ref) continue;
+      // Prefer requisition-style refs for linkage.
+      if (ref.toUpperCase().startsWith('REQ/')) {
+        return ref;
+      }
+    }
+
+    // fallback
+    return String(candidates.find((v) => String(v || '').trim()) || '').trim();
   }
 
   private normalizeRefToken(value: any): string {
@@ -1437,6 +1527,62 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
+  private isApprovedLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    return (
+      status.includes('approv') ||
+      stage.includes('approv') ||
+      status.includes('issued') ||
+      stage.includes('issued') ||
+      status.includes('complete') ||
+      stage.includes('complete')
+    ) && !this.isRejectedLikeStatus(item);
+  }
+
+  private isRejectedLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    return status.includes('reject') || stage.includes('reject');
+  }
+
+  private isPendingLikeStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+    return (
+      combined.includes('pending') ||
+      combined.includes('review') ||
+      combined.includes('submit') ||
+      combined.includes('forward')
+    );
+  }
+
+  private toBooleanFlag(value: any, fallback?: boolean): boolean | undefined {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return value !== 0;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+    if (['true', '1', 'yes', 'y'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'n', 'null', 'none'].includes(normalized)) {
+      return false;
+    }
+
+    return fallback;
+  }
+
   viewSlip(item: TableData): void {
     this.router.navigate(['/dev-requisition-permit-slip'], {
       queryParams: {
@@ -1511,9 +1657,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   getDashboardStatistics() {
     return {
       applied: this.getRequisitionStatusCount('APPLIED') + this.getRequisitionStatusCount('SUBMITTED'),
-      pending: this.getRequisitionStatusCount('PENDING') + this.getRequisitionStatusCount('UNDER_REVIEW'),
-      approved: this.getRequisitionStatusCount('APPROVED') + this.getRequisitionStatusCount('APPROVED_BY_COMMISSIONER'),
-      rejected: this.getRequisitionStatusCount('REJECTED') + this.getRequisitionStatusCount('REJECTED_BY_COMMISSIONER')
+      pending: this.getRequisitionStatusCount('PENDING'),
+      approved: this.getRequisitionStatusCount('APPROVED'),
+      rejected: this.getRequisitionStatusCount('REJECTED')
     };
   }
 

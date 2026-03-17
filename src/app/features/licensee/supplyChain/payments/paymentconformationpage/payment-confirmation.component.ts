@@ -104,6 +104,7 @@ interface MyLicenseRow {
 
 type WalletModuleType = 'distillery' | 'brewery' | '';
 type PaymentModuleTab = 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
+type WalletTableTab = PaymentModuleTab | 'recharge' | 'history';
 
 interface PendingWalletPaymentContext {
   id: string;
@@ -111,6 +112,16 @@ interface PendingWalletPaymentContext {
   itemType: string;
   referenceNo: string;
   amount: number;
+}
+
+interface PendingWalletPaymentPreview {
+  moduleLabel: string;
+  walletLabel: string;
+  referenceNo: string;
+  currentBalance: number;
+  deductionAmount: number;
+  balanceAfter: number;
+  shortfall: number;
 }
 
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
@@ -129,14 +140,46 @@ const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   styleUrls: ['./payment-confirmation.component.scss']
 })
 export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
+  Math = Math;
   private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
   private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
   private readonly isBrowser = typeof window !== 'undefined';
   activeTab = 'requisition';
+  tablePageSizeOptions: number[] = [5, 10, 15];
+  private tablePageSizeByTab: Record<WalletTableTab, number> = {
+    requisition: 5,
+    revalidation: 5,
+    cancellation: 5,
+    transit: 5,
+    hologram: 5,
+    recharge: 5,
+    history: 5
+  };
+  private tableCurrentPageByTab: Record<WalletTableTab, number> = {
+    requisition: 1,
+    revalidation: 1,
+    cancellation: 1,
+    transit: 1,
+    hologram: 1,
+    recharge: 1,
+    history: 1
+  };
   private walletDataLoaded = false;
   pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
+  pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
   private hasHandledPendingWalletPayment = false;
+
+  // Monthly filter method - declared early to avoid TypeScript issues
+  private setCurrentMonthAutomatically(): void {
+    const currentDate = new Date();
+    const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0'); // Current month as 01-12
+    
+    this.walletHistoryFilters.month = currentMonth;
+    this.applyWalletHistoryFilters();
+  }
   private isHandlingPendingWalletPayment = false;
+  showPendingWalletConfirmationModal = false;
+  pendingWalletPaymentDeclarationAccepted = false;
   private autoSelectLastPaidTabOnLoad = false;
   private pendingHologramAutoPayRefNo = '';
   private pendingHologramAutoPayType = '';
@@ -930,8 +973,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // Map backend data to PaymentItem interface
         this.cancellationData = data.filter(item =>
           this.isForActiveLicense(item) && (
-          item.status === 'ApprovedCancellationByCommissioner' ||
-          item.status === 'ForwardedCancellationPaySLipToCommissioner'
+          this.isCancellationPaymentQueueStatus(item.status)
           )
         ).map(item => ({
           id: item.id,
@@ -958,6 +1000,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     });
   }
 
+  private normalizeStatus(status: string | null | undefined): string {
+    return String(status || '').toLowerCase().replace(/[\s_-]+/g, '');
+  }
+
+  private isCancellationPaymentQueueStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return false;
+    const isCancellationFlow = value.includes('cancellation');
+    const isCommissionerFlow = value.includes('commissioner');
+    const isApproved = value.includes('approv') && !value.includes('reject');
+    const isForwardedPaySlip = value.includes('forward') && value.includes('payslip');
+    return isCancellationFlow && isCommissionerFlow && (isApproved || isForwardedPaySlip);
+  }
+
   // Process hologram payment - called when user completes payment
   // Process hologram payment - called when user completes payment
   // Legacy method using localStorage - deprecated for API integration
@@ -968,10 +1024,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   walletHistoryFilters = {
     from: '',
     to: '',
+    month: '', // Monthly filter
     type: '', // Added | Utilized | Refunded
     minAmount: '',
     maxAmount: ''
   };
+
+  // Pagination properties
+  walletHistoryPageSize = 10;
+  walletHistoryCurrentPage = 1;
+  walletHistoryTotalItems = 0;
+  walletHistoryTotalPages = 0;
+
+  // Monthly filter properties
+  private _currentMonthCache: string = '';
 
   exciseWalletTransactions: WalletHistoryTransaction[] = [];
 
@@ -987,6 +1053,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    
+    // Set current month automatically when opening wallet history
+    this.setCurrentMonthAutomatically();
+    
+    this.updateWalletHistoryPagination();
     const modalEl = document.getElementById('walletHistoryModal');
     if (modalEl) {
       if (modalEl.parentNode !== document.body) {
@@ -1004,6 +1075,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    
+    // Set current month automatically when switching wallets
+    this.setCurrentMonthAutomatically();
+    
+    this.updateWalletHistoryPagination();
   }
 
   openHologramHistory(): void {
@@ -1026,21 +1102,128 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   applyWalletHistoryFilters(): void {
     const txns = this.getActiveWalletTxns();
     const f = this.walletHistoryFilters;
+    
     this.walletHistoryFiltered = txns.filter(t => {
+      // Handle monthly filter
+      const monthOk = f.month ? this.isTransactionInMonth(t.date, f.month) : true;
+      
+      // Handle date range filter
       const tDate = t.date;
       const afterFrom = f.from ? tDate >= f.from : true;
       const beforeTo = f.to ? tDate <= f.to : true;
+      
+      // Handle other filters
       const typeOk = f.type ? t.type === (f.type as any) : true;
       const minOk = f.minAmount ? t.amount >= Number(f.minAmount) : true;
       const maxOk = f.maxAmount ? t.amount <= Number(f.maxAmount) : true;
-      return afterFrom && beforeTo && typeOk && minOk && maxOk;
+      
+      return monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
     });
+    
+    // Reset to first page when filters change
+    this.walletHistoryCurrentPage = 1;
+    this.updateWalletHistoryPagination();
   }
 
   clearWalletHistoryFilters(apply: boolean = true): void {
-    this.walletHistoryFilters = { from: '', to: '', type: '', minAmount: '', maxAmount: '' };
+    this.walletHistoryFilters = { from: '', to: '', month: '', type: '', minAmount: '', maxAmount: '' };
     if (apply) {
       this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    }
+    // Reset to first page when clearing filters
+    this.walletHistoryCurrentPage = 1;
+    this.updateWalletHistoryPagination();
+  }
+
+  // Pagination methods
+  updateWalletHistoryPagination(): void {
+    this.walletHistoryTotalItems = this.walletHistoryFiltered.length;
+    this.walletHistoryTotalPages = Math.ceil(this.walletHistoryTotalItems / this.walletHistoryPageSize);
+  }
+
+  getPaginatedWalletHistory(): WalletHistoryTransaction[] {
+    const startIndex = (this.walletHistoryCurrentPage - 1) * this.walletHistoryPageSize;
+    const endIndex = startIndex + this.walletHistoryPageSize;
+    return this.walletHistoryFiltered.slice(startIndex, endIndex);
+  }
+
+  onWalletHistoryPageSizeChange(pageSize: string): void {
+    this.walletHistoryPageSize = parseInt(pageSize, 10);
+    this.walletHistoryCurrentPage = 1;
+    this.updateWalletHistoryPagination();
+  }
+
+  onWalletHistoryPageChange(page: number): void {
+    this.walletHistoryCurrentPage = page;
+    this.updateWalletHistoryPagination();
+  }
+
+  getWalletHistoryPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisiblePages = 5;
+    const startPage = Math.max(1, this.walletHistoryCurrentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(this.walletHistoryTotalPages, startPage + maxVisiblePages - 1);
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  }
+
+  // Monthly filter methods
+  getAvailableMonths(): Array<{value: string, label: string}> {
+    const months: Array<{value: string, label: string}> = [];
+    
+    // Simple month names from January to December
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    // Add all months option
+    months.push({ value: '', label: 'All Months' });
+    
+    // Add each month
+    monthNames.forEach((monthName, index) => {
+      const monthValue = String(index + 1).padStart(2, '0'); // 01, 02, etc.
+      months.push({ value: monthValue, label: monthName });
+    });
+    
+    return months;
+  }
+
+  isTransactionInMonth(transactionDate: string, selectedMonth: string): boolean {
+    if (!transactionDate || !selectedMonth) return false;
+    
+    try {
+      // Handle different date formats to extract month number
+      let monthNumber: string | undefined;
+      
+      if (transactionDate.includes('-')) {
+        // Format: "2026-03-15" - extract month (03)
+        const parts = transactionDate.split('-');
+        monthNumber = parts[1];
+      } else if (transactionDate.includes('/')) {
+        // Format: "15/03/2026" or "03/2026" - extract month (03)
+        const parts = transactionDate.split('/');
+        if (parts.length === 3) {
+          monthNumber = parts[1];
+        } else if (parts.length === 2) {
+          monthNumber = parts[0];
+        }
+      } else {
+        // Try parsing as Date object
+        const date = new Date(transactionDate);
+        if (!isNaN(date.getTime())) {
+          monthNumber = String(date.getMonth() + 1).padStart(2, '0');
+        }
+      }
+      
+      return monthNumber === selectedMonth;
+    } catch (error) {
+      console.warn('Error parsing transaction date:', transactionDate, error);
+      return false;
     }
   }
 
@@ -1066,6 +1249,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
     this.activeTab = requested;
+    const walletTab = this.getCurrentWalletTableTab();
+    if (walletTab) {
+      this.tableCurrentPageByTab[walletTab] = 1;
+    }
   }
 
   private normalizePaymentModuleTab(value: string): PaymentModuleTab | null {
@@ -1149,6 +1336,56 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return Math.max(0, required - available);
   }
 
+  openPendingWalletPaymentConfirmation(): void {
+    if (!this.walletDataLoaded || this.hasHandledPendingWalletPayment || this.isHandlingPendingWalletPayment) {
+      return;
+    }
+
+    const context = this.pendingWalletPaymentContext;
+    if (!context) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    const deductionAmount = Number(context.amount || 0);
+    const currentBalance = this.getAvailableBalanceForModuleTab(context.tab);
+    if (deductionAmount <= 0) {
+      this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    this.pendingWalletPaymentPreview = {
+      moduleLabel: this.getModuleLabelForTab(context.tab),
+      walletLabel: this.getWalletLabelForModuleTab(context.tab),
+      referenceNo: context.referenceNo || '-',
+      currentBalance,
+      deductionAmount,
+      balanceAfter: currentBalance - deductionAmount,
+      shortfall: Math.max(0, deductionAmount - currentBalance)
+    };
+    this.pendingWalletPaymentDeclarationAccepted = false;
+    this.showPendingWalletConfirmationModal = true;
+  }
+
+  closePendingWalletPaymentConfirmation(): void {
+    this.showPendingWalletConfirmationModal = false;
+    this.pendingWalletPaymentDeclarationAccepted = false;
+    this.pendingWalletPaymentPreview = null;
+  }
+
+  canConfirmPendingWalletPayment(): boolean {
+    if (!this.pendingWalletPaymentDeclarationAccepted) return false;
+    if (this.isHandlingPendingWalletPayment) return false;
+    const preview = this.pendingWalletPaymentPreview;
+    if (!preview) return false;
+    return preview.deductionAmount > 0 && preview.shortfall <= 0;
+  }
+
+  getPendingWalletDeclarationText(): string {
+    const moduleLabel = this.pendingWalletPaymentPreview?.moduleLabel || this.getPendingPaymentModuleLabel();
+    return `I understand that wallet amount will be deducted immediately when I proceed with this ${moduleLabel.toLowerCase()} payment.`;
+  }
+
   proceedPendingWalletPayment(): void {
     if (!this.walletDataLoaded || this.hasHandledPendingWalletPayment || this.isHandlingPendingWalletPayment) {
       return;
@@ -1172,6 +1409,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
 
     if (availableBalance < requiredAmount) {
+      this.closePendingWalletPaymentConfirmation();
       const shortage = Math.max(0, requiredAmount - availableBalance);
       Swal.fire({
         icon: 'error',
@@ -1198,7 +1436,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.executeWalletPaymentFromContext(context).subscribe({
       next: () => {
-        this.addOptimisticPaymentHistoryRow(context);
+        this.closePendingWalletPaymentConfirmation();
         Swal.fire({
           icon: 'success',
           title: 'Payment Successful',
@@ -1210,6 +1448,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.finishPendingWalletPaymentHandling();
       },
       error: (err) => {
+        this.closePendingWalletPaymentConfirmation();
         const errorMessage =
           err?.error?.error ||
           err?.error?.detail ||
@@ -1228,26 +1467,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private addOptimisticPaymentHistoryRow(context: PendingWalletPaymentContext): void {
-    // Hologram payment API writes wallet transaction immediately; avoid temporary duplicate row.
-    if (context.tab === 'hologram') {
-      return;
-    }
-
-    const now = new Date();
-    const row: HistoryItem = {
-      id: `local-${now.getTime()}`,
-      txnId: `LOCAL-${now.getTime()}`,
-      userId: '-',
-      type: 'Wallet Utilization',
-      paymentFor: this.getModuleLabelForTab(context.tab),
-      amount: Number(context.amount || 0),
-      reference: context.referenceNo || '-',
-      status: 'Payment Successful',
-      dateTime: now,
-      licenseeId: this.activeLicenseeId || '-'
-    };
-    this.optimisticPaymentHistory = [row, ...this.optimisticPaymentHistory];
-    this.persistOptimisticPaymentsToStorage();
+    // Disabled intentionally: wallet history must only show backend transaction IDs.
+    return;
   }
 
   private reconcileOptimisticPayments(): void {
@@ -1279,17 +1500,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private loadOptimisticPaymentsFromStorage(): void {
     if (!this.isBrowser) return;
     try {
-      const raw = sessionStorage.getItem(this.optimisticPaymentStorageKey);
-      if (!raw) {
-        this.optimisticPaymentHistory = [];
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      const rows = Array.isArray(parsed) ? parsed : [];
-      this.optimisticPaymentHistory = rows.map((item: any) => ({
-        ...item,
-        dateTime: this.toDate(item?.dateTime)
-      }));
+      // Clear old LOCAL-* placeholder rows and rely fully on backend history.
+      this.optimisticPaymentHistory = [];
+      sessionStorage.removeItem(this.optimisticPaymentStorageKey);
     } catch {
       this.optimisticPaymentHistory = [];
     }
@@ -1352,6 +1565,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   goToAddMoneyForPendingPayment(): void {
     const context = this.pendingWalletPaymentContext;
     if (!context) return;
+    this.closePendingWalletPaymentConfirmation();
 
     if (context.tab === 'hologram') {
       this.addMoney('hologram');
@@ -1392,6 +1606,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return this.getTotalWalletBalance();
   }
 
+  private getWalletLabelForModuleTab(tab: PaymentModuleTab): string {
+    if (tab === 'hologram') {
+      return 'Hologram Wallet';
+    }
+    if (tab === 'transit') {
+      return 'Combined Excise and Education Wallet Balance';
+    }
+    return 'Available Wallet Balance';
+  }
+
   private getModuleLabelForTab(tab: PaymentModuleTab): string {
     if (tab === 'requisition') return 'Requisition';
     if (tab === 'revalidation') return 'Revalidation';
@@ -1404,6 +1628,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.hasHandledPendingWalletPayment = true;
     this.isHandlingPendingWalletPayment = false;
     this.pendingWalletPaymentContext = null;
+    this.closePendingWalletPaymentConfirmation();
     this.pendingHologramAutoPayRefNo = '';
     this.pendingHologramAutoPayType = '';
     this.clearPendingPaymentContextFromStorage();
@@ -1446,6 +1671,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   canPay(item: PaymentItem): boolean {
+    if (this.activeTab === 'cancellation') {
+      return this.isCancellationPaymentQueueStatus(item.status) && item.amount > 0;
+    }
+
     const payableStatuses = [
       'ApprovedByCommissioner',
       'ApprovedByJointCommissioner',
@@ -1454,7 +1683,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       'ApprovedCancellationByCommissioner',
       'ApprovedCancellationByJointCommissioner'
     ];
-    return payableStatuses.includes(item.status) && item.amount > 0;
+    if (payableStatuses.includes(item.status)) {
+      return item.amount > 0;
+    }
+
+    const normalized = this.normalizeStatus(item.status);
+    return normalized.includes('approv') && !normalized.includes('reject') && item.amount > 0;
   }
 
   payItem(item: PaymentItem): void {
@@ -1529,7 +1763,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee').subscribe({
         next: (res) => {
           this.showSuccessMessage(`Cancellation Payment of Rs ${item.amount} processed successfully!`);
-          item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
+          item.status = String(res?.new_status || res?.status || 'SUBMITTED_PAYSLIP');
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
           this.refreshWalletData();
@@ -1720,7 +1954,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         if (found) {
           console.log('Transit Permit Found:', found);
           this.transitId = found.id;
-          this.transitBillStatus = found.status;
+          this.transitBillStatus = found.current_stage_name || found.status;
+          const transitAllowedActions = Array.isArray(found.allowed_actions || found.allowedActions)
+            ? (found.allowed_actions || found.allowedActions).map((a: any) => String(a).toUpperCase())
+            : [];
+          const isInitialStage = Boolean(found.current_stage_is_initial ?? found.currentStageIsInitial ?? false);
           // Map backend fields to frontend model
           this.transitData = [{
             id: found.id,
@@ -1730,7 +1968,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
             portions: 0,
             nips: (found.size_ml || found.size) + 'ml',
             licenseeId: found.licensee_id || found.licenseeId || 'Unknown',
-            status: found.status,
+            status: found.current_stage_name || found.status,
             paymentDate: null,
             totalAmount: parseFloat(found.total_amount || found.totalAmount || 0)
           }];
@@ -1739,7 +1977,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
           this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
           this.transitItemCount = 1;
-          this.showTransitPayment = String(found.status || '').trim() === 'Ready for Payment';
+          this.showTransitPayment = transitAllowedActions.includes('PAY') || isInitialStage;
         } else {
           console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
           alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
@@ -2026,7 +2264,90 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         type.includes('debit');
       const isRefundLike = type.includes('refund');
       return paymentFor.includes(keyword) && (isDebitLike || isRefundLike);
-    });
+    }).sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+  }
+
+  private isWalletTableTab(value: string): value is WalletTableTab {
+    return ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'recharge', 'history'].includes(String(value || '').toLowerCase());
+  }
+
+  private getCurrentWalletTableTab(): WalletTableTab | null {
+    const current = String(this.activeTab || '').toLowerCase();
+    return this.isWalletTableTab(current) ? current : null;
+  }
+
+  getRowsForTab(tab: WalletTableTab): any[] {
+    switch (tab) {
+      case 'requisition':
+      case 'revalidation':
+      case 'cancellation':
+      case 'transit':
+      case 'hologram':
+        return this.getPaymentTransactionsFor(tab);
+      case 'recharge':
+        return [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      case 'history':
+        return [...this.historyData].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+      default:
+        return [];
+    }
+  }
+
+  getPaginatedRowsForTab(tab: WalletTableTab): any[] {
+    const rows = this.getRowsForTab(tab);
+    const pageSize = this.tablePageSizeByTab[tab] || 5;
+    const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+    const currentPage = Math.min(Math.max(1, this.tableCurrentPageByTab[tab] || 1), totalPages);
+    if (currentPage !== this.tableCurrentPageByTab[tab]) {
+      this.tableCurrentPageByTab[tab] = currentPage;
+    }
+    const start = (currentPage - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }
+
+  getActiveTabTotalRows(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 0;
+    return this.getRowsForTab(tab).length;
+  }
+
+  getActiveTabTotalPages(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 1;
+    const totalRows = this.getRowsForTab(tab).length;
+    const pageSize = this.tablePageSizeByTab[tab] || 5;
+    return Math.max(1, Math.ceil(totalRows / pageSize));
+  }
+
+  getActiveTabCurrentPage(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 1;
+    const totalPages = this.getActiveTabTotalPages();
+    const page = this.tableCurrentPageByTab[tab] || 1;
+    return Math.min(Math.max(1, page), totalPages);
+  }
+
+  getActiveTabPageSize(): number {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return 5;
+    return this.tablePageSizeByTab[tab] || 5;
+  }
+
+  changeActiveTabPageSize(size: string | number): void {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return;
+    const parsed = typeof size === 'string' ? parseInt(size, 10) : size;
+    if (!parsed || !this.tablePageSizeOptions.includes(parsed)) return;
+    this.tablePageSizeByTab[tab] = parsed;
+    this.tableCurrentPageByTab[tab] = 1;
+  }
+
+  goToActiveTabPage(page: number): void {
+    const tab = this.getCurrentWalletTableTab();
+    if (!tab) return;
+    const totalPages = this.getActiveTabTotalPages();
+    if (page < 1 || page > totalPages) return;
+    this.tableCurrentPageByTab[tab] = page;
   }
 
   private applyLastPaidTabAsDefault(): void {

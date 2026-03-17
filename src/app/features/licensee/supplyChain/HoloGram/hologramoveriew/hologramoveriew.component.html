@@ -1405,7 +1405,14 @@
                       <input type="number" class="form-control form-control-sm" [(ngModel)]="serialFilters.qty"
                         (input)="applySerialFilters()" placeholder="Enter qty..." min="1">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                      <label class="form-label small fw-bold mb-1">
+                        <i class="bi bi-arrow-left-right me-1"></i>Roll Range
+                      </label>
+                      <input type="text" class="form-control form-control-sm" [(ngModel)]="serialFilters.rollRange"
+                        (input)="applySerialFilters()" placeholder="e.g. 120-300 or 250" autocomplete="off">
+                    </div>
+                    <div class="col-md-2">
                       <button class="btn btn-outline-secondary btn-sm me-2"
                         (click)="clearSerialFilters(); applySerialFilters()">
                         <i class="bi bi-x-circle me-1"></i>Clear Filters
@@ -1415,7 +1422,7 @@
                       </button>
                     </div>
                   </div>
-                  @if (serialFilters.brandReferenceNo || serialFilters.brandName || serialFilters.qty) {
+                  @if (serialFilters.brandReferenceNo || serialFilters.brandName || serialFilters.qty || serialFilters.rollRange) {
                   <div class="mt-2 p-2 bg-light rounded">
                     <small class="text-muted">
                       <i class="bi bi-info-circle me-1"></i>
@@ -1428,6 +1435,9 @@
                       }
                       @if (serialFilters.qty) {
                       <span class="badge bg-primary ms-1">Qty: {{ serialFilters.qty }}</span>
+                      }
+                      @if (serialFilters.rollRange) {
+                      <span class="badge bg-secondary ms-1">Roll: {{ serialFilters.rollRange }}</span>
                       }
                     </small>
                   </div>

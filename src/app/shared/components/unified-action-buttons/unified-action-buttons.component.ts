@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -160,7 +161,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
   constructor(
     private workflowActionService: WorkflowActionService,
-    private unifiedActionsService: UnifiedActionsService
+    private unifiedActionsService: UnifiedActionsService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -316,7 +318,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     });
   }
 
-  private shouldShowTransitOicRejectDeclaration(button: ActionButtonConfig): boolean {
+    private shouldShowTransitOicRejectDeclaration(button: ActionButtonConfig): boolean {
     const action = this.normalizeActionName(button?.action);
     return action === 'REJECT' && this.itemType === 'transit' && this.context === 'officer-in-charge';
   }
@@ -329,77 +331,171 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const refNo = this.escapeHtml(String(this.item?.referenceNo || this.item?.['refNo'] || this.item?.['billNo'] || 'N/A'));
 
     Swal.fire({
-      title: 'Declaration Before Rejection',
-      html: `
-        <div style="text-align:left;font-size:14px;line-height:1.5">
-          <p style="margin:0 0 8px 0;"><strong>Reference:</strong> ${refNo}</p>
-          <p style="margin:0 0 10px 0;color:#9a3412;">
-            Rejecting this transit permit will trigger automatic reversal actions.
-          </p>
-          <ul style="padding-left:18px;margin:0 0 10px 0;">
-            <li>Stock utilized under this permit will be reverted to inventory.</li>
-            <li>Wallet refund will be posted for this permit.</li>
-            <li><strong>Excise refund:</strong> ${excise}</li>
-            <li><strong>Education cess refund:</strong> ${education}</li>
-            <li><strong>Total wallet refund:</strong> ${currency}</li>
-            <li><strong>Stock impact:</strong> ${summary.totalCases} case(s) will be reverted.</li>
-          </ul>
-          <p style="margin:0;">
-            Proceed only if this cancellation is valid and fully verified.
-          </p>
-          <div style="margin-top:12px;">
-            <label for="rejectReasonInput" style="display:block;font-weight:600;margin-bottom:6px;">
-              Rejection reason (optional)
-            </label>
-            <textarea
-              id="rejectReasonInput"
-              class="swal2-textarea"
-              style="display:block;width:100%;min-height:78px;margin:0;"
-              placeholder="Enter reason for rejection..."
-            ></textarea>
-          </div>
-          <div style="margin-top:10px;">
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-              <input id="rejectAcknowledgeCheckbox" type="checkbox" />
-              <span>I understand the above consequences and want to continue.</span>
-            </label>
-          </div>
-        </div>
-      `,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Proceed With Rejection',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#f59e0b',
-      cancelButtonColor: '#6c757d',
-      focusConfirm: false,
-      preConfirm: () => {
-        const popup = Swal.getPopup();
-        const checkbox = popup?.querySelector('#rejectAcknowledgeCheckbox') as HTMLInputElement | null;
-        const reasonInput = popup?.querySelector('#rejectReasonInput') as HTMLTextAreaElement | null;
+        html: `
+            <div style="padding: 16px;">
+                <!-- Header -->
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 24px; color: white;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h2 style="margin: 0 0 4px 0; color: #1f2937; font-size: 20px; font-weight: 700;">Declaration Before Rejection</h2>
+                        <p style="margin: 0; color: #6b7280; font-size: 14px;">Ref: ${refNo} • Please review consequences</p>
+                    </div>
+                </div>
+                
+                <!-- Warning Bar -->
+                <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="bi bi-info-circle-fill" style="font-size: 16px; color: #dc2626; flex-shrink: 0;"></i>
+                        <span style="font-size: 13px; color: #991b1b; font-weight: 600;">This action cannot be undone and will trigger automatic reversals.</span>
+                    </div>
+                </div>
+                
+                <!-- Impact Summary -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <!-- Stock Impact -->
+                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <i class="bi bi-box-seam" style="font-size: 16px; color: #0ea5e9;"></i>
+                            <span style="font-size: 12px; color: #0369a1; font-weight: 600;">Stock Impact</span>
+                        </div>
+                        <div style="font-size: 16px; color: #0c4a6e; font-weight: 700;">${summary.totalCases} cases</div>
+                        <div style="font-size: 11px; color: #075985;">will be reverted</div>
+                    </div>
+                    
+                    <!-- Refund Amount -->
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <i class="bi bi-wallet2" style="font-size: 16px; color: #10b981;"></i>
+                            <span style="font-size: 12px; color: #047857; font-weight: 600;">Total Refund</span>
+                        </div>
+                        <div style="font-size: 16px; color: #064e3b; font-weight: 700;">₹${currency}</div>
+                        <div style="font-size: 11px; color: #047857;">to wallet</div>
+                    </div>
+                </div>
+                
+                <!-- Breakdown -->
+                <div style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 12px; color: #374151; font-weight: 600; margin-bottom: 8px;">Refund Breakdown:</div>
+                    <div style="display: flex; gap: 16px; align-items: center;">
+                        <span style="font-size: 12px; color: #6b7280;">Excise: <strong>₹${excise}</strong></span>
+                        <span style="font-size: 12px; color: #6b7280;">Education: <strong>₹${education}</strong></span>
+                        <span style="font-size: 13px; color: #10b981; font-weight: 700;">Total: <strong>₹${currency}</strong></span>
+                    </div>
+                </div>
+                
+                <!-- Reason and Action -->
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start;">
+                    <div>
+                        <label for="rejectReasonInput" style="display: block; font-size: 13px; color: #374151; font-weight: 600; margin-bottom: 6px;">
+                            <i class="bi bi-chat-left-text me-1"></i>Reason (Optional)
+                        </label>
+                        <textarea
+                            id="rejectReasonInput"
+                            class="swal2-textarea"
+                            style="display: block; width: 100%; height: 60px; margin: 0; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; font-size: 13px; resize: vertical;"
+                            placeholder="Enter reason for rejection..."
+                        ></textarea>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 8px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; margin-bottom: 8px;">
+                            <input id="rejectAcknowledgeCheckbox" type="checkbox" style="margin-top: 2px; width: 14px; height: 14px;" />
+                            <span style="font-size: 12px; color: #92400e; font-weight: 600;">I understand the consequences</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        showConfirmButton: true,
+        confirmButtonText: '<i class="bi bi-check-circle me-2"></i>Proceed With Rejection',
+        cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Cancel',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        focusConfirm: false,
+        width: '700px',
+        padding: '0',
+        showClass: {
+            popup: 'swal2-noanimation',
+            backdrop: 'swal2-noanimation'
+        },
+        hideClass: {
+            popup: 'swal2-noanimation',
+            backdrop: 'swal2-noanimation'
+        },
+        preConfirm: () => {
+            const popup = Swal.getPopup();
+            const checkbox = popup?.querySelector('#rejectAcknowledgeCheckbox') as HTMLInputElement | null;
+            const reasonInput = popup?.querySelector('#rejectReasonInput') as HTMLTextAreaElement | null;
 
-        if (!checkbox?.checked) {
-          Swal.showValidationMessage('Please acknowledge the declaration to proceed.');
-          return false;
+            if (!checkbox?.checked) {
+                Swal.showValidationMessage('Please acknowledge the declaration to proceed with rejection.');
+                return false;
+            }
+
+            return {
+                reason: String(reasonInput?.value || '').trim()
+            };
         }
-
-        return {
-          reason: String(reasonInput?.value || '').trim()
-        };
-      }
     }).then((declarationResult) => {
-      if (declarationResult.isConfirmed) {
-        const reason = String((declarationResult.value as any)?.reason || '').trim();
-        this.item = {
-          ...this.item,
-          __rejectReason: reason
-        };
-        this.executeAction(button);
-      }
+        if (declarationResult.isConfirmed) {
+            const reason = String((declarationResult.value as any)?.reason || '').trim();
+            
+            // Show loading state
+            Swal.fire({
+                title: 'Processing Rejection...',
+                text: 'Please wait while we process your rejection request.',
+                icon: 'info',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Add the rejection reason to the item
+            this.item = {
+                ...this.item,
+                __rejectReason: reason
+            };
+            
+            console.log('🔧 UNIFIED BUTTONS: Proceeding with rejection, reason:', reason);
+            
+            // Execute the action with a timeout to ensure loading shows
+            setTimeout(() => {
+                try {
+                    this.executeAction(button);
+                    console.log('🔧 UNIFIED BUTTONS: Rejection action executed successfully');
+                    // Close loading after a short delay to allow parent to handle
+                    setTimeout(() => {
+                        Swal.close();
+                    }, 1000);
+                } catch (error) {
+                    console.error('🔧 UNIFIED BUTTONS: Error executing rejection action:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'An error occurred while processing the rejection. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            }, 500);
+        }
+    }).catch((error) => {
+        console.error('🔧 UNIFIED BUTTONS: Rejection dialog error:', error);
+        Swal.fire({
+            title: 'Error',
+            text: 'An error occurred with the rejection dialog. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
     });
-  }
+}
 
-  private getTransitRejectSummary(): {
+private getTransitRejectSummary(): {
     totalCases: number;
     exciseRefund: number;
     educationRefund: number;
@@ -918,6 +1014,16 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       });
     }
 
+    if (include.includes('REQUEST_REVALIDATION') && !result.some(config => config.action === 'REQUEST_REVALIDATION')) {
+      result.push({
+        action: 'REQUEST_REVALIDATION',
+        label: 'Request Revalidation',
+        icon: 'restore',
+        color: 'warn',
+        tooltip: 'Request Revalidation'
+      });
+    }
+
     if (include.length) {
       result = result.filter(config => include.includes(config.action));
     }
@@ -993,7 +1099,19 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       return configs;
     }
 
-    return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
+    const currentUrl = this.router.url || '';
+    const isDetailView = currentUrl.includes('/supply-chain-view');
+
+    return configs.filter(config => {
+      const action = this.normalizeActionName(config?.action);
+      if (action === 'REJECT') {
+        return false;
+      }
+      if (!isDetailView && action === 'APPROVE') {
+        return false;
+      }
+      return true;
+    });
   }
 
   private applyHologramCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
@@ -1019,7 +1137,6 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'paid',
       'wallet',
       'approvedbypermitsection',
-      'forwardedtocommissioner',
       'approvedbycommissioner',
       'rejectedbycommissioner'
     ];

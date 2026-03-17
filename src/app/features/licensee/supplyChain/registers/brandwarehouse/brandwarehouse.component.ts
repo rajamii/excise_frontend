@@ -90,6 +90,7 @@ interface FilterOptions {
 })
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
+  private static readonly NEW_UPDATE_BADGE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
   // Current distillery context resolved from active user profile.
   private currentDistilleryName = '';
@@ -103,6 +104,11 @@ export class BrandwarehouseComponent implements OnInit {
   filteredStocks: GroupedBrandStock[] = [];
   paginatedStocks: GroupedBrandStock[] = [];
   newlyUpdatedStocks: GroupedBrandStock[] = [];
+  timelineMonthOptions: { value: string; label: string }[] = [];
+  selectedTimelineMonth: string = 'ALL';
+  timelinePageSizeOptions: number[] = [5, 10, 15];
+  timelinePageSize = 5;
+  timelineCurrentPage = 1;
   warehouseOverview: WarehouseOverview = {
     totalBrands: 0,
     totalCapacity: 0,
@@ -475,20 +481,23 @@ export class BrandwarehouseComponent implements OnInit {
       .filter(stock => this.isRecentlyUpdatedStock(stock) && (stock.totalStock || 0) > 0)
       .slice(0, 8);
 
+    this.refreshTimelineMonthOptions();
+    this.timelineCurrentPage = 1;
+
     this.updatePagination();
   }
 
   isRecentlyUpdatedStock(stock: GroupedBrandStock): boolean {
     if (!stock) return false;
-    if (stock.isNew === true) return true;
-    const updatedTs = new Date(stock.lastUpdated || 0).getTime();
+    const updatedTs = new Date(stock.lastUpdated || '').getTime();
     if (!updatedTs) return false;
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    return (Date.now() - updatedTs) <= oneDayMs;
+    const ageMs = Date.now() - updatedTs;
+    return ageMs >= 0 && ageMs <= BrandwarehouseComponent.NEW_UPDATE_BADGE_WINDOW_MS;
   }
 
   getNewUpdateTag(stock: GroupedBrandStock): string {
     if (!stock) return '';
+    if (!this.isRecentlyUpdatedStock(stock)) return '';
     if (stock.isNew === true) return 'NEW';
     return 'UPDATED';
   }
@@ -500,6 +509,86 @@ export class BrandwarehouseComponent implements OnInit {
   getHiddenNewUpdatesCount(): number {
     const total = (this.newlyUpdatedStocks || []).length;
     return total > 5 ? total - 5 : 0;
+  }
+
+  openNewUpdatesModal(): void {
+    this.refreshTimelineMonthOptions();
+    const currentMonthKey = this.getCurrentMonthKey();
+    const hasCurrentMonth = this.timelineMonthOptions.some(option => option.value === currentMonthKey);
+    this.selectedTimelineMonth = hasCurrentMonth ? currentMonthKey : 'ALL';
+    this.timelineCurrentPage = 1;
+    this.showNewUpdatesModal = true;
+  }
+
+  onTimelineMonthChange(): void {
+    this.timelineCurrentPage = 1;
+  }
+
+  onTimelinePageSizeChange(): void {
+    this.timelineCurrentPage = 1;
+  }
+
+  changeTimelinePage(page: number): void {
+    const totalPages = this.getTimelineTotalPages();
+    if (page >= 1 && page <= totalPages) {
+      this.timelineCurrentPage = page;
+    }
+  }
+
+  getPaginatedTimelineStocks(): GroupedBrandStock[] {
+    const filtered = this.getMonthFilteredTimelineStocks();
+    const start = (this.timelineCurrentPage - 1) * this.timelinePageSize;
+    return filtered.slice(start, start + this.timelinePageSize);
+  }
+
+  getTimelineTotalPages(): number {
+    const total = this.getMonthFilteredTimelineStocks().length;
+    return Math.max(1, Math.ceil(total / this.timelinePageSize));
+  }
+
+  getTimelineSummary(): string {
+    const filtered = this.getMonthFilteredTimelineStocks();
+    if (!filtered.length) return 'No updates';
+    const start = (this.timelineCurrentPage - 1) * this.timelinePageSize + 1;
+    const end = Math.min(filtered.length, start + this.timelinePageSize - 1);
+    return `${start}-${end} of ${filtered.length}`;
+  }
+
+  private getMonthFilteredTimelineStocks(): GroupedBrandStock[] {
+    if (this.selectedTimelineMonth === 'ALL') {
+      return this.newlyUpdatedStocks || [];
+    }
+    return (this.newlyUpdatedStocks || []).filter(
+      stock => this.getMonthValue(stock.lastUpdated) === this.selectedTimelineMonth
+    );
+  }
+
+  private refreshTimelineMonthOptions(): void {
+    const monthLabels = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    this.timelineMonthOptions = [
+      { value: 'ALL', label: 'All Months' },
+      ...monthLabels.map((label, idx) => ({
+        value: String(idx + 1).padStart(2, '0'),
+        label
+      }))
+    ];
+
+    if (!this.timelineMonthOptions.some(option => option.value === this.selectedTimelineMonth)) {
+      this.selectedTimelineMonth = 'ALL';
+    }
+  }
+
+  private getCurrentMonthKey(): string {
+    return this.getMonthValue(new Date().toISOString());
+  }
+
+  private getMonthValue(value: string): string {
+    const dt = new Date(String(value || '').trim());
+    if (Number.isNaN(dt.getTime())) return '';
+    return String(dt.getMonth() + 1).padStart(2, '0');
   }
 
   checkStockLevel(stock: GroupedBrandStock): boolean {

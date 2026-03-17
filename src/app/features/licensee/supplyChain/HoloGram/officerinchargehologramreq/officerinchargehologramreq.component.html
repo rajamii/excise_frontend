@@ -246,15 +246,15 @@
                                     </ng-template>
                                 </td>
                                 <td class="status">
-                                <span class="status-badge" [ngClass]="getStatusClass(request.status)">
-                                    <i [class]="getStatusIcon(request.status)" class="me-1"></i>
-                                    {{ getDisplayStatus(request.status) }}
+                                <span class="status-badge" [ngClass]="getStatusClass(request)">
+                                    <i [class]="getStatusIcon(request)" class="me-1"></i>
+                                    {{ getDisplayStatus(request) }}
                                 </span>
                                 </td>
                                 <td class="actions">
                                     <div class="action-buttons">
                                         <!-- Show view details button only for COMPLETED requests (has allocation data) -->
-                                        <button *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="btn-action view"
+                                        <button *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="btn-action view"
                                             (click)="viewRequestDetails(request)" title="View Allocation Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -272,18 +272,18 @@
                                             Allocation will be approved on usage date
                                         </span>
                                         <!-- Show status badge for COMPLETED -->
-                                        <span *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="badge bg-success text-white">
+                                        <span *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
                                             Completed
                                         </span>
                                         <!-- Show status badge for UNDER_PROCESS -->
-                                        <span *ngIf="mapStatusToCategory(request.status) === 'UNDER_PROCESS'"
+                                        <span *ngIf="mapStatusToCategory(request) === 'UNDER_PROCESS'"
                                             class="badge bg-info text-white">
                                             <i class="bi bi-hourglass-split me-1"></i>
                                             Under Process
                                         </span>
                                         <!-- Show status badge for REJECTED -->
-                                        <span *ngIf="mapStatusToCategory(request.status) === 'REJECTED'" class="badge bg-danger text-white">
+                                        <span *ngIf="mapStatusToCategory(request) === 'REJECTED'" class="badge bg-danger text-white">
                                             <i class="bi bi-x-circle-fill me-1"></i>
                                             Rejected
                                         </span>
@@ -377,7 +377,7 @@
 </div>
 
 <!-- Allocation Details Modal (Only for Completed Requests) -->
-<div class="modal fade show" *ngIf="selectedRequest && mapStatusToCategory(selectedRequest.status) === 'APPROVED'"
+<div class="modal fade show" *ngIf="selectedRequest && mapStatusToCategory(selectedRequest) === 'APPROVED'"
     style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
     <div class="modal-dialog modal-lg" style="z-index: 1051;" (click)="$event.stopPropagation()">
         <div class="modal-content" style="z-index: 1052;">
@@ -587,7 +587,6 @@
                                     <th>Serial Range</th>
                                     <th>Quantity</th>
                                     <th>Remaining in Cartoon</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -620,11 +619,6 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
-                                        <button class="btn btn-outline-info btn-sm" title="View cartoon details">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                    </td>
                                 </tr>
                             </tbody>
                             <tfoot class="table-light">
@@ -633,17 +627,10 @@
                                     <td class="fw-bold text-success">
                                         {{ getTotalAllocatedQuantity() | number }} units
                                     </td>
-                                    <td colspan="2"></td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
-                    </div>
-
-                    <!-- Comments Section -->
-                    <div class="mt-4">
-                        <label class="form-label fw-bold">Approval Comments (Optional)</label>
-                        <textarea class="form-control" rows="3" [(ngModel)]="approvalComments"
-                            placeholder="Enter any comments for this hologram allocation..."></textarea>
                     </div>
                 </div>
 
@@ -716,8 +703,8 @@
                                 <div class="info-card">
                                     <label class="info-label">Status:</label>
                                     <div class="info-value">
-                                        <span class="status-badge" [ngClass]="getStatusClass(selectedRequestForRolls.status)">
-                                            {{ getDisplayStatus(selectedRequestForRolls.status) }}
+                                        <span class="status-badge" [ngClass]="getStatusClass(selectedRequestForRolls)">
+                                            {{ getDisplayStatus(selectedRequestForRolls) }}
                                         </span>
                                     </div>
                                 </div>

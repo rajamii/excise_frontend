@@ -10,10 +10,9 @@
           </h4>
         </div>
         <div class="header-actions">
-
-          <button class="btn btn-outline-secondary" (click)="goBack()">
-            <i class="bi bi-arrow-left me-2"></i>
-            Back
+          <button class="btn btn-primary" (click)="refreshData()">
+            <i class="bi bi-arrow-clockwise me-2"></i>
+            Refresh
           </button>
         </div>
       </div>
@@ -1654,9 +1653,22 @@
                       <i class="bi bi-box-seam"></i>
                       <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
                     </div>
+                    @if (rollInput.brands && rollInput.brands.length > 0) {
+                    @for (brand of rollInput.brands; track brand.id; let brandIdx = $index) {
+                    <div class="mb-2">
+                      <div class="small fw-semibold mb-1" [style.color]="getBrandColor(brand.colorIndex)">
+                        Brand {{ brandIdx + 1 }}{{ brand.brandName ? ' - ' + brand.brandName : '' }}
+                      </div>
+                      <textarea class="form-control form-control-sm reason-input" [(ngModel)]="brand.damageReason"
+                        placeholder="Enter damage reason for this brand..." rows="2"
+                        [style.border-color]="getBrandColor(brand.colorIndex)"></textarea>
+                    </div>
+                    }
+                    } @else {
                     <textarea class="form-control form-control-sm reason-input" [(ngModel)]="rollInput.damageReason"
                       placeholder="Enter damage reason..." rows="2"
                       [style.border-color]="getRollColor(getCurrentRollIndex(entry))"></textarea>
+                    }
                   </div>
                   }
                   }
@@ -1670,7 +1682,16 @@
                       {{ lockedRoll.cartoonNumber.split('_')[0] }}
                     </div>
                     <div class="damage-reason-text">
+                      @if (lockedRoll.brands && lockedRoll.brands.length > 0) {
+                      @for (brand of lockedRoll.brands; track brand.id; let brandIdx = $index) {
+                      <div class="small">
+                        <strong>Brand {{ brandIdx + 1 }}{{ brand.brandName ? ' - ' + brand.brandName : '' }}:</strong>
+                        {{ brand.damageReason || 'No damage reason provided' }}
+                      </div>
+                      }
+                      } @else {
                       {{ lockedRoll.damageReason || 'No damage reason provided' }}
+                      }
                     </div>
                   </div>
                   }
@@ -1689,7 +1710,16 @@
                     </div>
                     <div class="damage-reason-text"
                       [style.color]="getRollColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])">
+                      @if (lockedRoll.brands && lockedRoll.brands.length > 0) {
+                      @for (brand of lockedRoll.brands; track brand.id; let brandIdx = $index) {
+                      <div class="small">
+                        <strong>Brand {{ brandIdx + 1 }}{{ brand.brandName ? ' - ' + brand.brandName : '' }}:</strong>
+                        {{ brand.damageReason || 'No damage reason provided' }}
+                      </div>
+                      }
+                      } @else {
                       {{ lockedRoll.damageReason || 'No damage reason provided' }}
+                      }
                     </div>
                   </div>
                   }

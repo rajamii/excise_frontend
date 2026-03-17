@@ -1285,7 +1285,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (!this.applicationData) {
             return null;
         }
-        return null;
+
+        const actions = Array.isArray(this.applicationData.allowedActions)
+            ? this.applicationData.allowedActions
+            : [];
+
+        const normalizedActions = actions
+            .map(action => String(action || '').toUpperCase().trim())
+            .filter(action => !!action && action !== 'VIEW');
+
+        return normalizedActions.length ? Array.from(new Set(normalizedActions)) : null;
     }
 
     private canRequestRequisitionCancellation(): boolean {

@@ -100,8 +100,7 @@
         <app-oic-transit-permit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-oic-transit-permit>
 
         <!-- Import the actual components for officer sections -->
-        <app-brands-details *ngIf="selectedSupplyChainSection === 'brands'"></app-brands-details>
-        <app-hologram-monthly-report
+                <app-hologram-monthly-report
           *ngIf="selectedSupplyChainSection === 'monthly-hologram-statement'"></app-hologram-monthly-report>
         <app-hologramdetails
           *ngIf="selectedSupplyChainSection === 'hologram-register'"
@@ -113,6 +112,7 @@
         <app-oicdailyhologramregister
           *ngIf="selectedSupplyChainSection === 'hologram-daily-entry'"></app-oicdailyhologramregister>
         <app-brandwarehouse *ngIf="selectedSupplyChainSection === 'stock-inventory'"></app-brandwarehouse>
+        <app-oic-bl-details *ngIf="selectedSupplyChainSection === 'bl-details'"></app-oic-bl-details>
 
 
         <!-- Additional Hologram Components -->
