@@ -1602,13 +1602,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return this.hologramWalletBalance;
     }
 
-    // Transit, requisition, revalidation and cancellation can involve non-hologram heads.
+    if (tab === 'requisition') {
+      return this.isBreweryUser ? this.breweryWalletBalance : this.exciseWalletBalance;
+    }
+
+    // Transit, revalidation and cancellation use combined non-hologram heads.
     return this.getTotalWalletBalance();
   }
 
   private getWalletLabelForModuleTab(tab: PaymentModuleTab): string {
     if (tab === 'hologram') {
       return 'Hologram Wallet';
+    }
+    if (tab === 'requisition') {
+      return 'Excise / Additional Wallet Balance';
     }
     if (tab === 'transit') {
       return 'Combined Excise and Education Wallet Balance';
