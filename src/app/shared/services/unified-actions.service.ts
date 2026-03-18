@@ -1064,8 +1064,11 @@ export class UnifiedActionsService {
     const hasSpecialConditionalFlag = (stage: any) => {
       const condition = getCondition(stage);
       return condition?.['is_reverted'] === true
+        || condition?.['isReverted'] === true
         || condition?.['has_objections'] === true
-        || condition?.['objections_resolved'] === true;
+        || condition?.['hasObjections'] === true
+        || condition?.['objections_resolved'] === true
+        || condition?.['objectionsResolved'] === true;
     };
 
     const isRejectLike = (stage: any) => {
