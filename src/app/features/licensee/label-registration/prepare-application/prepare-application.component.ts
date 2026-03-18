@@ -22,14 +22,43 @@ import { LabelRegistrationSubmitApplicationComponent } from './steps/submit-appl
   styleUrl: './prepare-application.component.scss'
 })
 export class LabelRegistrationPrepareApplicationComponent implements OnInit {
+  private readonly maintenanceBypassStorageKey = 'label-registration.maintenance.bypass';
+  readonly maintenanceModeEnabled = true;
+  maintenanceBypassEnabled = false;
+
   constructor(private accountService: AccountService) {}
 
   ngOnInit(): void {
+    this.loadMaintenanceBypassState();
+
     const userProfile = this.accountService.getUserProfileSync();
     if (!userProfile) {
       this.accountService.identity(true).subscribe({
         error: (error) => console.error('Failed to load user profile for label registration:', error)
       });
+    }
+  }
+
+  get showMaintenanceOverlay(): boolean {
+    return this.maintenanceModeEnabled && !this.maintenanceBypassEnabled;
+  }
+
+  activateMaintenanceBypass(): void {
+    this.maintenanceBypassEnabled = true;
+    this.persistMaintenanceBypassState();
+  }
+
+  private loadMaintenanceBypassState(): void {
+    if (typeof window === 'undefined') return;
+    this.maintenanceBypassEnabled = window.localStorage.getItem(this.maintenanceBypassStorageKey) === '1';
+  }
+
+  private persistMaintenanceBypassState(): void {
+    if (typeof window === 'undefined') return;
+    if (this.maintenanceBypassEnabled) {
+      window.localStorage.setItem(this.maintenanceBypassStorageKey, '1');
+    } else {
+      window.localStorage.removeItem(this.maintenanceBypassStorageKey);
     }
   }
 }
