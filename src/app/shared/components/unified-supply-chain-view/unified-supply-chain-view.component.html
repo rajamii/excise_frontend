@@ -934,22 +934,29 @@
         }
     </div>
 
-    <!-- Right-side sticky OIC action panel (transit only) -->
-    @if (applicationData && isTransit() && (applicationData['approvedByDisplay'] || applicationData['cancelledByDisplay'])) {
-    <div class="oic-action-sidebar" [class.sidebar-approved]="applicationData['approvedByDisplay'] && !applicationData['cancelledByDisplay']"
-        [class.sidebar-cancelled]="applicationData['cancelledByDisplay']">
+    <!-- Right-side sticky decision panel (transit + rejected requisition) -->
+    @if (shouldShowRightSideDecisionPanel()) {
+    <div class="oic-action-sidebar"
+        [class.sidebar-approved]="!isRightSideDecisionNegative()"
+        [class.sidebar-cancelled]="isRightSideDecisionNegative()">
         <div class="oic-sidebar-inner">
             <div class="oic-sidebar-icon">
-                <i class="bi" [class.bi-check-circle-fill]="!applicationData['cancelledByDisplay']"
-                    [class.bi-x-circle-fill]="applicationData['cancelledByDisplay']"></i>
+                <i class="bi" [class.bi-check-circle-fill]="!isRightSideDecisionNegative()"
+                    [class.bi-x-circle-fill]="isRightSideDecisionNegative()"></i>
             </div>
             <div class="oic-sidebar-label">
-                {{ applicationData['cancelledByDisplay'] ? 'Cancelled By' : 'Approved By' }}
+                {{ getRightSideDecisionLabel() }}
             </div>
             <div class="oic-sidebar-name">
-                {{ applicationData['cancelledByDisplay'] || applicationData['approvedByDisplay'] }}
+                {{ getRightSideDecisionName() }}
             </div>
-            <div class="oic-sidebar-role">Officer In-Charge</div>
+            @if ((isRequisition() && isApplicationRejected()) || hasText(getRightSideDecisionReason())) {
+            <div class="oic-sidebar-reason">
+                <span class="oic-sidebar-reason-label">Reason:</span>
+                <span class="oic-sidebar-reason-text">{{ getRightSideDecisionReason() }}</span>
+            </div>
+            }
+            <div class="oic-sidebar-role">{{ isRequisition() ? 'Workflow' : 'Officer In-Charge' }}</div>
         </div>
     </div>
     }

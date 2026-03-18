@@ -850,6 +850,33 @@
     margin-top: 2px;
   }
 
+  .oic-sidebar-reason {
+    margin-top: 2px;
+    padding: 6px 6px 0;
+    border-top: 1px dashed rgba(255, 255, 255, 0.35);
+    width: 100%;
+    text-align: left;
+  }
+
+  .oic-sidebar-reason-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 2px;
+  }
+
+  .oic-sidebar-reason-text {
+    display: block;
+    font-size: 10px;
+    line-height: 1.25;
+    opacity: 0.95;
+    word-break: break-word;
+    max-height: 72px;
+    overflow: auto;
+  }
+
   &.sidebar-approved {
     background: linear-gradient(160deg, #1a7a3c, #28a745);
     color: #fff;

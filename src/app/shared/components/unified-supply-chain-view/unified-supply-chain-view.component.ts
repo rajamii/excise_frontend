@@ -697,6 +697,17 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
      */
     private addTypeSpecificFields(mappedData: UnifiedApplicationData, apiData: any, config: ServiceConfig): void {
         switch (this.applicationType) {
+            case 'requisition':
+                mappedData['rejectedByDisplay'] = this.resolveRejectedByDisplay(apiData, mappedData);
+                mappedData['cancellationReasonDisplay'] = this.extractFieldValue(apiData, [
+                    'cancellationReasonDisplay',
+                    'cancellation_reason_display',
+                    'cancellation_reason',
+                    'cancellationReason',
+                    'reason'
+                ]) || '';
+                break;
+
             case 'revalidation':
                 mappedData['originalPermitNo'] = mappedData.referenceNo;
                 mappedData['originalPermitDate'] = mappedData.submissionDate;
@@ -835,6 +846,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 // Approved / Cancelled by OIC — from serializer method fields
                 mappedData['approvedByDisplay'] = this.extractFieldValue(apiData, ['approvedByDisplay', 'approved_by_display']) || '';
                 mappedData['cancelledByDisplay'] = this.extractFieldValue(apiData, ['cancelledByDisplay', 'cancelled_by_display']) || '';
+                mappedData['cancelledReasonDisplay'] = this.extractFieldValue(apiData, ['cancelledReasonDisplay', 'cancelled_reason_display']) || '';
                 break;
                 
             case 'hologram':
@@ -919,6 +931,46 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         
         const parsed = new Date(value);
         return isNaN(parsed.getTime()) ? new Date() : parsed;
+    }
+
+    private resolveRejectedByDisplay(apiData: any, mappedData: any): string {
+        const directValue = this.extractFieldValue(apiData, [
+            'rejectedByDisplay',
+            'rejected_by_display',
+            'rejectedBy',
+            'rejected_by',
+            'rejectedByRole',
+            'rejected_by_role'
+        ]);
+        if (this.hasText(directValue)) {
+            return String(directValue).trim();
+        }
+
+        const stageText = String(
+            mappedData?.currentStageName ??
+            apiData?.current_stage_name ??
+            apiData?.currentStageName ??
+            ''
+        ).trim();
+        const statusText = String(mappedData?.status ?? apiData?.status ?? '').trim();
+
+        return this.extractRejectedByFromStageToken(stageText) || this.extractRejectedByFromStageToken(statusText);
+    }
+
+    private extractRejectedByFromStageToken(value: string): string {
+        if (!this.hasText(value)) return '';
+
+        const match = String(value).match(/rejected(?:\s*|_|-)?by(?:\s*|_|-)?(.+)$/i);
+        if (!match?.[1]) return '';
+
+        const roleToken = String(match[1]).replace(/[_-]+/g, ' ').trim();
+        if (!this.hasText(roleToken)) return '';
+
+        return roleToken
+            .split(' ')
+            .filter(Boolean)
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
     }
 
     private extractFieldValue(apiData: any, fieldMappings: string[]): any {
@@ -1430,6 +1482,63 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'REJECTED': STATUS_BADGE_CLASSES.DANGER
         };
         return statusMap[status] || STATUS_BADGE_CLASSES.INFO;
+    }
+
+    isApplicationRejected(): boolean {
+        const status = String(this.applicationData?.status || '').toLowerCase();
+        const stage = String(this.applicationData?.currentStageName || (this.applicationData as any)?.current_stage_name || '').toLowerCase();
+        return status.includes('reject') || stage.includes('reject');
+    }
+
+    getRejectedByDisplayName(): string {
+        const explicit = (this.applicationData as any)?.rejectedByDisplay;
+        if (this.hasText(explicit)) {
+            return String(explicit).trim();
+        }
+
+        const stageText = String(this.applicationData?.currentStageName || (this.applicationData as any)?.current_stage_name || '').trim();
+        const statusText = String(this.applicationData?.status || '').trim();
+        return this.extractRejectedByFromStageToken(stageText) || this.extractRejectedByFromStageToken(statusText);
+    }
+
+    shouldShowRightSideDecisionPanel(): boolean {
+        if (!this.applicationData) return false;
+        if (this.isTransit()) {
+            return this.hasText((this.applicationData as any)?.approvedByDisplay) || this.hasText((this.applicationData as any)?.cancelledByDisplay);
+        }
+        if (this.isRequisition()) {
+            return this.isApplicationRejected() && this.hasText(this.getRejectedByDisplayName());
+        }
+        return false;
+    }
+
+    isRightSideDecisionNegative(): boolean {
+        if (this.isRequisition() && this.isApplicationRejected()) return true;
+        if (this.isTransit() && this.hasText((this.applicationData as any)?.cancelledByDisplay)) return true;
+        return false;
+    }
+
+    getRightSideDecisionLabel(): string {
+        if (this.isRequisition() && this.isApplicationRejected()) return 'Rejected By';
+        return this.hasText((this.applicationData as any)?.cancelledByDisplay) ? 'Cancelled By' : 'Approved By';
+    }
+
+    getRightSideDecisionName(): string {
+        if (this.isRequisition() && this.isApplicationRejected()) {
+            return this.getRejectedByDisplayName();
+        }
+        return String((this.applicationData as any)?.cancelledByDisplay || (this.applicationData as any)?.approvedByDisplay || '').trim();
+    }
+
+    getRightSideDecisionReason(): string {
+        if (this.isRequisition() && this.isApplicationRejected()) {
+            const reason = String((this.applicationData as any)?.cancellationReasonDisplay || '').trim();
+            return reason || 'Not provided';
+        }
+        if (this.isTransit() && this.isRightSideDecisionNegative()) {
+            return String((this.applicationData as any)?.cancelledReasonDisplay || '').trim();
+        }
+        return '';
     }
 
     hasText(value: unknown): boolean {
