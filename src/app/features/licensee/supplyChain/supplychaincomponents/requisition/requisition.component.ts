@@ -585,6 +585,21 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   shouldShowCancelPermit(item: TableData): boolean {
+    // Commissioner dashboard should not expose cancellation initiation.
+    if (this.isCommissioner()) {
+      return false;
+    }
+
+    // For licensee users, hide cancellation initiation after commissioner approval stage.
+    const statusToken = this.normalizeStageToken(item.status);
+    const stageToken = this.normalizeStageToken(item.currentStageName);
+    const isApprovedCommissioner =
+      (statusToken.includes('approved') && statusToken.includes('commissioner')) ||
+      (stageToken.includes('approved') && stageToken.includes('commissioner'));
+    if (isApprovedCommissioner) {
+      return false;
+    }
+
     if (this.canCancelRequisition(item)) {
       return true;
     }

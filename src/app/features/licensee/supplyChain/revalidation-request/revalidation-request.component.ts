@@ -246,7 +246,10 @@ export class RevalidationRequestComponent implements OnInit {
           const walletDeduction = response?.wallet_deduction || response?.walletDeduction;
           const debited = walletDeduction?.debited !== false;
           if (debited) {
-            this.availableWalletBalance = this.getBalanceAfterDeduction();
+            const balanceAfter = Number(walletDeduction?.balance_after ?? walletDeduction?.balanceAfter);
+            this.availableWalletBalance = Number.isFinite(balanceAfter)
+              ? balanceAfter
+              : this.getBalanceAfterDeduction();
             this.showMessage('Revalidation request submitted successfully!', 'success');
           } else {
             const reason = walletDeduction?.reason || 'Wallet was not debited';
