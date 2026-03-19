@@ -221,7 +221,7 @@
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
               <button
-                *ngIf="!isCommissioner() && !isPermitSection() && canCancelRequisition(item)"
+                *ngIf="shouldShowCancelPermit(item)"
                 type="button"
                 class="btn btn-sm mt-2 cancel-permit-btn"
                 (click)="openCancellationModal(item)">

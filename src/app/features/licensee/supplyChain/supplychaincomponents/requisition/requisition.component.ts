@@ -537,7 +537,29 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   canCancelRequisition(item: TableData): boolean {
+    const allowed = (item.allowedActions || []).map(a => String(a || '').toUpperCase());
+    if (allowed.includes('REQUEST_CANCELLATION')) {
+      return true;
+    }
+    const allowedConfigs = (item.allowedActionConfigs || []).map((c: any) => String(c?.action || '').toUpperCase());
+    if (allowedConfigs.includes('REQUEST_CANCELLATION')) {
+      return true;
+    }
+    const backendFlag = item.canInitiateCancellation;
+    if (backendFlag === true) {
+      return true;
+    }
+    if (backendFlag === false) {
+      return false;
+    }
     const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    // Fallback: show cancel for approved requisitions when backend flags are missing.
+    if (status.includes('approved') && !status.includes('cancel')) {
+      const hasRevalidationOnSameRef = this.hasActiveRevalidationOnSameRef(item);
+      if (!hasRevalidationOnSameRef) {
+        return true;
+      }
+    }
 
     const isFinalApproved = this.isCommissionerFinalApproval(item);
 
@@ -560,6 +582,17 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
     console.log('canCancelRequisition: Cancellation allowed (final approved stage)');
     return true;
+  }
+
+  shouldShowCancelPermit(item: TableData): boolean {
+    if (this.canCancelRequisition(item)) {
+      return true;
+    }
+    const status = (item.status || '').toLowerCase();
+    if (status.includes('approved') && !status.includes('cancel')) {
+      return true;
+    }
+    return false;
   }
 
   hasPaymentBeenMade(item: TableData): boolean {
