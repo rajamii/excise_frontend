@@ -46,11 +46,13 @@ export class RevalidationRequestComponent implements OnInit {
   walletErrorMessage = '';
   isWalletLoading = false;
   isSubmittingRevalidation = false;
+  isRevalidationReady = false;
   showDeclaration = false;
   showWalletConfirmation = false;
   walletDeclarationAccepted = false;
   currentStatus = '';
   currentAllowedActions: string[] = [];
+  currentRevalidationId = '';
 
   displayData: DisplayData = {
     refNo: '',
@@ -88,22 +90,42 @@ export class RevalidationRequestComponent implements OnInit {
   private loadRevalidationData(id: string) {
     this.supplyChainService.getRevalidationDetail(id).subscribe({
       next: (data) => {
-        this.currentStatus = data.status || '';
-        this.currentAllowedActions = data.allowedActions || data.allowed_actions || [];
-        this.displayData = {
-          refNo: data.ourRefNo || data.our_ref_no,
-          date: new Date(data.revalidationDate || data.revalidation_date),
-          totalENA: data.totalBl || data.total_bl,
-          bulk_spirit_type: data.strength || data.bulk_spirit_type || '',
-          permitNumbers: (data.requisitonNumberOfPermits || data.requisiton_number_of_permits || '0').toString(),
-          permitDate: new Date(data.requisitionDate || data.requisition_date),
-          expiryDate: new Date(data.revalidationDate || data.revalidation_date),
-        };
+        this.applyRevalidationData(data);
       },
-      error: (error) => {
-        this.showMessage('Error loading data: ' + error.message, 'danger');
+      error: () => {
+        const ref = this.route.snapshot.queryParams['ref'];
+        this.supplyChainService.createRevalidationFromRequisition(id, ref).subscribe({
+          next: (response) => {
+            const data = response?.data || response;
+            this.applyRevalidationData(data);
+          },
+          error: (error) => {
+            this.showMessage('Error loading data: ' + (error?.message || 'Unable to load revalidation.'), 'danger');
+          }
+        });
       },
     });
+  }
+
+  private applyRevalidationData(data: any) {
+    if (!data) {
+      this.showMessage('Revalidation data not available.', 'danger');
+      return;
+    }
+
+    this.currentRevalidationId = String(data.id || data.pk || '').trim();
+    this.currentStatus = data.status || '';
+    this.currentAllowedActions = data.allowedActions || data.allowed_actions || [];
+    this.isRevalidationReady = !!this.currentRevalidationId;
+    this.displayData = {
+      refNo: data.ourRefNo || data.our_ref_no || this.displayData.refNo,
+      date: new Date(data.revalidationDate || data.revalidation_date || Date.now()),
+      totalENA: data.totalBl || data.total_bl || '0',
+      bulk_spirit_type: data.strength || data.bulk_spirit_type || '',
+      permitNumbers: (data.requisitonNumberOfPermits || data.requisiton_number_of_permits || '0').toString(),
+      permitDate: new Date(data.requisitionDate || data.requisition_date || Date.now()),
+      expiryDate: new Date(data.revalidationDate || data.revalidation_date || Date.now()),
+    };
   }
 
   private fetchProfile() {
@@ -202,29 +224,56 @@ export class RevalidationRequestComponent implements OnInit {
       return;
     }
 
-    const id = this.route.snapshot.queryParams['id'];
-    if (!id) {
+    const routeId = this.route.snapshot.queryParams['id'];
+    const routeRef = this.route.snapshot.queryParams['ref'];
+    const id = this.currentRevalidationId;
+    if (!id && !routeId) {
       this.showMessage('No Revalidation ID found to submit.', 'danger');
       return;
     }
 
     this.isSubmittingRevalidation = true;
 
-    this.supplyChainService.submitRevalidation(id).subscribe({
-      next: () => {
-        this.showWalletConfirmation = false;
-        this.walletDeclarationAccepted = false;
-        this.availableWalletBalance = this.getBalanceAfterDeduction();
-        this.showMessage('Revalidation request submitted successfully!', 'success');
+    const submitWithId = (revalidationId: string) => {
+      this.supplyChainService.submitRevalidation(revalidationId).subscribe({
+        next: () => {
+          this.showWalletConfirmation = false;
+          this.walletDeclarationAccepted = false;
+          this.availableWalletBalance = this.getBalanceAfterDeduction();
+          this.showMessage('Revalidation request submitted successfully!', 'success');
 
-        setTimeout(() => {
-          this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });
-        }, 1500);
+          setTimeout(() => {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });
+          }, 1500);
+        },
+        error: (error) => {
+          console.error('Submission error:', error);
+          const errMsg = error.error?.message || error.error?.error || error.message || 'Unknown error';
+          this.showMessage('Failed to submit revalidation: ' + errMsg, 'danger');
+          this.isSubmittingRevalidation = false;
+        }
+      });
+    };
+
+    if (id) {
+      submitWithId(id);
+      return;
+    }
+
+    this.supplyChainService.createRevalidationFromRequisition(routeId, routeRef).subscribe({
+      next: (response) => {
+        const data = response?.data || response;
+        this.applyRevalidationData(data);
+        if (!this.currentRevalidationId) {
+          this.showMessage('Unable to resolve revalidation id for submission.', 'danger');
+          this.isSubmittingRevalidation = false;
+          return;
+        }
+        submitWithId(this.currentRevalidationId);
       },
       error: (error) => {
-        console.error('Submission error:', error);
         const errMsg = error.error?.message || error.error?.error || error.message || 'Unknown error';
-        this.showMessage('Failed to submit revalidation: ' + errMsg, 'danger');
+        this.showMessage('Failed to prepare revalidation submission: ' + errMsg, 'danger');
         this.isSubmittingRevalidation = false;
       }
     });
@@ -250,8 +299,10 @@ export class RevalidationRequestComponent implements OnInit {
 
   canSubmitRevalidation(): boolean {
     const normalizedStatus = String(this.currentStatus || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    return this.currentAllowedActions.includes('REQUEST_REVALIDATION') ||
-      normalizedStatus === 'importpermitextends45daysinvalid';
+    return this.isRevalidationReady && (
+      this.currentAllowedActions.includes('REQUEST_REVALIDATION') ||
+      normalizedStatus === 'importpermitextends45daysinvalid'
+    );
   }
 
   formatCurrency(amount: number): string {
