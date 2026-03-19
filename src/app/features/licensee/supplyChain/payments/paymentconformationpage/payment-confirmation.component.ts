@@ -2378,9 +2378,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   getRowsForTab(tab: WalletTableTab): any[] {
     switch (tab) {
       case 'requisition':
+        return this.getPaymentTransactionsFor('requisition');
       case 'revalidation':
+        return this.getPaymentTransactionsFor('revalidation');
       case 'cancellation':
+        return this.getPaymentTransactionsFor('cancellation');
       case 'transit':
+        return this.getPaymentTransactionsFor('transit');
       case 'hologram':
         return this.getHologramTabRows();
       case 'recharge':

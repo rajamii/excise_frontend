@@ -216,7 +216,11 @@ export class RevalidationRequestComponent implements OnInit {
     });
   }
 
-  submitRevalidation() {
+  submitRevalidation(event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     if (this.isSubmittingRevalidation) {
       return;
     }
@@ -236,11 +240,18 @@ export class RevalidationRequestComponent implements OnInit {
 
     const submitWithId = (revalidationId: string) => {
       this.supplyChainService.submitRevalidation(revalidationId).subscribe({
-        next: () => {
+        next: (response) => {
           this.showWalletConfirmation = false;
           this.walletDeclarationAccepted = false;
-          this.availableWalletBalance = this.getBalanceAfterDeduction();
-          this.showMessage('Revalidation request submitted successfully!', 'success');
+          const walletDeduction = response?.wallet_deduction || response?.walletDeduction;
+          const debited = walletDeduction?.debited !== false;
+          if (debited) {
+            this.availableWalletBalance = this.getBalanceAfterDeduction();
+            this.showMessage('Revalidation request submitted successfully!', 'success');
+          } else {
+            const reason = walletDeduction?.reason || 'Wallet was not debited';
+            this.showMessage(`Revalidation submitted. ${reason}.`, 'success');
+          }
 
           setTimeout(() => {
             this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });

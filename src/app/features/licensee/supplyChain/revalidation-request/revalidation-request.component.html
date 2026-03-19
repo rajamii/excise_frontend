@@ -74,6 +74,7 @@
   <div class="btn-group-custom no-print">
     <button
       *ngIf="canSubmitRevalidation()"
+      type="button"
       class="btn btn-success px-4"
       [disabled]="isSubmittingRevalidation"
       (click)="showDeclarationModal()"
@@ -86,7 +87,7 @@
       ></span>
       {{ isSubmittingRevalidation ? 'Submitting...' : 'Submit for Revalidation' }}
     </button>
-    <button class="btn btn-outline-secondary" (click)="goBack()">Back</button>
+    <button type="button" class="btn btn-outline-secondary" (click)="goBack()">Back</button>
   </div>
 
   <div
@@ -230,7 +231,7 @@
             type="button"
             class="btn btn-success"
             [disabled]="!canProceedWithWalletConfirmation()"
-            (click)="submitRevalidation()"
+            (click)="submitRevalidation($event)"
           >
             <span
               *ngIf="isSubmittingRevalidation"
