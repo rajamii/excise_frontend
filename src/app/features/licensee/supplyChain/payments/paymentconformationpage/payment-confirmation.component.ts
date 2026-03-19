@@ -114,6 +114,12 @@ interface PendingWalletPaymentContext {
   amount: number;
 }
 
+type HologramTabRow = HistoryItem & {
+  canPay?: boolean;
+  procurementId?: string;
+  hologramItem?: HologramItem;
+};
+
 interface PendingWalletPaymentPreview {
   moduleLabel: string;
   walletLabel: string;
@@ -881,7 +887,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               localQty,
               exportQty,
               defenceQty,
-              paymentDate: paidAt
+              paymentDate: paidAt,
+              paymentDetails,
+              paymentStatus: normalizedStatus
             } as HologramItem;
           })
           .filter(item => !!item.referenceNo);
@@ -1311,6 +1319,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   shouldShowPendingPaymentInTab(tab: PaymentModuleTab): boolean {
     const context = this.pendingWalletPaymentContext;
     if (!context) return false;
+    if (context.tab === 'hologram' && tab === 'hologram') {
+      return this.activeTab === tab && !this.hasHologramRowForReference(context.referenceNo);
+    }
     return context.tab === tab && this.activeTab === tab;
   }
 
@@ -2274,6 +2285,87 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }).sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
   }
 
+  openHologramPaymentFromRow(row: HologramTabRow): void {
+    const item = row?.hologramItem;
+    if (!item) return;
+    const id = String(item.id || '').trim();
+    const amount = Number(item.hologramFee || 0);
+    if (!id || !Number.isFinite(amount) || amount <= 0) return;
+
+    this.pendingWalletPaymentContext = {
+      id,
+      tab: 'hologram',
+      itemType: 'hologram',
+      referenceNo: String(item.referenceNo || '-'),
+      amount
+    };
+    this.hasHandledPendingWalletPayment = false;
+    this.setActiveTab('hologram');
+    this.persistPendingPaymentContextToStorage();
+    this.openPendingWalletPaymentConfirmation();
+  }
+
+  private hasHologramRowForReference(refNo: string): boolean {
+    const ref = String(refNo || '').trim().toUpperCase();
+    if (!ref) return false;
+    return this.hologramData.some(item => String(item?.referenceNo || '').trim().toUpperCase() === ref);
+  }
+
+  private getHologramTabRows(): HologramTabRow[] {
+    const historyRows = this.getPaymentTransactionsFor('hologram');
+    const historyByRef = new Map<string, HistoryItem>();
+    for (const row of historyRows) {
+      const ref = String(row?.reference || '').trim().toUpperCase();
+      if (!ref) continue;
+      const existing = historyByRef.get(ref);
+      if (!existing || new Date(row.dateTime).getTime() > new Date(existing.dateTime).getTime()) {
+        historyByRef.set(ref, row);
+      }
+    }
+
+    const rows: HologramTabRow[] = [];
+    const seenRefs = new Set<string>();
+
+    for (const item of this.hologramData) {
+      const ref = String(item?.referenceNo || '').trim();
+      if (!ref) continue;
+      const refKey = ref.toUpperCase();
+      const history = historyByRef.get(refKey);
+      const canPay = this.canPayHologram(item);
+      const isPaid = !canPay;
+      const dateTime = history?.dateTime || item.paymentDate || new Date();
+      const status = history?.status || (isPaid ? 'Payment Successful' : 'Pending');
+      const type = history?.type || (isPaid ? 'Wallet Utilization' : 'Pending Payment');
+      const amount = Number(history?.amount ?? item.hologramFee ?? 0);
+      const txnId = history?.txnId || history?.reference || '-';
+
+      rows.push({
+        id: history?.id || String(item.id || ref),
+        txnId,
+        type,
+        paymentFor: history?.paymentFor || 'Hologram Procurement',
+        amount,
+        reference: ref,
+        status,
+        dateTime,
+        licenseeId: history?.licenseeId || this.activeLicenseeId || '-',
+        userId: history?.userId || '-',
+        canPay,
+        procurementId: String(item.id || ''),
+        hologramItem: item
+      });
+      seenRefs.add(refKey);
+    }
+
+    for (const row of historyRows) {
+      const ref = String(row?.reference || '').trim().toUpperCase();
+      if (ref && seenRefs.has(ref)) continue;
+      rows.push({ ...row });
+    }
+
+    return rows.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+  }
+
   private isWalletTableTab(value: string): value is WalletTableTab {
     return ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'recharge', 'history'].includes(String(value || '').toLowerCase());
   }
@@ -2290,7 +2382,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       case 'cancellation':
       case 'transit':
       case 'hologram':
-        return this.getPaymentTransactionsFor(tab);
+        return this.getHologramTabRows();
       case 'recharge':
         return [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       case 'history':

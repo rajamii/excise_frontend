@@ -339,7 +339,15 @@
               <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
-              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
+              <td class="text-end">
+                @if (item.canPay) {
+                <button class="btn btn-success btn-sm" (click)="openHologramPaymentFromRow(item)">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+                } @else {
+                {{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}
+                }
+              </td>
             </tr>
             }
             @if (getRowsForTab('hologram').length === 0) {
