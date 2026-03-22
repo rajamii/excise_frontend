@@ -19,21 +19,23 @@ export interface CompanyCollaborationBrandOwner {
   factory_address?: string;
   mobile?: string;
   email?: string;
+  owner_type?: string;
   members?: CompanyCollaborationMember[];
 }
 
 export interface CompanyCollaborationBrand {
-  id: number;
+  id: number | string;
   brand_code: string;
   brand_name: string;
   category: string;
+  kind?: string;
   type: string;
-  strength: number;
-  sizes: string[];
   brand_owner_code?: string;
   status?: string;
-  kind?: string;
-  selectedSizes?: string[];
+  // Raw FK IDs for reliable filtering
+  liquorCatCode?: number;
+  liquorKindId?: number;
+  liquorTypeId?: number;
 }
 
 export interface CompanyCollaborationBottlerDetails {
@@ -87,11 +89,31 @@ export interface CompanyCollaborationSubmission {
   submittedAt: string;
   mode: 'online' | 'local';
   totalAmount: number;
-  collaborationId?: string;
 }
 
-export const COMPANY_COLLAB_STORAGE_KEYS = {
-  bottlerDetails: 'companyCollabBottlerDetails',
+export interface LiquorCategory {
+  liquorCatCode: number;
+  liquorCatDesc: string;
+  liquorCatAbbr: string;
+}
+
+export interface LiquorKind {
+  id: number;
+  liquorCatCode: number;
+  liquorKindCode: number;
+  liquorKindDesc: string;
+  liquorKindAbbr: string;
+}
+
+export interface LiquorType {
+  id: number;
+  liquorCatCode: number;
+  liquorKindId: number;
+  liquorTypeCode: number;
+  liquorTypeDesc: string;
+}
+
+export const COMPANY_COLLAB_STORAGE_KEYS = {  bottlerDetails: 'companyCollabBottlerDetails',
   companyDetails: 'companyCollabCompanyDetails',
   selectedBrandIds: 'companyCollabSelectedBrandIds',
   selectedBrands: 'companyCollabSelectedBrands',

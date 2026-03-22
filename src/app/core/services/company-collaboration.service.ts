@@ -9,6 +9,10 @@ import {
   CompanyCollaborationFeeStructure
 } from '../models/company-collaboration.model';
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function unwrapArray<T>(response: any, context: string): T[] {
   if (Array.isArray(response)) return response as T[];
   if (response && typeof response === 'object') {
@@ -26,50 +30,72 @@ function unwrapArray<T>(response: any, context: string): T[] {
   return [];
 }
 
+/**
+ * Maps a master_brand_owner row (after camelCase conversion by DRF middleware) to
+ * the CompanyCollaborationBrandOwner interface.
+ *
+ * Master serializer fields (camelCase after middleware):
+ *   brandOwnerCode, brandOwnerName, brandOwnerTypeDesc, brandOwnerMobileNo,
+ *   brandOwnerCompanyAddress, brandOwnerAddress, brandOwnerPan, brandOwnerEmail,
+ *   enableStatus, liquorBownerCode
+ */
 function normalizeBrandOwner(raw: any): CompanyCollaborationBrandOwner {
   return {
-    id:                raw.id,
-    brand_owner_code:  raw.brandOwnerCode  ?? raw.brand_owner_code  ?? '',
-    company_name:      raw.companyName     ?? raw.company_name      ?? raw.brandOwner ?? '',
-    company_address:   raw.companyAddress  ?? raw.company_address   ?? '',
-    location:          raw.location        ?? '',
-    status:            raw.status          ?? '',
-    brand_count:       raw.brandCount      ?? raw.brand_count       ?? 0,
-    pan_no:            raw.panNo           ?? raw.pan_no            ?? '',
-    office_address:    raw.officeAddress   ?? raw.office_address    ?? raw.companyAddress ?? raw.company_address ?? '',
-    factory_address:   raw.factoryAddress  ?? raw.factory_address   ?? '',
-    mobile:            raw.mobile          ?? raw.phone             ?? '',
-    email:             raw.email           ?? '',
-    members:           raw.members         ?? []
+    id:              raw.brandOwnerCode   ?? raw.brand_owner_code   ?? '',
+    brand_owner_code: raw.brandOwnerCode  ?? raw.brand_owner_code   ?? '',
+    company_name:    raw.brandOwnerName   ?? raw.brand_owner_name   ?? '',
+    company_address: raw.brandOwnerCompanyAddress ?? raw.brand_owner_company_address ?? '',
+    office_address:  raw.brandOwnerCompanyAddress ?? raw.brand_owner_company_address ?? '',
+    factory_address: raw.brandOwnerAddress        ?? raw.brand_owner_address         ?? '',
+    pan_no:          raw.brandOwnerPan    ?? raw.brand_owner_pan    ?? '',
+    mobile:          raw.brandOwnerMobileNo ?? raw.brand_owner_mobile_no ?? '',
+    email:           raw.brandOwnerEmail  ?? raw.brand_owner_email  ?? '',
+    owner_type:      raw.brandOwnerTypeDesc ?? raw.brand_owner_type_desc ?? '',
+    location:        '',
+    status:          raw.enableStatus === 'E' || raw.enable_status === 'E' ? 'Active' : 'Inactive',
+    brand_count:     0,
+    members:         []
   };
 }
 
+/**
+ * Maps a master_liquor_brand row (after camelCase conversion) to
+ * the CompanyCollaborationBrand interface.
+ *
+ * Master serializer fields (camelCase after middleware):
+ *   liquorBrandCode, liquorBrandDesc, liquorCatDesc, liquorKindDesc,
+ *   liquorKindAbbr (via LiquorKindSerializer), liquorTypeDesc, deleteStatus
+ */
 function normalizeBrand(raw: any): CompanyCollaborationBrand {
-  let sizes: string[] = [];
-  const rawSizes = raw.sizes ?? raw.capacitySize ?? raw.capacity_size ?? raw.packSizes ?? raw.pack_sizes;
-  if (Array.isArray(rawSizes))           sizes = rawSizes.map(String).filter(Boolean);
-  else if (typeof rawSizes === 'string') sizes = rawSizes.split(',').map((s: string) => s.trim()).filter(Boolean);
-  else if (rawSizes != null)             sizes = [String(rawSizes)];
-
   return {
-    id:               raw.id,
-    brand_code:       raw.brandCode       ?? raw.brand_code       ?? String(raw.id ?? ''),
-    brand_name:       raw.brandName       ?? raw.brand_name       ?? raw.brandDetails ?? raw.brand_details ?? '',
-    category:         raw.category        ?? raw.distilleryName   ?? raw.distillery_name ?? '',
-    type:             raw.brandType       ?? raw.brand_type       ?? raw.type ?? '',
-    strength:         raw.strength        ?? 0,
-    sizes,
-    brand_owner_code: raw.brandOwnerCode  ?? raw.brand_owner_code ?? '',
-    status:           raw.status          ?? ''
+    id:               raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? raw.id ?? '',
+    brand_code:       raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? String(raw.id ?? ''),
+    brand_name:       raw.liquorBrandDesc  ?? raw.liquor_brand_desc  ?? '',
+    category:         raw.liquorCatDesc    ?? raw.liquor_cat_desc    ?? '',
+    kind:             raw.liquorKindAbbr   ?? raw.liquor_kind_abbr   ?? raw.liquorKindDesc ?? raw.liquor_kind_desc ?? '',
+    type:             raw.liquorTypeDesc   ?? raw.liquor_type_desc   ?? '',
+    brand_owner_code: raw.brandNameAlias   ?? raw.brand_name_alias   ?? '',
+    status:           raw.deleteStatus === 'N' || raw.delete_status === 'N' ? 'Active' : 'Inactive',
+    liquorCatCode:    raw.liquorCat        ?? raw.liquor_cat         ?? undefined,
+    liquorKindId:     raw.liquorKind       ?? raw.liquor_kind        ?? undefined,
+    liquorTypeId:     raw.liquorType       ?? raw.liquor_type        ?? undefined,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
 
 @Injectable({ providedIn: 'root' })
 export class CompanyCollaborationService {
-  private baseUrl = `${environment.apiBaseUrl}/transactional/company-collaboration`;
+  private baseUrl     = `${environment.apiBaseUrl}/transactional/company-collaboration`;
+  private mastersUrl  = `${environment.apiBaseUrl}/masters/company-collaboration`;
+
   private selectedBrands: CompanyCollaborationBrand[] = [];
 
   constructor(private http: HttpClient) {}
+
+  // ── Application lifecycle ──────────────────────────────────────────────────
 
   applyCompanyCollaboration(data: FormData): Observable<any> {
     return this.http.post(`${this.baseUrl}/apply/`, data);
@@ -91,13 +117,17 @@ export class CompanyCollaborationService {
     return this.http.get(`${this.baseUrl}/list-by-status/`);
   }
 
+  // ── Master data ────────────────────────────────────────────────────────────
+
+  /**
+   * GET /masters/company-collaboration/brand-owners/
+   * Returns enabled brand owners from master_brand_owner.
+   */
   getBrandOwners(): Observable<CompanyCollaborationBrandOwner[]> {
-    return this.http.get<any>(`${this.baseUrl}/brand-owners/`).pipe(
+    return this.http.get<any>(`${this.mastersUrl}/brand-owners/`).pipe(
       map((response) => {
         const raw = unwrapArray<any>(response, 'getBrandOwners');
-        const normalized = raw.map(normalizeBrandOwner);
-        console.log('[CompanyCollaborationService] getBrandOwners normalized:', normalized);
-        return normalized;
+        return raw.map(normalizeBrandOwner);
       }),
       catchError((err) => {
         console.error('[CompanyCollaborationService] getBrandOwners failed:', err);
@@ -106,32 +136,73 @@ export class CompanyCollaborationService {
     );
   }
 
-  getBrandsByOwner(brandOwnerCode: string, brandOwnerName?: string): Observable<CompanyCollaborationBrand[]> {
-    let params = new HttpParams().set('brand_owner_code', brandOwnerCode);
-    if (brandOwnerName) params = params.set('brand_owner_name', brandOwnerName);
+  /**
+   * GET /masters/company-collaboration/liquor-brands/
+   * Returns all active brands. Optionally filtered by cat/kind/type IDs.
+   */
+  getBrands(catCode?: number | string, kindId?: number | string, typeId?: number | string): Observable<CompanyCollaborationBrand[]> {
+    let params = new HttpParams();
+    if (catCode)  params = params.set('cat',  String(catCode));
+    if (kindId)   params = params.set('kind', String(kindId));
+    if (typeId)   params = params.set('type', String(typeId));
 
-    return this.http.get<any>(`${this.baseUrl}/brands/`, { params }).pipe(
-      map((response) => {
-        const raw = unwrapArray<any>(response, 'getBrandsByOwner');
-        const normalized = raw.map(normalizeBrand);
-        console.log('[CompanyCollaborationService] getBrandsByOwner normalized:', normalized);
-        return normalized;
-      }),
+    return this.http.get<any>(`${this.mastersUrl}/liquor-brands/`, { params }).pipe(
+      map((response) => unwrapArray<any>(response, 'getBrands').map(normalizeBrand)),
       catchError((err) => {
-        console.error('[CompanyCollaborationService] getBrandsByOwner failed:', err);
+        console.error('[CompanyCollaborationService] getBrands failed:', err);
         return throwError(() => err);
       })
     );
   }
 
-  getFeeStructure(brandIds: Array<string | number>, selectedBrands: CompanyCollaborationBrand[] = []): Observable<CompanyCollaborationFeeStructure> {
-    return this.http.post<any>(`${this.baseUrl}/fee-structure/`, { brandIds, selectedBrands }).pipe(
+
+  /**
+   * GET /masters/company-collaboration/liquor-categories/
+   */
+  getLiquorCategories(): Observable<any[]> {
+    return this.http.get<any>(`${this.mastersUrl}/liquor-categories/`).pipe(
+      map((r) => unwrapArray<any>(r, 'getLiquorCategories')),
+      catchError((err) => { console.error('[CompanyCollaborationService] getLiquorCategories failed:', err); return throwError(() => err); })
+    );
+  }
+
+  /**
+   * GET /masters/company-collaboration/liquor-kinds/?cat=<catCode>
+   */
+  getLiquorKinds(catCode?: number | string): Observable<any[]> {
+    let params = new HttpParams();
+    if (catCode) params = params.set('cat', String(catCode));
+    return this.http.get<any>(`${this.mastersUrl}/liquor-kinds/`, { params }).pipe(
+      map((r) => unwrapArray<any>(r, 'getLiquorKinds')),
+      catchError((err) => { console.error('[CompanyCollaborationService] getLiquorKinds failed:', err); return throwError(() => err); })
+    );
+  }
+
+  /**
+   * GET /masters/company-collaboration/liquor-types/?cat=<catCode>&kind=<kindId>
+   */
+  getLiquorTypes(catCode?: number | string, kindId?: number | string): Observable<any[]> {
+    let params = new HttpParams();
+    if (catCode) params = params.set('cat',  String(catCode));
+    if (kindId)  params = params.set('kind', String(kindId));
+    return this.http.get<any>(`${this.mastersUrl}/liquor-types/`, { params }).pipe(
+      map((r) => unwrapArray<any>(r, 'getLiquorTypes')),
+      catchError((err) => { console.error('[CompanyCollaborationService] getLiquorTypes failed:', err); return throwError(() => err); })
+    );
+  }
+
+  /**
+   * GET /masters/company-collaboration/fee/
+   * Returns the active fee structure from master_brand_owner_fee.
+   */
+  getFeeStructure(): Observable<CompanyCollaborationFeeStructure> {
+    return this.http.get<any>(`${this.mastersUrl}/fee/`).pipe(
       map((response): CompanyCollaborationFeeStructure => {
-        const payload = response?.data ?? response?.fee ?? response ?? {};
+        const payload = response?.data ?? response ?? {};
         return {
-          applicationFee:   Number(payload.applicationFee   ?? payload.application_fee   ?? 0),
-          collaborationFee: Number(payload.collaborationFee ?? payload.collaboration_fee ?? 0),
-          securityDeposit:  Number(payload.securityDeposit  ?? payload.security_deposit  ?? 0)
+          applicationFee:   Number(payload.registrationFee   ?? payload.registration_fee   ?? payload.applicationFee   ?? payload.application_fee   ?? 0),
+          collaborationFee: Number(payload.collaborationFees ?? payload.collaboration_fees  ?? payload.collaborationFee ?? payload.collaboration_fee  ?? 0),
+          securityDeposit:  Number(payload.securityDeposit   ?? payload.security_deposit   ?? 0)
         };
       }),
       catchError((err) => {
@@ -140,6 +211,9 @@ export class CompanyCollaborationService {
       })
     );
   }
+
+
+  // ── Selected brands state ──────────────────────────────────────────────────
 
   setSelectedBrands(brands: CompanyCollaborationBrand[]): void { this.selectedBrands = [...brands]; }
   getSelectedBrands(): CompanyCollaborationBrand[] { return this.selectedBrands; }
