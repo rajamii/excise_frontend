@@ -19,9 +19,13 @@ export class InactivityService {
   private configRefreshInterval?: ReturnType<typeof setInterval>;
   private readonly activityEvents: Array<keyof WindowEventMap> = [
     'mousedown',
+    'mousemove',
+    'pointerdown',
+    'pointermove',
     'keydown',
     'touchstart',
-    'click'
+    'click',
+    'wheel'
   ];
 
   private warningTimeout?: ReturnType<typeof setTimeout>;
@@ -30,11 +34,22 @@ export class InactivityService {
   private trackingEnabled = false;
   private isLoggingOut = false;
   private warningVisible = false;
+  private lastHighFreqActivityAtMs = 0;
+  private readonly highFreqActivityThrottleMs = 1000;
   private readonly activityHandler = (event?: Event) => {
     // Ignore synthetic/untrusted events that can be emitted by scripts/animations,
     // otherwise the timer keeps resetting and the warning never shows.
     if (event && 'isTrusted' in event && (event as any).isTrusted === false) {
       return;
+    }
+
+    const eventType = event?.type ?? '';
+    if (this.isHighFrequencyActivityEvent(eventType)) {
+      const now = Date.now();
+      if (now - this.lastHighFreqActivityAtMs < this.highFreqActivityThrottleMs) {
+        return;
+      }
+      this.lastHighFreqActivityAtMs = now;
     }
     this.onUserActivity();
   };
@@ -101,6 +116,12 @@ export class InactivityService {
     }
 
     this.startInactivityCycle();
+  }
+
+  private isHighFrequencyActivityEvent(eventType: string): boolean {
+    // Mouse/pointer movement and wheel events can fire many times per second.
+    // Throttle them so we don't continually clear/set timers during active use.
+    return eventType === 'mousemove' || eventType === 'pointermove' || eventType === 'wheel';
   }
 
   private loadConfigAndStart(attempt = 0): void {
