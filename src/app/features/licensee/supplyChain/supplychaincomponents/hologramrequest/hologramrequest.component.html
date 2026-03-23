@@ -162,6 +162,16 @@
               <div class="date-display">
                 <span class="date-main">{{ request.usageDate | date: "dd/MM/yyyy" }}</span>
                 <span class="date-day">{{ request.usageDate | date: "EEE" }}</span>
+                @if (shouldShowUsageDateApprovalNotice(request)) {
+                <span class="usage-activation-hint">OIC can approve &amp; start production on this date</span>
+                }
+                @if (shouldShowUsageDateMissedNotice(request)) {
+                <span class="missed-action-hint">
+                  Not approved on usage date
+                  <br>
+                  No action taken
+                </span>
+                }
               </div>
             </td>
             <td class="type">

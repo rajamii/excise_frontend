@@ -18,6 +18,7 @@ interface HologramRoll {
   damagedCount: number;
   status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
   receivedDate: string;
+  receivedBy?: string;
   isNew?: boolean;
   newUntil?: number;
   usageHistory?: any[]; // Add usage history for Rolls tab
@@ -44,6 +45,7 @@ interface SerialRange {
   productionLine?: string;
   damageReason?: string;
   reportedBy?: string;
+  updatedBy?: string;
   brandDetails?: string;
   bottleSize?: string;
 }
@@ -348,6 +350,17 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           damagedCount: roll.damaged || 0,
           status: roll.status as 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED',
           receivedDate: roll.receivedDate || roll.received_date,
+          receivedBy: (() => {
+            const picked = this.pickDisplayOfficer(
+              roll.received_by_name,
+              roll.receivedByName,
+              roll.received_by_display_name,
+              roll.receivedByDisplayName,
+              roll.received_by_username,
+              roll.receivedByUsername
+            );
+            return picked === 'Pending' ? '' : picked;
+          })(),
           isNew: roll.isNew || roll.is_new || false,
           newUntil: roll.newUntil || roll.new_until,
           usageHistory: roll.usageHistory || roll.usage_history || [],
@@ -1217,9 +1230,56 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       productionLine: range.productionLine || range.production_line || 'N/A',
       damageReason: range.damageReason || range.damage_reason,
       reportedBy: range.reportedBy || range.reported_by,
+      updatedBy: this.pickDisplayOfficer(
+        range.updated_by_name,
+        range.updatedByName,
+        range.updated_by_display_name,
+        range.updatedByDisplayName,
+        range.reportedBy,
+        range.reported_by
+      ),
       brandDetails: resolvedBrand || '',
       bottleSize: range.bottleSize || range.bottle_size || ''
     };
+  }
+
+  getRangeUpdatedBy(range: SerialRange): string {
+    const direct = String(range?.updatedBy || '').trim();
+    if (direct && direct.toLowerCase() !== 'pending') {
+      return direct;
+    }
+
+    const ref = String(range?.referenceNo || '').trim();
+    if (!ref || ref.toUpperCase() === 'N/A') {
+      return '';
+    }
+
+    // Prefer grouped history row (already normalized to display names)
+    const fromHistory = this.historyData?.find((h: any) => String(h?.requestReference || '').trim() === ref)?.officer;
+    const historyName = String(fromHistory || '').trim();
+    if (historyName && historyName.toLowerCase() !== 'pending') {
+      return historyName;
+    }
+
+    // Fallback to raw daily register entries if available
+    const anySavedEntries: any[] = Array.isArray((this as any).savedDailyRegisterEntries)
+      ? (this as any).savedDailyRegisterEntries
+      : [];
+    const entry = anySavedEntries.find((e: any) => String(e?.reference_no || e?.referenceNo || '').trim() === ref);
+    if (!entry) return '';
+
+    const picked = this.pickDisplayOfficer(
+      entry.approved_by_name,
+      entry.approvedByName,
+      entry.updated_by_name,
+      entry.updatedByName,
+      entry.created_by_name,
+      entry.createdByName,
+      entry.approved_by,
+      entry.updated_by,
+      entry.created_by
+    );
+    return picked && picked !== 'Pending' ? picked : '';
   }
 
   private normalizeSerialValue(value: any): string {

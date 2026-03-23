@@ -518,6 +518,7 @@
                     <thead class="table-success">
                       <tr>
                         <th>Received Date</th>
+                        <th>Received By</th>
                         <th>Carton Number</th>
                         <th>Type</th>
                         <th>From Serial</th>
@@ -534,6 +535,7 @@
                       @for (roll of (hasActiveRollsFilters() ? filteredRollsData : rollsData); track roll.id) {
                       <tr [class.table-success]="isNewRoll(roll)" [class.new-roll-highlight]="isNewRoll(roll)">
                         <td>{{ roll.receivedDate | date:'dd-MMM-yyyy' }}</td>
+                        <td>{{ roll.receivedBy || '—' }}</td>
                         <td>
                           <div class="d-flex align-items-center">
                             <span class="fw-bold text-primary">{{ roll.cartoonNumber }}</span>
@@ -1519,7 +1521,7 @@
                             </div>
                             }
                             @if (range.status !== 'AVAILABLE' && range.productionLine && range.productionLine !== 'N/A' &&
-                            !range.productionLine.startsWith('LINE-')) {
+                            range.productionLine.startsWith('LINE-')) {
                             <div class="detail-item">
                               <i class="bi bi-gear text-secondary me-1"></i>
                               <small>{{ range.productionLine }}</small>
@@ -1529,6 +1531,12 @@
                             <div class="detail-item">
                               <i class="bi bi-info-circle text-warning me-1"></i>
                               <small>{{ range.damageReason }}</small>
+                            </div>
+                            }
+                            @if (range.status !== 'AVAILABLE' && getRangeUpdatedBy(range)) {
+                            <div class="detail-item">
+                              <i class="bi bi-person-check text-secondary me-1"></i>
+                              <small>Updated By - <span class="fw-bold">{{ getRangeUpdatedBy(range) }}</span></small>
                             </div>
                             }
 

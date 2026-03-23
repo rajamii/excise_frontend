@@ -90,6 +90,32 @@ export class HologramrequestComponent implements OnInit {
     });
   }
 
+  private isUsageDateToday(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey === todayKey;
+  }
+
+  private isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
+  }
+
+  shouldShowUsageDateApprovalNotice(request: any): boolean {
+    return this.getRequestStatusCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
+  }
+
+  shouldShowUsageDateMissedNotice(request: any): boolean {
+    return this.getRequestStatusCategory(request) === 'PENDING' && this.isUsageDatePast(request);
+  }
+
   navigateToHologramRequest(): void {
     this.router.navigate(['/dev-hologramrequestlevel1']);
   }

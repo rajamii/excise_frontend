@@ -191,6 +191,7 @@
                                 <th class="type">TYPE</th>
                                 <th class="hologram-qty">HOLOGRAM QTY</th>
                                 <th class="rolls-assigned">ROLLS ASSIGNED</th>
+                                <th class="updated-by">UPDATED BY</th>
                                 <th class="status">STATUS</th>
                                 <th class="actions">ACTIONS</th>
                             </tr>
@@ -214,6 +215,14 @@
                                     <div class="date-display">
                                         <span class="date-main">{{ request.usageDate | date:'dd/MM/yyyy' }}</span>
                                         <span class="date-day">{{ request.usageDate | date:'EEE' }}</span>
+                                        <span class="usage-activation-hint" *ngIf="shouldShowUsageDateApprovalNotice(request)">
+                                            OIC can approve &amp; start production on this date
+                                        </span>
+                                        <span class="missed-action-hint" *ngIf="shouldShowUsageDateMissedNotice(request)">
+                                            Not approved on usage date
+                                            <br>
+                                            No action taken
+                                        </span>
                                     </div>
                                 </td>
                                 <td class="type">
@@ -245,6 +254,19 @@
                                         </span>
                                     </ng-template>
                                 </td>
+                                <td class="updated-by">
+                                    <ng-container *ngIf="request.updatedBy; else updatedByEmpty">
+                                        <span class="updated-by-name">
+                                            <span class="line1">{{ getDisplayNameLine1(request.updatedBy) }}</span>
+                                            <span class="line2" *ngIf="getDisplayNameLine2(request.updatedBy)">
+                                                {{ getDisplayNameLine2(request.updatedBy) }}
+                                            </span>
+                                        </span>
+                                    </ng-container>
+                                    <ng-template #updatedByEmpty>
+                                        <span class="text-muted small">—</span>
+                                    </ng-template>
+                                </td>
                                 <td class="status">
                                 <span class="status-badge" [ngClass]="getStatusClass(request)">
                                     <i [class]="getStatusIcon(request)" class="me-1"></i>
@@ -270,6 +292,10 @@
                                         <span *ngIf="shouldShowUsageDateApprovalNotice(request)"
                                             class="badge bg-warning text-dark">
                                             Allocation will be approved on usage date
+                                        </span>
+                                        <span *ngIf="shouldShowUsageDateMissedNotice(request)"
+                                            class="badge bg-danger text-white">
+                                            Not approved on usage date (No action taken)
                                         </span>
                                         <!-- Show status badge for COMPLETED -->
                                         <span *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="badge bg-success text-white">
