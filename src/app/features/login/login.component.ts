@@ -129,64 +129,101 @@ export class LoginComponent extends BaseComponent {
                 <div class="inactive-logout-illustration" aria-hidden="true">
                   <svg class="inactive-logout-icon" viewBox="0 0 96 96" role="presentation" focusable="false">
                     <defs>
-                      <linearGradient id="inactiveBottle" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stop-color="#2fcb7a" />
-                        <stop offset="1" stop-color="#1f8f56" />
-                      </linearGradient>
                       <linearGradient id="inactiveAmber" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0" stop-color="#ffcf5e" />
                         <stop offset="1" stop-color="#f59e0b" />
                       </linearGradient>
+                      <linearGradient id="inactiveGlassStroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#1f2e53" />
+                        <stop offset="1" stop-color="#142243" />
+                      </linearGradient>
+                      <linearGradient id="inactiveGlassFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#f4f8ff" />
+                        <stop offset="1" stop-color="#d7e5ff" />
+                      </linearGradient>
+                      <linearGradient id="inactiveFoam" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffffff" />
+                        <stop offset="1" stop-color="#f0f4ff" />
+                      </linearGradient>
+                      <clipPath id="inactiveBeerClip">
+                        <path d="M30 22h28l-4 56H34l-4-56z" />
+                      </clipPath>
                     </defs>
 
-                    <!-- Broken bottle (excise theme) -->
-                    <g class="inactive-logout-bottle" transform="translate(0,0)">
+                    <!-- Beer glass (broken + spill) -->
+                    <g class="inactive-logout-glass" transform="translate(0,0)">
+                      <!-- Glass body -->
                       <path
-                        class="inactive-logout-bottle-shape"
-                        d="M42 10h12v10c0 3 1 6 3 9l5 7c2 3 3 6 3 10v30c0 11-9 20-20 20s-20-9-20-20V53c0-4 1-7 3-10l5-7c2-3 3-6 3-9V10z"
-                        fill="url(#inactiveBottle)"
-                        stroke="#0b3b2a"
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="url(#inactiveGlassFill)"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="none"
+                        stroke="url(#inactiveGlassStroke)"
                         stroke-width="2.6"
                         stroke-linejoin="round"
-                        opacity="0.97"
+                        opacity="0.92"
                       />
 
-                      <rect x="43" y="6" width="10" height="6.5" rx="2" fill="#0b3b2a" opacity="0.55" />
-
+                      <!-- Handle -->
                       <path
-                        d="M56 14l8 2-6 8-10-3z"
-                        fill="#ffffff"
-                        opacity="0.72"
-                      />
-
-                      <path
-                        d="M38 30c-3 6-4 12-4 19v18c0 8 6 14 14 14"
+                        d="M60 34c9 0 14 7 14 14s-5 14-14 14"
                         fill="none"
-                        stroke="#ffffff"
-                        stroke-width="4"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="3.6"
                         stroke-linecap="round"
-                        opacity="0.22"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M60 40c5 0 8 4 8 8s-3 8-8 8"
+                        fill="none"
+                        stroke="url(#inactiveGlassFill)"
+                        stroke-width="5.2"
+                        stroke-linecap="round"
+                        opacity="0.88"
                       />
 
-                      <rect x="30.5" y="55" width="35" height="18" rx="7" fill="url(#inactiveAmber)" stroke="#0b3b2a" stroke-width="1.8" opacity="0.98" />
-                      <rect x="35" y="60" width="26" height="8" rx="4" fill="#fff" opacity="0.68" />
+                      <!-- Beer inside (clipped) -->
+                      <g clip-path="url(#inactiveBeerClip)">
+                        <path
+                          class="inactive-logout-beer"
+                          d="M28 48c6-4 11 2 16-1s11-8 16-3v44H28V48z"
+                          fill="url(#inactiveAmber)"
+                          opacity="0.96"
+                        />
+                      </g>
 
-                      <!-- Crack line -->
+                      <!-- Crack + broken rim -->
                       <path
                         class="inactive-logout-crack"
-                        d="M51 28l-7 10 7 7-8 10 9 9-4 10"
+                        d="M46 30l-6 10 8 7-9 10 10 10-4 10"
                         fill="none"
-                        stroke="#0b3b2a"
-                        stroke-width="3.4"
+                        stroke="#1f2e53"
+                        stroke-width="3.2"
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         opacity="0.72"
                       />
+                      <path
+                        d="M46 18l7 2-6 6-8-2z"
+                        fill="url(#inactiveGlassFill)"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="2"
+                        opacity="0.9"
+                      />
 
-                      <!-- Small shards -->
-                      <path class="inactive-logout-shard inactive-logout-shard-1" d="M71 28l10 4-8 10-10-4z" fill="url(#inactiveBottle)" stroke="#0b3b2a" stroke-width="1.5" opacity="0.75" />
-                      <path class="inactive-logout-shard inactive-logout-shard-2" d="M18 44l10-3 3 10-10 3z" fill="url(#inactiveBottle)" stroke="#0b3b2a" stroke-width="1.5" opacity="0.72" />
-                      <path class="inactive-logout-shard inactive-logout-shard-3" d="M69 54l8 3-6 8-8-3z" fill="url(#inactiveBottle)" stroke="#0b3b2a" stroke-width="1.5" opacity="0.65" />
+                      <!-- Spill drops -->
+                      <g class="inactive-logout-spill" opacity="0.98">
+                        <path class="inactive-logout-drop inactive-logout-drop-1" d="M52 56c4 6 2 10-2 12-4-2-6-6-2-12 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" />
+                        <path class="inactive-logout-drop inactive-logout-drop-2" d="M58 60c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.92" />
+                        <path class="inactive-logout-drop inactive-logout-drop-3" d="M48 62c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.88" />
+                      </g>
+
+                      <!-- Shards -->
+                      <path class="inactive-logout-shard inactive-logout-shard-1" d="M72 26l10 4-8 10-10-4z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.85" />
+                      <path class="inactive-logout-shard inactive-logout-shard-2" d="M18 48l10-3 3 10-10 3z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.82" />
                     </g>
                   </svg>
                 </div>

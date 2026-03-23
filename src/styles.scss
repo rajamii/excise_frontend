@@ -388,9 +388,24 @@ body{ background-color: #EDF7FE; }
   animation: inactiveIconFloat 2.8s ease-in-out infinite;
 }
 
-.inactive-logout-bottle {
+.inactive-logout-glass {
   transform-origin: 48px 58px;
-  animation: inactiveBottleWobble 2.6s ease-in-out infinite;
+  animation: inactiveGlassWobble 2.8s ease-in-out infinite;
+}
+
+.inactive-logout-beer {
+  transform-origin: center;
+  animation: inactiveBeerWave 2.2s ease-in-out infinite;
+}
+
+.inactive-logout-spill {
+  transform-origin: 54px 60px;
+  animation: inactiveSpillSway 2.8s ease-in-out infinite;
+}
+
+.inactive-logout-drop {
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .inactive-logout-crack {
@@ -422,10 +437,31 @@ body{ background-color: #EDF7FE; }
   50% { transform: translateY(-6px) rotate(2deg); }
 }
 
-@keyframes inactiveBottleWobble {
+@keyframes inactiveGlassWobble {
   0%, 100% { transform: rotate(-2deg) translateY(0); }
   50% { transform: rotate(3deg) translateY(-1px); }
 }
+
+@keyframes inactiveBeerWave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.2px); }
+}
+
+@keyframes inactiveSpillSway {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(1.5px); }
+}
+
+@keyframes inactiveBeerDrip {
+  0% { opacity: 0; transform: translateY(-8px) scale(0.9); }
+  15% { opacity: 1; }
+  75% { opacity: 1; transform: translateY(18px) scale(1); }
+  100% { opacity: 0; transform: translateY(24px) scale(0.92); }
+}
+
+.inactive-logout-drop-1 { animation: inactiveBeerDrip 1.9s ease-in-out infinite; }
+.inactive-logout-drop-2 { animation: inactiveBeerDrip 2.15s ease-in-out infinite 0.35s; }
+.inactive-logout-drop-3 { animation: inactiveBeerDrip 2.05s ease-in-out infinite 0.7s; }
 
 @keyframes inactiveCrackDraw {
   0% { stroke-dashoffset: 64; opacity: 0.55; }
