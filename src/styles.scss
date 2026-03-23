@@ -385,12 +385,23 @@ body{ background-color: #EDF7FE; }
   height: 148px;
   display: block;
   filter: drop-shadow(0 14px 20px rgba(10, 34, 74, 0.16));
-  animation: inactiveIconFloat 2.8s ease-in-out infinite;
 }
 
 .inactive-logout-glass {
   transform-origin: 48px 58px;
-  animation: inactiveGlassWobble 2.8s ease-in-out infinite;
+  animation: inactiveGlassFall 2.9s ease-in-out infinite;
+}
+
+.inactive-logout-shadow {
+  transform-origin: 46px 90px;
+  transform-box: fill-box;
+  animation: inactiveShadowBounce 2.9s ease-in-out infinite;
+}
+
+.inactive-logout-impact {
+  transform-origin: 46px 90px;
+  transform-box: fill-box;
+  animation: inactiveImpactFlash 2.9s ease-in-out infinite;
 }
 
 .inactive-logout-beer {
@@ -421,25 +432,38 @@ body{ background-color: #EDF7FE; }
 }
 
 .inactive-logout-shard-1 {
-  animation: inactiveShardFloat1 2.4s ease-in-out infinite;
+  animation: inactiveShardFall1 2.9s ease-in-out infinite;
 }
 
 .inactive-logout-shard-2 {
-  animation: inactiveShardFloat2 2.7s ease-in-out infinite;
+  animation: inactiveShardFall2 2.9s ease-in-out infinite;
 }
 
 .inactive-logout-shard-3 {
-  animation: inactiveShardFloat1 2.9s ease-in-out infinite;
+  animation: inactiveShardFall3 2.9s ease-in-out infinite;
 }
 
-@keyframes inactiveIconFloat {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  50% { transform: translateY(-6px) rotate(2deg); }
+@keyframes inactiveGlassFall {
+  0% { transform: translateY(-10px) rotate(-10deg); }
+  45% { transform: translateY(6px) rotate(6deg); }
+  58% { transform: translateY(0) rotate(-3deg); }
+  70% { transform: translateY(2px) rotate(2deg); }
+  100% { transform: translateY(-10px) rotate(-10deg); }
 }
 
-@keyframes inactiveGlassWobble {
-  0%, 100% { transform: rotate(-2deg) translateY(0); }
-  50% { transform: rotate(3deg) translateY(-1px); }
+@keyframes inactiveShadowBounce {
+  0% { opacity: 0.06; transform: scale(0.75); }
+  45% { opacity: 0.16; transform: scale(1.05); }
+  58% { opacity: 0.14; transform: scale(0.95); }
+  70% { opacity: 0.15; transform: scale(1.02); }
+  100% { opacity: 0.06; transform: scale(0.75); }
+}
+
+@keyframes inactiveImpactFlash {
+  0%, 42% { opacity: 0; transform: scale(0.9); }
+  46% { opacity: 0.95; transform: scale(1.02); }
+  54% { opacity: 0; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
 }
 
 @keyframes inactiveBeerWave {
@@ -478,6 +502,30 @@ body{ background-color: #EDF7FE; }
 @keyframes inactiveShardFloat2 {
   0%, 100% { transform: translate(1px, 0) rotate(10deg); opacity: 0.5; }
   50% { transform: translate(-2px, -2px) rotate(-10deg); opacity: 0.78; }
+}
+
+@keyframes inactiveShardFall1 {
+  0% { transform: translate(0, -12px) rotate(-20deg); opacity: 0; }
+  40% { opacity: 0; }
+  48% { transform: translate(0, -12px) rotate(-20deg); opacity: 0.85; }
+  62% { transform: translate(-6px, 14px) rotate(18deg); opacity: 0.9; }
+  100% { transform: translate(-6px, 14px) rotate(18deg); opacity: 0.15; }
+}
+
+@keyframes inactiveShardFall2 {
+  0% { transform: translate(0, -10px) rotate(18deg); opacity: 0; }
+  42% { opacity: 0; }
+  50% { transform: translate(0, -10px) rotate(18deg); opacity: 0.82; }
+  66% { transform: translate(7px, 16px) rotate(-16deg); opacity: 0.9; }
+  100% { transform: translate(7px, 16px) rotate(-16deg); opacity: 0.14; }
+}
+
+@keyframes inactiveShardFall3 {
+  0% { transform: translate(0, -11px) rotate(-10deg); opacity: 0; }
+  44% { opacity: 0; }
+  52% { transform: translate(0, -11px) rotate(-10deg); opacity: 0.7; }
+  70% { transform: translate(4px, 12px) rotate(14deg); opacity: 0.86; }
+  100% { transform: translate(4px, 12px) rotate(14deg); opacity: 0.12; }
 }
 
 .inactive-logout-message {

@@ -152,6 +152,9 @@ export class LoginComponent extends BaseComponent {
 
                     <!-- Beer glass (broken + spill) -->
                     <g class="inactive-logout-glass" transform="translate(0,0)">
+                      <!-- Ground shadow (stays on ground while glass falls) -->
+                      <ellipse class="inactive-logout-shadow" cx="46" cy="90" rx="22" ry="6" fill="#0b1b3a" opacity="0.12" />
+
                       <!-- Glass body -->
                       <path
                         d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
@@ -224,6 +227,13 @@ export class LoginComponent extends BaseComponent {
                       <!-- Shards -->
                       <path class="inactive-logout-shard inactive-logout-shard-1" d="M72 26l10 4-8 10-10-4z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.85" />
                       <path class="inactive-logout-shard inactive-logout-shard-2" d="M18 48l10-3 3 10-10 3z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.82" />
+
+                      <!-- Impact marks near ground -->
+                      <g class="inactive-logout-impact" opacity="0">
+                        <path d="M30 86l-6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M62 86l6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M46 84v6" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.55" />
+                      </g>
                     </g>
                   </svg>
                 </div>
