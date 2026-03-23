@@ -123,19 +123,75 @@ export class LoginComponent extends BaseComponent {
       if (params['inactive']) {
         setTimeout(() => {
           Swal.fire({
-            title: 'We Miss You',
+            title: 'Session timed out',
             html: `
               <div class="inactive-logout-content">
-                <div class="inactive-alien-wrap" aria-hidden="true">
-                  <span class="inactive-alien-head"></span>
-                  <span class="inactive-alien-eye inactive-alien-eye-left"></span>
-                  <span class="inactive-alien-eye inactive-alien-eye-right"></span>
-                  <span class="inactive-alien-mouth"></span>
-                  <span class="inactive-alien-antenna"></span>
-                  <span class="inactive-alien-tear"></span>
+                <div class="inactive-logout-illustration" aria-hidden="true">
+                  <svg class="inactive-logout-icon" viewBox="0 0 96 96" role="presentation" focusable="false">
+                    <defs>
+                      <linearGradient id="inactiveBottle" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#2fcb7a" />
+                        <stop offset="1" stop-color="#1f8f56" />
+                      </linearGradient>
+                      <linearGradient id="inactiveAmber" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffcf5e" />
+                        <stop offset="1" stop-color="#f59e0b" />
+                      </linearGradient>
+                    </defs>
+
+                    <!-- Broken bottle (excise theme) -->
+                    <g class="inactive-logout-bottle" transform="translate(0,0)">
+                      <path
+                        class="inactive-logout-bottle-shape"
+                        d="M42 10h12v10c0 3 1 6 3 9l5 7c2 3 3 6 3 10v30c0 11-9 20-20 20s-20-9-20-20V53c0-4 1-7 3-10l5-7c2-3 3-6 3-9V10z"
+                        fill="url(#inactiveBottle)"
+                        stroke="#0b3b2a"
+                        stroke-width="2.6"
+                        stroke-linejoin="round"
+                        opacity="0.97"
+                      />
+
+                      <rect x="43" y="6" width="10" height="6.5" rx="2" fill="#0b3b2a" opacity="0.55" />
+
+                      <path
+                        d="M56 14l8 2-6 8-10-3z"
+                        fill="#ffffff"
+                        opacity="0.72"
+                      />
+
+                      <path
+                        d="M38 30c-3 6-4 12-4 19v18c0 8 6 14 14 14"
+                        fill="none"
+                        stroke="#ffffff"
+                        stroke-width="4"
+                        stroke-linecap="round"
+                        opacity="0.22"
+                      />
+
+                      <rect x="30.5" y="55" width="35" height="18" rx="7" fill="url(#inactiveAmber)" stroke="#0b3b2a" stroke-width="1.8" opacity="0.98" />
+                      <rect x="35" y="60" width="26" height="8" rx="4" fill="#fff" opacity="0.68" />
+
+                      <!-- Crack line -->
+                      <path
+                        class="inactive-logout-crack"
+                        d="M51 28l-7 10 7 7-8 10 9 9-4 10"
+                        fill="none"
+                        stroke="#0b3b2a"
+                        stroke-width="3.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        opacity="0.72"
+                      />
+
+                      <!-- Small shards -->
+                      <path class="inactive-logout-shard inactive-logout-shard-1" d="M71 28l10 4-8 10-10-4z" fill="url(#inactiveBottle)" stroke="#0b3b2a" stroke-width="1.5" opacity="0.75" />
+                      <path class="inactive-logout-shard inactive-logout-shard-2" d="M18 44l10-3 3 10-10 3z" fill="url(#inactiveBottle)" stroke="#0b3b2a" stroke-width="1.5" opacity="0.72" />
+                      <path class="inactive-logout-shard inactive-logout-shard-3" d="M69 54l8 3-6 8-8-3z" fill="url(#inactiveBottle)" stroke="#0b3b2a" stroke-width="1.5" opacity="0.65" />
+                    </g>
+                  </svg>
                 </div>
                 <p class="inactive-logout-message">
-                  Your session timed out due to inactivity. Please log in again.
+                  Your session ended due to inactivity. Please sign in again to continue.
                 </p>
               </div>
             `,
