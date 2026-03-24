@@ -70,6 +70,8 @@ export class InactivityService {
     this.trackingEnabled = true;
     this.isLoggingOut = false;
     this.configReady = false;
+    // Ensure a previous session's warning state can't suppress the next login cycle.
+    this.warningVisible = false;
     this.registerActivityListeners();
     this.loadConfigAndStart();
     this.startConfigAutoRefresh();
@@ -423,13 +425,12 @@ export class InactivityService {
   }
 
   private closeWarningModal(force = false): void {
-    if (Swal.isVisible()) {
-      Swal.close();
-      return;
-    }
-
     if (force) {
       this.warningVisible = false;
+    }
+
+    if (Swal.isVisible()) {
+      Swal.close();
     }
   }
 
