@@ -280,13 +280,11 @@ export class TransitPermitComponent implements OnInit {
 
   private rebuildBrandCatalogFromWarehouse(): void {
     const sizesByBrand = new Map<string, Set<number>>();
-    const options: BrandOption[] = [];
+    const optionsByBrand = new Map<string, BrandOption>();
 
     this.warehouseCatalogData.forEach((entry: any) => {
       const brandName = this.getWarehouseBrandName(entry);
       const capacitySize = this.getWarehouseCapacitySize(entry);
-      const exciseDuty = this.getWarehouseExciseDuty(entry);
-
       if (!brandName || !capacitySize) return;
 
       if (!sizesByBrand.has(brandName)) {
@@ -294,10 +292,12 @@ export class TransitPermitComponent implements OnInit {
       }
       sizesByBrand.get(brandName)!.add(capacitySize);
 
-      options.push({
-        brandName,
-        label: brandName
-      });
+      if (!optionsByBrand.has(brandName)) {
+        optionsByBrand.set(brandName, {
+          brandName,
+          label: brandName
+        });
+      }
     });
 
     this.brandsData = Array.from(sizesByBrand.entries())
@@ -307,7 +307,8 @@ export class TransitPermitComponent implements OnInit {
       }))
       .sort((a, b) => a.brandName.localeCompare(b.brandName));
 
-    this.brandOptions = options.sort((a, b) => a.label.localeCompare(b.label));
+    this.brandOptions = Array.from(optionsByBrand.values())
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
 
   private getWarehouseBrandName(entry: any): string {

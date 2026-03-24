@@ -215,6 +215,22 @@ export class SupplyChainService {
     );
   }
 
+  createRevalidationFromRequisition(requisitionId?: string, requisitionRef?: string): Observable<any> {
+    const payload: any = {};
+    if (requisitionId) payload.requisition_id = requisitionId;
+    if (requisitionRef) payload.requisition_ref_no = requisitionRef;
+
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/from-requisition/`,
+      payload
+    ).pipe(
+      catchError((error) => {
+        console.error('createRevalidationFromRequisition error', error);
+        throw error;
+      })
+    );
+  }
+
   submitRevalidation(id: string): Observable<any> {
     return this.http.post<any>(
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/submit_revalidation/`,

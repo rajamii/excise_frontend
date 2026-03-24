@@ -1,0 +1,377 @@
+mat-card {
+  mat-card-header {
+    padding: 12px;
+    border-radius: 8px 8px 0 0;
+    background-color: #1C2B78;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 500;
+    align-items: flex-start;
+    justify-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+
+    .heading {
+      flex: 1 1 100%;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+    
+    .validation {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.9);
+      font-style: italic;
+      line-height: 1.4;
+      flex: 1 1 100%;
+      margin-top: 2px;
+    }
+  }
+  
+  mat-card-content {
+    padding: 20px;
+
+    .info-section {
+      margin-bottom: 30px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      border-left: 4px solid #1C2B78;
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+
+        mat-icon {
+          color: #1C2B78;
+          font-size: 24px;
+        }
+
+        h3 {
+          margin: 0;
+          color: #1C2B78;
+          font-weight: 600;
+          font-size: 18px;
+        }
+      }
+
+      .application-summary {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #f0f0f0;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &.highlight {
+            background: linear-gradient(135deg, #1C2B78 0%, #2a3d8f 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            border-bottom: none;
+            font-weight: 600;
+            font-size: 16px;
+
+            .label,
+            .value {
+              color: white;
+            }
+          }
+
+          .label {
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+          }
+
+          .value {
+            font-weight: 600;
+            color: #1C2B78;
+            text-align: right;
+            font-size: 14px;
+            max-width: 60%;
+            word-break: break-word;
+          }
+        }
+      }
+
+      .details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+
+        .detail-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+
+          &.full-width {
+            grid-column: span 2;
+          }
+
+          .label {
+            font-weight: 500;
+            color: #666;
+            font-size: 14px;
+          }
+
+          .value {
+            font-weight: 600;
+            color: #1C2B78;
+            font-size: 15px;
+          }
+        }
+      }
+
+      .brands-summary {
+        .brand-item {
+          display: flex;
+          gap: 16px;
+          padding: 12px;
+          background: white;
+          border-radius: 8px;
+          margin-bottom: 12px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+          .brand-number {
+            background: #1C2B78;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+          }
+
+          .brand-details {
+            flex: 1;
+
+            .brand-name {
+              font-weight: 600;
+              color: #1C2B78;
+              font-size: 16px;
+              margin-bottom: 4px;
+            }
+
+            .brand-meta {
+              color: #666;
+              font-size: 13px;
+              margin-bottom: 4px;
+            }
+
+            .brand-sizes {
+              color: #888;
+              font-size: 12px;
+            }
+          }
+        }
+      }
+
+      .fee-summary {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+
+        .fee-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #f0f0f0;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &.total {
+            background: linear-gradient(135deg, #1C2B78 0%, #2a3d8f 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-weight: 600;
+            font-size: 16px;
+          }
+
+          .fee-label {
+            font-weight: 500;
+            color: #555;
+          }
+
+          .fee-value {
+            font-weight: 600;
+            color: #1C2B78;
+            font-size: 15px;
+          }
+
+          &.total .fee-label,
+          &.total .fee-value {
+            color: white;
+          }
+        }
+      }
+    }
+
+    .terms-section {
+      background: #fff3e0;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #ff9800;
+      margin-bottom: 20px;
+
+      .terms-text {
+        line-height: 1.6;
+        color: #e65100;
+
+        a {
+          color: #1C2B78;
+          text-decoration: none;
+          font-weight: 500;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+
+    .success-section {
+      background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+      padding: 30px;
+      border-radius: 12px;
+      border-left: 4px solid #4caf50;
+      text-align: center;
+
+      .success-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 20px;
+
+        mat-icon {
+          color: #4caf50;
+          font-size: 32px;
+        }
+
+        h3 {
+          margin: 0;
+          color: #2e7d32;
+          font-weight: 600;
+          font-size: 24px;
+        }
+      }
+
+      .application-id {
+        background: white;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 20px 0;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        font-size: 18px;
+
+        .label {
+          font-weight: 500;
+          color: #666;
+        }
+
+        .value {
+          font-weight: 700;
+          color: #1C2B78;
+          font-family: monospace;
+        }
+      }
+
+      .next-steps {
+        text-align: left;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+
+        h4 {
+          color: #2e7d32;
+          margin-bottom: 12px;
+        }
+
+        ul {
+          color: #555;
+          line-height: 1.6;
+
+          li {
+            margin-bottom: 8px;
+          }
+        }
+      }
+    }
+  }
+  
+  mat-card-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #fafafa;
+  }
+}
+
+@media(max-width: 768px) {
+  mat-card mat-card-content {
+    .details-grid {
+      grid-template-columns: 1fr !important;
+
+      .detail-item.full-width {
+        grid-column: span 1;
+      }
+    }
+
+    .application-summary .summary-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+
+      .value {
+        text-align: left;
+        max-width: 100%;
+      }
+    }
+
+    .brand-item {
+      flex-direction: column;
+      text-align: center;
+
+      .brand-number {
+        align-self: center;
+      }
+    }
+  }
+
+  mat-card-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+
+    button {
+      flex: 1;
+      min-width: 120px;
+    }
+  }
+}

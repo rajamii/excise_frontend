@@ -16,7 +16,7 @@ interface PermitData {
   distilleryName: string;
   status: string;
   amount: string;
-  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
+  type: 'requisition' | 'revalidation' | 'transit' | 'hologram';
   allowedActions?: string[];
   allowedActionConfigs?: any[];
   workflowId?: number;
@@ -198,13 +198,19 @@ export class PermitSectionDashboardComponent implements OnInit {
     this.loadAllApplications();
   }
 
+  private isPermitSectionUser(): boolean {
+    return Number(this.accountService.getCurrentUser()?.role?.id ?? 0) === 5;
+  }
+
   loadAllApplications(): void {
     // Load all types of applications for permit section review
     this.loadRequisitions();
     this.loadRevalidations();
-    this.loadCancellations();
-    this.loadTransitPermits();
     this.loadHolograms();
+
+    if (!this.isPermitSectionUser()) {
+      this.loadTransitPermits();
+    }
   }
 
   loadRequisitions(): void {
@@ -251,29 +257,6 @@ export class PermitSectionDashboardComponent implements OnInit {
         this.updatePermits('revalidation', revalidations);
       },
       error: (error) => console.error('Error loading revalidations:', error)
-    });
-  }
-
-  loadCancellations(): void {
-    this.supplyChainService.getCancellations().subscribe({
-      next: (data: any[]) => {
-        const cancellations: PermitData[] = data.map((item: any) => ({
-          id: item.id,
-          referenceNo: item.ourRefNo || item.our_ref_no || `CAN-${item.id}`,
-          submissionDate: this.formatDate(item.cancellationDate || item.cancellation_date),
-          distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
-          status: item.status || 'PENDING',
-          amount: item.totalCancellationAmount || item.total_cancellation_amount || '0.00',
-          type: 'cancellation',
-          allowedActions: item.allowedActions || item.allowed_actions || [],
-          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
-          workflowId: item.workflow || item.workflow_id || item.workflowId,
-          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
-        }));
-        
-        this.updatePermits('cancellation', cancellations);
-      },
-      error: (error) => console.error('Error loading cancellations:', error)
     });
   }
 
@@ -340,14 +323,17 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   getFilterOptions() {
-    return [
+    const options = [
       { value: 'all', label: 'All Applications' },
       { value: 'requisition', label: 'Requisitions' },
       { value: 'revalidation', label: 'Revalidations' },
-      { value: 'cancellation', label: 'Cancellations' },
       { value: 'transit', label: 'Transit Permits' },
       { value: 'hologram', label: 'Holograms' }
     ];
+
+    return this.isPermitSectionUser()
+      ? options.filter(option => option.value !== 'transit')
+      : options;
   }
 
   onDashboardFilterChange(filterValue: string): void {

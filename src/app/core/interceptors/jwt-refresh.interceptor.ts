@@ -28,7 +28,8 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
       const publicEndpoints = [
         '/get_captcha/',
         '/captcha/',
-        '/token/refresh/'
+        '/token/refresh/',
+        '/masters/core/timer-config/'
       ];
 
       // If the request is public, skip attaching token

@@ -1,0 +1,164 @@
+<mat-card>
+  <mat-card-header>
+    <div class="heading">Submit Application</div>
+    <div class="validation">Review all details before final submission</div>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="info-section" *ngIf="!applicationId">
+      <div class="section-header">
+        <mat-icon>summarize</mat-icon>
+        <h3>Application Summary</h3>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-row">
+          <span class="label">Application Year</span>
+          <span class="value">{{ licenseeDetails.applicationYear || 'N/A' }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Licensee</span>
+          <span class="value">{{ licenseeDetails.licenseeName || 'N/A' }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Brand</span>
+          <span class="value">{{ productDetails.brandName || 'N/A' }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Label Name</span>
+          <span class="value">{{ productDetails.labelName || 'N/A' }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Pack Sizes</span>
+          <span class="value">{{ getPackagingRows().length }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Uploaded Documents</span>
+          <span class="value">{{ getUploadedDocuments().length }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Application Date</span>
+          <span class="value">{{ getCurrentDate() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-section" *ngIf="!applicationId">
+      <div class="section-header">
+        <mat-icon>badge</mat-icon>
+        <h3>Licensee Information</h3>
+      </div>
+      <div class="details-grid">
+        <div class="detail-item"><span class="label">License Number</span><span class="value">{{ licenseeDetails.licenseNumber }}</span></div>
+        <div class="detail-item"><span class="label">License Type</span><span class="value">{{ licenseeDetails.licenseType }}</span></div>
+        <div class="detail-item"><span class="label">Establishment</span><span class="value">{{ licenseeDetails.establishmentName }}</span></div>
+        <div class="detail-item"><span class="label">Contact Person</span><span class="value">{{ licenseeDetails.contactPerson }}</span></div>
+        <div class="detail-item"><span class="label">Contact Number</span><span class="value">{{ licenseeDetails.contactNumber }}</span></div>
+        <div class="detail-item"><span class="label">Email</span><span class="value">{{ licenseeDetails.emailAddress }}</span></div>
+      </div>
+    </div>
+
+    <div class="info-section" *ngIf="!applicationId">
+      <div class="section-header">
+        <mat-icon>label</mat-icon>
+        <h3>Label Specification</h3>
+      </div>
+      <div class="details-grid">
+        <div class="detail-item"><span class="label">Liquor Category</span><span class="value">{{ productDetails.liquorCategory }}</span></div>
+        <div class="detail-item"><span class="label">Label Type</span><span class="value">{{ productDetails.labelType }}</span></div>
+        <div class="detail-item"><span class="label">Strength</span><span class="value">{{ productDetails.abvStrength }}% ABV</span></div>
+        <div class="detail-item"><span class="label">Net Content</span><span class="value">{{ productDetails.netContentMl }} ML</span></div>
+        <div class="detail-item"><span class="label">Origin State</span><span class="value">{{ productDetails.originState }}</span></div>
+        <div class="detail-item"><span class="label">Barcode</span><span class="value">{{ productDetails.barcode }}</span></div>
+      </div>
+    </div>
+
+    <div class="info-section" *ngIf="!applicationId">
+      <div class="section-header">
+        <mat-icon>inventory_2</mat-icon>
+        <h3>Packaging Matrix</h3>
+      </div>
+      <div class="packaging-table">
+        <table mat-table [dataSource]="getPackagingRows()" class="mat-elevation-z1">
+          <ng-container matColumnDef="size">
+            <th mat-header-cell *matHeaderCellDef>Size (ML)</th>
+            <td mat-cell *matCellDef="let row">{{ row.sizeMl }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let row">{{ row.packagingType }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="units">
+            <th mat-header-cell *matHeaderCellDef>Units/Case</th>
+            <td mat-cell *matCellDef="let row">{{ row.unitsPerCase }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="mrp">
+            <th mat-header-cell *matHeaderCellDef>MRP</th>
+            <td mat-cell *matCellDef="let row">INR {{ row.mrp }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['size', 'type', 'units', 'mrp']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['size', 'type', 'units', 'mrp']"></tr>
+        </table>
+      </div>
+      <div class="summary-row highlight">
+        <span class="label">Average MRP</span>
+        <span class="value">INR {{ getAverageMrp() | number:'1.2-2' }}</span>
+      </div>
+    </div>
+
+    <div class="info-section" *ngIf="!applicationId">
+      <div class="section-header">
+        <mat-icon>folder</mat-icon>
+        <h3>Documents</h3>
+      </div>
+      <div class="documents-list">
+        @for (document of documentMeta; track document.key) {
+          <div class="doc-row">
+            <span class="doc-name">{{ document.name }}</span>
+            <span class="doc-file">{{ document.fileName || 'Not uploaded' }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="terms-section" *ngIf="!applicationId">
+      <mat-checkbox [(ngModel)]="acceptTerms">
+        <span class="terms-text">
+          I hereby declare that all details submitted in this label registration application are true and I agree to comply with Excise regulations.
+        </span>
+      </mat-checkbox>
+    </div>
+
+    @if (applicationId) {
+      <div class="success-section">
+        <div class="success-header">
+          <mat-icon>check_circle</mat-icon>
+          <h3>Application Processed</h3>
+        </div>
+        <div class="application-id">
+          <span class="label">Application ID:</span>
+          <span class="value">{{ applicationId }}</span>
+        </div>
+        <p class="mode-note" *ngIf="submissionMode === 'local'">
+          Submitted in local mode because backend endpoint is currently unavailable.
+        </p>
+      </div>
+    }
+  </mat-card-content>
+
+  <mat-card-actions>
+    @if (!applicationId) {
+      <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+      <button mat-flat-button color="primary" type="button" (click)="submitApplication()" [disabled]="!acceptTerms || isSubmitting">
+        {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
+      </button>
+    } @else {
+      <button mat-flat-button color="primary" type="button" (click)="goToDashboard()">Go to Dashboard</button>
+      <button mat-stroked-button type="button" (click)="startNewApplication()">Start New Application</button>
+    }
+  </mat-card-actions>
+</mat-card>

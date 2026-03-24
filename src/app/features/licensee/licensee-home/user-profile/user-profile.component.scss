@@ -1,24 +1,285 @@
-mat-card{
+// user-profile.component.scss
+
+:host ::ng-deep {
+  .mat-mdc-dialog-container {
+    padding: 0 !important;
+    .mdc-dialog__surface { padding: 0 !important; }
+  }
+}
+
+mat-card {
+  max-width: 600px;
+  margin: 0;
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+
+  mat-card-header {
+    background-color: #1C2B78;
+    color: white;
+    padding: 1rem 1.5rem;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    mat-card-header{
-        background-color: #1C2B78;
-        color: #ffffff;
-        width: 100%;
-        padding: 8px;
-        font-size: 22px;
-        font-weight: 500;
-        align-items: center;
-        justify-content: space-between; 
+    font-size: 1.25rem;
+    font-weight: 500;
+    border-radius: 0;
+    width: 100%;
+
+    button {
+      color: white;
+      mat-icon { font-size: 24px; }
+      &:hover { background-color: rgba(255, 255, 255, 0.15); }
     }
-    mat-card-content{
-        padding: 20px;
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 10px;
-        table{
-            td{
-                padding: 6px;
-            }
+  }
+
+  mat-card-content {
+    padding: 1.5rem;
+    background-color: #ffffff;
+    max-height: 78vh;
+    overflow-y: auto;
+
+    // ── Account table ───────────────────────────────────────────
+    table {
+      width: 100%;
+      border-collapse: collapse;
+
+      tr {
+        border-bottom: 1px solid #e5e7eb;
+        &:last-child { border-bottom: none; }
+
+        td {
+          padding: 0.75rem 0.5rem;
+          vertical-align: top;
+
+          &:first-child {
+            width: 40%;
+            color: #4b5563;
+            font-weight: 500;
+          }
+          &:last-child {
+            width: 60%;
+            color: #1f2937;
+          }
         }
+      }
     }
+
+    // ── Licensee profile summary ────────────────────────────────
+    .profile-summary {
+      margin-top: 1.25rem;
+      border: 1px solid #e0e7ff;
+      border-radius: 8px;
+      overflow: hidden;
+
+      .profile-summary-header {
+        background-color: #eef2ff;
+        color: #1C2B78;
+        padding: 0.6rem 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+
+        mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      }
+
+      table {
+        margin: 0;
+        tr { border-bottom: 1px solid #e8eaf0; }
+        td { padding: 0.6rem 1rem; font-size: 0.9rem; }
+      }
+    }
+
+    // ── No-profile hint ─────────────────────────────────────────
+    .no-profile-hint {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background-color: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.88rem;
+      color: #6d4c1a;
+
+      mat-icon { font-size: 18px; color: #f59e0b; }
+    }
+
+    // ── Action buttons ──────────────────────────────────────────
+    .action-buttons {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #e5e7eb;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+
+      .edit-profile-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: #f0f4ff;
+        color: #1C2B78;
+        border: 2px solid #1C2B78;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+        &:hover {
+          background-color: #1C2B78;
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 10px rgba(28, 43, 120, 0.25);
+        }
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+      }
+
+      .my-licenses-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: #1C2B78;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(28, 43, 120, 0.3);
+        transition: all 0.3s ease;
+
+        mat-icon { font-size: 24px; width: 24px; height: 24px; }
+
+        &:hover {
+          background-color: #15206b;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 14px rgba(28, 43, 120, 0.4);
+        }
+        &:active { transform: translateY(0); }
+      }
+    }
+
+    // ── Edit / Create form ──────────────────────────────────────
+    .profile-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      .form-section-label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0.75rem 0 0.5rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #1C2B78;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+
+        mat-icon { font-size: 17px; width: 17px; height: 17px; }
+
+        .lock-hint {
+          font-size: 0.78rem;
+          font-weight: 400;
+          color: #9ca3af;
+          text-transform: none;
+          letter-spacing: 0;
+        }
+      }
+
+      .full-width { width: 100%; }
+
+      .alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        margin-bottom: 0.5rem;
+
+        mat-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+        &.alert-success {
+          background-color: #f0fdf4;
+          color: #166534;
+          border: 1px solid #86efac;
+          mat-icon { color: #16a34a; }
+        }
+
+        &.alert-error {
+          background-color: #fef2f2;
+          color: #991b1b;
+          border: 1px solid #fca5a5;
+          mat-icon { color: #dc2626; }
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        padding-top: 1rem;
+        border-top: 2px solid #e5e7eb;
+
+        button {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-weight: 500;
+        }
+
+        .save-btn {
+          background-color: #1C2B78;
+          color: white;
+          min-width: 145px;
+          justify-content: center;
+
+          &:hover:not([disabled]) { background-color: #15206b; }
+          &[disabled] { opacity: 0.6; }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  mat-card {
+    mat-card-header {
+      font-size: 1.1rem;
+      padding: 0.75rem 1rem;
+    }
+
+    mat-card-content {
+      padding: 1rem;
+
+      .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+
+        .edit-profile-btn,
+        .my-licenses-btn {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+
+      .profile-form .form-actions {
+        flex-direction: column;
+        button { width: 100%; justify-content: center; }
+      }
+    }
+  }
 }

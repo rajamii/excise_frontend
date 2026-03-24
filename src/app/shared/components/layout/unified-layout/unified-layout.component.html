@@ -10,7 +10,7 @@
 
         <!-- User Profile -->
         <div class="user-profile">
-          <div class="user-info" (click)="openUserProfile()" style="cursor: pointer;">
+          <div class="user-info" (click)="openUserProfile()">
             <div class="user-avatar">
               <span class="avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
             </div>
@@ -33,10 +33,6 @@
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
-            <button class="nav-item wallet-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
-              <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
-              <span class="nav-text">Wallet</span>
-            </button>
 
             <!-- Apply New License -->
             <button class="nav-item" (click)="navigateToSupplyChain('new-license')" [class.active]="isDashboardSectionActive('new-license')">
@@ -44,28 +40,33 @@
               <span class="nav-text">New License</span>
             </button>
 
+            <button class="nav-item wallet-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
+              <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
+              <span class="nav-text">Wallet</span>
+            </button>
+
             <!-- Distillery-only supply chain items -->
             <button class="nav-item" *ngIf="showDistilleryMenus" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
               <mat-icon class="nav-icon">description</mat-icon>
-              <span class="nav-text">Requisition</span>
+              <span class="nav-text">{{ getSidebarLabel('requisition') }}</span>
             </button>
-            <button class="nav-item" *ngIf="showDistilleryMenus" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
+            <button class="nav-item" *ngIf="showDistilleryMenus && !isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
               <mat-icon class="nav-icon">refresh</mat-icon>
-              <span class="nav-text">Revalidation</span>
+              <span class="nav-text">{{ getSidebarLabel('revalidation') }}</span>
             </button>
             <button class="nav-item" *ngIf="showDistilleryMenus" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
               <mat-icon class="nav-icon">cancel</mat-icon>
-              <span class="nav-text">Cancellation</span>
+              <span class="nav-text">{{ getSidebarLabel('cancellation') }}</span>
             </button>
 
             <!-- Brewery + Distillery common items -->
             <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('transit')" [class.active]="isDashboardSectionActive('transit')">
               <mat-icon class="nav-icon">local_shipping</mat-icon>
-              <span class="nav-text">Transit</span>
+              <span class="nav-text">{{ getSidebarLabel('transit') }}</span>
             </button>
             <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
               <mat-icon class="nav-icon">qr_code</mat-icon>
-              <span class="nav-text">Hologram</span>
+              <span class="nav-text">{{ getSidebarLabel('hologram') }}</span>
             </button>
             <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
               <mat-icon class="nav-icon">add_box</mat-icon>
@@ -96,10 +97,6 @@
                     <mat-icon class="sub-icon">factory</mat-icon>
                     <span class="sub-text">Daily Production Register</span>
                   </button>
-                  <button class="sub-nav-item" (click)="navigateTo('brands-details')">
-                    <mat-icon class="sub-icon">label</mat-icon>
-                    <span class="sub-text">Brands Details</span>
-                  </button>
                   <button class="sub-nav-item" (click)="navigateTo('yuksom-local-sales-register')">
                     <mat-icon class="sub-icon">store</mat-icon>
                     <span class="sub-text">Yuksom Local Sales Register</span>
@@ -120,9 +117,18 @@
               <mat-icon class="nav-icon">apartment</mat-icon>
               <span class="nav-text">Company Registration</span>
             </button>
+            <button class="nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
+              <mat-icon class="nav-icon">groups</mat-icon>
+              <span class="nav-text">Company Collaboration</span>
+            </button>
             <button class="nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
+            </button>
+            <button class="nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
+            "isDashboardSectionActive('label-registration')">
+              <mat-icon class="nav-icon">label</mat-icon>
+              <span class="nav-text">Label Registration</span>
             </button>
           </div>
 
@@ -136,11 +142,11 @@
             <ng-container *ngFor="let item of officerSectionItems">
               <button
                 class="nav-item"
-                *ngIf="(item.showOnlyForOic ? isOicUser() : true) && (item.showOnlyForCommissioner ? isCommissionerUser() : true) && (!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForOic || !isOicUser()) && (!item.hideForCommissioner || !isCommissionerUser()) && canAccessSection(item.section)"
+                *ngIf="(item.showOnlyForOic ? isOicUser() : true) && (item.showOnlyForCommissioner ? isCommissionerUser() : true) && (!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForPermitSection || !isPermitSectionUser()) && (!item.hideForOic || !isOicUser()) && (!item.hideForCommissioner || !isCommissionerUser()) && canAccessSection(item.section)"
                 (click)="navigateToSection(item.section)"
                 [class.active]="isDashboardSectionActive(item.section)">
                 <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-                <span class="nav-text">{{ item.label }}</span>
+                <span class="nav-text">{{ getSidebarLabel(item.section, item.label) }}</span>
               </button>
             </ng-container>
 
@@ -211,7 +217,7 @@
 
           <!-- Right Section with User Info -->
           <div class="nav-right">
-            <div class="top-user-info" (click)="openUserProfile()" style="cursor: pointer;">
+            <div class="top-user-info" (click)="openUserProfile()">
               <div class="top-user-avatar">
                 <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
               </div>

@@ -269,6 +269,7 @@
           &.type { width: 120px; text-align: center; }
           &.hologram-qty { width: 150px; text-align: center; }
           &.rolls-assigned { width: 130px; text-align: center; }
+          &.updated-by { width: 170px; text-align: center; }
           &.status { width: 150px; text-align: center; }
           &.actions { width: 150px; text-align: center; }
         }
@@ -344,6 +345,26 @@
                   text-transform: uppercase;
                   margin-top: 0.25rem;
                 }
+
+                .usage-activation-hint {
+                  display: block;
+                  margin-top: 0.35rem;
+                  font-size: 0.72rem;
+                  font-weight: 700;
+                  color: #b45309;
+                  line-height: 1.1;
+                  text-transform: none;
+                }
+
+                .missed-action-hint {
+                  display: block;
+                  margin-top: 0.35rem;
+                  font-size: 0.72rem;
+                  font-weight: 800;
+                  color: #b91c1c;
+                  line-height: 1.1;
+                  text-transform: none;
+                }
               }
             }
 
@@ -389,6 +410,31 @@
                   color: #6b7280;
                   font-size: 0.7rem;
                   text-transform: uppercase;
+                }
+              }
+            }
+
+            &.updated-by {
+              text-align: center;
+
+              .updated-by-name {
+                display: inline-block;
+                text-align: center;
+                color: #0f172a;
+
+                .line1 {
+                  display: block;
+                  font-weight: 800;
+                  font-size: 0.95rem;
+                  line-height: 1.1;
+                }
+
+                .line2 {
+                  display: block;
+                  font-weight: 800;
+                  font-size: 0.95rem;
+                  line-height: 1.1;
+                  margin-top: 0.15rem;
                 }
               }
             }

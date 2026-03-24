@@ -1,15 +1,15 @@
 <mat-horizontal-stepper #stepper>
   <!-- Loading State -->
-  @if (isLoading) {
+  @if (isLoading || !application) {
   <div class="loading-container">
     <mat-spinner diameter="50"></mat-spinner>
     <p>Loading application details...</p>
   </div>
-  }
+  } @else {
   <!-- Step 1: Show Application Data -->
   <mat-step label="Application Data">
     <div class="step-header">
-      Application Id: {{application.application_id || application.applicationId}}
+      Application Id: {{application?.application_id || application?.applicationId}}
     </div>
     <div class="application-details">
       <!-- Dynamic Section: Renders all available fields -->
@@ -22,13 +22,16 @@
               {{ item.key }}
             </div>
             <div class="value">
-              <!-- Check if value is a URL (photo/doc) -->
-              @if (item.value && (item.value.toString().startsWith('http') || item.field.includes('photo'))) {
-              <img
-                [src]="item.value.toString().startsWith('http') ? item.value : (item.value ? environment.apiBaseUrl + '/' + item.value : '')"
-                alt="{{ item.key }}" class="photo-preview" onerror="this.style.display='none'" />
+              <!-- Check if value is a document/file path -->
+              @if (isDocumentField(item.field, item.value)) {
+                <!-- Show as clickable link for documents -->
+                <a [href]="getDocumentUrl(item.value)" target="_blank" class="document-link">
+                  <mat-icon>description</mat-icon>
+                  View Document
+                </a>
               } @else {
-              {{ item.value }}
+                <!-- Show regular text value -->
+                {{ item.value }}
               }
 
               <!-- Objection icon -->
@@ -46,14 +49,8 @@
 
     <!-- Action Buttons -->
     <div class="step-buttons">
-      <!-- Edit Application -->
-      @if (tableType === 'applied') {
-      <button matButton="filled" color="primary" (click)="onEdit(stepper)" [disabled]="isLoading">
-        <mat-icon>edit</mat-icon>
-        Edit
-      </button>
-      }
-
+      <!-- ❌ REMOVED: Edit button no longer shows for 'applied' table -->
+      
       <!-- Resolve Objection -->
       @if (tableType === 'pending') {
       @if (hasAnyObjections()) {
@@ -62,7 +59,7 @@
         Resolve Objections
       </button>
       }
-      @if (!application.isLicenseFeePaid && application.currentStage === 'awaiting_payment') {
+      @if (application && !application.isLicenseFeePaid && application.currentStage === 'awaiting_payment') {
       <button matButton="filled" color="primary" (click)="stepper.next()" [disabled]="isLoading">
         <mat-icon>payment</mat-icon>
         Pay Fees
@@ -77,7 +74,7 @@
   <mat-step label="Resolve Objections">
     <form [formGroup]="resolveObjectionForm">
       <div class="step-header">
-        <h5>{{ application.application_id || application.applicationId }}</h5>
+        <h5>{{ application?.application_id || application?.applicationId }}</h5>
       </div>
 
       @if (unresolvedObjections.length) {
@@ -166,19 +163,20 @@
   }
 
   <!-- Fee Payment (only if relevant for type) -->
-  @if (application.yearlyLicenseFee || application.yearly_license_fee) {
+  @if (application?.yearlyLicenseFee || application?.yearly_license_fee) {
   <mat-step label="Confirm Payment">
     <div class="step-content confirmation-step">
       <h5 class="text-success">
         Confirm Payment
       </h5>
       <mat-card appearance="outlined">
-        <p><strong>Fee Amount:</strong> ₹{{ application.yearlyLicenseFee || application.yearly_license_fee }}</p>
+        <p><strong>Fee Amount:</strong> ₹{{ application?.yearlyLicenseFee || application?.yearly_license_fee }}</p>
       </mat-card>
       <button mat-raised-button color="primary" (click)="payLicenseFee()">
         Pay
       </button>
     </div>
   </mat-step>
+  }
   }
 </mat-horizontal-stepper>

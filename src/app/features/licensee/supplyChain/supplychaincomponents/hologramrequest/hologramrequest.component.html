@@ -162,6 +162,16 @@
               <div class="date-display">
                 <span class="date-main">{{ request.usageDate | date: "dd/MM/yyyy" }}</span>
                 <span class="date-day">{{ request.usageDate | date: "EEE" }}</span>
+                @if (shouldShowUsageDateApprovalNotice(request)) {
+                <span class="usage-activation-hint">OIC can approve &amp; start production on this date</span>
+                }
+                @if (shouldShowUsageDateMissedNotice(request)) {
+                <span class="missed-action-hint">
+                  Not approved on usage date
+                  <br>
+                  No action taken
+                </span>
+                }
               </div>
             </td>
             <td class="type">
@@ -193,8 +203,8 @@
               }
             </td>
             <td class="status">
-              <span class="status-badge" [ngClass]="getRequestStatusClass(request.status)">
-                <i [class]="getStatusIcon(request.status)" class="me-1"></i>
+              <span class="status-badge" [ngClass]="getRequestStatusClass(request)">
+                <i [class]="getStatusIcon(request)" class="me-1"></i>
                 {{ request.status }}
               </span>
             </td>
@@ -203,10 +213,6 @@
                 <button class="btn-action view" (click)="viewHologramRequestApplication(request)"
                   title="View Application">
                   <i class="bi bi-eye"></i>
-                </button>
-                <button class="btn-action download" (click)="downloadRequestApplication(request)"
-                  title="Download Application">
-                  <i class="bi bi-download"></i>
                 </button>
               </div>
             </td>
@@ -338,12 +344,12 @@
               <div class="col-md-6">
                 <div class="info-card status-info">
                   <div class="info-icon">
-                    <i [class]="getStatusIcon(selectedRequest.status)"></i>
+                    <i [class]="getStatusIcon(selectedRequest)"></i>
                   </div>
                   <div class="info-content">
                     <h6 class="info-label">Status</h6>
                     <p class="info-value">
-                      <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequest.status)">
+                      <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequest)">
                         {{ selectedRequest.status }}
                       </span>
                     </p>
@@ -398,10 +404,6 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-success me-2" (click)="downloadRequestApplication(selectedRequest)">
-          <i class="bi bi-download me-2"></i>
-          Download Application
-        </button>
         <button type="button" class="btn btn-outline-secondary" (click)="closeRequestModal()">
           <i class="bi bi-x-circle me-2"></i>
           Close
@@ -445,7 +447,7 @@
                 <div class="info-card">
                   <label class="info-label">Status:</label>
                   <div class="info-value">
-                    <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequestForRolls.status)">
+                    <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequestForRolls)">
                       {{ selectedRequestForRolls.status }}
                     </span>
                   </div>

@@ -162,7 +162,7 @@
         
         <!-- Normal Mode Controls -->
         <div class="d-flex gap-2 w-100" *ngIf="!isEditingQuantity">
-          <button type="button" class="btn btn-outline-primary" (click)="enableQuantityEdit()">
+          <button type="button" class="btn btn-outline-primary" (click)="enableQuantityEdit()" *ngIf="application?.canEditQuantity === true">
             <i class="bi bi-pencil me-1"></i>
             Edit Quantities
           </button>

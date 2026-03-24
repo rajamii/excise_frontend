@@ -8,6 +8,7 @@ import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { MasterService } from '../../../../../core/services/master.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 @Component({
   selector: 'app-select-license',
@@ -38,7 +39,11 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
     license: signal('')
   };
 
-  constructor(private fb: FormBuilder, private masterService: MasterService) {
+  constructor(
+    private fb: FormBuilder, 
+    private masterService: MasterService,
+    private accountService: AccountService
+  ) {
     const storedValues = this.getFromSessionStorage();
 
     this.selectLicenseForm = this.fb.group({
@@ -63,9 +68,6 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  /**
-   * ✅ CRITICAL: Load master data AND save to sessionStorage
-   */
   private loadDropdownData(): void {
     forkJoin({
       districts: this.masterService.getDistrict(),
@@ -78,15 +80,14 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
         this.licenseCategories = licenseCategories;
         this.dataLoaded = true;
         
-        // ✅ CRITICAL: Save master data to sessionStorage for later use
         sessionStorage.setItem('districts', JSON.stringify(districts));
         sessionStorage.setItem('subdivisions', JSON.stringify(subdivisions));
         sessionStorage.setItem('licenseCategories', JSON.stringify(licenseCategories));
         
         console.log('✅ Master data loaded and saved to sessionStorage');
-        console.log('  Districts:', districts.length);
-        console.log('  Subdivisions:', subdivisions.length);
-        console.log('  License Categories:', licenseCategories.length);
+        
+        // ✅ AUTO-FILL from user profile AFTER data is loaded
+        this.autoFillFromUserProfile();
         
         const storedDistrict = this.selectLicenseForm.get('excise_district')?.value;
         if (storedDistrict) {
@@ -97,6 +98,85 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
         console.error('❌ Failed to load master data:', error);
       }
     });
+  }
+
+  /**
+   * ✅ Auto-fill district and subdivision from logged-in user profile
+   */
+  private autoFillFromUserProfile(): void {
+    const sessionData = sessionStorage.getItem('selectLicenseData');
+    if (sessionData) {
+      console.log('📋 Select license data already in session, skipping auto-fill');
+      return;
+    }
+
+    // Get user profile from AccountService
+    const userProfile = this.accountService.getUserProfileSync();
+    
+    if (!userProfile) {
+      console.log('⚠️ No user profile in memory, fetching from backend...');
+      this.accountService.identity(true).subscribe({
+        next: (profile) => {
+          if (profile) {
+            this.fillFormWithProfile(profile);
+          }
+        },
+        error: (err) => {
+          console.error('❌ Failed to fetch user profile:', err);
+        }
+      });
+    } else {
+      console.log('✅ User profile found in memory, auto-filling...');
+      this.fillFormWithProfile(userProfile);
+    }
+  }
+
+  /**
+   * Fill form with user profile data
+   */
+  private fillFormWithProfile(profile: any): void {
+    if (!this.dataLoaded || !profile.district || !profile.subdivision) {
+      console.log('⚠️ Cannot auto-fill: missing data or profile incomplete');
+      return;
+    }
+
+    console.log('🔍 Auto-filling with profile:', profile);
+
+    // Find district by code
+    const district = this.districts.find(d => 
+      d.districtCode === profile.district.code || 
+      d.districtCode === profile.district
+    );
+    
+    if (district && district.id !== undefined) {  // ✅ FIX: Check if id exists
+      console.log('✅ Found district:', district);
+      this.selectLicenseForm.patchValue({
+        excise_district: district.id
+      }, { emitEvent: true });
+
+      // Trigger district change to load subdivisions
+      this.onDistrictChange(district.id);  // ✅ FIX: Now TypeScript knows id is defined
+
+      // Find and set subdivision
+      setTimeout(() => {
+        const subdivision = this.filteredSubdivisions.find(s => 
+          s.subdivisionCode === profile.subdivision.code || 
+          s.subdivisionCode === profile.subdivision
+        );
+        
+        if (subdivision && subdivision.id !== undefined) {  // ✅ FIX: Check if id exists
+          console.log('✅ Found subdivision:', subdivision);
+          this.selectLicenseForm.patchValue({
+            excise_subdivision: subdivision.id
+          }, { emitEvent: true });
+          console.log('✅ Select license auto-filled successfully');
+        } else {
+          console.warn('⚠️ Subdivision not found for code:', profile.subdivision);
+        }
+      }, 100);
+    } else {
+      console.warn('⚠️ District not found for code:', profile.district);
+    }
   }
 
   onDistrictChange(districtId: number): void {

@@ -15,17 +15,19 @@ interface TableData {
   distilleryName: string;
   status: string;
   statusCode?: string;
-  backendStatus?: string; // Original backend status for role-based logic
+  backendStatus?: string;
   amount: string;
   workflowId?: number;
   currentStage?: number;
   destination?: string;
-  depotAddress?: string; // Add separate depot address field
+  depotAddress?: string;
   transportMode?: string;
   vehicleNumber?: string;
   permitValidUntil?: string;
-  allowedActions?: string[]; // Dynamic actions from backend
+  allowedActions?: string[];
   allowedActionConfigs?: any[];
+  approvedByDisplay?: string;
+  cancelledByDisplay?: string;
 }
 
 interface ProductDetail {
@@ -162,23 +164,25 @@ export class TransitComponent implements OnInit {
 
           if (billNo && !grouped.has(billNo)) {
             grouped.set(billNo, {
-              id: item.id, // Add ID for actions
+              id: item.id,
               referenceNo: billNo,
               submissionDate: date,
               distilleryName: distributorName,
-              status: displayStatus, // Use status from database with proper mapping
+              status: displayStatus,
               statusCode: item.statusCode || item.status_code || '',
-              backendStatus: backendStatus, // Store original backend status for role-based logic
+              backendStatus: backendStatus,
               amount: rowTotal,
               workflowId: item.workflow || item.workflow_id || item.workflowId,
               currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-              destination: destination, // This should be the actual destination
-              depotAddress: destination, // Store depot address separately
+              destination: destination,
+              depotAddress: destination,
               transportMode: 'Road',
               vehicleNumber: vehicleNumber,
               permitValidUntil: '',
-              allowedActions: item.allowedActions || item.allowed_actions || [], // Add allowed actions
-              allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || []
+              allowedActions: item.allowedActions || item.allowed_actions || [],
+              allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+              approvedByDisplay: item.approvedByDisplay || item.approved_by_display || '',
+              cancelledByDisplay: item.cancelledByDisplay || item.cancelled_by_display || '',
             });
           } else if (billNo) {
             // Accumulate amount for existing bill
@@ -689,10 +693,12 @@ export class TransitComponent implements OnInit {
 
   // Brand Details Panel
   showBrandDetailsPanel: boolean = false;
+  selectedPermitItem: TableData | null = null;
 
   // Brand Details Methods
-  openBrandDetailsModal(referenceNo: string): void {
+  openBrandDetailsModal(referenceNo: string, item?: TableData): void {
     this.selectedPermitRef = referenceNo;
+    this.selectedPermitItem = item || this.filteredTransitData.find(d => d.referenceNo === referenceNo) || null;
     this.selectedBrandDetails = this.getBrandDetailsForPermit(referenceNo);
     this.showBrandDetailsPanel = true;
   }

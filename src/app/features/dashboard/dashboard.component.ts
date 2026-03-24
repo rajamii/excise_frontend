@@ -42,11 +42,12 @@ import { RegistrationManagementComponent } from '../licensee/supplyChain/supplyc
 import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
 // Officer-specific Components
-import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
 import { HologramMonthlyReportComponent } from '../licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component';
 import { HologramdetailsComponent } from '../licensee/supplyChain/HoloGram/hologramdetails/hologramdetails.component';
+import { OfficerinchargehologramreqComponent } from '../licensee/supplyChain/HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 import { OicdailyhologramregisterComponent } from '../licensee/supplyChain/registers/oicdailyhologramregister/oicdailyhologramregister.component';
 import { BrandwarehouseComponent } from '../licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component';
+import { OicBlDetailsComponent } from '../admin/officer-in-charge/oic-bl-details/oic-bl-details.component';
 import { ITCELLComponent } from '../admin/it-cell/itcell.component';
 import { HologramoveriewComponent } from '../licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component';
 import { DailyhologramrecordregisterComponent } from '../admin/commissioner/dailyhologramrecordregister/dailyhologramrecordregister.component';
@@ -56,8 +57,10 @@ import { PermitSectionDashboardComponent } from './role-components/permit-sectio
 import { CommissionerDashboardComponent as CommissionerDashboard } from './role-components/commissioner-dashboard.component';
 import { ITCellDashboardComponent } from './role-components/itcell-dashboard.component';
 import { OfficerInChargeDashboardComponent } from './role-components/officer-in-charge-dashboard.component';
-import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
+import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
+import { PrepareApplicationComponent as CompanyCollaborationPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-collaboration/prepare-application/prepare-application.component';
 import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } from '../licensee/salesman-registration/prepare-application.component';
+import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-registration/prepare-application/prepare-application.component';
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
 
 @Component({
@@ -90,11 +93,12 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     RegistrationManagementComponent,
     PaymentConfirmationComponent,
     // Officer-specific Components
-    BrandsDetailsComponent,
     HologramMonthlyReportComponent,
     HologramdetailsComponent,
+    OfficerinchargehologramreqComponent,
     OicdailyhologramregisterComponent,
     BrandwarehouseComponent,
+    OicBlDetailsComponent,
     ITCELLComponent,
     HologramoveriewComponent,
     DailyhologramrecordregisterComponent,
@@ -104,7 +108,9 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     ITCellDashboardComponent,
     OfficerInChargeDashboardComponent,
     CompanyPrepareApplicationComponent,
+    CompanyCollaborationPrepareApplicationComponent,
     SalesmanPrepareApplicationComponent,
+    LabelRegistrationPrepareApplicationComponent,
     ApplyNewLicenseComponent
   ],
   templateUrl: './dashboard.component.html',
@@ -383,6 +389,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    if (this.currentUser?.roleId === 5 && ['transit-applications'].includes(String(this.selectedSupplyChainSection || ''))) {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
+
     if (this.selectedSupplyChainSection !== 'wallet') {
       return;
     }
@@ -687,9 +704,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'commissioner-monthly-view-details': 'Monthly View Details',
       'hologram-request': 'Hologram Request',
       'company-registration': 'Company Registration',
-      'salesman-barman-registration': 'Salesman/Barman Registration',
       'company-registration-apply': 'Company Registration',
+      'company-collaboration': 'Company Collaboration',
+      'salesman-barman-registration': 'Salesman/Barman Registration',
       'salesman-barman-registration-apply': 'Salesman/Barman Registration',
+      'label-registration': 'Label Registration',
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
 
@@ -708,9 +727,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'transit-applications': 'Transit Applications',
       'brands': 'Brand Details',
       'monthly-hologram-statement': 'Monthly Hologram Statement',
-      'hologram-register': 'Hologram Register',
+      'oic-hologram-requests': 'Hologram Requests',
+      'hologram-register': 'Hologram Procurement',
       'hologram-daily-entry': 'Daily Hologram Entry',
       'stock-inventory': 'Brand Warehouse Stock',
+      'bl-details': 'ENA Details Information',
 
       'hologram-overview': 'Hologram Overview',
       'officer-activity': 'Officer Activity',
@@ -858,7 +879,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 5: // Permit Section
         this.quickActions = [
           { id: 'review-permits', label: 'Review Permits', icon: 'assignment', color: 'primary', action: () => this.navigateToSection('requisition') },
-          { id: 'approve-transit', label: 'Transit Approvals', icon: 'local_shipping', color: 'accent', action: () => this.navigateToSection('transit') },
           { id: 'generate-report', label: 'Generate Report', icon: 'assessment', color: 'warn', action: () => this.generateReport() }
         ];
         break;

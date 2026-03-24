@@ -52,6 +52,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  readonly sidebarSectionLabels: Record<string, string> = {
+    requisition: 'ENA Requisition',
+    revalidation: 'ENA Revalidation',
+    cancellation: 'ENA Cancellation',
+    transit: 'Transit Permit',
+    hologram: 'New Hologram Procurement'
+  };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
   readonly officerSectionItems: Array<{
@@ -59,25 +66,27 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     label: string;
     icon: string;
     hideForSiteAdmin?: boolean;
+    hideForPermitSection?: boolean;
     hideForOic?: boolean;
     hideForCommissioner?: boolean;
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
-    { section: 'requisition', label: 'Requisition', icon: 'description' },
-    { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
-    { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
-    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true },
+    { section: 'requisition', label: 'ENA Requisition', icon: 'description' },
+    { section: 'revalidation', label: 'ENA Revalidation', icon: 'refresh', hideForPermitSection: true },
+    { section: 'cancellation', label: 'ENA Cancellation', icon: 'cancel', hideForPermitSection: true },
+    { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
-    { section: 'transit', label: 'Transit', icon: 'local_shipping', hideForCommissioner: true },
+    { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
-    { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
-    { section: 'brands', label: 'Brands Details', icon: 'label' },
-    { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
+    { section: 'bl-details', label: 'ENA Details Information', icon: 'water_drop', showOnlyForOic: true },
+    { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
+        { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
     { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
-    { section: 'hologram-register', label: 'Hologram Registers', icon: 'qr_code', hideForCommissioner: true },
+    { section: 'hologram-register', label: 'Hologram Procurement', icon: 'qr_code', hideForCommissioner: true },
+    { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', showOnlyForOic: true },
     { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', hideForCommissioner: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
@@ -392,11 +401,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
-  navigateToLicenseeRegistration(type: 'company' | 'salesman-barman'): void {
-    const section =
-      type === 'company'
-        ? 'company-registration'
-        : 'salesman-barman-registration';
+  navigateToLicenseeRegistration(type: 'company' | 'collaboration' | 'salesman-barman' | 'label'): void {
+    const sectionMap: Record<'company' | 'collaboration' | 'salesman-barman' | 'label', string> = {
+      company: 'company-registration',
+      collaboration: 'company-collaboration',
+      'salesman-barman': 'salesman-barman-registration',
+      label: 'label-registration'
+    };
+    const section = sectionMap[type];
 
     this.router.navigate(['/dashboard'], {
       queryParams: { section }
@@ -434,9 +446,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         break;
       case 'daily-production-register':
         this.router.navigate(['/dev-daily-production-register']);
-        break;
-      case 'brands-details':
-        this.router.navigate(['/dev-brands-details']);
         break;
       case 'yuksom-local-sales-register':
         this.router.navigate(['/dev-local-sales-register']);
@@ -585,6 +594,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   isWalletActive(): boolean {
     return this.isDashboardSectionActive('wallet');
+  }
+
+  getSidebarLabel(section: string, fallbackLabel?: string): string {
+    return this.sidebarSectionLabels[section] || fallbackLabel || section;
   }
 
   // Check if user is licensee/supply chain
@@ -823,13 +836,34 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('commissioner');
   }
 
+  isPermitSectionUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 5) {
+      return true;
+    }
+
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      this.user?.role?.name ||
+      this.user?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('permitsection');
+  }
+
   canAccessSection(section: string): boolean {
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
       return false;
     }
 
-    // Allow hologram-inventory for OIC users only
-    if (section === 'hologram-inventory' && this.isOicUser()) {
+    if (this.isPermitSectionUser() && (section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
+      return false;
+    }
+
+    // Allow OIC-only sections even if DB navigation tokens are incomplete.
+    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests' || section === 'bl-details') && this.isOicUser()) {
       return true;
     }
 
@@ -868,12 +902,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'commissioner-monthly-view-details': ['hologram_monthly', 'monthly_hologram', 'hologram_statement', 'hologram'],
       'itcell-hologram': ['hologram_procurement', 'itcell_hologram', 'it_cell', 'hologram'],
       'transit-applications': ['transit_permit', 'transit'],
-      'brands': ['brand', 'brands'],
-      'monthly-hologram-statement': ['hologram_monthly', 'monthly_hologram', 'hologram_statement'],
+            'monthly-hologram-statement': ['hologram_monthly', 'monthly_hologram', 'hologram_statement'],
       'hologram-inventory': ['hologram_inventory', 'hologram_overview', 'hologram'],
+      'oic-hologram-requests': ['hologram_request', 'hologram_requests', 'hologram_register', 'hologram'],
       'hologram-register': ['hologram_register', 'hologram'],
       'hologram-daily-entry': ['hologram_daily', 'hologram'],
       'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],
+      'bl-details': ['bl_details', 'bulk_liter', 'bulk_detail', 'arrival_bulk_liter', 'arrival_details', 'bl'],
       'officer-activity': ['officer_activity', 'officer'],
       'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
       'company-registration': ['company_registration', 'company-registration', 'companyregistration'],

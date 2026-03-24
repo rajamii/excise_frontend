@@ -338,7 +338,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   goToDashboard(): void {
     this.clearApplicationData();
-    this.router.navigate(['/licensee/dashboard']);
+    this.router.navigate(['/dashboard']);
   }
 
   private debugSessionStorage(): void {
@@ -508,14 +508,14 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('✅ Location Category OK');
     }
     
-    if (!siteData?.location_name) {
+    if (!siteData?.location) {
       console.error('❌ Missing: Location Name');
       missingFields.push('Location Name');
     } else {
       console.log('✅ Location Name OK');
     }
     
-    if (!siteData?.ward_name) {
+    if (!siteData?.ward) {
       console.error('❌ Missing: Ward Name');
       missingFields.push('Ward Name');
     } else {

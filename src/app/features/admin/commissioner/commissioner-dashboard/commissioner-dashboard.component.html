@@ -242,7 +242,7 @@
                         <th class="ref-number">Reference No</th>
                         <th class="submission-date">Submission Date</th>
                         <th class="expiry-date">Expiry Date</th>
-                        <th class="licensee-name">Licensee Name</th>
+                        <th class="licensee-name">Factory Name</th>
                         <th class="status">Status</th>
                         <th class="priority">Priority</th>
                         <th class="days-left">Days Left</th>
@@ -273,7 +273,7 @@
                           <span class="date-text" [class.text-danger]="item.isExpired">{{ item.expiryDate }}</span>
                         </td>
                         <td class="licensee-name">
-                          <span class="company-name">{{ item.distilleryName }}</span>
+                          <span class="company-name">{{ item.factoryName || item.distilleryName }}</span>
                         </td>
                         <td class="status">
                           <span class="status-badge status-{{ getStatusClass(item.status) }}">

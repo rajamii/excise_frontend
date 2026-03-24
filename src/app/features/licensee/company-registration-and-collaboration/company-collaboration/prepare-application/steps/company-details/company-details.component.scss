@@ -1,0 +1,89 @@
+mat-card {
+  mat-card-header {
+    padding: 12px;
+    border-radius: 8px 8px 0 0;
+    background-color: #1C2B78;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 500;
+    align-items: flex-start;
+    justify-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+
+    .heading {
+      flex: 1 1 100%;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+    
+    .validation {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.85);
+      font-style: italic;
+      line-height: 1.4;
+      flex: 1 1 100%;
+      margin-top: 2px;
+    }
+  }
+  
+  mat-card-content {
+    padding: 20px;
+    .form-field-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px 24px;
+      padding: 8px 0 20px;
+      align-items: start;
+      
+      mat-form-field {
+        width: 100%;
+        
+        mat-label {
+          font-size: 14px;
+        }
+        
+        textarea {
+          resize: vertical;
+          min-height: 60px; // Increased min-height for better textarea appearance
+        }
+        
+        input::placeholder, textarea::placeholder {
+          font-size: 13px;
+        }
+      }
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    }
+  }
+  
+  mat-card-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #fafafa;
+  }
+}
+
+@media(max-width: 768px) {
+  mat-card {
+    mat-card-header {
+      align-items: flex-start;
+    }
+
+    mat-card-actions {
+      flex-wrap: wrap;
+      gap: 10px;
+
+      button {
+        flex: 1;
+        min-width: 120px;
+      }
+    }
+  }
+}

@@ -2,6 +2,11 @@
     <!-- Header Section -->
     <div class="header-section">
         <div class="header-content">
+            <div class="left-section">
+                <button type="button" class="btn btn-outline-primary" (click)="goBack()">
+                    <i class="bi bi-arrow-left me-1"></i>Back
+                </button>
+            </div>
             <div class="right-section">
                 <h1 class="page-title">{{ getPageTitle() }}</h1>
             </div>
@@ -266,44 +271,6 @@
                 </div>
 
                 <div class="section-card mb-4">
-                    <h5 class="section-title">Cancellation Request Information</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Reason for Cancellation</td>
-                                    <td>{{ applicationData.cancellationReason }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Requested By</td>
-                                    <td>Mr. Rajesh Kumar, Operations Manager</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Authorized By</td>
-                                    <td>Mrs. Priya Sharma, Director</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Cancellation Date</td>
-                                    <td>{{ applicationData.submissionDate | date: "dd-MM-yyyy" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Refund Amount</td>
-                                    <td class="text-success fw-bold">₹{{ applicationData.refundAmount }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Refund Status</td>
-                                    <td>
-                                        <span [ngClass]="getRefundStatusBadgeClass(applicationData.refundStatus || '')">
-                                            {{ applicationData.refundStatus }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="section-card mb-4">
                     <h5 class="section-title">Original Application Specifications</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
@@ -344,6 +311,7 @@
 
                 <!-- ========== TRANSIT DETAILS SECTION ========== -->
                 @if (isTransit()) {
+
                 <div class="section-card mb-4">
                     <h5 class="section-title">Transit Details</h5>
                     <div class="table-responsive">
@@ -631,7 +599,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Additional Information</td>
-                                    <td>Verified and approved by IT Cell. Upload slip enabled for supply chain user.</td>
+                                    <td>Verified and approved by IT Cells. Upload slip enabled for supply chain user.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -965,6 +933,33 @@
         </div>
         }
     </div>
-    
+
+    <!-- Right-side sticky decision panel (transit + rejected requisition) -->
+    @if (shouldShowRightSideDecisionPanel()) {
+    <div class="oic-action-sidebar"
+        [class.sidebar-approved]="!isRightSideDecisionNegative()"
+        [class.sidebar-cancelled]="isRightSideDecisionNegative()">
+        <div class="oic-sidebar-inner">
+            <div class="oic-sidebar-icon">
+                <i class="bi" [class.bi-check-circle-fill]="!isRightSideDecisionNegative()"
+                    [class.bi-x-circle-fill]="isRightSideDecisionNegative()"></i>
+            </div>
+            <div class="oic-sidebar-label">
+                {{ getRightSideDecisionLabel() }}
+            </div>
+            <div class="oic-sidebar-name">
+                {{ getRightSideDecisionName() }}
+            </div>
+            @if ((isRequisition() && isApplicationRejected()) || hasText(getRightSideDecisionReason())) {
+            <div class="oic-sidebar-reason">
+                <span class="oic-sidebar-reason-label">Reason:</span>
+                <span class="oic-sidebar-reason-text">{{ getRightSideDecisionReason() }}</span>
+            </div>
+            }
+            <div class="oic-sidebar-role">{{ isRequisition() ? 'Workflow' : 'Officer In-Charge' }}</div>
+        </div>
+    </div>
+    }
+
 </div>
 

@@ -90,6 +90,7 @@ interface FilterOptions {
 })
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
+  private static readonly NEW_UPDATE_BADGE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
   // Current distillery context resolved from active user profile.
   private currentDistilleryName = '';
@@ -103,6 +104,11 @@ export class BrandwarehouseComponent implements OnInit {
   filteredStocks: GroupedBrandStock[] = [];
   paginatedStocks: GroupedBrandStock[] = [];
   newlyUpdatedStocks: GroupedBrandStock[] = [];
+  timelineMonthOptions: { value: string; label: string }[] = [];
+  selectedTimelineMonth: string = 'ALL';
+  timelinePageSizeOptions: number[] = [5, 10, 15];
+  timelinePageSize = 5;
+  timelineCurrentPage = 1;
   warehouseOverview: WarehouseOverview = {
     totalBrands: 0,
     totalCapacity: 0,
@@ -148,7 +154,35 @@ export class BrandwarehouseComponent implements OnInit {
   selectedTransitPermits: TransitPermitDetail[] = [];
   selectedLastEntries: LastEntryDetail[] = [];
 
-  // Production data
+  // Transit permits modal pagination & filter
+  permitPageSize = 5;
+  permitPageSizeOptions = [5, 10, 15];
+  permitCurrentPage = 1;
+  permitSelectedMonth = 'ALL';
+  permitMonthOptions = [
+    { value: 'ALL', label: 'All Months' },
+    { value: '01', label: 'January' }, { value: '02', label: 'February' },
+    { value: '03', label: 'March' },   { value: '04', label: 'April' },
+    { value: '05', label: 'May' },     { value: '06', label: 'June' },
+    { value: '07', label: 'July' },    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },{ value: '10', label: 'October' },
+    { value: '11', label: 'November' },{ value: '12', label: 'December' },
+  ];
+
+  // Recent Entries modal pagination & filter
+  entryPageSize = 5;
+  entryPageSizeOptions = [5, 10, 15];
+  entryCurrentPage = 1;
+  entrySelectedMonth = 'ALL';
+  entryMonthOptions = [
+    { value: 'ALL', label: 'All Months' },
+    { value: '01', label: 'January' }, { value: '02', label: 'February' },
+    { value: '03', label: 'March' },   { value: '04', label: 'April' },
+    { value: '05', label: 'May' },     { value: '06', label: 'June' },
+    { value: '07', label: 'July' },    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },{ value: '10', label: 'October' },
+    { value: '11', label: 'November' },{ value: '12', label: 'December' },
+  ];  // Production data
   productionHistory: ProductionBatch[] = [];
   currentPackSizeId: string = '';
   productionSummary = {
@@ -475,20 +509,23 @@ export class BrandwarehouseComponent implements OnInit {
       .filter(stock => this.isRecentlyUpdatedStock(stock) && (stock.totalStock || 0) > 0)
       .slice(0, 8);
 
+    this.refreshTimelineMonthOptions();
+    this.timelineCurrentPage = 1;
+
     this.updatePagination();
   }
 
   isRecentlyUpdatedStock(stock: GroupedBrandStock): boolean {
     if (!stock) return false;
-    if (stock.isNew === true) return true;
-    const updatedTs = new Date(stock.lastUpdated || 0).getTime();
+    const updatedTs = new Date(stock.lastUpdated || '').getTime();
     if (!updatedTs) return false;
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    return (Date.now() - updatedTs) <= oneDayMs;
+    const ageMs = Date.now() - updatedTs;
+    return ageMs >= 0 && ageMs <= BrandwarehouseComponent.NEW_UPDATE_BADGE_WINDOW_MS;
   }
 
   getNewUpdateTag(stock: GroupedBrandStock): string {
     if (!stock) return '';
+    if (!this.isRecentlyUpdatedStock(stock)) return '';
     if (stock.isNew === true) return 'NEW';
     return 'UPDATED';
   }
@@ -500,6 +537,86 @@ export class BrandwarehouseComponent implements OnInit {
   getHiddenNewUpdatesCount(): number {
     const total = (this.newlyUpdatedStocks || []).length;
     return total > 5 ? total - 5 : 0;
+  }
+
+  openNewUpdatesModal(): void {
+    this.refreshTimelineMonthOptions();
+    const currentMonthKey = this.getCurrentMonthKey();
+    const hasCurrentMonth = this.timelineMonthOptions.some(option => option.value === currentMonthKey);
+    this.selectedTimelineMonth = hasCurrentMonth ? currentMonthKey : 'ALL';
+    this.timelineCurrentPage = 1;
+    this.showNewUpdatesModal = true;
+  }
+
+  onTimelineMonthChange(): void {
+    this.timelineCurrentPage = 1;
+  }
+
+  onTimelinePageSizeChange(): void {
+    this.timelineCurrentPage = 1;
+  }
+
+  changeTimelinePage(page: number): void {
+    const totalPages = this.getTimelineTotalPages();
+    if (page >= 1 && page <= totalPages) {
+      this.timelineCurrentPage = page;
+    }
+  }
+
+  getPaginatedTimelineStocks(): GroupedBrandStock[] {
+    const filtered = this.getMonthFilteredTimelineStocks();
+    const start = (this.timelineCurrentPage - 1) * this.timelinePageSize;
+    return filtered.slice(start, start + this.timelinePageSize);
+  }
+
+  getTimelineTotalPages(): number {
+    const total = this.getMonthFilteredTimelineStocks().length;
+    return Math.max(1, Math.ceil(total / this.timelinePageSize));
+  }
+
+  getTimelineSummary(): string {
+    const filtered = this.getMonthFilteredTimelineStocks();
+    if (!filtered.length) return 'No updates';
+    const start = (this.timelineCurrentPage - 1) * this.timelinePageSize + 1;
+    const end = Math.min(filtered.length, start + this.timelinePageSize - 1);
+    return `${start}-${end} of ${filtered.length}`;
+  }
+
+  private getMonthFilteredTimelineStocks(): GroupedBrandStock[] {
+    if (this.selectedTimelineMonth === 'ALL') {
+      return this.newlyUpdatedStocks || [];
+    }
+    return (this.newlyUpdatedStocks || []).filter(
+      stock => this.getMonthValue(stock.lastUpdated) === this.selectedTimelineMonth
+    );
+  }
+
+  private refreshTimelineMonthOptions(): void {
+    const monthLabels = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    this.timelineMonthOptions = [
+      { value: 'ALL', label: 'All Months' },
+      ...monthLabels.map((label, idx) => ({
+        value: String(idx + 1).padStart(2, '0'),
+        label
+      }))
+    ];
+
+    if (!this.timelineMonthOptions.some(option => option.value === this.selectedTimelineMonth)) {
+      this.selectedTimelineMonth = 'ALL';
+    }
+  }
+
+  private getCurrentMonthKey(): string {
+    return this.getMonthValue(new Date().toISOString());
+  }
+
+  private getMonthValue(value: string): string {
+    const dt = new Date(String(value || '').trim());
+    if (Number.isNaN(dt.getTime())) return '';
+    return String(dt.getMonth() + 1).padStart(2, '0');
   }
 
   checkStockLevel(stock: GroupedBrandStock): boolean {
@@ -634,8 +751,8 @@ export class BrandwarehouseComponent implements OnInit {
               bottlesPerCase: util.bottles_per_case || util.bottlesPerCase || 12, // Default if missing
               totalBottles: (util.cases * (util.bottles_per_case || util.bottlesPerCase || 12)) || util.quantity,
               status: util.status,
-              approvedBy: util.approved_by || util.approvedBy,
-              approvalDate: util.approval_date || util.approvalDate
+              approvedBy: util.approvedByDisplay || util.approved_by_display || util.approvedBy || util.approved_by,
+              approvalDate: util.approvalDate || util.approval_date
             });
           });
 
@@ -656,12 +773,48 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   finalizeTransitPermits(permits: TransitPermitDetail[]): void {
-    // Sort by date descending (most recent first)
     permits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
     this.selectedTransitPermits = permits;
     this.isLoadingPermits = false;
-    console.log('Finalized transit permits:', this.selectedTransitPermits);
+    // Reset pagination & auto-select current month if data exists
+    this.permitCurrentPage = 1;
+    const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    const hasCurrentMonth = permits.some(p => this.getPermitMonth(p.date) === currentMonth);
+    this.permitSelectedMonth = hasCurrentMonth ? currentMonth : 'ALL';
+  }
+
+  getPermitMonth(dateStr: string): string {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? '' : String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  getFilteredPermits(): TransitPermitDetail[] {
+    if (this.permitSelectedMonth === 'ALL') return this.selectedTransitPermits;
+    return this.selectedTransitPermits.filter(p => this.getPermitMonth(p.date) === this.permitSelectedMonth);
+  }
+
+  getPaginatedPermits(): TransitPermitDetail[] {
+    const filtered = this.getFilteredPermits();
+    const start = (this.permitCurrentPage - 1) * this.permitPageSize;
+    return filtered.slice(start, start + this.permitPageSize);
+  }
+
+  getPermitTotalPages(): number {
+    return Math.max(1, Math.ceil(this.getFilteredPermits().length / this.permitPageSize));
+  }
+
+  getPermitSummary(): string {
+    const filtered = this.getFilteredPermits();
+    if (!filtered.length) return 'No permits';
+    const start = (this.permitCurrentPage - 1) * this.permitPageSize + 1;
+    const end = Math.min(filtered.length, start + this.permitPageSize - 1);
+    return `${start}–${end} of ${filtered.length}`;
+  }
+
+  onPermitMonthChange(): void { this.permitCurrentPage = 1; }
+  onPermitPageSizeChange(): void { this.permitCurrentPage = 1; }
+  changePermitPage(page: number): void {
+    if (page >= 1 && page <= this.getPermitTotalPages()) this.permitCurrentPage = page;
   }
 
   viewLastEntries(brand: GroupedBrandStock): void {
@@ -774,24 +927,24 @@ export class BrandwarehouseComponent implements OnInit {
           cancellations.forEach((cancel: any) => {
             const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
             const eventDate = this.resolveEntryDate(
-              cancel.cancellation_date,
               cancel.cancellationDate,
-              cancel.updated_at,
+              cancel.cancellation_date,
               cancel.updatedAt,
-              cancel.created_at,
-              cancel.createdAt
+              cancel.updated_at,
+              cancel.createdAt,
+              cancel.created_at
             );
             allEntries.push({
               id: `cancel-${cancel.id}`,
               date: eventDate,
               type: 'CANCELLATION',
               activity: 'Stock Restored',
-              quantity: cancel.bottles_reversed,
-              previousStock: cancel.previousStock || 0,
-              newStock: cancel.newStock || 0,
-              referenceNo: cancel.permit_no,
-              description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || 'N/A'})`,
-              transitPermitNo: cancel.permit_no,
+              quantity: cancel.bottlesReversed || cancel.bottles_reversed || cancel.quantityBottles || cancel.quantity_bottles || 0,
+              previousStock: cancel.previousStock || cancel.previous_stock || 0,
+              newStock: cancel.newStock || cancel.new_stock || 0,
+              referenceNo: cancel.permitNo || cancel.permit_no || cancel.referenceNo || cancel.reference_no || '',
+              description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || cancel.reason || 'N/A'})`,
+              transitPermitNo: cancel.permitNo || cancel.permit_no || cancel.referenceNo || cancel.reference_no || '',
               packSize: packSize,
               sortTimestamp: this.toSortTimestamp(eventDate)
             });
@@ -826,24 +979,55 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   finalizeLastEntries(entries: LastEntryDetail[]): void {
-    // Sort by true activity time descending (across all event types).
-    // This keeps utilization, cancellation and production interleaved by when they happened.
     entries.sort((a, b) => {
       const timeDiff = this.getEntrySortTimestamp(b) - this.getEntrySortTimestamp(a);
       if (timeDiff !== 0) return timeDiff;
-
-      // Tie-breaker so equal timestamps don't appear grouped by fetch order/type.
       const idDiff = this.extractEntryNumericId(b.id) - this.extractEntryNumericId(a.id);
       if (idDiff !== 0) return idDiff;
-
       return String(a.id).localeCompare(String(b.id));
     });
 
-    // Take only the most recent 10 entries
-    this.selectedLastEntries = entries.slice(0, 10);
+    this.selectedLastEntries = entries;
     this.isLoadingLastEntries = false;
+    // Reset pagination & auto-select current month
+    this.entryCurrentPage = 1;
+    const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    const hasCurrentMonth = entries.some(e => this.getEntryMonth(e.date) === currentMonth);
+    this.entrySelectedMonth = hasCurrentMonth ? currentMonth : 'ALL';
+  }
 
-    console.log('Finalized recent entries:', this.selectedLastEntries);
+  getEntryMonth(dateStr: string): string {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? '' : String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  getFilteredEntries(): LastEntryDetail[] {
+    if (this.entrySelectedMonth === 'ALL') return this.selectedLastEntries;
+    return this.selectedLastEntries.filter(e => this.getEntryMonth(e.date) === this.entrySelectedMonth);
+  }
+
+  getPaginatedEntries(): LastEntryDetail[] {
+    const filtered = this.getFilteredEntries();
+    const start = (this.entryCurrentPage - 1) * this.entryPageSize;
+    return filtered.slice(start, start + this.entryPageSize);
+  }
+
+  getEntryTotalPages(): number {
+    return Math.max(1, Math.ceil(this.getFilteredEntries().length / this.entryPageSize));
+  }
+
+  getEntrySummary(): string {
+    const filtered = this.getFilteredEntries();
+    if (!filtered.length) return 'No entries';
+    const start = (this.entryCurrentPage - 1) * this.entryPageSize + 1;
+    const end = Math.min(filtered.length, start + this.entryPageSize - 1);
+    return `${start}–${end} of ${filtered.length}`;
+  }
+
+  onEntryMonthChange(): void { this.entryCurrentPage = 1; }
+  onEntryPageSizeChange(): void { this.entryCurrentPage = 1; }
+  changeEntryPage(page: number): void {
+    if (page >= 1 && page <= this.getEntryTotalPages()) this.entryCurrentPage = page;
   }
 
   private resolveEntryDate(...candidates: any[]): string {

@@ -1,0 +1,100 @@
+<form [formGroup]="licenseeForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Licensee Details</div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="form-field-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Application Year</mat-label>
+          <input matInput formControlName="applicationYear" readonly />
+          <mat-icon matSuffix>event</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>License Number</mat-label>
+          <input matInput formControlName="licenseNumber" required />
+          <mat-icon matSuffix>badge</mat-icon>
+          @if (licenseeForm.controls['licenseNumber'].invalid && licenseeForm.controls['licenseNumber'].touched) {
+            <mat-error>{{ getErrorMessage('licenseNumber') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>License Type</mat-label>
+          <mat-select formControlName="licenseType" required>
+            <mat-option value="">-- Select License Type --</mat-option>
+            @for (type of licenseTypes; track type.value) {
+              <mat-option [value]="type.value">{{ type.label }}</mat-option>
+            }
+          </mat-select>
+          @if (licenseeForm.controls['licenseType'].invalid && licenseeForm.controls['licenseType'].touched) {
+            <mat-error>{{ getErrorMessage('licenseType') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Licensee Name</mat-label>
+          <input matInput formControlName="licenseeName" required />
+          @if (licenseeForm.controls['licenseeName'].invalid && licenseeForm.controls['licenseeName'].touched) {
+            <mat-error>{{ getErrorMessage('licenseeName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Establishment Name</mat-label>
+          <input matInput formControlName="establishmentName" required />
+          @if (licenseeForm.controls['establishmentName'].invalid && licenseeForm.controls['establishmentName'].touched) {
+            <mat-error>{{ getErrorMessage('establishmentName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contact Person</mat-label>
+          <input matInput formControlName="contactPerson" required />
+          @if (licenseeForm.controls['contactPerson'].invalid && licenseeForm.controls['contactPerson'].touched) {
+            <mat-error>{{ getErrorMessage('contactPerson') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contact Number</mat-label>
+          <input matInput formControlName="contactNumber" required />
+          @if (licenseeForm.controls['contactNumber'].invalid && licenseeForm.controls['contactNumber'].touched) {
+            <mat-error>{{ getErrorMessage('contactNumber') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email Address</mat-label>
+          <input matInput formControlName="emailAddress" required />
+          @if (licenseeForm.controls['emailAddress'].invalid && licenseeForm.controls['emailAddress'].touched) {
+            <mat-error>{{ getErrorMessage('emailAddress') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Premises Address</mat-label>
+          <textarea
+            matInput
+            formControlName="premisesAddress"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="2"
+            cdkAutosizeMaxRows="4"
+            required>
+          </textarea>
+          @if (licenseeForm.controls['premisesAddress'].invalid && licenseeForm.controls['premisesAddress'].touched) {
+            <mat-error>{{ getErrorMessage('premisesAddress') }}</mat-error>
+          }
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-flat-button color="primary" (click)="proceedToNext()">Next</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

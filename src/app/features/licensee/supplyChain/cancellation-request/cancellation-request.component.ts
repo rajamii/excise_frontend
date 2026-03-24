@@ -1,34 +1,35 @@
-import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnChanges, OnInit, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { SupplyChainService } from '../services/supplychain.service';
 import { SupplyChainProfileService } from '../../../../core/services/supply-chain-profile.service';
+import { PaymentIntegrationService } from '../../../../core/services/payment-integration.service';
 import { environment } from '../../../../../environments/environment';
 
 interface Permit {
   number: string;
   amount: number;
   isCancelled: boolean;
+  isLocked: boolean;
+  lockReason?: string;
   isSelected?: boolean;
 }
 
-interface RequisitionData {
-  ourRefNo: string;
-  requisitionDate: string;
-  branchName: string; // Placeholder in backend
-  branchAddress: string; // Placeholder
-  grainEnaNumber: string; // Backend sends grainEnaNumber (camelCase of grain_ena_number)
-  strength: string; // Backend sends strength
-  liftedFromDistilleryName: string; // Backend sends lifted_from_distillery_name
-  viaRoute: string; // Backend sends via_route -> viaRoute
-  totalbl: string; // Backend sends totalbl
-  requisitonNumberOfPermits: number; // Backend sends requisitonNumberOfPermits
-  branchPurpose: string;
-  govtOfficer: string; // Placeholder
-  state: string;
-  liftedFrom: string; // Backend sends lifted_from -> liftedFrom
+interface CancellationListResponse {
+  results?: any[];
+}
+
+interface WalletSummaryRowLike {
+  wallet_type?: string;
+  walletType?: string;
+  module_type?: string;
+  moduleType?: string;
+  head_of_account?: string;
+  headOfAccount?: string;
+  current_balance?: string | number;
+  currentBalance?: string | number;
 }
 
 @Component({
@@ -42,33 +43,36 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   @Input() referenceNo: string = '';
   @Output() close = new EventEmitter<void>();
 
-  requisitionData: any = null; // Using any to match backend response roughly
+  requisitionData: any = null;
   permits: Permit[] = [];
   selectedPermits: string[] = [];
   newlySelectedPermits: string[] = [];
 
-  // Modal states
-  showDeclarationModal: boolean = false;
-  showSuccessModal: boolean = false;
-  showCancelModal: boolean = false;
+  showDeclarationModal = false;
+  showWalletConfirmationModal = false;
+  showSuccessModal = false;
+  showCancelModal = false;
 
-  // Success message
-  successMessage: string = '';
-  errorMessage: string = '';
-  isLoading: boolean = false;
+  successMessage = '';
+  errorMessage = '';
+  isLoading = false;
+  isWalletLoading = false;
+  isSubmittingCancellation = false;
+  walletErrorMessage = '';
+  availableWalletBalance = 0;
+  walletDeclarationAccepted = false;
+  walletSourceLabel = 'Excise / Additional Wallet Balance';
 
-  // File upload
   uploadedFiles: any[] = [];
-
-  // Profile Data
-  currentLicenseeId: string = '';
+  currentLicenseeId = '';
 
   constructor(
     private http: HttpClient,
     private router: Router,
     private supplyChainService: SupplyChainService,
-    private profileService: SupplyChainProfileService
-  ) { }
+    private profileService: SupplyChainProfileService,
+    private paymentIntegrationService: PaymentIntegrationService
+  ) {}
 
   ngOnInit() {
     console.log('CancellationRequestComponent: ngOnInit, refNo:', this.referenceNo);
@@ -80,7 +84,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     console.log('CancellationRequestComponent: ngOnChanges', changes);
-    if (changes['referenceNo'] && changes['referenceNo'].currentValue) {
+    if (changes['referenceNo']?.currentValue) {
       this.loadData();
     }
   }
@@ -89,13 +93,25 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     this.profileService.getProfile().subscribe({
       next: (res) => {
         if (res.exists && res.data) {
-          this.currentLicenseeId = res.data.licenseeId;
+          this.currentLicenseeId = this.resolveLicenseeId(res.data);
           console.log('Fetched Licensee ID:', this.currentLicenseeId);
+          if (this.currentLicenseeId) {
+            this.loadWalletBalance();
+          } else {
+            this.walletErrorMessage = 'Active licensee id not found for the logged-in user.';
+          }
         } else {
-          console.warn('Profile not found, defaulting loop or error?');
+          console.warn('Profile not found.');
+          this.currentLicenseeId = this.resolveLicenseeId();
         }
       },
-      error: (err) => console.error('Error fetching profile', err)
+      error: (err) => {
+        console.error('Error fetching profile', err);
+        this.currentLicenseeId = this.resolveLicenseeId();
+        if (this.currentLicenseeId) {
+          this.loadWalletBalance();
+        }
+      }
     });
   }
 
@@ -103,70 +119,131 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     console.log('CancellationRequestComponent: loading data for', this.referenceNo);
     this.isLoading = true;
     this.errorMessage = '';
+    this.selectedPermits = [];
+    this.newlySelectedPermits = [];
+    this.permits = [];
 
-    // 1. Fetch Requisition Data
-    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/?our_ref_no=${this.referenceNo}`).subscribe({
-      next: (reqData) => {
-        console.log('CancellationRequestComponent: req Data loaded', reqData);
-        if (reqData && reqData.length > 0) {
-          this.requisitionData = reqData[0];
-
-          // 2. Fetch Existing Cancellations to mark cancelled permits
-          this.fetchExistingCancellations();
-        } else {
-          this.errorMessage = 'Requisition not found.';
+    this.http
+      .get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/?our_ref_no=${this.referenceNo}`)
+      .subscribe({
+        next: (reqData) => {
+          console.log('CancellationRequestComponent: req Data loaded', reqData);
+          if (Array.isArray(reqData) && reqData.length > 0) {
+            this.requisitionData = reqData[0];
+            this.fetchExistingCancellations();
+          } else {
+            this.errorMessage = 'Requisition not found.';
+            this.isLoading = false;
+          }
+        },
+        error: (error) => {
+          console.error('Error loading requisition:', error);
+          this.errorMessage = 'Failed to load requisition data.';
           this.isLoading = false;
         }
-      },
-      error: (error) => {
-        console.error('Error loading requisition:', error);
-        this.errorMessage = 'Failed to load requisition data.';
-        this.isLoading = false;
-      }
-    });
+      });
   }
 
   fetchExistingCancellations() {
-    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?requisition_ref_no=${this.referenceNo}`).subscribe({
-      next: (cancelData) => {
-        console.log('Cancellation Data:', cancelData);
-        const cancelledNumbers = new Set<string>();
-        if (cancelData) {
-          if (Array.isArray(cancelData)) {
-            cancelData.forEach(c => {
-              if (!this.isCommissionerApprovedCancellation(c)) {
-                return;
-              }
-              const cancelledRaw = c.cancelled_permit_numbers || c.cancelled_permit_number || '';
-              if (cancelledRaw) {
-                cancelledRaw.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
-              }
+    this.http
+      .get<any[] | CancellationListResponse>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?requisition_ref_no=${this.referenceNo}`)
+      .subscribe({
+        next: (cancelData) => {
+          console.log('Cancellation Data:', cancelData);
+          const permitStateMap = new Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>();
+          const rows: any[] = Array.isArray(cancelData)
+            ? cancelData
+            : (Array.isArray(cancelData?.results) ? cancelData.results : []);
+
+          rows.forEach((record: any) => {
+            const cancelledRaw =
+              record.cancelledPermitNumbers ||
+              record.cancelledPermitNumber ||
+              record.cancelled_permit_numbers ||
+              record.cancelled_permit_number ||
+              '';
+
+            if (!cancelledRaw) {
+              return;
+            }
+
+            const permitNumbers = String(cancelledRaw)
+              .split(',')
+              .map((num: string) => num.trim())
+              .filter((num: string) => num.length > 0);
+
+            const isApproved = this.isCommissionerApprovedCancellation(record);
+            const isPaid = this.isPaidCancellation(record);
+            const isLocked = this.isActiveCancellationRequest(record) || isPaid;
+            const lockReason = isApproved ? 'Cancelled' : (isPaid ? 'Paid' : 'Already submitted');
+
+            permitNumbers.forEach((num: string) => {
+              const existing = permitStateMap.get(num) || {
+                isCancelled: false,
+                isLocked: false,
+                lockReason: ''
+              };
+
+              permitStateMap.set(num, {
+                isCancelled: existing.isCancelled || isApproved,
+                isLocked: existing.isLocked || isLocked,
+                lockReason: existing.lockReason || (isLocked ? lockReason : '')
+              });
             });
-          } else {
-            console.warn('Cancel Data is not an array:', cancelData);
-          }
+          });
+
+          this.generatePermitsFromRequisition(permitStateMap);
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error loading cancellations:', error);
+          this.generatePermitsFromRequisition(new Map());
+          this.isLoading = false;
         }
-        console.log('Generating permits with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermitsFromRequisition(cancelledNumbers);
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading cancellations:', error);
-        console.log('Generating permits (fallback) with count:', this.requisitionData.requisitonNumberOfPermits);
-        this.generatePermitsFromRequisition(new Set());
-        this.isLoading = false;
-      }
-    });
+      });
   }
 
   private isCommissionerApprovedCancellation(record: any): boolean {
     const status = String(record?.status || '').toLowerCase();
-    const stageName = String(record?.current_stage_name || '').toLowerCase();
+    const stageName = String(record?.current_stage_name || record?.currentStageName || '').toLowerCase();
     const merged = `${status} ${stageName}`;
     return merged.includes('approved') && merged.includes('commissioner');
   }
 
-  private generatePermitsFromRequisition(cancelledSet: Set<string>) {
+  private isRejectedCancellation(record: any): boolean {
+    const status = String(record?.status || '').toLowerCase();
+    const stageName = String(record?.current_stage_name || record?.currentStageName || '').toLowerCase();
+    const merged = `${status} ${stageName}`;
+    return merged.includes('reject');
+  }
+
+  private isPaidCancellation(record: any): boolean {
+    if (record?.payment_completed === true || record?.paymentCompleted === true) {
+      return true;
+    }
+
+    const paymentStatus = String(
+      record?.payment_status ||
+      record?.paymentStatus ||
+      record?.wallet_payment_status ||
+      ''
+    ).toLowerCase();
+
+    if (['success', 'paid', 'completed'].includes(paymentStatus)) {
+      return true;
+    }
+
+    const status = String(record?.status || '').toLowerCase();
+    return status.includes('payslip') || status.includes('paid');
+  }
+
+  private isActiveCancellationRequest(record: any): boolean {
+    return !this.isRejectedCancellation(record);
+  }
+
+  private generatePermitsFromRequisition(
+    permitStateMap: Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>
+  ) {
     const detailsNumbersRaw =
       this.requisitionData?.details_permits_number ||
       this.requisitionData?.detailsPermitsNumber ||
@@ -181,7 +258,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.permits = explicitPermitNumbers.map((num: string) => ({
         number: num,
         amount: 1000,
-        isCancelled: cancelledSet.has(num),
+        isCancelled: permitStateMap.get(num)?.isCancelled || false,
+        isLocked: permitStateMap.get(num)?.isLocked || false,
+        lockReason: permitStateMap.get(num)?.lockReason || '',
         isSelected: false
       }));
       return;
@@ -192,91 +271,72 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.requisitionData?.requisiton_number_of_permits ||
       0;
 
-    this.generatePermits(totalCount, cancelledSet);
+    this.generatePermits(totalCount, permitStateMap);
   }
 
-  generatePermits(totalCount: any, cancelledSet: Set<string>) {
+  generatePermits(
+    totalCount: any,
+    permitStateMap: Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>
+  ) {
     this.permits = [];
     const count = Number(totalCount);
-    console.log('Generating permits loop, count:', count);
-    if (!count || isNaN(count)) return;
+    if (!count || isNaN(count)) {
+      return;
+    }
+
     for (let i = 1; i <= count; i++) {
       const numStr = i.toString();
       this.permits.push({
         number: numStr,
         amount: 1000,
-        isCancelled: cancelledSet.has(numStr),
+        isCancelled: permitStateMap.get(numStr)?.isCancelled || false,
+        isLocked: permitStateMap.get(numStr)?.isLocked || false,
+        lockReason: permitStateMap.get(numStr)?.lockReason || '',
         isSelected: false
       });
     }
   }
 
-  onPermitSelectionChange() {
-    // We only care about newly selected ones for the current transaction
-    // The UI checkbox binds to nothing directly? 
-    // Wait, the template uses [checked]="permit.isCancelled" but that is for ALREADY cancelled.
-    // I need to track the NEWLY selected checkboxes.
-    // The template likely needs [(ngModel)] or (change) updating a set.
-    // The provided template snippet uses (change)="onPermitSelectionChange()". 
-    // I need to scan the DOM or bind inputs. 
-    // Better: Update the 'permits' model with a 'isSelected' property or similar, but interface is fixed.
-    // I shall check the checkboxes via querySelector or bind to a local map if I can't change template.
-    // Actually, I can allow the user to select multiple.
+  onPermitSelectionChange() {}
 
-    // NOTE: The current template logic in the prompt:
-    // <input ... [checked]="permit.isCancelled" ... (change)="onPermitSelectionChange()" />
-    // It binds checked to isCancelled which is for EXISTING. 
-    // It doesn't seem to have a binding for NEW selection.
-    // I implicitly need to handle the selection state.
-    // I will iterate over the checkboxes in the DOM or add a 'selected' prop to my local Permit objects if allowed.
-    // Since I am rewriting the component, I can extend the Permit interface locally.
-  }
-
-  // Helper to handle selection since template is not fully binded in the snippet provided
   togglePermit(permit: Permit, event: any) {
-    if (permit.isCancelled) return;
+    if (permit.isLocked) {
+      return;
+    }
+
     permit.isSelected = !!event.target.checked;
 
-    // Update newlySelectedPermits for submission logic
     if (event.target.checked) {
       if (!this.newlySelectedPermits.includes(permit.number)) {
         this.newlySelectedPermits.push(permit.number);
       }
-      // Also update selectedPermits for display
       if (!this.selectedPermits.includes(permit.number)) {
         this.selectedPermits.push(permit.number);
       }
     } else {
-      this.newlySelectedPermits = this.newlySelectedPermits.filter(n => n !== permit.number);
-      // Remove from selectedPermits
-      this.selectedPermits = this.selectedPermits.filter(n => n !== permit.number);
+      this.newlySelectedPermits = this.newlySelectedPermits.filter((num) => num !== permit.number);
+      this.selectedPermits = this.selectedPermits.filter((num) => num !== permit.number);
     }
-    // Sort visually
+
     this.selectedPermits.sort((a, b) => Number(a) - Number(b));
   }
 
   getTotalBalance(): number {
-    // grainEnaNumber * newlySelectedPermits.length
-    if (this.requisitionData && this.requisitionData.grainEnaNumber) {
+    if (this.requisitionData?.grainEnaNumber) {
       return Number(this.requisitionData.grainEnaNumber) * this.newlySelectedPermits.length;
     }
     return 0;
   }
 
+  loadPermitNumbers() {}
 
-  loadPermitNumbers() {
-    // Replaced by loadData flow
-  }
-
-  loadCancellationData() {
-    // Replaced by loadData flow
-  }
+  loadCancellationData() {}
 
   onFileSelected(event: any, fileType: string) {
     const file = event.target.files[0];
     if (file) {
       this.uploadedFiles.push({
-        file: file,
+        file,
         type: fileType,
         name: file.name,
         size: this.formatFileSize(file.size),
@@ -287,29 +347,82 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   formatFileSize(bytes: number): string {
     if (bytes > 1024 * 1024) {
       return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-    } else {
-      return (bytes / 1024).toFixed(2) + ' KB';
     }
+    return (bytes / 1024).toFixed(2) + ' KB';
   }
 
   showDeclaration() {
-    // Must gather selected permits. 
-    // Since the template calls onPermitSelectionChange without args, I need to read the state.
-    // I'll assume I update the template to pass $event or permit.
-    // OR create a ViewChild.
-    // For now, I will assume I can update the template too.
+    if (this.isSubmittingCancellation) {
+      return;
+    }
     const cancellationCharges = this.newlySelectedPermits.length * 1000;
-    this.successMessage = `Refund of ₹${cancellationCharges.toLocaleString()} will be processed after approval by the Commissioner.`;
+    this.successMessage = `Refund of Rs ${cancellationCharges.toLocaleString()} will be processed after approval by the Commissioner.`;
     this.showDeclarationModal = true;
   }
 
-  confirmCancellation() {
+  openWalletConfirmation() {
+    if (this.isSubmittingCancellation) {
+      return;
+    }
     this.showDeclarationModal = false;
 
     if (!this.currentLicenseeId) {
-      alert('Licensee Profile not loaded. Cannot submit cancellation.');
+      alert('Licensee profile not loaded. Cannot submit cancellation.');
       return;
     }
+
+    this.walletDeclarationAccepted = false;
+    this.walletErrorMessage = '';
+    this.showWalletConfirmationModal = true;
+    this.loadWalletBalance();
+  }
+
+  closeWalletConfirmation() {
+    if (this.isSubmittingCancellation) {
+      return;
+    }
+
+    this.showWalletConfirmationModal = false;
+    this.walletDeclarationAccepted = false;
+    this.walletErrorMessage = '';
+  }
+
+  private loadWalletBalance() {
+    if (!this.currentLicenseeId) {
+      this.walletErrorMessage = 'Active licensee id not found for the logged-in user.';
+      return;
+    }
+
+    this.isWalletLoading = true;
+    this.walletErrorMessage = '';
+
+    this.paymentIntegrationService.getWalletSummary(this.currentLicenseeId).subscribe({
+      next: (response) => {
+        const rows = Array.isArray(response?.results) ? response.results : [];
+        this.availableWalletBalance = this.extractCancellationWalletBalance(rows);
+        if (!rows.length) {
+          this.walletErrorMessage = 'Wallet summary rows are unavailable for the active licensee.';
+        }
+        this.isWalletLoading = false;
+      },
+      error: (summaryError) => {
+        console.error('Error loading wallet summary:', summaryError);
+        this.availableWalletBalance = 0;
+        this.walletErrorMessage = 'Unable to load Excise / Additional wallet balance right now.';
+        this.isWalletLoading = false;
+      }
+    });
+  }
+
+  confirmCancellation() {
+    if (this.isSubmittingCancellation) {
+      return;
+    }
+    if (!this.canProceedWithWalletConfirmation()) {
+      return;
+    }
+
+    this.isSubmittingCancellation = true;
 
     const payload = {
       reference_no: this.referenceNo,
@@ -317,19 +430,31 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       licensee_id: this.currentLicenseeId,
     };
 
-    console.log('🔧 Submitting cancellation with payload:', payload);
+    console.log('Submitting cancellation with payload:', payload);
 
     this.supplyChainService.submitCancellation(payload).subscribe({
       next: (response: any) => {
-        console.log('✅ Cancellation submitted successfully:', response);
+        const deductedAmount = this.toNumber(response?.wallet_deduction?.amount ?? this.getCancellationCharges());
+        const balanceAfter = this.toNumber(response?.wallet_deduction?.balance_after ?? this.getBalanceAfterDeduction());
+        const transactionId = String(response?.wallet_deduction?.transaction_id || '').trim();
+
+        this.availableWalletBalance = balanceAfter;
+        this.showWalletConfirmationModal = false;
+        this.walletDeclarationAccepted = false;
         this.showSuccessModal = true;
-        this.successMessage = response.message;
-        // Refresh data to show updated status
+        this.successMessage =
+          `${response.message || 'Cancellation request submitted successfully.'}<br>` +
+          `Wallet deducted: <strong>${this.formatCurrency(deductedAmount)}</strong><br>` +
+          `Balance after deduction: <strong>${this.formatCurrency(balanceAfter)}</strong>` +
+          (transactionId ? `<br>Wallet transaction ID: <strong>${transactionId}</strong>` : '');
+
         this.loadData();
         this.newlySelectedPermits = [];
+        this.selectedPermits = [];
+        this.isSubmittingCancellation = false;
       },
       error: (error) => {
-        console.error('❌ Error submitting cancellation:', error);
+        console.error('Error submitting cancellation:', error);
         console.error('Error details:', {
           status: error.status,
           statusText: error.statusText,
@@ -337,22 +462,18 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
           message: error.message
         });
         this.errorMessage = 'Failed to submit cancellation: ' + (error.error?.error || error.error?.message || error.message);
+        this.isSubmittingCancellation = false;
         alert(this.errorMessage);
       },
     });
   }
 
-  // Helper removed as we use service now
-  // getLicenseeIdFromSession()...
-
   redirectToDashboard() {
     this.showSuccessModal = false;
-    // Navigate to dashboard cancellation section and force reload
-    this.router.navigate(['/dashboard'], { 
+    this.router.navigate(['/dashboard'], {
       queryParams: { section: 'cancellation' },
       queryParamsHandling: 'merge'
     }).then(() => {
-      // Force page reload to ensure data is refreshed
       window.location.reload();
     });
   }
@@ -361,13 +482,129 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     this.close.emit();
   }
 
-
-
   getCancellationCharges(): number {
     return this.newlySelectedPermits.length * 1000;
   }
 
+  getBalanceAfterDeduction(): number {
+    return this.availableWalletBalance - this.getCancellationCharges();
+  }
+
+  hasSufficientWalletBalance(): boolean {
+    return this.getBalanceAfterDeduction() >= 0;
+  }
+
+  canProceedWithWalletConfirmation(): boolean {
+    return (
+      !this.isWalletLoading &&
+      !this.isSubmittingCancellation &&
+      !this.walletErrorMessage &&
+      this.walletDeclarationAccepted &&
+      this.getCancellationCharges() > 0 &&
+      this.hasSufficientWalletBalance()
+    );
+  }
+
+  formatCurrency(amount: number): string {
+    return `Rs ${this.toNumber(amount).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  }
+
   isPermitSelectionLocked(): boolean {
-    return this.permits.length > 0 && this.permits.every((p) => p.isCancelled);
+    return this.permits.length > 0 && this.permits.every((p) => p.isLocked);
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private extractCancellationWalletBalance(rows: WalletSummaryRowLike[]): number {
+    return rows.reduce((sum, row) => {
+      const walletType = String(row.wallet_type ?? row.walletType ?? '').toLowerCase();
+      const moduleType = String(row.module_type ?? row.moduleType ?? '').toLowerCase();
+      const hoa = String(row.head_of_account ?? row.headOfAccount ?? '').trim();
+      const inferredWalletType = walletType || this.inferWalletTypeFromHoa(hoa);
+
+      if (inferredWalletType === 'education_cess' || inferredWalletType === 'hologram') {
+        return sum;
+      }
+
+      if (inferredWalletType === 'excise' || inferredWalletType === 'brewery' || moduleType === 'brewery') {
+        return sum + this.toNumber(row.current_balance ?? row.currentBalance ?? 0);
+      }
+
+      return sum;
+    }, 0);
+  }
+
+  private inferWalletTypeFromHoa(hoa: string): string {
+    if (hoa === '0045-00-112-45-03') {
+      return 'education_cess';
+    }
+    if (
+      hoa === '0039-00-800-45-01' ||
+      hoa === '0039-00-105-45-04' ||
+      hoa === '0039-80-800-45-01'
+    ) {
+      return 'hologram';
+    }
+    if (hoa === '0038-00-102-45-00') {
+      return 'brewery';
+    }
+    return 'excise';
+  }
+
+  private resolveLicenseeId(profileData?: any): string {
+    const fromProfile = this.pickFirstNonEmpty(profileData, [
+      'licenseeId',
+      'licensee_id',
+      'licenseId',
+      'license_id',
+      'licenseeIdNo',
+      'licensee_id_no'
+    ]);
+
+    if (fromProfile) {
+      return fromProfile;
+    }
+
+    const fromSession = sessionStorage.getItem('currentUser');
+    if (fromSession) {
+      try {
+        const parsed = JSON.parse(fromSession);
+        return this.pickFirstNonEmpty(parsed, [
+          'licensee_id',
+          'licenseeId',
+          'license_id',
+          'licenseId',
+          'licensee_id_no',
+          'licenseeIdNo',
+          'username',
+          'userName'
+        ]);
+      } catch (error) {
+        console.error('Invalid currentUser session payload:', error);
+      }
+    }
+
+    return '';
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    if (!source || typeof source !== 'object') {
+      return '';
+    }
+
+    for (const key of keys) {
+      const value = String(source?.[key] ?? '').trim();
+      if (value) {
+        return value;
+      }
+    }
+
+    return '';
   }
 }

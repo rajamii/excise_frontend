@@ -1,0 +1,129 @@
+<form [formGroup]="packagingForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Packaging & Pricing</div>
+      <div class="validation">Configure approved pack sizes and pricing details</div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="packaging-section">
+        <div class="section-title">
+          <mat-icon>inventory_2</mat-icon>
+          <h3>Pack Size Matrix</h3>
+        </div>
+
+        <div class="packaging-rows" formArrayName="packagingRows">
+          <div
+            class="packaging-row"
+            *ngFor="let row of packagingRows.controls; let i = index"
+            [formGroupName]="i">
+            <mat-form-field appearance="outline">
+              <mat-label>Size (ML)</mat-label>
+              <input matInput type="number" formControlName="sizeMl" min="30" />
+              @if (row.get('sizeMl')?.invalid && row.get('sizeMl')?.touched) {
+                <mat-error>Enter valid size</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Packaging Type</mat-label>
+              <mat-select formControlName="packagingType">
+                <mat-option value="">-- Select Type --</mat-option>
+                @for (type of packagingTypes; track type) {
+                  <mat-option [value]="type">{{ type }}</mat-option>
+                }
+              </mat-select>
+              @if (row.get('packagingType')?.invalid && row.get('packagingType')?.touched) {
+                <mat-error>Packaging type required</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Units Per Case</mat-label>
+              <input matInput type="number" formControlName="unitsPerCase" min="1" />
+              @if (row.get('unitsPerCase')?.invalid && row.get('unitsPerCase')?.touched) {
+                <mat-error>Enter valid quantity</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>MRP (INR)</mat-label>
+              <input matInput type="number" formControlName="mrp" min="1" />
+              @if (row.get('mrp')?.invalid && row.get('mrp')?.touched) {
+                <mat-error>Enter valid MRP</mat-error>
+              }
+            </mat-form-field>
+
+            <button mat-icon-button color="warn" (click)="removePackagingRow(i)" [disabled]="packagingRows.length === 1">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="row-actions">
+          <button mat-stroked-button type="button" (click)="addPackagingRow()">
+            <mat-icon>add</mat-icon>
+            Add Pack Size
+          </button>
+        </div>
+      </div>
+
+      <div class="summary-strip">
+        <span>Total Packs: <strong>{{ packagingRows.length }}</strong></span>
+        <span>Average MRP: <strong>INR {{ getEstimatedAverageMrp() | number:'1.2-2' }}</strong></span>
+      </div>
+
+      <div class="form-field-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Target Market Districts</mat-label>
+          <mat-select formControlName="marketDistricts" multiple>
+            @for (district of districts; track district) {
+              <mat-option [value]="district">{{ district }}</mat-option>
+            }
+          </mat-select>
+          @if (packagingForm.controls['marketDistricts'].invalid && packagingForm.controls['marketDistricts'].touched) {
+            <mat-error>{{ getErrorMessage('marketDistricts') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Proposed Launch Date</mat-label>
+          <input matInput [matDatepicker]="launchDatePicker" formControlName="proposedLaunchDate" />
+          <mat-datepicker-toggle matSuffix [for]="launchDatePicker"></mat-datepicker-toggle>
+          <mat-datepicker #launchDatePicker></mat-datepicker>
+          @if (packagingForm.controls['proposedLaunchDate'].invalid && packagingForm.controls['proposedLaunchDate'].touched) {
+            <mat-error>{{ getErrorMessage('proposedLaunchDate') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Projected Annual Sales (Cases)</mat-label>
+          <input matInput type="number" formControlName="annualProjectedSales" min="1" />
+          @if (packagingForm.controls['annualProjectedSales'].invalid && packagingForm.controls['annualProjectedSales'].touched) {
+            <mat-error>{{ getErrorMessage('annualProjectedSales') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Remarks (Optional)</mat-label>
+          <textarea
+            matInput
+            formControlName="remarks"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="2"
+            cdkAutosizeMaxRows="4">
+          </textarea>
+          @if (packagingForm.controls['remarks'].invalid && packagingForm.controls['remarks'].touched) {
+            <mat-error>{{ getErrorMessage('remarks') }}</mat-error>
+          }
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+      <button mat-flat-button color="primary" type="button" (click)="proceedToNext()">Next</button>
+      <button mat-stroked-button color="warn" type="button" (click)="resetForm()">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

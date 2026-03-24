@@ -1,22 +1,22 @@
-  import { inject, isDevMode, PLATFORM_ID } from '@angular/core';
-  import { isPlatformBrowser } from '@angular/common';
-  import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
-  import { HttpClient } from '@angular/common/http';
-  import { of } from 'rxjs';
-  import { catchError, map, switchMap } from 'rxjs/operators';
-  import { AccountService } from '../services/account.service';
-  import { StateStorageService } from './state-storage.service';
-  import { environment } from '../../../environments/environment';
+import { inject, isDevMode, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
+import { of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+import { AccountService } from '../services/account.service';
+import { StateStorageService } from './state-storage.service';
 
-  /**
-   * Route guard to control access based on user authentication and role/authority.
-   * It verifies if the user is logged in and has required permissions before allowing route activation.
-   */
+/**
+ * Route guard to control access based on authentication and route permissions.
+ * - SSR: allows navigation on server side, validates in browser.
+ * - Browser: validates tokens, identity, then role/permission requirements.
+ */
 export const UserRouteAccessService: CanActivateFn = (
   next: ActivatedRouteSnapshot,
   state: RouterStateSnapshot
 ) => {
-    // Inject required services
   const accountService = inject(AccountService);
   const router = inject(Router);
   const stateStorageService = inject(StateStorageService);
@@ -24,65 +24,78 @@ export const UserRouteAccessService: CanActivateFn = (
   const platformId = inject(PLATFORM_ID);
   const dashboardConfigUrl = `${environment.apiBaseUrl}/auth/roles/dashboard-config/current/`;
 
-  // During server rendering there is no browser storage to resolve auth tokens.
-  // Let the client runtime perform the actual route protection.
   if (!isPlatformBrowser(platformId)) {
-    return of(true);
+    return true;
   }
 
-    // Attempt to get the current user's account
+  const hasAccessToken = localStorage.getItem('access');
+  const hasRefreshToken = localStorage.getItem('refresh');
+
+  if (!hasAccessToken || !hasRefreshToken) {
+    stateStorageService.storeUrl(state.url);
+    router.navigate(['/login']);
+    return false;
+  }
+
+  const evaluateLegacyAuthorities = (authorities?: string[]): boolean => {
+    if (!authorities || authorities.length === 0) {
+      return true;
+    }
+
+    const allowed = accountService.hasAnyRole(authorities);
+    if (!allowed) {
+      if (isDevMode()) {
+        console.error('User does not have required authorities:', authorities);
+      }
+      router.navigate(['accessdenied']);
+    }
+    return allowed;
+  };
+
   return accountService.identity().pipe(
     switchMap(account => {
-      if (account) {
-        // DB-driven permission key for the route.
-        const requiredPermission = next.data['requiredPermission'] as string | undefined;
-        const accountPermissions = Array.isArray((account as any)?.permissions)
-          ? (account as any).permissions as string[]
-          : [];
-
-        // Route is open when no role/permission restriction exists.
-        if (!requiredPermission) {
-          return of(true);
-        }
-
-        // Permission check from user payload when available.
-        if (requiredPermission && accountPermissions.includes(requiredPermission)) {
-          return of(true);
-        }
-
-        // DB-driven fallback from dashboard role config.
-        return http.get<any>(dashboardConfigUrl).pipe(
-          map(config => {
-            const dbPermissions = Array.isArray(config?.permissions) ? config.permissions as string[] : [];
-
-            if (requiredPermission) {
-              return dbPermissions.includes(requiredPermission);
-            }
-
-            return dbPermissions.includes(requiredPermission);
-          }),
-          catchError(() => of(false)),
-          map(allowed => {
-            if (!allowed) {
-              if (isDevMode()) {
-                console.error(
-                  'User does not have required access. authorities=',
-                  next.data['authorities'],
-                  'requiredPermission=',
-                  requiredPermission
-                );
-              }
-              router.navigate(['accessdenied']);
-            }
-            return allowed;
-          })
-        );
+      if (!account) {
+        stateStorageService.storeUrl(state.url);
+        router.navigate(['/login'], { queryParams: { sessionExpired: true } });
+        return of(false);
       }
 
-      // If user is not logged in, store the attempted URL and redirect to login page
-      stateStorageService.storeUrl(state.url);
-      router.navigate(['/login']);
-      return of(false);
-    }),
+      const requiredPermission = next.data['requiredPermission'] as string | undefined;
+      const authorities = next.data['authorities'] as string[] | undefined;
+
+      if (!requiredPermission) {
+        return of(evaluateLegacyAuthorities(authorities));
+      }
+
+      const accountPermissions = Array.isArray((account as any)?.permissions)
+        ? ((account as any).permissions as string[])
+        : [];
+
+      if (accountPermissions.includes(requiredPermission)) {
+        return of(true);
+      }
+
+      return http.get<any>(dashboardConfigUrl).pipe(
+        map(config => {
+          const dbPermissions = Array.isArray(config?.permissions) ? (config.permissions as string[]) : [];
+          return dbPermissions.includes(requiredPermission);
+        }),
+        catchError(() => of(false)),
+        map(allowed => {
+          if (!allowed) {
+            if (isDevMode()) {
+              console.error(
+                'User does not have required access. authorities=',
+                authorities,
+                'requiredPermission=',
+                requiredPermission
+              );
+            }
+            router.navigate(['accessdenied']);
+          }
+          return allowed;
+        })
+      );
+    })
   );
 };

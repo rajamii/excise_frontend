@@ -9,15 +9,16 @@
   box-shadow: 0 6px 14px rgba(23, 42, 105, 0.08);
 }
 
-.oic-card-header {
+.oic-card .oic-card-header,
+mat-card.oic-card mat-card-header.oic-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   margin-bottom: 0;
-  border-bottom: 1px solid #e5eaf7;
-  background: linear-gradient(90deg, #f7f9ff 0%, #f2f5ff 100%);
+  border-bottom: 1px solid #1f2b78;
+  background: #28358a !important;
 }
 
 .header-content {
@@ -30,22 +31,24 @@
   margin: 0;
   font-size: 31px;
   font-weight: 700;
-  color: #142a66;
+  color: #ffffff;
 }
 
 .page-subtitle {
   margin: 0;
   font-size: 14px;
-  color: #5e6b8f;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .add-officer-btn {
   min-width: 156px;
   border-radius: 10px;
-  border: 1px solid #2f76c6;
+  border: 1px solid rgba(255, 255, 255, 0.72);
   color: #12396d;
+  background: #ffffff !important;
   font-weight: 600;
   letter-spacing: 0.2px;
+  box-shadow: 0 8px 18px rgba(10, 37, 84, 0.18);
 }
 
 .oic-card-content {
@@ -68,7 +71,7 @@
 
 .oic-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1120px;
   border-radius: 8px;
   overflow: hidden;
 
@@ -95,6 +98,10 @@
 
   .email-cell {
     word-break: break-word;
+  }
+
+  .mat-mdc-slide-toggle {
+    margin-left: 0;
   }
 }
 

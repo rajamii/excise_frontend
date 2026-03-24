@@ -6,6 +6,9 @@ import { HologramDataService } from '../../services/hologram-data.service';
 
 export interface HologramRecord {
   id: number;
+  stageId?: number;
+  isInitialStage?: boolean;
+  isFinalStage?: boolean;
   date: string;
   ourRefNo: string;
   cartoonNumber?: string;
@@ -13,7 +16,7 @@ export interface HologramRecord {
   toSerial: string;
   numberOfHolograms: number;
   remarks?: string;
-  status: 'PENDING_ARRIVAL' | 'ARRIVED' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL' | 'Cartoon Assigned' | 'Completed' | string;
+  status: string;
   approvedDate?: string;
   arrivedDate?: string;
   procurementType?: 'Local' | 'Export' | 'Defence'; // Add procurement type
@@ -134,11 +137,12 @@ export class HologramdetailsComponent implements OnInit {
             console.log(`Debug Mapping [${p.refNo}]: No details found. Keys:`, Object.keys(p));
           }
 
-          // Determine internal status based on backend status
-          let internalStatus: 'PENDING_ARRIVAL' | 'ARRIVED' = 'PENDING_ARRIVAL';
-          if ((rawDetails && rawDetails.length > 0) || p.status === 'Cartoon Assigned' || p.status === 'ARRIVED') {
-            internalStatus = 'ARRIVED';
-          }
+          const backendStatus = String(
+            (p as any).status ||
+            (p as any).current_stage_name ||
+            (p as any).currentStageName ||
+            ''
+          ).trim() || 'Unknown';
 
           // Map procurement type from quantities (heuristic if not explicit)
           let pType: 'Local' | 'Export' | 'Defence' = 'Local';
@@ -167,17 +171,24 @@ export class HologramdetailsComponent implements OnInit {
 
           return {
             id: p.id!,
-            date: p.date!,
-            ourRefNo: p.refNo!,
+            stageId: Number((p as any).stage_id ?? (p as any).stageId ?? (p as any).current_stage ?? (p as any).currentStage ?? 0) || undefined,
+            isInitialStage: Boolean((p as any).current_stage_is_initial),
+            isFinalStage: Boolean((p as any).current_stage_is_final),
+            date: (p as any).date || (p as any).created_at || '',
+            ourRefNo: (p as any).refNo || (p as any).ref_no || `REF-${p.id}`,
             cartoonNumber: rawDetails[0]?.cartoonNumber || rawDetails[0]?.cartoon_number || '', // Handle both camelCase and snake_case keys
             fromSerial: rawDetails[0]?.fromSerial || rawDetails[0]?.from_serial || '',
             toSerial: rawDetails[0]?.toSerial || rawDetails[0]?.to_serial || '',
             // Use original procurement quantities instead of calculated available quantities
             // This ensures we show the actual procured amount (1000) not the available amount (999)
-            numberOfHolograms: (Number(p.localQty) + Number(p.exportQty) + Number(p.defenceQty)),
+            numberOfHolograms: (
+              Number((p as any).localQty ?? (p as any).local_qty ?? 0) +
+              Number((p as any).exportQty ?? (p as any).export_qty ?? 0) +
+              Number((p as any).defenceQty ?? (p as any).defence_qty ?? 0)
+            ),
             remarks: p.remarks || `Hologram procurement (${pType})`,
-            status: internalStatus,
-            approvedDate: p.date,
+            status: backendStatus,
+            approvedDate: (p as any).date || (p as any).created_at || '',
             arrivedDate: resolvedArrivalDate,
             procurementType: pType,
             carton_details: rawDetails,
@@ -221,43 +232,21 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
-  determineStatus(item: any): 'PENDING_ARRIVAL' | 'ARRIVED' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL' {
-    // Check if hologram has physically arrived
-    if (item.arrivedDate) return 'ARRIVED';
-
-    // Check if approved by commissioner and ready for arrival
-    if (item.status === 'APPROVED' || item.approvedDate) return 'PENDING_ARRIVAL';
-
-    // Check if rejected
-    if (item.status === 'REJECTED') return 'REJECTED';
-
-    // Check if submitted but not yet approved
-    if (item.status === 'Submitted') return 'PENDING_APPROVAL';
-
-    // Default status for new requests
-    return 'PENDING_APPROVAL';
+  determineStatus(item: any): string {
+    return String(item?.status || item?.current_stage_name || item?.currentStageName || '').trim() || 'Unknown';
   }
 
 
 
   // Check if record is from completed workflow
   isFromCompletedWorkflow(record: HologramRecord): boolean {
-    return record.supplyChainData && (record.status === 'PENDING_ARRIVAL' || record.status === 'ARRIVED');
+    return !!record.supplyChainData && (this.isPendingArrivalStage(record) || this.isArrivedStage(record));
   }
 
   // Determine which record to keep when deduplicating
   shouldReplaceRecord(existing: HologramRecord, newRecord: HologramRecord): boolean {
-    // Priority order: ARRIVED > PENDING_ARRIVAL > PENDING_APPROVAL
-    const statusPriority = {
-      'ARRIVED': 3,
-      'PENDING_ARRIVAL': 2,
-      'PENDING_APPROVAL': 1,
-      'APPROVED': 1,
-      'REJECTED': 0
-    };
-
-    const existingPriority = (statusPriority as any)[existing.status] || 0;
-    const newPriority = (statusPriority as any)[newRecord.status] || 0;
+    const existingPriority = this.getRecordPriority(existing);
+    const newPriority = this.getRecordPriority(newRecord);
 
     // Keep the record with higher status priority
     if (newPriority > existingPriority) {
@@ -273,6 +262,14 @@ export class HologramdetailsComponent implements OnInit {
     }
 
     return false;
+  }
+
+  private getRecordPriority(record: HologramRecord): number {
+    if (this.hasRollDetails(record)) return 4;
+    if (this.hasAllowedAction(record, 'assign_cartons')) return 3;
+    if (record.isFinalStage) return 2;
+    if (record.isInitialStage) return 1;
+    return 0;
   }
 
   // Create unique key for deduplication that includes type
@@ -335,36 +332,34 @@ export class HologramdetailsComponent implements OnInit {
 
   // Update arrival methods
   canUpdateRecord(record: HologramRecord): boolean {
-    // Button should only be active if:
-    // 1. Status is PENDING_ARRIVAL (approved by commissioner)
-    // 2. Payment has been COMPLETED (not just slip uploaded)
-    // 3. Status is NOT 'ARRIVED', 'Cartoon Assigned' or 'Completed' (already processed)
-    //    UNLESS data is missing (cartonNumber is empty/null/-)
-
-    // Hard gate: allow update only after payment completion.
     if (!this.isPaymentCompleted(record)) {
       return false;
     }
-
-    const status = record.status;
-    if (status === 'ARRIVED' || status === 'Cartoon Assigned' || status === 'Completed') {
-      const hasDetails = record.carton_details && record.carton_details.length > 0;
-      console.log(`Debug Button [${record.ourRefNo}]: Status=${status}, HasDetails=${hasDetails}, Len=${record.carton_details?.length}`);
-
-      // Fix for missing data: If arrived but NO carton details are present in the list
-      // stricter check than just cartoonNumber string
-      if (!hasDetails) {
-        return true;
-      }
+    if (this.isArrivedStage(record)) {
       return false;
     }
+    const backendAllowsAssign = this.hasAllowedAction(record, 'assign_cartons');
+    return backendAllowsAssign || this.isPendingArrivalStage(record);
+  }
 
-    if (status !== 'PENDING_ARRIVAL') {
+  private hasAllowedAction(record: HologramRecord, action: string): boolean {
+    const actions = record?.supplyChainData?.allowed_actions ?? record?.supplyChainData?.allowedActions ?? [];
+    if (!Array.isArray(actions)) {
       return false;
     }
+    return actions.some((entry: any) => String(entry || '').trim().toLowerCase() === action.toLowerCase());
+  }
 
-    // Check if payment has been completed for this record
-    return this.isPaymentCompleted(record);
+  isPendingArrivalStage(record: HologramRecord): boolean {
+    return this.hasAllowedAction(record, 'assign_cartons') && !this.hasRollDetails(record);
+  }
+
+  isPendingApprovalStage(record: HologramRecord): boolean {
+    return !record.isFinalStage && !this.hasAllowedAction(record, 'assign_cartons') && !this.hasRollDetails(record);
+  }
+
+  isArrivedStage(record: HologramRecord): boolean {
+    return this.hasRollDetails(record);
   }
 
   // Check if payment has been COMPLETED for this hologram record
@@ -1082,55 +1077,26 @@ export class HologramdetailsComponent implements OnInit {
     return this.filteredRecords.filter(record => record.status === status).length;
   }
 
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'PENDING_ARRIVAL':
-        return 'bg-warning text-dark';
-      case 'ARRIVED':
-        return 'bg-success';
-      case 'APPROVED':
-        return 'bg-info';
-      case 'REJECTED':
-        return 'bg-danger';
-      case 'PENDING_APPROVAL':
-        return 'bg-secondary';
-      default:
-        return 'bg-secondary';
-    }
+  getStatusClass(record: HologramRecord): string {
+    if (this.isArrivedStage(record)) return 'bg-success';
+    if (this.isPendingArrivalStage(record)) return 'bg-warning text-dark';
+    if (record.isFinalStage && !this.hasRollDetails(record)) return 'bg-danger';
+    if (record.isInitialStage) return 'bg-secondary';
+    if (!record.isFinalStage) return 'bg-info';
+    return 'bg-secondary';
   }
 
-  getStatusIcon(status: string): string {
-    switch (status) {
-      case 'PENDING_ARRIVAL':
-        return 'bi bi-clock';
-      case 'ARRIVED':
-        return 'bi bi-check-circle';
-      case 'APPROVED':
-        return 'bi bi-check-circle-fill';
-      case 'REJECTED':
-        return 'bi bi-x-circle';
-      case 'PENDING_APPROVAL':
-        return 'bi bi-hourglass-split';
-      default:
-        return 'bi bi-question-circle';
-    }
+  getStatusIcon(record: HologramRecord): string {
+    if (this.isArrivedStage(record)) return 'bi bi-check-circle';
+    if (this.isPendingArrivalStage(record)) return 'bi bi-receipt';
+    if (record.isFinalStage && !this.hasRollDetails(record)) return 'bi bi-x-circle';
+    if (record.isInitialStage) return 'bi bi-hourglass-split';
+    if (!record.isFinalStage) return 'bi bi-arrow-repeat';
+    return 'bi bi-question-circle';
   }
 
   getStatusLabel(status: string): string {
-    switch (status) {
-      case 'PENDING_ARRIVAL':
-        return 'Pending Arrival';
-      case 'ARRIVED':
-        return 'Arrived';
-      case 'APPROVED':
-        return 'Approved';
-      case 'REJECTED':
-        return 'Rejected';
-      case 'PENDING_APPROVAL':
-        return 'Pending Approval';
-      default:
-        return 'Unknown';
-    }
+    return String(status || '').trim() || 'Unknown';
   }
 
   // Hologram type related methods
@@ -1287,19 +1253,27 @@ export class HologramdetailsComponent implements OnInit {
 
   // Get summary counts for new status system
   getPendingArrivals(): number {
-    return this.filteredRecords.filter(record => record.status === 'PENDING_ARRIVAL').length;
+    return this.filteredRecords.filter(record => this.isPendingArrivalStage(record)).length;
   }
 
   getArrivedCount(): number {
-    return this.filteredRecords.filter(record => record.status === 'ARRIVED').length;
+    return this.filteredRecords.filter(record => this.isArrivedStage(record)).length;
   }
 
   openHologramRequests(): void {
-    this.router.navigate(['/dev-hologram-request-list']);
+    if (this.hologramRequestsClicked.observed) {
+      this.hologramRequestsClicked.emit();
+      return;
+    }
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'oic-hologram-requests' } });
   }
 
   openHologramOverview(): void {
-    this.router.navigate(['/dev-hologram-overview']);
+    if (this.hologramOverviewClicked.observed) {
+      this.hologramOverviewClicked.emit();
+      return;
+    }
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-overview' } });
   }
 
   // Add test data for arrival testing - Simple 30 holograms for easy testing
@@ -1422,19 +1396,12 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   // Modern styling methods for the new design
-  getModernStatusClass(status: string): string {
-    switch (status) {
-      case 'ARRIVED':
-        return 'status-arrived';
-      case 'PENDING_ARRIVAL':
-        return 'status-pending';
-      case 'APPROVED':
-        return 'status-approved';
-      case 'REJECTED':
-        return 'status-rejected';
-      default:
-        return 'status-default';
-    }
+  getModernStatusClass(record: HologramRecord): string {
+    if (this.isArrivedStage(record)) return 'status-arrived';
+    if (this.isPendingArrivalStage(record)) return 'status-pending';
+    if (record.isFinalStage && !this.hasRollDetails(record)) return 'status-rejected';
+    if (!record.isFinalStage) return 'status-approved';
+    return 'status-default';
   }
 
   getModernTypeClass(type: string): string {

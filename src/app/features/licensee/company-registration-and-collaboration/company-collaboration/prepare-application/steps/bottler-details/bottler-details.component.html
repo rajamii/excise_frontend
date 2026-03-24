@@ -1,0 +1,159 @@
+<form [formGroup]="bottlerDetailsForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Company Details</div>
+      <div class="validation">
+        Select the registered collaborating company. Details will be auto-filled.
+        <em>Note: Only companies registered via Company Registration will appear in the dropdown.</em>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <!-- ── Company Selector ─────────────────────────────────────────────── -->
+      <div class="form-field-container">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Select Collaborating Company *</mat-label>
+          <mat-select formControlName="brandOwner" required>
+            <mat-option value="">-- Select Company --</mat-option>
+            @for (owner of brandOwners; track owner.id) {
+              <mat-option [value]="owner.id">
+                {{ owner.company_name }}
+              </mat-option>
+            }
+          </mat-select>
+          <mat-icon matSuffix>business</mat-icon>
+          @if (bottlerDetailsForm.controls['brandOwner'].invalid && bottlerDetailsForm.controls['brandOwner'].touched) {
+            <mat-error>Please select a collaborating company</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <!-- ── Company Details (auto-filled after selection) ────────────────── -->
+      @if (selectedOwner) {
+        <div class="auto-fill-section">
+          <div class="section-label">Company Details</div>
+
+          <div class="detail-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Name</mat-label>
+              <input
+                matInput
+                formControlName="brandOwnerName"
+                readonly
+                aria-label="Company name"
+                title="Company name">
+              <mat-icon matSuffix>badge</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>PAN No</mat-label>
+              <input
+                matInput
+                formControlName="brandOwnerPan"
+                readonly
+                aria-label="PAN number"
+                title="PAN number">
+              <mat-icon matSuffix>fingerprint</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Registered Office Address</mat-label>
+              <textarea matInput
+                formControlName="brandOwnerOfficeAddress"
+                readonly
+                aria-label="Registered office address"
+                title="Registered office address"
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="4">
+              </textarea>
+              <mat-icon matSuffix>location_city</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Factory Address</mat-label>
+              <textarea matInput
+                formControlName="brandOwnerFactoryAddress"
+                readonly
+                aria-label="Factory address"
+                title="Factory address"
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="4">
+              </textarea>
+              <mat-icon matSuffix>factory</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Mobile No</mat-label>
+              <input
+                matInput
+                formControlName="brandOwnerMobile"
+                readonly
+                aria-label="Mobile number"
+                title="Mobile number">
+              <mat-icon matSuffix>phone</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Email</mat-label>
+              <input
+                matInput
+                formControlName="brandOwnerEmail"
+                readonly
+                aria-label="Email address"
+                title="Email address">
+              <mat-icon matSuffix>email</mat-icon>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- ── Company Member Details table ───────────────────────────────── -->
+        @if (members.length > 0) {
+          <div class="auto-fill-section">
+            <div class="section-label">Company Member Details</div>
+
+            <table class="members-table mat-elevation-z1">
+              <thead>
+                <tr>
+                  <th>Sl No</th>
+                  <th>Member Name &amp; Designation</th>
+                  <th>Member Address</th>
+                  <th>Contact Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (member of members; track member.member_name; let i = $index) {
+                  <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>
+                      <div class="member-name">{{ member.member_name }}</div>
+                      <div class="member-designation">{{ member.designation }}</div>
+                    </td>
+                    <td>{{ member.member_address }}</td>
+                    <td>
+                      <div>{{ member.contact_number }}</div>
+                      <div class="member-email">{{ member.email }}</div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+      <button mat-flat-button color="primary" type="button"
+        (click)="proceedToNext()"
+        [disabled]="!bottlerDetailsForm.valid">
+        Save &amp; Proceed
+      </button>
+      <button mat-stroked-button color="warn" type="button" (click)="resetForm()">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

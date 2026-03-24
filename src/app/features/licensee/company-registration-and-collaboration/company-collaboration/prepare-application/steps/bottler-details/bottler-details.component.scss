@@ -1,0 +1,188 @@
+mat-card {
+  mat-card-header {
+    padding: 12px;
+    border-radius: 8px 8px 0 0;
+    background-color: #1C2B78;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 500;
+    align-items: flex-start;
+    justify-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+
+    .heading {
+      flex: 1 1 100%;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+    
+    .validation {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.85);
+      font-style: italic;
+      line-height: 1.4;
+      max-width: 860px;
+      flex: 1 1 100%;
+      margin-top: 2px;
+
+      em {
+        display: block;
+        font-style: normal;
+        opacity: 0.9;
+      }
+    }
+  }
+
+  mat-card-content {
+    padding: 20px;
+
+    .form-field-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px 24px;
+      padding: 8px 0 20px;
+      align-items: start;
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+
+      mat-form-field {
+        width: 100%;
+        
+        mat-label {
+          font-size: 14px;
+        }
+        
+        input::placeholder, textarea::placeholder {
+          font-size: 13px;
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 60px;
+        }
+
+        .brand-owner-option {
+          .owner-name {
+            font-weight: 600;
+            color: #1C2B78;
+            font-size: 14px;
+          }
+
+          .owner-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+          }
+        }
+      }
+    }
+    
+    .auto-fill-section {
+      margin-top: 12px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px;
+      border-left: 4px solid #1C2B78;
+    }
+
+    .section-label {
+      color: #1C2B78;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px 24px;
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .members-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+
+      thead th {
+        background-color: #1C2B78;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 12px 14px;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: top;
+        font-size: 13px;
+        color: #333;
+      }
+
+      tbody tr:hover {
+        background-color: #f5f7ff;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .member-name {
+        font-weight: 600;
+        color: #1C2B78;
+      }
+
+      .member-designation,
+      .member-email {
+        font-size: 12px;
+        color: #666;
+      }
+    }
+  }
+
+  mat-card-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #fafafa;
+  }
+}
+
+@media(max-width: 768px) {
+  mat-card {
+    mat-card-header {
+      align-items: flex-start;
+    }
+
+    mat-card-content {
+      .members-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+
+    mat-card-actions {
+      flex-wrap: wrap;
+      gap: 10px;
+
+      button {
+        flex: 1;
+        min-width: 120px;
+      }
+    }
+  }
+}

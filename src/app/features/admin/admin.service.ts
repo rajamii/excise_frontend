@@ -17,6 +17,7 @@ export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'r
   district?: number;
   subdivision?: number;
   role?: number;
+  isActive?: boolean;
   confirmPassword?: string;
 };
 
@@ -40,7 +41,12 @@ export interface OICOfficerRecord {
   licenseId: string;
   licensee_id: string;
   establishment_name: string;
+  establishmentName?: string;
   created_at: string;
+  createdAt?: string;
+  officer_created_at?: string;
+  officerCreatedAt?: string;
+  isActive?: boolean;
 }
 
 export interface CreateOICOfficerPayload {
@@ -102,6 +108,26 @@ export class AdminService {
     return this.http.post(
       `${this.usersUrl}/users/oic/officers/create/`,
       payload
+    );
+  }
+
+  updateOICOfficer(assignmentId: number, payload: CreateOICOfficerPayload): Observable<any> {
+    return this.http.put(
+      `${this.usersUrl}/users/oic/officers/${assignmentId}/update/`,
+      payload
+    );
+  }
+
+  setOICOfficerActive(assignmentId: number, isActive: boolean): Observable<any> {
+    return this.http.patch(
+      `${this.usersUrl}/users/oic/officers/${assignmentId}/set-active/`,
+      { isActive }
+    );
+  }
+
+  deleteOICOfficer(assignmentId: number): Observable<any> {
+    return this.http.delete(
+      `${this.usersUrl}/users/oic/officers/${assignmentId}/delete/`
     );
   }
 

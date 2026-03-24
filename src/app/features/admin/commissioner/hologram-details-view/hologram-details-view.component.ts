@@ -47,9 +47,13 @@ export class HologramDetailsViewComponent {
     }
   }
 
+  canEditQuantities(): boolean {
+    return this.application?.canEditQuantity === true;
+  }
+
   // Enable edit mode for quantities
   enableQuantityEdit(): void {
-    if (!this.application) return;
+    if (!this.application || !this.canEditQuantities()) return;
     
     this.isEditingQuantity = true;
     

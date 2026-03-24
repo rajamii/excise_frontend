@@ -28,6 +28,7 @@ import { HttpErrorResponse } from '@angular/common/http';
   styleUrl: './login.component.scss',
 })
 export class LoginComponent extends BaseComponent {
+  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
   loginForm: FormGroup;
   registrationForm: FormGroup;
   isPasswordMode = true;
@@ -122,19 +123,122 @@ export class LoginComponent extends BaseComponent {
       if (params['inactive']) {
         setTimeout(() => {
           Swal.fire({
-            title: 'We Miss You',
+            title: 'Session timed out',
             html: `
               <div class="inactive-logout-content">
-                <div class="inactive-alien-wrap" aria-hidden="true">
-                  <span class="inactive-alien-head"></span>
-                  <span class="inactive-alien-eye inactive-alien-eye-left"></span>
-                  <span class="inactive-alien-eye inactive-alien-eye-right"></span>
-                  <span class="inactive-alien-mouth"></span>
-                  <span class="inactive-alien-antenna"></span>
-                  <span class="inactive-alien-tear"></span>
+                <div class="inactive-logout-illustration" aria-hidden="true">
+                  <svg class="inactive-logout-icon" viewBox="0 0 96 96" role="presentation" focusable="false">
+                    <defs>
+                      <linearGradient id="inactiveAmber" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffcf5e" />
+                        <stop offset="1" stop-color="#f59e0b" />
+                      </linearGradient>
+                      <linearGradient id="inactiveGlassStroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#1f2e53" />
+                        <stop offset="1" stop-color="#142243" />
+                      </linearGradient>
+                      <linearGradient id="inactiveGlassFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#f4f8ff" />
+                        <stop offset="1" stop-color="#d7e5ff" />
+                      </linearGradient>
+                      <linearGradient id="inactiveFoam" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffffff" />
+                        <stop offset="1" stop-color="#f0f4ff" />
+                      </linearGradient>
+                      <clipPath id="inactiveBeerClip">
+                        <path d="M30 22h28l-4 56H34l-4-56z" />
+                      </clipPath>
+                    </defs>
+
+                    <!-- Beer glass (broken + spill) -->
+                    <g class="inactive-logout-glass" transform="translate(0,0)">
+                      <!-- Ground shadow (stays on ground while glass falls) -->
+                      <ellipse class="inactive-logout-shadow" cx="46" cy="90" rx="22" ry="6" fill="#0b1b3a" opacity="0.12" />
+
+                      <!-- Glass body -->
+                      <path
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="url(#inactiveGlassFill)"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="none"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="2.6"
+                        stroke-linejoin="round"
+                        opacity="0.92"
+                      />
+
+                      <!-- Handle -->
+                      <path
+                        d="M60 34c9 0 14 7 14 14s-5 14-14 14"
+                        fill="none"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="3.6"
+                        stroke-linecap="round"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M60 40c5 0 8 4 8 8s-3 8-8 8"
+                        fill="none"
+                        stroke="url(#inactiveGlassFill)"
+                        stroke-width="5.2"
+                        stroke-linecap="round"
+                        opacity="0.88"
+                      />
+
+                      <!-- Beer inside (clipped) -->
+                      <g clip-path="url(#inactiveBeerClip)">
+                        <path
+                          class="inactive-logout-beer"
+                          d="M28 48c6-4 11 2 16-1s11-8 16-3v44H28V48z"
+                          fill="url(#inactiveAmber)"
+                          opacity="0.96"
+                        />
+                      </g>
+
+                      <!-- Crack + broken rim -->
+                      <path
+                        class="inactive-logout-crack"
+                        d="M46 30l-6 10 8 7-9 10 10 10-4 10"
+                        fill="none"
+                        stroke="#1f2e53"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        opacity="0.72"
+                      />
+                      <path
+                        d="M46 18l7 2-6 6-8-2z"
+                        fill="url(#inactiveGlassFill)"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="2"
+                        opacity="0.9"
+                      />
+
+                      <!-- Spill drops -->
+                      <g class="inactive-logout-spill" opacity="0.98">
+                        <path class="inactive-logout-drop inactive-logout-drop-1" d="M52 56c4 6 2 10-2 12-4-2-6-6-2-12 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" />
+                        <path class="inactive-logout-drop inactive-logout-drop-2" d="M58 60c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.92" />
+                        <path class="inactive-logout-drop inactive-logout-drop-3" d="M48 62c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.88" />
+                      </g>
+
+                      <!-- Shards -->
+                      <path class="inactive-logout-shard inactive-logout-shard-1" d="M72 26l10 4-8 10-10-4z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.85" />
+                      <path class="inactive-logout-shard inactive-logout-shard-2" d="M18 48l10-3 3 10-10 3z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.82" />
+
+                      <!-- Impact marks near ground -->
+                      <g class="inactive-logout-impact" opacity="0">
+                        <path d="M30 86l-6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M62 86l6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M46 84v6" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.55" />
+                      </g>
+                    </g>
+                  </svg>
                 </div>
                 <p class="inactive-logout-message">
-                  Your session timed out due to inactivity. Please log in again.
+                  Your session ended due to inactivity. Please sign in again to continue.
                 </p>
               </div>
             `,
@@ -220,6 +324,66 @@ export class LoginComponent extends BaseComponent {
     this.hidePassword = !this.hidePassword;
   }
 
+  sanitizePhoneNumberInput(form: 'login' | 'registration', event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    const sanitizedValue = input.value.replace(/\D/g, '').slice(0, 10);
+    if (input.value !== sanitizedValue) {
+      input.value = sanitizedValue;
+    }
+
+    const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
+    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: false });
+    targetForm.get('phoneNumber')?.markAsDirty();
+    targetForm.get('phoneNumber')?.updateValueAndValidity();
+  }
+
+  onOtpPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.isPasswordMode && !this.otpSent) {
+      this.sendOtp();
+    }
+  }
+
+  private getBlockedUsers(): Array<{ id?: number; username?: string; phoneNumber?: string; email?: string }> {
+    try {
+      const raw = localStorage.getItem(this.blockedUsersStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private isLocallyBlockedByUsername(username: string): boolean {
+    const normalized = String(username || '').trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.username || '').trim().toLowerCase() === normalized);
+  }
+
+  private isLocallyBlockedByPhone(phoneNumber: string): boolean {
+    const normalized = String(phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10) === normalized);
+  }
+
+  private isLocallyBlockedUser(user: any): boolean {
+    const username = String(user?.username || user?.login || '').trim().toLowerCase();
+    const phone = String(user?.phoneNumber || user?.phone_number || '').replace(/\D/g, '').slice(0, 10);
+    return this.getBlockedUsers().some(entry => {
+      const blockedUsername = String(entry?.username || '').trim().toLowerCase();
+      const blockedPhone = String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+      return (!!username && blockedUsername === username) || (!!phone && blockedPhone === phone);
+    });
+  }
+
   // Fetch districts
   fetchDistricts(): void {
     this.loadingDistricts = true;
@@ -263,14 +427,25 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    if (this.loginForm.controls['phoneNumber'].invalid) {
+    const phoneControl = this.loginForm.controls['phoneNumber'];
+    const sanitizedPhoneNumber = String(phoneControl.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl.value !== sanitizedPhoneNumber) {
+      phoneControl.setValue(sanitizedPhoneNumber);
+    }
+
+    if (phoneControl.invalid) {
       this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
+      return;
+    }
+
+    if (this.isLocallyBlockedByPhone(sanitizedPhoneNumber)) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
       return;
     }
 
     this.isSendingOtp = true;
     this.clearLoginErrors();
-    const phoneNumber = this.loginForm.value.phoneNumber;
+    const phoneNumber = sanitizedPhoneNumber;
     const formData = FormDataUtil.buildFormData({ phoneNumber });
 
     this.authService.sendOtp(formData).subscribe({
@@ -304,12 +479,18 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendRegistrationOtp() {
+    const phoneControl = this.registrationForm.get('phoneNumber');
+    const sanitizedPhoneNumber = String(phoneControl?.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl?.value !== sanitizedPhoneNumber) {
+      phoneControl?.setValue(sanitizedPhoneNumber);
+    }
+
     if (this.registrationForm.invalid) {
       this.registrationError = true;
       this.registrationErrorMessages = this.getRegistrationValidationErrors();
       return;
     }
-    const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
+    const phoneNumber = sanitizedPhoneNumber;
     this.isSendingOtp = true;
     this.registrationError = false;
     this.authService.sendRegistrationOtp({
@@ -478,6 +659,11 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
+    if (this.isLocallyBlockedByUsername(String(this.loginForm.value.username || ''))) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+      return;
+    }
+
     this.clearLoginErrors();
     this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
@@ -575,9 +761,26 @@ export class LoginComponent extends BaseComponent {
       localStorage.setItem('access', accessToken);
       localStorage.setItem('refresh', refreshToken);
 
-      this.accountService.identity(true).subscribe({
+      const currentUser = this.accountService.getUserProfileSync();
+      if (currentUser) {
+        const previousUrl = this.stateStorgeService.getUrl();
+        if (previousUrl && previousUrl !== '/login') {
+          this.stateStorgeService.clearUrl();
+          this.router.navigateByUrl(previousUrl);
+          return;
+        }
+        this.redirectBasedOnRole(currentUser.role?.id);
+        return;
+      }
+
+      this.accountService.identity().subscribe({
         next: (user) => {
           if (user) {
+            if (this.isLocallyBlockedUser(user)) {
+              this.accountService.clearAppData();
+              this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+              return;
+            }
             const previousUrl = this.stateStorgeService.getUrl();
             if (previousUrl && previousUrl !== '/login') {
               this.stateStorgeService.clearUrl();
@@ -721,6 +924,9 @@ export class LoginComponent extends BaseComponent {
     const hasAny = (terms: string[]) => terms.some((term) => normalizedText.includes(term));
 
     if (flow === 'password') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (status === 401 || hasAny(['invalid credentials', 'incorrect password', 'invalid password', 'wrong password'])) {
         return ['Incorrect user ID or password. Please try again.'];
       }
@@ -733,6 +939,9 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'sendOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (hasAny(['invalid phone', 'invalid mobile', 'phone number', 'mobile number', 'format'])) {
         return ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
       }
@@ -745,6 +954,9 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'verifyOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
       if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp'])) {
         return ['Invalid OTP. Enter the correct OTP and try again.'];
       }

@@ -182,7 +182,7 @@
       <ng-container matColumnDef="status">
         <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
         <mat-cell *matCellDef="let element">
-          <span class="status-badge" [ngClass]="getStatusClass(element.status_code || element.status_label || element.status)">
+          <span class="status-badge" [ngClass]="getStatusClass(element)">
             <mat-icon>{{ getStatusIcon(element) }}</mat-icon>
             {{ getStatusLabel(element) }}
           </span>
@@ -198,7 +198,7 @@
               <mat-icon>visibility</mat-icon>
             </button>
             <button mat-icon-button color="primary" (click)="onViewFinalPermit(element)" matTooltip="View Permit"
-              *ngIf="element.status_code === 'TRP_03' || element.status.toLowerCase().includes('approved')">
+              *ngIf="canViewFinalPermit(element)">
               <mat-icon>assignment</mat-icon>
             </button>
           </div>

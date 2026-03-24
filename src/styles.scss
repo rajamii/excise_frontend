@@ -65,6 +65,8 @@ body{ background-color: #EDF7FE; }
 
   .mat-mdc-dialog-surface,
   .mdc-dialog__surface {
+    width: min(760px, 96vw) !important;
+    max-width: min(760px, 96vw) !important;
     border-radius: 14px !important;
     box-shadow: 0 18px 46px rgba(12, 27, 72, 0.28) !important;
     border: 1px solid #dce4f6;
@@ -349,7 +351,7 @@ body{ background-color: #EDF7FE; }
   }
 }
 
-// Inactivity logout popup (sad alien)
+// Inactivity logout popup (session timed out)
 .swal2-popup.inactive-logout-popup {
   width: min(420px, calc(100vw - 2rem)) !important;
   border-radius: 16px !important;
@@ -371,80 +373,159 @@ body{ background-color: #EDF7FE; }
   gap: 0.75rem;
 }
 
-.inactive-alien-wrap {
-  position: relative;
-  width: 88px;
-  height: 102px;
-  animation: inactiveAlienFloat 2.3s infinite ease-in-out;
+.inactive-logout-illustration {
+  width: 168px;
+  height: 140px;
+  display: grid;
+  place-items: center;
 }
 
-.inactive-alien-head {
-  position: absolute;
-  left: 8px;
-  top: 12px;
-  width: 72px;
-  height: 66px;
-  border-radius: 46px 46px 40px 40px;
-  background: linear-gradient(180deg, #8cf5cf 0%, #4fcf9c 100%);
-  border: 1px solid #5abf95;
-  box-shadow: inset 0 -8px 14px rgba(24, 92, 72, 0.24);
+.inactive-logout-icon {
+  width: 148px;
+  height: 148px;
+  display: block;
+  filter: drop-shadow(0 14px 20px rgba(10, 34, 74, 0.16));
 }
 
-.inactive-alien-eye {
-  position: absolute;
-  top: 36px;
-  width: 12px;
-  height: 16px;
-  border-radius: 50%;
-  background: #143449;
+.inactive-logout-glass {
+  transform-origin: 48px 58px;
+  animation: inactiveGlassFall 2.9s ease-in-out infinite;
 }
 
-.inactive-alien-eye-left { left: 28px; }
-.inactive-alien-eye-right { right: 28px; }
-
-.inactive-alien-mouth {
-  position: absolute;
-  left: 37px;
-  top: 57px;
-  width: 14px;
-  height: 7px;
-  border-bottom: 3px solid #235066;
-  border-radius: 0 0 14px 14px;
+.inactive-logout-shadow {
+  transform-origin: 46px 90px;
+  transform-box: fill-box;
+  animation: inactiveShadowBounce 2.9s ease-in-out infinite;
 }
 
-.inactive-alien-antenna {
-  position: absolute;
-  left: 42px;
-  top: 2px;
-  width: 4px;
-  height: 16px;
-  border-radius: 4px;
-  background: #56c59a;
-  transform-origin: bottom center;
-  animation: inactiveAntennaSway 1.2s infinite ease-in-out;
+.inactive-logout-impact {
+  transform-origin: 46px 90px;
+  transform-box: fill-box;
+  animation: inactiveImpactFlash 2.9s ease-in-out infinite;
 }
 
-.inactive-alien-antenna::after {
-  content: '';
-  position: absolute;
-  left: -4px;
-  top: -6px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #8cf5cf;
-  border: 1px solid #63c89f;
+.inactive-logout-beer {
+  transform-origin: center;
+  animation: inactiveBeerWave 2.2s ease-in-out infinite;
 }
 
-.inactive-alien-tear {
-  position: absolute;
-  right: 22px;
-  top: 43px;
-  width: 6px;
-  height: 11px;
-  border-radius: 3px 3px 6px 6px;
-  background: linear-gradient(180deg, #8ad3ff 0%, #3f98e8 100%);
-  animation: inactiveTearDrop 1.5s infinite ease-in;
+.inactive-logout-spill {
+  transform-origin: 54px 60px;
+  animation: inactiveSpillSway 2.8s ease-in-out infinite;
+}
+
+.inactive-logout-drop {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.inactive-logout-crack {
+  stroke-dasharray: 64;
+  stroke-dashoffset: 64;
+  animation: inactiveCrackDraw 2.2s ease-in-out infinite;
+}
+
+.inactive-logout-shard {
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 6px 10px rgba(18, 58, 40, 0.15));
+}
+
+.inactive-logout-shard-1 {
+  animation: inactiveShardFall1 2.9s ease-in-out infinite;
+}
+
+.inactive-logout-shard-2 {
+  animation: inactiveShardFall2 2.9s ease-in-out infinite;
+}
+
+.inactive-logout-shard-3 {
+  animation: inactiveShardFall3 2.9s ease-in-out infinite;
+}
+
+@keyframes inactiveGlassFall {
+  0% { transform: translateY(-10px) rotate(-10deg); }
+  45% { transform: translateY(6px) rotate(6deg); }
+  58% { transform: translateY(0) rotate(-3deg); }
+  70% { transform: translateY(2px) rotate(2deg); }
+  100% { transform: translateY(-10px) rotate(-10deg); }
+}
+
+@keyframes inactiveShadowBounce {
+  0% { opacity: 0.06; transform: scale(0.75); }
+  45% { opacity: 0.16; transform: scale(1.05); }
+  58% { opacity: 0.14; transform: scale(0.95); }
+  70% { opacity: 0.15; transform: scale(1.02); }
+  100% { opacity: 0.06; transform: scale(0.75); }
+}
+
+@keyframes inactiveImpactFlash {
+  0%, 42% { opacity: 0; transform: scale(0.9); }
+  46% { opacity: 0.95; transform: scale(1.02); }
+  54% { opacity: 0; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes inactiveBeerWave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.2px); }
+}
+
+@keyframes inactiveSpillSway {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(1.5px); }
+}
+
+@keyframes inactiveBeerDrip {
+  0% { opacity: 0; transform: translateY(-8px) scale(0.9); }
+  15% { opacity: 1; }
+  75% { opacity: 1; transform: translateY(18px) scale(1); }
+  100% { opacity: 0; transform: translateY(24px) scale(0.92); }
+}
+
+.inactive-logout-drop-1 { animation: inactiveBeerDrip 1.9s ease-in-out infinite; }
+.inactive-logout-drop-2 { animation: inactiveBeerDrip 2.15s ease-in-out infinite 0.35s; }
+.inactive-logout-drop-3 { animation: inactiveBeerDrip 2.05s ease-in-out infinite 0.7s; }
+
+@keyframes inactiveCrackDraw {
+  0% { stroke-dashoffset: 64; opacity: 0.55; }
+  40% { stroke-dashoffset: 0; opacity: 0.8; }
+  70% { stroke-dashoffset: 0; opacity: 0.78; }
+  100% { stroke-dashoffset: -64; opacity: 0.55; }
+}
+
+@keyframes inactiveShardFloat1 {
+  0%, 100% { transform: translate(-1px, 0) rotate(-8deg); opacity: 0.55; }
+  50% { transform: translate(2px, -3px) rotate(10deg); opacity: 0.8; }
+}
+
+@keyframes inactiveShardFloat2 {
+  0%, 100% { transform: translate(1px, 0) rotate(10deg); opacity: 0.5; }
+  50% { transform: translate(-2px, -2px) rotate(-10deg); opacity: 0.78; }
+}
+
+@keyframes inactiveShardFall1 {
+  0% { transform: translate(0, -12px) rotate(-20deg); opacity: 0; }
+  40% { opacity: 0; }
+  48% { transform: translate(0, -12px) rotate(-20deg); opacity: 0.85; }
+  62% { transform: translate(-6px, 14px) rotate(18deg); opacity: 0.9; }
+  100% { transform: translate(-6px, 14px) rotate(18deg); opacity: 0.15; }
+}
+
+@keyframes inactiveShardFall2 {
+  0% { transform: translate(0, -10px) rotate(18deg); opacity: 0; }
+  42% { opacity: 0; }
+  50% { transform: translate(0, -10px) rotate(18deg); opacity: 0.82; }
+  66% { transform: translate(7px, 16px) rotate(-16deg); opacity: 0.9; }
+  100% { transform: translate(7px, 16px) rotate(-16deg); opacity: 0.14; }
+}
+
+@keyframes inactiveShardFall3 {
+  0% { transform: translate(0, -11px) rotate(-10deg); opacity: 0; }
+  44% { opacity: 0; }
+  52% { transform: translate(0, -11px) rotate(-10deg); opacity: 0.7; }
+  70% { transform: translate(4px, 12px) rotate(14deg); opacity: 0.86; }
+  100% { transform: translate(4px, 12px) rotate(14deg); opacity: 0.12; }
 }
 
 .inactive-logout-message {
@@ -463,22 +544,6 @@ body{ background-color: #EDF7FE; }
   color: #fff;
   background: linear-gradient(180deg, #2f66d6 0%, #1f4fb6 100%);
   box-shadow: 0 8px 16px rgba(23, 72, 162, 0.3);
-}
-
-@keyframes inactiveAlienFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes inactiveAntennaSway {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(8deg); }
-}
-
-@keyframes inactiveTearDrop {
-  0% { opacity: 0; transform: translateY(0); }
-  20% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(14px); }
 }
 
 

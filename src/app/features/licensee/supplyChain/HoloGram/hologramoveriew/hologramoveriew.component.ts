@@ -18,6 +18,7 @@ interface HologramRoll {
   damagedCount: number;
   status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
   receivedDate: string;
+  receivedBy?: string;
   isNew?: boolean;
   newUntil?: number;
   usageHistory?: any[]; // Add usage history for Rolls tab
@@ -44,6 +45,7 @@ interface SerialRange {
   productionLine?: string;
   damageReason?: string;
   reportedBy?: string;
+  updatedBy?: string;
   brandDetails?: string;
   bottleSize?: string;
 }
@@ -177,6 +179,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   availableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
+  private savedDailyRegisterEntries: any[] = [];
   showHistoryBrandsModal: boolean = false;
   selectedHistoryForBrands: HistoryHologram | null = null;
 
@@ -197,10 +200,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     brandReferenceNo: string;
     brandName: string;
     qty: number | null;
+    rollRange: string;
   } = {
       brandReferenceNo: '',
       brandName: '',
-      qty: null
+      qty: null,
+      rollRange: ''
     };
 
   // Autocomplete suggestions
@@ -345,6 +350,17 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           damagedCount: roll.damaged || 0,
           status: roll.status as 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED',
           receivedDate: roll.receivedDate || roll.received_date,
+          receivedBy: (() => {
+            const picked = this.pickDisplayOfficer(
+              roll.received_by_name,
+              roll.receivedByName,
+              roll.received_by_display_name,
+              roll.receivedByDisplayName,
+              roll.received_by_username,
+              roll.receivedByUsername
+            );
+            return picked === 'Pending' ? '' : picked;
+          })(),
           isNew: roll.isNew || roll.is_new || false,
           newUntil: roll.newUntil || roll.new_until,
           usageHistory: roll.usageHistory || roll.usage_history || [],
@@ -745,6 +761,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         const savedEntries = entries.filter((entry: any) =>
           (entry.is_fixed === true || entry.isFixed === true)
         );
+        this.savedDailyRegisterEntries = savedEntries;
 
         console.log('📊 Saved entries (is_fixed=true):', savedEntries.length);
 
@@ -959,6 +976,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           url: error.url
         });
         this.historyData = [];
+        this.savedDailyRegisterEntries = [];
       }
     });
   }
@@ -1108,6 +1126,25 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           .reduce((sum, r) => sum + (r.count || 0), 0);
       }
 
+      const serialRanges = generated.serialRanges || [];
+      const approvedRefNo =
+        serialRanges.find(range => range.referenceNo && range.referenceNo !== 'N/A')?.referenceNo ||
+        this.getFallbackRequestReferenceForCartoon(availableData.cartoonNumber);
+      const approvedBrandName = approvedRefNo && approvedRefNo !== 'N/A'
+        ? this.getFallbackBrandByReference(approvedRefNo)
+        : '';
+
+      if (approvedRefNo && approvedRefNo !== 'N/A') {
+        serialRanges.forEach((range) => {
+          if (range.status !== 'AVAILABLE' && (!range.referenceNo || range.referenceNo === 'N/A')) {
+            range.referenceNo = approvedRefNo;
+          }
+          if (range.status !== 'AVAILABLE' && (!range.brandDetails || range.brandDetails === 'N/A') && approvedBrandName) {
+            range.brandDetails = approvedBrandName;
+          }
+        });
+      }
+
       this.selectedSerialData = generated;
       this.serialViewMode = 'all';
       this.currentSerialPage = 1;
@@ -1148,7 +1185,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.serialFilters = {
       brandReferenceNo: '',
       brandName: '',
-      qty: null
+      qty: null,
+      rollRange: ''
     };
   }
 
@@ -1170,11 +1208,15 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     }
 
     const referenceNo = range.referenceNo || range.reference_no || 'N/A';
-    let resolvedBrand = range.brandDetails || range.brand_details || range.brand_name || '';
-    if (!resolvedBrand || resolvedBrand === 'N/A') {
-      resolvedBrand = this.getFallbackBrandByReference(referenceNo);
-    }
-    resolvedBrand = this.sanitizeBrandName(resolvedBrand);
+    const cartoonNumber = range.cartoonNumber || range.cartoon_number || range.roll_range || range.rollRange || '';
+    const incomingBrand = range.brandDetails || range.brand_details || range.brand_name || '';
+    const resolvedBrand = this.resolveBrandBySerialContext(
+      referenceNo,
+      cartoonNumber,
+      fromSerial,
+      toSerial,
+      incomingBrand
+    );
 
     return {
       fromSerial,
@@ -1188,9 +1230,136 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       productionLine: range.productionLine || range.production_line || 'N/A',
       damageReason: range.damageReason || range.damage_reason,
       reportedBy: range.reportedBy || range.reported_by,
+      updatedBy: this.pickDisplayOfficer(
+        range.updated_by_name,
+        range.updatedByName,
+        range.updated_by_display_name,
+        range.updatedByDisplayName,
+        range.reportedBy,
+        range.reported_by
+      ),
       brandDetails: resolvedBrand || '',
       bottleSize: range.bottleSize || range.bottle_size || ''
     };
+  }
+
+  getRangeUpdatedBy(range: SerialRange): string {
+    const direct = String(range?.updatedBy || '').trim();
+    if (direct && direct.toLowerCase() !== 'pending') {
+      return direct;
+    }
+
+    const ref = String(range?.referenceNo || '').trim();
+    if (!ref || ref.toUpperCase() === 'N/A') {
+      return '';
+    }
+
+    // Prefer grouped history row (already normalized to display names)
+    const fromHistory = this.historyData?.find((h: any) => String(h?.requestReference || '').trim() === ref)?.officer;
+    const historyName = String(fromHistory || '').trim();
+    if (historyName && historyName.toLowerCase() !== 'pending') {
+      return historyName;
+    }
+
+    // Fallback to raw daily register entries if available
+    const anySavedEntries: any[] = Array.isArray((this as any).savedDailyRegisterEntries)
+      ? (this as any).savedDailyRegisterEntries
+      : [];
+    const entry = anySavedEntries.find((e: any) => String(e?.reference_no || e?.referenceNo || '').trim() === ref);
+    if (!entry) return '';
+
+    const picked = this.pickDisplayOfficer(
+      entry.approved_by_name,
+      entry.approvedByName,
+      entry.updated_by_name,
+      entry.updatedByName,
+      entry.created_by_name,
+      entry.createdByName,
+      entry.approved_by,
+      entry.updated_by,
+      entry.created_by
+    );
+    return picked && picked !== 'Pending' ? picked : '';
+  }
+
+  private normalizeSerialValue(value: any): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    if (!/^\d+$/.test(raw)) return raw.toUpperCase();
+    const parsed = parseInt(raw, 10);
+    return Number.isNaN(parsed) ? raw : String(parsed);
+  }
+
+  private parseRangeArrayField(field: any): any[] {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  private isMatchingCartoonNumber(candidate: string, target: string): boolean {
+    const c = String(candidate || '').trim();
+    const t = String(target || '').trim();
+    if (!c || !t) return true;
+    if (c === t) return true;
+    return c.split('_')[0] === t.split('_')[0];
+  }
+
+  private hasExactRangeMatch(range: any, fromSerial: string, toSerial: string): boolean {
+    const rangeFrom = this.normalizeSerialValue(range?.fromSerial ?? range?.from_serial ?? range?.from ?? '');
+    const rangeTo = this.normalizeSerialValue(range?.toSerial ?? range?.to_serial ?? range?.to ?? '');
+    const fromNorm = this.normalizeSerialValue(fromSerial);
+    const toNorm = this.normalizeSerialValue(toSerial);
+    return !!(rangeFrom && rangeTo && rangeFrom === fromNorm && rangeTo === toNorm);
+  }
+
+  private resolveBrandBySerialContext(
+    referenceNo: string,
+    cartoonNumber: string,
+    fromSerial: string,
+    toSerial: string,
+    currentBrand: string
+  ): string {
+    // Priority 1: exact daily register entry match (reference + cartoon + range)
+    const candidates = this.savedDailyRegisterEntries.filter((entry: any) => {
+      const entryRef = entry.reference_no || entry.referenceNo || '';
+      const entryCartoon = entry.cartoon_number || entry.cartoonNumber || entry.roll_range || entry.rollRange || '';
+      const refMatches = referenceNo && referenceNo !== 'N/A' ? entryRef === referenceNo : true;
+      const cartoonMatches = this.isMatchingCartoonNumber(entryCartoon, cartoonNumber);
+      return refMatches && cartoonMatches;
+    });
+
+    for (const entry of candidates) {
+      const issuedRanges = this.parseRangeArrayField(entry.issued_ranges || entry.issuedRanges);
+      const wastageRanges = this.parseRangeArrayField(entry.wastage_ranges || entry.wastageRanges);
+      const listToCheck = [...issuedRanges, ...wastageRanges];
+      const exactFromRanges = listToCheck.some((r) => this.hasExactRangeMatch(r, fromSerial, toSerial));
+
+      const fromSingle = this.normalizeSerialValue(entry.issued_from || entry.issuedFrom || entry.wastage_from || entry.wastageFrom || '');
+      const toSingle = this.normalizeSerialValue(entry.issued_to || entry.issuedTo || entry.wastage_to || entry.wastageTo || '');
+      const fromNorm = this.normalizeSerialValue(fromSerial);
+      const toNorm = this.normalizeSerialValue(toSerial);
+      const exactFromSingle = !!(fromSingle && toSingle && fromSingle === fromNorm && toSingle === toNorm);
+
+      if (exactFromRanges || exactFromSingle) {
+        const name = this.sanitizeBrandName(entry.brand_details || entry.brandDetails || '');
+        if (name) return name;
+      }
+    }
+
+    // Priority 2: fallback brand by reference (old behavior)
+    let resolved = currentBrand || '';
+    if (!resolved || resolved === 'N/A') {
+      resolved = this.getFallbackBrandByReference(referenceNo);
+    }
+    return this.sanitizeBrandName(resolved);
   }
 
   private getFallbackBrandByReference(referenceNo: string): string {
@@ -1209,6 +1378,27 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     }
 
     return '';
+  }
+
+  private getFallbackRequestReferenceForCartoon(cartoonNumber: string): string {
+    const issuedEntry = this.issuedData.find((issued) => {
+      const cartons = String(issued.cartoonNumber || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      return cartons.includes(cartoonNumber);
+    });
+
+    if (issuedEntry?.referenceNo && issuedEntry.referenceNo !== 'N/A') {
+      return issuedEntry.referenceNo;
+    }
+
+    const historyEntry = this.historyData.find((history) => String(history.cartoonNumber || '').trim() === cartoonNumber);
+    if (historyEntry?.requestReference && historyEntry.requestReference !== 'N/A') {
+      return historyEntry.requestReference;
+    }
+
+    return 'N/A';
   }
 
   private sanitizeBrandName(name: string): string {
@@ -1647,11 +1837,20 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   getFilteredSerialRanges(): SerialRange[] {
+    const filtered = this.getFilteredSerialRangesRaw();
+
+    // Apply pagination
+    const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
+    const endIndex = startIndex + this.serialPageSize;
+
+    return filtered.slice(startIndex, endIndex);
+  }
+
+  private getFilteredSerialRangesRaw(): SerialRange[] {
     if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return [];
 
     let filtered = this.selectedSerialData.serialRanges;
 
-    // Filter by view mode
     if (this.serialViewMode !== 'all') {
       filtered = filtered.filter(range => {
         switch (this.serialViewMode) {
@@ -1667,7 +1866,6 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Filter by brand reference no
     if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
       filtered = filtered.filter(range =>
         range.referenceNo &&
@@ -1675,7 +1873,6 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       );
     }
 
-    // Filter by brand name
     if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
       filtered = filtered.filter(range => {
         const brandMatch = range.brandDetails &&
@@ -1686,16 +1883,69 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Filter by quantity
     if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
       filtered = filtered.filter(range => range.count === this.serialFilters.qty);
     }
 
-    // Apply pagination
-    const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
-    const endIndex = startIndex + this.serialPageSize;
+    if (this.serialFilters.rollRange && this.serialFilters.rollRange.trim() !== '') {
+      filtered = filtered.filter(range => this.matchesRollRangeFilter(range, this.serialFilters.rollRange));
+    }
 
-    return filtered.slice(startIndex, endIndex);
+    return filtered;
+  }
+
+  private matchesRollRangeFilter(range: SerialRange, input: string): boolean {
+    const query = String(input || '').trim();
+    if (!query) return true;
+
+    const rangeFrom = this.extractOptionalSerialNumber(range.fromSerial);
+    const rangeTo = this.extractOptionalSerialNumber(range.toSerial);
+    if (rangeFrom === null || rangeTo === null) {
+      const text = `${range.fromSerial}-${range.toSerial}`.toLowerCase();
+      return text.includes(query.toLowerCase());
+    }
+
+    const serialBounds: [number, number] = rangeFrom <= rangeTo ? [rangeFrom, rangeTo] : [rangeTo, rangeFrom];
+    const normalized = query.toLowerCase().replace(/\s+/g, '');
+
+    const pairMatch = normalized.match(/^(\d+)(?:-|to)(\d+)$/i);
+    if (pairMatch) {
+      const q1 = Number(pairMatch[1]);
+      const q2 = Number(pairMatch[2]);
+      if (Number.isFinite(q1) && Number.isFinite(q2)) {
+        const queryBounds: [number, number] = q1 <= q2 ? [q1, q2] : [q2, q1];
+        // Show ranges that overlap with entered roll range
+        return serialBounds[0] <= queryBounds[1] && queryBounds[0] <= serialBounds[1];
+      }
+    }
+
+    const singleMatch = normalized.match(/^(\d+)$/);
+    if (singleMatch) {
+      const value = Number(singleMatch[1]);
+      return Number.isFinite(value) && value >= serialBounds[0] && value <= serialBounds[1];
+    }
+
+    const queryNumbers = query.match(/\d+/g);
+    if (queryNumbers && queryNumbers.length >= 2) {
+      const q1 = Number(queryNumbers[0]);
+      const q2 = Number(queryNumbers[1]);
+      if (Number.isFinite(q1) && Number.isFinite(q2)) {
+        const queryBounds: [number, number] = q1 <= q2 ? [q1, q2] : [q2, q1];
+        return serialBounds[0] <= queryBounds[1] && queryBounds[0] <= serialBounds[1];
+      }
+    }
+
+    const text = `${range.fromSerial}-${range.toSerial}`.toLowerCase();
+    return text.includes(query.toLowerCase());
+  }
+
+  private extractOptionalSerialNumber(value: string): number | null {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const match = raw.match(/\d+/);
+    if (!match) return null;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   getSerialStatusClass(status: string): string {
@@ -1751,51 +2001,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   getTotalSerialPages(): number {
-    if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return 1;
-
-    let filtered = this.selectedSerialData.serialRanges;
-
-    // Filter by view mode
-    if (this.serialViewMode !== 'all') {
-      filtered = filtered.filter(range => {
-        switch (this.serialViewMode) {
-          case 'available':
-            return range.status === 'AVAILABLE';
-          case 'used':
-            return range.status === 'USED';
-          case 'damaged':
-            return range.status === 'DAMAGED';
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filter by brand reference no
-    if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
-      filtered = filtered.filter(range =>
-        range.referenceNo &&
-        range.referenceNo.toLowerCase().includes(this.serialFilters.brandReferenceNo.toLowerCase())
-      );
-    }
-
-    // Filter by brand name
-    if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
-      filtered = filtered.filter(range => {
-        const brandMatch = range.brandDetails &&
-          range.brandDetails.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        const productionLineMatch = range.productionLine &&
-          range.productionLine.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        return brandMatch || productionLineMatch;
-      });
-    }
-
-    // Filter by quantity
-    if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
-      filtered = filtered.filter(range => range.count === this.serialFilters.qty);
-    }
-
-    return Math.ceil(filtered.length / this.serialPageSize);
+    const filtered = this.getFilteredSerialRangesRaw();
+    return Math.max(1, Math.ceil(filtered.length / this.serialPageSize));
   }
 
   getSerialPageNumbers(): number[] {
@@ -2259,6 +2466,71 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // Use a Set to track unique ranges and prevent duplicates
     const processedRanges = new Set<string>();
 
+    const normalizeSerial = (value: any): string => {
+      const raw = String(value ?? '').trim();
+      if (!raw) return '';
+      const digitsOnly = /^\d+$/.test(raw);
+      if (!digitsOnly) return raw.toUpperCase();
+      const normalized = String(parseInt(raw, 10));
+      return Number.isNaN(Number(normalized)) ? raw : normalized;
+    };
+
+    const parseRangesFromText = (text: string): Array<{ from: string; to: string }> => {
+      if (!text) return [];
+      const matches = text.match(/\d+\s*-\s*\d+/g) || [];
+      return matches
+        .map((segment) => {
+          const parts = segment.split('-').map((p) => normalizeSerial(p));
+          return { from: parts[0] || '', to: parts[1] || '' };
+        })
+        .filter((r) => !!r.from && !!r.to);
+    };
+
+    const isSameCartoon = (candidate: string, target: string): boolean => {
+      const c = String(candidate || '').trim();
+      const t = String(target || '').trim();
+      if (!c || !t) return true;
+      if (c === t) return true;
+      return c.split('_')[0] === t.split('_')[0];
+    };
+
+    const findBrandInfoBySerialRange = (
+      referenceNo: string,
+      fromSerial: string,
+      toSerial: string,
+      currentCartoon: string
+    ): { brandName: string; bottleSize: string } | null => {
+      const fromNorm = normalizeSerial(fromSerial);
+      const toNorm = normalizeSerial(toSerial);
+
+      const candidateHistory = this.historyData.filter((history) =>
+        referenceNo && referenceNo !== 'N/A'
+          ? history.requestReference === referenceNo
+          : String(history.cartoonNumber || '').includes(currentCartoon)
+      );
+
+      for (const historyEntry of candidateHistory) {
+        const details = historyEntry.brandDetailsList || [];
+        for (const brand of details) {
+          if (!isSameCartoon(brand.cartonNumber || '', currentCartoon)) continue;
+          const parsedRanges = parseRangesFromText(brand.serialRanges || '');
+          const hasExactMatch = parsedRanges.some((r) => {
+            const rangeFrom = normalizeSerial(r.from);
+            const rangeTo = normalizeSerial(r.to);
+            return rangeFrom === fromNorm && rangeTo === toNorm;
+          });
+          if (hasExactMatch) {
+            return {
+              brandName: this.sanitizeBrandName(brand.brandName || 'N/A'),
+              bottleSize: brand.bottleSize || ''
+            };
+          }
+        }
+      }
+
+      return null;
+    };
+
     // Helper method to get brand information from issued/history data as fallback
     const getBrandInfoFromIssuedData = (referenceNo: string): { brandName: string, bottleSize: string } => {
       // Try to find brand info from issued data (requests)
@@ -2336,7 +2608,16 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
             let bottleSize = historyEntry.bottleSize || historyEntry.bottle_size || '';
             let referenceNo = historyEntry.referenceNo || historyEntry.refNo || historyEntry.ref_no || 'N/A';
 
-            // If brand details are missing, try to get from issued/history data
+            // First resolve brand from exact serial-range + cartoon mapping (most accurate for multi-brand)
+            const rangeBasedBrandInfo = findBrandInfoBySerialRange(referenceNo, fromSerial, toSerial, cartoonNumber);
+            if (rangeBasedBrandInfo && rangeBasedBrandInfo.brandName !== 'N/A') {
+              brandDetails = rangeBasedBrandInfo.brandName;
+              if (!bottleSize && rangeBasedBrandInfo.bottleSize) {
+                bottleSize = rangeBasedBrandInfo.bottleSize;
+              }
+            }
+
+            // If brand details are still missing, try to get from issued/history data
             if (!brandDetails || brandDetails === 'N/A' || brandDetails.trim() === '') {
               const brandInfo = getBrandInfoFromIssuedData(referenceNo);
               if (brandInfo.brandName !== 'N/A') {

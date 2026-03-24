@@ -14,32 +14,44 @@ export class CompanyRegistrationService {
 
   constructor(private http: HttpClient) { }
 
-  createCompany(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/create/`, data);
+  // Create new company registration application
+  applyCompanyRegistration(data: FormData): Observable<any> {
+    return this.http.post(`${this.baseUrl}/apply/`, data);
   }
 
+  // Get list of all company registrations
+  listCompanyRegistrations(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/list/`);
+  }
+
+  // Backward-compatible list endpoint
   getCompanyList(): Observable<any> {
     return this.http.get(`${this.baseUrl}/`);
   }
 
-  getCompanyDetail(id: number): Observable<any> {
+  // Get company record by numeric id (admin/master style endpoint)
+  getCompanyById(id: number): Observable<any> {
     return this.http.get(`${this.baseUrl}/${id}/`);
   }
 
-  updateCompany(id: number, data: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/${id}/update/`, data);
+  // Get company registration details by application ID
+  getCompanyDetail(applicationId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/detail/${applicationId}/`);
   }
 
-  deleteCompany(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/${id}/delete/`);
+  // Get dashboard counts
+  getDashboardCounts(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/dashboard-counts/`);
   }
 
-  getCompanyByApplicationId(applicationId: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/appid/${applicationId}/`);
+  // Get applications grouped by status
+  getApplicationsByStatus(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/list-by-status/`);
   }
 
+  // Document management methods
   setCompanyDocuments(docs: Partial<Record<keyof CompanyDocuments, File>>): void {
-    this.companyDocs = docs;
+    this.companyDocs = { ...this.companyDocs, ...docs };
   }
 
   getCompanyDocuments(): Partial<Record<keyof CompanyDocuments, File>> {

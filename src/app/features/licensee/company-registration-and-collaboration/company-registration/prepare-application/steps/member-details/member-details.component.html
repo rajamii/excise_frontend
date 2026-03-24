@@ -1,0 +1,144 @@
+<!-- Bind the form to the Reactive Form Group in your component -->
+<form [formGroup]="memberDetailsForm">
+  <mat-card>
+
+    <!-- Card header with title and note -->
+    <mat-card-header>
+      <div class="heading">Member Details</div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <!-- ══ EDITABLE MEMBER FIELDS ════════════════════════════════ -->
+      <div class="form-field-container">
+
+        <!-- Member Name Input -->
+        <mat-form-field appearance="outline">
+          <mat-label>Member Name</mat-label>
+          <input matInput placeholder="Enter Member Name" type="text" formControlName="memberName" />
+          @if (memberDetailsForm.controls['memberName'].invalid) {
+            <mat-error>{{ getErrorMessage('memberName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Member Designation -->
+        <mat-form-field appearance="outline">
+          <mat-label>Member Designation</mat-label>
+          <textarea
+            matInput
+            placeholder="Enter Member Designation (max 100 characters)"
+            formControlName="memberDesignation"
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="5">
+          </textarea>
+          @if (memberDetailsForm.controls['memberDesignation'].invalid) {
+            <mat-error>{{ getErrorMessage('memberDesignation') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Mobile Number -->
+        <mat-form-field appearance="outline">
+          <mat-label>Mobile Number</mat-label>
+          <input matInput placeholder="Enter Mobile Number" type="number" formControlName="memberMobileNumber" />
+          @if (memberDetailsForm.controls['memberMobileNumber'].invalid) {
+            <mat-error>{{ getErrorMessage('memberMobileNumber') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Email -->
+        <mat-form-field appearance="outline">
+          <mat-label>Email Id</mat-label>
+          <input matInput placeholder="Enter Email" type="email" formControlName="memberEmailId" />
+          @if (memberDetailsForm.controls['memberEmailId'].invalid) {
+            <mat-error>{{ getErrorMessage('memberEmailId') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Member Address -->
+        <mat-form-field appearance="outline">
+          <mat-label>Member Address</mat-label>
+          <textarea
+            matInput
+            placeholder="Enter Member Address (max 500 characters)"
+            formControlName="memberAddress"
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="5">
+          </textarea>
+          @if (memberDetailsForm.controls['memberAddress'].invalid) {
+            <mat-error>{{ getErrorMessage('memberAddress') }}</mat-error>
+          }
+        </mat-form-field>
+
+      </div>
+
+      <!-- ══ LICENSEE PROFILE DETAILS (read-only, auto-filled) ══════ -->
+      @if (hasLicenseeProfile) {
+        <div class="section">
+          <div class="heading" style="display:flex; align-items:center; gap:8px;">
+            <mat-icon style="color: #1C2B78;">person_pin</mat-icon>
+            Licensee Profile Details
+            <span style="font-size:12px; color:#888; font-weight:400;">(auto-filled · read-only)</span>
+          </div>
+
+          <div class="form-field-container">
+
+            <!-- Father's Name -->
+            <mat-form-field appearance="outline">
+              <mat-label>Father's Name</mat-label>
+              <input matInput formControlName="fatherName" readonly />
+              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+            </mat-form-field>
+
+            <!-- Date of Birth -->
+            <mat-form-field appearance="outline">
+              <mat-label>Date of Birth</mat-label>
+              <input matInput formControlName="dob" readonly />
+              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+            </mat-form-field>
+
+            <!-- Gender -->
+            <mat-form-field appearance="outline">
+              <mat-label>Gender</mat-label>
+              <input matInput formControlName="gender" readonly />
+              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+            </mat-form-field>
+
+            <!-- Nationality -->
+            <mat-form-field appearance="outline">
+              <mat-label>Nationality</mat-label>
+              <input matInput formControlName="nationality" readonly />
+              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+            </mat-form-field>
+
+          </div>
+        </div>
+      }
+
+      <!-- ══ WARNING: No licensee profile found ════════════════════ -->
+      @if (!hasLicenseeProfile) {
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px;
+                    background:#fff3e0; border-radius:8px; margin-top:12px; color:#e65100;">
+          <mat-icon>warning_amber</mat-icon>
+          <span>
+            No Licensee Profile found. Please create your profile first via
+            <strong>User Profile → Create Profile</strong> before submitting the application.
+          </span>
+        </div>
+      }
+
+    </mat-card-content>
+
+    <!-- Action Buttons -->
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!memberDetailsForm.valid">Next</button>
+    </mat-card-actions>
+
+  </mat-card>
+</form>

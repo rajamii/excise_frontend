@@ -1,0 +1,47 @@
+<div class="label-registration-maintenance-wrap">
+  <mat-horizontal-stepper [linear]="true" #stepper [class.maintenance-blurred]="showMaintenanceOverlay">
+    <mat-step label="Licensee Details">
+      <app-label-registration-licensee-details (next)="stepper.next()"></app-label-registration-licensee-details>
+    </mat-step>
+
+    <mat-step label="Label Details">
+      <app-label-registration-product-details
+        (back)="stepper.previous()"
+        (next)="stepper.next()">
+      </app-label-registration-product-details>
+    </mat-step>
+
+    <mat-step label="Packaging & Pricing">
+      <app-label-registration-packaging-details
+        (back)="stepper.previous()"
+        (next)="stepper.next()">
+      </app-label-registration-packaging-details>
+    </mat-step>
+
+    <mat-step label="Upload Documents">
+      <app-label-registration-upload-documents
+        (back)="stepper.previous()"
+        (next)="stepper.next()">
+      </app-label-registration-upload-documents>
+    </mat-step>
+
+    <mat-step label="Submit Application">
+      <app-label-registration-submit-application
+        (back)="stepper.previous()">
+      </app-label-registration-submit-application>
+    </mat-step>
+  </mat-horizontal-stepper>
+
+  @if (showMaintenanceOverlay) {
+  <div class="label-registration-maintenance-overlay">
+    <div class="label-registration-maintenance-card">
+      <h3>
+        Label Registration Is Under
+        <button type="button" class="maintenance-bypass-trigger" (dblclick)="activateMaintenanceBypass()">Maintenance</button>
+      </h3>
+      <p>This section is temporarily unavailable while updates are in progress.</p>
+      <p class="maintenance-note">Please check back later.</p>
+    </div>
+  </div>
+  }
+</div>

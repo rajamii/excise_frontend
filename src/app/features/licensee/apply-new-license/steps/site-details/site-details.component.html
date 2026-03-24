@@ -14,144 +14,196 @@
 
         <!-- DISTRICT -->
         <mat-form-field appearance="outline">
-          <mat-label>District <span class="required"></span></mat-label>
+          <mat-label>District <span class="required">*</span></mat-label>
           <mat-select formControlName="siteDistrict" required (selectionChange)="onDistrictChange($event.value)">
+            @if (districts.length === 0) {
+              <mat-option disabled>Loading districts...</mat-option>
+            }
             @for (district of districts; track district.id) {
-            <mat-option [value]="district.id">
-              {{ district.district }}
-            </mat-option>
+              <mat-option [value]="district.id">
+                {{ district.district }}
+              </mat-option>
             }
           </mat-select>
           @if (siteDetailsForm.controls['siteDistrict'].invalid && siteDetailsForm.controls['siteDistrict'].touched) {
-          <mat-error>{{ getErrorMessage('siteDistrict') }}</mat-error>
+            <mat-error>{{ getErrorMessage('siteDistrict') }}</mat-error>
           }
         </mat-form-field>
 
         <!-- SUBDIVISION (filtered by district) -->
         <mat-form-field appearance="outline">
-          <mat-label>Site Sub Division <span class="required"></span></mat-label>
+          <mat-label>Site Sub Division <span class="required">*</span></mat-label>
           <mat-select formControlName="siteSubdivision" required>
             @if (siteSubdivisions.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>No subdivisions available</mat-option>
+              <mat-option disabled>No subdivisions available</mat-option>
             }
             @if (siteSubdivisions.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>Please select district first</mat-option>
+              <mat-option disabled>Please select district first</mat-option>
             }
             @for (subdivision of siteSubdivisions; track subdivision.id) {
-            <mat-option [value]="subdivision.id">
-              {{ subdivision.subdivision }}
-            </mat-option>
+              <mat-option [value]="subdivision.id">
+                {{ subdivision.subdivision }}
+              </mat-option>
             }
           </mat-select>
           @if (siteDetailsForm.controls['siteSubdivision'].invalid &&
           siteDetailsForm.controls['siteSubdivision'].touched) {
-          <mat-error>{{ getErrorMessage('siteSubdivision') }}</mat-error>
+            <mat-error>{{ getErrorMessage('siteSubdivision') }}</mat-error>
           }
         </mat-form-field>
 
         <!-- POLICE STATION (filtered by subdivision) -->
         <mat-form-field appearance="outline">
-          <mat-label>Police Station <span class="required"></span></mat-label>
+          <mat-label>Police Station <span class="required">*</span></mat-label>
           <mat-select formControlName="policeStation" required>
             @if (sitePoliceStations.length === 0 && siteDetailsForm.get('siteSubdivision')?.value) {
-            <mat-option disabled>No police stations available</mat-option>
+              <mat-option disabled>No police stations available</mat-option>
             }
             @if (sitePoliceStations.length === 0 && !siteDetailsForm.get('siteSubdivision')?.value) {
-            <mat-option disabled>Please select subdivision first</mat-option>
+              <mat-option disabled>Please select subdivision first</mat-option>
             }
             @for (policeStation of sitePoliceStations; track policeStation.id) {
-            <mat-option [value]="policeStation.id">
-              {{ policeStation.policeStation }}
-            </mat-option>
+              <mat-option [value]="policeStation.id">
+                {{ policeStation.policeStation }}
+              </mat-option>
             }
           </mat-select>
           @if (siteDetailsForm.controls['policeStation'].invalid && siteDetailsForm.controls['policeStation'].touched) {
-          <mat-error>{{ getErrorMessage('policeStation') }}</mat-error>
+            <mat-error>{{ getErrorMessage('policeStation') }}</mat-error>
           }
         </mat-form-field>
 
+        <!-- ✅ NEW: LOCATION CATEGORY (from API) -->
         <mat-form-field appearance="outline">
-          <mat-label>Location Category</mat-label>
+          <mat-label>Location Category <span class="required">*</span></mat-label>
           <mat-select formControlName="locationCategory" required>
-            @for (locationCategory of locationCategories; track locationCategory) {
-            <mat-option [value]="locationCategory">{{ locationCategory }}</mat-option>
+            @if (locationCategories.length === 0) {
+              <mat-option disabled>Loading categories...</mat-option>
+            }
+            @for (category of locationCategories; track category.id) {
+              <mat-option [value]="category.id">
+                {{ category.categoryName }}
+              </mat-option>
             }
           </mat-select>
           @if (siteDetailsForm.controls['locationCategory'].invalid &&
           siteDetailsForm.controls['locationCategory'].touched) {
-          <mat-error>
-            {{ getErrorMessage('locationCategory') }}
-          </mat-error>
+            <mat-error>
+              {{ getErrorMessage('locationCategory') }}
+            </mat-error>
           }
         </mat-form-field>
 
+        <!-- ✅ NEW: LOCATION SUBCATEGORY (filtered by category) -->
         <mat-form-field appearance="outline">
-          <mat-label>Location Name</mat-label>
-          <mat-select formControlName="locationName" required>
-            @for (locationName of locationNames; track locationName) {
-            <mat-option [value]="locationName">{{ locationName }}</mat-option>
+          <mat-label>Location Subcategory <span class="required">*</span></mat-label>
+          <mat-select formControlName="locationSubcategory" required>
+            @if (locationSubcategories.length === 0 && siteDetailsForm.get('locationCategory')?.value) {
+              <mat-option disabled>No subcategories available</mat-option>
+            }
+            @if (locationSubcategories.length === 0 && !siteDetailsForm.get('locationCategory')?.value) {
+              <mat-option disabled>Please select category first</mat-option>
+            }
+            @for (subcategory of locationSubcategories; track subcategory.id) {
+              <mat-option [value]="subcategory.id">
+                {{ subcategory.subcategoryName }}
+              </mat-option>
             }
           </mat-select>
-          @if (siteDetailsForm.controls['locationName'].invalid && siteDetailsForm.controls['locationName'].touched) {
-          <mat-error>
-            {{ getErrorMessage('locationName') }}
-          </mat-error>
+          @if (siteDetailsForm.controls['locationSubcategory'].invalid && siteDetailsForm.controls['locationSubcategory'].touched) {
+            <mat-error>
+              {{ getErrorMessage('locationSubcategory') }}
+            </mat-error>
           }
         </mat-form-field>
 
+        <!-- ✅ NEW: LOCATION (filtered by district) -->
         <mat-form-field appearance="outline">
-          <mat-label>Ward Name</mat-label>
-          <mat-select formControlName="wardName" required>
-            @for (wardName of wardNames; track wardName) {
-            <mat-option [value]="wardName">{{ wardName }}</mat-option>
+          <mat-label>Location Name <span class="required">*</span></mat-label>
+          <mat-select formControlName="location" required>
+            @if (locations.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
+              <mat-option disabled>No locations available</mat-option>
+            }
+            @if (locations.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
+              <mat-option disabled>Please select district first</mat-option>
+            }
+            @for (location of locations; track location.id) {
+              <mat-option [value]="location.id">
+                {{ location.locationDescription }}
+              </mat-option>
             }
           </mat-select>
-          @if (siteDetailsForm.controls['wardName'].invalid && siteDetailsForm.controls['wardName'].touched) {
-          <mat-error>
-            {{ getErrorMessage('wardName') }}
-          </mat-error>
+          @if (siteDetailsForm.controls['location'].invalid && siteDetailsForm.controls['location'].touched) {
+            <mat-error>
+              {{ getErrorMessage('location') }}
+            </mat-error>
           }
         </mat-form-field>
 
+        <!-- ✅ NEW: WARD (filtered by location) -->
         <mat-form-field appearance="outline">
-          <mat-label>Address of the Business Premises</mat-label>
+          <mat-label>Ward Name <span class="required">*</span></mat-label>
+          <mat-select formControlName="ward" required>
+            @if (wards.length === 0 && siteDetailsForm.get('location')?.value) {
+              <mat-option disabled>No wards available</mat-option>
+            }
+            @if (wards.length === 0 && !siteDetailsForm.get('location')?.value) {
+              <mat-option disabled>Please select location first</mat-option>
+            }
+            @for (ward of wards; track ward.id) {
+              <mat-option [value]="ward.id">
+                {{ ward.wardName }} (Ward {{ ward.wardNumber }})
+              </mat-option>
+            }
+          </mat-select>
+          @if (siteDetailsForm.controls['ward'].invalid && siteDetailsForm.controls['ward'].touched) {
+            <mat-error>
+              {{ getErrorMessage('ward') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <!-- BUSINESS ADDRESS -->
+        <mat-form-field appearance="outline">
+          <mat-label>Address of the Business Premises <span class="required">*</span></mat-label>
           <textarea matInput placeholder="Enter Site Address (max 500 characters)" formControlName="businessAddress"
             cdkTextareaAutosize #autosize="cdkTextareaAutosize" cdkAutosizeMinRows="1" cdkAutosizeMaxRows="5" required>
           </textarea>
           @if (siteDetailsForm.controls['businessAddress'].invalid &&
           siteDetailsForm.controls['businessAddress'].touched) {
-          <mat-error>
-            {{ getErrorMessage('businessAddress') }}
-          </mat-error>
+            <mat-error>
+              {{ getErrorMessage('businessAddress') }}
+            </mat-error>
           }
         </mat-form-field>
 
-        <!-- ✅ FIXED: ROAD (filtered by district) -->
+        <!-- ROAD (filtered by district) -->
         <mat-form-field appearance="outline">
-          <mat-label>Road Name <span class="required"></span></mat-label>
+          <mat-label>Road Name <span class="required">*</span></mat-label>
           <mat-select formControlName="roadName" required>
             @if (roadNames.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>No roads available</mat-option>
+              <mat-option disabled>No roads available</mat-option>
             }
             @if (roadNames.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>Please select district first</mat-option>
+              <mat-option disabled>Please select district first</mat-option>
             }
             @for (road of roadNames; track road.id) {
-            <mat-option [value]="road.id">{{ road.roadName }}</mat-option>
+              <mat-option [value]="road.id">{{ road.roadName }}</mat-option>
             }
           </mat-select>
           @if (siteDetailsForm.controls['roadName'].invalid && siteDetailsForm.controls['roadName'].touched) {
-          <mat-error>{{ getErrorMessage('roadName') }}</mat-error>
+            <mat-error>{{ getErrorMessage('roadName') }}</mat-error>
           }
         </mat-form-field>
 
+        <!-- PIN CODE -->
         <mat-form-field appearance="outline">
-          <mat-label>PIN Code</mat-label>
+          <mat-label>PIN Code <span class="required">*</span></mat-label>
           <input matInput placeholder="Enter PIN" type="number" formControlName="pinCode" required />
           @if (siteDetailsForm.controls['pinCode'].invalid && siteDetailsForm.controls['pinCode'].touched) {
-          <mat-error>
-            {{ getErrorMessage('pinCode') }}
-          </mat-error>
+            <mat-error>
+              {{ getErrorMessage('pinCode') }}
+            </mat-error>
           }
         </mat-form-field>
       </div>
@@ -160,17 +212,17 @@
       <h5 class="section-title">Site Map (Optional)</h5>
       <div class="form-field-container">
         <mat-form-field appearance="outline">
-          <mat-label>Type of Construction of Proposed Shop</mat-label>
+          <mat-label>Type of Construction of Proposed Shop <span class="required">*</span></mat-label>
           <mat-select formControlName="constructionType" required>
             @for (type of constructionTypes; track type) {
-            <mat-option [value]="type">{{ type }}</mat-option>
+              <mat-option [value]="type">{{ type }}</mat-option>
             }
           </mat-select>
           @if (siteDetailsForm.controls['constructionType'].invalid &&
           siteDetailsForm.controls['constructionType'].touched) {
-          <mat-error>
-            {{ getErrorMessage('constructionType') }}
-          </mat-error>
+            <mat-error>
+              {{ getErrorMessage('constructionType') }}
+            </mat-error>
           }
         </mat-form-field>
 
@@ -178,9 +230,9 @@
           <mat-label>Length (in sq. ft)</mat-label>
           <input matInput placeholder="0.00" type="number" step="0.01" formControlName="length" />
           @if (siteDetailsForm.controls['length'].invalid && siteDetailsForm.controls['length'].touched) {
-          <mat-error>
-            {{ getErrorMessage('length') }}
-          </mat-error>
+            <mat-error>
+              {{ getErrorMessage('length') }}
+            </mat-error>
           }
         </mat-form-field>
 
@@ -188,9 +240,9 @@
           <mat-label>Breadth (in sq. ft)</mat-label>
           <input matInput placeholder="0.00" type="number" step="0.01" formControlName="breadth" />
           @if (siteDetailsForm.controls['breadth'].invalid && siteDetailsForm.controls['breadth'].touched) {
-          <mat-error>
-            {{ getErrorMessage('breadth') }}
-          </mat-error>
+            <mat-error>
+              {{ getErrorMessage('breadth') }}
+            </mat-error>
           }
         </mat-form-field>
       </div>
@@ -208,25 +260,25 @@
             <mat-radio-button value="No">No</mat-radio-button>
           </mat-radio-group>
           @if (siteDetailsForm.controls['siteOwned'].invalid && siteDetailsForm.controls['siteOwned'].touched) {
-          <mat-error class="radio-error">{{ getErrorMessage('siteOwned') }}</mat-error>
+            <mat-error class="radio-error">{{ getErrorMessage('siteOwned') }}</mat-error>
           }
         </div>
 
         <!-- 2. NOC question – shown only when siteOwned === 'No' -->
         @if (siteDetailsForm.get('siteOwned')?.value === 'No') {
-        <div class="radio-question">
-          <label class="question-label">
-            If no, whether NOC along with the Parcha from Land Lord regarding the use of
-            Premises to run the Excise License Applied for, has been obtained? <span class="required">*</span>
-          </label>
-          <mat-radio-group formControlName="nocObtained" required>
-            <mat-radio-button value="Yes">Yes</mat-radio-button>
-            <mat-radio-button value="No">No</mat-radio-button>
-          </mat-radio-group>
-          @if (siteDetailsForm.controls['nocObtained'].invalid && siteDetailsForm.controls['nocObtained'].touched) {
-          <mat-error class="radio-error">{{ getErrorMessage('nocObtained') }}</mat-error>
-          }
-        </div>
+          <div class="radio-question">
+            <label class="question-label">
+              If no, whether NOC along with the Parcha from Land Lord regarding the use of
+              Premises to run the Excise License Applied for, has been obtained? <span class="required">*</span>
+            </label>
+            <mat-radio-group formControlName="nocObtained" required>
+              <mat-radio-button value="Yes">Yes</mat-radio-button>
+              <mat-radio-button value="No">No</mat-radio-button>
+            </mat-radio-group>
+            @if (siteDetailsForm.controls['nocObtained'].invalid && siteDetailsForm.controls['nocObtained'].touched) {
+              <mat-error class="radio-error">{{ getErrorMessage('nocObtained') }}</mat-error>
+            }
+          </div>
         }
 
         <!-- 3. Trade License Coverage -->
@@ -240,65 +292,65 @@
           </mat-radio-group>
           @if (siteDetailsForm.controls['tradeLicenseCovered'].invalid && 
                siteDetailsForm.controls['tradeLicenseCovered'].touched) {
-          <mat-error class="radio-error">{{ getErrorMessage('tradeLicenseCovered') }}</mat-error>
+            <mat-error class="radio-error">{{ getErrorMessage('tradeLicenseCovered') }}</mat-error>
           }
         </div>
       </div>
 
       <!-- Document Upload Section – Only show if site is NOT owned -->
       @if (siteDetailsForm.get('siteOwned')?.value === 'No') {
-      <div>
-        <h5 class="section-title">Upload Documents</h5>
-        <div class="documents-upload-container">
-          @for (doc of documents; track doc.name) {
-            <div class="document-upload-row">
-              <div class="document-info">
-                <span class="document-label">
-                  {{ doc.label }}
-                  @if (doc.required) {
-                    <span class="required">*</span>
-                  }
-                </span>
-                <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
-              </div>
-              <div class="document-actions">
-                <input
-                  type="file"
-                  [id]="doc.name"
-                  (change)="onDocumentSelect($event, doc.name)"
-                  [accept]="doc.formats"
-                  style="display: none"
-                />
-                <label
-                  [for]="doc.name"
-                  mat-raised-button
-                  color="primary"
-                  style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;"
-                >
-                  <mat-icon style="margin-right: 4px;">upload_file</mat-icon>
-                  Choose File
-                </label>
-
-                @if (doc.fileUrl) {
-                  <button
-                    mat-icon-button
-                    color="accent"
-                    (click)="viewDocument(doc)"
-                    type="button"
-                    aria-label="View Document"
+        <div>
+          <h5 class="section-title">Upload Documents</h5>
+          <div class="documents-upload-container">
+            @for (doc of documents; track doc.name) {
+              <div class="document-upload-row">
+                <div class="document-info">
+                  <span class="document-label">
+                    {{ doc.label }}
+                    @if (doc.required) {
+                      <span class="required">*</span>
+                    }
+                  </span>
+                  <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
+                </div>
+                <div class="document-actions">
+                  <input
+                    type="file"
+                    [id]="doc.name"
+                    (change)="onDocumentSelect($event, doc.name)"
+                    [accept]="doc.formats"
+                    style="display: none"
+                  />
+                  <label
+                    [for]="doc.name"
+                    mat-raised-button
+                    color="primary"
+                    style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;"
                   >
-                    <mat-icon>visibility</mat-icon>
-                  </button>
-                }
+                    <mat-icon style="margin-right: 4px;">upload_file</mat-icon>
+                    Choose File
+                  </label>
 
-                @if (doc.file) {
-                  <span class="file-name">{{ doc.file.name }}</span>
-                }
+                  @if (doc.fileUrl) {
+                    <button
+                      mat-icon-button
+                      color="accent"
+                      (click)="viewDocument(doc)"
+                      type="button"
+                      aria-label="View Document"
+                    >
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                  }
+
+                  @if (doc.file) {
+                    <span class="file-name">{{ doc.file.name }}</span>
+                  }
+                </div>
               </div>
-            </div>
-          }
+            }
+          </div>
         </div>
-      </div>
       }
     </mat-card-content>
 

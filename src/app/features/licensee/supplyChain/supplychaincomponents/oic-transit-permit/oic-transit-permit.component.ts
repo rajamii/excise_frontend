@@ -128,15 +128,14 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     // Filter by status
     if (filters.status && filters.status !== 'All Status') {
       filtered = filtered.filter(permit => {
-        const status = String(permit.status_label || permit.status || '').toLowerCase();
-        const statusCode = permit.status_code;
-
+        const allowed = Array.isArray(permit.allowed_actions) ? permit.allowed_actions.map(a => String(a).toUpperCase()) : [];
+        const entryActions = Array.isArray(permit.current_stage_entry_actions) ? permit.current_stage_entry_actions.map(a => String(a).toUpperCase()) : [];
         if (filters.status === 'PENDING') {
-          return statusCode === 'TRP_02' || status.includes('payment') && status.includes('successful');
+          return allowed.includes('APPROVE') || allowed.includes('REJECT');
         } else if (filters.status === 'APPROVED') {
-          return statusCode === 'TRP_03' || status.includes('approved');
+          return !!permit.current_stage_is_final && entryActions.includes('APPROVE');
         } else if (filters.status === 'REJECTED') {
-          return statusCode === 'TRP_04' || status.includes('cancelled') || status.includes('rejected');
+          return !!permit.current_stage_is_final && entryActions.includes('REJECT');
         }
         return false;
       });
@@ -211,12 +210,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
       const permitId = element.brands[0].id;
       this.transitPermitService.performAction(permitId, 'APPROVE').subscribe({
         next: (_response) => {
-          const approvedPermitData = {
-            ...element,
-            status: 'TransitPermitSucessfulyApproved',
-            status_code: 'TRP_03'
-          };
-          localStorage.setItem('finalTransitPermitData', JSON.stringify(approvedPermitData));
+          localStorage.setItem('finalTransitPermitData', JSON.stringify(element));
           this.snackBar.open('Transit permit approved successfully', 'Close', { duration: 3000 });
           this.loadTransitPermits();
           this.router.navigate(['/dev-final-transit-permit-view']);
@@ -298,17 +292,14 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     });
   }
 
-  getStatusClass(statusCode: string): string {
-    // Handle both status_code and status string
-    if (statusCode === 'TRP_02' || String(statusCode || '').toLowerCase().includes('payment')) {
+  getStatusClass(element: GroupedTransitPermit): string {
+    const allowed = Array.isArray(element.allowed_actions) ? element.allowed_actions.map(a => String(a).toUpperCase()) : [];
+    const entryActions = Array.isArray(element.current_stage_entry_actions) ? element.current_stage_entry_actions.map(a => String(a).toUpperCase()) : [];
+    if (allowed.includes('APPROVE') || allowed.includes('REJECT')) {
       return 'status-pending';
-    } else if (statusCode === 'TRP_03' || String(statusCode || '').toLowerCase().includes('approved')) {
+    } else if (element.current_stage_is_final && entryActions.includes('APPROVE')) {
       return 'status-approved';
-    } else if (
-      statusCode === 'TRP_04' ||
-      String(statusCode || '').toLowerCase().includes('cancelled') ||
-      String(statusCode || '').toLowerCase().includes('rejected')
-    ) {
+    } else if (element.current_stage_is_final && entryActions.includes('REJECT')) {
       return 'status-rejected';
     }
     return '';
@@ -325,10 +316,17 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
   }
 
   getStatusIcon(element: GroupedTransitPermit): string {
-    const value = String(element?.status_code || element?.status_label || element?.status || '').toLowerCase();
-    if (value.includes('approved') || value === 'trp_03') return 'check_circle';
-    if (value.includes('rejected') || value.includes('cancelled') || value === 'trp_04') return 'cancel';
+    const allowed = Array.isArray(element.allowed_actions) ? element.allowed_actions.map(a => String(a).toUpperCase()) : [];
+    const entryActions = Array.isArray(element.current_stage_entry_actions) ? element.current_stage_entry_actions.map(a => String(a).toUpperCase()) : [];
+    if (element.current_stage_is_final && entryActions.includes('APPROVE')) return 'check_circle';
+    if (element.current_stage_is_final && entryActions.includes('REJECT')) return 'cancel';
+    if (allowed.includes('APPROVE') || allowed.includes('REJECT')) return 'schedule';
     return 'schedule';
+  }
+
+  canViewFinalPermit(element: GroupedTransitPermit): boolean {
+    const entryActions = Array.isArray(element.current_stage_entry_actions) ? element.current_stage_entry_actions.map(a => String(a).toUpperCase()) : [];
+    return !!element.current_stage_is_final && entryActions.includes('APPROVE');
   }
 
   formatDate(dateString: string): string {

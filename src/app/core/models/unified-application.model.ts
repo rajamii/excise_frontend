@@ -1,5 +1,5 @@
 export interface UnifiedApplication {
-  type: 'license-renewal' | 'new-license' | 'salesman-barman';
+  type: 'license-renewal' | 'new-license' | 'salesman-barman' | 'company-registration';
   applicationId: string;
   currentStage: string;
   currentStageName?: string;

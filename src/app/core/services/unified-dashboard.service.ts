@@ -15,12 +15,13 @@ export class UnifiedDashboardService {
   private endpoints = {
     renewal: `${this.baseUrl}/license_application`,
     new: `${this.baseUrl}/new_license_application`,
-    salesman: `${this.baseUrl}/salesman_barman`
+    salesman: `${this.baseUrl}/salesman_barman`,
+    company: `${this.baseUrl}/company-registration` // ✅ ADDED: Company registration endpoint
   };
 
   constructor(private http: HttpClient) { }
 
-  /** Combine counts from all 3 application types */
+  /** ✅ FIXED: Combine counts from all 4 application types (added company) */
   getUnifiedDashboardCounts(): Observable<DashboardCount> {
     const requests = [
       this.http.get<DashboardCount>(`${this.endpoints.renewal}/dashboard-counts/`).pipe(
@@ -40,19 +41,27 @@ export class UnifiedDashboardService {
           console.error('❌ Salesman counts error:', err);
           return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
         })
+      ),
+      // ✅ ADDED: Company registration counts
+      this.http.get<DashboardCount>(`${this.endpoints.company}/dashboard-counts/`).pipe(
+        catchError(err => {
+          console.error('❌ Company registration counts error:', err);
+          return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+        })
       )
     ];
 
     return forkJoin(requests).pipe(
-      map(([renewal, newLic, salesman]) => ({
-        applied: (renewal.applied || 0) + (newLic.applied || 0) + (salesman.applied || 0),
-        pending: (renewal.pending || 0) + (newLic.pending || 0) + (salesman.pending || 0),
-        approved: (renewal.approved || 0) + (newLic.approved || 0) + (salesman.approved || 0),
-        rejected: (renewal.rejected || 0) + (newLic.rejected || 0) + (salesman.rejected || 0),
+      map(([renewal, newLic, salesman, company]) => ({
+        applied: (renewal.applied || 0) + (newLic.applied || 0) + (salesman.applied || 0) + (company.applied || 0),
+        pending: (renewal.pending || 0) + (newLic.pending || 0) + (salesman.pending || 0) + (company.pending || 0),
+        approved: (renewal.approved || 0) + (newLic.approved || 0) + (salesman.approved || 0) + (company.approved || 0),
+        rejected: (renewal.rejected || 0) + (newLic.rejected || 0) + (salesman.rejected || 0) + (company.rejected || 0),
       }))
     );
   }
 
+  /** ✅ FIXED: Get applications from all 4 types (added company) */
   getUnifiedApplicationsByStatus(): Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
@@ -79,11 +88,18 @@ export class UnifiedDashboardService {
           console.error('Salesman error:', err);
           return of({ applied: [], pending: [], approved: [], rejected: [] });
         })
+      ),
+      // ✅ ADDED: Company registration applications
+      this.http.get<any>(`${this.endpoints.company}/list-by-status/`).pipe(
+        catchError(err => {
+          console.error('Company registration error:', err);
+          return of({ applied: [], pending: [], approved: [], rejected: [] });
+        })
       )
     ];
 
     return forkJoin(requests).pipe(
-      map(([renewal, newLic, salesman]) => {
+      map(([renewal, newLic, salesman, company]) => {
         const normalize = (data: any, type: UnifiedApplication['type']) => {
           if (!data) {
             return { applied: [], pending: [], approved: [], rejected: [], awaitingPayment: [] };
@@ -131,10 +147,10 @@ export class UnifiedDashboardService {
                 currentStage: String(currentStage),
                 currentStageName: app.current_stage_name || app.currentStageName || 'Unknown',
                 isApproved: app.is_approved ?? app.isApproved ?? false,
-                establishmentName: app.establishment_name || app.establishmentName || null,
+                establishmentName: app.establishment_name || app.establishmentName || app.company_name || app.companyName || null,
                 applicantFullName: this.getApplicantName(app, type),
-                mobileNumber: app.mobile_number || app.mobileNumber || '',
-                email: app.email || app.emailId || app.email_id || '',
+                mobileNumber: app.mobile_number || app.mobileNumber || app.company_mobile_number || app.companyMobileNumber || '',
+                email: app.email || app.emailId || app.email_id || app.company_email_id || app.companyEmailId || '',
                 licenseCategoryName: this.getLicenseCategoryName(app),
                 siteDistrictName: this.getDistrictName(app),
                 transactions: Array.isArray(app.transactions) ? app.transactions : [],
@@ -160,11 +176,13 @@ export class UnifiedDashboardService {
         const normalizedRenewal = normalize(renewal, 'license-renewal');
         const normalizedNewLic = normalize(newLic, 'new-license');
         const normalizedSalesman = normalize(salesman, 'salesman-barman');
+        const normalizedCompany = normalize(company, 'company-registration'); // ✅ ADDED
 
-        let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied];
-        let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending];
-        let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved];
-        const allRejected = [...normalizedRenewal.rejected, ...normalizedNewLic.rejected, ...normalizedSalesman.rejected];
+        // ✅ FIXED: Include company applications in aggregation
+        let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied];
+        let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending];
+        let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved, ...normalizedCompany.approved];
+        const allRejected = [...normalizedRenewal.rejected, ...normalizedNewLic.rejected, ...normalizedSalesman.rejected, ...normalizedCompany.rejected];
 
         const awaitingPaymentApps: UnifiedApplication[] = [];
         
@@ -217,6 +235,11 @@ export class UnifiedDashboardService {
     if (app.member_name) return app.member_name;
     if (app.memberName) return app.memberName;
     
+    // ✅ ADDED: Company registration name fields
+    if (type === 'company-registration') {
+      return app.company_name || app.companyName || 'N/A';
+    }
+    
     if (type === 'salesman-barman') {
       const firstName = app.first_name || app.firstName || '';
       const middleName = app.middle_name || app.middleName || '';
@@ -232,7 +255,8 @@ export class UnifiedDashboardService {
     if (app.license_category && typeof app.license_category === 'object') {
       return app.license_category.name || app.license_category.licenseCategory || app.license_category.license_category || 'N/A';
     }
-    return app.license_category_name || app.licenseCategoryName || app.license_category || 'N/A';
+    // ✅ ADDED: Fallback for company registration (may use "brand_type" or "license")
+    return app.license_category_name || app.licenseCategoryName || app.license_category || app.brand_type || app.brandType || app.license || 'N/A';
   }
 
   private getDistrictName(app: any): string {
@@ -245,14 +269,16 @@ export class UnifiedDashboardService {
     if (app.district && typeof app.district === 'object') {
       return app.district.name || app.district.district || 'N/A';
     }
-    return app.site_district_name || app.excise_district_name || app.district || 'N/A';
+    // ✅ ADDED: Fallback for company registration (may use "state")
+    return app.site_district_name || app.excise_district_name || app.district || app.state || 'N/A';
   }
 
   getApplicationDetail(applicationId: string, type: UnifiedApplication['type']): Observable<any> {
     const mapping: Record<UnifiedApplication['type'], string> = {
       'license-renewal': this.endpoints.renewal,
       'new-license': this.endpoints.new,
-      'salesman-barman': this.endpoints.salesman
+      'salesman-barman': this.endpoints.salesman,
+      'company-registration': this.endpoints.company // ✅ ADDED
     };
     const encodedId = encodeURIComponent(applicationId);
     const url = `${mapping[type]}/detail/${encodedId}/`;
@@ -260,15 +286,13 @@ export class UnifiedDashboardService {
   }
 
   getObjections(applicationId: string): Observable<Objection[]> {
-    return this.http.get<Objection[]>(`${this.workflowUrl}${applicationId}/objections/`); // Assume endpoint exists for all
+    return this.http.get<Objection[]>(`${this.workflowUrl}${applicationId}/objections/`);
   }
 
-  // FIXED: Correct endpoint to /resolve-objections/ as per backend urls.py and sample
   resolveObjections(applicationId: string, type: UnifiedApplication['type'], formData: FormData): Observable<any> {
     return this.http.post<any>(`${this.workflowUrl}${applicationId}/resolve-objections/`, formData);
   }
 
-  // NEW: Added for payment as per backend views.py and urls.py
   payLicenseFee(applicationId: string): Observable<any> {
     return this.http.post<any>(`${this.workflowUrl}${applicationId}/pay-license-fee/`, {});
   }

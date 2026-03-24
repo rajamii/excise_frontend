@@ -63,6 +63,7 @@ interface RevalidationSlipRow {
   reference_no: string;
   submission_date: string;
   distillery_name: string;
+  factory_name?: string;
   status: string;
   quantity_bl: number;
   permit_numbers: string;
@@ -759,6 +760,54 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
+  get showRefundSummaryCard(): boolean {
+    return this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
+  }
+
+  get showCountSummaryCard(): boolean {
+    return this.moduleType !== 'revalidation';
+  }
+
+  get primarySummaryLabel(): string {
+    if (this.moduleType === 'requisition') return 'Total Requisition Amount';
+    if (this.moduleType === 'revalidation') return 'Revalidation Fee';
+    if (this.moduleType === 'hologram') return 'Total Hologram Amount';
+    if (this.moduleType === 'cancellation') return 'Total Refund Amount';
+    return 'Total Transit Amount';
+  }
+
+  get secondarySummaryLabel(): string {
+    if (this.moduleType === 'requisition') return 'Payable Amount';
+    if (this.moduleType === 'hologram') return 'Wallet Paid Amount';
+    return 'Refund Amount';
+  }
+
+  get tertiarySummaryLabel(): string {
+    if (this.moduleType === 'requisition') return 'No. of Permits';
+    if (this.moduleType === 'hologram') return 'Total Holograms';
+    if (this.moduleType === 'cancellation') return 'Permits Cancelled';
+    return 'Total Cases';
+  }
+
+  get revalidationDisplayName(): string {
+    return String(this.revalidationRow?.factory_name || this.revalidationRow?.distillery_name || '-').trim() || '-';
+  }
+
+  private resolveRevalidationQuantityBl(row: any): number {
+    return this.toNumber(
+      row?.totalBl ??
+      row?.total_bl ??
+      row?.quantity_bl ??
+      row?.quantityBl ??
+      row?.quantity ??
+      row?.bl ??
+      row?.totalQuantityBl ??
+      row?.total_quantity_bl ??
+      row?.requisition?.total_bl ??
+      row?.requisition?.totalBl
+    );
+  }
+
   private toTitle(value: string): string {
     return String(value || '')
       .replace(/[_-]/g, ' ')
@@ -978,7 +1027,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
 
           const sourceModule = String(row?.source_module || row?.sourceModule || '').toLowerCase();
           const txnId = String(row?.transaction_id || row?.transactionId || '').toUpperCase();
-          const looksRequisition = sourceModule.includes('requisition') || txnId.startsWith('REQ-') || rowRef.startsWith('REQ/');
+          // Strict requisition match to avoid picking revalidation/cancellation txns
+          // that can share the same requisition reference number.
+          const looksRequisition = sourceModule.includes('requisition') || txnId.startsWith('REQ-');
 
           return isDebitLike && looksRequisition;
         });
@@ -1125,9 +1176,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           id: Number(row.id || 0),
           reference_no: String(row.ourRefNo || row.our_ref_no || row.referenceNo || row.ref_no || this.referenceNo || ''),
           submission_date: String(row.revalidationDate || row.revalidation_date || row.submissionDate || row.submission_date || row.date || row.created_at || ''),
+          factory_name: String(row.establishment_name || row.establishmentName || row.factory_name || row.factoryName || ''),
           distillery_name: String(row.liftedFromDistilleryName || row.lifted_from_distillery_name || row.distilleryName || row.distillery_name || '-'),
           status: String(row.status || '-'),
-          quantity_bl: Number(row.totalbl || row.total_bl || row.quantity || 0),
+          quantity_bl: this.resolveRevalidationQuantityBl(row),
           permit_numbers: String(row.details_permits_number || row.detailsPermitsNumber || row.permitNumbers || row.permit_numbers || '-'),
           original_permit_date: String(row.requisitionDate || row.requisition_date || row.originalPermitDate || row.original_permit_date || ''),
           expiry_date: String(row.expiryDate || row.expiry_date || row.revalidationDate || row.revalidation_date || ''),

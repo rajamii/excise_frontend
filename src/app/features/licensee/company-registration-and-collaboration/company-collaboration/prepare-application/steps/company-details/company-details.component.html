@@ -1,0 +1,81 @@
+<form [formGroup]="companyDetailsForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Bottler Details</div>
+      <div class="validation">
+        Auto-fetched from licensee data. * Marked fields are mandatory.
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="form-field-container">
+
+        <!-- Row 1: Application Year | Application ID | Application Date -->
+        <mat-form-field appearance="outline">
+          <mat-label>Select Application Year *</mat-label>
+          <input matInput formControlName="financialYear" readonly
+            aria-label="Application year"
+            title="Application year">
+          <mat-icon matSuffix>calendar_today</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Application Date</mat-label>
+          <input matInput formControlName="applicationDate" readonly
+            aria-label="Application date"
+            title="Application date">
+          <mat-icon matSuffix>event</mat-icon>
+        </mat-form-field>
+
+        <!-- Row 2: Select Bottler -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Select Bottler *</mat-label>
+          <mat-select formControlName="bottlerId" required>
+            <mat-option value="">-- Select Bottler --</mat-option>
+            @if (isLoadingBottlers) {
+              <mat-option disabled>Loading...</mat-option>
+            } @else {
+              @for (bottler of bottlerOptions; track bottler.id) {
+                <mat-option [value]="bottler.id">
+                  {{ bottler.name }}{{ bottler.code ? ' [' + bottler.code + ']' : '' }}
+                </mat-option>
+              }
+            }
+          </mat-select>
+          <mat-icon matSuffix>factory</mat-icon>
+          @if (companyDetailsForm.controls['bottlerId'].invalid && companyDetailsForm.controls['bottlerId'].touched) {
+            <mat-error>Please select a bottler</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Row 3: Bottler Address (auto-filled, read-only) -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Bottler Address</mat-label>
+          <textarea matInput
+            formControlName="bottlerAddress"
+            readonly
+            aria-label="Bottler address"
+            title="Bottler address"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="2"
+            cdkAutosizeMaxRows="4">
+          </textarea>
+          <mat-icon matSuffix>location_on</mat-icon>
+        </mat-form-field>
+
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      @if (showBack) {
+        <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+      }
+      <button mat-flat-button color="primary" type="button"
+        (click)="proceedToNext()"
+        [disabled]="!companyDetailsForm.valid">
+        Save &amp; Proceed
+      </button>
+      <button mat-stroked-button color="warn" type="button" (click)="resetForm()">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

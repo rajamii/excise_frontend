@@ -146,6 +146,17 @@ export class WorkflowActionService {
   private mapNextStagesToActionConfigs(stages: any[]): WorkflowActionConfig[] {
     if (!Array.isArray(stages)) return [];
 
+    const hasSpecialConditionalFlag = (stage: any): boolean => {
+      const condition = stage?.condition;
+      if (!condition || typeof condition !== 'object') return false;
+      return condition['is_reverted'] === true
+        || condition['isReverted'] === true
+        || condition['has_objections'] === true
+        || condition['hasObjections'] === true
+        || condition['objections_resolved'] === true
+        || condition['objectionsResolved'] === true;
+    };
+
     const sortedStages = [...stages].sort((a: any, b: any) => {
       const aTransitionId = Number(a?.transition_id ?? a?.transitionId);
       const bTransitionId = Number(b?.transition_id ?? b?.transitionId);
@@ -160,7 +171,9 @@ export class WorkflowActionService {
       return 0;
     });
 
-    return sortedStages.map((stage: any): WorkflowActionConfig | null => {
+    return sortedStages
+    .filter((stage: any) => !hasSpecialConditionalFlag(stage))
+    .map((stage: any): WorkflowActionConfig | null => {
       const explicitAction = String(stage?.action || '').toUpperCase().trim();
       const stageName = String(stage?.name || '').toLowerCase();
       let action = '';

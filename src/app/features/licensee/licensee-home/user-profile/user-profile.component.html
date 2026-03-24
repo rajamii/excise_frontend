@@ -1,63 +1,203 @@
-<!-- Only show card if component is loaded -->
+<!-- user-profile.component.html -->
 @if (loaded) {
   <mat-card>
-    <!-- Card header -->
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
     <mat-card-header>
-      User Profile
+      {{ showEditForm ? (isNewProfile ? 'Create Licensee Profile' : 'Edit Licensee Profile') : 'User Profile' }}
       <button mat-icon-button (click)="closeDialog()">
         <mat-icon style="color: white;">close</mat-icon>
       </button>
     </mat-card-header>
-    <!-- Card content only shown if user data is available -->
+
     @if (user) {
       <mat-card-content>
-        <table>
-          <!-- Each row shows a user detail -->
-          <tr>
-            <td><strong>First Name:</strong></td>
-            <td>{{ user.firstName }}</td>
-          </tr>
-          <tr>
-            <td><strong>Middle Name:</strong></td>
-            <td>{{ user.middleName }}</td>
-          </tr>
-          <tr>
-            <td><strong>Last Name:</strong></td>
-            <td>{{ user.lastName }}</td>
-          </tr>
-          <tr>
-            <td><strong>User Name:</strong></td>
-            <td>{{ user.username }}</td>
-          </tr>
-          <tr>
-            <td><strong>Email:</strong></td>
-            <td>{{ user.email }}</td>
-          </tr>
-          <tr>
-            <td><strong>Phone:</strong></td>
-            <td>{{ user.phoneNumber }}</td>
-          </tr>
-          <tr>
-            <td><strong>Role:</strong></td>
-            <td>{{ resolvedRoleName }}</td>
-          </tr>
-          <tr>
-            <td><strong>District:</strong></td>
-            <td>{{ user.district.name }}</td>
-          </tr>
-          <tr>
-            <td><strong>Sub Division:</strong></td>
-            <td>{{ user.subdivision.name }}</td>
-          </tr>
-          <tr>
-            <td><strong>Address:</strong></td>
-            <td>{{ user.address }}</td>
-          </tr>
-          <tr>
-            <td><strong>Created by:</strong></td>
-            <td>{{ user.createdBy }}</td>
-          </tr>
-        </table>
+
+        <!-- ══ VIEW MODE ══════════════════════════════════════════ -->
+        @if (!showEditForm) {
+
+          <!-- Account details -->
+          <table>
+            <tr><td><strong>First Name:</strong></td>   <td>{{ user.firstName }}</td></tr>
+            <tr><td><strong>Middle Name:</strong></td>  <td>{{ user.middleName }}</td></tr>
+            <tr><td><strong>Last Name:</strong></td>    <td>{{ user.lastName }}</td></tr>
+            <tr><td><strong>User Name:</strong></td>    <td>{{ user.username }}</td></tr>
+            <tr><td><strong>Email:</strong></td>        <td>{{ user.email }}</td></tr>
+            <tr><td><strong>Phone:</strong></td>        <td>{{ user.phoneNumber }}</td></tr>
+            <tr><td><strong>Role:</strong></td>         <td>{{ resolvedRoleName }}</td></tr>
+            <tr><td><strong>District:</strong></td>     <td>{{ user.district?.name }}</td></tr>
+            <tr><td><strong>Sub Division:</strong></td> <td>{{ user.subdivision?.name }}</td></tr>
+            <tr><td><strong>Address:</strong></td>      <td>{{ user.address }}</td></tr>
+            <tr><td><strong>Created by:</strong></td>   <td>{{ user.createdBy }}</td></tr>
+          </table>
+
+          <!-- Licensee profile summary -->
+          @if (!profileLoading && licenseeProfile) {
+            <div class="profile-summary">
+              <div class="profile-summary-header">
+                <mat-icon>person_pin</mat-icon>
+                <span>Licensee Profile</span>
+              </div>
+              <table>
+                <tr><td><strong>PAN Number:</strong></td>         <td>{{ licenseeProfile.pan_number }}</td></tr>
+                <tr><td><strong>Father's Name:</strong></td>      <td>{{ licenseeProfile.father_name }}</td></tr>
+                <tr><td><strong>Date of Birth:</strong></td>      <td>{{ licenseeProfile.dob }}</td></tr>
+                <tr><td><strong>Gender:</strong></td>             <td>{{ licenseeProfile.gender_display }}</td></tr>
+                <tr><td><strong>Nationality:</strong></td>        <td>{{ licenseeProfile.nationality }}</td></tr>
+                <tr><td><strong>Marital Status:</strong></td>     <td>{{ licenseeProfile.marital_status_display }}</td></tr>
+                <tr><td><strong>Residential Status:</strong></td> <td>{{ licenseeProfile.residential_status_display }}</td></tr>
+              </table>
+            </div>
+          }
+
+          @if (!profileLoading && !licenseeProfile) {
+            <div class="no-profile-hint">
+              <mat-icon>info_outline</mat-icon>
+              <span>No licensee profile found. Click <strong>Edit Profile</strong> to create one.</span>
+            </div>
+          }
+
+          <!-- Action buttons -->
+          <div class="action-buttons">
+            <button mat-raised-button class="edit-profile-btn"
+              (click)="openEditForm()" [disabled]="profileLoading">
+              <mat-icon>edit</mat-icon>
+              {{ licenseeProfile ? 'Edit Profile' : 'Create Profile' }}
+            </button>
+
+            <button mat-raised-button color="primary"
+              (click)="openMyLicenses()" class="my-licenses-btn">
+              <mat-icon>workspace_premium</mat-icon>
+              My Licenses
+            </button>
+          </div>
+        }
+
+        <!-- ══ EDIT / CREATE FORM ════════════════════════════════ -->
+        @if (showEditForm) {
+          <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="profile-form" novalidate>
+
+            @if (saveSuccess) {
+              <div class="alert alert-success">
+                <mat-icon>check_circle</mat-icon>
+                Profile saved successfully!
+              </div>
+            }
+
+            @if (saveError) {
+              <div class="alert alert-error">
+                <mat-icon>error_outline</mat-icon>
+                <span style="white-space: pre-line;">{{ saveError }}</span>
+              </div>
+            }
+
+            <!-- ── Immutable fields ───────────────────────────── -->
+            <div class="form-section-label">
+              <mat-icon>lock</mat-icon>
+              Personal Details
+              @if (!isNewProfile) {
+                <span class="lock-hint">(cannot be changed after creation)</span>
+              }
+            </div>
+
+            <!-- Father's Name -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Father's Name</mat-label>
+              <input matInput formControlName="father_name" placeholder="Enter father's full name" />
+              @if (f['father_name'].touched && f['father_name'].errors?.['required']) {
+                <mat-error>Father's name is required.</mat-error>
+              }
+              @if (f['father_name'].touched && f['father_name'].errors?.['pattern']) {
+                <mat-error>Only letters and spaces are allowed.</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Date of Birth -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Date of Birth</mat-label>
+              <input matInput [matDatepicker]="dobPicker"
+                     formControlName="dob" placeholder="YYYY-MM-DD" />
+              <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
+              <mat-datepicker #dobPicker></mat-datepicker>
+              @if (f['dob'].touched && f['dob'].errors?.['required']) {
+                <mat-error>Date of birth is required.</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Gender -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Gender</mat-label>
+              <mat-select formControlName="gender">
+                @for (opt of genderOptions; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+              @if (f['gender'].touched && f['gender'].errors?.['required']) {
+                <mat-error>Gender is required.</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Nationality -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nationality</mat-label>
+              <input matInput formControlName="nationality" />
+              @if (f['nationality'].touched && f['nationality'].errors?.['required']) {
+                <mat-error>Nationality is required.</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- ── Mutable fields ─────────────────────────────── -->
+            <div class="form-section-label">
+              <mat-icon>edit_note</mat-icon>
+              Status Details
+              <span class="lock-hint">(can be updated anytime)</span>
+            </div>
+
+            <!-- Marital Status -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Marital Status</mat-label>
+              <mat-select formControlName="marital_status">
+                @for (opt of maritalStatusOptions; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+              @if (f['marital_status'].touched && f['marital_status'].errors?.['required']) {
+                <mat-error>Marital status is required.</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Residential Status -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Residential Status</mat-label>
+              <mat-select formControlName="residential_status">
+                @for (opt of residentialStatusOptions; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+              @if (f['residential_status'].touched && f['residential_status'].errors?.['required']) {
+                <mat-error>Residential status is required.</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Form actions -->
+            <div class="form-actions">
+              <button mat-stroked-button type="button" (click)="cancelEdit()" [disabled]="isSaving">
+                <mat-icon>cancel</mat-icon>
+                Cancel
+              </button>
+              <button mat-raised-button type="submit" class="save-btn" [disabled]="isSaving">
+                @if (isSaving) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                  <mat-icon>save</mat-icon>
+                }
+                {{ isSaving ? 'Saving…' : (isNewProfile ? 'Create Profile' : 'Save Changes') }}
+              </button>
+            </div>
+
+          </form>
+        }
+
       </mat-card-content>
     }
   </mat-card>

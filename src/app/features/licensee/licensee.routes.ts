@@ -68,9 +68,19 @@ export const licenseeRoutes: Routes = [
     data: { section: 'company-registration' }
   },
   {
+    path: 'company-collaboration/prepare-application',
+    loadComponent: () => import('./registration-section-redirect/registration-section-redirect.component').then(m => m.RegistrationSectionRedirectComponent),
+    data: { section: 'company-collaboration' }
+  },
+  {
     path: 'salesman-barman/prepare-application',
     loadComponent: () => import('./registration-section-redirect/registration-section-redirect.component').then(m => m.RegistrationSectionRedirectComponent),
     data: { section: 'salesman-barman-registration' }
+  },
+  {
+    path: 'label/prepare-application',
+    loadComponent: () => import('./registration-section-redirect/registration-section-redirect.component').then(m => m.RegistrationSectionRedirectComponent),
+    data: { section: 'label-registration' }
   }
 ];
 

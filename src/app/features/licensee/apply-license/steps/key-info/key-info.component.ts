@@ -8,6 +8,7 @@ import { PatternConstants } from '../../../../../shared/constants/pattern.consta
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { DatePipe } from '@angular/common';
 import { MasterService } from '../../../../../core/services/master.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 @Component({
   selector: 'app-key-info',
@@ -48,6 +49,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private masterService: MasterService,
+    private accountService: AccountService,
     private datePipe: DatePipe
   ) {
     const storedValues = this.getFromSessionStorage();
@@ -91,6 +93,9 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadDropdownData();
+    
+    // ✅ AUTO-FILL from user profile
+    this.autoFillFromUserProfile();
   }
 
   ngOnDestroy() {
@@ -98,14 +103,55 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  /**
+   * ✅ Auto-fill contact details from logged-in user profile
+   */
+  private autoFillFromUserProfile(): void {
+    const sessionData = sessionStorage.getItem('keyInfoData');
+    if (sessionData) {
+      console.log('📋 Key info already in session, skipping auto-fill');
+      return;
+    }
+
+    const userProfile = this.accountService.getUserProfileSync();
+    
+    if (!userProfile) {
+      console.log('⚠️ No user profile in memory, fetching from backend...');
+      this.accountService.identity(true).subscribe({
+        next: (profile) => {
+          if (profile) {
+            this.fillFormWithProfile(profile);
+          }
+        },
+        error: (err) => {
+          console.error('❌ Failed to fetch user profile:', err);
+        }
+      });
+    } else {
+      console.log('✅ User profile found in memory, auto-filling...');
+      this.fillFormWithProfile(userProfile);
+    }
+  }
+
+  /**
+   * Fill form with user profile data
+   */
+  private fillFormWithProfile(profile: any): void {
+    console.log('🔍 Auto-filling key info with profile:', profile);
+    
+    this.keyInfoForm.patchValue({
+      mobile_number: profile.phoneNumber || profile.phone_number,
+      email: profile.email
+    }, { emitEvent: true });
+
+    console.log('✅ Key info auto-filled from user profile');
+  }
+
   private loadDropdownData(): void {
     this.masterService.getLicenseTypes().subscribe({
       next: (data: LicenseType[]) => {
         this.licenseTypes = data;
-        
-        // ✅ CRITICAL: Save to sessionStorage
         sessionStorage.setItem('licenseTypes', JSON.stringify(data));
-        
         console.log('✅ License types loaded and saved:', data.length);
       },
       error: (error) => {
@@ -122,14 +168,12 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.keyInfoForm.getRawValue();
 
-    // Convert dates to YYYY-MM-DD format
     const parsedDates = {
       initial_grant_date: this.transformValidDate(formData.initial_grant_date),
       renewed_from: this.transformValidDate(formData.renewed_from),
       valid_up_to: this.transformValidDate(formData.valid_up_to),
     };
 
-    // ✅ CRITICAL: Convert to proper types
     const enrichedData: any = {
       license_type: formData.license_type ? parseInt(String(formData.license_type)) : null,
       establishment_name: formData.establishment_name,

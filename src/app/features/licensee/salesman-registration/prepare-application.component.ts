@@ -10,18 +10,18 @@ import { AccountService } from '../../../core/services/account.service';
   selector: 'app-salesman-registration',
   standalone: true,
   imports: [
-    MaterialModule,
-    LicenseComponent,
-    DetailsComponent,
-    MakePaymentComponent,
+    MaterialModule, 
+    LicenseComponent, 
+    DetailsComponent, 
+    MakePaymentComponent, 
     SubmitApplicationComponent
   ],
   templateUrl: './prepare-application.component.html',
   styleUrl: './prepare-application.component.scss'
 })
 export class PrepareApplicationComponent implements OnInit {
-
-  constructor(private accountService: AccountService) { }
+  
+  constructor(private accountService: AccountService) {}
 
   ngOnInit(): void {
     // ✅ Ensure user profile is loaded when starting salesman/barman registration
@@ -32,8 +32,8 @@ export class PrepareApplicationComponent implements OnInit {
    * ✅ Ensure user profile is loaded before starting the registration
    */
   private ensureUserProfileLoaded(): void {
-    const userProfile = this.accountService.getCurrentUser();
-
+    const userProfile = this.accountService.getUserProfileSync();
+    
     if (!userProfile) {
       console.log('📡 Loading user profile for salesman/barman registration...');
       this.accountService.identity(true).subscribe({
