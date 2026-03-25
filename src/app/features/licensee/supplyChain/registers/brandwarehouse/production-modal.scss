@@ -3,10 +3,37 @@
   max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
+  box-sizing: border-box;
 
   .modal-body {
-    padding: 0;
+    padding: 0 28px 28px 28px;
   }
+}
+
+@media (max-width: 768px) {
+  .production-modal {
+    .modal-body {
+      padding: 0 16px 20px 16px;
+    }
+  }
+}
+
+.production-modal *,
+.production-modal *::before,
+.production-modal *::after {
+  box-sizing: border-box;
+}
+
+/* Month filter spacing (reuses existing permits-controls styles) */
+.production-filters {
+  padding: 16px 0 12px 0;
+
+  .permits-filter-row {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  margin: 0;
 }
 
 /* Production Summary Card */
@@ -139,6 +166,8 @@
 /* Production History */
 .production-history {
   margin-bottom: 32px;
+  padding: 0;
+  max-width: 100%;
 
   h4 {
     font-size: 18px;
@@ -163,6 +192,7 @@
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
   }
 
   .history-table {
@@ -297,6 +327,14 @@
         }
       }
     }
+  }
+}
+
+.production-pagination {
+  padding: 12px 24px 0 24px;
+
+  @media (max-width: 768px) {
+    padding: 12px 0 0 0;
   }
 }
 
