@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { SupplyChainService } from '../../../licensee/supplyChain/services/supplychain.service';
 import { environment } from '../../../../../environments/environment';
 import { AccountService } from '../../../../core/services/account.service';
+import { HologramService, DailyRegisterEntry } from '../../../../core/services/hologram.service';
 import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
 import { RequisitionComponent } from "../../../licensee/supplyChain/supplychaincomponents/requisition/requisition.component";
 import { CancellationComponent } from "../../../licensee/supplyChain/supplychaincomponents/cancellation/cancellation.component";
@@ -120,6 +121,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Overdue hologram entries
   overdueHologramEntries: any[] = [];
   showOverdueAlert = false;
+  private static readonly APPROVAL_DEADLINE_HOUR = 17; // 5 PM
 
   // Sample data for revalidation applications (from commissioner's perspective)
   revalidationData: CommissionerTableData[] = [
@@ -207,6 +209,7 @@ export class CommissionerDashboardComponent implements OnInit {
     private http: HttpClient,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService,
+    private commissionerDailyRegisterService: HologramService,
     @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -240,7 +243,7 @@ export class CommissionerDashboardComponent implements OnInit {
       }
 
       // Load overdue hologram entries
-      this.loadOverdueEntries();
+      this.refreshOverdueEntries();
 
       // Listen for overdue alerts from daily register
       window.addEventListener('overdueHologramAlert', (event: any) => {
@@ -250,7 +253,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
       // Check for overdue entries every minute
       setInterval(() => {
-        this.loadOverdueEntries();
+        this.refreshOverdueEntries();
       }, 60000);
 
       // Refresh hologram data every 30 seconds when on hologram tab
@@ -321,6 +324,57 @@ export class CommissionerDashboardComponent implements OnInit {
       this.overdueHologramEntries = [];
       this.showOverdueAlert = false;
     }
+  }
+
+  private refreshOverdueEntries(): void {
+    // Prefer live data from API so warning is always up-to-date even if daily register tab isn't opened.
+    this.commissionerDailyRegisterService.getDailyRegisterOverview().subscribe({
+      next: (response) => {
+        const now = new Date();
+        const entries = (response?.entries || []) as DailyRegisterEntry[];
+        const overdue = entries.filter((e) => this.isApprovalUpdateOverdue(e, now));
+
+        // Store simplified shape for UI
+        this.overdueHologramEntries = overdue.map((e) => ({
+          referenceNo: e.referenceNo,
+          distilleryName: e.distilleryName,
+          approvalDate: e.approvalDate,
+          approvalTime: e.approvalTime,
+          status: e.status,
+        }));
+        this.showOverdueAlert = this.overdueHologramEntries.length > 0;
+
+        try {
+          localStorage.setItem('overdueHologramEntries', JSON.stringify(this.overdueHologramEntries));
+        } catch {
+          // ignore storage errors
+        }
+      },
+      error: () => {
+        // Fallback to any previously cached values
+        this.loadOverdueEntries();
+      }
+    });
+  }
+
+  private isApprovalUpdateOverdue(entry: DailyRegisterEntry, now: Date): boolean {
+    if (!entry?.approvalDate) return false;
+    if (entry.status === 'COMPLETED') return false;
+
+    const approval = new Date(String(entry.approvalDate || '').trim());
+    if (Number.isNaN(approval.getTime())) return false;
+
+    const deadline = new Date(
+      approval.getFullYear(),
+      approval.getMonth(),
+      approval.getDate(),
+      CommissionerDashboardComponent.APPROVAL_DEADLINE_HOUR,
+      0,
+      0,
+      0
+    );
+
+    return now.getTime() > deadline.getTime();
   }
 
   dismissOverdueAlert(): void {

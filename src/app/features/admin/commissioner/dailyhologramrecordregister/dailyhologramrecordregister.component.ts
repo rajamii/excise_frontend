@@ -26,6 +26,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly authUsersApiBase = `${environment.apiBaseUrl}/auth/users`;
   private readonly hologramApiBase = `${environment.apiBaseUrl}/transactional/supply_chain/hologram`;
+  private static readonly APPROVAL_DEADLINE_HOUR = 17; // 5 PM
   
   dailyRegisterEntries: DailyRegisterEntry[] = [];
   filteredEntries: DailyRegisterEntry[] = [];
@@ -68,6 +69,10 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
 
+  // SLA breach alert for commissioner-approved entries not updated by 5 PM
+  approvalDeadlineBreaches: DailyRegisterEntry[] = [];
+  approvalDeadlineBreachMessage = '';
+
   constructor(
     private hologramService: HologramService,
     private http: HttpClient
@@ -81,6 +86,11 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     setInterval(() => {
       this.loadDailyRegisterEntries();
     }, 30000);
+
+    // Re-check deadline locally (crossing 5 PM)
+    setInterval(() => {
+      this.updateApprovalDeadlineBreaches();
+    }, 60000);
   }
 
   loadDailyRegisterEntries() {
@@ -95,6 +105,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         this.updateDistilleryOptions(response.entries);
         
         this.applyFilters();
+        this.updateApprovalDeadlineBreaches();
         this.isLoading = false;
       },
       error: (error) => {
@@ -103,6 +114,56 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  private updateApprovalDeadlineBreaches(now: Date = new Date()): void {
+    const breaches = (this.dailyRegisterEntries || []).filter((entry) => this.isApprovalUpdateOverdue(entry, now));
+
+    this.approvalDeadlineBreaches = breaches;
+    if (breaches.length > 0) {
+      const sampleRefs = breaches.slice(0, 4).map((e) => e.referenceNo).join(', ');
+      this.approvalDeadlineBreachMessage =
+        `${breaches.length} approved hologram request(s) not updated by 5 PM. ` +
+        (sampleRefs ? `Ref: ${sampleRefs}${breaches.length > 4 ? '…' : ''}` : '');
+    } else {
+      this.approvalDeadlineBreachMessage = '';
+    }
+
+    // Keep commissioner dashboard warning in sync
+    try {
+      const simplified = breaches.map((e) => ({
+        referenceNo: e.referenceNo,
+        distilleryName: e.distilleryName,
+        approvalDate: e.approvalDate,
+        approvalTime: e.approvalTime,
+        status: e.status,
+      }));
+      localStorage.setItem('overdueHologramEntries', JSON.stringify(simplified));
+      window.dispatchEvent(new CustomEvent('overdueHologramAlert', { detail: { entries: simplified } }));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private isApprovalUpdateOverdue(entry: DailyRegisterEntry, now: Date): boolean {
+    if (!entry) return false;
+    if (!entry.approvalDate) return false; // not approved yet
+    if (entry.status === 'COMPLETED') return false;
+
+    const approval = new Date(String(entry.approvalDate || '').trim());
+    if (Number.isNaN(approval.getTime())) return false;
+
+    const deadline = new Date(
+      approval.getFullYear(),
+      approval.getMonth(),
+      approval.getDate(),
+      DailyhologramrecordregisterComponent.APPROVAL_DEADLINE_HOUR,
+      0,
+      0,
+      0
+    );
+
+    return now.getTime() > deadline.getTime();
   }
 
   private loadDropdownSources(): void {
@@ -497,6 +558,31 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         : 'Completed';
     }
 
+    // Under process: enforce 5 PM deadline of approval date (commissioner SLA)
+    if (entry.status === 'UNDER_PROCESS' && entry.approvalDate) {
+      const now = new Date();
+      const approval = new Date(String(entry.approvalDate || '').trim());
+      if (!Number.isNaN(approval.getTime())) {
+        const deadline = new Date(
+          approval.getFullYear(),
+          approval.getMonth(),
+          approval.getDate(),
+          DailyhologramrecordregisterComponent.APPROVAL_DEADLINE_HOUR,
+          0,
+          0,
+          0
+        );
+        const diffMs = deadline.getTime() - now.getTime();
+        if (diffMs <= 0) {
+          return 'Overdue (deadline 5:00 PM)';
+        }
+        const totalMinutes = Math.floor(diffMs / 60000);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${hours}h ${minutes}m remaining (deadline 5:00 PM)`;
+      }
+    }
+
     return entry.timeRemaining || 'No deadline set';
   }
 
@@ -510,6 +596,10 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         return 'text-danger fw-bold';
       }
       return 'text-success';
+    }
+
+    if (entry.status === 'UNDER_PROCESS' && this.isApprovalUpdateOverdue(entry, new Date())) {
+      return 'text-danger fw-bold';
     }
 
     if (entry.isOverdue) {
