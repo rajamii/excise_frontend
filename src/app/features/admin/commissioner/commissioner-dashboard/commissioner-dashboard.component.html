@@ -39,7 +39,8 @@
               <strong>Overdue Hologram Processing Alert!</strong>
             </h5>
             <p class="mb-2">
-              {{ overdueHologramEntries.length }} hologram request(s) have exceeded the 5 PM deadline and are still
+              {{ overdueHologramEntries.length }} hologram request(s) have exceeded the
+              {{ approvalDeadlineLabel || 'configured' }} deadline and are still
               under process.
               Immediate action required to complete the workflow.
             </p>

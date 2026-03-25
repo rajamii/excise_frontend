@@ -121,7 +121,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Overdue hologram entries
   overdueHologramEntries: any[] = [];
   showOverdueAlert = false;
-  private static readonly APPROVAL_DEADLINE_HOUR = 17; // 5 PM
+  approvalDeadlineLabel = '';
 
   // Sample data for revalidation applications (from commissioner's perspective)
   revalidationData: CommissionerTableData[] = [
@@ -324,6 +324,8 @@ export class CommissionerDashboardComponent implements OnInit {
       this.overdueHologramEntries = [];
       this.showOverdueAlert = false;
     }
+    // Label is best-effort here; refreshOverdueEntries() will set it from API.
+    this.approvalDeadlineLabel = '';
   }
 
   private refreshOverdueEntries(): void {
@@ -334,6 +336,10 @@ export class CommissionerDashboardComponent implements OnInit {
         const entries = (response?.entries || []) as DailyRegisterEntry[];
         const overdue = entries.filter((e) => this.isApprovalUpdateOverdue(e, now));
 
+        this.approvalDeadlineLabel = this.getDeadlineLabel(
+          (overdue[0] as any)?.deadline || (entries || []).find((e) => !!(e as any)?.deadline)?.deadline
+        );
+
         // Store simplified shape for UI
         this.overdueHologramEntries = overdue.map((e) => ({
           referenceNo: e.referenceNo,
@@ -341,6 +347,7 @@ export class CommissionerDashboardComponent implements OnInit {
           approvalDate: e.approvalDate,
           approvalTime: e.approvalTime,
           status: e.status,
+          deadline: (e as any).deadline,
         }));
         this.showOverdueAlert = this.overdueHologramEntries.length > 0;
 
@@ -361,20 +368,19 @@ export class CommissionerDashboardComponent implements OnInit {
     if (!entry?.approvalDate) return false;
     if (entry.status === 'COMPLETED') return false;
 
-    const approval = new Date(String(entry.approvalDate || '').trim());
-    if (Number.isNaN(approval.getTime())) return false;
-
-    const deadline = new Date(
-      approval.getFullYear(),
-      approval.getMonth(),
-      approval.getDate(),
-      CommissionerDashboardComponent.APPROVAL_DEADLINE_HOUR,
-      0,
-      0,
-      0
-    );
-
+    const deadlineIso = String((entry as any)?.deadline || '').trim();
+    if (!deadlineIso) return false;
+    const deadline = new Date(deadlineIso);
+    if (Number.isNaN(deadline.getTime())) return false;
     return now.getTime() > deadline.getTime();
+  }
+
+  private getDeadlineLabel(deadlineIso?: string | null): string {
+    const iso = String(deadlineIso || '').trim();
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
   }
 
   dismissOverdueAlert(): void {
