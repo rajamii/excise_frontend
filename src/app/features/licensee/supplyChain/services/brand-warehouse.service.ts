@@ -26,6 +26,8 @@ export interface BrandWarehouseUtilization {
 export interface BrandWarehouse {
     id?: number;
     license_id?: string;
+    factory_id?: number | null;
+    factory_name?: string;
     distillery_name: string;
     brand_type: string;
     brand_id?: number | null;
@@ -127,7 +129,9 @@ export class BrandWarehouseService {
                     const brandId = brand.brandId ?? brand.brand_id ?? null;
                     const brandName = brand.brandName || brand.brand_name || 'Unknown Brand';
                     const licenseId = String(brand.licenseId || brand.license_id || '').trim();
-                    const distilleryName = brand.distilleryName || brand.distillery_name || '';
+                    const factoryId = brand.factoryId ?? brand.factory_id ?? null;
+                    const factoryName = brand.factoryName || brand.factory_name || '';
+                    const distilleryName = brand.distilleryName || brand.distillery_name || factoryName || '';
                     const brandType = brand.brandType || brand.brand_type || '';
                     const capacitySize = brand.capacitySize || brand.capacity_size || 0;
                     const currentStock = brand.currentStock || brand.current_stock || 0;
@@ -142,6 +146,8 @@ export class BrandWarehouseService {
 
                     if (!groupedBrands.has(groupKey)) {
                         groupedBrands.set(groupKey, {
+                            factoryId: factoryId,
+                            factoryName: factoryName || distilleryName,
                             brandId: brandId,
                             brandName: brandName,
                             licenseId: licenseId || '',
@@ -250,7 +256,9 @@ export class BrandWarehouseService {
                 return brands.map((brand: any) => ({
                     id: brand.id,
                     license_id: String(brand.licenseId || brand.license_id || '').trim(),
-                    distillery_name: brand.distilleryName || brand.distillery_name || '',
+                    factory_id: brand.factoryId ?? brand.factory_id ?? null,
+                    factory_name: brand.factoryName || brand.factory_name || '',
+                    distillery_name: brand.distilleryName || brand.distillery_name || brand.factoryName || brand.factory_name || '',
                     brand_type: brand.brandType || brand.brand_type || '',
                     brand_id: brand.brandId ?? brand.brand_id ?? null,
                     brand_name: brand.brandName || brand.brand_name || '',
