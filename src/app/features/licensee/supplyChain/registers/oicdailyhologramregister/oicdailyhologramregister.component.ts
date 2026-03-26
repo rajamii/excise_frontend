@@ -886,8 +886,8 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
         const grouped = new Map<string, Set<number>>();
         typeFilteredRows.forEach((row: any) => {
           const brandName = String(
-            row.brand_details ||
-            row.brandDetails ||
+            row.brand_name ||
+            row.brandName ||
             row.liquor_data_details?.brand_name ||
             row.liquorDataDetails?.brandName ||
             ''

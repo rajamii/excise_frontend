@@ -312,7 +312,13 @@ export class TransitPermitComponent implements OnInit {
   }
 
   private getWarehouseBrandName(entry: any): string {
-    return String(entry?.brandDetails || entry?.brand_details || '').trim();
+    return String(
+      entry?.brandName ||
+      entry?.brand_name ||
+      entry?.brandDetails ||
+      entry?.brand_details ||
+      ''
+    ).trim();
   }
 
   private getWarehouseCapacitySize(entry: any): number {

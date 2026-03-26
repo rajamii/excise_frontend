@@ -47,6 +47,7 @@ interface PackSizeInfo {
 }
 
 interface GroupedBrandStock {
+  brandId?: number | null;
   brandName: string;
   licenseId?: string;
   distilleryName: string;
