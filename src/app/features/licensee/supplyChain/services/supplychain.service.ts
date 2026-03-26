@@ -95,7 +95,7 @@ export class SupplyChainService {
         success?: boolean;
         data?: { brandName: string; sizes: number[] }[];
       }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`,
+        `${environment.apiBaseUrl}/brands/`,
         { params }
       )
       .pipe(map((response: any) => response.data || []));
@@ -110,7 +110,7 @@ export class SupplyChainService {
         success: boolean;
         data: LiquorRates;
       }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/rates/`,
+        `${environment.apiBaseUrl}/rates/`,
         {
           params: {
             brand_name: brandName,
@@ -415,7 +415,7 @@ export class SupplyChainService {
     console.log('getBrandWarehouseStock called with params:', params);
 
     return this.http.get<any[]>(
-      `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/`,
+      `${environment.apiBaseUrl}/brand-warehouse/`,
       { params }
     ).pipe(
       map((response: any) => {

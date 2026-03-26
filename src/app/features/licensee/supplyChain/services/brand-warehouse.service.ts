@@ -70,8 +70,8 @@ export interface StockAdjustment {
     providedIn: 'root'
 })
 export class BrandWarehouseService {
-    private baseUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse`;
-    private utilizationUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse-utilization`;
+    private baseUrl = `${environment.apiBaseUrl}/brand-warehouse`;
+    private utilizationUrl = `${environment.apiBaseUrl}/brand-warehouse-utilization`;
 
     constructor(private http: HttpClient) { }
 

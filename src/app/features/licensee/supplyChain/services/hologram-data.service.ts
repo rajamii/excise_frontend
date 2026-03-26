@@ -320,7 +320,7 @@ export class HologramDataService {
     // Add distillery filter to only get Sikkim Distilleries Ltd brands
     const params = new HttpParams().set('distillery', 'Sikkim Distilleries Ltd');
     
-    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`, { params })
+    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/brands/`, { params })
       .pipe(
         map(response => {
           if (response.success && response.data) {
