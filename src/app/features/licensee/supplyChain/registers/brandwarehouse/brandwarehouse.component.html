@@ -657,12 +657,12 @@
               <option *ngFor="let s of permitPageSizeOptions" [ngValue]="s">{{ s }}</option>
             </select>
           </div>
-          <div class="permits-filter-summary">{{ getPermitSummary() }}</div>
+          <div class="permits-filter-summary">{{ permitSummaryText }}</div>
         </div>
       </div>
 
       <div class="permits-table-container" *ngIf="!isLoadingPermits; else loadingPermits">
-        <table class="permits-table" *ngIf="getPaginatedPermits().length > 0">
+        <table class="permits-table" *ngIf="paginatedTransitPermits.length > 0">
           <thead>
             <tr>
               <th>Permit No</th>
@@ -676,7 +676,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let permit of getPaginatedPermits()" class="permit-row">
+            <tr *ngFor="let permit of paginatedTransitPermits; trackBy: trackByPermit" class="permit-row">
               <td class="permit-no">{{ permit.permitNo }}</td>
               <td class="permit-date">{{ permit.date | date:'dd/MM/yyyy' }}</td>
               <td class="distributor-name">{{ permit.distributorName }}</td>
@@ -709,7 +709,7 @@
           </tbody>
         </table>
 
-        <div class="empty-state" *ngIf="getPaginatedPermits().length === 0">
+        <div class="empty-state" *ngIf="paginatedTransitPermits.length === 0">
           <div class="empty-icon"><i class="bi bi-truck"></i></div>
           <h3>No Transit Permits</h3>
           <p>No permits found{{ permitSelectedMonth !== 'ALL' ? ' for the selected month' : '' }}</p>
@@ -727,15 +727,15 @@
     </div>
 
     <!-- Pagination Footer -->
-    <div class="modal-footer" *ngIf="!isLoadingPermits && getPermitTotalPages() > 1">
+    <div class="modal-footer" *ngIf="!isLoadingPermits && permitTotalPages > 1">
       <div class="permits-pagination">
         <button class="btn btn-outline btn-sm" (click)="changePermitPage(permitCurrentPage - 1)"
           [disabled]="permitCurrentPage <= 1">
           <i class="bi bi-chevron-left"></i> Prev
         </button>
-        <span class="permits-page-indicator">Page {{ permitCurrentPage }} / {{ getPermitTotalPages() }}</span>
+        <span class="permits-page-indicator">Page {{ permitCurrentPage }} / {{ permitTotalPages }}</span>
         <button class="btn btn-outline btn-sm" (click)="changePermitPage(permitCurrentPage + 1)"
-          [disabled]="permitCurrentPage >= getPermitTotalPages()">
+          [disabled]="permitCurrentPage >= permitTotalPages">
           Next <i class="bi bi-chevron-right"></i>
         </button>
       </div>

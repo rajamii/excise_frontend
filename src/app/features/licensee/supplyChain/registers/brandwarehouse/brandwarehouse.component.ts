@@ -161,6 +161,10 @@ export class BrandwarehouseComponent implements OnInit {
   permitPageSizeOptions = [5, 10, 15];
   permitCurrentPage = 1;
   permitSelectedMonth = 'ALL';
+  filteredTransitPermits: TransitPermitDetail[] = [];
+  paginatedTransitPermits: TransitPermitDetail[] = [];
+  permitTotalPages = 1;
+  permitSummaryText = 'No permits';
   permitMonthOptions = [
     { value: 'ALL', label: 'All Months' },
     { value: '01', label: 'January' }, { value: '02', label: 'February' },
@@ -734,8 +738,14 @@ export class BrandwarehouseComponent implements OnInit {
   viewTransitPermits(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
     this.selectedTransitPermits = [];
+    this.filteredTransitPermits = [];
+    this.paginatedTransitPermits = [];
     this.isLoadingPermits = true;
     this.showTransitPermitsModal = true;
+    this.permitCurrentPage = 1;
+    this.permitSelectedMonth = 'ALL';
+    this.permitTotalPages = 1;
+    this.permitSummaryText = 'No permits';
 
     // Get all pack size IDs for this brand
     const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
@@ -798,6 +808,7 @@ export class BrandwarehouseComponent implements OnInit {
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
     const hasCurrentMonth = permits.some(p => this.getPermitMonth(p.date) === currentMonth);
     this.permitSelectedMonth = hasCurrentMonth ? currentMonth : 'ALL';
+    this.recomputePermitView();
   }
 
   getPermitMonth(dateStr: string): string {
@@ -806,32 +817,60 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   getFilteredPermits(): TransitPermitDetail[] {
-    if (this.permitSelectedMonth === 'ALL') return this.selectedTransitPermits;
-    return this.selectedTransitPermits.filter(p => this.getPermitMonth(p.date) === this.permitSelectedMonth);
+    return this.filteredTransitPermits;
   }
 
   getPaginatedPermits(): TransitPermitDetail[] {
-    const filtered = this.getFilteredPermits();
-    const start = (this.permitCurrentPage - 1) * this.permitPageSize;
-    return filtered.slice(start, start + this.permitPageSize);
+    return this.paginatedTransitPermits;
   }
 
   getPermitTotalPages(): number {
-    return Math.max(1, Math.ceil(this.getFilteredPermits().length / this.permitPageSize));
+    return this.permitTotalPages;
   }
 
   getPermitSummary(): string {
-    const filtered = this.getFilteredPermits();
-    if (!filtered.length) return 'No permits';
-    const start = (this.permitCurrentPage - 1) * this.permitPageSize + 1;
-    const end = Math.min(filtered.length, start + this.permitPageSize - 1);
-    return `${start}–${end} of ${filtered.length}`;
+    return this.permitSummaryText;
   }
 
-  onPermitMonthChange(): void { this.permitCurrentPage = 1; }
-  onPermitPageSizeChange(): void { this.permitCurrentPage = 1; }
+  onPermitMonthChange(): void {
+    this.permitCurrentPage = 1;
+    this.recomputePermitView();
+  }
+  onPermitPageSizeChange(): void {
+    this.permitCurrentPage = 1;
+    this.recomputePermitView();
+  }
   changePermitPage(page: number): void {
-    if (page >= 1 && page <= this.getPermitTotalPages()) this.permitCurrentPage = page;
+    if (page < 1 || page > this.permitTotalPages) return;
+    this.permitCurrentPage = page;
+    this.recomputePermitView();
+  }
+
+  private recomputePermitView(): void {
+    const pageSize = Math.max(1, Number(this.permitPageSize) || 1);
+
+    this.filteredTransitPermits = this.permitSelectedMonth === 'ALL'
+      ? this.selectedTransitPermits
+      : this.selectedTransitPermits.filter(p => this.getPermitMonth(p.date) === this.permitSelectedMonth);
+
+    this.permitTotalPages = Math.max(1, Math.ceil(this.filteredTransitPermits.length / pageSize));
+    this.permitCurrentPage = Math.min(Math.max(1, this.permitCurrentPage), this.permitTotalPages);
+
+    const startIndex = (this.permitCurrentPage - 1) * pageSize;
+    this.paginatedTransitPermits = this.filteredTransitPermits.slice(startIndex, startIndex + pageSize);
+
+    if (!this.filteredTransitPermits.length) {
+      this.permitSummaryText = 'No permits';
+      return;
+    }
+
+    const start = startIndex + 1;
+    const end = startIndex + this.paginatedTransitPermits.length;
+    this.permitSummaryText = `${start}-${end} of ${this.filteredTransitPermits.length}`;
+  }
+
+  trackByPermit(index: number, permit: TransitPermitDetail): string {
+    return `${permit.permitNo || index}|${permit.date}`;
   }
 
   viewLastEntries(brand: GroupedBrandStock): void {

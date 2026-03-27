@@ -1758,6 +1758,22 @@
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.transit-permits-modal .modal-header,
+.transit-permits-modal .modal-footer {
+  flex: 0 0 auto;
+}
+
+.transit-permits-modal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .permits-summary {
