@@ -2,11 +2,18 @@
 .production-modal {
   max-width: 900px;
   max-height: 90vh;
-  overflow-y: auto;
   box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   .modal-body {
     padding: 0 28px 28px 28px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
