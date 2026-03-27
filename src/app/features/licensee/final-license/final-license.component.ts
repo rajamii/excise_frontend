@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MaterialModule } from '../../../shared/material.module';
@@ -24,7 +24,8 @@ type FinalLicenseTemplateData = {
   standalone: true,
   imports: [CommonModule, MaterialModule],
   templateUrl: './final-license.component.html',
-  styleUrl: './final-license.component.scss'
+  styleUrl: './final-license.component.scss',
+  encapsulation: ViewEncapsulation.None
 })
 export class FinalLicenseComponent {
   private readonly queryAppId = signal<string>('');
