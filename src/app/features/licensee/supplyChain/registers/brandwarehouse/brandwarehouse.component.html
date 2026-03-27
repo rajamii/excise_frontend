@@ -657,12 +657,12 @@
               <option *ngFor="let s of permitPageSizeOptions" [ngValue]="s">{{ s }}</option>
             </select>
           </div>
-          <div class="permits-filter-summary">{{ getPermitSummary() }}</div>
+          <div class="permits-filter-summary">{{ permitSummaryText }}</div>
         </div>
       </div>
 
       <div class="permits-table-container" *ngIf="!isLoadingPermits; else loadingPermits">
-        <table class="permits-table" *ngIf="getPaginatedPermits().length > 0">
+        <table class="permits-table" *ngIf="paginatedTransitPermits.length > 0">
           <thead>
             <tr>
               <th>Permit No</th>
@@ -676,7 +676,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let permit of getPaginatedPermits()" class="permit-row">
+            <tr *ngFor="let permit of paginatedTransitPermits; trackBy: trackByPermit" class="permit-row">
               <td class="permit-no">{{ permit.permitNo }}</td>
               <td class="permit-date">{{ permit.date | date:'dd/MM/yyyy' }}</td>
               <td class="distributor-name">{{ permit.distributorName }}</td>
@@ -709,7 +709,7 @@
           </tbody>
         </table>
 
-        <div class="empty-state" *ngIf="getPaginatedPermits().length === 0">
+        <div class="empty-state" *ngIf="paginatedTransitPermits.length === 0">
           <div class="empty-icon"><i class="bi bi-truck"></i></div>
           <h3>No Transit Permits</h3>
           <p>No permits found{{ permitSelectedMonth !== 'ALL' ? ' for the selected month' : '' }}</p>
@@ -727,15 +727,15 @@
     </div>
 
     <!-- Pagination Footer -->
-    <div class="modal-footer" *ngIf="!isLoadingPermits && getPermitTotalPages() > 1">
+    <div class="modal-footer" *ngIf="!isLoadingPermits && permitTotalPages > 1">
       <div class="permits-pagination">
         <button class="btn btn-outline btn-sm" (click)="changePermitPage(permitCurrentPage - 1)"
           [disabled]="permitCurrentPage <= 1">
           <i class="bi bi-chevron-left"></i> Prev
         </button>
-        <span class="permits-page-indicator">Page {{ permitCurrentPage }} / {{ getPermitTotalPages() }}</span>
+        <span class="permits-page-indicator">Page {{ permitCurrentPage }} / {{ permitTotalPages }}</span>
         <button class="btn btn-outline btn-sm" (click)="changePermitPage(permitCurrentPage + 1)"
-          [disabled]="permitCurrentPage >= getPermitTotalPages()">
+          [disabled]="permitCurrentPage >= permitTotalPages">
           Next <i class="bi bi-chevron-right"></i>
         </button>
       </div>
@@ -911,6 +911,18 @@
         </div>
       </div>
 
+      <!-- Month Filter (above Daily production batch) -->
+      <div class="permits-controls production-filters">
+        <div class="permits-filter-row">
+          <div class="permits-filter-item">
+            <label>Month</label>
+            <select class="form-control" [(ngModel)]="productionSelectedMonth" (change)="onProductionMonthChange()">
+              <option *ngFor="let month of productionMonthOptions" [value]="month.value">{{ month.label }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <!-- Production Summary Card -->
       <div class="production-summary-card">
         <div class="production-header">
@@ -969,9 +981,22 @@
       </div>
 
       <!-- Production History -->
-      <div class="production-history" *ngIf="productionHistory && productionHistory.length > 0">
+      <div class="production-history">
         <h4>Recent Production History</h4>
-        <div class="history-table-container">
+
+        <div class="permits-controls" *ngIf="filteredProductionHistory && filteredProductionHistory.length > 0">
+          <div class="permits-filter-row">
+            <div class="permits-filter-item">
+              <label>Rows</label>
+              <select class="form-control" [(ngModel)]="productionPageSize" (change)="onProductionPageSizeChange()">
+                <option *ngFor="let size of productionPageSizeOptions" [value]="size">{{ size }}</option>
+              </select>
+            </div>
+            <div class="permits-filter-summary">{{ getProductionSummary() }}</div>
+          </div>
+        </div>
+
+        <div class="history-table-container" *ngIf="filteredProductionHistory && filteredProductionHistory.length > 0">
           <table class="history-table">
             <thead>
               <tr>
@@ -984,7 +1009,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let batch of productionHistory" class="history-row">
+              <tr *ngFor="let batch of getPaginatedProductionHistory()" class="history-row">
                 <td class="batch-date">
                   {{ batch.productionDate | date:'dd/MM/yyyy' }}
                   <small>{{ batch.productionTime }}</small>
@@ -1012,17 +1037,30 @@
             </tbody>
           </table>
         </div>
+
+        <div class="permits-pagination production-pagination"
+          *ngIf="filteredProductionHistory && filteredProductionHistory.length > 0 && getProductionTotalPages() > 1">
+          <button class="btn btn-outline btn-sm" (click)="changeProductionPage(productionCurrentPage - 1)"
+            [disabled]="productionCurrentPage <= 1">
+            <i class="bi bi-chevron-left"></i> Prev
+          </button>
+          <span class="permits-page-indicator">Page {{ productionCurrentPage }} / {{ getProductionTotalPages() }}</span>
+          <button class="btn btn-outline btn-sm" (click)="changeProductionPage(productionCurrentPage + 1)"
+            [disabled]="productionCurrentPage >= getProductionTotalPages()">
+            Next <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
 
 
       <!-- Empty State -->
-      <div class="empty-state" *ngIf="(!productionHistory || productionHistory.length === 0) && !isLoadingProduction">
+      <div class="empty-state" *ngIf="(!filteredProductionHistory || filteredProductionHistory.length === 0) && !isLoadingProduction">
         <div class="empty-icon">
           <i class="bi bi-gear"></i>
         </div>
         <h3>No Production History</h3>
-        <p>No production batches found for this brand</p>
+        <p>No production batches found for the selected month</p>
       </div>
 
       <!-- Loading State -->

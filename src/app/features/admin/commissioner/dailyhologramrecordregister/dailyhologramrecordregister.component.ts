@@ -68,6 +68,11 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
 
+  // SLA breach alert for commissioner-approved entries not updated by configured deadline
+  approvalDeadlineBreaches: DailyRegisterEntry[] = [];
+  approvalDeadlineBreachMessage = '';
+  approvalDeadlineLabel = '';
+
   constructor(
     private hologramService: HologramService,
     private http: HttpClient
@@ -81,6 +86,11 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     setInterval(() => {
       this.loadDailyRegisterEntries();
     }, 30000);
+
+    // Re-check deadline locally (crossing the configured cutoff)
+    setInterval(() => {
+      this.updateApprovalDeadlineBreaches();
+    }, 60000);
   }
 
   loadDailyRegisterEntries() {
@@ -95,6 +105,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         this.updateDistilleryOptions(response.entries);
         
         this.applyFilters();
+        this.updateApprovalDeadlineBreaches();
         this.isLoading = false;
       },
       error: (error) => {
@@ -103,6 +114,59 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  private updateApprovalDeadlineBreaches(now: Date = new Date()): void {
+    const breaches = (this.dailyRegisterEntries || []).filter((entry) => this.isApprovalUpdateOverdue(entry, now));
+
+    this.approvalDeadlineBreaches = breaches;
+    this.approvalDeadlineLabel = this.getDeadlineLabel(
+      (breaches[0] as any)?.deadline || (this.dailyRegisterEntries || []).find((e) => !!(e as any)?.deadline)?.deadline
+    );
+    if (breaches.length > 0) {
+      const sampleRefs = breaches.slice(0, 4).map((e) => e.referenceNo).join(', ');
+      this.approvalDeadlineBreachMessage =
+        `${breaches.length} approved hologram request(s) not updated by ${this.approvalDeadlineLabel || 'deadline'}. ` +
+        (sampleRefs ? `Ref: ${sampleRefs}${breaches.length > 4 ? '…' : ''}` : '');
+    } else {
+      this.approvalDeadlineBreachMessage = '';
+    }
+
+    // Keep commissioner dashboard warning in sync
+    try {
+      const simplified = breaches.map((e) => ({
+        referenceNo: e.referenceNo,
+        distilleryName: e.distilleryName,
+        approvalDate: e.approvalDate,
+        approvalTime: e.approvalTime,
+        status: e.status,
+        deadline: (e as any).deadline,
+      }));
+      localStorage.setItem('overdueHologramEntries', JSON.stringify(simplified));
+      window.dispatchEvent(new CustomEvent('overdueHologramAlert', { detail: { entries: simplified } }));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private isApprovalUpdateOverdue(entry: DailyRegisterEntry, now: Date): boolean {
+    if (!entry) return false;
+    if (!entry.approvalDate) return false; // not approved yet
+    if (entry.status === 'COMPLETED') return false;
+
+    const deadlineIso = String((entry as any)?.deadline || '').trim();
+    if (!deadlineIso) return false;
+    const deadline = new Date(deadlineIso);
+    if (Number.isNaN(deadline.getTime())) return false;
+    return now.getTime() > deadline.getTime();
+  }
+
+  private getDeadlineLabel(deadlineIso?: string | null): string {
+    const iso = String(deadlineIso || '').trim();
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
   }
 
   private loadDropdownSources(): void {
@@ -487,6 +551,9 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     }
     
     if (entry.status === 'COMPLETED') {
+      if (entry.timeRemaining) {
+        return entry.timeRemaining;
+      }
       if (entry.completedOnTime === false) {
         return entry.completionTime
           ? `Completed Late (saved ${entry.completionTime})`
@@ -510,6 +577,10 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         return 'text-danger fw-bold';
       }
       return 'text-success';
+    }
+
+    if (entry.status === 'UNDER_PROCESS' && this.isApprovalUpdateOverdue(entry, new Date())) {
+      return 'text-danger fw-bold';
     }
 
     if (entry.isOverdue) {

@@ -16,7 +16,6 @@ export class InactivityService {
   private warningDurationMs = 30 * 1000; // Countdown before logout (configurable)
   private configReady = false;
   private readonly inactivityConfigStorageKey = 'inactivity_config_v1';
-  private configRefreshInterval?: ReturnType<typeof setInterval>;
   private readonly activityEvents: Array<keyof WindowEventMap> = [
     'mousedown',
     'mousemove',
@@ -74,7 +73,6 @@ export class InactivityService {
     this.warningVisible = false;
     this.registerActivityListeners();
     this.loadConfigAndStart();
-    this.startConfigAutoRefresh();
   }
 
   stopWatching(): void {
@@ -84,7 +82,6 @@ export class InactivityService {
 
     this.trackingEnabled = false;
     this.configReady = false;
-    this.stopConfigAutoRefresh();
     this.unregisterActivityListeners();
     this.clearTimers();
     this.closeWarningModal(true);
@@ -230,64 +227,6 @@ export class InactivityService {
     this.warningTimeout = setTimeout(() => {
       this.openWarning();
     }, warningLeadMs);
-  }
-
-  private startConfigAutoRefresh(): void {
-    this.stopConfigAutoRefresh();
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    // Poll DB config so changes take effect without a hard refresh.
-    this.configRefreshInterval = setInterval(() => {
-      if (!this.trackingEnabled || this.isLoggingOut) return;
-      this.refreshConfigFromServer();
-    }, 15000);
-
-    document.addEventListener('visibilitychange', this.onVisibilityChange, { passive: true });
-  }
-
-  private stopConfigAutoRefresh(): void {
-    if (this.configRefreshInterval) {
-      clearInterval(this.configRefreshInterval);
-      this.configRefreshInterval = undefined;
-    }
-    if (isPlatformBrowser(this.platformId)) {
-      document.removeEventListener('visibilitychange', this.onVisibilityChange as EventListener);
-    }
-  }
-
-  private readonly onVisibilityChange = () => {
-    if (!this.trackingEnabled || this.isLoggingOut) return;
-    if (document.visibilityState === 'visible') {
-      this.refreshConfigFromServer();
-    }
-  };
-
-  private refreshConfigFromServer(): void {
-    this.fetchInactivityLogoutMs().subscribe((logoutMs) => {
-      if (!this.trackingEnabled) return;
-      if (!logoutMs || logoutMs <= 0) return;
-
-      this.fetchInactivityWarningMs().subscribe((warningMs) => {
-        if (!this.trackingEnabled) return;
-        const next = {
-          logoutMs,
-          warningMs: Math.max(1 * 1000, warningMs || 0),
-        };
-
-        const changed =
-          next.logoutMs !== this.inactivityLimitMs ||
-          next.warningMs !== this.warningDurationMs;
-
-        if (!changed) return;
-
-        this.applyInactivityConfig(next);
-        this.configReady = true;
-        this.saveCachedConfig({ logoutMs: this.inactivityLimitMs, warningMs: this.warningDurationMs });
-        this.startInactivityCycle();
-      });
-    });
   }
 
   private clearTimers(): void {

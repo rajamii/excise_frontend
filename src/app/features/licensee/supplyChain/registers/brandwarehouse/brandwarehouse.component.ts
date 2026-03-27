@@ -47,6 +47,7 @@ interface PackSizeInfo {
 }
 
 interface GroupedBrandStock {
+  brandId?: number | null;
   brandName: string;
   licenseId?: string;
   distilleryName: string;
@@ -91,6 +92,7 @@ interface FilterOptions {
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
   private static readonly NEW_UPDATE_BADGE_WINDOW_MS = 24 * 60 * 60 * 1000;
+  private static readonly DAY_MS = 24 * 60 * 60 * 1000;
 
   // Current distillery context resolved from active user profile.
   private currentDistilleryName = '';
@@ -159,6 +161,10 @@ export class BrandwarehouseComponent implements OnInit {
   permitPageSizeOptions = [5, 10, 15];
   permitCurrentPage = 1;
   permitSelectedMonth = 'ALL';
+  filteredTransitPermits: TransitPermitDetail[] = [];
+  paginatedTransitPermits: TransitPermitDetail[] = [];
+  permitTotalPages = 1;
+  permitSummaryText = 'No permits';
   permitMonthOptions = [
     { value: 'ALL', label: 'All Months' },
     { value: '01', label: 'January' }, { value: '02', label: 'February' },
@@ -182,8 +188,23 @@ export class BrandwarehouseComponent implements OnInit {
     { value: '07', label: 'July' },    { value: '08', label: 'August' },
     { value: '09', label: 'September' },{ value: '10', label: 'October' },
     { value: '11', label: 'November' },{ value: '12', label: 'December' },
-  ];  // Production data
+  ];
+
+  // Production data
   productionHistory: ProductionBatch[] = [];
+  filteredProductionHistory: ProductionBatch[] = [];
+  productionSelectedMonth: string = this.getMonthValue(new Date().toISOString());
+  productionMonthOptions = [
+    { value: '01', label: 'January' }, { value: '02', label: 'February' },
+    { value: '03', label: 'March' }, { value: '04', label: 'April' },
+    { value: '05', label: 'May' }, { value: '06', label: 'June' },
+    { value: '07', label: 'July' }, { value: '08', label: 'August' },
+    { value: '09', label: 'September' }, { value: '10', label: 'October' },
+    { value: '11', label: 'November' }, { value: '12', label: 'December' },
+  ];
+  productionPageSizeOptions = [5, 10, 15];
+  productionPageSize = 5;
+  productionCurrentPage = 1;
   currentPackSizeId: string = '';
   productionSummary = {
     todayProduction: 0,
@@ -717,8 +738,14 @@ export class BrandwarehouseComponent implements OnInit {
   viewTransitPermits(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
     this.selectedTransitPermits = [];
+    this.filteredTransitPermits = [];
+    this.paginatedTransitPermits = [];
     this.isLoadingPermits = true;
     this.showTransitPermitsModal = true;
+    this.permitCurrentPage = 1;
+    this.permitSelectedMonth = 'ALL';
+    this.permitTotalPages = 1;
+    this.permitSummaryText = 'No permits';
 
     // Get all pack size IDs for this brand
     const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
@@ -781,6 +808,7 @@ export class BrandwarehouseComponent implements OnInit {
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
     const hasCurrentMonth = permits.some(p => this.getPermitMonth(p.date) === currentMonth);
     this.permitSelectedMonth = hasCurrentMonth ? currentMonth : 'ALL';
+    this.recomputePermitView();
   }
 
   getPermitMonth(dateStr: string): string {
@@ -789,32 +817,60 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   getFilteredPermits(): TransitPermitDetail[] {
-    if (this.permitSelectedMonth === 'ALL') return this.selectedTransitPermits;
-    return this.selectedTransitPermits.filter(p => this.getPermitMonth(p.date) === this.permitSelectedMonth);
+    return this.filteredTransitPermits;
   }
 
   getPaginatedPermits(): TransitPermitDetail[] {
-    const filtered = this.getFilteredPermits();
-    const start = (this.permitCurrentPage - 1) * this.permitPageSize;
-    return filtered.slice(start, start + this.permitPageSize);
+    return this.paginatedTransitPermits;
   }
 
   getPermitTotalPages(): number {
-    return Math.max(1, Math.ceil(this.getFilteredPermits().length / this.permitPageSize));
+    return this.permitTotalPages;
   }
 
   getPermitSummary(): string {
-    const filtered = this.getFilteredPermits();
-    if (!filtered.length) return 'No permits';
-    const start = (this.permitCurrentPage - 1) * this.permitPageSize + 1;
-    const end = Math.min(filtered.length, start + this.permitPageSize - 1);
-    return `${start}–${end} of ${filtered.length}`;
+    return this.permitSummaryText;
   }
 
-  onPermitMonthChange(): void { this.permitCurrentPage = 1; }
-  onPermitPageSizeChange(): void { this.permitCurrentPage = 1; }
+  onPermitMonthChange(): void {
+    this.permitCurrentPage = 1;
+    this.recomputePermitView();
+  }
+  onPermitPageSizeChange(): void {
+    this.permitCurrentPage = 1;
+    this.recomputePermitView();
+  }
   changePermitPage(page: number): void {
-    if (page >= 1 && page <= this.getPermitTotalPages()) this.permitCurrentPage = page;
+    if (page < 1 || page > this.permitTotalPages) return;
+    this.permitCurrentPage = page;
+    this.recomputePermitView();
+  }
+
+  private recomputePermitView(): void {
+    const pageSize = Math.max(1, Number(this.permitPageSize) || 1);
+
+    this.filteredTransitPermits = this.permitSelectedMonth === 'ALL'
+      ? this.selectedTransitPermits
+      : this.selectedTransitPermits.filter(p => this.getPermitMonth(p.date) === this.permitSelectedMonth);
+
+    this.permitTotalPages = Math.max(1, Math.ceil(this.filteredTransitPermits.length / pageSize));
+    this.permitCurrentPage = Math.min(Math.max(1, this.permitCurrentPage), this.permitTotalPages);
+
+    const startIndex = (this.permitCurrentPage - 1) * pageSize;
+    this.paginatedTransitPermits = this.filteredTransitPermits.slice(startIndex, startIndex + pageSize);
+
+    if (!this.filteredTransitPermits.length) {
+      this.permitSummaryText = 'No permits';
+      return;
+    }
+
+    const start = startIndex + 1;
+    const end = startIndex + this.paginatedTransitPermits.length;
+    this.permitSummaryText = `${start}-${end} of ${this.filteredTransitPermits.length}`;
+  }
+
+  trackByPermit(index: number, permit: TransitPermitDetail): string {
+    return `${permit.permitNo || index}|${permit.date}`;
   }
 
   viewLastEntries(brand: GroupedBrandStock): void {
@@ -1065,6 +1121,7 @@ export class BrandwarehouseComponent implements OnInit {
   viewProduction(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
     this.showProductionModal = true;
+    this.productionSelectedMonth = this.getCurrentMonthKey();
     this.loadProductionData(brand);
   }
 
@@ -1073,6 +1130,7 @@ export class BrandwarehouseComponent implements OnInit {
 
     // Initialize with empty data
     this.productionHistory = [];
+    this.filteredProductionHistory = [];
     this.productionSummary = {
       todayProduction: 0,
       stockBefore: brand.totalStock,
@@ -1096,53 +1154,7 @@ export class BrandwarehouseComponent implements OnInit {
     // Store current pack size ID for highlighting
     this.currentPackSizeId = firstPackSize.id;
 
-    // Load production history
-    this.productionService.getProductionHistory(brandWarehouseId, 10, 30).subscribe({
-      next: (response) => {
-        console.log('Production history response:', response);
-
-        if (response && response.success) {
-          // Backend returns camelCase
-          this.productionHistory = response.productionHistory || [];
-
-          console.log('Production history array:', this.productionHistory);
-          console.log('Production history length:', this.productionHistory.length);
-
-          // Update production summary
-          if (this.productionHistory && this.productionHistory.length > 0) {
-            const firstBatch = this.productionHistory[0];
-            this.productionSummary = {
-              todayProduction: response.summary?.totalQuantity || 0,
-              stockBefore: firstBatch.stockBefore,
-              stockAfter: firstBatch.stockAfter,
-              latestReference: firstBatch.sourceReference || firstBatch.batchReference,
-              productionManager: firstBatch.productionManager,
-              productionDate: firstBatch.productionDate,
-              productionTime: firstBatch.productionTime
-            };
-            console.log('Production summary updated:', this.productionSummary);
-          } else {
-            console.log('No production history found, using defaults');
-            // No production history, use current stock
-            this.productionSummary = {
-              todayProduction: 0,
-              stockBefore: brand.totalStock,
-              stockAfter: brand.totalStock,
-              latestReference: 'N/A',
-              productionManager: 'N/A',
-              productionDate: '',
-              productionTime: ''
-            };
-          }
-        }
-        this.isLoadingProduction = false;
-      },
-      error: (error) => {
-        console.error('Error loading production data:', error);
-        this.productionHistory = [];
-        this.isLoadingProduction = false;
-      }
-    });
+    this.loadProductionDataForSelectedMonth(brandWarehouseId);
   }
 
 
@@ -1184,59 +1196,180 @@ export class BrandwarehouseComponent implements OnInit {
 
     // Reload production data for the new pack size
     this.isLoadingProduction = true;
+    this.productionCurrentPage = 1;
     const brandWarehouseId = parseInt(packSizeId);
     console.log('Loading production data for brand warehouse ID:', brandWarehouseId);
 
-    this.productionService.getProductionHistory(brandWarehouseId, 10, 30).subscribe({
+    this.productionHistory = [];
+    this.filteredProductionHistory = [];
+    this.loadProductionDataForSelectedMonth(brandWarehouseId);
+  }
+
+  onProductionMonthChange(): void {
+    if (!this.currentPackSizeId) return;
+    const brandWarehouseId = parseInt(this.currentPackSizeId);
+    if (!Number.isFinite(brandWarehouseId)) return;
+
+    this.isLoadingProduction = true;
+    this.productionCurrentPage = 1;
+    this.productionHistory = [];
+    this.filteredProductionHistory = [];
+    this.loadProductionDataForSelectedMonth(brandWarehouseId);
+  }
+
+  onProductionPageSizeChange(): void {
+    this.productionCurrentPage = 1;
+  }
+
+  changeProductionPage(page: number): void {
+    if (page >= 1 && page <= this.getProductionTotalPages()) {
+      this.productionCurrentPage = page;
+    }
+  }
+
+  getProductionTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredProductionHistory || []).length / this.productionPageSize));
+  }
+
+  getPaginatedProductionHistory(): ProductionBatch[] {
+    const filtered = this.filteredProductionHistory || [];
+    const start = (this.productionCurrentPage - 1) * this.productionPageSize;
+    return filtered.slice(start, start + this.productionPageSize);
+  }
+
+  getProductionSummary(): string {
+    const filtered = this.filteredProductionHistory || [];
+    if (!filtered.length) return 'No batches';
+    const start = (this.productionCurrentPage - 1) * this.productionPageSize + 1;
+    const end = Math.min(filtered.length, start + this.productionPageSize - 1);
+    return `${start}-${end} of ${filtered.length}`;
+  }
+
+  private loadProductionDataForSelectedMonth(brandWarehouseId: number): void {
+    const daysBack = this.getDaysBackForMonth(this.productionSelectedMonth);
+    const limit = 500;
+
+    this.productionService.getProductionHistory(brandWarehouseId, limit, daysBack).subscribe({
       next: (response) => {
-        console.log('Production history response for pack size:', response);
+        console.log('Production history response:', response);
 
         if (response && response.success) {
           this.productionHistory = response.productionHistory || [];
-
-          if (this.productionHistory && this.productionHistory.length > 0) {
-            const firstBatch = this.productionHistory[0];
-            this.productionSummary = {
-              todayProduction: response.summary?.totalQuantity || 0,
-              stockBefore: firstBatch.stockBefore,
-              stockAfter: firstBatch.stockAfter,
-              latestReference: firstBatch.sourceReference || firstBatch.batchReference,
-              productionManager: firstBatch.productionManager,
-              productionDate: firstBatch.productionDate,
-              productionTime: firstBatch.productionTime
-            };
-          } else {
-            // No production history, use current stock from selected pack size
-            if (this.selectedBrand) {
-              const packSizeKeys = this.getPackSizeKeys(this.selectedBrand.packSizes);
-              let currentStock = 0;
-              for (const key of packSizeKeys) {
-                if (this.selectedBrand.packSizes[key].id === packSizeId) {
-                  currentStock = this.selectedBrand.packSizes[key].currentStock;
-                  break;
-                }
-              }
-
-              this.productionSummary = {
-                todayProduction: 0,
-                stockBefore: currentStock,
-                stockAfter: currentStock,
-                latestReference: 'N/A',
-                productionManager: 'N/A',
-                productionDate: '',
-                productionTime: ''
-              };
-            }
-          }
+          this.applyProductionMonthFilter();
+        } else {
+          this.productionHistory = [];
+          this.filteredProductionHistory = [];
+          this.applyProductionMonthFilter();
         }
+
         this.isLoadingProduction = false;
       },
       error: (error) => {
         console.error('Error loading production data:', error);
         this.productionHistory = [];
+        this.filteredProductionHistory = [];
+        this.applyProductionMonthFilter();
         this.isLoadingProduction = false;
       }
     });
+  }
+
+  private applyProductionMonthFilter(): void {
+    const month = this.productionSelectedMonth;
+    const year = new Date().getFullYear();
+
+    const normalized = [...(this.productionHistory || [])].sort((a, b) => {
+      const aTime = this.getBatchSortTime(a);
+      const bTime = this.getBatchSortTime(b);
+      return bTime - aTime;
+    });
+
+    this.filteredProductionHistory = normalized.filter((batch) => {
+      const dt = this.getBatchDate(batch);
+      if (!dt) return false;
+      const batchMonth = String(dt.getMonth() + 1).padStart(2, '0');
+      return dt.getFullYear() === year && batchMonth === month;
+    });
+
+    const totalPages = this.getProductionTotalPages();
+    if (this.productionCurrentPage > totalPages) {
+      this.productionCurrentPage = 1;
+    }
+
+    if (this.filteredProductionHistory.length > 0) {
+      const firstBatch = this.filteredProductionHistory[0];
+      const totalQuantity = this.filteredProductionHistory.reduce((sum, b) => sum + Number(b.quantityProduced || 0), 0);
+
+      this.productionSummary = {
+        todayProduction: totalQuantity,
+        stockBefore: firstBatch.stockBefore,
+        stockAfter: firstBatch.stockAfter,
+        latestReference: firstBatch.sourceReference || firstBatch.batchReference,
+        productionManager: firstBatch.productionManager,
+        productionDate: firstBatch.productionDate,
+        productionTime: firstBatch.productionTime
+      };
+      return;
+    }
+
+    const fallbackStock = this.getCurrentPackSizeStock();
+    this.productionSummary = {
+      todayProduction: 0,
+      stockBefore: fallbackStock,
+      stockAfter: fallbackStock,
+      latestReference: 'N/A',
+      productionManager: 'N/A',
+      productionDate: '',
+      productionTime: ''
+    };
+  }
+
+  private getCurrentPackSizeStock(): number {
+    if (!this.selectedBrand || !this.currentPackSizeId) return this.selectedBrand?.totalStock ?? 0;
+    const packSizeKeys = this.getPackSizeKeys(this.selectedBrand.packSizes);
+    for (const key of packSizeKeys) {
+      if (this.selectedBrand.packSizes[key].id === this.currentPackSizeId) {
+        return this.selectedBrand.packSizes[key].currentStock;
+      }
+    }
+    return this.selectedBrand.totalStock || 0;
+  }
+
+  private getDaysBackForMonth(monthValue: string): number {
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthIndex = Number(monthValue) - 1;
+    if (!Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) return 30;
+
+    const monthStart = new Date(year, monthIndex, 1);
+    const diffMs = now.getTime() - monthStart.getTime();
+    if (diffMs < 0) return 1;
+
+    const rawDays = Math.ceil(diffMs / BrandwarehouseComponent.DAY_MS) + 1;
+    return Math.min(Math.max(rawDays, 1), 366);
+  }
+
+  private getBatchDate(batch: ProductionBatch): Date | null {
+    const candidates = [
+      (batch as any)?.productionDatetime,
+      (batch as any)?.productionDate,
+      (batch as any)?.createdAt,
+      (batch as any)?.updatedAt,
+    ];
+
+    for (const candidate of candidates) {
+      const value = String(candidate ?? '').trim();
+      if (!value) continue;
+      const dt = new Date(value);
+      if (!Number.isNaN(dt.getTime())) return dt;
+    }
+
+    return null;
+  }
+
+  private getBatchSortTime(batch: ProductionBatch): number {
+    const dt = this.getBatchDate(batch);
+    return dt ? dt.getTime() : 0;
   }
 
   getStatusColor(status: string): string {

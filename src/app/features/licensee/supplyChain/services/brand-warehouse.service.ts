@@ -26,9 +26,12 @@ export interface BrandWarehouseUtilization {
 export interface BrandWarehouse {
     id?: number;
     license_id?: string;
+    factory_id?: number | null;
+    factory_name?: string;
     distillery_name: string;
     brand_type: string;
-    brand_details?: string;
+    brand_id?: number | null;
+    brand_name?: string;
     current_stock: number;
     capacity_size: number;
     total_capacity?: number;
@@ -67,8 +70,8 @@ export interface StockAdjustment {
     providedIn: 'root'
 })
 export class BrandWarehouseService {
-    private baseUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse`;
-    private utilizationUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse-utilization`;
+    private baseUrl = `${environment.apiBaseUrl}/brand-warehouse`;
+    private utilizationUrl = `${environment.apiBaseUrl}/brand-warehouse-utilization`;
 
     constructor(private http: HttpClient) { }
 
@@ -123,9 +126,12 @@ export class BrandWarehouseService {
                 console.log('🔍 Processing brands for grouping:', brands.length);
 
                 brands.forEach((brand: any) => {
-                    const brandName = brand.brandDetails || brand.brand_details || 'Unknown Brand';
+                    const brandId = brand.brandId ?? brand.brand_id ?? null;
+                    const brandName = brand.brandName || brand.brand_name || 'Unknown Brand';
                     const licenseId = String(brand.licenseId || brand.license_id || '').trim();
-                    const distilleryName = brand.distilleryName || brand.distillery_name || '';
+                    const factoryId = brand.factoryId ?? brand.factory_id ?? null;
+                    const factoryName = brand.factoryName || brand.factory_name || '';
+                    const distilleryName = brand.distilleryName || brand.distillery_name || factoryName || '';
                     const brandType = brand.brandType || brand.brand_type || '';
                     const capacitySize = brand.capacitySize || brand.capacity_size || 0;
                     const currentStock = brand.currentStock || brand.current_stock || 0;
@@ -136,10 +142,13 @@ export class BrandWarehouseService {
                     const isNew = brand.isNew || brand.is_new || false;
 
                     // Create a unique key for grouping (brand name + distillery)
-                    const groupKey = `${brandName}_${licenseId || distilleryName}`;
+                    const groupKey = `${brandId ?? brandName}_${licenseId || distilleryName}`;
 
                     if (!groupedBrands.has(groupKey)) {
                         groupedBrands.set(groupKey, {
+                            factoryId: factoryId,
+                            factoryName: factoryName || distilleryName,
+                            brandId: brandId,
                             brandName: brandName,
                             licenseId: licenseId || '',
                             distilleryName: distilleryName,
@@ -247,9 +256,12 @@ export class BrandWarehouseService {
                 return brands.map((brand: any) => ({
                     id: brand.id,
                     license_id: String(brand.licenseId || brand.license_id || '').trim(),
-                    distillery_name: brand.distilleryName || brand.distillery_name || '',
+                    factory_id: brand.factoryId ?? brand.factory_id ?? null,
+                    factory_name: brand.factoryName || brand.factory_name || '',
+                    distillery_name: brand.distilleryName || brand.distillery_name || brand.factoryName || brand.factory_name || '',
                     brand_type: brand.brandType || brand.brand_type || '',
-                    brand_details: brand.brandDetails || brand.brand_details || '',
+                    brand_id: brand.brandId ?? brand.brand_id ?? null,
+                    brand_name: brand.brandName || brand.brand_name || '',
                     current_stock: brand.currentStock || brand.current_stock || 0,
                     capacity_size: brand.capacitySize || brand.capacity_size || 0,
                     total_capacity: brand.totalCapacity || brand.total_capacity || 0,
@@ -445,6 +457,7 @@ export class BrandWarehouseService {
         if (typeof brandWarehouseIdOrFilters === 'number') {
             // Called with brandWarehouseId as first parameter
             brandWarehouseId = brandWarehouseIdOrFilters;
+            params = params.set('brand_warehouse', brandWarehouseId.toString());
             if (additionalFilters) {
                 if (additionalFilters.limit) params = params.set('limit', additionalFilters.limit.toString());
                 if (additionalFilters.status) params = params.set('status', additionalFilters.status);
