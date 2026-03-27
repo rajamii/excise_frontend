@@ -557,6 +557,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.activeTable = 'approved';
   }
 
+  openFinalLicense(application: UnifiedApplication): void {
+    if (!this.hasPermission(['licensee.module.view'])) {
+      Swal.fire('Not allowed', 'Print license is available only for Licensee users.', 'info');
+      return;
+    }
+
+    const applicationId =
+      application?.applicationId ||
+      (application as any)?.raw?.application_id ||
+      (application as any)?.raw?.applicationId ||
+      '';
+
+    this.router.navigate(['/licensee/final-license'], {
+      queryParams: {
+        applicationId,
+        type: application?.type || '',
+        returnUrl: this.router.url
+      }
+    });
+  }
+
   onApplicationTypeChange(): void {
     this.activeTable = 'approved';
     this.loadDashboardData();

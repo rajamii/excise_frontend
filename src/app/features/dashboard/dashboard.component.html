@@ -421,7 +421,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="approvedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'approved'">
+            [tableType]="'approved'" (print)="openFinalLicense($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>

@@ -59,6 +59,22 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     this.activeTable = 'default';
   }
 
+  openFinalLicense(application: UnifiedApplication): void {
+    const applicationId =
+      application?.applicationId ||
+      (application as any)?.raw?.application_id ||
+      (application as any)?.raw?.applicationId ||
+      '';
+
+    this.router.navigate(['/licensee/final-license'], {
+      queryParams: {
+        applicationId,
+        type: application?.type || '',
+        returnUrl: this.router.url
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.loadDashboardData();
 
