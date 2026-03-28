@@ -75,6 +75,27 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  viewApplication(application: UnifiedApplication): void {
+    const applicationId =
+      application?.applicationId ||
+      (application as any)?.raw?.application_id ||
+      (application as any)?.raw?.applicationId ||
+      '';
+
+    if (!applicationId) return;
+
+    const type = (application as any)?.type || (application as any)?.raw?.type || '';
+
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id: applicationId,
+        ref: applicationId,
+        type,
+        source: 'licensee'
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.loadDashboardData();
 

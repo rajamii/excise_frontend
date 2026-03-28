@@ -90,7 +90,8 @@
           <app-application-table
             [dataSource]="appliedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'applied'">
+            [tableType]="'applied'"
+            (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -110,6 +111,7 @@
             [dataSource]="pendingDataSource"
             [displayedColumns]="displayedColumns"
             [tableType]="'pending'"
+            (view)="viewApplication($event)"
             (payment)="onPaymentConfirmed($event)">
           </app-application-table>
         </mat-card-content>
@@ -130,6 +132,7 @@
             [dataSource]="approvedDataSource"
             [displayedColumns]="displayedColumns"
             [tableType]="'approved'"
+            (view)="viewApplication($event)"
             (print)="openFinalLicense($event)">
           </app-application-table>
         </mat-card-content>
@@ -149,7 +152,8 @@
           <app-application-table
             [dataSource]="rejectedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'rejected'">
+            [tableType]="'rejected'"
+            (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
