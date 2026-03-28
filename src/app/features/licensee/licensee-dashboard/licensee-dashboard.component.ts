@@ -32,7 +32,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   };
 
   // ✅ FIXED: Added 'company-registration' option
-  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' | 'company-registration' = 'all';
+  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' | 'company-registration' = 'new-license';
   isLoading = false;
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -97,13 +97,16 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Always default to New License on dashboard load.
+    this.selectedApplicationType = 'new-license';
     this.loadDashboardData();
 
     this.routerSubscription = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
       if (event.url.includes('/dashboard')) {
-        console.log('🔄 Dashboard: Auto-refreshing after navigation');
+        this.selectedApplicationType = 'new-license';
+        this.activeTable = 'default';
         this.loadDashboardData();
       }
     });

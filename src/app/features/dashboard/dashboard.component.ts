@@ -136,7 +136,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
-  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' = 'all';
+  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' = 'new-license';
   selectedMetricsPeriod: 'today' | 'week' | 'month' | 'quarter' = 'week';
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -202,6 +202,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const initialSection = this.route.snapshot.queryParamMap.get('section');
     this.selectedSupplyChainSection = initialSection || null;
     this.enforceSectionAccess();
+    // When opening /dashboard directly, ensure stats load with New License as default filter.
+    if (!this.selectedSupplyChainSection && this.currentUser?.roleId === 2) {
+      this.selectedApplicationType = 'new-license';
+      this.activeTable = 'approved';
+    }
 
     // Subscribe to query parameter changes
     this.route.queryParams
@@ -210,6 +215,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const section = params['section'];
         this.selectedSupplyChainSection = section || null;
         this.enforceSectionAccess();
+
+        // Navigating back to /dashboard (clearing section) should always reload stats.
+        if (!this.selectedSupplyChainSection) {
+          if (this.currentUser?.roleId === 2) {
+            this.selectedApplicationType = 'new-license';
+          }
+          this.activeTable = 'approved';
+          this.loadDashboardData();
+        }
       });
   }
 
@@ -574,6 +588,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
         applicationId,
         type: application?.type || '',
         returnUrl: this.router.url
+      }
+    });
+  }
+
+  viewApplication(application: UnifiedApplication): void {
+    // This is primarily used by Licensee dashboard tables to open the application view.
+    const applicationId =
+      application?.applicationId ||
+      (application as any)?.raw?.application_id ||
+      (application as any)?.raw?.applicationId ||
+      '';
+
+    if (!applicationId) return;
+
+    const type = (application as any)?.type || (application as any)?.raw?.type || '';
+
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id: applicationId,
+        ref: applicationId,
+        type,
+        source: 'licensee'
       }
     });
   }
