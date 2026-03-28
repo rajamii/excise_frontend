@@ -92,7 +92,7 @@ export class FinalLicenseComponent implements OnDestroy {
 
       if (looksLikeCode) {
         // Direct validation download flow (no UI needed): validate code on server and download PDF.
-        const pdfUrl = `${environment.apiBaseUrl}/transactional/validate/license/pdf/?code=${encodeURIComponent(normalizedAppId)}`;
+        const pdfUrl = `${environment.apiBaseUrl}/v/${encodeURIComponent(normalizedAppId)}/`;
         window.location.href = pdfUrl;
         return;
       }
