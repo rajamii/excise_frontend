@@ -37,6 +37,8 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly loading = signal<boolean>(false);
   readonly error = signal<string>('');
   readonly qrCodeUrl = signal<string>('');
+  readonly photoStatus = signal<string>('');
+  readonly qrStatus = signal<string>('');
 
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
@@ -124,8 +126,16 @@ export class FinalLicenseComponent implements OnDestroy {
           validTo: String(data?.validTo || current.validTo || ''),
           generatedOn: String(data?.generatedOn || current.generatedOn || '')
         }));
+
+        if (data?.qrCodeDataUrl) {
+          this.qrCodeUrl.set(String(data.qrCodeDataUrl));
+          this.qrStatus.set('QR: embedded');
+        } else {
+          this.loadQrCode();
+        }
+
+        this.photoStatus.set(data?.passportPhotoExists === false ? 'Photo: missing file' : '');
         this.loadPassportPhoto();
-        this.loadQrCode();
         this.loading.set(false);
       },
       error: (err: any) => {
@@ -158,9 +168,11 @@ export class FinalLicenseComponent implements OnDestroy {
           ...current,
           passportPhotoUrl: this.passportObjectUrl || ''
         }));
+        this.photoStatus.set('Photo: loaded');
       },
-      error: () => {
-        this.templateData.update(current => ({ ...current, passportPhotoUrl: '' }));
+      error: (err: any) => {
+        const status = err?.status ? `(${err.status})` : '';
+        this.photoStatus.update(s => s || `Photo: failed ${status}`.trim());
       }
     });
   }
@@ -184,8 +196,11 @@ export class FinalLicenseComponent implements OnDestroy {
       next: (blob: Blob) => {
         this.qrObjectUrl = URL.createObjectURL(blob);
         this.qrCodeUrl.set(this.qrObjectUrl || '');
+        this.qrStatus.set('QR: loaded');
       },
-      error: () => {
+      error: (err: any) => {
+        const status = err?.status ? `(${err.status})` : '';
+        this.qrStatus.set(`QR: failed ${status}`.trim());
         this.qrCodeUrl.set('');
       }
     });
