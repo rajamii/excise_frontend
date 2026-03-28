@@ -23,6 +23,10 @@
     <div class="meta">
       <span class="meta-label">Type:</span> {{ requestedFor }}
     </div>
+    <button mat-stroked-button *ngIf="validationCode()" (click)="downloadPdf()">
+      <mat-icon>download</mat-icon>
+      Download PDF
+    </button>
     <button mat-flat-button color="primary" (click)="print()">
       <mat-icon>print</mat-icon>
       Print
@@ -131,6 +135,10 @@
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
       </footer>
+      <div class="validation-edge" *ngIf="validationCode()">
+        <div>VAL{{ validatedViaCode() ? ' VERIFIED' : '' }}: {{ validationCode() }}</div>
+        <div *ngIf="validationPdfUrl()">PDF: {{ validationPdfUrl() }}</div>
+      </div>
     </section>
 
     <!-- Page 2 -->
@@ -185,6 +193,10 @@
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
       </footer>
+      <div class="validation-edge" *ngIf="validationCode()">
+        <div>VAL{{ validatedViaCode() ? ' VERIFIED' : '' }}: {{ validationCode() }}</div>
+        <div *ngIf="validationPdfUrl()">PDF: {{ validationPdfUrl() }}</div>
+      </div>
       <div class="page-number">Page No: 2</div>
     </section>
 
@@ -208,6 +220,10 @@
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
       </footer>
+      <div class="validation-edge" *ngIf="validationCode()">
+        <div>VAL{{ validatedViaCode() ? ' VERIFIED' : '' }}: {{ validationCode() }}</div>
+        <div *ngIf="validationPdfUrl()">PDF: {{ validationPdfUrl() }}</div>
+      </div>
       <div class="page-number">Page No: 3</div>
     </section>
   </div>

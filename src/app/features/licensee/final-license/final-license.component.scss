@@ -333,6 +333,20 @@
   z-index: 3;
 }
 
+.validation-edge {
+  position: absolute;
+  left: 16mm;
+  right: 40mm;
+  bottom: 4mm;
+  font-size: 7px;
+  line-height: 1.15;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  word-break: break-all;
+  color: #111;
+  opacity: 0.85;
+  z-index: 3;
+}
+
 @media print {
   * {
     -webkit-print-color-adjust: exact;

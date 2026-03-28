@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MaterialModule } from '../../../shared/material.module';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
+import { catchError } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 type FinalLicenseTemplateData = {
   licenseNumber: string;
@@ -34,6 +36,7 @@ export class FinalLicenseComponent implements OnDestroy {
   private readonly queryAppId = signal<string>('');
   private readonly queryAppType = signal<string>('');
   private readonly returnUrl = signal<string>('');
+  private readonly autoDownload = signal<boolean>(false);
 
   readonly loading = signal<boolean>(false);
   readonly error = signal<string>('');
@@ -41,13 +44,19 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly photoStatus = signal<string>('');
   readonly qrStatus = signal<string>('');
   readonly licenseTitle = signal<string>('');
+  readonly validationCode = signal<string>('');
+  readonly validatedViaCode = signal<boolean>(false);
+  readonly validationPdfUrl = signal<string>('');
   readonly terms = signal<string[]>([]);
 
   readonly termsFirstPage = signal<string[]>([]);
   readonly termsRemaining = signal<string[]>([]);
 
+  private readonly resolvedApiType = signal<'new-license' | 'license-renewal' | ''>('');
+
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
+  private hasAutoDownloaded = false;
 
   readonly templateData = signal<FinalLicenseTemplateData>({
     licenseNumber: '',
@@ -72,9 +81,21 @@ export class FinalLicenseComponent implements OnDestroy {
     private readonly licenseAppService: LicenseApplicationService
   ) {
     this.route.queryParamMap.subscribe(params => {
-      this.queryAppId.set(params.get('applicationId') || '');
+      const rawAppId = String(params.get('applicationId') || '').trim();
+      const normalizedAppId = rawAppId.replace(/^\s*val\s*[:\-]?\s*/i, '').trim();
+      this.queryAppId.set(normalizedAppId);
       this.queryAppType.set(params.get('type') || '');
       this.returnUrl.set(params.get('returnUrl') || '');
+      const dl = String(params.get('download') || '').toLowerCase();
+      const looksLikeCode = normalizedAppId.includes(':') && normalizedAppId.length > 30;
+      this.autoDownload.set(looksLikeCode || dl === '1' || dl === 'true' || dl === 'yes');
+
+      if (looksLikeCode) {
+        // Direct validation download flow (no UI needed): validate code on server and download PDF.
+        const pdfUrl = `${environment.apiBaseUrl}/transactional/validate/license/pdf/?code=${encodeURIComponent(normalizedAppId)}`;
+        window.location.href = pdfUrl;
+        return;
+      }
 
       this.loadFinalLicense();
     });
@@ -86,6 +107,13 @@ export class FinalLicenseComponent implements OnDestroy {
     return appType;
   }
 
+  private get isNewLicense(): boolean {
+    const q = (this.queryAppType() || '').toLowerCase();
+    if (q === 'new-license') return true;
+    if (q) return false;
+    return this.resolvedApiType() === 'new-license';
+  }
+
   private loadFinalLicense(): void {
     const applicationId = this.queryAppId();
     if (!applicationId) return;
@@ -93,19 +121,41 @@ export class FinalLicenseComponent implements OnDestroy {
     this.loading.set(true);
     this.error.set('');
     this.licenseTitle.set('');
+    this.validationCode.set('');
+    this.validatedViaCode.set(false);
+    this.validationPdfUrl.set('');
     this.terms.set([]);
     this.termsFirstPage.set([]);
     this.termsRemaining.set([]);
+    this.hasAutoDownloaded = false;
 
     const appType = (this.queryAppType() || '').toLowerCase();
-    const req$ =
-      appType === 'new-license'
-        ? this.licenseAppService.getNewFinalLicenseData(applicationId)
-        : this.licenseAppService.getOldFinalLicenseData(applicationId);
+    const newReq$ = this.licenseAppService.getNewFinalLicenseData(applicationId);
+    const oldReq$ = this.licenseAppService.getOldFinalLicenseData(applicationId);
+
+    let req$ = oldReq$;
+    if (appType === 'new-license') {
+      this.resolvedApiType.set('new-license');
+      req$ = newReq$;
+    } else if (appType) {
+      this.resolvedApiType.set('license-renewal');
+      req$ = oldReq$;
+    } else {
+      this.resolvedApiType.set('new-license');
+      req$ = newReq$.pipe(
+        catchError(() => {
+          this.resolvedApiType.set('license-renewal');
+          return oldReq$;
+        })
+      );
+    }
 
     req$.subscribe({
       next: (data: Partial<FinalLicenseTemplateData> | any) => {
         this.licenseTitle.set(String(data?.licenseTitle || data?.license_title || ''));
+        this.validationCode.set(String(data?.validationCode || data?.validation_code || ''));
+        this.validatedViaCode.set(Boolean(data?.validatedViaCode || data?.validated_via_code));
+        this.validationPdfUrl.set(String(data?.validationPdfUrl || data?.validation_pdf_url || ''));
 
         const incomingTerms = Array.isArray(data?.terms) ? data.terms : [];
         const normalizedTerms = incomingTerms
@@ -151,17 +201,37 @@ export class FinalLicenseComponent implements OnDestroy {
           this.loadPassportPhoto();
         }
         this.loading.set(false);
+
+        if ((this.autoDownload() || this.validatedViaCode()) && !this.hasAutoDownloaded) {
+          this.hasAutoDownloaded = true;
+          setTimeout(() => void this.downloadPdf(), 1200);
+        }
       },
       error: (err: any) => {
         const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load license details.';
         this.error.set(String(msg));
         this.licenseTitle.set('');
+        this.validationCode.set('');
+        this.validatedViaCode.set(false);
+        this.validationPdfUrl.set('');
         this.terms.set([]);
         this.termsFirstPage.set([]);
         this.termsRemaining.set([]);
         this.loading.set(false);
       }
     });
+  }
+
+  downloadPdf(): void {
+    const directUrl = (this.validationPdfUrl() || '').trim();
+    if (directUrl) {
+      window.location.href = directUrl;
+      return;
+    }
+    const code = (this.validationCode() || '').trim();
+    if (!code) return;
+    const url = `${environment.apiBaseUrl}/transactional/validate/license/pdf/?code=${encodeURIComponent(code)}`;
+    window.location.href = url;
   }
 
   private loadPassportPhoto(): void {
@@ -173,11 +243,9 @@ export class FinalLicenseComponent implements OnDestroy {
       this.passportObjectUrl = null;
     }
 
-    const appType = (this.queryAppType() || '').toLowerCase();
-    const req$ =
-      appType === 'new-license'
-        ? this.licenseAppService.getNewFinalLicensePassportPhoto(applicationId)
-        : this.licenseAppService.getOldFinalLicensePassportPhoto(applicationId);
+    const req$ = this.isNewLicense
+      ? this.licenseAppService.getNewFinalLicensePassportPhoto(applicationId)
+      : this.licenseAppService.getOldFinalLicensePassportPhoto(applicationId);
 
     req$.subscribe({
       next: (blob: Blob) => {
@@ -205,11 +273,9 @@ export class FinalLicenseComponent implements OnDestroy {
       this.qrObjectUrl = null;
     }
 
-    const appType = (this.queryAppType() || '').toLowerCase();
-    const req$ =
-      appType === 'new-license'
-        ? this.licenseAppService.getNewFinalLicenseQrCode(applicationId)
-        : this.licenseAppService.getOldFinalLicenseQrCode(applicationId);
+    const req$ = this.isNewLicense
+      ? this.licenseAppService.getNewFinalLicenseQrCode(applicationId)
+      : this.licenseAppService.getOldFinalLicenseQrCode(applicationId);
 
     req$.subscribe({
       next: (blob: Blob) => {
