@@ -6,6 +6,7 @@ import { LicenseApplicationService } from '../../../core/services/license-applic
 
 type FinalLicenseTemplateData = {
   licenseNumber: string;
+  licenseTitle?: string;
   licenseeName: string;
   fatherOrHusbandName: string;
   kindOfShop: string;
@@ -39,6 +40,11 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly qrCodeUrl = signal<string>('');
   readonly photoStatus = signal<string>('');
   readonly qrStatus = signal<string>('');
+  readonly licenseTitle = signal<string>('');
+  readonly terms = signal<string[]>([]);
+
+  readonly termsFirstPage = signal<string[]>([]);
+  readonly termsRemaining = signal<string[]>([]);
 
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
@@ -59,20 +65,6 @@ export class FinalLicenseComponent implements OnDestroy {
     validTo: '',
     generatedOn: ''
   });
-
-  readonly terms = [
-    'The License shall remain valid from the period shown on this License.',
-    'The licensee shall sell Liquor during the strength of this license. The procurement of Liquor shall be made only from the sources authorized by the Commissioner of Excise.',
-    'The licensee shall operate the sale of Liquor only from the licensed premises for which the License is granted.',
-    'The licensee shall not allow any person to sell Liquor under this License, unless the name of such person has been registered as Salesman with the Department.',
-    'The licensee shall sell only those brands of Liquor which are Registered with the Department.',
-    'That no Liquor shall be sold to any person below the age of 18 years or to School or College students or Army or Police personnel in uniform.',
-    'The consumption of liquor in the licensed premises shall not be allowed.',
-    'That the licensee shall not open his shop, nor shall effect sales therein before 7 am in Summer and Winter and shall not keep open the shop nor shall effect sale therein after 9 pm in Winter and 10 pm in Summer.',
-    'The licensee shall not permit drunkenness, rioting or gambling in the shop.',
-    'The licensee shall not during the hours in which his licensed premises is kept open, employ or permit to be employed in the Licensed premises, whether with or without remuneration, a women to assist him in the conduct of such business in any capacity whatsoever.',
-    'The licensee shall affix inside his Licensed Premises a Signboard having the following inscription in English languages with size of 2 feet by 4 feet along with copy of this Licence.'
-  ];
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -100,6 +92,10 @@ export class FinalLicenseComponent implements OnDestroy {
 
     this.loading.set(true);
     this.error.set('');
+    this.licenseTitle.set('');
+    this.terms.set([]);
+    this.termsFirstPage.set([]);
+    this.termsRemaining.set([]);
 
     const appType = (this.queryAppType() || '').toLowerCase();
     const req$ =
@@ -109,6 +105,16 @@ export class FinalLicenseComponent implements OnDestroy {
 
     req$.subscribe({
       next: (data: Partial<FinalLicenseTemplateData> | any) => {
+        this.licenseTitle.set(String(data?.licenseTitle || data?.license_title || ''));
+
+        const incomingTerms = Array.isArray(data?.terms) ? data.terms : [];
+        const normalizedTerms = incomingTerms
+          .map((t: any) => String(t || '').trim())
+          .filter((t: string) => !!t);
+        this.terms.set(normalizedTerms);
+        this.termsFirstPage.set(normalizedTerms.slice(0, 11));
+        this.termsRemaining.set(normalizedTerms.slice(11));
+
         this.templateData.update(current => ({
           ...current,
           licenseNumber: String(data?.licenseNumber || data?.license_id || current.licenseNumber || applicationId),
@@ -149,6 +155,10 @@ export class FinalLicenseComponent implements OnDestroy {
       error: (err: any) => {
         const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load license details.';
         this.error.set(String(msg));
+        this.licenseTitle.set('');
+        this.terms.set([]);
+        this.termsFirstPage.set([]);
+        this.termsRemaining.set([]);
         this.loading.set(false);
       }
     });

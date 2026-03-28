@@ -1,4 +1,4 @@
-<div class="final-license-root">
+﻿<div class="final-license-root">
   <div class="screen-actions no-print">
     <button mat-stroked-button color="primary" (click)="goBack()">
       <mat-icon>arrow_back</mat-icon>
@@ -91,7 +91,7 @@
           <div class="emblem" aria-label="Government emblem placeholder"></div>
           <div class="dept">EXCISE DEPARTMENT</div>
           <div class="govt">Government of Sikkim</div>
-          <div class="title">LICENSE FOR RETAIL SALE OF REGISTERED BRANDS OF LIQUOR</div>
+          <div class="title">{{ licenseTitle() }}</div>
         </div>
         <div class="header-right">
           <ng-container *ngIf="qrCodeUrl(); else qrPlaceholder">
@@ -143,7 +143,7 @@
           <div class="emblem small" aria-label="Government emblem placeholder"></div>
           <div class="dept">EXCISE DEPARTMENT</div>
           <div class="govt">Government of Sikkim</div>
-          <div class="title">LICENSE FOR RETAIL SALE OF REGISTERED BRANDS OF LIQUOR</div>
+          <div class="title">{{ licenseTitle() }}</div>
         </div>
         <div class="header-right">
           <ng-container *ngIf="qrCodeUrl(); else qrPlaceholderSmall">
@@ -155,12 +155,12 @@
         </div>
       </header>
 
-      <div class="content">
-        <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
-        <div class="section-title">The aforesaid License has been granted as per the following terms and conditions:</div>
-        <ol class="terms" type="I">
-          <li *ngFor="let t of terms">{{ t }}</li>
-        </ol>
+        <div class="content">
+          <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
+          <div class="section-title" *ngIf="terms().length">The aforesaid License has been granted as per the following terms and conditions:</div>
+          <ol class="terms" type="I" *ngIf="termsFirstPage().length">
+            <li *ngFor="let t of termsFirstPage()">{{ t }}</li>
+          </ol>
 
         <div class="premises-box">
           <div class="premises-title">The licensed premises shall not be:</div>
@@ -189,24 +189,12 @@
     </section>
 
     <!-- Page 3 (template placeholder for remaining terms) -->
-    <section class="page">
+    <section class="page" *ngIf="termsRemaining().length">
       <img src="assets/icons/fav-icon.png" alt="watermark" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;height:450px;object-fit:contain;pointer-events:none;z-index:2;filter:invert(1);opacity:0.15;">
 
       <div class="content">
-        <ol class="terms continued" type="I" start="12">
-          <li>The licensee shall not sell, transfer or sublet his right of selling Liquor conferred upon him by this license nor shall be in connection with the said right enter into any agreement which is of the nature of a sub-lease.</li>
-          <li>The licensee shall keep a regular and correct daily account in the prescribed form of all such sales and have it always ready for inspection by the Officer of the Excise Department.</li>
-          <li>The licensee shall produce his License and accounts for inspection on demand by any Excise Officer of and above the rank of Assistant Sub-Inspector, and shall not prevent any Excise Officer or Officials of whatever grade from entering his shop at any hour of the day or night.</li>
-          <li>If at required to do so by the Government of Sikkim, on account of proximity of the troops or other emergent reason, he shall close his shop and keep it closed for so long as he may be directed.</li>
-          <li>The licensee shall not sell the liquor beyond the MRP rate.</li>
-          <li>The licensee shall abide by the conditions of the License and the provisions of the Sikkim Excise Act, 1992 (as amended from time to time) and the rules, regulations, order and notification, circulars made and issued thereunder.</li>
-          <li>The licensee shall not sell liquor on “Dry Days” as declared by the Department.</li>
-          <li>The licensee shall not keep the shop open during Elections or on any other days as prescribed by the Department from time to time.</li>
-          <li>In the event of the license being cancelled or suspended, during the currency of the License period or is not renewed within one month of the expiry, the Licensee shall surrender the whole stock of unsold Liquors forthwith, to the Commissioner, Excise Department. The stock of Liquors so surrendered shall be sold by the Commissioner and the proceeds of the sale shall after deducting expenses and any sums due to the State Government be returned to the Licensee.</li>
-          <li>The Government reserves the right to suspend or cancel the License at any time in accordance with the provisions of the Sikkim Excise Act, 1992 (as amended from time to time) and the rules, regulations, order and notification, circulars made and issued thereunder.</li>
-          <li>In the case the license is not renewed within 20th March every year, the license shall be liable to be cancelled. In the event of failure to renew the license, the license shall be granted further time i.e. till 31st July, provided the Licensee pays a penalty as notified by the Government from time to time. In case the License is not renewed within 31st July, in such circumstances the license so granted shall be renewed cancelled without further notice to the licensee.</li>
-          <li>The licensee shall keep the License in good condition. In case the License gets lost, a Duplicate Copy of License can be printed only after the payment of Rs 500/- (Rupees Five Hundred Only) per copy.</li>
-          <li>The infringement of any of the above conditions or provisions of the Sikkim Excise Act, 1992 will render him/her liable to such penalties as Government may deem proper including forfeiture of the License and Security Deposit.</li>
+        <ol class="terms continued" type="I" [attr.start]="termsFirstPage().length + 1">
+          <li *ngFor="let t of termsRemaining()">{{ t }}</li>
         </ol>
       </div>
 
