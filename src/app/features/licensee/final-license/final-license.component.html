@@ -30,6 +30,57 @@
   </div>
 
   <div class="pages">
+    <ng-template #licenseDetails>
+      <div class="details">
+        <table class="info-table">
+          <tr>
+            <td class="key">License Number</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().licenseNumber || '-' }}</td>
+            <td class="photo" rowspan="6">
+              <ng-container *ngIf="templateData().passportPhotoUrl; else photoPlaceholder">
+                <img class="photo-img" [src]="templateData().passportPhotoUrl" alt="Passport photo" />
+              </ng-container>
+              <ng-template #photoPlaceholder>
+                <div class="photo-box" aria-label="Photo placeholder"></div>
+              </ng-template>
+            </td>
+          </tr>
+          <tr>
+            <td class="key">Name of the Licensee</td>
+            <td class="colon">:</td>
+            <td class="value strong">{{ templateData().licenseeName || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Father's/Husband's Name</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().fatherOrHusbandName || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Kind of Shop</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().kindOfShop || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Address of the Business Premises</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().addressOfBusiness || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">District</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().district || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Mode of Operation</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().modeOfOperation || '-' }}</td>
+            <td class="photo-spacer"></td>
+          </tr>
+        </table>
+      </div>
+    </ng-template>
+
     <!-- Page 1 -->
     <section class="page">
       <img src="assets/icons/fav-icon.png" alt="watermark" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;height:450px;object-fit:contain;pointer-events:none;z-index:2;filter:invert(1);opacity:0.15;">
@@ -55,58 +106,7 @@
       <div class="sub-title">COUNTER FOIL</div>
 
       <div class="content">
-        <div class="details">
-          <table class="info-table">
-            <tr>
-              <td class="key">License Number</td>
-              <td class="colon">:</td>
-              <td class="value">{{ templateData().licenseNumber || '-' }}</td>
-              <td class="photo" rowspan="6">
-                <ng-container *ngIf="templateData().passportPhotoUrl; else photoPlaceholder">
-                  <img
-                    class="photo-img"
-                    [src]="templateData().passportPhotoUrl"
-                    alt="Passport photo"
-                  />
-                </ng-container>
-                <ng-template #photoPlaceholder>
-                  <div class="photo-box" aria-label="Photo placeholder"></div>
-                </ng-template>
-              </td>
-            </tr>
-            <tr>
-              <td class="key">Name of the Licensee</td>
-              <td class="colon">:</td>
-              <td class="value strong">{{ templateData().licenseeName || '-' }}</td>
-            </tr>
-            <tr>
-              <td class="key">Father's/Husband's Name</td>
-              <td class="colon">:</td>
-              <td class="value">{{ templateData().fatherOrHusbandName || '-' }}</td>
-            </tr>
-            <tr>
-              <td class="key">Kind of Shop</td>
-              <td class="colon">:</td>
-              <td class="value">{{ templateData().kindOfShop || '-' }}</td>
-            </tr>
-            <tr>
-              <td class="key">Address of the Business Premises</td>
-              <td class="colon">:</td>
-              <td class="value">{{ templateData().addressOfBusiness || '-' }}</td>
-            </tr>
-            <tr>
-              <td class="key">District</td>
-              <td class="colon">:</td>
-              <td class="value">{{ templateData().district || '-' }}</td>
-            </tr>
-            <tr>
-              <td class="key">Mode of Operation</td>
-              <td class="colon">:</td>
-              <td class="value">{{ templateData().modeOfOperation || '-' }}</td>
-              <td class="photo-spacer"></td>
-            </tr>
-          </table>
-        </div>
+        <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
 
         <p class="paragraph" *ngIf="templateData().licenseFee || templateData().transactionRef || templateData().transactionDate || templateData().validFrom || templateData().validTo">
           The License fee of <span class="strong">{{ templateData().licenseFee }}</span> for issue of this License
@@ -146,11 +146,17 @@
           <div class="title">LICENSE FOR RETAIL SALE OF REGISTERED BRANDS OF LIQUOR</div>
         </div>
         <div class="header-right">
-          <div class="qr small" aria-label="QR code placeholder"></div>
+          <ng-container *ngIf="qrCodeUrl(); else qrPlaceholderSmall">
+            <img class="qr-img small" [src]="qrCodeUrl()" alt="QR code" />
+          </ng-container>
+          <ng-template #qrPlaceholderSmall>
+            <div class="qr small" aria-label="QR code placeholder"></div>
+          </ng-template>
         </div>
       </header>
 
       <div class="content">
+        <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
         <div class="section-title">The aforesaid License has been granted as per the following terms and conditions:</div>
         <ol class="terms" type="I">
           <li *ngFor="let t of terms">{{ t }}</li>
