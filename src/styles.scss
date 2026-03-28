@@ -7,6 +7,39 @@
 * { font-family: 'Poppins', sans-serif; }
 body{ background-color: #EDF7FE; }
 
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+  }
+
+  app-header,
+  app-footer {
+    display: none !important;
+  }
+
+  .content-wrapper {
+    min-height: auto !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure the print uses full viewport and avoids extra blank pages */
+  .pages {
+    width: 210mm !important;
+    margin: 0 auto !important;
+  }
+}
+
 // Global notification animations
 @keyframes slideIn {
   from {

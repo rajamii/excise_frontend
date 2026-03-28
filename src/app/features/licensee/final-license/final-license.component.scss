@@ -370,13 +370,15 @@
   }
 
   .pages {
+    display: block;
     gap: 0;
   }
 
   .page {
     box-shadow: none;
-    width: auto;
-    min-height: auto;
+    width: 210mm;
+    min-height: 297mm;
+    height: 297mm;
     padding: 18mm 16mm 18mm;
     page-break-after: always;
   }
