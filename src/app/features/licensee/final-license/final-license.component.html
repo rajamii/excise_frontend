@@ -5,6 +5,15 @@
       Back
     </button>
     <div class="spacer"></div>
+    <mat-progress-spinner
+      *ngIf="loading()"
+      diameter="22"
+      mode="indeterminate"
+      class="mini-spinner"
+    ></mat-progress-spinner>
+    <div class="meta" *ngIf="error()">
+      <span class="meta-label">Error:</span> {{ error() }}
+    </div>
     <div class="meta">
       <span class="meta-label">Type:</span> {{ requestedFor }}
     </div>
@@ -28,7 +37,12 @@
           <div class="title">LICENSE FOR RETAIL SALE OF REGISTERED BRANDS OF LIQUOR</div>
         </div>
         <div class="header-right">
-          <div class="qr" aria-label="QR code placeholder"></div>
+          <ng-container *ngIf="qrCodeUrl(); else qrPlaceholder">
+            <img class="qr-img" [src]="qrCodeUrl()" alt="QR code" />
+          </ng-container>
+          <ng-template #qrPlaceholder>
+            <div class="qr" aria-label="QR code placeholder"></div>
+          </ng-template>
         </div>
       </header>
 
@@ -40,46 +54,55 @@
             <tr>
               <td class="key">License Number</td>
               <td class="colon">:</td>
-              <td class="value">{{ templateData().licenseNumber }}</td>
+              <td class="value">{{ templateData().licenseNumber || '-' }}</td>
               <td class="photo" rowspan="6">
-                <div class="photo-box" aria-label="Photo placeholder"></div>
+                <ng-container *ngIf="templateData().passportPhotoUrl; else photoPlaceholder">
+                  <img
+                    class="photo-img"
+                    [src]="templateData().passportPhotoUrl"
+                    alt="Passport photo"
+                  />
+                </ng-container>
+                <ng-template #photoPlaceholder>
+                  <div class="photo-box" aria-label="Photo placeholder"></div>
+                </ng-template>
               </td>
             </tr>
             <tr>
               <td class="key">Name of the Licensee</td>
               <td class="colon">:</td>
-              <td class="value strong">{{ templateData().licenseeName }}</td>
+              <td class="value strong">{{ templateData().licenseeName || '-' }}</td>
             </tr>
             <tr>
               <td class="key">Father's/Husband's Name</td>
               <td class="colon">:</td>
-              <td class="value">{{ templateData().fatherOrHusbandName }}</td>
+              <td class="value">{{ templateData().fatherOrHusbandName || '-' }}</td>
             </tr>
             <tr>
               <td class="key">Kind of Shop</td>
               <td class="colon">:</td>
-              <td class="value">{{ templateData().kindOfShop }}</td>
+              <td class="value">{{ templateData().kindOfShop || '-' }}</td>
             </tr>
             <tr>
               <td class="key">Address of the Business Premises</td>
               <td class="colon">:</td>
-              <td class="value">{{ templateData().addressOfBusiness }}</td>
+              <td class="value">{{ templateData().addressOfBusiness || '-' }}</td>
             </tr>
             <tr>
               <td class="key">District</td>
               <td class="colon">:</td>
-              <td class="value">{{ templateData().district }}</td>
+              <td class="value">{{ templateData().district || '-' }}</td>
             </tr>
             <tr>
               <td class="key">Mode of Operation</td>
               <td class="colon">:</td>
-              <td class="value">{{ templateData().modeOfOperation }}</td>
+              <td class="value">{{ templateData().modeOfOperation || '-' }}</td>
               <td class="photo-spacer"></td>
             </tr>
           </table>
         </div>
 
-        <p class="paragraph">
+        <p class="paragraph" *ngIf="templateData().licenseFee || templateData().transactionRef || templateData().transactionDate || templateData().validFrom || templateData().validTo">
           The License fee of <span class="strong">{{ templateData().licenseFee }}</span> for issue of this License
           vide Transaction Reference Number <span class="strong">{{ templateData().transactionRef }}</span> dated
           <span class="strong">{{ templateData().transactionDate }}</span> has been acknowledged by the Department.
@@ -95,7 +118,7 @@
       <footer class="footer">
         <div class="left">
           <div class="label">Date :</div>
-          <div class="value">{{ templateData().generatedOn }}</div>
+          <div class="value">{{ templateData().generatedOn || '-' }}</div>
         </div>
         <div class="right">
           <div class="sign-box" aria-label="Signature placeholder"></div>
@@ -143,7 +166,7 @@
       <footer class="footer">
         <div class="left">
           <div class="label">Date :</div>
-          <div class="value">{{ templateData().generatedOn }}</div>
+          <div class="value">{{ templateData().generatedOn || '-' }}</div>
         </div>
         <div class="right">
           <div class="sign-box" aria-label="Signature placeholder"></div>
@@ -178,7 +201,7 @@
       <footer class="footer">
         <div class="left">
           <div class="label">Date :</div>
-          <div class="value">{{ templateData().generatedOn }}</div>
+          <div class="value">{{ templateData().generatedOn || '-' }}</div>
         </div>
         <div class="right">
           <div class="sign-box" aria-label="Signature placeholder"></div>
@@ -189,4 +212,3 @@
     </section>
   </div>
 </div>
-

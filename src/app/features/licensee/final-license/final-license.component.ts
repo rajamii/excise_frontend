@@ -1,7 +1,8 @@
-import { Component, computed, signal, ViewEncapsulation } from '@angular/core';
+import { Component, OnDestroy, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MaterialModule } from '../../../shared/material.module';
+import { LicenseApplicationService } from '../../../core/services/license-application.service';
 
 type FinalLicenseTemplateData = {
   licenseNumber: string;
@@ -11,6 +12,7 @@ type FinalLicenseTemplateData = {
   addressOfBusiness: string;
   district: string;
   modeOfOperation: string;
+  passportPhotoUrl: string;
   licenseFee: string;
   transactionRef: string;
   transactionDate: string;
@@ -27,27 +29,34 @@ type FinalLicenseTemplateData = {
   styleUrl: './final-license.component.scss',
   encapsulation: ViewEncapsulation.None
 })
-export class FinalLicenseComponent {
+export class FinalLicenseComponent implements OnDestroy {
   private readonly queryAppId = signal<string>('');
   private readonly queryAppType = signal<string>('');
   private readonly returnUrl = signal<string>('');
 
-  readonly templateData = computed<FinalLicenseTemplateData>(() => ({
-    licenseNumber: this.queryAppId() || '03/2022/0038',
-    licenseeName: 'CHANDA LIMBOO',
-    fatherOrHusbandName: 'KASHI RAJ LIMBOO',
-    kindOfShop: 'Foreign Liquor Retail Shop',
-    addressOfBusiness:
-      'TINGZEY, Pin - 737116, P.S - Mangan P.S., Sub Division - Mangan, Block - Mangan, GPU - Manganthak, W.4, Tingzey',
-    district: 'Mangan',
-    modeOfOperation: 'Self',
-    licenseFee: 'Rs. 5,000/-',
-    transactionRef: 'W/2025/000000037505',
-    transactionDate: '20/03/2025',
-    validFrom: '01/04/2025',
-    validTo: '20/03/2026',
-    generatedOn: '17/03/2026'
-  }));
+  readonly loading = signal<boolean>(false);
+  readonly error = signal<string>('');
+  readonly qrCodeUrl = signal<string>('');
+
+  private passportObjectUrl: string | null = null;
+  private qrObjectUrl: string | null = null;
+
+  readonly templateData = signal<FinalLicenseTemplateData>({
+    licenseNumber: '',
+    licenseeName: '',
+    fatherOrHusbandName: '',
+    kindOfShop: '',
+    addressOfBusiness: '',
+    district: '',
+    modeOfOperation: '',
+    passportPhotoUrl: '',
+    licenseFee: '',
+    transactionRef: '',
+    transactionDate: '',
+    validFrom: '',
+    validTo: '',
+    generatedOn: ''
+  });
 
   readonly terms = [
     'The License shall remain valid from the period shown on this License.',
@@ -65,12 +74,15 @@ export class FinalLicenseComponent {
 
   constructor(
     private readonly route: ActivatedRoute,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly licenseAppService: LicenseApplicationService
   ) {
     this.route.queryParamMap.subscribe(params => {
       this.queryAppId.set(params.get('applicationId') || '');
       this.queryAppType.set(params.get('type') || '');
       this.returnUrl.set(params.get('returnUrl') || '');
+
+      this.loadFinalLicense();
     });
   }
 
@@ -78,6 +90,105 @@ export class FinalLicenseComponent {
     const appType = this.queryAppType();
     if (!appType) return 'license-renewal';
     return appType;
+  }
+
+  private loadFinalLicense(): void {
+    const applicationId = this.queryAppId();
+    if (!applicationId) return;
+
+    this.loading.set(true);
+    this.error.set('');
+
+    const appType = (this.queryAppType() || '').toLowerCase();
+    const req$ =
+      appType === 'new-license'
+        ? this.licenseAppService.getNewFinalLicenseData(applicationId)
+        : this.licenseAppService.getOldFinalLicenseData(applicationId);
+
+    req$.subscribe({
+      next: (data: Partial<FinalLicenseTemplateData> | any) => {
+        this.templateData.update(current => ({
+          ...current,
+          licenseNumber: String(data?.licenseNumber || data?.license_id || current.licenseNumber || applicationId),
+          licenseeName: String(data?.licenseeName || current.licenseeName || ''),
+          fatherOrHusbandName: String(data?.fatherOrHusbandName || current.fatherOrHusbandName || ''),
+          kindOfShop: String(data?.kindOfShop || current.kindOfShop || ''),
+          addressOfBusiness: String(data?.addressOfBusiness || current.addressOfBusiness || ''),
+          district: String(data?.district || current.district || ''),
+          modeOfOperation: String(data?.modeOfOperation || current.modeOfOperation || ''),
+          passportPhotoUrl: String(data?.passportPhotoUrl || current.passportPhotoUrl || ''),
+          licenseFee: String(data?.licenseFee || current.licenseFee || ''),
+          transactionRef: String(data?.transactionRef || current.transactionRef || ''),
+          transactionDate: String(data?.transactionDate || current.transactionDate || ''),
+          validFrom: String(data?.validFrom || current.validFrom || ''),
+          validTo: String(data?.validTo || current.validTo || ''),
+          generatedOn: String(data?.generatedOn || current.generatedOn || '')
+        }));
+        this.loadPassportPhoto();
+        this.loadQrCode();
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load license details.';
+        this.error.set(String(msg));
+        this.loading.set(false);
+      }
+    });
+  }
+
+  private loadPassportPhoto(): void {
+    const applicationId = this.queryAppId();
+    if (!applicationId) return;
+
+    if (this.passportObjectUrl) {
+      URL.revokeObjectURL(this.passportObjectUrl);
+      this.passportObjectUrl = null;
+    }
+
+    const appType = (this.queryAppType() || '').toLowerCase();
+    const req$ =
+      appType === 'new-license'
+        ? this.licenseAppService.getNewFinalLicensePassportPhoto(applicationId)
+        : this.licenseAppService.getOldFinalLicensePassportPhoto(applicationId);
+
+    req$.subscribe({
+      next: (blob: Blob) => {
+        this.passportObjectUrl = URL.createObjectURL(blob);
+        this.templateData.update(current => ({
+          ...current,
+          passportPhotoUrl: this.passportObjectUrl || ''
+        }));
+      },
+      error: () => {
+        this.templateData.update(current => ({ ...current, passportPhotoUrl: '' }));
+      }
+    });
+  }
+
+  private loadQrCode(): void {
+    const applicationId = this.queryAppId();
+    if (!applicationId) return;
+
+    if (this.qrObjectUrl) {
+      URL.revokeObjectURL(this.qrObjectUrl);
+      this.qrObjectUrl = null;
+    }
+
+    const appType = (this.queryAppType() || '').toLowerCase();
+    const req$ =
+      appType === 'new-license'
+        ? this.licenseAppService.getNewFinalLicenseQrCode(applicationId)
+        : this.licenseAppService.getOldFinalLicenseQrCode(applicationId);
+
+    req$.subscribe({
+      next: (blob: Blob) => {
+        this.qrObjectUrl = URL.createObjectURL(blob);
+        this.qrCodeUrl.set(this.qrObjectUrl || '');
+      },
+      error: () => {
+        this.qrCodeUrl.set('');
+      }
+    });
   }
 
   goBack(): void {
@@ -92,5 +203,10 @@ export class FinalLicenseComponent {
 
   print(): void {
     window.print();
+  }
+
+  ngOnDestroy(): void {
+    if (this.passportObjectUrl) URL.revokeObjectURL(this.passportObjectUrl);
+    if (this.qrObjectUrl) URL.revokeObjectURL(this.qrObjectUrl);
   }
 }
