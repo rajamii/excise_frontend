@@ -7,16 +7,6 @@
 * { font-family: 'Poppins', sans-serif; }
 body{ background-color: #EDF7FE; }
 
-// Global Watermark Styles for Final License
-app-final-license .watermark {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 999 !important;
-  background: url('/assets/fav-icon.png') center center / 200px auto no-repeat !important;
-  opacity: 0.15 !important;
-  pointer-events: none !important;
-}
-
 // Global notification animations
 @keyframes slideIn {
   from {

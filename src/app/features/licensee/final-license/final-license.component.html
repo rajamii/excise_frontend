@@ -83,7 +83,7 @@
 
     <!-- Page 1 -->
     <section class="page">
-      <img src="assets/icons/fav-icon.png" alt="watermark" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;height:450px;object-fit:contain;pointer-events:none;z-index:2;filter:invert(1);opacity:0.15;">
+      <img class="watermark" src="assets/icons/fav-icon.png" alt="" aria-hidden="true" />
 
       <header class="header">
         <div class="header-left"></div>
@@ -138,7 +138,7 @@
 
     <!-- Page 2 -->
     <section class="page">
-      <img src="assets/icons/fav-icon.png" alt="watermark" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;height:450px;object-fit:contain;pointer-events:none;z-index:2;filter:invert(1);opacity:0.15;">
+      <img class="watermark" src="assets/icons/fav-icon.png" alt="" aria-hidden="true" />
 
       <header class="header compact">
         <div class="header-left"></div>
@@ -196,7 +196,7 @@
 
     <!-- Page 3 (template placeholder for remaining terms) -->
     <section class="page" *ngIf="termsRemaining().length">
-      <img src="assets/icons/fav-icon.png" alt="watermark" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;height:450px;object-fit:contain;pointer-events:none;z-index:2;filter:invert(1);opacity:0.15;">
+      <img class="watermark" src="assets/icons/fav-icon.png" alt="" aria-hidden="true" />
 
       <div class="content">
         <ol class="terms continued" type="I" [attr.start]="termsFirstPage().length + 1">

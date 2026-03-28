@@ -49,13 +49,16 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 350px;
-  height: 350px;
+  width: 175mm;
+  height: 175mm;
+  max-width: 88%;
+  max-height: 88%;
   object-fit: contain;
-  opacity: 0.18;
+  opacity: 0.22;
   pointer-events: none;
   z-index: 2;
   mix-blend-mode: multiply;
+  filter: grayscale(1) brightness(0);
 }
 
 .header {
