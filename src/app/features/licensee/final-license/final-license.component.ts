@@ -118,7 +118,7 @@ export class FinalLicenseComponent implements OnDestroy {
           addressOfBusiness: String(data?.addressOfBusiness || current.addressOfBusiness || ''),
           district: String(data?.district || current.district || ''),
           modeOfOperation: String(data?.modeOfOperation || current.modeOfOperation || ''),
-          passportPhotoUrl: String(data?.passportPhotoUrl || current.passportPhotoUrl || ''),
+          passportPhotoUrl: '',
           licenseFee: String(data?.licenseFee || current.licenseFee || ''),
           transactionRef: String(data?.transactionRef || current.transactionRef || ''),
           transactionDate: String(data?.transactionDate || current.transactionDate || ''),
@@ -134,8 +134,16 @@ export class FinalLicenseComponent implements OnDestroy {
           this.loadQrCode();
         }
 
-        this.photoStatus.set(data?.passportPhotoExists === false ? 'Photo: missing file' : '');
-        this.loadPassportPhoto();
+        if (data?.passportPhotoDataUrl) {
+          this.templateData.update(current => ({
+            ...current,
+            passportPhotoUrl: String(data.passportPhotoDataUrl)
+          }));
+          this.photoStatus.set('Photo: embedded');
+        } else {
+          this.photoStatus.set(data?.passportPhotoExists === false ? 'Photo: missing file' : '');
+          this.loadPassportPhoto();
+        }
         this.loading.set(false);
       },
       error: (err: any) => {
@@ -172,6 +180,7 @@ export class FinalLicenseComponent implements OnDestroy {
       },
       error: (err: any) => {
         const status = err?.status ? `(${err.status})` : '';
+        this.templateData.update(current => ({ ...current, passportPhotoUrl: '' }));
         this.photoStatus.update(s => s || `Photo: failed ${status}`.trim());
       }
     });
