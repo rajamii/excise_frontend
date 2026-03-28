@@ -347,14 +347,9 @@
   z-index: 3;
 }
 
-.validation-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.validation-link:hover,
-.validation-link:focus-visible {
-  text-decoration: underline;
+.validation-text {
+  user-select: text;
+  cursor: text;
 }
 
 @media print {

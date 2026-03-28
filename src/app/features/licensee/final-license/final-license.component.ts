@@ -36,7 +36,6 @@ export class FinalLicenseComponent implements OnDestroy {
   private readonly queryAppId = signal<string>('');
   private readonly queryAppType = signal<string>('');
   private readonly returnUrl = signal<string>('');
-  private readonly autoDownload = signal<boolean>(false);
 
   readonly loading = signal<boolean>(false);
   readonly error = signal<string>('');
@@ -56,7 +55,6 @@ export class FinalLicenseComponent implements OnDestroy {
 
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
-  private hasAutoDownloaded = false;
 
   readonly templateData = signal<FinalLicenseTemplateData>({
     licenseNumber: '',
@@ -86,16 +84,6 @@ export class FinalLicenseComponent implements OnDestroy {
       this.queryAppId.set(normalizedAppId);
       this.queryAppType.set(params.get('type') || '');
       this.returnUrl.set(params.get('returnUrl') || '');
-      const dl = String(params.get('download') || '').toLowerCase();
-      const looksLikeCode = normalizedAppId.includes(':') && normalizedAppId.length > 30;
-      this.autoDownload.set(looksLikeCode || dl === '1' || dl === 'true' || dl === 'yes');
-
-      if (looksLikeCode) {
-        // Direct validation download flow (no UI needed): validate code on server and download PDF.
-        const pdfUrl = `${environment.apiBaseUrl}/v/${encodeURIComponent(normalizedAppId)}/`;
-        window.location.href = pdfUrl;
-        return;
-      }
 
       this.loadFinalLicense();
     });
@@ -127,7 +115,6 @@ export class FinalLicenseComponent implements OnDestroy {
     this.terms.set([]);
     this.termsFirstPage.set([]);
     this.termsRemaining.set([]);
-    this.hasAutoDownloaded = false;
 
     const appType = (this.queryAppType() || '').toLowerCase();
     const newReq$ = this.licenseAppService.getNewFinalLicenseData(applicationId);
@@ -201,11 +188,6 @@ export class FinalLicenseComponent implements OnDestroy {
           this.loadPassportPhoto();
         }
         this.loading.set(false);
-
-        if ((this.autoDownload() || this.validatedViaCode()) && !this.hasAutoDownloaded) {
-          this.hasAutoDownloaded = true;
-          setTimeout(() => void this.downloadPdf(), 1200);
-        }
       },
       error: (err: any) => {
         const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load license details.';

@@ -23,10 +23,6 @@
     <div class="meta">
       <span class="meta-label">Type:</span> {{ requestedFor }}
     </div>
-    <button mat-stroked-button *ngIf="validationCode()" (click)="downloadPdf()">
-      <mat-icon>download</mat-icon>
-      Download PDF
-    </button>
     <button mat-flat-button color="primary" (click)="print()">
       <mat-icon>print</mat-icon>
       Print
@@ -136,7 +132,7 @@
         </div>
       </footer>
       <div class="validation-edge" *ngIf="validationPdfUrl()">
-        <a class="validation-link" [href]="validationPdfUrl()" target="_blank" rel="noopener noreferrer">{{ validationPdfUrl() }}</a>
+        <span class="validation-text">{{ validationPdfUrl() }}</span>
       </div>
     </section>
 
@@ -193,7 +189,7 @@
         </div>
       </footer>
       <div class="validation-edge" *ngIf="validationPdfUrl()">
-        <a class="validation-link" [href]="validationPdfUrl()" target="_blank" rel="noopener noreferrer">{{ validationPdfUrl() }}</a>
+        <span class="validation-text">{{ validationPdfUrl() }}</span>
       </div>
       <div class="page-number">Page No: 2</div>
     </section>
@@ -219,7 +215,7 @@
         </div>
       </footer>
       <div class="validation-edge" *ngIf="validationPdfUrl()">
-        <a class="validation-link" [href]="validationPdfUrl()" target="_blank" rel="noopener noreferrer">{{ validationPdfUrl() }}</a>
+        <span class="validation-text">{{ validationPdfUrl() }}</span>
       </div>
       <div class="page-number">Page No: 3</div>
     </section>
