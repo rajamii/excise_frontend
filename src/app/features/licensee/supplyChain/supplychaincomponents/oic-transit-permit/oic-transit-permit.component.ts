@@ -158,6 +158,14 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     }
   }
 
+  onStatCardClick(status: 'All Status' | 'PENDING' | 'APPROVED' | 'REJECTED'): void {
+    this.filterForm.patchValue({ status });
+  }
+
+  isStatCardActive(status: 'All Status' | 'PENDING' | 'APPROVED' | 'REJECTED'): boolean {
+    return this.filterForm.get('status')?.value === status;
+  }
+
   onClear(): void {
     this.filterForm.reset({
       referenceNumber: '',

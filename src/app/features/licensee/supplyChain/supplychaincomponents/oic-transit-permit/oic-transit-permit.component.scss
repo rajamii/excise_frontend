@@ -170,40 +170,105 @@
         background: white;
         padding: 20px;
         border-radius: 8px;
-        text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         border-top: 4px solid;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        position: relative;
+        overflow: hidden;
+
+        &.stat-card-clickable {
+          cursor: pointer;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        &.stat-card-clickable:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2), 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        &:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        &.active {
+          box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.18), 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .stat-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          background: rgba(33, 150, 243, 0.12);
+
+          mat-icon {
+            width: 22px;
+            height: 22px;
+            font-size: 22px;
+            color: #2196f3;
+          }
+        }
+
+        .stat-content {
+          min-width: 0;
+        }
         
         .stat-number {
-          font-size: 32px;
+          font-size: 30px;
           font-weight: bold;
-          margin-bottom: 8px;
+          line-height: 1.1;
+          margin-bottom: 4px;
         }
         
         .stat-label {
           font-size: 14px;
           color: #666;
           font-weight: 500;
+          line-height: 1.2;
         }
         
         &.pending {
           border-top-color: #ff9800;
           .stat-number { color: #ff9800; }
+          .stat-icon {
+            background: rgba(255, 152, 0, 0.14);
+            mat-icon { color: #ff9800; }
+          }
         }
         
         &.approved {
           border-top-color: #4caf50;
           .stat-number { color: #4caf50; }
+          .stat-icon {
+            background: rgba(76, 175, 80, 0.14);
+            mat-icon { color: #4caf50; }
+          }
         }
         
         &.rejected {
           border-top-color: #f44336;
           .stat-number { color: #f44336; }
+          .stat-icon {
+            background: rgba(244, 67, 54, 0.14);
+            mat-icon { color: #f44336; }
+          }
         }
         
         &.total {
           border-top-color: #2196f3;
           .stat-number { color: #2196f3; }
+          .stat-icon {
+            background: rgba(33, 150, 243, 0.14);
+            mat-icon { color: #2196f3; }
+          }
         }
       }
     }
