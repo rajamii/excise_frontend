@@ -127,7 +127,16 @@
           <div class="value">{{ templateData().generatedOn || '-' }}</div>
         </div>
         <div class="right">
-          <div class="sign-box" aria-label="Signature placeholder"></div>
+          <div class="sign-frame" aria-label="Commissioner signature">
+            <img
+              *ngIf="commSignOk()"
+              class="sign-img"
+              [src]="commSignUrl"
+              alt=""
+              aria-hidden="true"
+              (error)="onCommSignError()"
+            />
+          </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
       </footer>
@@ -184,7 +193,16 @@
           <div class="value">{{ templateData().generatedOn || '-' }}</div>
         </div>
         <div class="right">
-          <div class="sign-box" aria-label="Signature placeholder"></div>
+          <div class="sign-frame" aria-label="Commissioner signature">
+            <img
+              *ngIf="commSignOk()"
+              class="sign-img"
+              [src]="commSignUrl"
+              alt=""
+              aria-hidden="true"
+              (error)="onCommSignError()"
+            />
+          </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
       </footer>
@@ -210,7 +228,16 @@
           <div class="value">{{ templateData().generatedOn || '-' }}</div>
         </div>
         <div class="right">
-          <div class="sign-box" aria-label="Signature placeholder"></div>
+          <div class="sign-frame" aria-label="Commissioner signature">
+            <img
+              *ngIf="commSignOk()"
+              class="sign-img"
+              [src]="commSignUrl"
+              alt=""
+              aria-hidden="true"
+              (error)="onCommSignError()"
+            />
+          </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
       </footer>

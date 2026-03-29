@@ -47,6 +47,8 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly validatedViaCode = signal<boolean>(false);
   readonly validationPdfUrl = signal<string>('');
   readonly terms = signal<string[]>([]);
+  readonly commSignOk = signal<boolean>(true);
+  readonly commSignUrl = 'assets/comm_sign.jpg';
 
   readonly termsFirstPage = signal<string[]>([]);
   readonly termsRemaining = signal<string[]>([]);
@@ -214,6 +216,10 @@ export class FinalLicenseComponent implements OnDestroy {
     if (!code) return;
     const url = `${environment.apiBaseUrl}/transactional/validate/license/pdf/?code=${encodeURIComponent(code)}`;
     window.location.href = url;
+  }
+
+  onCommSignError(): void {
+    this.commSignOk.set(false);
   }
 
   private loadPassportPhoto(): void {
