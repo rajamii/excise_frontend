@@ -175,6 +175,15 @@
   gap: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
 
+  &.summary-card-clickable {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  &.active {
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35), 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
@@ -265,6 +274,16 @@
     }
     .card-value {
       color: #17a2b8;
+    }
+  }
+
+  &.under-process-requests {
+    .card-icon {
+      background: linear-gradient(135deg, #5c6bc0 0%, #3949ab 100%);
+      color: white;
+    }
+    .card-value {
+      color: #5c6bc0;
     }
   }
 }

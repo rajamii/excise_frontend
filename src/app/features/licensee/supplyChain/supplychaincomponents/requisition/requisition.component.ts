@@ -103,6 +103,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   // Data properties
   requisitionData: TableData[] = [];
   filteredRequisitionData: TableData[] = [];
+  summaryRequisitionData: TableData[] = [];
   private revalidationApprovedDateByRef: Record<string, string> = {};
   private revalidationActiveByRef: Record<string, boolean> = {};
 
@@ -111,6 +112,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   requisitionMonthFilter: string = '';
   requisitionYearFilter: string = '';
   requisitionStatusFilter: string = '';
+  activeSummaryFilter: string = '';
 
   // Modal properties
   isCancellationModalOpen: boolean = false;
@@ -336,6 +338,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         console.error('Error loading requisitions:', error);
         // Show empty state or error message
         this.requisitionData = [];
+        this.summaryRequisitionData = [];
         this.filteredRequisitionData = [];
         this.revalidationApprovedDateByRef = {};
         this.revalidationActiveByRef = {};
@@ -426,28 +429,63 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(): void {
-    this.filteredRequisitionData = this.requisitionData.filter(item => {
+    this.summaryRequisitionData = this.requisitionData.filter(item => {
       let matches = true;
 
+      const submissionDate =
+        this.parseDate(item.submissionDateRaw) ||
+        this.parseDate(item.submissionDate);
+
       if (this.requisitionDateFilter) {
-        matches = matches && item.submissionDate.includes(this.requisitionDateFilter);
+        matches =
+          matches &&
+          Boolean(submissionDate) &&
+          this.toIsoDay(submissionDate as Date) === this.requisitionDateFilter;
       }
 
-      if (this.requisitionStatusFilter) {
-        const filter = this.normalizeStageToken(this.requisitionStatusFilter);
-        if (filter === 'pending' || filter === 'review') {
-          matches = matches && this.isPendingLikeStatus(item);
-        } else if (filter === 'approved') {
-          matches = matches && this.isApprovedLikeStatus(item);
-        } else if (filter === 'rejected') {
-          matches = matches && this.isRejectedLikeStatus(item);
-        } else {
-          matches = matches && this.normalizeStageToken(item.status).includes(filter);
-        }
+      if (this.requisitionMonthFilter) {
+        matches =
+          matches &&
+          Boolean(submissionDate) &&
+          this.toIsoMonth(submissionDate as Date) === this.requisitionMonthFilter;
+      }
+
+      if (this.requisitionYearFilter) {
+        matches =
+          matches &&
+          Boolean(submissionDate) &&
+          String((submissionDate as Date).getFullYear()) === String(this.requisitionYearFilter);
       }
 
       return matches;
     });
+
+    this.filteredRequisitionData = this.summaryRequisitionData.filter(item => {
+      if (!this.requisitionStatusFilter) {
+        return true;
+      }
+
+      const filter = this.normalizeStageToken(this.requisitionStatusFilter);
+      if (filter === 'pending' || filter === 'review') {
+        return this.isCommissioner() ? this.isPendingLikeStatus(item) : this.isPendingSummaryStatus(item);
+      }
+      if (filter === 'approved') {
+        return this.isApprovedLikeStatus(item);
+      }
+      if (filter === 'rejected') {
+        return this.isRejectedLikeStatus(item);
+      }
+      if (filter === 'underprocess') {
+        return this.isUnderProcessLikeStatus(item);
+      }
+      if (filter === 'cancellation' || filter === 'cancel' || filter === 'cancelled') {
+        return this.isCancellationLikeStatus(item);
+      }
+      const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.currentStageName)}`;
+      return token.includes(filter);
+    });
+
+    this.currentPage = 1;
   }
 
   isCommissioner(): boolean {
@@ -1270,6 +1308,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.requisitionMonthFilter = '';
     this.requisitionYearFilter = '';
     this.requisitionStatusFilter = '';
+    this.activeSummaryFilter = '';
     this.applyFilters();
   }
 
@@ -1278,6 +1317,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   onRequisitionStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyFilters();
   }
 
@@ -1293,19 +1333,60 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStageToken(filter);
+    const current = this.normalizeStageToken(this.requisitionStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.requisitionStatusFilter = '';
+      this.applyFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.requisitionStatusFilter = '';
+      this.applyFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.requisitionStatusFilter = filter;
+    this.applyFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStageToken(this.requisitionStatusFilter);
+    if (['pending', 'approved', 'rejected', 'underprocess', 'cancellation', 'cancel', 'cancelled'].includes(normalized)) {
+      this.activeSummaryFilter = this.requisitionStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
+  }
+
   getRequisitionStatusCount(status: string): number {
     const filter = this.normalizeStageToken(status);
     if (filter === 'pending' || filter === 'review') {
-      return this.filteredRequisitionData.filter(item => this.isPendingLikeStatus(item)).length;
+      const predicate = this.isCommissioner()
+        ? (item: TableData) => this.isPendingLikeStatus(item)
+        : (item: TableData) => this.isPendingSummaryStatus(item);
+      return this.summaryRequisitionData.filter(predicate).length;
     }
     if (filter === 'approved') {
-      return this.filteredRequisitionData.filter(item => this.isApprovedLikeStatus(item)).length;
+      return this.summaryRequisitionData.filter(item => this.isApprovedLikeStatus(item)).length;
     }
     if (filter === 'rejected') {
-      return this.filteredRequisitionData.filter(item => this.isRejectedLikeStatus(item)).length;
+      return this.summaryRequisitionData.filter(item => this.isRejectedLikeStatus(item)).length;
     }
-    return this.filteredRequisitionData.filter(
-      item => this.normalizeStageToken(item.status).includes(filter)
+    if (filter === 'underprocess') {
+      return this.summaryRequisitionData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+    }
+    if (filter === 'cancellation' || filter === 'cancel' || filter === 'cancelled') {
+      return this.summaryRequisitionData.filter(item => this.isCancellationLikeStatus(item)).length;
+    }
+    return this.summaryRequisitionData.filter(
+      item => `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.currentStageName)}`.includes(filter)
     ).length;
   }
 
@@ -1607,6 +1688,34 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       combined.includes('submit') ||
       combined.includes('forward')
     );
+  }
+
+  private isCancellationLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+    return combined.includes('cancel');
+  }
+
+  private isUnderProcessLikeStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    if (this.isCancellationLikeStatus(item)) {
+      return false;
+    }
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+    const isCommissionerStage = combined.includes('commissioner');
+    const isPermitSectionAll =
+      (combined.includes('permit') && combined.includes('section') && combined.includes('all')) ||
+      combined.includes('permitsectionall');
+    return isCommissionerStage || isPermitSectionAll;
+  }
+
+  private isPendingSummaryStatus(item: TableData): boolean {
+    return this.isPendingLikeStatus(item) && !this.isUnderProcessLikeStatus(item) && !this.isCancellationLikeStatus(item);
   }
 
   private toBooleanFlag(value: any, fallback?: boolean): boolean | undefined {
