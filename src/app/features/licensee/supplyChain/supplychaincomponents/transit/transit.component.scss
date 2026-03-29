@@ -1220,7 +1220,8 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
-  z-index: 9999;
+  // Keep this overlay above any sticky headers/action button containers used elsewhere in the app
+  z-index: 50000;
 
   &.show {
     opacity: 1;
@@ -1235,6 +1236,7 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     cursor: pointer;
+    z-index: 0;
   }
 
   .panel-content {
@@ -1249,6 +1251,7 @@
     flex-direction: column;
     transform: scale(0.9);
     transition: transform 0.3s ease;
+    z-index: 1;
   }
 
   &.show .panel-content {
