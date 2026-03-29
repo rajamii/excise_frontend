@@ -40,21 +40,41 @@ interface BlDetailRow {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card pending">
+        <article class="stat-card total stat-card-clickable" role="button" tabindex="0" aria-label="Show all ENA details"
+          (click)="onStatCardClick('ALL')" (keydown.enter)="onStatCardClick('ALL')"
+          (keydown.space)="onStatCardClick('ALL'); $event.preventDefault()"
+          [class.active]="isStatCardActive('ALL')">
+          <div>
+            <span class="stat-kicker">All submissions</span>
+            <h3>Total Applications</h3>
+          </div>
+          <div class="stat-pill">{{ getTotalCount() }}</div>
+        </article>
+
+        <article class="stat-card pending stat-card-clickable" role="button" tabindex="0" aria-label="Filter pending ENA details"
+  (click)="onStatCardClick('PENDING')" (keydown.enter)="onStatCardClick('PENDING')"
+  (keydown.space)="onStatCardClick('PENDING'); $event.preventDefault()"
+  [class.active]="isStatCardActive('PENDING')">
           <div>
             <span class="stat-kicker">Awaiting action</span>
             <h3>Pending</h3>
           </div>
           <div class="stat-pill">{{ getCount('PENDING') }}</div>
         </article>
-        <article class="stat-card approved">
+        <article class="stat-card approved stat-card-clickable" role="button" tabindex="0" aria-label="Filter approved ENA details"
+  (click)="onStatCardClick('APPROVED')" (keydown.enter)="onStatCardClick('APPROVED')"
+  (keydown.space)="onStatCardClick('APPROVED'); $event.preventDefault()"
+  [class.active]="isStatCardActive('APPROVED')">
           <div>
             <span class="stat-kicker">Cleared by OIC</span>
             <h3>Approved</h3>
           </div>
           <div class="stat-pill">{{ getCount('APPROVED') }}</div>
         </article>
-        <article class="stat-card rejected">
+        <article class="stat-card rejected stat-card-clickable" role="button" tabindex="0" aria-label="Filter rejected ENA details"
+  (click)="onStatCardClick('REJECTED')" (keydown.enter)="onStatCardClick('REJECTED')"
+  (keydown.space)="onStatCardClick('REJECTED'); $event.preventDefault()"
+  [class.active]="isStatCardActive('REJECTED')">
           <div>
             <span class="stat-kicker">Sent back</span>
             <h3>Rejected</h3>
@@ -73,7 +93,7 @@ interface BlDetailRow {
         <div class="filters-grid">
           <label class="field-block">
             <span class="field-label">Review Status</span>
-            <select class="field-input" [(ngModel)]="reviewStatus" (change)="loadRows()">
+            <select class="field-input" [(ngModel)]="reviewStatus">
               <option value="ALL">All</option>
               <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
@@ -299,6 +319,7 @@ interface BlDetailRow {
       border: 1px solid rgba(148, 163, 184, 0.18);
       border-radius: 22px;
       box-shadow: var(--shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
     .hero-panel {
@@ -389,12 +410,14 @@ interface BlDetailRow {
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
       margin-bottom: 1rem;
     }
 
     .stat-card {
+      --stat-accent-start: #0ea5e9;
+      --stat-accent-end: #2563eb;
       position: relative;
       border-radius: 20px;
       padding: 1.15rem 1.2rem;
@@ -404,6 +427,29 @@ interface BlDetailRow {
       overflow: hidden;
       border: 1px solid transparent;
       box-shadow: var(--shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+
+    .stat-card-clickable {
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .stat-card-clickable:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+    }
+
+    .stat-card-clickable:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2), 0 18px 38px rgba(15, 23, 42, 0.12);
+    }
+
+    .stat-card.active {
+      border-color: rgba(13, 110, 253, 0.4);
+      box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15), 0 18px 38px rgba(15, 23, 42, 0.12);
     }
 
     .stat-card::before {
@@ -414,7 +460,40 @@ interface BlDetailRow {
       border-radius: 20px 0 0 20px;
     }
 
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--stat-accent-start), var(--stat-accent-end));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.25s ease;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .stat-card-clickable:hover::after,
+    .stat-card.active::after {
+      transform: scaleX(1);
+    }
+
+    .stat-card.total {
+      --stat-accent-start: #3b82f6;
+      --stat-accent-end: #1d4ed8;
+      background: linear-gradient(135deg, rgba(219, 234, 254, 0.9), rgba(191, 219, 254, 0.7));
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .stat-card.total::before {
+      background: #1d4ed8;
+    }
+
     .stat-card.pending {
+      --stat-accent-start: #f59e0b;
+      --stat-accent-end: #d97706;
       background: linear-gradient(135deg, #fff8dc, #fff2b8);
       border-color: #f3df89;
     }
@@ -424,6 +503,8 @@ interface BlDetailRow {
     }
 
     .stat-card.approved {
+      --stat-accent-start: #22c55e;
+      --stat-accent-end: #15803d;
       background: linear-gradient(135deg, #e6f8ee, #cbf0dc);
       border-color: #9dd5b6;
     }
@@ -433,6 +514,8 @@ interface BlDetailRow {
     }
 
     .stat-card.rejected {
+      --stat-accent-start: #ef4444;
+      --stat-accent-end: #b91c1c;
       background: linear-gradient(135deg, #fce8e8, #f7d3d3);
       border-color: #efb6b6;
     }
@@ -909,7 +992,7 @@ interface BlDetailRow {
 
     .details-metrics {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
       margin-bottom: 1rem;
     }
@@ -972,7 +1055,7 @@ interface BlDetailRow {
 
     .details-info-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
       margin-bottom: 1.15rem;
     }
@@ -1164,7 +1247,7 @@ export class OicBlDetailsComponent implements OnInit {
   loadRows(): void {
     this.loading = true;
     this.errorMessage = '';
-    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus(this.reviewStatus).subscribe({
+    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('ALL').subscribe({
       next: (response: any) => {
         const rows = Array.isArray(response?.data) ? response.data : [];
         this.rows = rows.map((row: any) => this.mapRow(row));
@@ -1178,11 +1261,16 @@ export class OicBlDetailsComponent implements OnInit {
   }
 
   get filteredRows(): BlDetailRow[] {
+    const statusFiltered = this.reviewStatus === 'ALL'
+      ? this.rows
+      : this.rows.filter((row) => row.approvalStatus === this.reviewStatus);
+
     const token = this.searchTerm.trim().toLowerCase();
     if (!token) {
-      return this.rows;
+      return statusFiltered;
     }
-    return this.rows.filter((row) =>
+
+    return statusFiltered.filter((row) =>
       [
         row.referenceNo,
         row.licenseeId,
@@ -1193,9 +1281,23 @@ export class OicBlDetailsComponent implements OnInit {
       ].some((value) => String(value || '').toLowerCase().includes(token))
     );
   }
-
   getCount(status: 'PENDING' | 'APPROVED' | 'REJECTED'): number {
     return this.rows.filter((row) => row.approvalStatus === status).length;
+  }
+
+  
+  
+
+  getTotalCount(): number {
+    return this.rows.length;
+  }
+
+  onStatCardClick(status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): void {
+    this.reviewStatus = status === 'ALL' ? 'ALL' : (this.reviewStatus === status ? 'ALL' : status);
+  }
+
+  isStatCardActive(status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): boolean {
+    return this.reviewStatus === status;
   }
 
   openDetailsModal(row: BlDetailRow): void {
