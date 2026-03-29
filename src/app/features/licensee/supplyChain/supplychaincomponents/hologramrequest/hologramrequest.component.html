@@ -1,58 +1,48 @@
 <!-- Header Section -->
 <div class="hologram-request-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-
-
-  </div>
-
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4 justify-content-center">
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-      <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('ALL')" [class.active]="!statusFilter">
-        <div class="card-icon">
-          <i class="bi bi-list-ul"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ summaryHologramRequestList.length }}</h3>
-          <p class="card-label">Total Requests</p>
-        </div>
+  <div class="hologram-request-summary-grid mb-4">
+    <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('ALL')" [class.active]="!statusFilter">
+      <div class="card-icon">
+        <i class="bi bi-list-ul"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ summaryHologramRequestList.length }}</h3>
+        <p class="card-label">Total Requests</p>
       </div>
     </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
-        <div class="card-icon">
-          <i class="bi bi-check-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getSummaryRequestStatusCount('APPROVED') }}</h3>
-          <p class="card-label">Approved</p>
-        </div>
+
+    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+      <div class="card-icon">
+        <i class="bi bi-check-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getSummaryRequestStatusCount('APPROVED') }}</h3>
+        <p class="card-label">Approved</p>
       </div>
     </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-      <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
-        <div class="card-icon">
-          <i class="bi bi-gear"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getSummaryRequestStatusCount('UNDER_PROCESS') }}</h3>
-          <p class="card-label">Under Process</p>
-        </div>
+
+    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+      <div class="card-icon">
+        <i class="bi bi-gear"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getSummaryRequestStatusCount('UNDER_PROCESS') }}</h3>
+        <p class="card-label">Under Process</p>
       </div>
     </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
-        <div class="card-icon">
-          <i class="bi bi-x-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getSummaryRequestStatusCount('REJECTED') }}</h3>
-          <p class="card-label">Rejected</p>
-        </div>
+
+    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+      <div class="card-icon">
+        <i class="bi bi-x-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getSummaryRequestStatusCount('REJECTED') }}</h3>
+        <p class="card-label">Rejected</p>
       </div>
     </div>
   </div>
