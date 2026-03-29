@@ -624,7 +624,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   shouldShowCancelPermit(item: TableData): boolean {
     // Commissioner dashboard should not expose cancellation initiation.
-    if (this.isCommissioner()) {
+    if (this.isCommissioner() || this.isPermitSection()) {
       return false;
     }
 
