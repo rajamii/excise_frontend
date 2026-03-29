@@ -1,7 +1,8 @@
 <div class="new-license-register-header">
   <div class="row g-3 mb-4 stats-row">
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card approved-requests">
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('approved')" [class.active]="activeSummaryFilter === 'approved'">
         <div class="card-icon"><i class="bi bi-check-circle"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.approved }}</h3>
@@ -10,7 +11,8 @@
       </div>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card pending-requests">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('pending')" [class.active]="activeSummaryFilter === 'pending'">
         <div class="card-icon"><i class="bi bi-clock-history"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.pending }}</h3>
@@ -19,7 +21,8 @@
       </div>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card objection-requests">
+      <div class="summary-card objection-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('objection')" [class.active]="activeSummaryFilter === 'objection'">
         <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.objection }}</h3>
@@ -28,7 +31,8 @@
       </div>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card rejected-requests">
+      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('rejected')" [class.active]="activeSummaryFilter === 'rejected'">
         <div class="card-icon"><i class="bi bi-x-circle"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.rejected }}</h3>

@@ -58,11 +58,21 @@ export class NewLicenseDashboardComponent implements OnInit {
     rejected: 0
   };
 
+  private serverCounts: NewLicenseCounts = {
+    applied: 0,
+    pending: 0,
+    objection: 0,
+    approved: 0,
+    rejected: 0
+  };
+
   allRows: NewLicenseItem[] = [];
+  summaryRows: NewLicenseItem[] = [];
   filteredRows: NewLicenseItem[] = [];
   stageFilterOptions: string[] = [];
   statusFilter = '';
   searchFilter = '';
+  activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
 
   ngOnInit(): void {
     this.loadData();
@@ -81,7 +91,7 @@ export class NewLicenseDashboardComponent implements OnInit {
       )
     }).subscribe({
       next: ({ counts, grouped }) => {
-        this.counts = {
+        this.serverCounts = {
           applied: Number(counts?.applied || 0),
           pending: Number(counts?.pending || 0),
           objection: Number((counts as any)?.objection || 0),
@@ -104,8 +114,21 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.filteredRows = this.allRows.filter((row) => {
-      const selected = (this.statusFilter || '').trim().toLowerCase();
+    const q = this.searchFilter.trim().toLowerCase();
+
+    // Summary rows are affected by search only (counts stay stable when selecting status via card/dropdown).
+    this.summaryRows = this.allRows.filter((row) => {
+      const matchesSearch = !q
+        || row.applicationId.toLowerCase().includes(q)
+        || row.applicantName.toLowerCase().includes(q)
+        || row.establishmentName.toLowerCase().includes(q)
+        || row.currentStage.toLowerCase().includes(q);
+
+      return matchesSearch;
+    });
+
+    const selected = (this.statusFilter || '').trim().toLowerCase();
+    this.filteredRows = this.summaryRows.filter((row) => {
       const stageRaw = (row.currentStageRaw || '').toLowerCase();
       const stageText = (row.currentStage || '').toLowerCase();
 
@@ -116,20 +139,35 @@ export class NewLicenseDashboardComponent implements OnInit {
         || stageRaw.includes(selected)
         || stageText === selected
         || stageText.includes(selected);
-      const q = this.searchFilter.trim().toLowerCase();
-      const matchesSearch = !q
-        || row.applicationId.toLowerCase().includes(q)
-        || row.applicantName.toLowerCase().includes(q)
-        || row.establishmentName.toLowerCase().includes(q)
-        || row.currentStage.toLowerCase().includes(q);
 
-      return matchesStatus && matchesSearch;
+      return matchesStatus;
     });
+
+    const calculated = this.calculateCounts(this.summaryRows);
+    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.statusFilter;
+    this.counts = canUseServerCounts ? this.serverCounts : calculated;
+
+    this.syncActiveSummaryFilter();
   }
 
   clearFilters(): void {
     this.statusFilter = '';
     this.searchFilter = '';
+    this.activeSummaryFilter = '';
+    this.applyFilters();
+  }
+
+  onSummaryCardClick(group: NewLicenseItem['statusGroup']): void {
+    const current = (this.statusFilter || '').trim().toLowerCase();
+    if (current === group) {
+      this.statusFilter = '';
+      this.activeSummaryFilter = '';
+      this.applyFilters();
+      return;
+    }
+
+    this.statusFilter = group;
+    this.activeSummaryFilter = group;
     this.applyFilters();
   }
 
@@ -213,5 +251,26 @@ export class NewLicenseDashboardComponent implements OnInit {
     );
     values.sort((a, b) => a.localeCompare(b));
     return values;
+  }
+
+  private calculateCounts(rows: NewLicenseItem[]): NewLicenseCounts {
+    const next: NewLicenseCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
+    for (const row of rows || []) {
+      if (row?.statusGroup === 'applied') next.applied += 1;
+      else if (row?.statusGroup === 'pending') next.pending += 1;
+      else if (row?.statusGroup === 'objection') next.objection += 1;
+      else if (row?.statusGroup === 'approved') next.approved += 1;
+      else if (row?.statusGroup === 'rejected') next.rejected += 1;
+    }
+    return next;
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const selected = (this.statusFilter || '').trim().toLowerCase();
+    if (selected === 'applied' || selected === 'pending' || selected === 'objection' || selected === 'approved' || selected === 'rejected') {
+      this.activeSummaryFilter = selected as NewLicenseItem['statusGroup'];
+      return;
+    }
+    this.activeSummaryFilter = '';
   }
 }
