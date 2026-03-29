@@ -33,6 +33,8 @@ export class HologramprocurementComponent implements OnInit {
   private readonly persistentPaymentRefsKey = 'hologramPersistentPaymentRefs';
   hologramList: HologramRow[] = [];
   filteredHologramData: HologramRow[] = [];
+  summaryHologramData: HologramRow[] = [];
+  activeSummaryFilter: string = '';
   private isBrowser = false;
   private persistentPaymentRefs = new Set<string>();
   showHologramModal = false;
@@ -104,8 +106,10 @@ export class HologramprocurementComponent implements OnInit {
           const requestedExport = Number((item as any).requested_export_qty || item.exportQty);
           const requestedDefence = Number((item as any).requested_defence_qty || item.defenceQty);
 
-          // Check if there's edit history
+          // Check if there's edit history (commissioner may update quantities)
           const hasEditHistory = (item as any).editHistory || (item as any).edit_history;
+          const editedByRaw = (hasEditHistory as any)?.editedBy || (hasEditHistory as any)?.edited_by || '';
+          const editedByToken = String(editedByRaw || '').toLowerCase();
           const normalizedPaymentStatus = String((item as any).paymentStatus || (item as any).payment_status || '').toLowerCase();
           const isWalletPaid = normalizedPaymentStatus === 'completed' || normalizedPaymentStatus === 'success';
 
@@ -121,7 +125,7 @@ export class HologramprocurementComponent implements OnInit {
             exportQtyLakh: requestedExport, // FIXED: Original requested quantity
             defenceQtyLakh: requestedDefence, // FIXED: Original requested quantity
             paymentCompleted: isWalletPaid || item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
-            editedByCommissioner: !!hasEditHistory,
+            editedByCommissioner: !!hasEditHistory && editedByToken.includes('commissioner'),
             editHistory: hasEditHistory || undefined,
             companyName: item.manufacturingUnit || item.licenseeName || '', // Map to companyName
             status: item.status || 'Submitted', // Default status
@@ -159,6 +163,7 @@ export class HologramprocurementComponent implements OnInit {
         this.isLoading = false;
         // Set empty data so the UI shows "No Holograms Found" instead of loading forever
         this.hologramList = [];
+        this.summaryHologramData = [];
         this.filteredHologramData = [];
       }
     });
@@ -170,11 +175,10 @@ export class HologramprocurementComponent implements OnInit {
 
   // Filter methods
   applyHologramFilters(): void {
-    this.filteredHologramData = this.hologramList.filter(item => {
+    this.summaryHologramData = this.hologramList.filter(item => {
       let matchesDate = true;
       let matchesMonth = true;
       let matchesYear = true;
-      let matchesStatus = true;
 
       const itemDate = new Date(item.date || '');
 
@@ -196,11 +200,32 @@ export class HologramprocurementComponent implements OnInit {
         matchesYear = itemDate.getFullYear() === filterYear;
       }
 
-      if (this.hologramStatusFilter) {
-        matchesStatus = (item.status || '').toUpperCase() === this.hologramStatusFilter.toUpperCase();
+      return matchesDate && matchesMonth && matchesYear;
+    });
+
+    this.filteredHologramData = this.summaryHologramData.filter(item => {
+      if (!this.hologramStatusFilter) {
+        return true;
       }
 
-      return matchesDate && matchesMonth && matchesYear && matchesStatus;
+      const filter = this.normalizeStageToken(this.hologramStatusFilter);
+      if (filter === 'submitted') {
+        return this.isSubmittedLikeStatus(item);
+      }
+      if (filter === 'draft') {
+        return this.isDraftLikeStatus(item);
+      }
+      if (filter === 'underprocess') {
+        return this.isUnderProcessLikeStatus(item);
+      }
+      if (filter === 'edited') {
+        return this.isEditedByCommissionerLike(item);
+      }
+      if (filter === 'approved') {
+        return this.isApprovedLikeStatus(item);
+      }
+
+      return this.normalizeStageToken(item.status).includes(filter);
     });
 
     this.currentPage = 1;
@@ -211,7 +236,9 @@ export class HologramprocurementComponent implements OnInit {
     this.hologramMonthFilter = '';
     this.hologramYearFilter = '';
     this.hologramStatusFilter = '';
+    this.activeSummaryFilter = '';
     this.filteredHologramData = [...this.hologramList];
+    this.summaryHologramData = [...this.hologramList];
     this.currentPage = 1;
   }
 
@@ -228,19 +255,119 @@ export class HologramprocurementComponent implements OnInit {
   }
 
   onHologramStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyHologramFilters();
   }
 
   // Summary methods
   getHologramStatusCount(status: string): number {
-    return this.hologramList.filter(item =>
-      (item.status || '').toLowerCase().includes(status.toLowerCase())
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'submitted') {
+      return this.summaryHologramData.filter(item => this.isSubmittedLikeStatus(item)).length;
+    }
+    if (filter === 'draft') {
+      return this.summaryHologramData.filter(item => this.isDraftLikeStatus(item)).length;
+    }
+    if (filter === 'underprocess') {
+      return this.summaryHologramData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+    }
+    if (filter === 'edited') {
+      return this.summaryHologramData.filter(item => this.isEditedByCommissionerLike(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.summaryHologramData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    return this.summaryHologramData.filter(item =>
+      this.normalizeStageToken(item.status).includes(filter)
     ).length;
   }
 
   getTotalHologramQuantity(): number {
-    return this.hologramList.reduce((total, item) =>
+    return this.summaryHologramData.reduce((total, item) =>
       total + this.getHologramTotal(item), 0
+    );
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStageToken(filter);
+    const current = this.normalizeStageToken(this.hologramStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.hologramStatusFilter = '';
+      this.applyHologramFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.hologramStatusFilter = '';
+      this.applyHologramFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.hologramStatusFilter = filter;
+    this.applyHologramFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStageToken(this.hologramStatusFilter);
+    if (['submitted', 'underprocess', 'edited', 'approved'].includes(normalized)) {
+      this.activeSummaryFilter = this.hologramStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private isDraftLikeStatus(item: HologramRow): boolean {
+    return this.normalizeStageToken(item.status).includes('draft');
+  }
+
+  private isSubmittedLikeStatus(item: HologramRow): boolean {
+    const token = this.normalizeStageToken(item.status);
+    return token.includes('submit') && !token.includes('draft');
+  }
+
+  private isEditedByCommissionerLike(item: HologramRow): boolean {
+    if (item.editedByCommissioner) {
+      return true;
+    }
+    const history: any = (item as any).editHistory || (item as any).edit_history;
+    if (!history) return false;
+    const editedBy = this.normalizeStageToken(history?.editedBy || history?.edited_by);
+    return editedBy.includes('commissioner');
+  }
+
+  private isApprovedLikeStatus(item: HologramRow): boolean {
+    const token = this.normalizeStageToken(item.status);
+    const isCartoonAssigned = token.includes('cartoonassigned') || token.includes('cartonassigned');
+    return (token.includes('approv') || isCartoonAssigned) && !token.includes('reject');
+  }
+
+  private isUnderProcessLikeStatus(item: HologramRow): boolean {
+    if (this.isDraftLikeStatus(item) || this.isSubmittedLikeStatus(item) || this.isApprovedLikeStatus(item)) {
+      return false;
+    }
+    if (this.isEditedByCommissionerLike(item)) {
+      return false;
+    }
+
+    const token = this.normalizeStageToken(item.status);
+    if (token.includes('cartoonassigned') || token.includes('cartonassigned')) {
+      return false;
+    }
+    return (
+      token.includes('itcell') ||
+      token.includes('commissioner') ||
+      token.includes('payment') ||
+      token.includes('processing') ||
+      token.includes('forward') ||
+      token.includes('under')
     );
   }
 
