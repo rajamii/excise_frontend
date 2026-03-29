@@ -98,21 +98,6 @@
         </select>
       </div>
 
-      <!-- Status Filter -->
-      <div class="compact-filter">
-        <select class="form-select form-select-sm" [(ngModel)]="revalidationStatusFilter"
-          (change)="onRevalidationStatusFilterChange()" title="Filter by status">
-          <option value="">All Status</option>
-          <option value="ACTION_REQUIRED">Action Required</option>
-          <option value="APPROVED">Approved</option>
-          <option value="EXPIRED">Expired</option>
-          <option value="INVALID">Invalid</option>
-          <option value="PENDING">Pending</option>
-          <option value="UNDER_PROCESS">Under Process</option>
-          <option value="PROCESSING">Processing</option>
-        </select>
-      </div>
-
       <!-- Clear Button - only show when filters are active -->
       <button class="btn btn-outline-danger btn-sm" (click)="clearRevalidationFilters()"
         *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter"

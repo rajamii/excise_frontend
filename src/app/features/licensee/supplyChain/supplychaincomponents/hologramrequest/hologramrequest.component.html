@@ -79,17 +79,6 @@
         (change)="onMonthFilterChange()" placeholder="Month" title="Filter by month">
     </div>
 
-    <!-- Status Filter -->
-    <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="statusFilter" (change)="onStatusFilterChange()"
-        title="Filter by status">
-        <option value="">All Status</option>
-        <option value="APPROVED">Approved</option>
-        <option value="UNDER_PROCESS">Under Process</option>
-        <option value="REJECTED">Rejected</option>
-      </select>
-    </div>
-
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()"
       *ngIf="dateFilter || monthFilter || statusFilter" title="Clear all filters">

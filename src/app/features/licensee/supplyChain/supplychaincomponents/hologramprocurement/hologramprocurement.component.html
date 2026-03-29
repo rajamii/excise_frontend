@@ -115,19 +115,6 @@
       </select>
     </div>
 
-    <!-- Status Filter -->
-    <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="hologramStatusFilter"
-        (change)="onHologramStatusFilterChange()" title="Filter by status">
-        <option value="">All Status</option>
-        <option value="SUBMITTED">Submitted</option>
-        <option value="UNDER_PROCESS">Under Process</option>
-        <option value="EDITED">Edited</option>
-        <option value="APPROVED">Approved</option>
-        <option value="PROCESSING">Processing</option>
-      </select>
-    </div>
-
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearHologramFilters()"
       *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter"

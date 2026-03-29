@@ -83,20 +83,6 @@
         (change)="onTransitDateFilterChange()" placeholder="Date" title="Filter by date">
     </div>
 
-    <!-- Status Filter -->
-    <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="transitStatusFilter"
-        (change)="onTransitStatusFilterChange()" title="Filter by status">
-        <option value="">All Status</option>
-        <option value="PENDING">Pending Review</option>
-        <option value="APPROVED">Approved</option>
-        <option value="UNDER_PROCESS">Under Process</option>
-        <option value="ISSUED">Issued</option>
-        <option value="REJECTED">Rejected</option>
-        <option value="PROCESSING">Processing</option>
-      </select>
-    </div>
-
     <!-- Destination Filter -->
     <div class="compact-filter">
       <select class="form-select form-select-sm" [(ngModel)]="transitDestinationFilter"
