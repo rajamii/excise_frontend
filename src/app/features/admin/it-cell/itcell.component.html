@@ -9,33 +9,48 @@
 
 
       <!-- Summary Cards -->
-      <div class="row g-3 mb-4">
-        <div class="col-md-3">
-          <div class="summary-card total-requests">
+      <div class="row g-3 mb-4 justify-content-center">
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+          <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+            (click)="onSummaryCardClick('All')" [class.active]="!activeSummaryFilter">
             <div class="card-icon">
               <i class="bi bi-list-ul"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">{{ filteredHologramData.length }}</h3>
+              <h3 class="card-value">{{ summaryHologramData.length }}</h3>
               <p class="card-label">Total Applications</p>
             </div>
           </div>
         </div>
-        <div class="col-md-3">
-          <div class="summary-card pending-requests">
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+          <div class="summary-card submitted-requests summary-card-clickable" role="button" tabindex="0"
+            (click)="onSummaryCardClick('Submitted')" [class.active]="activeSummaryFilter === 'Submitted'">
+            <div class="card-icon">
+              <i class="bi bi-send"></i>
+            </div>
+            <div class="card-content">
+              <h3 class="card-value">{{ getStatusCount('Submitted') }}</h3>
+              <p class="card-label">Submitted</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+          <div class="summary-card under-review-requests summary-card-clickable" role="button" tabindex="0"
+            (click)="onSummaryCardClick('Under IT Cell Review')" [class.active]="activeSummaryFilter === 'Under IT Cell Review'">
             <div class="card-icon">
               <i class="bi bi-clock-history"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">{{ getStatusCount('Under Review') }}</h3>
+              <h3 class="card-value">{{ getStatusCount('Under IT Cell Review') }}</h3>
               <p class="card-label">Under Review</p>
             </div>
           </div>
         </div>
-        <div class="col-md-3">
-          <div class="summary-card approved-requests">
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+          <div class="summary-card forwarded-requests summary-card-clickable" role="button" tabindex="0"
+            (click)="onSummaryCardClick('Forwarded to Commissioner')" [class.active]="activeSummaryFilter === 'Forwarded to Commissioner'">
             <div class="card-icon">
-              <i class="bi bi-check-circle"></i>
+              <i class="bi bi-arrow-right-circle"></i>
             </div>
             <div class="card-content">
               <h3 class="card-value">{{ getStatusCount('Forwarded to Commissioner') }}</h3>
@@ -43,14 +58,26 @@
             </div>
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+          <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+            (click)="onSummaryCardClick('Approved')" [class.active]="activeSummaryFilter === 'Approved'">
+            <div class="card-icon">
+              <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="card-content">
+              <h3 class="card-value">{{ getStatusCount('Approved') }}</h3>
+              <p class="card-label">Approved</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
           <div class="summary-card total-quantity">
             <div class="card-icon">
               <i class="bi bi-boxes"></i>
             </div>
             <div class="card-content">
               <h3 class="card-value">{{ getTotalQuantity() | number:'1.0-0' }}</h3>
-              <p class="card-label">Total Quantity (Lakh)</p>
+              <p class="card-label">Total Quantity</p>
             </div>
           </div>
         </div>
@@ -93,20 +120,15 @@
           </select>
         </div>
 
-        <!-- Status Filter -->
-        <div class="compact-filter">
-          <select class="form-select form-select-sm" [(ngModel)]="statusFilter" (change)="applyFilters()"
-            title="Filter by status">
-            @for (status of statusOptions; track status) {
-            <option [value]="status">{{ status }}</option>
-            }
-          </select>
-        </div>
-
         <!-- Company Filter -->
         <div class="compact-filter">
-          <input type="text" class="form-control form-control-sm" [(ngModel)]="companyFilter" (input)="applyFilters()"
-            placeholder="Search company..." title="Filter by company">
+          <select class="form-select form-select-sm" [(ngModel)]="companyFilter" (change)="applyFilters()"
+            title="Filter by company">
+            <option value="">All Companies</option>
+            @for (company of companyOptions; track company) {
+            <option [value]="company">{{ company }}</option>
+            }
+          </select>
         </div>
 
         <!-- Clear Button -->
@@ -215,7 +237,7 @@
             </div>
             <div class="summary-item">
               <span class="summary-label">Total Quantity:</span>
-              <span class="summary-value">{{ getTotalQuantity() | number:'1.0-0' }}</span>
+              <span class="summary-value">{{ getFilteredTotalQuantity() | number:'1.0-0' }}</span>
             </div>
           </div>
         </div>
