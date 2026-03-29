@@ -4,48 +4,64 @@
   </div>
 
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
+  <div class="row g-3 mb-4 justify-content-center">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('ALL')" [class.active]="!revalidationStatusFilter">
         <div class="card-icon">
           <i class="bi bi-list-ul"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ filteredRevalidationData.length }}</h3>
+          <h3 class="card-value">{{ summaryRevalidationData.length }}</h3>
           <p class="card-label">Total Revalidations</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card expired-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
         <div class="card-icon">
-          <i class="bi bi-exclamation-triangle"></i>
+          <i class="bi bi-check-circle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getRevalidationStatusCount('EXPIRED') }}</h3>
-          <p class="card-label">Expired</p>
+          <h3 class="card-value">{{ getRevalidationStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card live-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
         <div class="card-icon">
-          <i class="bi bi-broadcast"></i>
+          <i class="bi bi-clock"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getLiveRevalidationCount() }}</h3>
-          <p class="card-label">Live Applications</p>
+          <h3 class="card-value">{{ getRevalidationStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card total-amount">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
         <div class="card-icon">
-          <i class="bi bi-currency-rupee"></i>
+          <i class="bi bi-gear"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">₹{{ getTotalRevalidationAmount() | number:'1.2-2' }}</h3>
-          <p class="card-label">Total Amount</p>
+          <h3 class="card-value">{{ getRevalidationStatusCount('UNDER_PROCESS') }}</h3>
+          <p class="card-label">Under Process</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card action-required-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('ACTION_REQUIRED')" [class.active]="activeSummaryFilter === 'ACTION_REQUIRED'">
+        <div class="card-icon">
+          <i class="bi bi-exclamation-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRevalidationStatusCount('ACTION_REQUIRED') }}</h3>
+          <p class="card-label">Action Required</p>
         </div>
       </div>
     </div>
@@ -68,7 +84,7 @@
       <!-- Month Filter -->
       <div class="compact-filter">
         <input type="month" class="form-control form-control-sm" [(ngModel)]="revalidationMonthFilter"
-          (change)="onRevalidationMonthFilterChange()" placeholder="Month" title="Filter by month">
+          (ngModelChange)="onRevalidationMonthFilterChange()" placeholder="Month" title="Filter by month">
       </div>
 
       <!-- Year Filter -->
@@ -87,9 +103,12 @@
         <select class="form-select form-select-sm" [(ngModel)]="revalidationStatusFilter"
           (change)="onRevalidationStatusFilterChange()" title="Filter by status">
           <option value="">All Status</option>
+          <option value="ACTION_REQUIRED">Action Required</option>
+          <option value="APPROVED">Approved</option>
           <option value="EXPIRED">Expired</option>
           <option value="INVALID">Invalid</option>
           <option value="PENDING">Pending</option>
+          <option value="UNDER_PROCESS">Under Process</option>
           <option value="PROCESSING">Processing</option>
         </select>
       </div>
