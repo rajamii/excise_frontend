@@ -1355,6 +1355,8 @@ mat-card-content {
         background: white;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         overflow: hidden;
+        // Small visual separation between the white header bar and the first content card/grid
+        padding-top: 16px;
     }
 
     &.hologram-overview-wrapper {
