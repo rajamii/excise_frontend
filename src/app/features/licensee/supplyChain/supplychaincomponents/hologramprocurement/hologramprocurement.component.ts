@@ -47,6 +47,8 @@ export class HologramprocurementComponent implements OnInit {
   hologramMonthFilter: string = '';
   hologramYearFilter: string = '';
   hologramStatusFilter: string = '';
+  hologramCompanyFilter: string = '';
+  hologramCompanyOptions: string[] = [];
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
@@ -203,7 +205,21 @@ export class HologramprocurementComponent implements OnInit {
       return matchesDate && matchesMonth && matchesYear;
     });
 
-    this.filteredHologramData = this.summaryHologramData.filter(item => {
+    this.hologramCompanyOptions = Array.from(
+      new Set(
+        this.summaryHologramData
+          .map(item => String(item?.companyName || '').trim())
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    let filtered = [...this.summaryHologramData];
+
+    if (this.hologramCompanyFilter) {
+      filtered = filtered.filter(item => String(item?.companyName || '').trim() === this.hologramCompanyFilter);
+    }
+
+    this.filteredHologramData = filtered.filter(item => {
       if (!this.hologramStatusFilter) {
         return true;
       }
@@ -236,6 +252,7 @@ export class HologramprocurementComponent implements OnInit {
     this.hologramMonthFilter = '';
     this.hologramYearFilter = '';
     this.hologramStatusFilter = '';
+    this.hologramCompanyFilter = '';
     this.activeSummaryFilter = '';
     this.filteredHologramData = [...this.hologramList];
     this.summaryHologramData = [...this.hologramList];
@@ -256,6 +273,10 @@ export class HologramprocurementComponent implements OnInit {
 
   onHologramStatusFilterChange(): void {
     this.syncActiveSummaryFilter();
+    this.applyHologramFilters();
+  }
+
+  onHologramCompanyFilterChange(): void {
     this.applyHologramFilters();
   }
 

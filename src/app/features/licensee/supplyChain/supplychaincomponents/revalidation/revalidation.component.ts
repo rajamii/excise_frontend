@@ -51,7 +51,17 @@ export class RevalidationComponent implements OnInit {
   revalidationMonthFilter: string = '';
   revalidationYearFilter: string = '';
   revalidationStatusFilter: string = '';
+  revalidationCompanyFilter: string = '';
+  revalidationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
+
+  private getCompanyNameForFilter(item: TableData): string {
+    const factory = String(item?.factoryName || '').trim();
+    if (factory && factory.toLowerCase() !== 'n/a' && factory !== '-') {
+      return factory;
+    }
+    return String(item?.distilleryName || '').trim();
+  }
 
   filteredRevalidationData: TableData[] = [];
   summaryRevalidationData: TableData[] = [];
@@ -199,7 +209,22 @@ export class RevalidationComponent implements OnInit {
       return true;
     });
 
+    this.revalidationCompanyOptions = Array.from(
+      new Set(
+        this.summaryRevalidationData
+          .map(item => this.getCompanyNameForFilter(item))
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
     this.filteredRevalidationData = this.summaryRevalidationData.filter(item => {
+      if (this.revalidationCompanyFilter) {
+        const company = this.getCompanyNameForFilter(item);
+        if (company !== this.revalidationCompanyFilter) {
+          return false;
+        }
+      }
+
       if (!this.revalidationStatusFilter) {
         return true;
       }
@@ -233,6 +258,7 @@ export class RevalidationComponent implements OnInit {
     this.revalidationMonthFilter = '';
     this.revalidationYearFilter = '';
     this.revalidationStatusFilter = '';
+    this.revalidationCompanyFilter = '';
     this.activeSummaryFilter = '';
     this.summaryRevalidationData = [...this.revlidationData];
     this.filteredRevalidationData = [...this.revlidationData];
@@ -253,6 +279,10 @@ export class RevalidationComponent implements OnInit {
 
   onRevalidationStatusFilterChange(): void {
     this.syncActiveSummaryFilter();
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationCompanyFilterChange(): void {
     this.applyRevalidationFilters();
   }
 

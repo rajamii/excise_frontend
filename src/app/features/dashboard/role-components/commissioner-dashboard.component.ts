@@ -69,6 +69,40 @@ interface CommissionerData {
               </div>
             </div>
 
+            <div class="filter-bar" *ngIf="allApplications.length > 0">
+              <div class="filter-item">
+                <label class="filter-label">Date</label>
+                <input
+                  type="date"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="hologramDateFilter"
+                  (change)="applyFilters()"
+                  title="Filter by date">
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Month</label>
+                <input
+                  type="month"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="hologramMonthFilter"
+                  (change)="applyFilters()"
+                  title="Filter by month">
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Company</label>
+                <select class="form-select form-select-sm" [(ngModel)]="selectedCompany" (ngModelChange)="applyFilters()">
+                  <option value="">All Companies</option>
+                  <option *ngFor="let c of companyOptions" [value]="c">{{ c }}</option>
+                </select>
+              </div>
+              <button
+                class="btn btn-outline-danger btn-sm"
+                (click)="clearHologramFilters()"
+                *ngIf="selectedCompany || hologramMonthFilter || hologramDateFilter">
+                <i class="bi bi-x-circle me-1"></i>Clear
+              </button>
+            </div>
+
             <div class="table-responsive" *ngIf="filteredApplications.length > 0">
               <table class="table register-table">
                 <thead>
@@ -305,8 +339,41 @@ interface CommissionerData {
         (filterChange)="onDashboardFilterChange($event)">
       </app-dashboard-statistics>
 
-      <!-- Data Table - Only show when a specific type is selected -->
-      <div class="data-table-section" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length > 0">
+       <!-- Data Table - Only show when a specific type is selected -->
+        <div class="data-table-section" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length > 0">
+          <div class="filter-bar" *ngIf="filteredApplications.length > 0">
+           <div class="filter-item" *ngIf="selectedApplicationType === 'hologram'">
+             <label class="filter-label">Date</label>
+             <input
+               type="date"
+               class="form-control form-control-sm"
+               [(ngModel)]="hologramDateFilter"
+               (change)="applyFilters()"
+               title="Filter by date">
+           </div>
+           <div class="filter-item" *ngIf="selectedApplicationType === 'hologram'">
+             <label class="filter-label">Month</label>
+             <input
+               type="month"
+               class="form-control form-control-sm"
+               [(ngModel)]="hologramMonthFilter"
+               (change)="applyFilters()"
+               title="Filter by month">
+           </div>
+            <div class="filter-item">
+              <label class="filter-label">Company</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedCompany" (ngModelChange)="applyFilters()">
+                <option value="">All Companies</option>
+               <option *ngFor="let c of companyOptions" [value]="c">{{ c }}</option>
+             </select>
+           </div>
+           <button
+              class="btn btn-outline-danger btn-sm"
+              (click)="selectedApplicationType === 'hologram' ? clearHologramFilters() : clearCompanyFilter()"
+              *ngIf="selectedCompany || (selectedApplicationType === 'hologram' && (hologramMonthFilter || hologramDateFilter))">
+              <i class="bi bi-x-circle me-1"></i>Clear
+            </button>
+          </div>
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
@@ -379,6 +446,33 @@ interface CommissionerData {
   styles: [`
     .commissioner-dashboard {
       padding: 1rem;
+    }
+
+    .filter-bar {
+      display: flex;
+      align-items: end;
+      justify-content: flex-start !important;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 10px 12px;
+      width: 100%;
+      flex: 1 1 100%;
+      border: 1px solid #e5e7eb;
+      border-top: 0;
+      background: #f8fafc;
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+    }
+
+    .filter-label {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 600;
+      margin-bottom: 6px;
     }
 
     .data-table-section {
@@ -560,6 +654,12 @@ export class CommissionerDashboardComponent implements OnInit {
   allApplications: CommissionerData[] = [];
   filteredApplications: CommissionerData[] = [];
   selectedApplicationType: string = 'all';
+  selectedCompany: string = '';
+  companyOptions: string[] = [];
+  hologramMonthFilter: string = '';
+  hologramDateFilter: string = '';
+  private currentRoleId: number = 0;
+  private currentRoleName: string = '';
 
   // Pagination
   currentPage: number = 1;
@@ -577,6 +677,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('🎯 Commissioner Dashboard (role-components) initialized');
+    this.resolveCurrentUserRole();
     if (this.embeddedHologramOnly) {
       this.selectedApplicationType = 'hologram';
       this.loadHolograms();
@@ -584,6 +685,33 @@ export class CommissionerDashboardComponent implements OnInit {
       console.log('📊 Loading all applications for Commissioner review...');
       this.loadAllApplications();
     }
+  }
+
+  private resolveCurrentUserRole(): void {
+    try {
+      const storedRoleId = Number(localStorage.getItem('role_id') || 0);
+      const storedRoleName = String(localStorage.getItem('role') || '');
+      if (storedRoleId) this.currentRoleId = storedRoleId;
+      if (storedRoleName) this.currentRoleName = storedRoleName;
+    } catch {}
+
+    this.accountService.identity().subscribe(user => {
+      this.currentRoleId = Number(user?.role?.id || this.currentRoleId || 0);
+      this.currentRoleName = String(
+        (user as any)?.role?.name ||
+        (user as any)?.role?.displayName ||
+        this.currentRoleName ||
+        ''
+      );
+    });
+  }
+
+  isDeputyCommissionerUser(): boolean {
+    if (Number(this.currentRoleId || 0) === 12) return true;
+    const normalized = String(this.currentRoleName || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+    return normalized.includes('deputycommissioner');
   }
 
   loadAllApplications(): void {
@@ -782,13 +910,90 @@ export class CommissionerDashboardComponent implements OnInit {
     this.applyFilters();
   }
 
-  private applyFilters(): void {
-    if (this.selectedApplicationType === 'all') {
-      this.filteredApplications = [...this.allApplications];
-    } else {
-      this.filteredApplications = this.allApplications.filter(app => app.type === this.selectedApplicationType);
+  applyFilters(): void {
+    const base =
+      this.selectedApplicationType === 'all'
+        ? [...this.allApplications]
+        : this.allApplications.filter(app => app.type === this.selectedApplicationType);
+
+    const isHologramView = this.embeddedHologramOnly || this.selectedApplicationType === 'hologram';
+    let filteredBase = base;
+
+    if (isHologramView && this.hologramMonthFilter) {
+      filteredBase = filteredBase.filter(app => {
+        const dt = this.parseSubmissionDate(app?.submissionDate || '');
+        return dt ? this.toIsoMonth(dt) === this.hologramMonthFilter : false;
+      });
     }
+
+    if (isHologramView && this.hologramDateFilter) {
+      filteredBase = filteredBase.filter(app => {
+        const dt = this.parseSubmissionDate(app?.submissionDate || '');
+        return dt ? this.toIsoDate(dt) === this.hologramDateFilter : false;
+      });
+    }
+
+    this.companyOptions = Array.from(
+      new Set(filteredBase.map(app => String(app?.distilleryName || '').trim()).filter(v => !!v))
+    ).sort((a, b) => a.localeCompare(b));
+
+    if (this.selectedCompany && !this.companyOptions.includes(this.selectedCompany)) {
+      this.selectedCompany = '';
+    }
+
+    this.filteredApplications = this.selectedCompany
+      ? filteredBase.filter(app => String(app?.distilleryName || '').trim() === this.selectedCompany)
+      : filteredBase;
+
     this.currentPage = 1;
+  }
+
+  clearCompanyFilter(): void {
+    this.selectedCompany = '';
+    this.applyFilters();
+  }
+
+  clearHologramFilters(): void {
+    this.selectedCompany = '';
+    this.hologramMonthFilter = '';
+    this.hologramDateFilter = '';
+    this.applyFilters();
+  }
+
+  private parseSubmissionDate(value: string): Date | null {
+    const v = String(value || '').trim();
+    if (!v) return null;
+
+    const direct = new Date(v);
+    if (!Number.isNaN(direct.getTime())) return direct;
+
+    const parts = v.split('-');
+    if (parts.length === 3) {
+      const day = Number(parts[0]);
+      const mon = String(parts[1] || '').slice(0, 3).toLowerCase();
+      const year = Number(parts[2]);
+      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const monthIndex = months.indexOf(mon);
+      if (!Number.isNaN(day) && !Number.isNaN(year) && monthIndex >= 0) {
+        const dt = new Date(year, monthIndex, day);
+        if (!Number.isNaN(dt.getTime())) return dt;
+      }
+    }
+
+    return null;
+  }
+
+  private toIsoDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private toIsoMonth(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
   }
 
   private getStatusCount(status: string): number {

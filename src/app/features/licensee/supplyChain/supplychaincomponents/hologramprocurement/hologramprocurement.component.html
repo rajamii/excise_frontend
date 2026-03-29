@@ -115,9 +115,18 @@
       </select>
     </div>
 
+    <!-- Company Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="hologramCompanyFilter"
+        (change)="onHologramCompanyFilterChange()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of hologramCompanyOptions" [value]="company">{{ company }}</option>
+      </select>
+    </div>
+
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearHologramFilters()"
-      *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter"
+      *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter || hologramCompanyFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -126,13 +135,14 @@
 
   <!-- Filter Results Summary -->
   <div class="filter-results-compact mt-2"
-    *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter">
+    *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter || hologramCompanyFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredHologramData.length }}</strong> of <strong>{{ hologramList.length }}</strong> holograms
       <span *ngIf="hologramDateFilter" class="filter-tag">Date: {{ hologramDateFilter | date:'dd MMM yyyy' }}</span>
       <span *ngIf="hologramMonthFilter" class="filter-tag">Month: {{ hologramMonthFilter | date:'MMM yyyy' }}</span>
       <span *ngIf="hologramYearFilter" class="filter-tag">Year: {{ hologramYearFilter }}</span>
+      <span *ngIf="hologramCompanyFilter" class="filter-tag">Company: {{ hologramCompanyFilter }}</span>
       <span *ngIf="hologramStatusFilter" class="filter-tag">Status: {{ hologramStatusFilter }}</span>
     </small>
   </div>
