@@ -5,31 +5,34 @@
   </div>
 
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
+  <div class="row g-3 mb-4 justify-content-center">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('ALL')" [class.active]="!transitStatusFilter">
         <div class="card-icon">
           <i class="bi bi-list-ul"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ filteredTransitData.length }}</h3>
-          <p class="card-label">Total Transit Permits</p>
+          <h3 class="card-value">{{ summaryTransitData.length }}</h3>
+          <p class="card-label">Total Transits</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card urgent-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
         <div class="card-icon">
-          <i class="bi bi-exclamation-triangle"></i>
+          <i class="bi bi-check-circle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getUrgentTransitCount() }}</h3>
-          <p class="card-label">Pending Review</p>
+          <h3 class="card-value">{{ getTransitStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card pending-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
         <div class="card-icon">
           <i class="bi bi-clock"></i>
         </div>
@@ -39,14 +42,27 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card total-amount">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
         <div class="card-icon">
-          <i class="bi bi-currency-rupee"></i>
+          <i class="bi bi-x-circle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">₹{{ getTotalTransitAmount() | number:'1.2-2' }}</h3>
-          <p class="card-label">Total Amount</p>
+          <h3 class="card-value">{{ getTransitStatusCount('REJECTED') }}</h3>
+          <p class="card-label">Rejected</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+        <div class="card-icon">
+          <i class="bi bi-gear"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getTransitStatusCount('UNDER_PROCESS') }}</h3>
+          <p class="card-label">Under Process</p>
         </div>
       </div>
     </div>
@@ -74,6 +90,7 @@
         <option value="">All Status</option>
         <option value="PENDING">Pending Review</option>
         <option value="APPROVED">Approved</option>
+        <option value="UNDER_PROCESS">Under Process</option>
         <option value="ISSUED">Issued</option>
         <option value="REJECTED">Rejected</option>
         <option value="PROCESSING">Processing</option>

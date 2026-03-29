@@ -64,6 +64,7 @@ export class TransitComponent implements OnInit {
   transitDateFilter: string = '';
   transitStatusFilter: string = '';
   transitDestinationFilter: string = '';
+  activeSummaryFilter: string = '';
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15, 20, 50];
@@ -71,6 +72,7 @@ export class TransitComponent implements OnInit {
   pageSize: number = 5;
 
   filteredTransitData: TableData[] = [];
+  summaryTransitData: TableData[] = [];
 
   // Store raw backend data for brand details
   rawTransitData: any[] = [];
@@ -261,22 +263,45 @@ export class TransitComponent implements OnInit {
 
   // Filter methods
   applyTransitFilters(): void {
-    let filtered = [...this.transitData];
+    let summary = [...this.transitData];
 
     if (this.transitDateFilter) {
-      filtered = filtered.filter(item => {
+      summary = summary.filter(item => {
         const itemDate = this.parseDate(item.submissionDate);
         const filterDate = new Date(this.transitDateFilter);
         return itemDate.toDateString() === filterDate.toDateString();
       });
     }
 
-    if (this.transitStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.transitStatusFilter);
+    if (this.transitDestinationFilter) {
+      summary = summary.filter(item => item.destination === this.transitDestinationFilter);
     }
 
-    if (this.transitDestinationFilter) {
-      filtered = filtered.filter(item => item.destination === this.transitDestinationFilter);
+    this.summaryTransitData = summary;
+
+    let filtered = [...summary];
+
+    if (this.transitStatusFilter) {
+      const filter = this.normalizeStageToken(this.transitStatusFilter);
+      filtered = filtered.filter(item => {
+        if (filter === 'pending' || filter === 'underreview') {
+          return this.isPendingSummaryStatus(item);
+        }
+        if (filter === 'issued') {
+          return this.isIssuedLikeStatus(item);
+        }
+        if (filter === 'approved') {
+          return this.isApprovedLikeStatus(item);
+        }
+        if (filter === 'rejected') {
+          return this.isRejectedLikeStatus(item);
+        }
+        if (filter === 'underprocess') {
+          return this.isUnderProcessLikeStatus(item);
+        }
+        const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+        return token.includes(filter);
+      });
     }
 
     this.filteredTransitData = filtered;
@@ -287,6 +312,7 @@ export class TransitComponent implements OnInit {
     this.transitDateFilter = '';
     this.transitStatusFilter = '';
     this.transitDestinationFilter = '';
+    this.activeSummaryFilter = '';
     this.applyTransitFilters();
   }
 
@@ -295,6 +321,7 @@ export class TransitComponent implements OnInit {
   }
 
   onTransitStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyTransitFilters();
   }
 
@@ -304,19 +331,121 @@ export class TransitComponent implements OnInit {
 
   // Summary methods
   getTransitStatusCount(status: string): number {
-    return this.filteredTransitData.filter(item => item.status === status).length;
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'pending' || filter === 'underreview') {
+      return this.summaryTransitData.filter(item => this.isPendingSummaryStatus(item)).length;
+    }
+    if (filter === 'issued') {
+      return this.summaryTransitData.filter(item => this.isIssuedLikeStatus(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.summaryTransitData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    if (filter === 'rejected') {
+      return this.summaryTransitData.filter(item => this.isRejectedLikeStatus(item)).length;
+    }
+    if (filter === 'underprocess') {
+      return this.summaryTransitData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+    }
+    return this.summaryTransitData.filter(
+      item => `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`.includes(filter)
+    ).length;
   }
 
   getUrgentTransitCount(): number {
     // Since we removed priority, we can base urgency on status or other criteria
     // For now, let's count items that need immediate attention (PENDING status)
-    return this.filteredTransitData.filter(item =>
-      item.status === 'PENDING'
-    ).length;
+    return this.summaryTransitData.filter(item => this.isPendingSummaryStatus(item)).length;
   }
 
   getTotalTransitAmount(): number {
-    return this.filteredTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+    return this.summaryTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStageToken(filter);
+    const current = this.normalizeStageToken(this.transitStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.transitStatusFilter = '';
+      this.applyTransitFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.transitStatusFilter = '';
+      this.applyTransitFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.transitStatusFilter = filter;
+    this.applyTransitFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStageToken(this.transitStatusFilter);
+    if (['pending', 'approved', 'rejected', 'underprocess'].includes(normalized)) {
+      this.activeSummaryFilter = this.transitStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private isRejectedLikeStatus(item: TableData): boolean {
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    return token.includes('reject');
+  }
+
+  private isApprovedLikeStatus(item: TableData): boolean {
+    if (this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    return token.includes('approv') || token.includes('issued') || token.includes('complete');
+  }
+
+  private isIssuedLikeStatus(item: TableData): boolean {
+    if (this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    return token.includes('issued');
+  }
+
+  private isPendingSummaryStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    const isPendingLike =
+      token.includes('pending') ||
+      token.includes('review') ||
+      token.includes('submit') ||
+      token.includes('applied');
+
+    const isPaymentForwardedToOfficer =
+      token.includes('paymentsuccess') &&
+      token.includes('forward') &&
+      (token.includes('officer') || token.includes('oic'));
+
+    return isPendingLike || isPaymentForwardedToOfficer;
+  }
+
+  private isUnderProcessLikeStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    if (this.isPendingSummaryStatus(item)) {
+      return false;
+    }
+    return true;
   }
 
   // Action methods
