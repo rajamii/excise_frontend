@@ -7,31 +7,34 @@
   </div>
 
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
+  <div class="row g-3 mb-4 justify-content-center">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('ALL')" [class.active]="!cancellationStatusFilter">
         <div class="card-icon">
           <i class="bi bi-list-ul"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ filteredCancellationData.length }}</h3>
+          <h3 class="card-value">{{ summaryCancellationData.length }}</h3>
           <p class="card-label">Total Cancellations</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card urgent-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
         <div class="card-icon">
-          <i class="bi bi-exclamation-triangle"></i>
+          <i class="bi bi-check-circle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getUrgentCancellationCount() }}</h3>
-          <p class="card-label">Urgent/Critical</p>
+          <h3 class="card-value">{{ getCancellationStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card pending-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
         <div class="card-icon">
           <i class="bi bi-clock"></i>
         </div>
@@ -41,14 +44,15 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card approved-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
         <div class="card-icon">
-          <i class="bi bi-check-circle"></i>
+          <i class="bi bi-gear"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getCancellationStatusCount('APPROVED') }}</h3>
-          <p class="card-label">Approved</p>
+          <h3 class="card-value">{{ getCancellationStatusCount('UNDER_PROCESS') }}</h3>
+          <p class="card-label">Under Process</p>
         </div>
       </div>
     </div>
@@ -76,6 +80,7 @@
         <option value="">All Status</option>
         <option value="PENDING">Pending Review</option>
         <option value="APPROVED">Approved</option>
+        <option value="UNDER_PROCESS">Under Process</option>
         <option value="REJECTED">Rejected</option>
         <option value="PROCESSING">Processing</option>
       </select>
