@@ -38,8 +38,8 @@ export class CancellationComponent implements OnInit {
 
   // Filter properties for cancellation
   cancellationDateFilter: string = '';
+  cancellationMonthFilter: string = '';
   cancellationStatusFilter: string = '';
-  cancellationReasonFilter: string = '';
   activeSummaryFilter: string = '';
 
   // Pagination
@@ -364,11 +364,13 @@ export class CancellationComponent implements OnInit {
       });
     }
 
-    // Reason filter
-    if (this.cancellationReasonFilter) {
-      summary = summary.filter(item =>
-        item.cancellationReason === this.cancellationReasonFilter
-      );
+    // Month filter (Jan-Dec)
+    if (this.cancellationMonthFilter) {
+      const monthNum = parseInt(this.cancellationMonthFilter, 10);
+      summary = summary.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.getMonth() + 1 === monthNum;
+      });
     }
 
     this.summaryCancellationData = summary;
@@ -402,8 +404,8 @@ export class CancellationComponent implements OnInit {
 
   clearCancellationFilters(): void {
     this.cancellationDateFilter = '';
+    this.cancellationMonthFilter = '';
     this.cancellationStatusFilter = '';
-    this.cancellationReasonFilter = '';
     this.activeSummaryFilter = '';
     this.applyCancellationFilters();
   }
@@ -412,12 +414,12 @@ export class CancellationComponent implements OnInit {
     this.applyCancellationFilters();
   }
 
-  onCancellationStatusFilterChange(): void {
-    this.syncActiveSummaryFilter();
+  onCancellationMonthFilterChange(): void {
     this.applyCancellationFilters();
   }
 
-  onCancellationReasonFilterChange(): void {
+  onCancellationStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyCancellationFilters();
   }
 
@@ -916,17 +918,37 @@ export class CancellationComponent implements OnInit {
   }
 
   private parseDate(dateString: string): Date {
-    // Handle DD-MM-YYYY format (common in the app)
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      // Assuming DD-MM-YYYY format
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-      const year = parseInt(parts[2], 10);
+    const s = String(dateString || '').trim();
+    if (!s) return new Date(NaN);
+
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const year = parseInt(iso[1], 10);
+      const month = parseInt(iso[2], 10) - 1;
+      const day = parseInt(iso[3], 10);
       return new Date(year, month, day);
     }
-    // Fallback to standard Date parsing
-    return new Date(dateString);
+
+    // DD-MM-YYYY
+    const dmyDash = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmyDash) {
+      const day = parseInt(dmyDash[1], 10);
+      const month = parseInt(dmyDash[2], 10) - 1;
+      const year = parseInt(dmyDash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    // DD/MM/YYYY
+    const dmySlash = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (dmySlash) {
+      const day = parseInt(dmySlash[1], 10);
+      const month = parseInt(dmySlash[2], 10) - 1;
+      const year = parseInt(dmySlash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    return new Date(s);
   }
 
   // Pagination methods

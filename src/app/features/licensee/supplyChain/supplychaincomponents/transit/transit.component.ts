@@ -62,8 +62,8 @@ export class TransitComponent implements OnInit {
 
   // Filter properties for transit
   transitDateFilter: string = '';
+  transitMonthFilter: string = '';
   transitStatusFilter: string = '';
-  transitDestinationFilter: string = '';
   activeSummaryFilter: string = '';
 
   // Pagination
@@ -273,8 +273,12 @@ export class TransitComponent implements OnInit {
       });
     }
 
-    if (this.transitDestinationFilter) {
-      summary = summary.filter(item => item.destination === this.transitDestinationFilter);
+    if (this.transitMonthFilter) {
+      const monthNum = parseInt(this.transitMonthFilter, 10);
+      summary = summary.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.getMonth() + 1 === monthNum;
+      });
     }
 
     this.summaryTransitData = summary;
@@ -310,8 +314,8 @@ export class TransitComponent implements OnInit {
 
   clearTransitFilters(): void {
     this.transitDateFilter = '';
+    this.transitMonthFilter = '';
     this.transitStatusFilter = '';
-    this.transitDestinationFilter = '';
     this.activeSummaryFilter = '';
     this.applyTransitFilters();
   }
@@ -320,12 +324,12 @@ export class TransitComponent implements OnInit {
     this.applyTransitFilters();
   }
 
-  onTransitStatusFilterChange(): void {
-    this.syncActiveSummaryFilter();
+  onTransitMonthFilterChange(): void {
     this.applyTransitFilters();
   }
 
-  onTransitDestinationFilterChange(): void {
+  onTransitStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyTransitFilters();
   }
 
@@ -679,11 +683,37 @@ export class TransitComponent implements OnInit {
   }
 
   private parseDate(dateString: string): Date {
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const s = String(dateString || '').trim();
+    if (!s) return new Date(NaN);
+
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const year = parseInt(iso[1], 10);
+      const month = parseInt(iso[2], 10) - 1;
+      const day = parseInt(iso[3], 10);
+      return new Date(year, month, day);
     }
-    return new Date(dateString);
+
+    // DD-MM-YYYY
+    const dmyDash = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmyDash) {
+      const day = parseInt(dmyDash[1], 10);
+      const month = parseInt(dmyDash[2], 10) - 1;
+      const year = parseInt(dmyDash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    // DD/MM/YYYY
+    const dmySlash = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (dmySlash) {
+      const day = parseInt(dmySlash[1], 10);
+      const month = parseInt(dmySlash[2], 10) - 1;
+      const year = parseInt(dmySlash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    return new Date(s);
   }
 
   navigateTo(route: string) {
