@@ -92,13 +92,16 @@ interface BlDetailRow {
         </div>
         <div class="filters-grid">
           <label class="field-block">
-            <span class="field-label">Review Status</span>
-            <select class="field-input" [(ngModel)]="reviewStatus">
-              <option value="ALL">All</option>
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
+            <span class="field-label">Month</span>
+            <input type="month" class="field-input" [(ngModel)]="selectedMonth">
+          </label>
+          <label class="field-block">
+            <span class="field-label">From Date</span>
+            <input type="date" class="field-input" [(ngModel)]="fromDate">
+          </label>
+          <label class="field-block">
+            <span class="field-label">To Date</span>
+            <input type="date" class="field-input" [(ngModel)]="toDate">
           </label>
           <label class="field-block search-block">
             <span class="field-label">Search</span>
@@ -576,9 +579,9 @@ interface BlDetailRow {
 
     .filters-grid {
       display: grid;
-      grid-template-columns: 260px minmax(0, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 1rem;
-      margin-top: 1rem;
+      align-items: start;
     }
 
     .field-block {
@@ -1239,8 +1242,16 @@ export class OicBlDetailsComponent implements OnInit {
   searchTerm = '';
   actingId: number | null = null;
   selectedDetailsRow: BlDetailRow | null = null;
+  selectedMonth: string = '';
+  fromDate: string = '';
+  toDate: string = '';
 
   ngOnInit(): void {
+    // Set default to current running month
+    const currentDate = new Date();
+    const currentMonth = currentDate.toISOString().slice(0, 7); // YYYY-MM format
+    this.selectedMonth = currentMonth;
+    
     this.loadRows();
   }
 
