@@ -2,7 +2,7 @@
 <div *ngIf="loaded" class="unified-layout-container">
   <mat-sidenav-container class="sidenav-container">
     <!-- Clean Sidebar -->
-    <mat-sidenav #sidenav mode="side" [opened]="true" (openedChange)="onSidenavStateChange($event)"
+    <mat-sidenav #sidenav mode="side" [opened]="isSidenavOpen" (openedChange)="onSidenavStateChange($event)"
       class="clean-sidenav">
 
       <!-- Sidebar Content -->

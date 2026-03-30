@@ -167,8 +167,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private setupInitialSidebarState() {
-    // Set initial sidebar state based on user role
-    const shouldBeOpen = !this.isLicenseeUser();
+    // Keep sidebar closed by default on login
+    const shouldBeOpen = false;
     this.isSidenavOpen = shouldBeOpen;
     console.log('🔍 Setup initial sidebar state - shouldBeOpen:', shouldBeOpen, 'isLicenseeUser:', this.isLicenseeUser());
   }
@@ -276,7 +276,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   snavToggle(sidenav: any) {
     sidenav.toggle();
     // Update our state to match the actual sidenav state
-    this.isSidenavOpen = sidenav.opened;
+    this.isSidenavOpen = !this.isSidenavOpen;
     console.log('🔍 Sidebar toggled - new state:', this.isSidenavOpen);
   }
 
