@@ -87,7 +87,7 @@ interface BlDetailRow {
         <div class="filters-heading">
           <div>
             <h4>Review Filters</h4>
-            <p>Switch between live queue and reviewed entries without losing the reference history.</p>
+          <br>
           </div>
         </div>
         <div class="filters-grid">
