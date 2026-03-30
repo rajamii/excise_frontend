@@ -74,7 +74,7 @@ interface StockDeductionPreview {
     ])
   ]
 })
-export class TransitPermitComponent implements OnInit {
+export class TransitPermitComponent implements OnInit { 
   formData: FormData = {
     billNo: 'TRP/01/EXCISE',
     soleDistributor: 'M/s Karma Chopel Bhutia',
@@ -102,10 +102,11 @@ export class TransitPermitComponent implements OnInit {
   bottleTypes: { id: number; bottleType: string }[] = [];
   /* vehicleNumbers: string[] = []; */
   private brandsData: { brandName: string; sizes: number[] }[] = [];
-  private warehouseCatalogData: any[] = [];
-  private activeLicenseId: string = '';
-  private resolvedLicenseId: string = '';
-
+  private warehouseCatalogData: any[] = []; 
+  private activeLicenseId: string = ''; 
+  private resolvedLicenseId: string = ''; 
+  private activeManufacturingUnitName: string = ''; 
+ 
   // New properties for stock logic
   private brandMlConversionData: any[] = [];
   private brandWarehouseData: any[] = [];
@@ -207,76 +208,115 @@ export class TransitPermitComponent implements OnInit {
     this.loadMlConversionData();
   }
 
-  private loadEstablishmentScopedBrands(): void {
-    this.supplyChainProfileService.getProfile().subscribe({
-      next: (response: any) => {
-        const profile = response?.data as any;
-        this.activeLicenseId = String(
-          profile?.licenseeId ||
-          profile?.licensee_id ||
-          ''
-        ).trim();
-        this.resolvedLicenseId = this.toValidLicenseId(this.activeLicenseId);
-        this.loadBrandWarehouseCatalog();
-      },
-      error: () => {
-        this.activeLicenseId = '';
-        this.resolvedLicenseId = '';
-        this.loadBrandWarehouseCatalog();
-      }
-    });
-  }
+  private loadEstablishmentScopedBrands(): void { 
+    this.supplyChainProfileService.getProfile().subscribe({ 
+      next: (response: any) => { 
+        const profile = response?.data as any; 
+        this.activeLicenseId = String( 
+          profile?.licenseeId || 
+          profile?.licensee_id || 
+          '' 
+        ).trim(); 
+        this.activeManufacturingUnitName = String( 
+          profile?.manufacturingUnitName || 
+          profile?.manufacturing_unit_name || 
+          '' 
+        ).trim(); 
+        this.resolvedLicenseId = this.normalizeLicenseId(this.activeLicenseId); 
+        this.loadBrandWarehouseCatalog(); 
+      }, 
+      error: () => { 
+        this.activeLicenseId = ''; 
+        this.resolvedLicenseId = ''; 
+        this.activeManufacturingUnitName = ''; 
+        this.loadBrandWarehouseCatalog(); 
+      } 
+    }); 
+  } 
+ 
+  private normalizeLicenseId(value: string): string { 
+    return String(value || '').trim(); 
+  } 
+ 
+  private shouldSendExplicitLicenseId(value: string): boolean { 
+    const normalized = String(value || '').trim(); 
+    return ( 
+      normalized.startsWith('NA/') || 
+      normalized.startsWith('NLI/') || 
+      normalized.startsWith('LA/') 
+    ); 
+  } 
+ 
+  private resolveEffectiveLicenseIdForPayment(): string { 
+    const fromProfile = this.normalizeLicenseId(this.resolvedLicenseId || this.activeLicenseId); 
+    if (fromProfile) { 
+      return fromProfile; 
+    } 
+ 
+    const rows = Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : []; 
+    for (const row of rows) { 
+      const candidate = this.normalizeLicenseId(String(row?.licenseId || row?.license_id || '').trim()); 
+      if (candidate) { 
+        return candidate; 
+      } 
+    } 
+    return ''; 
+  } 
 
-  private toValidLicenseId(value: string): string {
-    const normalized = String(value || '').trim();
-    if (normalized.startsWith('NA/') || normalized.startsWith('NLI/')) {
-      return normalized;
-    }
-    return '';
-  }
-
-  private resolveEffectiveLicenseIdForPayment(): string {
-    const fromProfile = this.toValidLicenseId(this.resolvedLicenseId || this.activeLicenseId);
-    if (fromProfile) {
-      return fromProfile;
-    }
-
-    const rows = Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : [];
-    for (const row of rows) {
-      const candidate = this.toValidLicenseId(String(row?.licenseId || row?.license_id || '').trim());
-      if (candidate) {
-        return candidate;
-      }
-    }
-    return '';
-  }
-
-  private loadBrandWarehouseCatalog(): void {
-    this.supplyChainService.getBrandWarehouseStock(
-      undefined,
-      undefined,
-      this.resolvedLicenseId || undefined
-    ).subscribe({
-      next: (data) => {
-        this.warehouseCatalogData = data || [];
-        this.brandWarehouseData = data || [];
-        if (!this.resolvedLicenseId) {
+  private loadBrandWarehouseCatalog(): void { 
+    const licenseFilter = this.shouldSendExplicitLicenseId(this.resolvedLicenseId) 
+      ? this.resolvedLicenseId 
+      : undefined; 
+ 
+    this.supplyChainService.getBrandWarehouseStock( 
+      undefined, 
+      undefined, 
+      licenseFilter 
+    ).subscribe({ 
+      next: (data) => { 
+        this.warehouseCatalogData = data || []; 
+        this.brandWarehouseData = data || []; 
+        if (!this.resolvedLicenseId) { 
           const inferred = this.resolveEffectiveLicenseIdForPayment();
-          if (inferred) {
-            this.resolvedLicenseId = inferred;
-          }
-        }
-        this.rebuildBrandCatalogFromWarehouse();
-      },
-      error: (error) => {
-        console.error('Failed to load establishment-scoped warehouse brands', error);
-        this.warehouseCatalogData = [];
-        this.brandWarehouseData = [];
-        this.brandsData = [];
-        this.brandOptions = [];
-      }
-    });
-  }
+          if (inferred) { 
+            this.resolvedLicenseId = inferred; 
+          } 
+        } 
+        this.rebuildBrandCatalogFromWarehouse(); 
+ 
+        // Fallback: if scoped warehouse endpoint returns empty on server due to license mapping,
+        // still populate the Brand dropdown using distillery-scoped master list.
+        if (this.brandOptions.length === 0 && this.activeManufacturingUnitName) { 
+          this.supplyChainService.getLiquorBrands(this.activeManufacturingUnitName).subscribe({ 
+            next: (rows: any[]) => { 
+              const normalized = Array.isArray(rows) ? rows : []; 
+              this.brandsData = normalized 
+                .map((row: any) => ({ 
+                  brandName: String(row?.brandName || row?.brand_name || '').trim(), 
+                  sizes: Array.isArray(row?.sizes) ? row.sizes.map((s: any) => Number(s)).filter((s: any) => Number.isFinite(s) && s > 0) : [] 
+                })) 
+                .filter((row: any) => !!row.brandName && row.sizes.length > 0) 
+                .sort((a: any, b: any) => a.brandName.localeCompare(b.brandName)); 
+ 
+              this.brandOptions = this.brandsData 
+                .map((b: any) => ({ brandName: b.brandName, label: b.brandName })) 
+                .sort((a: any, b: any) => a.label.localeCompare(b.label)); 
+            }, 
+            error: () => { 
+              // keep existing empty state 
+            } 
+          }); 
+        } 
+      }, 
+      error: (error) => { 
+        console.error('Failed to load establishment-scoped warehouse brands', error); 
+        this.warehouseCatalogData = []; 
+        this.brandWarehouseData = []; 
+        this.brandsData = []; 
+        this.brandOptions = []; 
+      } 
+    }); 
+  } 
 
   private rebuildBrandCatalogFromWarehouse(): void {
     const sizesByBrand = new Map<string, Set<number>>();
@@ -413,7 +453,7 @@ export class TransitPermitComponent implements OnInit {
     // Logic if needed when depot address changes explicitly
   }
 
-  onBrandChange(): void {
+  onBrandChange(): void { 
     // Reset size when brand changes
     this.formData.size = '';
     this.formData.cases = 0;
@@ -427,17 +467,20 @@ export class TransitPermitComponent implements OnInit {
     const selectedBrandBasic = this.brandsData.find(b => b.brandName === this.formData.brand);
     console.log('selectedBrandBasic:', selectedBrandBasic);
 
-    // Fetch fresh stock for selected brand within active establishment scope.
-    this.supplyChainService
-      .getBrandWarehouseStock(
-        undefined,
-        this.formData.brand,
-        this.resolvedLicenseId || undefined
-      )
-      .subscribe({
-        next: (data) => {
-          console.log('Stock Data for Brand (raw response):', data);
-          this.brandWarehouseData = data || [];
+    // Fetch fresh stock for selected brand within active establishment scope. 
+    const licenseFilter = this.shouldSendExplicitLicenseId(this.resolvedLicenseId) 
+      ? this.resolvedLicenseId 
+      : undefined; 
+    this.supplyChainService 
+      .getBrandWarehouseStock( 
+        undefined, 
+        this.formData.brand, 
+        licenseFilter 
+      ) 
+      .subscribe({ 
+        next: (data) => { 
+          console.log('Stock Data for Brand (raw response):', data); 
+          this.brandWarehouseData = data || []; 
           this.updateStockSummary(selectedBrandBasic);
         },
         error: (error) => {

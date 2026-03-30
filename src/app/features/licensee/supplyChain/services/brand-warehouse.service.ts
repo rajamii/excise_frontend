@@ -69,23 +69,26 @@ export interface StockAdjustment {
 @Injectable({
     providedIn: 'root'
 })
-export class BrandWarehouseService {
-    private baseUrl = `${environment.apiBaseUrl}/brand-warehouse`;
-    private utilizationUrl = `${environment.apiBaseUrl}/brand-warehouse-utilization`;
+export class BrandWarehouseService { 
+    // Prefer transactional routes: many production reverse proxies only forward `/transactional/...` to Django.
+    private baseUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse`; 
+    private utilizationUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse-utilization`; 
 
-    constructor(private http: HttpClient) { }
-
-    private normalizeValidLicenseId(value?: string): string {
-        const normalized = String(value || '').trim();
-        if (
-            normalized.startsWith('NA/') ||
-            normalized.startsWith('NLI/') ||
-            normalized.startsWith('LA/')
-        ) {
-            return normalized;
-        }
-        return '';
-    }
+    constructor(private http: HttpClient) { } 
+ 
+    private normalizeValidLicenseId(value?: string): string { 
+        // Guardrail: only send `license_id` when it matches an issued/app id format.
+        // Sending numeric/plain ids can accidentally over-restrict scoped queries on the server.
+        const normalized = String(value || '').trim(); 
+        if ( 
+            normalized.startsWith('NA/') || 
+            normalized.startsWith('NLI/') || 
+            normalized.startsWith('LA/') 
+        ) { 
+            return normalized; 
+        } 
+        return ''; 
+    } 
 
     /**
      * Get brands grouped by brand name with all pack sizes

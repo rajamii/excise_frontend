@@ -237,17 +237,17 @@ export class BrandwarehouseComponent implements OnInit {
     this.supplyChainProfileService.getProfile().subscribe({
       next: (profileResponse) => {
         const profileData: any = profileResponse?.data || {};
-        this.currentLicenseId = String(
-          profileData?.licenseeId ||
-          profileData?.licensee_id ||
-          ''
-        ).trim();
-        this.resolvedLicenseId = this.toValidLicenseId(this.currentLicenseId);
-        this.currentLicenseType = String(
-          profileData?.licenseType ||
-          profileData?.license_type ||
-          ''
-        ).trim();
+        this.currentLicenseId = String( 
+          profileData?.licenseeId || 
+          profileData?.licensee_id || 
+          '' 
+        ).trim(); 
+        this.resolvedLicenseId = this.normalizeLicenseId(this.currentLicenseId); 
+        this.currentLicenseType = String( 
+          profileData?.licenseType || 
+          profileData?.license_type || 
+          '' 
+        ).trim(); 
         this.currentDistilleryName = String(
           profileData?.manufacturingUnitName ||
           profileData?.manufacturing_unit_name ||
@@ -264,16 +264,21 @@ export class BrandwarehouseComponent implements OnInit {
         this.initializeSikkimBrands();
         this.loadWarehouseData();
       }
-    });
-  }
-
-  private toValidLicenseId(value: string): string {
-    const normalized = String(value || '').trim();
-    if (normalized.startsWith('NA/') || normalized.startsWith('NLI/') || normalized.startsWith('LA/')) {
-      return normalized;
-    }
-    return '';
-  }
+    }); 
+  } 
+ 
+  private normalizeLicenseId(value: string): string { 
+    return String(value || '').trim(); 
+  } 
+ 
+  private shouldSendExplicitLicenseId(value: string): boolean { 
+    const normalized = String(value || '').trim(); 
+    return ( 
+      normalized.startsWith('NA/') || 
+      normalized.startsWith('NLI/') || 
+      normalized.startsWith('LA/') 
+    ); 
+  } 
 
   /**
    * Initialize Sikkim brands from liquor_data_details table
@@ -346,14 +351,14 @@ export class BrandwarehouseComponent implements OnInit {
   /**
    * Build API filters from component filters
    */
-  private buildApiFilters(): any {
-    const filters: any = {};
-
-    // Only pass explicit license_id when it is a real issued/app license format.
-    // Otherwise rely on backend user-scope resolution (OIC assignment/profile mapping).
-    if (this.resolvedLicenseId) {
-      filters.license_id = this.resolvedLicenseId;
-    }
+  private buildApiFilters(): any { 
+    const filters: any = {}; 
+ 
+    // Only pass explicit license_id when it is a real issued/app license format. 
+    // Otherwise rely on backend user-scope resolution (OIC assignment/profile mapping). 
+    if (this.shouldSendExplicitLicenseId(this.resolvedLicenseId)) { 
+      filters.license_id = this.resolvedLicenseId; 
+    } 
 
     if (this.filters.brandName) {
       filters.brand_name = this.filters.brandName;
