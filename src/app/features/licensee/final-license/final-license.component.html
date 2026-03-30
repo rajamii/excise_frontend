@@ -1,4 +1,12 @@
 ﻿<div class="final-license-root">
+  <div class="print-overlay no-print" *ngIf="printing()" aria-live="polite" aria-busy="true">
+    <div class="print-overlay-card">
+      <mat-progress-spinner diameter="42" mode="indeterminate"></mat-progress-spinner>
+      <div class="print-overlay-title">Preparing license for print…</div>
+      <div class="print-overlay-sub">Please wait, it may take a few seconds.</div>
+    </div>
+  </div>
+
   <div class="screen-actions no-print">
     <button mat-stroked-button color="primary" (click)="goBack()">
       <mat-icon>arrow_back</mat-icon>
@@ -23,7 +31,7 @@
     <div class="meta">
       <span class="meta-label">Type:</span> {{ requestedFor }}
     </div>
-    <button mat-flat-button color="primary" (click)="print()">
+    <button mat-flat-button color="primary" (click)="print()" [disabled]="loading() || printing()">
       <mat-icon>print</mat-icon>
       Print
     </button>

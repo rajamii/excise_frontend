@@ -49,6 +49,7 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly terms = signal<string[]>([]);
   readonly commSignOk = signal<boolean>(true);
   readonly commSignUrl = 'assets/comm_sign.jpg';
+  readonly printing = signal<boolean>(false);
 
   readonly termsFirstPage = signal<string[]>([]);
   readonly termsRemaining = signal<string[]>([]);
@@ -290,7 +291,85 @@ export class FinalLicenseComponent implements OnDestroy {
   }
 
   print(): void {
-    window.print();
+    void this.printWithLoader();
+  }
+
+  private async printWithLoader(): Promise<void> {
+    if (this.printing()) return;
+
+    this.printing.set(true);
+
+    const failSafe = window.setTimeout(() => {
+      this.printing.set(false);
+    }, 20000);
+
+    try {
+      await this.waitForNextFrame();
+      await this.waitForNextFrame();
+      await this.waitForTemplateAssets(7000);
+      await this.waitForAssets(7000);
+
+      // Hide loader once everything is ready, then trigger print.
+      this.printing.set(false);
+      await this.waitForNextFrame();
+      await this.waitForNextFrame();
+      window.print();
+    } finally {
+      window.clearTimeout(failSafe);
+    }
+  }
+
+  private waitForNextFrame(): Promise<void> {
+    return new Promise(resolve => window.requestAnimationFrame(() => resolve()));
+  }
+
+  private async waitForAssets(timeoutMs: number): Promise<void> {
+    const timeout = new Promise<void>(resolve => window.setTimeout(resolve, timeoutMs));
+
+    const fontReady = (document as any).fonts?.ready instanceof Promise ? (document as any).fonts.ready : Promise.resolve();
+
+    const images = Array.from(document.querySelectorAll('img'));
+    const imagePromises = images.map(img => {
+      const anyImg = img as any;
+      if (typeof anyImg.decode === 'function') {
+        return anyImg.decode().catch(() => undefined);
+      }
+
+      if (img.complete) return Promise.resolve();
+
+      return new Promise<void>(resolve => {
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+      });
+    });
+
+    await Promise.race([Promise.all([fontReady, ...imagePromises]).then(() => undefined), timeout]);
+  }
+
+  private async waitForTemplateAssets(timeoutMs: number): Promise<void> {
+    const startedAt = Date.now();
+
+    const isQrReady = () => {
+      const status = (this.qrStatus() || '').toLowerCase();
+      return !!this.qrCodeUrl() || status.includes('loaded') || status.includes('embedded') || status.includes('failed');
+    };
+
+    const isPhotoReady = () => {
+      const status = (this.photoStatus() || '').toLowerCase();
+      return (
+        !!this.templateData().passportPhotoUrl ||
+        status.includes('loaded') ||
+        status.includes('embedded') ||
+        status.includes('missing') ||
+        status.includes('failed')
+      );
+    };
+
+    while (Date.now() - startedAt < timeoutMs) {
+      if (!this.loading() && isQrReady() && isPhotoReady()) return;
+      await new Promise(resolve => window.setTimeout(resolve, 120));
+    }
   }
 
   ngOnDestroy(): void {
