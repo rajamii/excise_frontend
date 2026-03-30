@@ -92,6 +92,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
     { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
     { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
+    { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForOic: true },
   ];
 
   constructor(
@@ -572,6 +573,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'hologram-request-form': 'hologram-request',
       'new-license-apply': 'new-license',
       'company-registration-apply': 'company-registration',
+      'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration',
       // Officer nested page
       'hologram-overview': 'hologram-register'
@@ -853,6 +855,33 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('permitsection');
   }
 
+  private getNormalizedRoleName(): string {
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      this.user?.role?.name ||
+      this.user?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    return roleName.replace(/[^a-z0-9]/g, '');
+  }
+
+  private canAccessCompanyCollaborationWorkflow(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if ([3, 5, 10, 12].includes(roleId)) {
+      return true;
+    }
+
+    const normalizedRole = this.getNormalizedRoleName();
+    return [
+      'singlewindow',
+      'permitsection',
+      'deputycommissioner',
+      'commissioner',
+      'siteadmin'
+    ].some((token) => normalizedRole.includes(token));
+  }
+
   canAccessSection(section: string): boolean {
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
       return false;
@@ -877,6 +906,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     // Keep commissioner procurement tab visible even if DB navigation tokens are incomplete.
     if (this.isCommissionerUser() && section === 'hologram') {
+      return true;
+    }
+
+    if (section === 'company-collaboration' && this.canAccessCompanyCollaborationWorkflow()) {
       return true;
     }
 
@@ -912,6 +945,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'officer-activity': ['officer_activity', 'officer'],
       'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
       'company-registration': ['company_registration', 'company-registration', 'companyregistration'],
+      'company-collaboration': ['company_collaboration', 'company-collaboration', 'companycollaboration'],
     };
     const matcherTokens = tokenMap[sectionRouteToken] || [sectionRouteToken];
 

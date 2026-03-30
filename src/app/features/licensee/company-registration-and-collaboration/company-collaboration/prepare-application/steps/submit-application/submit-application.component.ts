@@ -157,13 +157,15 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       this.submissionMode = 'online';
       this.saveSubmission('Submitted', 'online');
 
+      // FIX: Clear session data and show the in-page success screen.
+      // Do NOT navigate away here — let the user use the action buttons below.
+      this.clearApplicationData();
+
       await Swal.fire(
         'Success',
         `Application submitted successfully. ID: ${this.applicationId}`,
         'success'
       );
-      this.clearApplicationData();
-      await this.openApplicationSummary();
     } catch (error) {
       const httpError = error as HttpErrorResponse;
       console.error('Company collaboration submit failed:', httpError);
@@ -203,13 +205,7 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
 
     formData.append('licensee_name', String(this.companyDetails.bottlerName || ''));
     formData.append('licensee_address', String(this.companyDetails.bottlerAddress || ''));
-    // contact_person not collected in Step 1 (auto-fetched from bottler profile)
-    // contact_number not collected in Step 1
-    // email_address not collected in Step 1
     formData.append('license_number', String(this.companyDetails.bottlerId || ''));
-    // license_type not collected in Step 1
-    // establishment_type not collected in Step 1
-    // business_reg_number not collected in Step 1
 
     formData.append('selected_brand_ids', JSON.stringify(selectedBrandIds));
     formData.append('selected_brands', JSON.stringify(this.selectedBrands));
@@ -292,18 +288,9 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     });
   }
 
-  async openApplicationSummary(): Promise<void> {
-    if (!this.applicationId) {
-      return;
-    }
-
-    try {
-      await this.router.navigate(['/licensee/company-collaboration/list']);
-    } catch {
-      if (typeof window !== 'undefined') {
-        window.location.href = '/licensee/company-collaboration/list';
-      }
-    }
+  // FIX: Navigate to dashboard instead of the non-existent list route.
+  openApplicationSummary(): void {
+    this.router.navigate(['/dashboard']);
   }
 
   goToDashboard(): void {

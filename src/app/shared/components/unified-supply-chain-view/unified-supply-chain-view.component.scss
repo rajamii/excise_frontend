@@ -68,6 +68,12 @@
                     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
                 }
 
+                .dept-seal {
+                    height: 60px;
+                    width: auto;
+                    filter: invert(1) brightness(0.2);
+                }
+
                 span {
                     color: #2c3e50;
                     font-weight: 700;
@@ -170,6 +176,10 @@
                                             background-color: #f8f9fa !important;
                                             color: #495057;
                                             font-weight: 600;
+                                        }
+
+                                        &.detail-label-cell {
+                                            width: 30%;
                                         }
 
                                         &.text-success {
