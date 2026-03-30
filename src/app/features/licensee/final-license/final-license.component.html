@@ -176,9 +176,11 @@
           <ol class="terms" type="I" *ngIf="termsPages()[0]?.items?.length">
             <li *ngFor="let t of termsPages()[0].items">{{ t }}</li>
           </ol>
-      </div>
+        </div>
 
-      <footer class="footer">
+      <div class="page-number" *ngIf="termsPages().length > 1">Page No: 2</div>
+
+      <footer class="footer" *ngIf="termsPages().length === 1">
         <div class="left">
           <div class="date-row">
             <div class="label">Date :</div>
@@ -207,7 +209,9 @@
         </ol>
       </div>
 
-      <footer class="footer">
+      <div class="page-number" *ngIf="i !== (termsPages().length - 2)">Page No: {{ i + 3 }}</div>
+
+      <footer class="footer" *ngIf="i === (termsPages().length - 2)">
         <div class="left">
           <div class="date-row">
             <div class="label">Date :</div>
