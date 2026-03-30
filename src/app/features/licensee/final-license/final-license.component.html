@@ -88,7 +88,7 @@
       <header class="header">
         <div class="header-left"></div>
         <div class="header-center">
-          <div class="emblem" aria-label="Government emblem placeholder"></div>
+          <img class="emblem-img" src="assets/emblem_2.jpg" alt="Emblem" />
           <div class="dept">EXCISE DEPARTMENT</div>
           <div class="govt">Government of Sikkim</div>
           <div class="title">{{ licenseTitle() }}</div>
@@ -128,14 +128,7 @@
         </div>
         <div class="right">
           <div class="sign-frame" aria-label="Commissioner signature">
-            <img
-              *ngIf="commSignOk()"
-              class="sign-img"
-              [src]="commSignUrl"
-              alt=""
-              aria-hidden="true"
-              (error)="onCommSignError()"
-            />
+            <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
           </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
@@ -152,7 +145,7 @@
       <header class="header compact">
         <div class="header-left"></div>
         <div class="header-center">
-          <div class="emblem small" aria-label="Government emblem placeholder"></div>
+          <img class="emblem-img small" src="assets/emblem_2.jpg" alt="Emblem" />
           <div class="dept">EXCISE DEPARTMENT</div>
           <div class="govt">Government of Sikkim</div>
           <div class="title">{{ licenseTitle() }}</div>
@@ -194,14 +187,7 @@
         </div>
         <div class="right">
           <div class="sign-frame" aria-label="Commissioner signature">
-            <img
-              *ngIf="commSignOk()"
-              class="sign-img"
-              [src]="commSignUrl"
-              alt=""
-              aria-hidden="true"
-              (error)="onCommSignError()"
-            />
+            <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
           </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
@@ -229,14 +215,7 @@
         </div>
         <div class="right">
           <div class="sign-frame" aria-label="Commissioner signature">
-            <img
-              *ngIf="commSignOk()"
-              class="sign-img"
-              [src]="commSignUrl"
-              alt=""
-              aria-hidden="true"
-              (error)="onCommSignError()"
-            />
+            <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
           </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
