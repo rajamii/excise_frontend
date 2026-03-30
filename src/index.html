@@ -10,6 +10,105 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
+  <style>
+    #app-preloader {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.96);
+      font-family: Roboto, Arial, sans-serif;
+    }
+
+    #app-preloader .card {
+      width: min(380px, calc(100vw - 48px));
+      border-radius: 14px;
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 12px 30px rgba(2, 6, 23, 0.14);
+      background: #ffffff;
+    }
+
+    #app-preloader .bottle-wrap {
+      perspective: 700px;
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    #app-preloader .bottle-glow {
+      position: absolute;
+      inset: -10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 50% 50%, rgba(255, 204, 0, 0.22), rgba(28, 43, 120, 0.02) 65%, transparent 72%);
+      filter: blur(2px);
+    }
+
+    #app-preloader .bottle {
+      width: 48px;
+      height: 48px;
+      transform-style: preserve-3d;
+      animation: bottleSpin 1.2s linear infinite;
+      filter: drop-shadow(0 6px 10px rgba(2, 6, 23, 0.18));
+    }
+
+    #app-preloader .title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1c2b78;
+    }
+
+    #app-preloader .sub {
+      font-size: 12px;
+      color: rgba(2, 6, 23, 0.72);
+    }
+
+    @keyframes bottleSpin {
+      0% { transform: rotateY(0deg) rotateZ(-6deg); }
+      50% { transform: rotateY(180deg) rotateZ(6deg); }
+      100% { transform: rotateY(360deg) rotateZ(-6deg); }
+    }
+  </style>
+
+  <div id="app-preloader" aria-live="polite" aria-busy="true">
+    <div class="card">
+      <div class="bottle-wrap" aria-hidden="true">
+        <div class="bottle-glow"></div>
+        <svg class="bottle" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bottleFill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#1c2b78" stop-opacity="0.92"/>
+              <stop offset="0.55" stop-color="#1c2b78" stop-opacity="0.55"/>
+              <stop offset="1" stop-color="#0b122b" stop-opacity="0.75"/>
+            </linearGradient>
+            <linearGradient id="bottleShine" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/>
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- bottle body -->
+          <path d="M26 6c0-2 1.6-4 6-4s6 2 6 4v6c0 1.3.7 2.5 1.8 3.2l3.2 2.1c2.1 1.4 3.4 3.7 3.4 6.2v25.6c0 6.4-5.2 11.6-11.6 11.6H28.2C21.8 62 16.6 56.8 16.6 50.4V24.8c0-2.5 1.3-4.8 3.4-6.2l3.2-2.1C24.3 14.5 25 13.3 25 12V6z" fill="url(#bottleFill)"/>
+          <!-- label -->
+          <rect x="20" y="31" width="24" height="12" rx="4" fill="#ffcc00" fill-opacity="0.92"/>
+          <rect x="22.5" y="33.2" width="19" height="7.6" rx="3" fill="#ffffff" fill-opacity="0.28"/>
+          <!-- cap -->
+          <rect x="26" y="2.8" width="12" height="5.2" rx="2.2" fill="#0b122b" fill-opacity="0.85"/>
+          <!-- shine -->
+          <path d="M27 10c0-2 1.2-3.5 5-3.5 2.7 0 4.2.7 4.7 2.2.3 1-1.4 1.2-2.4.9-.8-.2-1.4-.3-2.3-.3-3.1 0-3.7 1.3-3.7 2.6v34.4c0 3.2 1 6.5 3.8 9.1.7.7-.1 1.8-1 .9-3.7-3.5-4.1-7.9-4.1-10V10z" fill="url(#bottleShine)"/>
+        </svg>
+      </div>
+      <div class="title">Loading...</div>
+      <div class="sub">Please wait</div>
+    </div>
+  </div>
+
   <app-root></app-root>
 </body>
 </html>

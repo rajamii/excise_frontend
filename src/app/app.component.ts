@@ -1,5 +1,13 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { Router, NavigationEnd, RouterOutlet, ActivatedRoute } from '@angular/router';
+import {
+  Router,
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  RouterOutlet,
+  ActivatedRoute
+} from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { HeaderComponent } from './layouts/header/header.component';
 import { FooterComponent } from './layouts/footer/footer.component';
@@ -7,12 +15,15 @@ import { CarouselComponent } from "./layouts/landing/carousel/carousel.component
 import { AccountService } from './core/services/account.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { Subject, filter, takeUntil } from 'rxjs';
+import { MaterialModule } from './shared/material.module';
+import { UiLoadingService } from './core/services/ui-loading.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     RouterOutlet,
+    MaterialModule,
     HeaderComponent,
     FooterComponent,
     CarouselComponent
@@ -32,12 +43,22 @@ export class AppComponent implements OnInit, OnDestroy {
   private accountService = inject(AccountService);
   private inactivityService = inject(InactivityService);
   private dialog = inject(MatDialog);
+  readonly loading = inject(UiLoadingService);
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       this.updateLayoutVisibility();
     });
+
+    this.router.events
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(event => {
+        if (event instanceof NavigationStart) this.loading.setRouteLoading(true);
+        if (event instanceof NavigationEnd) this.loading.setRouteLoading(false);
+        if (event instanceof NavigationCancel) this.loading.setRouteLoading(false);
+        if (event instanceof NavigationError) this.loading.setRouteLoading(false);
+      });
 
   }
 

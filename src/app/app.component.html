@@ -1,3 +1,37 @@
+@if (loading.topBarVisible()) {
+  <mat-progress-bar class="top-loader" mode="indeterminate"></mat-progress-bar>
+}
+
+@if (loading.overlayVisible()) {
+  <div class="page-loader-overlay" aria-live="polite" aria-busy="true">
+    <div class="page-loader-card">
+      <div class="bottle-wrap" aria-hidden="true">
+        <div class="bottle-glow"></div>
+        <svg class="bottle" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bottleFillApp" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#1c2b78" stop-opacity="0.92"/>
+              <stop offset="0.55" stop-color="#1c2b78" stop-opacity="0.55"/>
+              <stop offset="1" stop-color="#0b122b" stop-opacity="0.75"/>
+            </linearGradient>
+            <linearGradient id="bottleShineApp" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/>
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M26 6c0-2 1.6-4 6-4s6 2 6 4v6c0 1.3.7 2.5 1.8 3.2l3.2 2.1c2.1 1.4 3.4 3.7 3.4 6.2v25.6c0 6.4-5.2 11.6-11.6 11.6H28.2C21.8 62 16.6 56.8 16.6 50.4V24.8c0-2.5 1.3-4.8 3.4-6.2l3.2-2.1C24.3 14.5 25 13.3 25 12V6z" fill="url(#bottleFillApp)"/>
+          <rect x="20" y="31" width="24" height="12" rx="4" fill="#ffcc00" fill-opacity="0.92"/>
+          <rect x="22.5" y="33.2" width="19" height="7.6" rx="3" fill="#ffffff" fill-opacity="0.28"/>
+          <rect x="26" y="2.8" width="12" height="5.2" rx="2.2" fill="#0b122b" fill-opacity="0.85"/>
+          <path d="M27 10c0-2 1.2-3.5 5-3.5 2.7 0 4.2.7 4.7 2.2.3 1-1.4 1.2-2.4.9-.8-.2-1.4-.3-2.3-.3-3.1 0-3.7 1.3-3.7 2.6v34.4c0 3.2 1 6.5 3.8 9.1.7.7-.1 1.8-1 .9-3.7-3.5-4.1-7.9-4.1-10V10z" fill="url(#bottleShineApp)"/>
+        </svg>
+      </div>
+      <div class="page-loader-title">Loading…</div>
+      <div class="page-loader-sub">Please wait</div>
+    </div>
+  </div>
+}
+
 <div class="content-wrapper">
   <app-header></app-header>
 
