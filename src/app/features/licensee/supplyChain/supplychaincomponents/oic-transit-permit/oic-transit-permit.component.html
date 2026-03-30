@@ -8,57 +8,8 @@
       <mat-icon class="header-icon">description</mat-icon>
       <div class="header-text">
         <h2>Transit Permit Applications - Officer In-Charge</h2>
-        <p><strong>Purpose:</strong> Review and manage transit permit applications submitted by distilleries. Approve or
-          reject applications based on verification and compliance requirements.</p>
       </div>
     </div>
-  </div>
-
-  <!-- Filter Section -->
-  <div class="filter-section">
-    <form [formGroup]="filterForm" class="filter-form">
-      <div class="filter-row">
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Reference Number</mat-label>
-          <input matInput placeholder="Search by reference number" formControlName="referenceNumber">
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Status</mat-label>
-          <mat-select formControlName="status">
-            <mat-option value="All Status">All Status</mat-option>
-            <mat-option value="PENDING">Pending</mat-option>
-            <mat-option value="APPROVED">Approved</mat-option>
-            <mat-option value="REJECTED">Rejected</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>From Date</mat-label>
-          <input matInput [matDatepicker]="fromPicker" placeholder="dd-mm-yyyy" formControlName="fromDate">
-          <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
-          <mat-datepicker #fromPicker></mat-datepicker>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>To Date</mat-label>
-          <input matInput [matDatepicker]="toPicker" placeholder="dd-mm-yyyy" formControlName="toDate">
-          <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
-          <mat-datepicker #toPicker></mat-datepicker>
-        </mat-form-field>
-
-        <div class="filter-actions">
-          <button mat-raised-button color="primary" class="clear-btn" (click)="onClear()">
-            <mat-icon>clear</mat-icon>
-            Clear
-          </button>
-          <button mat-raised-button color="accent" class="export-btn" (click)="onExport()">
-            <mat-icon>file_download</mat-icon>
-            Export
-          </button>
-        </div>
-      </div>
-    </form>
   </div>
 
   <!-- Statistics Cards -->
@@ -116,6 +67,43 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <form [formGroup]="filterForm" class="filter-form">
+      <div class="filter-row">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Reference Number</mat-label>
+          <input matInput placeholder="Search by reference number" formControlName="referenceNumber">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>From Date</mat-label>
+          <input matInput [matDatepicker]="fromPicker" placeholder="dd-mm-yyyy" formControlName="fromDate">
+          <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>To Date</mat-label>
+          <input matInput [matDatepicker]="toPicker" placeholder="dd-mm-yyyy" formControlName="toDate">
+          <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+
+        <div class="filter-actions">
+          <button mat-raised-button color="primary" class="clear-btn" (click)="onClear()">
+            <mat-icon>clear</mat-icon>
+            Clear
+          </button>
+          <button mat-raised-button color="accent" class="export-btn" (click)="onExport()">
+            <mat-icon>file_download</mat-icon>
+            Export
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 
   <!-- Dashboard Info -->
