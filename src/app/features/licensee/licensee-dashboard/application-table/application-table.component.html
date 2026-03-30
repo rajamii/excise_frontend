@@ -100,20 +100,6 @@
           <mat-icon>timeline</mat-icon>
         </button>
         
-        <!-- ✅ Print Button - Show ONLY for approved applications -->
-        @if (tableType === 'approved') {
-          <button 
-            mat-icon-button 
-            color="accent"
-            (click)="onPrint(element); $event.stopPropagation()"
-            [disabled]="!element"
-            matTooltip="Print License"
-            class="print-btn"
-            style="color: #4caf50 !important;">
-            <mat-icon>print</mat-icon>
-          </button>
-        }
-        
       </mat-cell>
     </ng-container>
     

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatDialogRef } from '@angular/material/dialog';
@@ -10,7 +10,9 @@ import { CommonModule } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { ViewApplicationComponent } from '../licensee-dashboard/application-table/view-application/view-application.component';
 import { PrintApplicationComponent } from '../licensee-dashboard/application-table/print-application/print-application.component';
-import { Router } from '@angular/router';
+import { NavigationStart, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -20,10 +22,11 @@ import Swal from 'sweetalert2';
   templateUrl: './my-licenses.component.html',
   styleUrl: './my-licenses.component.scss'
 })
-export class MyLicensesComponent implements OnInit {
+export class MyLicensesComponent implements OnInit, OnDestroy {
   dataSource = new MatTableDataSource<UnifiedApplication>();
   displayedColumns: string[] = ['slNo', 'applicationId', 'type', 'establishmentName', 'approvalDate', 'actions'];
   isLoading = false;
+  private routerSub?: Subscription;
 
   constructor(
     public dialogRef: MatDialogRef<MyLicensesComponent>,
@@ -35,7 +38,19 @@ export class MyLicensesComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    // Auto-close this dialog when navigating to final license screen
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationStart)
+    ).subscribe((event: any) => {
+      const url = String(event?.url || '');
+      if (url.startsWith('/licensee/final-license')) this.closeDialog();
+    });
+
     this.loadMyLicenses();
+  }
+
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe();
   }
 
   loadMyLicenses(): void {
@@ -111,7 +126,10 @@ export class MyLicensesComponent implements OnInit {
     }
     this.unifiedDashboardService.getApplicationDetail(appId, appType).subscribe({
       next: (fullApp: UnifiedApplication) => {
-        this.dialog.open(PrintApplicationComponent, { width: '450px', data: { application: fullApp, tableType: 'approved' } });
+        this.dialog.open(PrintApplicationComponent, {
+          width: '450px',
+          data: { application: fullApp, tableType: 'approved', returnUrl: this.router.url }
+        });
       },
       error: (err: any) => {
         console.error('Error fetching application details:', err);

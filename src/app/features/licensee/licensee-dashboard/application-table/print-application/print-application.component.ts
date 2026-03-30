@@ -3,6 +3,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -19,25 +20,78 @@ export class PrintApplicationComponent {
     public dialogRef: MatDialogRef<PrintApplicationComponent>,
     private licenseApplicationService: LicenseApplicationService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
+    private router: Router,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.application = data.application;
   }
 
-  getApplicationId(): string {
-    return this.application?.application_id ||
+  private get raw(): any {
+    return this.application?.raw || {};
+  }
+
+  private isNumericId(value: unknown): boolean {
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value !== 'string') return false;
+    return /^\d+$/.test(value.trim());
+  }
+
+  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | '' {
+    const id = String(applicationId || '').trim().toUpperCase();
+    if (!id) return '';
+    if (id.startsWith('NLI/')) return 'new-license';
+    if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('NA/')) return 'new-license';
+    if (id.startsWith('LA/')) return 'license-renewal';
+    return '';
+  }
+
+  private getPrintApiId(): string {
+    const candidates = [
+      this.application?.id,
+      this.raw?.id,
+      this.raw?.pk,
+      this.raw?.application_pk,
+      this.raw?.applicationIdPk
+    ];
+
+    for (const c of candidates) {
+      if (this.isNumericId(c)) return String(c);
+    }
+
+    // Fallback to "application_id" style values if backend uses lookup_field.
+    return this.getFinalLicenseId();
+  }
+
+  private getFinalLicenseId(): string {
+    return (
+      this.application?.application_id ||
       this.application?.applicationId ||
-      this.application?.id || '';
+      this.raw?.application_id ||
+      this.raw?.applicationId ||
+      ''
+    );
+  }
+
+  // Kept for template compatibility (used in print-application.component.html)
+  getApplicationId(): string {
+    return this.getFinalLicenseId() || this.getPrintApiId();
   }
 
   getApplicationType(): string {
-    return this.application?.type || 'license-renewal';
+    return this.application?.type || this.raw?.type || 'license-renewal';
   }
 
   getPrintCount(): number {
-    return this.application?.print_count ??
+    const value =
+      this.application?.print_count ??
       this.application?.printCount ??
+      this.raw?.print_count ??
+      this.raw?.printCount ??
       0;
+
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
   }
 
   canPrint(): boolean {
@@ -45,10 +99,31 @@ export class PrintApplicationComponent {
   }
 
   onPrint(): void {
-    const appId = this.getApplicationId();
+    const printApiId = this.getPrintApiId();
+    const finalLicenseId = this.getFinalLicenseId();
     const appType = this.getApplicationType();
 
-    if (!appId) {
+    // For license applications, open Final License screen dynamically (as requested).
+    // This avoids backend "No LicenseApplication matches" errors from the print endpoint.
+    if ((appType || '').toLowerCase() === 'new-license' || (appType || '').toLowerCase() === 'license-renewal') {
+      if (!finalLicenseId) {
+        Swal.fire('Error', 'Application ID not found', 'error');
+        return;
+      }
+
+      const inferredType = this.inferApiTypeFromId(finalLicenseId);
+      this.dialogRef.close(true);
+      void this.router.navigate(['/licensee/final-license'], {
+        queryParams: {
+          applicationId: finalLicenseId,
+          type: inferredType || appType,
+          returnUrl: this.data?.returnUrl || '',
+        }
+      });
+      return;
+    }
+
+    if (!printApiId) {
       console.error('No application ID found');
       Swal.fire('Error', 'Application ID not found', 'error');
       return;
@@ -60,33 +135,30 @@ export class PrintApplicationComponent {
     switch (appType) {
       case 'salesman-barman':
         
-        printObservable = this.salesmanBarmanService.printRegistration(appId);
+        printObservable = this.salesmanBarmanService.printRegistration(printApiId);
         break;
 
       case 'new-license':
         
-        printObservable = this.licenseApplicationService.printNewLicense(appId);
+        printObservable = this.licenseApplicationService.printNewLicense(printApiId);
         break;
 
       case 'license-renewal':
       default:
         
-        printObservable = this.licenseApplicationService.printLicense(appId);
+        printObservable = this.licenseApplicationService.printLicense(printApiId);
         break;
     }
 
     printObservable.subscribe({
       next: (res: any) => {
-       // Update print count
-        if (res.print_count !== undefined) {
-          this.application.print_count = res.print_count;
-        } else if (res.printCount !== undefined) {
-          this.application.print_count = res.printCount;
+        const updatedCount = res?.print_count ?? res?.printCount;
+        if (updatedCount !== undefined) {
+          this.application.print_count = updatedCount;
+          if (this.raw) this.raw.print_count = updatedCount;
         }
 
-        // Trigger browser print dialog
-        this.triggerPrint();
-
+        this.dialogRef.close(true);
         Swal.fire('Printed', 'License printed successfully.', 'success');
       },
       error: (err: any) => {
@@ -102,153 +174,5 @@ export class PrintApplicationComponent {
 
   onPay(): void {
     Swal.fire('Payment', 'Payment feature coming soon', 'info');
-  }
-
-  private getPrintStyles(): string {
-    return `
-      @page {
-        size: A4;
-        margin: 20mm;
-      }
-      
-      body {
-        font-family: 'Times New Roman', Times, serif;
-        margin: 0;
-        padding: 20px;
-      }
-      
-      .license-header {
-        text-align: center;
-        margin-bottom: 30px;
-      }
-      
-      .license-header img {
-        width: 100px;
-        margin-bottom: 10px;
-      }
-      
-      .license-header h3 {
-        margin: 5px 0;
-        font-size: 18px;
-      }
-      
-      .license-header p {
-        margin: 5px 0;
-      }
-      
-      .license-header .act {
-        font-style: italic;
-        font-size: 12px;
-      }
-      
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-      
-      table .key {
-        width: 35%;
-        font-weight: 700;
-        padding: 8px;
-        vertical-align: top;
-      }
-      
-      table .colon {
-        width: 5%;
-        text-align: center;
-        padding: 8px;
-        vertical-align: top;
-      }
-      
-      table .value {
-        width: 60%;
-        padding: 8px;
-        vertical-align: top;
-      }
-      
-      .license-details-container {
-        margin-bottom: 20px;
-      }
-      
-      .license-restrictions {
-        margin-bottom: 20px;
-      }
-      
-      .license-restrictions h4 {
-        margin-bottom: 10px;
-        font-size: 14px;
-      }
-      
-      .license-restrictions table {
-        width: 100%;
-        border: 1px solid #000;
-      }
-      
-      .license-restrictions th,
-      .license-restrictions td {
-        border: 1px solid #000;
-        text-align: left;
-        padding: 8px;
-      }
-      
-      .license-restrictions th {
-        background-color: #f0f0f0;
-        font-weight: bold;
-      }
-      
-      .terms {
-        margin-top: 20px;
-      }
-      
-      .terms p {
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-      
-      .terms ol {
-        margin: 0;
-        padding-left: 30px;
-      }
-      
-      .terms ol li {
-        margin-bottom: 10px;
-        line-height: 1.6;
-      }
-    `;
-  }
-
-  triggerPrint(): void {
-    const printContents = document.getElementById('licenseToPrint')?.innerHTML;
-    const printStyles = this.getPrintStyles();
-    const appId = this.getApplicationId();
-
-    if (!printContents) {
-      console.error('Print content not found');
-      Swal.fire('Error', 'Print template not found', 'error');
-      return;
-    }
-
-    const popupWin = window.open('', '_blank', 'width=800,height=600');
-
-    if (!popupWin) {
-      Swal.fire('Error', 'Please allow pop-ups for printing', 'error');
-      return;
-    }
-
-    popupWin.document.open();
-    popupWin.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>License - ${appId}</title>
-          <style>${printStyles}</style>
-        </head>
-        <body onload="window.print(); window.close();">
-          ${printContents}
-        </body>
-      </html>
-    `);
-    popupWin.document.close();
   }
 }

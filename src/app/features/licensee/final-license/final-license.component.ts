@@ -89,11 +89,37 @@ export class FinalLicenseComponent implements OnDestroy {
       const rawAppId = String(params.get('applicationId') || '').trim();
       const normalizedAppId = rawAppId.replace(/^\s*val\s*[:\-]?\s*/i, '').trim();
       this.queryAppId.set(normalizedAppId);
-      this.queryAppType.set(params.get('type') || '');
+
+      const incomingType = String(params.get('type') || '').trim();
+      const inferredType = this.inferApiTypeFromId(normalizedAppId);
+      // If the URL has a mismatched type (common when passing NLI/.. with license-renewal),
+      // prefer the inferred type so we hit the correct final-license endpoint.
+      if (inferredType && incomingType && incomingType.toLowerCase() !== inferredType) {
+        this.queryAppType.set(inferredType);
+      } else if (inferredType && !incomingType) {
+        this.queryAppType.set(inferredType);
+      } else {
+        this.queryAppType.set(incomingType);
+      }
       this.returnUrl.set(params.get('returnUrl') || '');
 
       this.loadFinalLicense();
     });
+  }
+
+  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | '' {
+    const id = String(applicationId || '').trim().toUpperCase();
+    if (!id) return '';
+
+    // Application-id prefixes
+    if (id.startsWith('NLI/')) return 'new-license';
+    if (id.startsWith('LIC/')) return 'license-renewal';
+
+    // License-id prefixes (sometimes used by mistake in the query param)
+    if (id.startsWith('NA/')) return 'new-license';
+    if (id.startsWith('LA/')) return 'license-renewal';
+
+    return '';
   }
 
   get requestedFor(): string {
