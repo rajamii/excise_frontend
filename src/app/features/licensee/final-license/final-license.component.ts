@@ -24,6 +24,11 @@ type FinalLicenseTemplateData = {
   generatedOn: string;
 };
 
+type TermsPage = {
+  start: number;
+  items: string[];
+};
+
 @Component({
   selector: 'app-final-license',
   standalone: true,
@@ -47,17 +52,16 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly validatedViaCode = signal<boolean>(false);
   readonly validationPdfUrl = signal<string>('');
   readonly terms = signal<string[]>([]);
+  readonly termsPages = signal<TermsPage[]>([{ start: 1, items: [] }]);
   readonly commSignOk = signal<boolean>(true);
   readonly commSignUrl = 'assets/comm_sign.jpg';
   readonly printing = signal<boolean>(false);
-
-  readonly termsFirstPage = signal<string[]>([]);
-  readonly termsRemaining = signal<string[]>([]);
 
   private readonly resolvedApiType = signal<'new-license' | 'license-renewal' | ''>('');
 
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
+  private termsPaginating = false;
 
   readonly templateData = signal<FinalLicenseTemplateData>({
     licenseNumber: '',
@@ -116,8 +120,7 @@ export class FinalLicenseComponent implements OnDestroy {
     this.validatedViaCode.set(false);
     this.validationPdfUrl.set('');
     this.terms.set([]);
-    this.termsFirstPage.set([]);
-    this.termsRemaining.set([]);
+    this.termsPages.set([{ start: 1, items: [] }]);
 
     const appType = (this.queryAppType() || '').toLowerCase();
     const newReq$ = this.licenseAppService.getNewFinalLicenseData(applicationId);
@@ -152,8 +155,8 @@ export class FinalLicenseComponent implements OnDestroy {
           .map((t: any) => String(t || '').trim())
           .filter((t: string) => !!t);
         this.terms.set(normalizedTerms);
-        this.termsFirstPage.set(normalizedTerms.slice(0, 11));
-        this.termsRemaining.set(normalizedTerms.slice(11));
+        this.termsPages.set([{ start: 1, items: normalizedTerms }]);
+        void this.paginateTermsToPages();
 
         this.templateData.update(current => ({
           ...current,
@@ -200,8 +203,7 @@ export class FinalLicenseComponent implements OnDestroy {
         this.validatedViaCode.set(false);
         this.validationPdfUrl.set('');
         this.terms.set([]);
-        this.termsFirstPage.set([]);
-        this.termsRemaining.set([]);
+        this.termsPages.set([{ start: 1, items: [] }]);
         this.loading.set(false);
       }
     });
@@ -298,14 +300,25 @@ export class FinalLicenseComponent implements OnDestroy {
     if (this.printing()) return;
 
     this.printing.set(true);
+    document.body.classList.add('print-prep');
+
+    const cleanup = () => {
+      document.body.classList.remove('print-prep');
+      window.removeEventListener('afterprint', cleanup);
+      void this.paginateTermsToPages();
+    };
+
+    window.addEventListener('afterprint', cleanup);
 
     const failSafe = window.setTimeout(() => {
       this.printing.set(false);
+      cleanup();
     }, 20000);
 
     try {
       await this.waitForNextFrame();
       await this.waitForNextFrame();
+      await this.paginateTermsToPages();
       await this.waitForTemplateAssets(7000);
       await this.waitForAssets(7000);
 
@@ -317,6 +330,67 @@ export class FinalLicenseComponent implements OnDestroy {
     } finally {
       window.clearTimeout(failSafe);
     }
+  }
+
+  private async paginateTermsToPages(): Promise<void> {
+    if (this.termsPaginating) return;
+    this.termsPaginating = true;
+
+    try {
+      // Let Angular paint the terms once before we start measuring.
+      await this.waitForNextFrame();
+      await this.waitForNextFrame();
+
+      let pages = this.normalizeTermsPages(this.termsPages());
+
+      for (let guard = 0; guard < 800; guard++) {
+        await this.waitForNextFrame();
+
+        const pageEls = Array.from(document.querySelectorAll<HTMLElement>('section.page.terms-page'));
+        if (!pageEls.length) break;
+
+        let moved = false;
+
+        for (let i = 0; i < pageEls.length; i++) {
+          const el = pageEls[i];
+          if (!pages[i]) pages[i] = { start: 1, items: [] };
+
+          // Move terms to the next page until the current page fits.
+          while (el.scrollHeight > el.clientHeight + 1 && pages[i].items.length > 0) {
+            if (!pages[i + 1]) pages[i + 1] = { start: 1, items: [] };
+            const last = pages[i].items.pop();
+            if (!last) break;
+            pages[i + 1].items.unshift(last);
+            pages = this.normalizeTermsPages(pages);
+            this.termsPages.set(pages);
+            moved = true;
+            await this.waitForNextFrame();
+          }
+
+          // If even with zero terms it overflows, there's nothing we can paginate here.
+          if (el.scrollHeight > el.clientHeight + 1 && pages[i].items.length === 0) {
+            break;
+          }
+        }
+
+        if (!moved) break;
+      }
+    } finally {
+      this.termsPaginating = false;
+    }
+  }
+
+  private normalizeTermsPages(pages: TermsPage[]): TermsPage[] {
+    const cleaned = pages.map(p => ({ start: 1, items: Array.isArray(p.items) ? [...p.items] : [] }));
+    // Keep at least one page so the UI stays stable.
+    const nonEmpty = cleaned.some(p => p.items.length) ? cleaned.filter(p => p.items.length) : [{ start: 1, items: [] }];
+
+    let start = 1;
+    return nonEmpty.map(p => {
+      const out = { start, items: p.items };
+      start += p.items.length;
+      return out;
+    });
   }
 
   private waitForNextFrame(): Promise<void> {

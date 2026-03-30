@@ -131,8 +131,13 @@
 
       <footer class="footer">
         <div class="left">
-          <div class="label">Date :</div>
-          <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          <div class="date-row">
+            <div class="label">Date :</div>
+            <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          </div>
+          <div class="validation-edge" *ngIf="validationPdfUrl()">
+            <span class="validation-text">{{ validationPdfUrl() }}</span>
+          </div>
         </div>
         <div class="right">
           <div class="sign-frame" aria-label="Commissioner signature">
@@ -141,13 +146,10 @@
           <div class="signatory">Commissioner of Excise, Excise Department</div>
         </div>
       </footer>
-      <div class="validation-edge" *ngIf="validationPdfUrl()">
-        <span class="validation-text">{{ validationPdfUrl() }}</span>
-      </div>
     </section>
 
     <!-- Page 2 -->
-    <section class="page">
+    <section class="page terms-page">
       <img class="watermark" src="assets/icons/fav-icon.png" alt="" aria-hidden="true" />
 
       <header class="header compact">
@@ -171,67 +173,58 @@
         <div class="content">
           <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
           <div class="section-title" *ngIf="terms().length">The aforesaid License has been granted as per the following terms and conditions:</div>
-          <ol class="terms" type="I" *ngIf="termsFirstPage().length">
-            <li *ngFor="let t of termsFirstPage()">{{ t }}</li>
+          <ol class="terms" type="I" *ngIf="termsPages()[0]?.items?.length">
+            <li *ngFor="let t of termsPages()[0].items">{{ t }}</li>
           </ol>
-
-        <div class="premises-box">
-          <div class="premises-title">The licensed premises shall not be:</div>
-          <div class="premises-lines">
-            <div>Name of the licensee: ___________________________</div>
-            <div>License No.: _________________________________</div>
-            <div>Location: ___________________________________</div>
-            <div>Time and Hours of sale: 7am - 10pm (summer)</div>
-            <div class="indent">7am to 9pm (winter)</div>
-            <div>Year: 20____</div>
-          </div>
-        </div>
       </div>
 
       <footer class="footer">
         <div class="left">
-          <div class="label">Date :</div>
-          <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          <div class="date-row">
+            <div class="label">Date :</div>
+            <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          </div>
+          <div class="validation-edge" *ngIf="validationPdfUrl()">
+            <span class="validation-text">{{ validationPdfUrl() }}</span>
+          </div>
         </div>
         <div class="right">
           <div class="sign-frame" aria-label="Commissioner signature">
             <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
           </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
+          <div class="page-number">Page No: 2</div>
         </div>
       </footer>
-      <div class="validation-edge" *ngIf="validationPdfUrl()">
-        <span class="validation-text">{{ validationPdfUrl() }}</span>
-      </div>
-      <div class="page-number">Page No: 2</div>
     </section>
 
-    <!-- Page 3 (template placeholder for remaining terms) -->
-    <section class="page" *ngIf="termsRemaining().length">
+    <section class="page terms-page" *ngFor="let p of termsPages().slice(1); let i = index">
       <img class="watermark" src="assets/icons/fav-icon.png" alt="" aria-hidden="true" />
 
       <div class="content">
-        <ol class="terms continued" type="I" [attr.start]="termsFirstPage().length + 1">
-          <li *ngFor="let t of termsRemaining()">{{ t }}</li>
+        <ol class="terms continued" type="I" [attr.start]="p.start">
+          <li *ngFor="let t of p.items">{{ t }}</li>
         </ol>
       </div>
 
       <footer class="footer">
         <div class="left">
-          <div class="label">Date :</div>
-          <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          <div class="date-row">
+            <div class="label">Date :</div>
+            <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          </div>
+          <div class="validation-edge" *ngIf="validationPdfUrl()">
+            <span class="validation-text">{{ validationPdfUrl() }}</span>
+          </div>
         </div>
         <div class="right">
           <div class="sign-frame" aria-label="Commissioner signature">
             <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
           </div>
           <div class="signatory">Commissioner of Excise, Excise Department</div>
+          <div class="page-number">Page No: {{ i + 3 }}</div>
         </div>
       </footer>
-      <div class="validation-edge" *ngIf="validationPdfUrl()">
-        <span class="validation-text">{{ validationPdfUrl() }}</span>
-      </div>
-      <div class="page-number">Page No: 3</div>
     </section>
   </div>
 </div>
