@@ -91,14 +91,16 @@
         }
         
         <!-- Movement Timeline Button -->
-        <button 
-          mat-icon-button 
-          color="primary" 
-          (click)="viewMovement(element)" 
-          [disabled]="!element"
-          matTooltip="View Timeline">
-          <mat-icon>timeline</mat-icon>
-        </button>
+        @if (shouldShowTimelineButton()) {
+          <button 
+            mat-icon-button 
+            color="primary" 
+            (click)="viewMovement(element)" 
+            [disabled]="!element"
+            matTooltip="View Timeline">
+            <mat-icon>timeline</mat-icon>
+          </button>
+        }
         
       </mat-cell>
     </ng-container>
