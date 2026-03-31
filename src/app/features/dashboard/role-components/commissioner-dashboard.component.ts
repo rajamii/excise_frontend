@@ -61,8 +61,7 @@ interface CommissionerData {
           <div class="register-container">
              <div class="register-header-bar">
                <h5 class="register-table-title">
-                 <i class="bi bi-table me-2"></i>
-                 Hologram Procurement Applications
+                 <i class="bi bi-table" aria-hidden="true"></i>
                </h5>
                <div class="register-info">
                  <span class="entries-count">{{ filteredApplications.length }} Applications</span>
@@ -643,22 +642,27 @@ interface CommissionerData {
     }
 
     .register-header-bar {
-      background: linear-gradient(135deg, #1f2937 0%, #334155 100%);
-      color: #fff;
+      background: #fff;
+      color: #111827;
       padding: 14px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      border-bottom: 1px solid #e5e7eb;
     }
 
     .register-table-title {
       margin: 0;
       font-weight: 700;
       font-size: 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .entries-count {
-      background: rgba(255, 255, 255, 0.2);
+      background: #111827;
+      color: #fff;
       border-radius: 999px;
       padding: 6px 14px;
       font-weight: 600;
@@ -670,6 +674,13 @@ interface CommissionerData {
       vertical-align: middle;
       font-size: 0.95rem;
       border-color: #dbe2ea;
+    }
+
+    /* Dark header background for all columns */
+    .register-table thead th {
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
     }
 
     .qty-value.total {
