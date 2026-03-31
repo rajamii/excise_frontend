@@ -59,15 +59,6 @@ interface CommissionerData {
       <ng-container *ngIf="embeddedHologramOnly; else fullDashboard">
         <div class="hologram-register-table">
           <div class="register-container">
-             <div class="register-header-bar">
-               <h5 class="register-table-title">
-                 <i class="bi bi-table" aria-hidden="true"></i>
-               </h5>
-               <div class="register-info">
-                 <span class="entries-count">{{ filteredApplications.length }} Applications</span>
-               </div>
-             </div>
-
              <div class="holo-stat-cards" *ngIf="embeddedHologramOnly">
                <div
                  class="holo-stat-card total"
@@ -159,6 +150,10 @@ interface CommissionerData {
                 *ngIf="selectedCompany || hologramMonthFilter || hologramDateFilter || hologramStatusSummary !== 'ALL'">
                 <i class="bi bi-x-circle me-1"></i>Clear
               </button>
+
+              <span class="entries-count entries-count--inline">
+                {{ filteredApplications.length }} Applications
+              </span>
             </div>
 
             <div class="table-responsive" *ngIf="filteredApplications.length > 0">
@@ -628,6 +623,13 @@ interface CommissionerData {
       color: #64748b;
       font-weight: 600;
       margin-bottom: 6px;
+    }
+
+    .entries-count--inline {
+      margin-left: auto;
+      align-self: center;
+      flex: 0 0 auto;
+      white-space: nowrap;
     }
 
     .data-table-section {
