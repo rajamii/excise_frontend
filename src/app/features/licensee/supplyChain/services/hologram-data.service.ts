@@ -320,7 +320,16 @@ export class HologramDataService {
     // Add distillery filter to only get Sikkim Distilleries Ltd brands
     const params = new HttpParams().set('distillery', 'Sikkim Distilleries Ltd');
     
-    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/brands/`, { params })
+    const mastersUrl = `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`;
+    const shortUrl = `${environment.apiBaseUrl}/brands/`;
+
+    // Prefer masters route first because some servers proxy only `/masters/...` to Django.
+    return this.http.get<LiquorBrandsResponse>(mastersUrl, { params }).pipe(
+      catchError((error) => {
+        console.error('Error fetching liquor brands (masters route):', error);
+        return this.http.get<LiquorBrandsResponse>(shortUrl, { params });
+      })
+    )
       .pipe(
         map(response => {
           if (response.success && response.data) {
