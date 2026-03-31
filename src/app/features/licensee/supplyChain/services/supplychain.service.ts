@@ -93,20 +93,22 @@ export class SupplyChainService {
     const parse = (response: any) => response?.data || response?.results || response || []; 
  
     // Some deployments expose this endpoint via short route `/brands/`, others only via masters route.
-    const mastersUrl = `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`;
-    const shortUrl = `${environment.apiBaseUrl}/brands/`;
-
-    // Prefer masters route first because some servers proxy only `/masters/...` to Django.
-    return this.http
-      .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>(mastersUrl, { params })
-      .pipe(
-        map(parse),
-        catchError(() =>
-          this.http
-            .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>(shortUrl, { params })
-            .pipe(map(parse))
-        )
-      );
+    return this.http 
+      .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>( 
+        `${environment.apiBaseUrl}/brands/`, 
+        { params } 
+      ) 
+      .pipe( 
+        map(parse), 
+        catchError(() => 
+          this.http 
+            .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>( 
+              `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`, 
+              { params } 
+            ) 
+            .pipe(map(parse)) 
+        ) 
+      ); 
   } 
 
   public getLiquorRates(
@@ -115,35 +117,31 @@ export class SupplyChainService {
   ): Observable<LiquorRates> {
     const rawSize = String(size || '').trim();
     const packSizeMl = rawSize.replace(/[^0-9]/g, '');
-    const params = {
-      brand_name: brandName,
-      pack_size_ml: packSizeMl,
-    };
-
-    const parse = (response: { success: boolean; data: LiquorRates }) => {
-      if (!response?.success || !response?.data) {
-        throw new Error('Failed to fetch liquor rates');
-      }
-      return response.data;
-    };
-
-    const mastersUrl = `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/rates/`;
-    const shortUrl = `${environment.apiBaseUrl}/rates/`;
-
-    // Prefer masters route first because some servers proxy only `/masters/...` to Django.
-    return this.http.get<{ success: boolean; data: LiquorRates }>(mastersUrl, { params }).pipe(
-      map(parse),
-      catchError((error) => {
-        console.error('Error fetching liquor rates (masters route):', error);
-        return this.http.get<{ success: boolean; data: LiquorRates }>(shortUrl, { params }).pipe(
-          map(parse),
-          catchError((error2) => {
-            console.error('Error fetching liquor rates (short route):', error2);
-            return throwError(() => error2);
-          })
-        );
-      })
-    );
+    return this.http
+      .get<{
+        success: boolean;
+        data: LiquorRates;
+      }>(
+        `${environment.apiBaseUrl}/rates/`,
+        {
+          params: {
+            brand_name: brandName,
+            pack_size_ml: packSizeMl,
+          },
+        }
+      )
+      .pipe(
+        map((response) => {
+          if (!response.success || !response.data) {
+            throw new Error('Failed to fetch liquor rates');
+          }
+          return response.data;
+        }),
+        catchError((error) => {
+          console.error('Error fetching liquor rates:', error);
+          return throwError(() => error);
+        })
+      );
   }
   getBottleTypes(): Observable<any[]> {
     return this.http
