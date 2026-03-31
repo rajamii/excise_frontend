@@ -634,20 +634,11 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     }
     
     if (entry.status === 'COMPLETED') {
-      if (entry.completedOnTime === false) {
-        const saved = this.getEntrySavedTime(entry);
-        return entry.completionTime
-          ? `Completed Late (saved at ${entry.completionTime})`
-          : saved
-            ? `Completed Late (saved at ${saved})`
-          : 'Completed Late';
-      }
       const saved = this.getEntrySavedTime(entry);
-      return entry.completionTime
-        ? `Completed On Time (saved at ${entry.completionTime})`
-        : saved
-          ? `Completed On Time (saved at ${saved})`
-        : 'Completed';
+      if (entry.completedOnTime === false) {
+        return saved ? `Completed Late (saved at ${saved})` : 'Completed Late';
+      }
+      return saved ? `Completed On Time (saved at ${saved})` : 'Completed';
     }
 
     const deadline = this.getEntryDeadlineAt5Pm(entry);
@@ -892,13 +883,8 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   }
 
   getEntrySavedTime(entry: DailyRegisterEntry): string | null {
-    const direct = String((entry as any)?.completionTime ?? '').trim();
-    if (direct) {
-      return direct;
-    }
-
-    const brands = Array.isArray((entry as any)?.brandsEntered) ? (entry as any).brandsEntered : [];
     const dates: Date[] = [];
+    const brands = Array.isArray((entry as any)?.brandsEntered) ? (entry as any).brandsEntered : [];
     for (const b of brands) {
       const raw = String(b?.savedAt ?? '').trim();
       if (!raw) continue;
@@ -907,8 +893,42 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
         dates.push(dt);
       }
     }
-    if (dates.length === 0) return null;
-    const latest = dates.sort((a, b) => b.getTime() - a.getTime())[0];
-    return latest.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+    const completionTimeRaw = String((entry as any)?.completionTime ?? '').trim();
+    const completionHms = this.extractHms(completionTimeRaw);
+    const completionDateParts =
+      this.extractYmdFromAny((entry as any)?.completionDate) ||
+      this.extractYmdFromAny(entry.approvalDate) ||
+      this.extractYmdFromAny(entry.submissionDate) ||
+      this.extractYmdFromAny((entry as any)?.usageDate);
+
+    if (completionHms && completionDateParts) {
+      // Backend often stores time as UTC. Convert to local time for display.
+      const { year, month, day } = completionDateParts;
+      dates.push(new Date(Date.UTC(year, month - 1, day, completionHms.hour, completionHms.minute, completionHms.second, 0)));
+    }
+
+    if (dates.length === 0) {
+      // Last resort: show raw string if we can't parse anything.
+      return completionTimeRaw || null;
+    }
+
+    const latest = dates.reduce((max, d) => (d.getTime() > max.getTime() ? d : max), dates[0]);
+    return latest.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  }
+
+  private extractHms(value: any): { hour: number; minute: number; second: number } | null {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+    const match = raw.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) return null;
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    const second = Number(match[3] ?? 0);
+    if (Number.isNaN(hour) || Number.isNaN(minute) || Number.isNaN(second)) return null;
+    if (hour < 0 || hour > 23) return null;
+    if (minute < 0 || minute > 59) return null;
+    if (second < 0 || second > 59) return null;
+    return { hour, minute, second };
   }
 }
