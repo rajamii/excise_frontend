@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { HologramService, DailyRegisterEntry, DailyRegisterSummary } from '../../../../core/services/hologram.service';
 import { environment } from '../../../../../environments/environment';
+import { Subject, interval } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 interface FilterOptions {
   referenceNumber: string;
@@ -13,19 +15,23 @@ interface FilterOptions {
   dateTo: string;
   onlyOverdue: boolean;
   distillery: string;
+  completion: '' | 'onTime' | 'late';
 }
 
 @Component({
   selector: 'app-dailyhologramrecordregister',
+  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './dailyhologramrecordregister.component.html',
   styleUrl: './dailyhologramrecordregister.component.scss'
 })
-export class DailyhologramrecordregisterComponent implements OnInit {
+export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   Math = Math;
+  private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly authUsersApiBase = `${environment.apiBaseUrl}/auth/users`;
   private readonly hologramApiBase = `${environment.apiBaseUrl}/transactional/supply_chain/hologram`;
+  now = new Date();
   
   dailyRegisterEntries: DailyRegisterEntry[] = [];
   filteredEntries: DailyRegisterEntry[] = [];
@@ -46,8 +52,11 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     dateFrom: '',
     dateTo: '',
     onlyOverdue: false,
-    distillery: ''
+    distillery: '',
+    completion: ''
   };
+
+  activeSummaryFilter: 'all' | 'applied' | 'underProcess' | 'onTime' | 'late' | 'overdue' = 'all';
 
   // List of distilleries/breweries - will be populated from backend
   distilleries: string[] = [];
@@ -80,22 +89,44 @@ export class DailyhologramrecordregisterComponent implements OnInit {
 
   ngOnInit() {
     this.loadDropdownSources();
-    this.loadDailyRegisterEntries();
-    
-    // Auto-refresh every 30 seconds
-    setInterval(() => {
-      this.loadDailyRegisterEntries();
-    }, 30000);
-
-    // Re-check deadline locally (crossing the configured cutoff)
-    setInterval(() => {
-      this.updateApprovalDeadlineBreaches();
-    }, 60000);
+    this.loadDailyRegisterEntries(true);
+    this.startAutoRefresh();
+    this.startClock();
+    this.startDeadlineBreachCheck();
   }
 
-  loadDailyRegisterEntries() {
-    this.isLoading = true;
-    this.errorMessage = '';
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private startAutoRefresh(): void {
+    // Poll for fresh entries so commissioner sees OIC updates quickly.
+    interval(10_000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadDailyRegisterEntries(false));
+  }
+
+  private startClock(): void {
+    // Drive "Time Remaining" countdown without hitting the backend.
+    interval(5_000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.now = new Date();
+      });
+  }
+
+  private startDeadlineBreachCheck(): void {
+    interval(60_000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.updateApprovalDeadlineBreaches(this.now));
+  }
+
+  loadDailyRegisterEntries(showLoader: boolean = false) {
+    if (showLoader) {
+      this.isLoading = true;
+      this.errorMessage = '';
+    }
     
     this.hologramService.getDailyRegisterOverview().subscribe({
       next: (response) => {
@@ -105,13 +136,17 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         this.updateDistilleryOptions(response.entries);
         
         this.applyFilters();
-        this.updateApprovalDeadlineBreaches();
-        this.isLoading = false;
+        this.updateApprovalDeadlineBreaches(this.now);
+        if (showLoader) {
+          this.isLoading = false;
+        }
       },
       error: (error) => {
         console.error('Error loading daily register:', error);
-        this.errorMessage = 'Failed to load daily register data. Please try again.';
-        this.isLoading = false;
+        if (showLoader) {
+          this.errorMessage = 'Failed to load daily register data. Please try again.';
+          this.isLoading = false;
+        }
       }
     });
   }
@@ -380,12 +415,68 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       const matchesDistillery = !this.filters.distillery || 
         entry.distilleryName === this.filters.distillery;
 
+      const matchesCompletion =
+        !this.filters.completion ||
+        (this.filters.completion === 'onTime' && entry.status === 'COMPLETED' && entry.completedOnTime === true) ||
+        (this.filters.completion === 'late' && entry.status === 'COMPLETED' && entry.completedOnTime === false);
+
       return matchesReference && matchesStatus && matchesType && 
-             matchesDateFrom && matchesDateTo && matchesOverdue && matchesDistillery;
+             matchesDateFrom && matchesDateTo && matchesOverdue && matchesDistillery && matchesCompletion;
     });
 
     this.currentPage = 1;
     this.updatePagination();
+  }
+
+  setSummaryFilter(filter: 'all' | 'applied' | 'underProcess' | 'onTime' | 'late' | 'overdue'): void {
+    this.activeSummaryFilter = filter;
+
+    if (filter === 'all') {
+      this.filters.status = '';
+      this.filters.onlyOverdue = false;
+      this.filters.completion = '';
+      this.applyFilters();
+      return;
+    }
+
+    if (filter === 'applied') {
+      this.filters.status = 'APPLIED';
+      this.filters.onlyOverdue = false;
+      this.filters.completion = '';
+      this.applyFilters();
+      return;
+    }
+
+    if (filter === 'underProcess') {
+      this.filters.status = 'UNDER_PROCESS';
+      this.filters.onlyOverdue = false;
+      this.filters.completion = '';
+      this.applyFilters();
+      return;
+    }
+
+    if (filter === 'onTime') {
+      this.filters.status = 'COMPLETED';
+      this.filters.onlyOverdue = false;
+      this.filters.completion = 'onTime';
+      this.applyFilters();
+      return;
+    }
+
+    if (filter === 'late') {
+      this.filters.status = 'COMPLETED';
+      this.filters.onlyOverdue = false;
+      this.filters.completion = 'late';
+      this.applyFilters();
+      return;
+    }
+
+    if (filter === 'overdue') {
+      this.filters.status = '';
+      this.filters.onlyOverdue = true;
+      this.filters.completion = '';
+      this.applyFilters();
+    }
   }
 
   clearFilters() {
@@ -396,8 +487,10 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       dateFrom: '',
       dateTo: '',
       onlyOverdue: false,
-      distillery: ''
+      distillery: '',
+      completion: ''
     };
+    this.activeSummaryFilter = 'all';
     this.applyFilters();
   }
 
@@ -511,7 +604,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
 
   refreshData() {
     this.loadDropdownSources();
-    this.loadDailyRegisterEntries();
+    this.loadDailyRegisterEntries(true);
   }
 
   isSlaBreached(entry: DailyRegisterEntry): boolean {
@@ -551,17 +644,29 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     }
     
     if (entry.status === 'COMPLETED') {
-      if (entry.timeRemaining) {
-        return entry.timeRemaining;
-      }
       if (entry.completedOnTime === false) {
+        const saved = this.getEntrySavedTime(entry);
         return entry.completionTime
-          ? `Completed Late (saved ${entry.completionTime})`
+          ? `Completed Late (saved at ${entry.completionTime})`
+          : saved
+            ? `Completed Late (saved at ${saved})`
           : 'Completed Late';
       }
+      const saved = this.getEntrySavedTime(entry);
       return entry.completionTime
-        ? `Completed On Time (saved ${entry.completionTime})`
+        ? `Completed On Time (saved at ${entry.completionTime})`
+        : saved
+          ? `Completed On Time (saved at ${saved})`
         : 'Completed';
+    }
+
+    const deadlineIso = String((entry as any)?.deadline || '').trim();
+    const deadline = deadlineIso ? new Date(deadlineIso) : null;
+    if (deadline && !Number.isNaN(deadline.getTime())) {
+      const diffMs = deadline.getTime() - this.now.getTime();
+      const absMs = Math.abs(diffMs);
+      const label = this.formatDuration(absMs);
+      return diffMs >= 0 ? `${label} remaining` : `Overdue by ${label}`;
     }
 
     return entry.timeRemaining || 'No deadline set';
@@ -579,24 +684,40 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       return 'text-success';
     }
 
-    if (entry.status === 'UNDER_PROCESS' && this.isApprovalUpdateOverdue(entry, new Date())) {
-      return 'text-danger fw-bold';
-    }
+    const deadlineIso = String((entry as any)?.deadline || '').trim();
+    const deadline = deadlineIso ? new Date(deadlineIso) : null;
+    if (deadline && !Number.isNaN(deadline.getTime())) {
+      const diffMs = deadline.getTime() - this.now.getTime();
+      const hours = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60));
 
-    if (entry.isOverdue) {
-      return 'text-danger fw-bold';
-    }
-
-    if (entry.timeRemaining) {
-      const hours = parseInt(entry.timeRemaining.split('h')[0]);
+      if (diffMs < 0) {
+        return 'text-danger fw-bold';
+      }
       if (hours < 2) {
         return 'text-danger';
-      } else if (hours < 4) {
+      }
+      if (hours < 4) {
         return 'text-warning';
       }
+      return 'text-success';
     }
     
     return 'text-success';
+  }
+
+  private formatDuration(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    }
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   }
 
   // Helper methods for brands summary
@@ -640,5 +761,79 @@ export class DailyhologramrecordregisterComponent implements OnInit {
 
   getBrandSavedAt(brand: any): string {
     return String(brand?.savedAt || '');
+  }
+
+  getBrandRollsCount(brand: any): number {
+    const rollKeys = new Set<string>();
+    const rollsAssigned = Array.isArray(brand?.rollsAssigned) ? brand.rollsAssigned : [];
+
+    for (const roll of rollsAssigned) {
+      const key =
+        String(roll?.rollId ?? '').trim() ||
+        String(roll?.rollNumber ?? '').trim() ||
+        String(roll?.cartoonNumber ?? '').trim();
+      if (key) {
+        rollKeys.add(key);
+      } else if (roll?.fromSerial && roll?.toSerial) {
+        // Roll without explicit identifier but has a serial range
+        rollKeys.add(`${String(roll.fromSerial)}-${String(roll.toSerial)}`);
+      }
+    }
+
+    if (rollKeys.size > 0) {
+      return rollKeys.size;
+    }
+
+    const serialRanges = Array.isArray(brand?.serialRanges) ? brand.serialRanges : [];
+    for (const r of serialRanges) {
+      const key = String(r?.rollNumber ?? '').trim();
+      if (key) {
+        rollKeys.add(key);
+      }
+    }
+    if (rollKeys.size > 0) {
+      return rollKeys.size;
+    }
+
+    const rollRange = String(brand?.rollRange ?? '').trim();
+    return rollRange ? 1 : 0;
+  }
+
+  getBrandSerialRangesCount(brand: any): number {
+    const serialRanges = Array.isArray(brand?.serialRanges) ? brand.serialRanges : [];
+    const explicitRanges = serialRanges.filter((r: any) => !!String(r?.from ?? '').trim() && !!String(r?.to ?? '').trim()).length;
+    if (explicitRanges > 0) {
+      return explicitRanges;
+    }
+
+    const rollsAssigned = Array.isArray(brand?.rollsAssigned) ? brand.rollsAssigned : [];
+    const rollRanges = rollsAssigned.filter((r: any) => !!String(r?.fromSerial ?? '').trim() && !!String(r?.toSerial ?? '').trim()).length;
+    if (rollRanges > 0) {
+      return rollRanges;
+    }
+
+    const rollRange = String(brand?.rollRange ?? '').trim();
+    return rollRange ? 1 : 0;
+  }
+
+  getEntrySavedTime(entry: DailyRegisterEntry): string | null {
+    const direct = String((entry as any)?.completionTime ?? '').trim();
+    if (direct) {
+      return direct;
+    }
+
+    const brands = Array.isArray((entry as any)?.brandsEntered) ? (entry as any).brandsEntered : [];
+    const dates: Date[] = [];
+    for (const b of brands) {
+      const raw = String(b?.savedAt ?? '').trim();
+      if (!raw) continue;
+      const dt = new Date(raw);
+      if (!Number.isNaN(dt.getTime())) {
+        dates.push(dt);
+      }
+    }
+    if (dates.length === 0) return null;
+    const latest = dates.sort((a, b) => b.getTime() - a.getTime())[0];
+    return latest.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   }
 }
