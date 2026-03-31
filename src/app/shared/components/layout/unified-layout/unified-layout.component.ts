@@ -854,7 +854,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   canAccessSection(section: string): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      return false;
+    }
+
+    // Joint Commissioner should NOT access New Hologram Procurement.
+    if (roleId === 9 && section === 'hologram') {
       return false;
     }
 
@@ -876,7 +883,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     // Keep commissioner procurement tab visible even if DB navigation tokens are incomplete.
-    if (this.isCommissionerUser() && section === 'hologram') {
+    if (roleId === 10 && section === 'hologram') {
       return true;
     }
 

@@ -31,8 +31,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
-  // ✅ FIXED: Added 'company-registration' option
-  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' | 'company-registration' = 'new-license';
   isLoading = false;
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -97,15 +95,12 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Always default to New License on dashboard load.
-    this.selectedApplicationType = 'new-license';
     this.loadDashboardData();
 
     this.routerSubscription = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
       if (event.url.includes('/dashboard')) {
-        this.selectedApplicationType = 'new-license';
         this.activeTable = 'default';
         this.loadDashboardData();
       }
@@ -116,11 +111,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
-  }
-
-  onApplicationTypeChange(): void {
-    this.activeTable = 'default';
-    this.loadDashboardData();
   }
 
   loadDashboardData(): void {
@@ -141,16 +131,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             approved: this.deduplicateApplications(result.applications.approved || []),
             rejected: this.deduplicateApplications(result.applications.rejected || [])
           };
-
-          if (this.selectedApplicationType !== 'all') {
-            filteredApplications = {
-              applied: filteredApplications.applied.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              pending: filteredApplications.pending.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              awaitingPayment: filteredApplications.awaitingPayment.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              approved: filteredApplications.approved.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              rejected: filteredApplications.rejected.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType)
-            };
-          }
 
           // ✅ MOVE APPROVED LICENSES WITH ACTIVE RENEWALS TO APPLIED
           const renewedLicenseIds = this.getRenewedLicenseIds(

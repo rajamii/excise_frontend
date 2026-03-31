@@ -10,7 +10,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
@@ -136,7 +136,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
-  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' = 'new-license';
   selectedMetricsPeriod: 'today' | 'week' | 'month' | 'quarter' = 'week';
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -159,6 +158,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   customStats: any[] = [];
   quickActions: any[] = [];
 
+  now = new Date();
+  greetingText = 'Welcome';
+  userDisplayName = 'User';
+  userRoleDisplayName = 'User';
+
   constructor(
     private roleService: RoleService,
     private dashboardConfigService: DashboardConfigService,
@@ -171,6 +175,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
+    this.startWelcomeClock();
+    this.bindCurrentUser();
     this.handleQueryParams();
     this.initializeDashboard();
     this.initializeProfessionalFeatures();
@@ -197,16 +203,79 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private startWelcomeClock(): void {
+    this.refreshWelcomeText();
+    interval(60_000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.now = new Date();
+        this.refreshWelcomeText();
+      });
+  }
+
+  private bindCurrentUser(): void {
+    this.roleService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        if (user) {
+          this.currentUser = user;
+          this.refreshWelcomeText();
+        }
+      });
+  }
+
+  private refreshWelcomeText(): void {
+    const hour = this.now.getHours();
+    if (hour < 12) this.greetingText = 'Good morning';
+    else if (hour < 17) this.greetingText = 'Good afternoon';
+    else if (hour < 21) this.greetingText = 'Good evening';
+    else this.greetingText = 'Welcome';
+
+    const name = (this.currentUser?.fullName || '').trim() || (this.currentUser?.username || '').trim();
+    this.userDisplayName = name || 'User';
+
+    let roleFromUser =
+      (this.currentUser?.role?.displayName || '').trim() ||
+      (this.currentUser?.role?.name || '').trim();
+
+    // If RoleService fallback labels are present, prefer backend/localStorage role name for dynamic roles.
+    if (/^Role ID:\s*\d+$/i.test(roleFromUser) || /^Role\s+\d+$/i.test(roleFromUser)) {
+      const backendRoleName =
+        String((this.accountService.getCurrentUser() as any)?.role?.name || '').trim() ||
+        String(localStorage.getItem('role') || '').trim();
+      if (backendRoleName) {
+        roleFromUser = this.humanizeRoleName(backendRoleName);
+      }
+    } else if (roleFromUser) {
+      roleFromUser = this.humanizeRoleName(roleFromUser);
+    }
+
+    if (roleFromUser) {
+      this.userRoleDisplayName = roleFromUser;
+    } else if (this.currentUser?.roleId) {
+      this.userRoleDisplayName = this.roleService.getRoleName(this.currentUser.roleId);
+    } else {
+      this.userRoleDisplayName = 'User';
+    }
+  }
+
+  private humanizeRoleName(value: string): string {
+    const cleaned = String(value || '').trim();
+    if (!cleaned) return '';
+
+    return cleaned
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .split(' ')
+      .map(w => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w))
+      .join(' ');
+  }
+
   // Handle query parameters for supply chain section navigation
   private handleQueryParams(): void {
     const initialSection = this.route.snapshot.queryParamMap.get('section');
     this.selectedSupplyChainSection = initialSection || null;
     this.enforceSectionAccess();
-    // When opening /dashboard directly, ensure stats load with New License as default filter.
-    if (!this.selectedSupplyChainSection && this.currentUser?.roleId === 2) {
-      this.selectedApplicationType = 'new-license';
-      this.activeTable = 'approved';
-    }
 
     // Subscribe to query parameter changes
     this.route.queryParams
@@ -218,9 +287,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         // Navigating back to /dashboard (clearing section) should always reload stats.
         if (!this.selectedSupplyChainSection) {
-          if (this.currentUser?.roleId === 2) {
-            this.selectedApplicationType = 'new-license';
-          }
           this.activeTable = 'approved';
           this.loadDashboardData();
         }
@@ -230,6 +296,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private initializeDashboard() {
     // Get current user from role service
     this.currentUser = this.roleService.getCurrentUser();
+    this.refreshWelcomeText();
 
     // If no current user in role service, try to get from account service
     if (!this.currentUser) {
@@ -239,6 +306,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const mappedUser = this.mapAccountUserToUnifiedUser(accountUser);
           this.roleService.setCurrentUser(mappedUser);
           this.currentUser = mappedUser;
+          this.refreshWelcomeText();
           this.proceedWithDashboardLoad();
         } else {
           this.error = 'No user found. Please log in again.';
@@ -318,16 +386,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
             rejected: result.applications.rejected || []
           };
 
-          if (this.selectedApplicationType !== 'all') {
-            filteredApplications = {
-              applied: filteredApplications.applied.filter(app => app.type === this.selectedApplicationType),
-              pending: filteredApplications.pending.filter(app => app.type === this.selectedApplicationType),
-              awaitingPayment: filteredApplications.awaitingPayment.filter(app => app.type === this.selectedApplicationType),
-              approved: filteredApplications.approved.filter(app => app.type === this.selectedApplicationType),
-              rejected: filteredApplications.rejected.filter(app => app.type === this.selectedApplicationType)
-            };
-          }
-
           // Product requirement: newly submitted applications should appear under Pending.
           const pendingBucket = [
             ...filteredApplications.pending,
@@ -403,6 +461,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    // Joint Commissioner should not access New Hologram Procurement.
+    if (this.currentUser?.roleId === 9 && String(this.selectedSupplyChainSection || '') === 'hologram') {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
+
     if (this.currentUser?.roleId === 5 && ['transit-applications'].includes(String(this.selectedSupplyChainSection || ''))) {
       this.selectedSupplyChainSection = null;
       this.router.navigate([], {
@@ -612,11 +682,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         source: 'licensee'
       }
     });
-  }
-
-  onApplicationTypeChange(): void {
-    this.activeTable = 'approved';
-    this.loadDashboardData();
   }
 
   private updateDataSources(result: {

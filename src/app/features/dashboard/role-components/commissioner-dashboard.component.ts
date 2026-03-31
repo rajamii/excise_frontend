@@ -392,33 +392,12 @@ interface CommissionerData {
       <ng-template #fullDashboard>
       <!-- Dashboard Statistics -->
       <app-dashboard-statistics
-        [statistics]="getDashboardStatistics()"
-        [filterOptions]="getFilterOptions()"
-        [showSelectionMessage]="!selectedApplicationType || selectedApplicationType === 'all'"
-        (filterChange)="onDashboardFilterChange($event)">
+        [statistics]="getDashboardStatistics()">
       </app-dashboard-statistics>
 
-       <!-- Data Table - Only show when a specific type is selected -->
-        <div class="data-table-section" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length > 0">
+       <!-- Data Table -->
+        <div class="data-table-section" *ngIf="filteredApplications.length > 0">
           <div class="filter-bar" *ngIf="filteredApplications.length > 0">
-           <div class="filter-item" *ngIf="selectedApplicationType === 'hologram'">
-             <label class="filter-label">Date</label>
-             <input
-               type="date"
-               class="form-control form-control-sm"
-               [(ngModel)]="hologramDateFilter"
-               (change)="applyFilters()"
-               title="Filter by date">
-           </div>
-           <div class="filter-item" *ngIf="selectedApplicationType === 'hologram'">
-             <label class="filter-label">Month</label>
-             <input
-               type="month"
-               class="form-control form-control-sm"
-               [(ngModel)]="hologramMonthFilter"
-               (change)="applyFilters()"
-               title="Filter by month">
-           </div>
             <div class="filter-item">
               <label class="filter-label">Company</label>
               <select class="form-select form-select-sm" [(ngModel)]="selectedCompany" (ngModelChange)="applyFilters()">
@@ -428,8 +407,8 @@ interface CommissionerData {
            </div>
            <button
               class="btn btn-outline-danger btn-sm"
-              (click)="selectedApplicationType === 'hologram' ? clearHologramFilters() : clearCompanyFilter()"
-              *ngIf="selectedCompany || (selectedApplicationType === 'hologram' && (hologramMonthFilter || hologramDateFilter || hologramStatusSummary !== 'ALL'))">
+              (click)="clearCompanyFilter()"
+              *ngIf="selectedCompany">
               <i class="bi bi-x-circle me-1"></i>Clear
             </button>
           </div>
@@ -491,13 +470,13 @@ interface CommissionerData {
         </div>
       </div>
 
-      <!-- Empty State for specific type with no data -->
-      <div class="empty-state" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length === 0">
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredApplications.length === 0">
         <div class="empty-icon">
           <i class="bi bi-inbox"></i>
         </div>
-        <h5>No {{ selectedApplicationType | titlecase }} Applications Found</h5>
-        <p>There are no {{ selectedApplicationType }} applications requiring commissioner review at this time.</p>
+        <h5>No Applications Found</h5>
+        <p>There are no applications requiring commissioner review at this time.</p>
       </div>
       </ng-template>
     </div>

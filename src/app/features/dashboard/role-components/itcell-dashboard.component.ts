@@ -38,14 +38,11 @@ interface ITCellData {
     <div class="itcell-dashboard">
       <!-- Dashboard Statistics -->
       <app-dashboard-statistics
-        [statistics]="getDashboardStatistics()"
-        [filterOptions]="getFilterOptions()"
-        [showSelectionMessage]="!selectedApplicationType || selectedApplicationType === 'all'"
-        (filterChange)="onDashboardFilterChange($event)">
+        [statistics]="getDashboardStatistics()">
       </app-dashboard-statistics>
 
-      <!-- Data Table - Only show when a specific type is selected -->
-      <div class="data-table-section" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length > 0">
+      <!-- Data Table -->
+      <div class="data-table-section" *ngIf="filteredApplications.length > 0">
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
@@ -105,13 +102,13 @@ interface ITCellData {
         </div>
       </div>
 
-      <!-- Empty State for specific type with no data -->
-      <div class="empty-state" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length === 0">
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredApplications.length === 0">
         <div class="empty-icon">
           <i class="bi bi-inbox"></i>
         </div>
-        <h5>No {{ selectedApplicationType | titlecase }} Applications Found</h5>
-        <p>There are no {{ selectedApplicationType }} applications requiring IT Cell verification at this time.</p>
+        <h5>No Applications Found</h5>
+        <p>There are no applications requiring IT Cell verification at this time.</p>
       </div>
     </div>
   `,
