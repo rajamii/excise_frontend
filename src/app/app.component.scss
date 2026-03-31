@@ -15,8 +15,22 @@
   width: 100%;
   z-index: 99998;
   height: 4px;
-  --mdc-linear-progress-active-indicator-color: #ffcc00;
-  --mdc-linear-progress-track-color: rgba(255, 255, 255, 0.35);
+  --mdc-linear-progress-active-indicator-color: #ff6b35 !important;
+  --mdc-linear-progress-track-color: rgba(255, 107, 53, 0.35) !important;
+  
+  // Force override Material Design colors
+  ::ng-deep .mdc-linear-progress__buffer {
+    background-color: rgba(255, 107, 53, 0.35) !important;
+  }
+  
+  ::ng-deep .mdc-linear-progress__bar {
+    background-color: #ff6b35 !important;
+    border-color: #ff6b35 !important;
+  }
+  
+  ::ng-deep .mdc-linear-progress__bar-inner {
+    border-color: #ff6b35 !important;
+  }
 }
 
 .page-loader-overlay {
@@ -45,7 +59,7 @@
 .page-loader-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1c2b78;
+  color: #ff6b35;
 }
 
 .page-loader-sub {
@@ -66,7 +80,7 @@
   position: absolute;
   inset: -16px;
   border-radius: 999px;
-  background: radial-gradient(circle at 50% 55%, rgba(255, 204, 0, 0.28), rgba(28, 43, 120, 0.04) 58%, transparent 72%);
+  background: radial-gradient(circle at 50% 55%, rgba(255, 107, 53, 0.28), rgba(255, 107, 53, 0.04) 58%, transparent 72%);
   filter: blur(3px);
   animation: glowPulse 1.25s ease-in-out infinite;
 }
@@ -75,11 +89,11 @@
   width: 82px;
   height: 82px;
   animation: glassSway 1.6s ease-in-out infinite;
-  filter: drop-shadow(0 10px 16px rgba(2, 6, 23, 0.18));
+  filter: drop-shadow(0 10px 16px rgba(255, 107, 53, 0.18));
 }
 
 .sip-ring {
-  stroke: rgba(28, 43, 120, 0.22);
+  stroke: rgba(255, 107, 53, 0.22);
   stroke-width: 3.2;
   fill: none;
 }

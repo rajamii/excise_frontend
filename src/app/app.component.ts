@@ -54,7 +54,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.router.events
       .pipe(takeUntil(this.destroy$))
       .subscribe(event => {
-        if (event instanceof NavigationStart) this.loading.setRouteLoading(true);
+        if (event instanceof NavigationStart) {
+          if (this.shouldShowRouteLoader(event.url)) this.loading.setRouteLoading(true);
+        }
         if (event instanceof NavigationEnd) this.loading.setRouteLoading(false);
         if (event instanceof NavigationCancel) this.loading.setRouteLoading(false);
         if (event instanceof NavigationError) this.loading.setRouteLoading(false);
@@ -97,5 +99,21 @@ export class AppComponent implements OnInit, OnDestroy {
 
 
   
+  }
+
+  private shouldShowRouteLoader(targetUrl: string): boolean {
+    const currentPath = this.normalizePath(this.router.url);
+    const nextPath = this.normalizePath(targetUrl);
+
+    // Inside user dashboard we switch sections frequently (sidebar/query params);
+    // avoid showing the full-screen route loader for these in-dashboard navigations.
+    const isInDashboardNav = currentPath.startsWith('/dashboard') && nextPath.startsWith('/dashboard');
+    return !isInDashboardNav;
+  }
+
+  private normalizePath(url: string): string {
+    const withoutHash = (url ?? '').split('#')[0] ?? '';
+    const withoutQuery = withoutHash.split('?')[0] ?? '';
+    return withoutQuery.trim();
   }
 }
