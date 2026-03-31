@@ -92,7 +92,6 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadDropdownSources();
     this.loadDailyRegisterEntries(true);
-    this.startAutoRefresh();
     this.startClock();
     this.startDeadlineBreachCheck();
   }
@@ -100,13 +99,6 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  private startAutoRefresh(): void {
-    // Poll for fresh entries so commissioner sees OIC updates quickly.
-    interval(10_000)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.loadDailyRegisterEntries(false));
   }
 
   private startClock(): void {
