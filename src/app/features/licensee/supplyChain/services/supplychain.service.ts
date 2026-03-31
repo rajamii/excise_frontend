@@ -1,4 +1,4 @@
-import { catchError, map, Observable, of } from "rxjs";
+import { catchError, map, Observable, of, throwError } from "rxjs";
 import { environment } from "../../../../../environments/environment";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
@@ -115,6 +115,8 @@ export class SupplyChainService {
     brandName: string,
     size: string
   ): Observable<LiquorRates> {
+    const rawSize = String(size || '').trim();
+    const packSizeMl = rawSize.replace(/[^0-9]/g, '');
     return this.http
       .get<{
         success: boolean;
@@ -124,7 +126,7 @@ export class SupplyChainService {
         {
           params: {
             brand_name: brandName,
-            pack_size_ml: size.replace('ml', ''),
+            pack_size_ml: packSizeMl,
           },
         }
       )
@@ -137,20 +139,7 @@ export class SupplyChainService {
         }),
         catchError((error) => {
           console.error('Error fetching liquor rates:', error);
-          // Return default values on error
-          return of({
-            brand: brandName,
-            size: `${size}ml`,
-            exFactoryPrice: 0,
-            educationCess: 0,
-            exciseDuty: 0,
-            additionalExcise: 0,
-            additionalExcise12_5: 0,
-            bottlingFee: 0,
-            exportFee: 0,
-            mrpPerBottle: 0,
-            totalPricePerCase: 0,
-          });
+          return throwError(() => error);
         })
       );
   }

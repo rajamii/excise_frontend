@@ -376,6 +376,58 @@ export class TransitPermitComponent implements OnInit {
     return Number.isFinite(value) ? value : 0;
   }
 
+  private getWarehouseEducationCess(entry: any): number {
+    const value = Number(entry?.educationCessRsPerCase ?? entry?.education_cess_rs_per_case ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private getWarehouseAdditionalExcise(entry: any): number {
+    const value = Number(entry?.additionalExciseDutyRsPerCase ?? entry?.additional_excise_duty_rs_per_case ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private getWarehouseExFactoryPrice(entry: any): number {
+    const value = Number(entry?.exFactoryPriceRsPerCase ?? entry?.ex_factory_price_rs_per_case ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private getWarehouseDistilleryName(entry: any): string {
+    return String(entry?.distilleryName ?? entry?.distillery_name ?? entry?.factory_name ?? entry?.factoryName ?? '').trim();
+  }
+
+  private getWarehouseLiquorTypeName(entry: any): string {
+    return String(entry?.brandType ?? entry?.brand_type ?? entry?.liquorType ?? entry?.liquor_type ?? '').trim();
+  }
+
+  private resolveRatesFromWarehouse(brand: string, sizeMl: number): {
+    educationCess: number;
+    exciseDuty: number;
+    additionalExcise: number;
+    exFactoryPrice: number;
+    manufacturingUnitName: string;
+    liquorType: string;
+  } | null {
+    const normalizedBrand = String(brand || '').trim().toLowerCase();
+    if (!normalizedBrand || !sizeMl) return null;
+
+    const entry = (this.brandWarehouseData || []).find((row: any) => {
+      const dbBrand = this.getWarehouseBrandName(row).trim().toLowerCase();
+      const matches = dbBrand === normalizedBrand || dbBrand.includes(normalizedBrand) || normalizedBrand.includes(dbBrand);
+      return matches && this.getWarehouseCapacitySize(row) === sizeMl;
+    });
+
+    if (!entry) return null;
+
+    return {
+      educationCess: this.getWarehouseEducationCess(entry),
+      exciseDuty: this.getWarehouseExciseDuty(entry),
+      additionalExcise: this.getWarehouseAdditionalExcise(entry),
+      exFactoryPrice: this.getWarehouseExFactoryPrice(entry),
+      manufacturingUnitName: this.getWarehouseDistilleryName(entry),
+      liquorType: this.getWarehouseLiquorTypeName(entry),
+    };
+  }
+
   loadMlConversionData(): void {
     this.supplyChainService.getBrandMlInCases().subscribe(data => {
       this.brandMlConversionData = data;
@@ -683,19 +735,50 @@ export class TransitPermitComponent implements OnInit {
       return;
     }
 
-    // Get rates from backend
-    this.supplyChainService.getLiquorRates(this.formData.brand, this.formData.size + 'ml').subscribe({
+    const sizeMl = parseInt(this.formData.size || '0', 10);
+    const warehouseRates = this.resolveRatesFromWarehouse(this.formData.brand, sizeMl);
+
+    // Prefer already-loaded warehouse rates (no extra API call; works even when /rates/ is blocked/misconfigured).
+    if (warehouseRates && (warehouseRates.educationCess > 0 || warehouseRates.exciseDuty > 0 || warehouseRates.additionalExcise > 0)) {
+      const newProduct: Product = {
+        brand: this.formData.brand,
+        size: this.formData.size,
+        cases: this.formData.cases,
+        educationCess: warehouseRates.educationCess,
+        exciseDuty: warehouseRates.exciseDuty,
+        additionalExcise: warehouseRates.additionalExcise,
+        brandOwner: '',
+        liquorType: warehouseRates.liquorType,
+        exFactoryPrice: warehouseRates.exFactoryPrice,
+        manufacturingUnitName: warehouseRates.manufacturingUnitName,
+        bottleType: this.formData.bottleType
+      };
+
+      this.products.push(newProduct);
+      if (this.products.length === 1) {
+        this.lockCommonFields();
+      }
+
+      this.formData.brand = '';
+      this.formData.size = '';
+      this.formData.cases = 0;
+      this.formData.bottleType = '';
+      this.sizeOptions = [];
+
+      console.log('Product added from warehouse rates:', newProduct);
+      return;
+    }
+
+    // Fallback to backend rates endpoint (also fills brandOwner/manufacturing unit on newer backend).
+    this.supplyChainService.getLiquorRates(this.formData.brand, this.formData.size).subscribe({
       next: (rates) => {
-        // Create new product
         const newProduct: Product = {
-          brand: this.formData.brand, // Use brand directly as display name for now, or fetch
+          brand: this.formData.brand,
           size: this.formData.size,
           cases: this.formData.cases,
           educationCess: rates.educationCess,
           exciseDuty: rates.exciseDuty,
           additionalExcise: rates.additionalExcise,
-
-          // Populate new fields (ensure backend returns these or handle defaults)
           brandOwner: (rates as any).brandOwner || (rates as any).brand_owner || '',
           liquorType: (rates as any).liquorType || (rates as any).liquor_type || '',
           exFactoryPrice: rates.exFactoryPrice,
@@ -703,15 +786,18 @@ export class TransitPermitComponent implements OnInit {
           bottleType: this.formData.bottleType
         };
 
-        // Add to products list
-        this.products.push(newProduct);
+        // If rates are still zero, block add and show a clear message (prevents silent ₹0 permits).
+        const totalRate = Number(newProduct.educationCess || 0) + Number(newProduct.exciseDuty || 0) + Number(newProduct.additionalExcise || 0);
+        if (!Number.isFinite(totalRate) || totalRate <= 0) {
+          this.validationErrors.push('Rates are not available for this brand/size on the server. Please contact administrator or sync brand rates.');
+          return;
+        }
 
-        // Lock common fields after adding first product
+        this.products.push(newProduct);
         if (this.products.length === 1) {
           this.lockCommonFields();
         }
 
-        // Reset form fields for next product
         this.formData.brand = '';
         this.formData.size = '';
         this.formData.cases = 0;
@@ -722,7 +808,7 @@ export class TransitPermitComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to fetch rates', err);
-        this.validationErrors.push('Failed to fetch rates for selected product');
+        this.validationErrors.push('Failed to fetch rates for selected product. Please refresh and try again.');
       }
     });
 
