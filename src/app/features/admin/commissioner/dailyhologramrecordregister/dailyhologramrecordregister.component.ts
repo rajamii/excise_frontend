@@ -27,6 +27,8 @@ interface FilterOptions {
 })
 export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   Math = Math;
+  private readonly IST_DEADLINE_UTC_HOUR = 11; // 5:00 PM IST == 11:30 UTC
+  private readonly IST_DEADLINE_UTC_MINUTE = 30;
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly authUsersApiBase = `${environment.apiBaseUrl}/auth/users`;
@@ -155,9 +157,8 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     const breaches = (this.dailyRegisterEntries || []).filter((entry) => this.isApprovalUpdateOverdue(entry, now));
 
     this.approvalDeadlineBreaches = breaches;
-    this.approvalDeadlineLabel = this.getDeadlineLabel(
-      (breaches[0] as any)?.deadline || (this.dailyRegisterEntries || []).find((e) => !!(e as any)?.deadline)?.deadline
-    );
+    // SLA rule for this screen: deadline is always 5:00 PM IST.
+    this.approvalDeadlineLabel = '5:00 PM';
     if (breaches.length > 0) {
       const sampleRefs = breaches.slice(0, 4).map((e) => e.referenceNo).join(', ');
       this.approvalDeadlineBreachMessage =
@@ -189,10 +190,8 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     if (!entry.approvalDate) return false; // not approved yet
     if (entry.status === 'COMPLETED') return false;
 
-    const deadlineIso = String((entry as any)?.deadline || '').trim();
-    if (!deadlineIso) return false;
-    const deadline = new Date(deadlineIso);
-    if (Number.isNaN(deadline.getTime())) return false;
+    const deadline = this.getEntryDeadlineAt5Pm(entry);
+    if (!deadline) return false;
     return now.getTime() > deadline.getTime();
   }
 
@@ -402,13 +401,12 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
       const matchesStatus = !this.filters.status || entry.status === this.filters.status;
       const matchesType = !this.filters.type || entry.hologramType === this.filters.type;
 
-      const matchesDateFrom = !this.filters.dateFrom ||
-        (entry.approvalDate ? new Date(entry.approvalDate) >= new Date(this.filters.dateFrom) : 
-         new Date(entry.submissionDate) >= new Date(this.filters.dateFrom));
+      const entryDate = this.getEntryDateForFiltering(entry);
+      const fromDate = this.filters.dateFrom ? new Date(this.filters.dateFrom) : null;
+      const toDate = this.filters.dateTo ? new Date(this.filters.dateTo) : null;
 
-      const matchesDateTo = !this.filters.dateTo ||
-        (entry.approvalDate ? new Date(entry.approvalDate) <= new Date(this.filters.dateTo) :
-         new Date(entry.submissionDate) <= new Date(this.filters.dateTo));
+      const matchesDateFrom = !fromDate || !entryDate || entryDate.getTime() >= fromDate.getTime();
+      const matchesDateTo = !toDate || !entryDate || entryDate.getTime() <= toDate.getTime();
 
       const matchesOverdue = !this.filters.onlyOverdue || entry.isOverdue;
 
@@ -660,16 +658,15 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
         : 'Completed';
     }
 
-    const deadlineIso = String((entry as any)?.deadline || '').trim();
-    const deadline = deadlineIso ? new Date(deadlineIso) : null;
-    if (deadline && !Number.isNaN(deadline.getTime())) {
-      const diffMs = deadline.getTime() - this.now.getTime();
-      const absMs = Math.abs(diffMs);
-      const label = this.formatDuration(absMs);
-      return diffMs >= 0 ? `${label} remaining` : `Overdue by ${label}`;
+    const deadline = this.getEntryDeadlineAt5Pm(entry);
+    if (!deadline) {
+      return entry.timeRemaining || 'No deadline set';
     }
 
-    return entry.timeRemaining || 'No deadline set';
+    const diffMs = deadline.getTime() - this.now.getTime();
+    const absMs = Math.abs(diffMs);
+    const label = this.formatDuration(absMs);
+    return diffMs >= 0 ? `${label} remaining` : `Overdue by ${label}`;
   }
 
   getTimeRemainingClass(entry: DailyRegisterEntry): string {
@@ -684,9 +681,8 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
       return 'text-success';
     }
 
-    const deadlineIso = String((entry as any)?.deadline || '').trim();
-    const deadline = deadlineIso ? new Date(deadlineIso) : null;
-    if (deadline && !Number.isNaN(deadline.getTime())) {
+    const deadline = this.getEntryDeadlineAt5Pm(entry);
+    if (deadline) {
       const diffMs = deadline.getTime() - this.now.getTime();
       const hours = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60));
 
@@ -703,6 +699,93 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     }
     
     return 'text-success';
+  }
+
+  /**
+   * SLA rule: deadline is always 5:00 PM local time on the "approval day".
+   * Why: backend often sends `deadline` as UTC (`...Z`), which becomes 10:30 PM in IST and shows wrong remaining time.
+   */
+  private getEntryDeadlineAt5Pm(entry: DailyRegisterEntry): Date | null {
+    const dateParts =
+      this.extractYmdFromAny((entry as any)?.deadline) ||
+      this.extractYmdFromAny(entry.approvalDate) ||
+      this.extractYmdFromAny(entry.submissionDate) ||
+      this.extractYmdFromAny((entry as any)?.usageDate);
+
+    // Fallback: if backend date fields are missing/unparseable, still compute deadline as 5 PM IST today.
+    const effective = dateParts ?? { year: this.now.getFullYear(), month: this.now.getMonth() + 1, day: this.now.getDate() };
+
+    const { year, month, day } = effective;
+    // Always treat deadline as a fixed moment: 5:00 PM IST, regardless of the client's local timezone.
+    return new Date(Date.UTC(year, month - 1, day, this.IST_DEADLINE_UTC_HOUR, this.IST_DEADLINE_UTC_MINUTE, 0, 0));
+  }
+
+  private extractYmdFromAny(value: any): { year: number; month: number; day: number } | null {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+
+    // ISO-like: 2026-03-31 or 2026-03-31T...
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+      const year = Number(iso[1]);
+      const month = Number(iso[2]);
+      const day = Number(iso[3]);
+      if (year && month >= 1 && month <= 12 && day >= 1 && day <= 31) return { year, month, day };
+    }
+
+    // dd-MMM-yyyy (e.g., 25-Mar-2026) with optional time part
+    const dmyText = raw.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})(?:\s.*)?$/);
+    if (dmyText) {
+      const day = Number(dmyText[1]);
+      const month = this.monthShortToNumber(dmyText[2]);
+      const year = Number(dmyText[3]);
+      if (year && month && day) return { year, month, day };
+    }
+
+    // dd/MM/yyyy or dd-MM-yyyy with optional time part (incl. newline)
+    const dmyNum = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s.*)?$/);
+    if (dmyNum) {
+      const day = Number(dmyNum[1]);
+      const month = Number(dmyNum[2]);
+      const year = Number(dmyNum[3]);
+      if (year && month >= 1 && month <= 12 && day >= 1 && day <= 31) return { year, month, day };
+    }
+
+    // dd MMM yyyy (e.g., 27 Mar 2026) with optional time part
+    const dmySpaced = raw.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})(?:\s.*)?$/);
+    if (dmySpaced) {
+      const day = Number(dmySpaced[1]);
+      const month = this.monthShortToNumber(dmySpaced[2]);
+      const year = Number(dmySpaced[3]);
+      if (year && month && day) return { year, month, day };
+    }
+
+    // Last resort: Date parse
+    const dt = new Date(raw);
+    if (!Number.isNaN(dt.getTime())) {
+      return { year: dt.getFullYear(), month: dt.getMonth() + 1, day: dt.getDate() };
+    }
+
+    return null;
+  }
+
+  private getEntryDateForFiltering(entry: DailyRegisterEntry): Date | null {
+    const dateParts =
+      this.extractYmdFromAny(entry.approvalDate) ||
+      this.extractYmdFromAny(entry.submissionDate) ||
+      this.extractYmdFromAny((entry as any)?.usageDate);
+
+    if (!dateParts) return null;
+    return new Date(dateParts.year, dateParts.month - 1, dateParts.day, 0, 0, 0, 0);
+  }
+
+  private monthShortToNumber(value: string): number | null {
+    const v = String(value || '').trim().toLowerCase();
+    const map: Record<string, number> = {
+      jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+      jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+    };
+    return map[v] || null;
   }
 
   private formatDuration(ms: number): string {
