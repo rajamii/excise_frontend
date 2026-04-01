@@ -16,6 +16,7 @@ export class InactivityService {
   private warningDurationMs = 30 * 1000; // Countdown before logout (configurable)
   private configReady = false;
   private readonly inactivityConfigStorageKey = 'inactivity_config_v1';
+  private readonly lastActivityStorageKey = 'inactivity_last_activity_ms_v1';
   private readonly activityEvents: Array<keyof WindowEventMap> = [
     'mousedown',
     'mousemove',
@@ -114,6 +115,13 @@ export class InactivityService {
       return;
     }
 
+    // If the app was paused (sleep/lock/shutdown) and the user comes back after the deadline,
+    // do NOT extend the session on first interaction; logout immediately.
+    if (this.hasExceededInactivityLimitFromStoredActivity()) {
+      this.logoutForInactivity();
+      return;
+    }
+
     this.startInactivityCycle();
   }
 
@@ -156,7 +164,18 @@ export class InactivityService {
       this.applyInactivityConfig(cfg);
       this.configReady = true;
       this.saveCachedConfig(cfg);
-      this.startInactivityCycle();
+
+      // On app reload/browser restore, continue the previous inactivity window (or logout immediately if expired).
+      if (this.hasExceededInactivityLimitFromStoredActivity()) {
+        this.logoutForInactivity();
+        return;
+      }
+      const storedActivityMs = this.readLastActivityMs();
+      if (storedActivityMs && storedActivityMs > 0) {
+        this.startInactivityCycle(storedActivityMs, false);
+      } else {
+        this.startInactivityCycle();
+      }
 
       // Refresh warning duration from DB without blocking start (prevents forkJoin from stalling everything).
       this.fetchInactivityWarningMs().subscribe((warningMs) => {
@@ -214,19 +233,68 @@ export class InactivityService {
     }
   }
 
-  private startInactivityCycle(): void {
+  private startInactivityCycle(baseActivityAtMs?: number, persistBase = true): void {
     this.clearTimers();
     if (!this.configReady || !this.inactivityLimitMs || this.inactivityLimitMs <= 0) {
       return;
     }
 
-    // Respect logout duration from DB exactly.
-    this.inactivityDeadline = Date.now() + this.inactivityLimitMs;
-    const warningLeadMs = Math.max(0, this.inactivityLimitMs - this.warningDurationMs);
+    const base = Number(baseActivityAtMs ?? 0);
+    const safeBase = Number.isFinite(base) && base > 0 ? base : Date.now();
+    if (persistBase) {
+      this.writeLastActivityMs(safeBase);
+    }
 
+    this.inactivityDeadline = safeBase + this.inactivityLimitMs;
+    const remainingMs = this.getRemainingMs();
+    if (remainingMs <= 0) {
+      this.logoutForInactivity();
+      return;
+    }
+
+    const warningAt = this.inactivityDeadline - this.warningDurationMs;
+    const warningDelay = Math.max(0, warningAt - Date.now());
     this.warningTimeout = setTimeout(() => {
       this.openWarning();
-    }, warningLeadMs);
+    }, warningDelay);
+  }
+
+  private readLastActivityMs(): number | null {
+    if (!isPlatformBrowser(this.platformId)) {
+      return null;
+    }
+    try {
+      const raw = localStorage.getItem(this.lastActivityStorageKey);
+      if (!raw) return null;
+      const ms = Number(raw);
+      return Number.isFinite(ms) && ms > 0 ? ms : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private writeLastActivityMs(ms: number): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+    try {
+      localStorage.setItem(this.lastActivityStorageKey, String(Number(ms) || Date.now()));
+    } catch {
+      // ignore
+    }
+  }
+
+  private hasExceededInactivityLimitFromStoredActivity(): boolean {
+    if (!this.configReady || !this.inactivityLimitMs || this.inactivityLimitMs <= 0) {
+      return false;
+    }
+
+    const last = this.readLastActivityMs();
+    if (!last) {
+      return false;
+    }
+
+    return (Date.now() - last) >= this.inactivityLimitMs;
   }
 
   private clearTimers(): void {
