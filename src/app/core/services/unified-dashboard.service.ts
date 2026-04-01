@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
-import { map, tap, catchError } from 'rxjs/operators';
+import { map, tap, catchError, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { DashboardCount } from '../models/dashboard.model';
 import { UnifiedApplication } from '../models/unified-application.model';
@@ -11,6 +11,13 @@ import { Objection } from '../models/license-application.model';
 export class UnifiedDashboardService {
   private baseUrl = `${environment.apiBaseUrl}/transactional`;
   private workflowUrl = `${environment.apiBaseUrl}/auth/`;
+  private unifiedAppsCache$?: Observable<{
+    applied: UnifiedApplication[];
+    pending: UnifiedApplication[];
+    approved: UnifiedApplication[];
+    rejected: UnifiedApplication[];
+    awaitingPayment?: UnifiedApplication[];
+  }>;
 
   private endpoints = {
     renewal: `${this.baseUrl}/license_application`,
@@ -62,14 +69,27 @@ export class UnifiedDashboardService {
   }
 
   /** ✅ FIXED: Get applications from all 4 types (added company) */
-  getUnifiedApplicationsByStatus(): Observable<{
+  getUnifiedApplicationsByStatus(forceRefresh = false): Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-       
+    if (!forceRefresh && this.unifiedAppsCache$) {
+      return this.unifiedAppsCache$;
+    }
+
+    const uniqueByKey = (apps: UnifiedApplication[]): UnifiedApplication[] => {
+      const seen = new Set<string>();
+      return (apps || []).filter((app) => {
+        const key = `${app.type}::${app.applicationId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+
     const requests = [
       this.http.get<any>(`${this.endpoints.renewal}/list-by-status/`).pipe(
         catchError(err => {
@@ -98,7 +118,7 @@ export class UnifiedDashboardService {
       )
     ];
 
-    return forkJoin(requests).pipe(
+    this.unifiedAppsCache$ = forkJoin(requests).pipe(
       map(([renewal, newLic, salesman, company]) => {
         const normalize = (data: any, type: UnifiedApplication['type']) => {
           if (!data) {
@@ -219,14 +239,17 @@ export class UnifiedDashboardService {
         });
 
         return {
-          applied: stillApplied,
-          pending: stillPending,
-          approved: stillApproved,
-          rejected: allRejected,
-          awaitingPayment: awaitingPaymentApps
+          applied: uniqueByKey(stillApplied),
+          pending: uniqueByKey(stillPending),
+          approved: uniqueByKey(stillApproved),
+          rejected: uniqueByKey(allRejected),
+          awaitingPayment: uniqueByKey(awaitingPaymentApps),
         };
-      })
+      }),
+      shareReplay({ bufferSize: 1, refCount: true })
     );
+
+    return this.unifiedAppsCache$;
   }
 
   private getApplicantName(app: any, type: UnifiedApplication['type']): string {
