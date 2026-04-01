@@ -244,6 +244,23 @@ export class PrintApplicationComponent {
           err?.error?.error ||
           err?.error?.message ||
           'Failed to print license.';
+
+        // If the master License record is not found yet, don't block user from viewing the final license details.
+        // This avoids getting stuck on "No License matches the given query."
+        const appTypeLower = String(appType || '').toLowerCase();
+        if ((appTypeLower === 'new-license' || appTypeLower === 'license-renewal') && Number(err?.status) === 404) {
+          const inferredType = this.inferApiTypeFromId(finalLicenseId || '');
+          this.dialogRef.close(true);
+          void this.router.navigate(['/licensee/final-license'], {
+            queryParams: {
+              applicationId: finalLicenseId,
+              type: inferredType || appType,
+              returnUrl: this.data?.returnUrl || '',
+            }
+          });
+          Swal.fire('Info', 'License details opened. Print counter is not available for this license yet.', 'info');
+          return;
+        }
         Swal.fire('Error', errorMsg, 'error');
       }
     });
