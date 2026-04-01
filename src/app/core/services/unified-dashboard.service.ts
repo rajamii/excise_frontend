@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { DashboardCount } from '../models/dashboard.model';
 import { UnifiedApplication } from '../models/unified-application.model';
 import { Objection } from '../models/license-application.model';
+import { AccountService } from './account.service';
 
 @Injectable({ providedIn: 'root' })
 export class UnifiedDashboardService {
@@ -18,6 +19,7 @@ export class UnifiedDashboardService {
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }>;
+  private cacheUserKey: string | null = null;
 
   private endpoints = {
     renewal: `${this.baseUrl}/license_application`,
@@ -26,7 +28,30 @@ export class UnifiedDashboardService {
     company: `${this.baseUrl}/company-registration` // ✅ ADDED: Company registration endpoint
   };
 
-  constructor(private http: HttpClient) { }
+  private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
+    const id = String(applicationId || '').trim().toUpperCase();
+    if (!id) return '';
+    if (id.startsWith('NLI/')) return 'new-license';
+    if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('NA/')) return 'new-license';
+    if (id.startsWith('LA/')) return 'license-renewal';
+    return '';
+  }
+
+  constructor(private http: HttpClient, private accountService: AccountService) {
+    // Prevent cross-user data leakage (SPA keeps services alive between logins).
+    this.accountService.getAuthenticationState().subscribe((account) => {
+      const nextKey = account?.username ? String(account.username) : null;
+      if (nextKey !== this.cacheUserKey) {
+        this.cacheUserKey = nextKey;
+        this.clearUnifiedAppsCache();
+      }
+    });
+  }
+
+  private clearUnifiedAppsCache(): void {
+    this.unifiedAppsCache$ = undefined;
+  }
 
   /** ✅ FIXED: Combine counts from all 4 application types (added company) */
   getUnifiedDashboardCounts(): Observable<DashboardCount> {
@@ -303,8 +328,11 @@ export class UnifiedDashboardService {
       'salesman-barman': this.endpoints.salesman,
       'company-registration': this.endpoints.company // ✅ ADDED
     };
+
+    const inferred = this.inferAppTypeFromId(applicationId);
+    const resolvedType = inferred || type;
     const encodedId = encodeURIComponent(applicationId);
-    const url = `${mapping[type]}/detail/${encodedId}/`;
+    const url = `${mapping[resolvedType]}/detail/${encodedId}/`;
     return this.http.get<any>(url);
   }
 

@@ -52,6 +52,16 @@ export class PrintApplicationComponent {
     return '';
   }
 
+  private getLicenseResolveId(): string {
+    // Backend `masters/license/*` endpoints can resolve by `license_id` OR by `source_object_id` (application id).
+    return (
+      this.getFinalLicenseId() ||
+      this.getMasterLicenseId() ||
+      this.getPrintApiId() ||
+      ''
+    ).trim();
+  }
+
   private getPrintApiId(): string {
     const candidates = [
       this.application?.id,
@@ -83,8 +93,14 @@ export class PrintApplicationComponent {
     return String(
       this.application?.license_id ||
       this.application?.licenseId ||
+      this.application?.license ||
+      this.application?.license_no ||
+      this.application?.licenseNo ||
       this.raw?.license_id ||
       this.raw?.licenseId ||
+      this.raw?.license ||
+      this.raw?.license_no ||
+      this.raw?.licenseNo ||
       this.getFinalLicenseId() ||
       ''
     ).trim();
@@ -96,7 +112,8 @@ export class PrintApplicationComponent {
   }
 
   getApplicationType(): string {
-    return this.application?.type || this.raw?.type || 'license-renewal';
+    const inferred = this.inferApiTypeFromId(this.getFinalLicenseId());
+    return inferred || this.application?.type || this.raw?.type || 'license-renewal';
   }
 
   getPrintCount(): number {
@@ -133,7 +150,7 @@ export class PrintApplicationComponent {
   }
 
   private refreshPrintInfo(): void {
-    const licenseId = this.getMasterLicenseId();
+    const licenseId = this.getLicenseResolveId();
     if (!licenseId) return;
 
     this.loadingPrintInfo = true;
@@ -165,85 +182,8 @@ export class PrintApplicationComponent {
       return;
     }
 
-    const printApiId = this.getPrintApiId();
     const finalLicenseId = this.getFinalLicenseId();
     const appType = this.getApplicationType();
-
-    // For license applications, open Final License screen dynamically (as requested).
-    // This avoids backend "No LicenseApplication matches" errors from the print endpoint.
-    if ((appType || '').toLowerCase() === 'new-license' || (appType || '').toLowerCase() === 'license-renewal') {
-      if (!finalLicenseId) {
-        Swal.fire('Error', 'Application ID not found', 'error');
-        return;
-      }
-
-      const masterLicenseId = this.getMasterLicenseId();
-      if (!masterLicenseId) {
-        Swal.fire('Error', 'License ID not found', 'error');
-        return;
-      }
-
-      this.printing = true;
-      this.licenseService.printLicense(masterLicenseId).subscribe({
-        next: (res: any) => {
-          const updatedCount = res?.print_count ?? res?.printCount;
-          const updatedPaid = res?.is_print_fee_paid ?? res?.isPrintFeePaid;
-          if (updatedCount !== undefined) {
-            this.application.print_count = updatedCount;
-            if (this.raw) this.raw.print_count = updatedCount;
-          }
-          if (updatedPaid !== undefined) {
-            this.application.is_print_fee_paid = updatedPaid;
-            if (this.raw) this.raw.is_print_fee_paid = updatedPaid;
-          }
-
-          const inferredType = this.inferApiTypeFromId(finalLicenseId);
-          this.dialogRef.close(true);
-          void this.router.navigate(['/licensee/final-license'], {
-            queryParams: {
-              applicationId: finalLicenseId,
-              type: inferredType || appType,
-              returnUrl: this.data?.returnUrl || '',
-            }
-          });
-          this.printing = false;
-        },
-        error: (err: any) => {
-          this.printing = false;
-          const errorMsg =
-            err?.error?.error ||
-            err?.error?.detail ||
-            err?.error?.message ||
-            'Failed to print license.';
-
-          // If the master License record is not found yet, don't block user from opening final license view.
-          // This avoids getting stuck on "No License matches the given query."
-          if (Number(err?.status) === 404 || /no\\s+license\\s+matches/i.test(String(errorMsg || ''))) {
-            const inferredType = this.inferApiTypeFromId(finalLicenseId);
-            this.dialogRef.close(true);
-            void this.router.navigate(['/licensee/final-license'], {
-              queryParams: {
-                applicationId: finalLicenseId,
-                type: inferredType || appType,
-                returnUrl: this.data?.returnUrl || '',
-              }
-            });
-            Swal.fire('Info', 'License details opened. Print counter is not available for this license yet.', 'info');
-            return;
-          }
-
-          Swal.fire('Error', errorMsg, 'error');
-          this.refreshPrintInfo();
-        }
-      });
-      return;
-    }
-
-    if (!printApiId) {
-      console.error('No application ID found');
-      Swal.fire('Error', 'Application ID not found', 'error');
-      return;
-    }
 
     let printObservable;
 
@@ -251,18 +191,23 @@ export class PrintApplicationComponent {
     switch (appType) {
       case 'salesman-barman':
         
-        printObservable = this.salesmanBarmanService.printRegistration(printApiId);
+        printObservable = this.salesmanBarmanService.printRegistration(this.getPrintApiId());
         break;
 
       case 'new-license':
-        
-        printObservable = this.licenseApplicationService.printNewLicense(printApiId);
-        break;
-
       case 'license-renewal':
       default:
-        
-        printObservable = this.licenseApplicationService.printLicense(printApiId);
+        {
+          const licenseId = this.getLicenseResolveId();
+          if (!licenseId) {
+            Swal.fire('Error', 'License/Application ID not found', 'error');
+            return;
+          }
+
+          // Print count + fee logic is tracked in `licenses` table.
+          // Backend resolves `license_id` OR `source_object_id` (application id).
+          printObservable = this.licenseService.printLicense(licenseId);
+        }
         break;
     }
 
@@ -275,8 +220,21 @@ export class PrintApplicationComponent {
           if (this.raw) this.raw.print_count = updatedCount;
         }
 
-        this.dialogRef.close(true);
-        Swal.fire('Printed', 'License printed successfully.', 'success');
+        // License applications should go to the final license view after recording a print.
+        if ((appType || '').toLowerCase() === 'new-license' || (appType || '').toLowerCase() === 'license-renewal') {
+          const inferredType = this.inferApiTypeFromId(finalLicenseId || '');
+          this.dialogRef.close(true);
+          void this.router.navigate(['/licensee/final-license'], {
+            queryParams: {
+              applicationId: finalLicenseId,
+              type: inferredType || appType,
+              returnUrl: this.data?.returnUrl || '',
+            }
+          });
+        } else {
+          this.dialogRef.close(true);
+          Swal.fire('Printed', 'License printed successfully.', 'success');
+        }
         this.printing = false;
       },
       error: (err: any) => {
@@ -292,7 +250,7 @@ export class PrintApplicationComponent {
   }
 
   onPay(): void {
-    const masterLicenseId = this.getMasterLicenseId();
+    const masterLicenseId = this.getLicenseResolveId();
     if (!masterLicenseId) {
       Swal.fire('Error', 'License ID not found', 'error');
       return;

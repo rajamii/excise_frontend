@@ -55,7 +55,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
   loadMyLicenses(): void {
     this.isLoading = true;
-    this.unifiedDashboardService.getUnifiedApplicationsByStatus().subscribe({
+    this.unifiedDashboardService.getUnifiedApplicationsByStatus(true).subscribe({
       next: (result: any) => {
         const approvedApps = result.approved || [];
         
@@ -133,7 +133,12 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         console.error('Error fetching application details:', err);
-        Swal.fire('Error', 'Failed to load application details for printing', 'error');
+        // Fallback: still allow printing flow with the summary row data.
+        // Print dialog already handles missing master-license records gracefully.
+        this.dialog.open(PrintApplicationComponent, {
+          width: '450px',
+          data: { application, tableType: 'approved', returnUrl: this.router.url }
+        });
       }
     });
   }
