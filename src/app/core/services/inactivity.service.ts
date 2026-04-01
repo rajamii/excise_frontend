@@ -27,6 +27,19 @@ export class InactivityService {
     'click',
     'wheel'
   ];
+  private readonly unloadEvents: Array<keyof WindowEventMap> = ['beforeunload', 'pagehide'];
+  private readonly handleVisibilityChange = () => {
+    if (!isPlatformBrowser(this.platformId) || !this.trackingEnabled) return;
+    if (document.visibilityState === 'hidden') {
+      // Persist activity timestamp when tab/app is backgrounded so reload can enforce inactivity window.
+      this.writeLastActivityMs(Date.now());
+    }
+  };
+  private readonly unloadHandler = () => {
+    if (!isPlatformBrowser(this.platformId) || !this.trackingEnabled) return;
+    // Persist the final activity timestamp when the tab is being closed/reloaded.
+    this.writeLastActivityMs(Date.now());
+  };
 
   private warningTimeout?: ReturnType<typeof setTimeout>;
   private countdownInterval?: ReturnType<typeof setInterval>;
@@ -72,6 +85,14 @@ export class InactivityService {
     this.configReady = false;
     // Ensure a previous session's warning state can't suppress the next login cycle.
     this.warningVisible = false;
+
+    // If we don't have a stored activity timestamp yet (e.g., first login),
+    // record one immediately so browser-close/reopen can still enforce timeout.
+    const stored = this.readLastActivityMs();
+    if (!stored || stored <= 0) {
+      this.writeLastActivityMs(Date.now());
+    }
+
     this.registerActivityListeners();
     this.loadConfigAndStart();
   }
@@ -92,12 +113,20 @@ export class InactivityService {
     for (const eventName of this.activityEvents) {
       window.addEventListener(eventName, this.activityHandler, { passive: true });
     }
+    for (const eventName of this.unloadEvents) {
+      window.addEventListener(eventName, this.unloadHandler, { passive: true });
+    }
+    document.addEventListener('visibilitychange', this.handleVisibilityChange, { passive: true });
   }
 
   private unregisterActivityListeners(): void {
     for (const eventName of this.activityEvents) {
       window.removeEventListener(eventName, this.activityHandler as EventListener);
     }
+    for (const eventName of this.unloadEvents) {
+      window.removeEventListener(eventName, this.unloadHandler as EventListener);
+    }
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange as EventListener);
   }
 
   private onUserActivity(): void {
@@ -142,7 +171,18 @@ export class InactivityService {
     if (cached && !this.configReady) {
       this.applyInactivityConfig(cached);
       this.configReady = true;
-      this.startInactivityCycle();
+
+      // Enforce stored inactivity immediately (do not overwrite stored last-activity first).
+      if (this.hasExceededInactivityLimitFromStoredActivity()) {
+        this.logoutForInactivity();
+        return;
+      }
+      const storedActivityMs = this.readLastActivityMs();
+      if (storedActivityMs && storedActivityMs > 0) {
+        this.startInactivityCycle(storedActivityMs, false);
+      } else {
+        this.startInactivityCycle();
+      }
     }
 
     this.fetchInactivityLogoutMs().subscribe((logoutMs) => {
