@@ -93,19 +93,19 @@ interface BlDetailRow {
         <div class="filters-grid">
           <label class="field-block">
             <span class="field-label">Month</span>
-            <input type="month" class="field-input" [(ngModel)]="selectedMonth">
+            <input type="month" class="field-input" [(ngModel)]="selectedMonth" (ngModelChange)="resetPagination()">
           </label>
           <label class="field-block">
             <span class="field-label">From Date</span>
-            <input type="date" class="field-input" [(ngModel)]="fromDate">
+            <input type="date" class="field-input" [(ngModel)]="fromDate" (ngModelChange)="resetPagination()">
           </label>
           <label class="field-block">
             <span class="field-label">To Date</span>
-            <input type="date" class="field-input" [(ngModel)]="toDate">
+            <input type="date" class="field-input" [(ngModel)]="toDate" (ngModelChange)="resetPagination()">
           </label>
           <label class="field-block search-block">
             <span class="field-label">Search</span>
-            <input class="field-input" [(ngModel)]="searchTerm" placeholder="Search by ref no, licensee, distillery or tanker">
+            <input class="field-input" [(ngModel)]="searchTerm" (ngModelChange)="resetPagination()" placeholder="Search by ref no, licensee, distillery or tanker">
           </label>
         </div>
       </section>
@@ -135,7 +135,7 @@ interface BlDetailRow {
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of filteredRows">
+              <tr *ngFor="let row of paginatedRows">
                 <td class="ref-cell">
                   <div class="ref-primary">{{ row.referenceNo }}</div>
                   <div class="ref-secondary">ENA submission</div>
@@ -185,6 +185,21 @@ interface BlDetailRow {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="table-footer" *ngIf="filteredRows.length > 0">
+          <div class="table-footer-left">
+            <span class="footer-label">Rows per page</span>
+            <select class="footer-select" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+              <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+            </select>
+          </div>
+          <div class="table-footer-right">
+            <span class="footer-range">{{ getPaginationLabel() }}</span>
+            <button type="button" class="pager-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1">Prev</button>
+            <span class="footer-page">Page {{ currentPage }} / {{ getTotalPages() }}</span>
+            <button type="button" class="pager-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= getTotalPages()">Next</button>
+          </div>
         </div>
       </section>
 
@@ -650,6 +665,52 @@ interface BlDetailRow {
       background: #fff;
     }
 
+
+    .table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 0.5rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .table-footer-left,
+    .table-footer-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-select {
+      border: 1px solid #dbe4ef;
+      border-radius: 12px;
+      padding: 0.35rem 0.65rem;
+      background: #fff;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .pager-btn {
+      border: 1px solid #dbe4ef;
+      background: #fff;
+      color: #0f172a;
+      border-radius: 12px;
+      padding: 0.35rem 0.7rem;
+      font-weight: 800;
+    }
+
+    .pager-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .footer-page {
+      font-weight: 800;
+      color: #0f172a;
+    }
     .bl-table {
       width: 100%;
       border-collapse: separate;
@@ -1246,6 +1307,9 @@ export class OicBlDetailsComponent implements OnInit {
   fromDate: string = '';
   toDate: string = '';
 
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize = 5;
+  currentPage = 1;
   ngOnInit(): void {
     // Set default to current running month
     const currentDate = new Date();
@@ -1262,6 +1326,7 @@ export class OicBlDetailsComponent implements OnInit {
       next: (response: any) => {
         const rows = Array.isArray(response?.data) ? response.data : [];
         this.rows = rows.map((row: any) => this.mapRow(row));
+        this.resetPagination();
         this.loading = false;
       },
       error: () => {
@@ -1305,6 +1370,58 @@ export class OicBlDetailsComponent implements OnInit {
 
   onStatCardClick(status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): void {
     this.reviewStatus = status === 'ALL' ? 'ALL' : (this.reviewStatus === status ? 'ALL' : status);
+    this.resetPagination();
+  }
+
+  resetPagination(): void {
+    this.currentPage = 1;
+  }
+
+  onPageSizeChange(value: any): void {
+    const parsed = Number(value);
+    this.pageSize = Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+    this.resetPagination();
+  }
+
+  getTotalPages(): number {
+    const total = this.filteredRows.length;
+    const size = this.pageSize || 5;
+    return Math.max(1, Math.ceil(total / size));
+  }
+
+  goToPage(page: number): void {
+    const totalPages = this.getTotalPages();
+    const next = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    this.currentPage = next;
+  }
+
+  getPaginationLabel(): string {
+    const total = this.filteredRows.length;
+    if (total <= 0) return 'Showing 0 of 0';
+
+    const size = this.pageSize || 5;
+    const totalPages = this.getTotalPages();
+    const safePage = Math.min(Math.max(1, this.currentPage), totalPages);
+    const startIndex = (safePage - 1) * size;
+    const start = startIndex + 1;
+    const end = Math.min(total, startIndex + size);
+    return `Showing ${start}-${end} of ${total}`;
+  }
+
+  get paginatedRows(): BlDetailRow[] {
+    const rows = this.filteredRows;
+    if (rows.length === 0) return [];
+
+    const totalPages = this.getTotalPages();
+    if (this.currentPage > totalPages) {
+      this.currentPage = totalPages;
+    } else if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+
+    const size = this.pageSize || 5;
+    const start = (this.currentPage - 1) * size;
+    return rows.slice(start, start + size);
   }
 
   isStatCardActive(status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): boolean {
