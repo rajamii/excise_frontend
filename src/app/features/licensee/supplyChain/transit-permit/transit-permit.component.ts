@@ -371,6 +371,35 @@ export class TransitPermitComponent implements OnInit {
     return Number.isFinite(value) ? value : 0;
   }
 
+  private getPiecesPerCase(sizeMl: number): number {
+    const conversionEntry = this.brandMlConversionData.find(x => Number(x?.ml) === Number(sizeMl));
+    const factor = Number(conversionEntry?.pieces_in_case ?? conversionEntry?.piecesInCase ?? 0);
+    return Number.isFinite(factor) ? factor : 0;
+  }
+
+  private getReservedPiecesForBrandSize(brand: string, sizeMl: number): number {
+    const normalizedBrand = String(brand || '').trim();
+    if (!normalizedBrand || !Number.isFinite(sizeMl) || sizeMl <= 0) return 0;
+
+    const piecesPerCase = this.getPiecesPerCase(sizeMl);
+    if (!piecesPerCase) return 0;
+
+    return this.products
+      .filter(p => String(p?.brand || '').trim() === normalizedBrand && Number(p?.size) === Number(sizeMl))
+      .reduce((total, p) => total + (Number(p?.cases || 0) * piecesPerCase), 0);
+  }
+
+  private refreshStockForCurrentSelection(): void {
+    if (!this.formData.brand) return;
+
+    const selectedBrandBasic = this.brandsData.find(b => b.brandName === this.formData.brand);
+    this.updateStockSummary(selectedBrandBasic);
+
+    if (this.formData.size) {
+      this.onSizeChange();
+    }
+  }
+
   private getWarehouseExciseDuty(entry: any): number {
     const value = Number(entry?.exciseDutyRsPerCase ?? entry?.excise_duty_rs_per_case ?? 0);
     return Number.isFinite(value) ? value : 0;
@@ -570,13 +599,14 @@ export class TransitPermitComponent implements OnInit {
 
       this.selectedBrandStockSummary = selectedBrandBasic.sizes.map((size: number) => {
         const stockEntry = warehouseEntries.find(we => this.getWarehouseCapacitySize(we) === size);
-        const pieces = stockEntry ? this.getWarehouseCurrentStock(stockEntry) : 0;
+        const rawPieces = stockEntry ? this.getWarehouseCurrentStock(stockEntry) : 0;
+        const reservedPieces = this.getReservedPiecesForBrandSize(this.formData.brand, size);
+        const pieces = Math.max(0, rawPieces - reservedPieces);
 
         console.log(`Size ${size}ml: stockEntry=`, stockEntry, `pieces=${pieces}`);
 
         // Find conversion - check both field name formats
-        const conv = this.brandMlConversionData.find(c => c.ml === size);
-        const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
+        const factor = this.getPiecesPerCase(size);
         const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
 
         console.log(`Size ${size}ml: factor=${factor}, approxCases=${approxCases}`);
@@ -592,9 +622,10 @@ export class TransitPermitComponent implements OnInit {
 
         this.selectedBrandStockSummary = warehouseEntries.map(entry => {
           const size = this.getWarehouseCapacitySize(entry);
-          const pieces = this.getWarehouseCurrentStock(entry);
-          const conv = this.brandMlConversionData.find(c => c.ml === size);
-          const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
+          const rawPieces = this.getWarehouseCurrentStock(entry);
+          const reservedPieces = this.getReservedPiecesForBrandSize(this.formData.brand, size);
+          const pieces = Math.max(0, rawPieces - reservedPieces);
+          const factor = this.getPiecesPerCase(size);
           const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
 
           console.log(`Fallback - Size ${size}ml: pieces=${pieces}, factor=${factor}, approxCases=${approxCases}`);
@@ -625,17 +656,8 @@ export class TransitPermitComponent implements OnInit {
     console.log('brandMlConversionData:', this.brandMlConversionData);
 
     // 1. Get Conversion Factor - check both snake_case and camelCase
-    const conversionEntry = this.brandMlConversionData.find(x => x.ml === sizeMl);
-    console.log('Conversion entry found:', conversionEntry);
-
-    if (conversionEntry) {
-      // Try both field name formats
-      this.conversionFactor = conversionEntry.pieces_in_case || conversionEntry.piecesInCase || 0;
-      console.log('Conversion factor set to:', this.conversionFactor);
-    } else {
-      console.warn(`No conversion entry found for ${sizeMl}ml in brandMlConversionData`);
-      this.conversionFactor = 0;
-    }
+    this.conversionFactor = this.getPiecesPerCase(sizeMl);
+    console.log('Conversion factor set to:', this.conversionFactor);
 
     // If conversion factor is still 0, show error
     if (this.conversionFactor === 0) {
@@ -659,10 +681,14 @@ export class TransitPermitComponent implements OnInit {
     console.log('Stock entry found:', stockEntry);
 
     if (stockEntry) {
-      this.availableStockPieces = this.getWarehouseCurrentStock(stockEntry);
-      console.log('Available stock pieces:', this.availableStockPieces);
+      const rawPieces = this.getWarehouseCurrentStock(stockEntry);
+      const reservedPieces = this.getReservedPiecesForBrandSize(this.formData.brand, sizeMl);
+      this.availableStockPieces = Math.max(0, rawPieces - reservedPieces);
+      console.log('Available stock pieces (net):', this.availableStockPieces, 'reservedPieces:', reservedPieces, 'rawPieces:', rawPieces);
       const approxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
-      this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${approxCases} case${approxCases !== 1 ? 's' : ''})`;
+      this.currentStockStatus = reservedPieces > 0
+        ? `Available: ${this.availableStockPieces} pieces (Approx. ${approxCases} case${approxCases !== 1 ? 's' : ''}) â€¢ Reserved in this application: ${reservedPieces} pieces`
+        : `Available: ${this.availableStockPieces} pieces (Approx. ${approxCases} case${approxCases !== 1 ? 's' : ''})`;
     } else {
       console.warn('No stock entry found for brand:', this.formData.brand, 'size:', sizeMl);
       this.currentStockStatus = 'No stock information available';
@@ -764,6 +790,11 @@ export class TransitPermitComponent implements OnInit {
       this.formData.cases = 0;
       this.formData.bottleType = '';
       this.sizeOptions = [];
+      this.selectedBrandStockSummary = [];
+      this.availableStockPieces = 0;
+      this.conversionFactor = 0;
+      this.currentStockStatus = '';
+      this.stockError = '';
 
       console.log('Product added from warehouse rates:', newProduct);
       return;
@@ -803,6 +834,11 @@ export class TransitPermitComponent implements OnInit {
         this.formData.cases = 0;
         this.formData.bottleType = '';
         this.sizeOptions = [];
+        this.selectedBrandStockSummary = [];
+        this.availableStockPieces = 0;
+        this.conversionFactor = 0;
+        this.currentStockStatus = '';
+        this.stockError = '';
 
         console.log('Product added:', newProduct);
       },
@@ -824,8 +860,10 @@ export class TransitPermitComponent implements OnInit {
       // Unlock common fields if no products remain
       if (this.products.length === 0) {
         this.unlockCommonFields();
+        return;
       }
 
+      this.refreshStockForCurrentSelection();
       console.log('Product deleted at index:', index);
     }
   }
