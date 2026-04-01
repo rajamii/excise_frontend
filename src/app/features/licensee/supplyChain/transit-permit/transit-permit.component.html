@@ -206,7 +206,8 @@
         <button class="btn btn-primary me-3" (click)="addProduct()">
           Add Product
         </button>
-        <button class="btn btn-success me-3" (click)="onPreSubmit()" [disabled]="products.length === 0">
+        <button class="btn btn-success me-3" (click)="onPreSubmit()" [disabled]="!canSubmitApplication()"
+          [title]="hasPendingProductEntry() ? 'Click Add Product to save current entry before submitting' : ''">
           Submit Application
         </button>
         <!-- Hidden button to trigger modal programmatically -->

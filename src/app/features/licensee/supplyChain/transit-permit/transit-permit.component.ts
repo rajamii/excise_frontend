@@ -926,9 +926,27 @@ export class TransitPermitComponent implements OnInit {
     return errors.length === 0;
   }
 
+  hasPendingProductEntry(): boolean {
+    const brand = String(this.formData.brand || '').trim();
+    const size = String(this.formData.size || '').trim();
+    const bottleType = String(this.formData.bottleType || '').trim();
+    const cases = Number(this.formData.cases || 0);
+
+    return !!(brand || size || bottleType || (Number.isFinite(cases) && cases > 0));
+  }
+
+  canSubmitApplication(): boolean {
+    return this.products.length > 0 && !this.hasPendingProductEntry();
+  }
+
   onPreSubmit(): void {
     if (this.products.length === 0) {
       this.validationErrors = ['Please add at least one product before submitting'];
+      return;
+    }
+
+    if (this.hasPendingProductEntry()) {
+      this.validationErrors = ['Please click "Add Product" to save the current entry (or clear product fields) before submitting.'];
       return;
     }
 
