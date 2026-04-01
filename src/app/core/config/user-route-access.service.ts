@@ -28,6 +28,12 @@ export const UserRouteAccessService: CanActivateFn = (
     return true;
   }
 
+  const isDevOnly = next.data?.['devOnly'] === true;
+  if (isDevOnly && !isDevMode()) {
+    router.navigate(['accessdenied']);
+    return false;
+  }
+
   const hasAccessToken = localStorage.getItem('access');
   const hasRefreshToken = localStorage.getItem('refresh');
 
@@ -58,6 +64,12 @@ export const UserRouteAccessService: CanActivateFn = (
         stateStorageService.storeUrl(state.url);
         router.navigate(['/login'], { queryParams: { sessionExpired: true } });
         return of(false);
+      }
+
+      // Dev-only routes should require a valid session, but should not be blocked by
+      // DB permission config while developing/testing.
+      if (isDevOnly) {
+        return of(true);
       }
 
       const requiredPermission = next.data['requiredPermission'] as string | undefined;

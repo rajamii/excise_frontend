@@ -420,9 +420,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // For all officer roles, navigate to dashboard with section parameter
     // This keeps the unified layout and sidebar open
     
-    if (section === 'hologram-inventory') {
-      // Navigate to the hologram overview page
-      this.router.navigate(['/dev-hologram-overview']);
+  if (section === 'hologram-inventory') {
+      // Keep unified dashboard layout for inventory/overview
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'hologram-overview' }
+      });
     } else if (section === 'itcell-hologram') {
       // For IT Cell hologram procurement, navigate with tab parameter to show the hologram tab
       this.router.navigate(['/dashboard'], { 
@@ -574,7 +576,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'company-registration-apply': 'company-registration',
       'salesman-barman-registration-apply': 'salesman-barman-registration',
       // Officer nested page
-      'hologram-overview': 'hologram-register'
+      'hologram-overview': 'hologram-inventory'
     };
 
     return parentSectionMap[value] || value;
