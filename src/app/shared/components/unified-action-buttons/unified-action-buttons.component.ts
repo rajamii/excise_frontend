@@ -415,6 +415,9 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         confirmButtonColor: '#dc2626',
         cancelButtonColor: '#6b7280',
         focusConfirm: false,
+        showCloseButton: true,
+        allowEscapeKey: true,
+        allowOutsideClick: true,
         width: '700px',
         padding: '0',
         showClass: {
@@ -424,6 +427,54 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         hideClass: {
             popup: 'swal2-noanimation',
             backdrop: 'swal2-noanimation'
+        },
+        didOpen: () => {
+          const hardClose = () => {
+            Swal.close();
+            // Defensive cleanup: if any overlay/body classes remain, they can block the UI.
+            try {
+              document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+              document.documentElement.classList.remove('swal2-shown');
+              document.querySelectorAll('.swal2-container').forEach(el => el.remove());
+            } catch {
+              // ignore
+            }
+          };
+
+          const actions = Swal.getActions();
+          if (actions) {
+            (actions as HTMLElement).style.pointerEvents = 'auto';
+          }
+
+          // Ensure Cancel always closes (some pages/styles interfere with click events).
+          const cancelButton = Swal.getCancelButton();
+          if (cancelButton) {
+            cancelButton.disabled = false;
+            cancelButton.style.pointerEvents = 'auto';
+            cancelButton.style.cursor = 'pointer';
+            cancelButton.addEventListener('pointerdown', hardClose, { once: true });
+            cancelButton.addEventListener('mousedown', hardClose, { once: true });
+            cancelButton.addEventListener('touchstart', hardClose, { once: true });
+            cancelButton.addEventListener('click', hardClose, { once: true });
+          }
+
+          const closeButton = Swal.getCloseButton();
+          if (closeButton) {
+            closeButton.style.pointerEvents = 'auto';
+            closeButton.style.cursor = 'pointer';
+            closeButton.addEventListener('pointerdown', hardClose, { once: true });
+            closeButton.addEventListener('click', hardClose, { once: true });
+          }
+        },
+        didClose: () => {
+          // Defensive cleanup (covers cancel/outside/escape/close button).
+          try {
+            document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+            document.documentElement.classList.remove('swal2-shown');
+            document.querySelectorAll('.swal2-container').forEach(el => el.remove());
+          } catch {
+            // ignore
+          }
         },
         preConfirm: () => {
             const popup = Swal.getPopup();
