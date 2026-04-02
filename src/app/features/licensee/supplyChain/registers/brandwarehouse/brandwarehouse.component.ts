@@ -785,7 +785,7 @@ export class BrandwarehouseComponent implements OnInit {
               cases: util.cases,
               bottlesPerCase: util.bottles_per_case || util.bottlesPerCase || 12, // Default if missing
               totalBottles: util.total_bottles || util.totalBottles || (util.cases * (util.bottles_per_case || util.bottlesPerCase || 12)) || util.quantity,
-              status: util.status,
+              status: (util.transit_permit_status || util.transitPermitStatus || util.status),
               approvedBy: util.approvedByDisplay || util.approved_by_display || util.approvedBy || util.approved_by,
               approvalDate: util.approvalDate || util.approval_date,
               createdAt: util.createdAt || util.created_at
