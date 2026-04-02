@@ -890,4 +890,16 @@
     border-left: 4px solid #7b1020;
     .oic-sidebar-icon { color: #ffc0c7; }
   }
+
+  &.sidebar-pending {
+    background: linear-gradient(160deg, #b86e00, #ffc107);
+    color: #1f1f1f;
+    border-left: 4px solid #8a5300;
+    .oic-sidebar-icon { color: #5b3a00; }
+    .oic-sidebar-label { opacity: 0.85; }
+    .oic-sidebar-role { opacity: 0.75; }
+    .oic-sidebar-reason {
+      border-top-color: rgba(0, 0, 0, 0.18);
+    }
+  }
 }

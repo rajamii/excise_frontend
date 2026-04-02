@@ -513,7 +513,9 @@ export class TransitComponent implements OnInit {
     const statusIndicatesPayment = status.includes('forwarded') ||
                                    status.includes('approved') ||
                                    status.includes('paymentsuccessful') ||
+                                   status.includes('pending') ||
                                    status.includes('paid') ||
+                                   statusCode === 'TRP_02' ||
                                    statusCode === 'TRP_03' ||
                                    statusCode === 'TRP_04';
     
@@ -580,19 +582,26 @@ export class TransitComponent implements OnInit {
     if (this.userRole === 'licensee') return false;
 
     const backendStatus = item.backendStatus || '';
+    const normalized = String(backendStatus || '').trim();
+    const token = normalized.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
 
     switch (this.userRole) {
       case 'oic':
         // OIC can approve/reject when payment is done and forwarded to them
-        return backendStatus === 'PaymentSuccessfulandForwardedToOfficerincharge';
+        return (
+          statusCode === 'TRP_02' ||
+          token.includes('pending') ||
+          normalized === 'PaymentSuccessfulandForwardedToOfficerincharge'
+        );
       case 'permit':
         // Permit section can approve/reject when forwarded to them
-        return backendStatus.toLowerCase().includes('permit section') ||
-          backendStatus.toLowerCase().includes('forwarded to permit');
+        return normalized.toLowerCase().includes('permit section') ||
+          normalized.toLowerCase().includes('forwarded to permit');
       case 'commissioner':
         // Commissioner can approve/reject when forwarded to them
-        return backendStatus.toLowerCase().includes('commissioner') ||
-          backendStatus.toLowerCase().includes('forwarded to commissioner');
+        return normalized.toLowerCase().includes('commissioner') ||
+          normalized.toLowerCase().includes('forwarded to commissioner');
       default:
         return false;
     }
@@ -626,7 +635,7 @@ export class TransitComponent implements OnInit {
     }
 
     // Ready for Payment / Pending states
-    if (statusLower.includes('ready for payment') || statusLower === 'pending' || statusLower.includes('waiting')) {
+    if (statusLower.includes('ready for payment') || statusLower.includes('pending') || statusLower.includes('waiting')) {
       return 'pending';
     }
 
@@ -660,7 +669,7 @@ export class TransitComponent implements OnInit {
     }
 
     // Ready for Payment / Pending states
-    if (statusLower.includes('ready for payment') || statusLower === 'pending' || statusLower.includes('waiting')) {
+    if (statusLower.includes('ready for payment') || statusLower.includes('pending') || statusLower.includes('waiting')) {
       return 'bi-clock-fill';
     }
 
