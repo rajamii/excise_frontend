@@ -331,19 +331,27 @@ export class FinalLicenseComponent implements OnDestroy {
       : this.licenseAppService.printLicense(applicationId);
 
     try {
-      await firstValueFrom(req$);
+      const resp: any = await firstValueFrom(req$);
+
+      const newValidationCode = String(resp?.validationCode || resp?.validation_code || '').trim();
+      const newValidationUrl = String(resp?.validationPdfUrl || resp?.validation_pdf_url || '').trim();
+      if (newValidationCode) this.validationCode.set(newValidationCode);
+      if (newValidationUrl) this.validationPdfUrl.set(newValidationUrl);
+
+      // Refresh QR from backend (it encodes the latest stored link).
+      this.loadQrCode();
     } catch (err: any) {
       const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to prepare print.';
       this.error.set(String(msg));
       // If printing is blocked by business rules (e.g. not approved yet),
       // still allow the user to open the browser print dialog for preview.
-      if (Number(err?.status) === 403) return false;
+      if (Number(err?.status) === 403) {
+        const low = String(msg || '').toLowerCase();
+        if (low.includes('not approved') || low.includes('print limit') || low.includes('fee')) return false;
+      }
       throw err;
     }
 
-    // Reload so the QR + bottom verification link reflect the latest rotated token.
-    this.loadFinalLicense();
-    await this.waitForLicenseLoad(9000);
     return true;
   }
 
