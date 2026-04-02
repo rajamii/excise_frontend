@@ -6,6 +6,7 @@ import { ProductionService, ProductionBatch } from '../../services/production.se
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface TransitPermitDetail {
+  utilizationId?: number;
   permitNo: string;
   date: string;
   distributorName: string;
@@ -17,6 +18,7 @@ interface TransitPermitDetail {
   status: 'PENDING' | 'APPROVED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
   approvedBy?: string;
   approvalDate?: string;
+  createdAt?: string;
 }
 
 interface LastEntryDetail {
@@ -774,6 +776,7 @@ export class BrandwarehouseComponent implements OnInit {
             // Map API response to TransitPermitDetail
             // Handle potential differences in field names between API and interface
             allPermits.push({
+              utilizationId: util.id,
               permitNo: util.permit_no || util.permitNo,
               date: util.date,
               distributorName: util.distributor,
@@ -781,10 +784,11 @@ export class BrandwarehouseComponent implements OnInit {
               vehicleNumber: util.vehicle,
               cases: util.cases,
               bottlesPerCase: util.bottles_per_case || util.bottlesPerCase || 12, // Default if missing
-              totalBottles: (util.cases * (util.bottles_per_case || util.bottlesPerCase || 12)) || util.quantity,
+              totalBottles: util.total_bottles || util.totalBottles || (util.cases * (util.bottles_per_case || util.bottlesPerCase || 12)) || util.quantity,
               status: util.status,
               approvedBy: util.approvedByDisplay || util.approved_by_display || util.approvedBy || util.approved_by,
-              approvalDate: util.approvalDate || util.approval_date
+              approvalDate: util.approvalDate || util.approval_date,
+              createdAt: util.createdAt || util.created_at
             });
           });
 
@@ -805,7 +809,40 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   finalizeTransitPermits(permits: TransitPermitDetail[]): void {
-    permits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const parseTs = (value: any): number => {
+      const s = String(value || '').trim();
+      if (!s) return Number.NEGATIVE_INFINITY;
+      const t = new Date(s).getTime();
+      return isNaN(t) ? Number.NEGATIVE_INFINITY : t;
+    };
+
+    const permitSeq = (permitNo: any): number => {
+      const s = String(permitNo || '').trim();
+      // Common format: TRP/33/EXCISE
+      const m = s.match(/(?:^|\/)TRP\/(\d+)\//i);
+      if (m && m[1]) return parseInt(m[1], 10) || 0;
+      const parts = s.split('/').filter(Boolean);
+      const maybe = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+      return isNaN(maybe) ? 0 : maybe;
+    };
+
+    // Sort newest first:
+    // 1) approvalDate/createdAt/date (timestamp) desc
+    // 2) permit sequence number desc
+    // 3) utilization id desc
+    permits.sort((a, b) => {
+      const ta = Math.max(parseTs(a.approvalDate), parseTs(a.createdAt), parseTs(a.date));
+      const tb = Math.max(parseTs(b.approvalDate), parseTs(b.createdAt), parseTs(b.date));
+      if (tb !== ta) return tb - ta;
+
+      const sa = permitSeq(a.permitNo);
+      const sb = permitSeq(b.permitNo);
+      if (sb !== sa) return sb - sa;
+
+      const ia = Number(a.utilizationId || 0);
+      const ib = Number(b.utilizationId || 0);
+      return ib - ia;
+    });
     this.selectedTransitPermits = permits;
     this.isLoadingPermits = false;
     // Reset pagination & auto-select current month if data exists
