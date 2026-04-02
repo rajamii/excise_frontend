@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MaterialModule } from '../../../shared/material.module';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
-import { catchError } from 'rxjs';
+import { catchError, firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 type FinalLicenseTemplateData = {
@@ -322,6 +322,35 @@ export class FinalLicenseComponent implements OnDestroy {
     void this.printWithLoader();
   }
 
+  private async rotateVerificationForPrint(): Promise<void> {
+    const applicationId = this.queryAppId();
+    if (!applicationId) return;
+
+    const req$ = this.isNewLicense
+      ? this.licenseAppService.printNewLicense(applicationId)
+      : this.licenseAppService.printLicense(applicationId);
+
+    try {
+      await firstValueFrom(req$);
+    } catch (err: any) {
+      const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to prepare print.';
+      this.error.set(String(msg));
+      throw err;
+    }
+
+    // Reload so the QR + bottom verification link reflect the latest rotated token.
+    this.loadFinalLicense();
+    await this.waitForLicenseLoad(9000);
+  }
+
+  private async waitForLicenseLoad(timeoutMs: number): Promise<void> {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      if (!this.loading()) return;
+      await new Promise(resolve => window.setTimeout(resolve, 120));
+    }
+  }
+
   private async printWithLoader(): Promise<void> {
     if (this.printing()) return;
 
@@ -342,6 +371,14 @@ export class FinalLicenseComponent implements OnDestroy {
     }, 20000);
 
     try {
+      try {
+        await this.rotateVerificationForPrint();
+      } catch {
+        this.printing.set(false);
+        cleanup();
+        return;
+      }
+
       await this.waitForNextFrame();
       await this.waitForNextFrame();
       await this.paginateTermsToPages();
