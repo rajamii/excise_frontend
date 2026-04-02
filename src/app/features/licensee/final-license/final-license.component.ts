@@ -322,9 +322,9 @@ export class FinalLicenseComponent implements OnDestroy {
     void this.printWithLoader();
   }
 
-  private async rotateVerificationForPrint(): Promise<void> {
+  private async rotateVerificationForPrint(): Promise<boolean> {
     const applicationId = this.queryAppId();
-    if (!applicationId) return;
+    if (!applicationId) return false;
 
     const req$ = this.isNewLicense
       ? this.licenseAppService.printNewLicense(applicationId)
@@ -335,12 +335,16 @@ export class FinalLicenseComponent implements OnDestroy {
     } catch (err: any) {
       const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to prepare print.';
       this.error.set(String(msg));
+      // If printing is blocked by business rules (e.g. not approved yet),
+      // still allow the user to open the browser print dialog for preview.
+      if (Number(err?.status) === 403) return false;
       throw err;
     }
 
     // Reload so the QR + bottom verification link reflect the latest rotated token.
     this.loadFinalLicense();
     await this.waitForLicenseLoad(9000);
+    return true;
   }
 
   private async waitForLicenseLoad(timeoutMs: number): Promise<void> {
@@ -371,13 +375,9 @@ export class FinalLicenseComponent implements OnDestroy {
     }, 20000);
 
     try {
-      try {
-        await this.rotateVerificationForPrint();
-      } catch {
-        this.printing.set(false);
-        cleanup();
-        return;
-      }
+      // Try to rotate verification token for printing. If policy blocks it (403),
+      // still proceed with printing a preview using the currently loaded QR/link.
+      await this.rotateVerificationForPrint();
 
       await this.waitForNextFrame();
       await this.waitForNextFrame();
