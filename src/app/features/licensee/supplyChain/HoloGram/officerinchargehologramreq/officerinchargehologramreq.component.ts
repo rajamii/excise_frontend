@@ -11,6 +11,7 @@ interface HologramRequest {
   submissionDate: string;
   usageDate: string; // Date when holograms will be used in factory
   submittedBy: string;
+  updatedBy?: string;
   requestType: 'NEW_ALLOCATION' | 'ADDITIONAL_STOCK' | 'REPLACEMENT';
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
   requestedQuantity: number;
@@ -168,6 +169,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
             submissionDate: req.submissionDate || new Date().toISOString(),
             usageDate: req.usageDate || new Date().toISOString(),
             submittedBy: req.licenseeName || 'Unknown',
+            updatedBy: req.production_updated_by || req.productionUpdatedBy || '',
             requestType: 'NEW_ALLOCATION',
             hologramType: this.normalizeHologramType(req.hologramType || req.type),
             requestedQuantity: req.quantity || 0,
@@ -208,6 +210,21 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     return String(referenceNo || '').replace(/^NHP(?=\/)/i, 'HQR');
   }
 
+  getDisplayNameLine1(fullName: string): string {
+    const cleaned = String(fullName || '').trim().replace(/\s+/g, ' ');
+    if (!cleaned) return '';
+    const parts = cleaned.split(' ');
+    return parts[0] || cleaned;
+  }
+
+  getDisplayNameLine2(fullName: string): string {
+    const cleaned = String(fullName || '').trim().replace(/\s+/g, ' ');
+    if (!cleaned) return '';
+    const parts = cleaned.split(' ');
+    if (parts.length <= 1) return '';
+    return parts.slice(1).join(' ');
+  }
+
   // Helper Methods for Dynamic Workflow
   canIssue(request: any): boolean {
     // Never show action buttons once request moves past pending-review stage.
@@ -236,8 +253,24 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     return usageKey === todayKey;
   }
 
+  isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) {
+      return false;
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
+  }
+
   shouldShowUsageDateApprovalNotice(request: any): boolean {
-    return this.mapStatusToCategory(request) === 'PENDING' && !this.isUsageDateToday(request);
+    return this.mapStatusToCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
+  }
+
+  shouldShowUsageDateMissedNotice(request: any): boolean {
+    return this.mapStatusToCategory(request) === 'PENDING' && this.isUsageDatePast(request);
   }
 
   canReject(request: any): boolean {
@@ -272,15 +305,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     switch (category) {
       case 'APPROVED':
-        return 'bg-success';
+        return 'bg-success text-white';
       case 'UNDER_PROCESS':
         return 'bg-warning text-dark';
       case 'PENDING':
-        return 'bg-info';
+        return 'bg-info text-white';
       case 'REJECTED':
-        return 'bg-danger';
+        return 'bg-danger text-white';
       default:
-        return 'bg-secondary';
+        return 'bg-secondary text-white';
     }
   }
 
@@ -357,6 +390,24 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     this.currentPage = 1;
     this.updatePagination();
+  }
+
+  onStatusCardClick(status: '' | 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): void {
+    this.filters.status = this.filters.status === status ? '' : status;
+    this.applyFilters();
+  }
+
+  isStatusCardActive(status: '' | 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): boolean {
+    return this.filters.status === status;
+  }
+
+  onHologramTypeCardClick(type: '' | 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
+    this.filters.hologramType = this.filters.hologramType === type ? '' : type;
+    this.applyFilters();
+  }
+
+  isHologramTypeCardActive(type: '' | 'LOCAL' | 'EXPORT' | 'DEFENCE'): boolean {
+    return this.filters.hologramType === type;
   }
 
   clearFilters() {
@@ -668,9 +719,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   getRequestCount(status?: string): number {
     if (status) {
-      return this.filteredRequests.filter(req => this.mapStatusToCategory(req) === status).length;
+      return this.hologramRequests.filter(req => this.mapStatusToCategory(req) === status).length;
     }
-    return this.filteredRequests.length;
+    return this.hologramRequests.length;
   }
 
   // Categorize using DB workflow metadata; avoid hardcoded stage names.

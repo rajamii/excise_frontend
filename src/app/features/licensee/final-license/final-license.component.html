@@ -1,0 +1,234 @@
+﻿<div class="final-license-root">
+  <div class="print-overlay no-print" *ngIf="printing()" aria-live="polite" aria-busy="true">
+    <div class="print-overlay-card">
+      <mat-progress-spinner diameter="42" mode="indeterminate"></mat-progress-spinner>
+      <div class="print-overlay-title">Preparing license for print…</div>
+      <div class="print-overlay-sub">Please wait, it may take a few seconds.</div>
+    </div>
+  </div>
+
+  <div class="screen-actions no-print">
+    <button mat-stroked-button color="primary" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back
+    </button>
+    <div class="spacer"></div>
+    <mat-progress-spinner
+      *ngIf="loading()"
+      diameter="22"
+      mode="indeterminate"
+      class="mini-spinner"
+    ></mat-progress-spinner>
+    <div class="meta" *ngIf="error()">
+      <span class="meta-label">Error:</span> {{ error() }}
+    </div>
+    <div class="meta" *ngIf="photoStatus()">
+      <span class="meta-label">{{ photoStatus() }}</span>
+    </div>
+    <div class="meta" *ngIf="qrStatus()">
+      <span class="meta-label">{{ qrStatus() }}</span>
+    </div>
+    <div class="meta">
+      <span class="meta-label">Type:</span> {{ requestedFor }}
+    </div>
+    <button mat-flat-button color="primary" (click)="print()" [disabled]="loading() || printing()">
+      <mat-icon>print</mat-icon>
+      Print
+    </button>
+  </div>
+
+  <div class="pages">
+    <ng-template #licenseDetails>
+      <div class="details">
+        <table class="info-table">
+          <tr>
+            <td class="key">License Number</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().licenseNumber || '-' }}</td>
+            <td class="photo" rowspan="6">
+              <ng-container *ngIf="templateData().passportPhotoUrl; else photoPlaceholder">
+                <img class="photo-img" [src]="templateData().passportPhotoUrl" alt="Passport photo" />
+              </ng-container>
+              <ng-template #photoPlaceholder>
+                <div class="photo-box" aria-label="Photo placeholder"></div>
+              </ng-template>
+            </td>
+          </tr>
+          <tr>
+            <td class="key">Name of the Licensee</td>
+            <td class="colon">:</td>
+            <td class="value strong">{{ templateData().licenseeName || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Father's/Husband's Name</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().fatherOrHusbandName || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Kind of Shop</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().kindOfShop || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Address of the Business Premises</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().addressOfBusiness || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">District</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().district || '-' }}</td>
+          </tr>
+          <tr>
+            <td class="key">Mode of Operation</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().modeOfOperation || '-' }}</td>
+            <td class="photo-spacer"></td>
+          </tr>
+        </table>
+      </div>
+    </ng-template>
+
+    <!-- Page 1 -->
+    <section class="page">
+      <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
+
+      <header class="header">
+        <div class="header-left"></div>
+        <div class="header-center">
+          <img class="emblem-img" src="assets/emblem_2.jpg" alt="Emblem" />
+          <div class="dept">EXCISE DEPARTMENT</div>
+          <div class="govt">Government of Sikkim</div>
+          <div class="title">{{ licenseTitle() }}</div>
+        </div>
+        <div class="header-right">
+          <ng-container *ngIf="qrCodeUrl(); else qrPlaceholder">
+            <img class="qr-img" [src]="qrCodeUrl()" alt="QR code" />
+          </ng-container>
+          <ng-template #qrPlaceholder>
+            <div class="qr" aria-label="QR code placeholder"></div>
+          </ng-template>
+        </div>
+      </header>
+
+      <div class="sub-title">COUNTER FOIL</div>
+
+      <div class="content">
+        <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
+
+        <p class="paragraph" *ngIf="templateData().licenseFee || templateData().transactionRef || templateData().transactionDate || templateData().validFrom || templateData().validTo">
+          The License fee of <span class="strong">{{ templateData().licenseFee }}</span> for issue of this License
+          vide Transaction Reference Number <span class="strong">{{ templateData().transactionRef }}</span> dated
+          <span class="strong">{{ templateData().transactionDate }}</span> has been acknowledged by the Department.
+          Hence your License is valid from <span class="strong">{{ templateData().validFrom }}</span> to
+          <span class="strong">{{ templateData().validTo }}</span>.
+        </p>
+
+        <p class="paragraph small">
+          This is a computer generated License which does not require signature.
+        </p>
+      </div>
+
+      <footer class="footer">
+        <div class="left">
+          <div class="date-row">
+            <div class="label">Date :</div>
+            <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          </div>
+          <div class="validation-edge" *ngIf="validationPdfUrl()">
+            <span class="validation-text">{{ validationPdfUrl() }}</span>
+          </div>
+        </div>
+        <div class="right">
+          <div class="sign-frame" aria-label="Commissioner signature">
+            <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
+          </div>
+          <div class="signatory">Commissioner of Excise, Excise Department</div>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Page 2 -->
+    <section class="page terms-page">
+      <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
+
+      <header class="header compact">
+        <div class="header-left"></div>
+        <div class="header-center">
+          <img class="emblem-img small" src="assets/emblem_2.jpg" alt="Emblem" />
+          <div class="dept">EXCISE DEPARTMENT</div>
+          <div class="govt">Government of Sikkim</div>
+          <div class="title">{{ licenseTitle() }}</div>
+        </div>
+        <div class="header-right">
+          <ng-container *ngIf="qrCodeUrl(); else qrPlaceholderSmall">
+            <img class="qr-img small" [src]="qrCodeUrl()" alt="QR code" />
+          </ng-container>
+          <ng-template #qrPlaceholderSmall>
+            <div class="qr small" aria-label="QR code placeholder"></div>
+          </ng-template>
+        </div>
+      </header>
+
+        <div class="content">
+          <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
+          <div class="section-title" *ngIf="terms().length">The aforesaid License has been granted as per the following terms and conditions:</div>
+          <ol class="terms" type="I" *ngIf="termsPages()[0]?.items?.length">
+            <li *ngFor="let t of termsPages()[0].items">{{ t }}</li>
+          </ol>
+        </div>
+
+      <div class="page-number" *ngIf="termsPages().length > 1">Page No: 2</div>
+
+      <footer class="footer" *ngIf="termsPages().length === 1">
+        <div class="left">
+          <div class="date-row">
+            <div class="label">Date :</div>
+            <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          </div>
+          <div class="validation-edge" *ngIf="validationPdfUrl()">
+            <span class="validation-text">{{ validationPdfUrl() }}</span>
+          </div>
+        </div>
+        <div class="right">
+          <div class="sign-frame" aria-label="Commissioner signature">
+            <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
+          </div>
+          <div class="signatory">Commissioner of Excise, Excise Department</div>
+          <div class="page-number">Page No: 2</div>
+        </div>
+      </footer>
+    </section>
+
+    <section class="page terms-page" *ngFor="let p of termsPages().slice(1); let i = index">
+      <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
+
+      <div class="content">
+        <ol class="terms continued" type="I" [attr.start]="p.start">
+          <li *ngFor="let t of p.items">{{ t }}</li>
+        </ol>
+      </div>
+
+      <div class="page-number" *ngIf="i !== (termsPages().length - 2)">Page No: {{ i + 3 }}</div>
+
+      <footer class="footer" *ngIf="i === (termsPages().length - 2)">
+        <div class="left">
+          <div class="date-row">
+            <div class="label">Date :</div>
+            <div class="value">{{ templateData().generatedOn || '-' }}</div>
+          </div>
+          <div class="validation-edge" *ngIf="validationPdfUrl()">
+            <span class="validation-text">{{ validationPdfUrl() }}</span>
+          </div>
+        </div>
+        <div class="right">
+          <div class="sign-frame" aria-label="Commissioner signature">
+            <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" />
+          </div>
+          <div class="signatory">Commissioner of Excise, Excise Department</div>
+          <div class="page-number">Page No: {{ i + 3 }}</div>
+        </div>
+      </footer>
+    </section>
+  </div>
+</div>

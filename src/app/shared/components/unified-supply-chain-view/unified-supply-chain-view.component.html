@@ -1074,11 +1074,14 @@
     <!-- Right-side sticky decision panel (transit + rejected requisition) -->
     @if (shouldShowRightSideDecisionPanel()) {
     <div class="oic-action-sidebar"
-        [class.sidebar-approved]="!isRightSideDecisionNegative()"
+        [class.sidebar-approved]="!isRightSideDecisionNegative() && !isTransitPendingSidebar()"
+        [class.sidebar-pending]="isTransitPendingSidebar()"
         [class.sidebar-cancelled]="isRightSideDecisionNegative()">
         <div class="oic-sidebar-inner">
             <div class="oic-sidebar-icon">
-                <i class="bi" [class.bi-check-circle-fill]="!isRightSideDecisionNegative()"
+                <i class="bi"
+                    [class.bi-clock-fill]="isTransitPendingSidebar()"
+                    [class.bi-check-circle-fill]="!isRightSideDecisionNegative() && !isTransitPendingSidebar()"
                     [class.bi-x-circle-fill]="isRightSideDecisionNegative()"></i>
             </div>
             <div class="oic-sidebar-label">

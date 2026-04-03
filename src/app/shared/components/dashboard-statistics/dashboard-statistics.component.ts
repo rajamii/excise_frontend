@@ -20,21 +20,6 @@ interface FilterOption {
   imports: [CommonModule, FormsModule],
   template: `
     <div class="dashboard-statistics">
-      <!-- Filter Dropdown -->
-      <div class="filter-section">
-        <div class="filter-container">
-          <label class="filter-label">Filter by Application Type</label>
-          <select 
-            class="form-select filter-dropdown" 
-            [(ngModel)]="selectedFilter"
-            (ngModelChange)="onFilterChange($event)">
-            <option *ngFor="let option of filterOptions" [value]="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </div>
-      </div>
-
       <!-- Statistics Cards -->
       <div class="statistics-cards">
         <div class="stat-card applied">
@@ -92,32 +77,6 @@ interface FilterOption {
   styles: [`
     .dashboard-statistics {
       margin-bottom: 2rem;
-    }
-
-    .filter-section {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 2rem;
-    }
-
-    .filter-container {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-    }
-
-    .filter-label {
-      font-size: 0.875rem;
-      color: #6c757d;
-      margin-bottom: 0.5rem;
-    }
-
-    .filter-dropdown {
-      min-width: 200px;
-      border: 1px solid #dee2e6;
-      border-radius: 0.375rem;
-      padding: 0.5rem 1rem;
-      font-size: 0.875rem;
     }
 
     .statistics-cards {
@@ -257,10 +216,4 @@ export class DashboardStatisticsComponent {
   @Input() showSelectionMessage: boolean = false;
 
   @Output() filterChange = new EventEmitter<string>();
-
-  selectedFilter: string = 'all';
-
-  onFilterChange(value: string): void {
-    this.filterChange.emit(value);
-  }
 }

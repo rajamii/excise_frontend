@@ -123,19 +123,122 @@ export class LoginComponent extends BaseComponent {
       if (params['inactive']) {
         setTimeout(() => {
           Swal.fire({
-            title: 'We Miss You',
+            title: 'Session timed out',
             html: `
               <div class="inactive-logout-content">
-                <div class="inactive-alien-wrap" aria-hidden="true">
-                  <span class="inactive-alien-head"></span>
-                  <span class="inactive-alien-eye inactive-alien-eye-left"></span>
-                  <span class="inactive-alien-eye inactive-alien-eye-right"></span>
-                  <span class="inactive-alien-mouth"></span>
-                  <span class="inactive-alien-antenna"></span>
-                  <span class="inactive-alien-tear"></span>
+                <div class="inactive-logout-illustration" aria-hidden="true">
+                  <svg class="inactive-logout-icon" viewBox="0 0 96 96" role="presentation" focusable="false">
+                    <defs>
+                      <linearGradient id="inactiveAmber" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffcf5e" />
+                        <stop offset="1" stop-color="#f59e0b" />
+                      </linearGradient>
+                      <linearGradient id="inactiveGlassStroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#1f2e53" />
+                        <stop offset="1" stop-color="#142243" />
+                      </linearGradient>
+                      <linearGradient id="inactiveGlassFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#f4f8ff" />
+                        <stop offset="1" stop-color="#d7e5ff" />
+                      </linearGradient>
+                      <linearGradient id="inactiveFoam" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffffff" />
+                        <stop offset="1" stop-color="#f0f4ff" />
+                      </linearGradient>
+                      <clipPath id="inactiveBeerClip">
+                        <path d="M30 22h28l-4 56H34l-4-56z" />
+                      </clipPath>
+                    </defs>
+
+                    <!-- Beer glass (broken + spill) -->
+                    <g class="inactive-logout-glass" transform="translate(0,0)">
+                      <!-- Ground shadow (stays on ground while glass falls) -->
+                      <ellipse class="inactive-logout-shadow" cx="46" cy="90" rx="22" ry="6" fill="#0b1b3a" opacity="0.12" />
+
+                      <!-- Glass body -->
+                      <path
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="url(#inactiveGlassFill)"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="none"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="2.6"
+                        stroke-linejoin="round"
+                        opacity="0.92"
+                      />
+
+                      <!-- Handle -->
+                      <path
+                        d="M60 34c9 0 14 7 14 14s-5 14-14 14"
+                        fill="none"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="3.6"
+                        stroke-linecap="round"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M60 40c5 0 8 4 8 8s-3 8-8 8"
+                        fill="none"
+                        stroke="url(#inactiveGlassFill)"
+                        stroke-width="5.2"
+                        stroke-linecap="round"
+                        opacity="0.88"
+                      />
+
+                      <!-- Beer inside (clipped) -->
+                      <g clip-path="url(#inactiveBeerClip)">
+                        <path
+                          class="inactive-logout-beer"
+                          d="M28 48c6-4 11 2 16-1s11-8 16-3v44H28V48z"
+                          fill="url(#inactiveAmber)"
+                          opacity="0.96"
+                        />
+                      </g>
+
+                      <!-- Crack + broken rim -->
+                      <path
+                        class="inactive-logout-crack"
+                        d="M46 30l-6 10 8 7-9 10 10 10-4 10"
+                        fill="none"
+                        stroke="#1f2e53"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        opacity="0.72"
+                      />
+                      <path
+                        d="M46 18l7 2-6 6-8-2z"
+                        fill="url(#inactiveGlassFill)"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="2"
+                        opacity="0.9"
+                      />
+
+                      <!-- Spill drops -->
+                      <g class="inactive-logout-spill" opacity="0.98">
+                        <path class="inactive-logout-drop inactive-logout-drop-1" d="M52 56c4 6 2 10-2 12-4-2-6-6-2-12 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" />
+                        <path class="inactive-logout-drop inactive-logout-drop-2" d="M58 60c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.92" />
+                        <path class="inactive-logout-drop inactive-logout-drop-3" d="M48 62c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.88" />
+                      </g>
+
+                      <!-- Shards -->
+                      <path class="inactive-logout-shard inactive-logout-shard-1" d="M72 26l10 4-8 10-10-4z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.85" />
+                      <path class="inactive-logout-shard inactive-logout-shard-2" d="M18 48l10-3 3 10-10 3z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.82" />
+
+                      <!-- Impact marks near ground -->
+                      <g class="inactive-logout-impact" opacity="0">
+                        <path d="M30 86l-6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M62 86l6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M46 84v6" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.55" />
+                      </g>
+                    </g>
+                  </svg>
                 </div>
                 <p class="inactive-logout-message">
-                  Your session timed out due to inactivity. Please log in again.
+                  Your session ended due to inactivity. Please sign in again to continue.
                 </p>
               </div>
             `,

@@ -59,14 +59,101 @@ interface CommissionerData {
       <ng-container *ngIf="embeddedHologramOnly; else fullDashboard">
         <div class="hologram-register-table">
           <div class="register-container">
-            <div class="register-header-bar">
-              <h5 class="register-table-title">
-                <i class="bi bi-table me-2"></i>
-                Hologram Procurement Applications
-              </h5>
-              <div class="register-info">
-                <span class="entries-count">{{ filteredApplications.length }} Applications</span>
+             <div class="holo-stat-cards" *ngIf="embeddedHologramOnly">
+               <div
+                 class="holo-stat-card total"
+                 role="button"
+                 tabindex="0"
+                 (click)="setHologramStatusSummary('ALL')"
+                 (keydown.enter)="setHologramStatusSummary('ALL')"
+                 (keydown.space)="setHologramStatusSummary('ALL')"
+                 [class.active]="hologramStatusSummary === 'ALL'">
+                 <div class="holo-stat-icon"><i class="bi bi-list-ul"></i></div>
+                 <div class="holo-stat-content">
+                   <div class="holo-stat-number">{{ getHologramSummaryCount('ALL') }}</div>
+                   <div class="holo-stat-label">TOTAL</div>
+                 </div>
+               </div>
+               <div
+                 class="holo-stat-card pending"
+                 role="button"
+                 tabindex="0"
+                 (click)="setHologramStatusSummary('UNDER_PROCESS')"
+                 (keydown.enter)="setHologramStatusSummary('UNDER_PROCESS')"
+                 (keydown.space)="setHologramStatusSummary('UNDER_PROCESS')"
+                 [class.active]="hologramStatusSummary === 'UNDER_PROCESS'">
+                 <div class="holo-stat-icon"><i class="bi bi-clock"></i></div>
+                 <div class="holo-stat-content">
+                   <div class="holo-stat-number">{{ getHologramSummaryCount('UNDER_PROCESS') }}</div>
+                   <div class="holo-stat-label">UNDER PROCESS</div>
+                 </div>
+               </div>
+               <div
+                 class="holo-stat-card approved"
+                 role="button"
+                 tabindex="0"
+                 (click)="setHologramStatusSummary('APPROVED')"
+                 (keydown.enter)="setHologramStatusSummary('APPROVED')"
+                 (keydown.space)="setHologramStatusSummary('APPROVED')"
+                 [class.active]="hologramStatusSummary === 'APPROVED'">
+                 <div class="holo-stat-icon"><i class="bi bi-check-circle"></i></div>
+                 <div class="holo-stat-content">
+                   <div class="holo-stat-number">{{ getHologramSummaryCount('APPROVED') }}</div>
+                   <div class="holo-stat-label">APPROVED</div>
+                 </div>
+               </div>
+               <div
+                 class="holo-stat-card rejected"
+                 role="button"
+                 tabindex="0"
+                 (click)="setHologramStatusSummary('REJECTED')"
+                 (keydown.enter)="setHologramStatusSummary('REJECTED')"
+                 (keydown.space)="setHologramStatusSummary('REJECTED')"
+                 [class.active]="hologramStatusSummary === 'REJECTED'">
+                 <div class="holo-stat-icon"><i class="bi bi-x-circle"></i></div>
+                 <div class="holo-stat-content">
+                   <div class="holo-stat-number">{{ getHologramSummaryCount('REJECTED') }}</div>
+                   <div class="holo-stat-label">REJECTED</div>
+                 </div>
+               </div>
+             </div>
+
+             <div class="filter-bar" *ngIf="allApplications.length > 0">
+               <div class="filter-item">
+                 <label class="filter-label">Date</label>
+                 <input
+                  type="date"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="hologramDateFilter"
+                  (change)="applyFilters()"
+                  title="Filter by date">
               </div>
+              <div class="filter-item">
+                <label class="filter-label">Month</label>
+                <input
+                  type="month"
+                  class="form-control form-control-sm"
+                  [(ngModel)]="hologramMonthFilter"
+                  (change)="applyFilters()"
+                  title="Filter by month">
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Company</label>
+                <select class="form-select form-select-sm" [(ngModel)]="selectedCompany" (ngModelChange)="applyFilters()">
+                  <option value="">All Companies</option>
+                  <option *ngFor="let c of companyOptions" [value]="c">{{ c }}</option>
+                </select>
+              </div>
+              <button
+                class="btn btn-outline-danger btn-sm"
+                (click)="clearHologramFilters()"
+                *ngIf="selectedCompany || hologramMonthFilter || hologramDateFilter || hologramStatusSummary !== 'ALL'">
+                <i class="bi bi-x-circle me-1"></i>Clear
+              </button>
+
+              <span class="entries-count entries-count--inline">
+                {{ filteredApplications.length }} Applications
+              </span>
             </div>
 
             <div class="table-responsive" *ngIf="filteredApplications.length > 0">
@@ -299,14 +386,26 @@ interface CommissionerData {
       <ng-template #fullDashboard>
       <!-- Dashboard Statistics -->
       <app-dashboard-statistics
-        [statistics]="getDashboardStatistics()"
-        [filterOptions]="getFilterOptions()"
-        [showSelectionMessage]="!selectedApplicationType || selectedApplicationType === 'all'"
-        (filterChange)="onDashboardFilterChange($event)">
+        [statistics]="getDashboardStatistics()">
       </app-dashboard-statistics>
 
-      <!-- Data Table - Only show when a specific type is selected -->
-      <div class="data-table-section" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length > 0">
+       <!-- Data Table -->
+        <div class="data-table-section" *ngIf="filteredApplications.length > 0">
+          <div class="filter-bar" *ngIf="filteredApplications.length > 0">
+            <div class="filter-item">
+              <label class="filter-label">Company</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedCompany" (ngModelChange)="applyFilters()">
+                <option value="">All Companies</option>
+               <option *ngFor="let c of companyOptions" [value]="c">{{ c }}</option>
+             </select>
+           </div>
+           <button
+              class="btn btn-outline-danger btn-sm"
+              (click)="clearCompanyFilter()"
+              *ngIf="selectedCompany">
+              <i class="bi bi-x-circle me-1"></i>Clear
+            </button>
+          </div>
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
@@ -365,13 +464,13 @@ interface CommissionerData {
         </div>
       </div>
 
-      <!-- Empty State for specific type with no data -->
-      <div class="empty-state" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length === 0">
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredApplications.length === 0">
         <div class="empty-icon">
           <i class="bi bi-inbox"></i>
         </div>
-        <h5>No {{ selectedApplicationType | titlecase }} Applications Found</h5>
-        <p>There are no {{ selectedApplicationType }} applications requiring commissioner review at this time.</p>
+        <h5>No Applications Found</h5>
+        <p>There are no applications requiring commissioner review at this time.</p>
       </div>
       </ng-template>
     </div>
@@ -379,6 +478,158 @@ interface CommissionerData {
   styles: [`
     .commissioner-dashboard {
       padding: 1rem;
+    }
+
+    .filter-bar {
+      display: flex;
+      align-items: end;
+      justify-content: flex-start !important;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 10px 12px;
+      width: 100%;
+      flex: 1 1 100%;
+      border: 1px solid #e5e7eb;
+      border-top: 0;
+      background: #f8fafc;
+    }
+
+    .holo-stat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-top: 0;
+      background: #ffffff;
+    }
+
+    .holo-stat-card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 12px 14px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .holo-stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.2s ease;
+    }
+
+    .holo-stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    }
+
+    .holo-stat-card:hover::after,
+    .holo-stat-card.active::after {
+      transform: scaleX(1);
+    }
+
+    .holo-stat-card.active {
+      border-color: rgba(59, 130, 246, 0.55);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15), 0 6px 14px rgba(0, 0, 0, 0.12);
+    }
+
+    .holo-stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.15rem;
+      flex: 0 0 44px;
+    }
+
+    .holo-stat-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .holo-stat-number {
+      font-size: 1.4rem;
+      font-weight: 800;
+      line-height: 1;
+      color: #1f2937;
+    }
+
+    .holo-stat-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #6b7280;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .holo-stat-card.total .holo-stat-icon {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+    .holo-stat-card.total::after {
+      background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    }
+
+    .holo-stat-card.pending .holo-stat-icon {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+    .holo-stat-card.pending::after {
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+    }
+
+    .holo-stat-card.approved .holo-stat-icon {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+    .holo-stat-card.approved::after {
+      background: linear-gradient(90deg, #10b981, #059669);
+    }
+
+    .holo-stat-card.rejected .holo-stat-icon {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+    .holo-stat-card.rejected::after {
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+    }
+
+    .filter-label {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .entries-count--inline {
+      margin-left: auto;
+      align-self: center;
+      flex: 0 0 auto;
+      white-space: nowrap;
     }
 
     .data-table-section {
@@ -393,22 +644,27 @@ interface CommissionerData {
     }
 
     .register-header-bar {
-      background: linear-gradient(135deg, #1f2937 0%, #334155 100%);
-      color: #fff;
+      background: #fff;
+      color: #111827;
       padding: 14px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      border-bottom: 1px solid #e5e7eb;
     }
 
     .register-table-title {
       margin: 0;
       font-weight: 700;
       font-size: 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .entries-count {
-      background: rgba(255, 255, 255, 0.2);
+      background: #111827;
+      color: #fff;
       border-radius: 999px;
       padding: 6px 14px;
       font-weight: 600;
@@ -420,6 +676,13 @@ interface CommissionerData {
       vertical-align: middle;
       font-size: 0.95rem;
       border-color: #dbe2ea;
+    }
+
+    /* Dark header background for all columns */
+    .register-table thead th {
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
     }
 
     .qty-value.total {
@@ -560,6 +823,13 @@ export class CommissionerDashboardComponent implements OnInit {
   allApplications: CommissionerData[] = [];
   filteredApplications: CommissionerData[] = [];
   selectedApplicationType: string = 'all';
+  selectedCompany: string = '';
+  companyOptions: string[] = [];
+  hologramMonthFilter: string = '';
+  hologramDateFilter: string = '';
+  hologramStatusSummary: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED' = 'ALL';
+  private currentRoleId: number = 0;
+  private currentRoleName: string = '';
 
   // Pagination
   currentPage: number = 1;
@@ -577,6 +847,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('🎯 Commissioner Dashboard (role-components) initialized');
+    this.resolveCurrentUserRole();
     if (this.embeddedHologramOnly) {
       this.selectedApplicationType = 'hologram';
       this.loadHolograms();
@@ -584,6 +855,33 @@ export class CommissionerDashboardComponent implements OnInit {
       console.log('📊 Loading all applications for Commissioner review...');
       this.loadAllApplications();
     }
+  }
+
+  private resolveCurrentUserRole(): void {
+    try {
+      const storedRoleId = Number(localStorage.getItem('role_id') || 0);
+      const storedRoleName = String(localStorage.getItem('role') || '');
+      if (storedRoleId) this.currentRoleId = storedRoleId;
+      if (storedRoleName) this.currentRoleName = storedRoleName;
+    } catch {}
+
+    this.accountService.identity().subscribe(user => {
+      this.currentRoleId = Number(user?.role?.id || this.currentRoleId || 0);
+      this.currentRoleName = String(
+        (user as any)?.role?.name ||
+        (user as any)?.role?.displayName ||
+        this.currentRoleName ||
+        ''
+      );
+    });
+  }
+
+  isDeputyCommissionerUser(): boolean {
+    if (Number(this.currentRoleId || 0) === 12) return true;
+    const normalized = String(this.currentRoleName || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+    return normalized.includes('deputycommissioner');
   }
 
   loadAllApplications(): void {
@@ -782,13 +1080,120 @@ export class CommissionerDashboardComponent implements OnInit {
     this.applyFilters();
   }
 
-  private applyFilters(): void {
-    if (this.selectedApplicationType === 'all') {
-      this.filteredApplications = [...this.allApplications];
-    } else {
-      this.filteredApplications = this.allApplications.filter(app => app.type === this.selectedApplicationType);
+  applyFilters(): void {
+    const base =
+      this.selectedApplicationType === 'all'
+        ? [...this.allApplications]
+        : this.allApplications.filter(app => app.type === this.selectedApplicationType);
+
+    const isHologramView = this.embeddedHologramOnly || this.selectedApplicationType === 'hologram';
+    let filteredBase = base;
+
+    if (isHologramView && this.hologramStatusSummary !== 'ALL') {
+      filteredBase = filteredBase.filter(app =>
+        this.matchesHologramStatusSummary(app?.status || '', this.hologramStatusSummary)
+      );
     }
+
+    if (isHologramView && this.hologramMonthFilter) {
+      filteredBase = filteredBase.filter(app => {
+        const dt = this.parseSubmissionDate(app?.submissionDate || '');
+        return dt ? this.toIsoMonth(dt) === this.hologramMonthFilter : false;
+      });
+    }
+
+    if (isHologramView && this.hologramDateFilter) {
+      filteredBase = filteredBase.filter(app => {
+        const dt = this.parseSubmissionDate(app?.submissionDate || '');
+        return dt ? this.toIsoDate(dt) === this.hologramDateFilter : false;
+      });
+    }
+
+    this.companyOptions = Array.from(
+      new Set(filteredBase.map(app => String(app?.distilleryName || '').trim()).filter(v => !!v))
+    ).sort((a, b) => a.localeCompare(b));
+
+    if (this.selectedCompany && !this.companyOptions.includes(this.selectedCompany)) {
+      this.selectedCompany = '';
+    }
+
+    this.filteredApplications = this.selectedCompany
+      ? filteredBase.filter(app => String(app?.distilleryName || '').trim() === this.selectedCompany)
+      : filteredBase;
+
     this.currentPage = 1;
+  }
+
+  clearCompanyFilter(): void {
+    this.selectedCompany = '';
+    this.applyFilters();
+  }
+
+  clearHologramFilters(): void {
+    this.selectedCompany = '';
+    this.hologramMonthFilter = '';
+    this.hologramDateFilter = '';
+    this.hologramStatusSummary = 'ALL';
+    this.applyFilters();
+  }
+
+  setHologramStatusSummary(value: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): void {
+    this.hologramStatusSummary = value;
+    this.applyFilters();
+  }
+
+  getHologramSummaryCount(value: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): number {
+    const holograms = this.allApplications.filter(a => a.type === 'hologram');
+    return holograms.filter(app => this.matchesHologramStatusSummary(app?.status || '', value)).length;
+  }
+
+  private matchesHologramStatusSummary(
+    status: string,
+    value: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'
+  ): boolean {
+    if (value === 'ALL') return true;
+    const s = String(status || '').toLowerCase();
+    const isApproved = s.includes('approved') || s.includes('cartoon assigned') || s.includes('carton assigned');
+    const isRejected = s.includes('rejected');
+    if (value === 'APPROVED') return isApproved;
+    if (value === 'REJECTED') return isRejected;
+    return !isApproved && !isRejected;
+  }
+
+  private parseSubmissionDate(value: string): Date | null {
+    const v = String(value || '').trim();
+    if (!v) return null;
+
+    const direct = new Date(v);
+    if (!Number.isNaN(direct.getTime())) return direct;
+
+    const parts = v.split('-');
+    if (parts.length === 3) {
+      const day = Number(parts[0]);
+      const mon = String(parts[1] || '').slice(0, 3).toLowerCase();
+      const year = Number(parts[2]);
+      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const monthIndex = months.indexOf(mon);
+      if (!Number.isNaN(day) && !Number.isNaN(year) && monthIndex >= 0) {
+        const dt = new Date(year, monthIndex, day);
+        if (!Number.isNaN(dt.getTime())) return dt;
+      }
+    }
+
+    return null;
+  }
+
+  private toIsoDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private toIsoMonth(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
   }
 
   private getStatusCount(status: string): number {
@@ -971,7 +1376,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Utility methods
   getStatusClass(status: string): string {
     const statusLower = status.toLowerCase();
-    if (statusLower.includes('approved')) return 'bg-success';
+    if (statusLower.includes('approved') || statusLower.includes('cartoon assigned') || statusLower.includes('carton assigned')) return 'bg-success';
     if (statusLower.includes('rejected')) return 'bg-danger';
     if (statusLower.includes('pending') || statusLower.includes('forwarded')) return 'bg-warning';
     return 'bg-secondary';

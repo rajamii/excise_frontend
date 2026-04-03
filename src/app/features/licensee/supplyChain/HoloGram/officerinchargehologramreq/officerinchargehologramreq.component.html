@@ -22,7 +22,11 @@
             <!-- Summary Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-md-2">
-                    <div class="summary-card pending-requests">
+                    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Filter pending review requests"
+                        (click)="onStatusCardClick('PENDING')" (keydown.enter)="onStatusCardClick('PENDING')"
+                        (keydown.space)="onStatusCardClick('PENDING'); $event.preventDefault()"
+                        [class.active]="isStatusCardActive('PENDING')">
                         <div class="card-icon">
                             <i class="bi bi-clock"></i>
                         </div>
@@ -33,7 +37,11 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="summary-card approved-requests">
+                    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Filter under process requests"
+                        (click)="onStatusCardClick('UNDER_PROCESS')" (keydown.enter)="onStatusCardClick('UNDER_PROCESS')"
+                        (keydown.space)="onStatusCardClick('UNDER_PROCESS'); $event.preventDefault()"
+                        [class.active]="isStatusCardActive('UNDER_PROCESS')">
                         <div class="card-icon">
                             <i class="bi bi-hourglass-split"></i>
                         </div>
@@ -44,7 +52,11 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="summary-card completed-requests">
+                    <div class="summary-card completed-requests summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Filter completed requests"
+                        (click)="onStatusCardClick('APPROVED')" (keydown.enter)="onStatusCardClick('APPROVED')"
+                        (keydown.space)="onStatusCardClick('APPROVED'); $event.preventDefault()"
+                        [class.active]="isStatusCardActive('APPROVED')">
                         <div class="card-icon">
                             <i class="bi bi-check-circle"></i>
                         </div>
@@ -55,7 +67,11 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="summary-card local-holograms">
+                    <div class="summary-card local-holograms summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Filter local hologram requests"
+                        (click)="onHologramTypeCardClick('LOCAL')" (keydown.enter)="onHologramTypeCardClick('LOCAL')"
+                        (keydown.space)="onHologramTypeCardClick('LOCAL'); $event.preventDefault()"
+                        [class.active]="isHologramTypeCardActive('LOCAL')">
                         <div class="card-icon">
                             <i class="bi bi-qr-code"></i>
                         </div>
@@ -67,7 +83,11 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="summary-card export-holograms">
+                    <div class="summary-card export-holograms summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Filter export hologram requests"
+                        (click)="onHologramTypeCardClick('EXPORT')" (keydown.enter)="onHologramTypeCardClick('EXPORT')"
+                        (keydown.space)="onHologramTypeCardClick('EXPORT'); $event.preventDefault()"
+                        [class.active]="isHologramTypeCardActive('EXPORT')">
                         <div class="card-icon">
                             <i class="bi bi-qr-code"></i>
                         </div>
@@ -79,7 +99,11 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="summary-card defence-holograms">
+                    <div class="summary-card defence-holograms summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Filter defence hologram requests"
+                        (click)="onHologramTypeCardClick('DEFENCE')" (keydown.enter)="onHologramTypeCardClick('DEFENCE')"
+                        (keydown.space)="onHologramTypeCardClick('DEFENCE'); $event.preventDefault()"
+                        [class.active]="isHologramTypeCardActive('DEFENCE')">
                         <div class="card-icon">
                             <i class="bi bi-qr-code"></i>
                         </div>
@@ -191,6 +215,7 @@
                                 <th class="type">TYPE</th>
                                 <th class="hologram-qty">HOLOGRAM QTY</th>
                                 <th class="rolls-assigned">ROLLS ASSIGNED</th>
+                                <th class="updated-by">UPDATED BY</th>
                                 <th class="status">STATUS</th>
                                 <th class="actions">ACTIONS</th>
                             </tr>
@@ -214,6 +239,14 @@
                                     <div class="date-display">
                                         <span class="date-main">{{ request.usageDate | date:'dd/MM/yyyy' }}</span>
                                         <span class="date-day">{{ request.usageDate | date:'EEE' }}</span>
+                                        <span class="usage-activation-hint" *ngIf="shouldShowUsageDateApprovalNotice(request)">
+                                            OIC can approve &amp; start production on this date
+                                        </span>
+                                        <span class="missed-action-hint" *ngIf="shouldShowUsageDateMissedNotice(request)">
+                                            Not approved on usage date
+                                            <br>
+                                            No action taken
+                                        </span>
                                     </div>
                                 </td>
                                 <td class="type">
@@ -245,6 +278,19 @@
                                         </span>
                                     </ng-template>
                                 </td>
+                                <td class="updated-by">
+                                    <ng-container *ngIf="request.updatedBy; else updatedByEmpty">
+                                        <span class="updated-by-name">
+                                            <span class="line1">{{ getDisplayNameLine1(request.updatedBy) }}</span>
+                                            <span class="line2" *ngIf="getDisplayNameLine2(request.updatedBy)">
+                                                {{ getDisplayNameLine2(request.updatedBy) }}
+                                            </span>
+                                        </span>
+                                    </ng-container>
+                                    <ng-template #updatedByEmpty>
+                                        <span class="text-muted small">—</span>
+                                    </ng-template>
+                                </td>
                                 <td class="status">
                                 <span class="status-badge" [ngClass]="getStatusClass(request)">
                                     <i [class]="getStatusIcon(request)" class="me-1"></i>
@@ -270,6 +316,10 @@
                                         <span *ngIf="shouldShowUsageDateApprovalNotice(request)"
                                             class="badge bg-warning text-dark">
                                             Allocation will be approved on usage date
+                                        </span>
+                                        <span *ngIf="shouldShowUsageDateMissedNotice(request)"
+                                            class="badge bg-danger text-white">
+                                            Not approved on usage date (No action taken)
                                         </span>
                                         <!-- Show status badge for COMPLETED -->
                                         <span *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="badge bg-success text-white">

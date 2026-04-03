@@ -38,8 +38,19 @@ export class CancellationComponent implements OnInit {
 
   // Filter properties for cancellation
   cancellationDateFilter: string = '';
+  cancellationMonthFilter: string = '';
   cancellationStatusFilter: string = '';
-  cancellationReasonFilter: string = '';
+  cancellationCompanyFilter: string = '';
+  cancellationCompanyOptions: string[] = [];
+  activeSummaryFilter: string = '';
+
+  private getCompanyNameForFilter(item: TableData): string {
+    const establishment = String(item?.establishmentName || '').trim();
+    if (establishment && establishment.toLowerCase() !== 'n/a' && establishment !== '-') {
+      return establishment;
+    }
+    return String(item?.distilleryName || '').trim();
+  }
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
@@ -47,6 +58,7 @@ export class CancellationComponent implements OnInit {
   pageSize: number = 5;
 
   filteredCancellationData: TableData[] = [];
+  summaryCancellationData: TableData[] = [];
 
   // Sample data for cancellation applications (from commissioner's perspective)
   cancellationData: TableData[] = [
@@ -282,6 +294,28 @@ export class CancellationComponent implements OnInit {
     );
   }
 
+  private isPendingSummaryStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return true;
+    if (this.isApprovedStatus(value) || this.isRejectedStatus(value)) return false;
+    // Pending summary should NOT include "processing" (those go to "Under Process").
+    return (
+      value.includes('pending') ||
+      value.includes('review') ||
+      value.includes('submitted') ||
+      value.includes('forward')
+    ) && !value.includes('processing');
+  }
+
+  private isUnderProcessLikeStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return false;
+    if (this.isApprovedStatus(value) || this.isRejectedStatus(value)) return false;
+    if (this.isPendingSummaryStatus(value)) return false;
+    // Remaining non-final statuses are treated as under process.
+    return true;
+  }
+
   private getDefaultActions(status: string): string[] {
     if (this.isApprovedStatus(status) || this.isRejectedStatus(status)) {
       return []; // No actions for completed items
@@ -329,15 +363,40 @@ export class CancellationComponent implements OnInit {
 
   // Filter methods
   applyCancellationFilters(): void {
-    let filtered = [...this.cancellationData];
+    let summary = [...this.cancellationData];
 
     // Date filter
     if (this.cancellationDateFilter) {
       const filterDate = new Date(this.cancellationDateFilter);
-      filtered = filtered.filter(item => {
+      summary = summary.filter(item => {
         const itemDate = this.parseDate(item.submissionDate);
         return itemDate.toDateString() === filterDate.toDateString();
       });
+    }
+
+    // Month filter (Jan-Dec)
+    if (this.cancellationMonthFilter) {
+      const monthNum = parseInt(this.cancellationMonthFilter, 10);
+      summary = summary.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.getMonth() + 1 === monthNum;
+      });
+    }
+
+    this.cancellationCompanyOptions = Array.from(
+      new Set(
+        summary
+          .map(item => this.getCompanyNameForFilter(item))
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    this.summaryCancellationData = summary;
+
+    let filtered = [...summary];
+
+    if (this.cancellationCompanyFilter) {
+      filtered = filtered.filter(item => this.getCompanyNameForFilter(item) === this.cancellationCompanyFilter);
     }
 
     // Status filter
@@ -348,22 +407,17 @@ export class CancellationComponent implements OnInit {
 
         // Handle different status variations
         if (filterStatus === 'pending') {
-          return this.isPendingLikeStatus(item.status);
+          return this.isPendingSummaryStatus(item.status);
         } else if (filterStatus === 'approved') {
           return this.isApprovedStatus(item.status);
         } else if (filterStatus === 'rejected') {
           return this.isRejectedStatus(item.status);
+        } else if (filterStatus === 'underprocess') {
+          return this.isUnderProcessLikeStatus(item.status);
         } else {
           return itemStatus === filterStatus;
         }
       });
-    }
-
-    // Reason filter
-    if (this.cancellationReasonFilter) {
-      filtered = filtered.filter(item =>
-        item.cancellationReason === this.cancellationReasonFilter
-      );
     }
 
     this.filteredCancellationData = filtered;
@@ -372,8 +426,10 @@ export class CancellationComponent implements OnInit {
 
   clearCancellationFilters(): void {
     this.cancellationDateFilter = '';
+    this.cancellationMonthFilter = '';
     this.cancellationStatusFilter = '';
-    this.cancellationReasonFilter = '';
+    this.cancellationCompanyFilter = '';
+    this.activeSummaryFilter = '';
     this.applyCancellationFilters();
   }
 
@@ -381,32 +437,71 @@ export class CancellationComponent implements OnInit {
     this.applyCancellationFilters();
   }
 
-  onCancellationStatusFilterChange(): void {
+  onCancellationMonthFilterChange(): void {
     this.applyCancellationFilters();
   }
 
-  onCancellationReasonFilterChange(): void {
+  onCancellationCompanyFilterChange(): void {
+    this.applyCancellationFilters();
+  }
+
+  onCancellationStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyCancellationFilters();
   }
 
   // Summary methods
   getCancellationStatusCount(status: string): number {
     if (status === 'PENDING') {
-      return this.filteredCancellationData.filter(item => this.isPendingLikeStatus(item.status)).length;
+      return this.summaryCancellationData.filter(item => this.isPendingSummaryStatus(item.status)).length;
     } else if (status === 'APPROVED') {
-      return this.filteredCancellationData.filter(item => this.isApprovedStatus(item.status)).length;
+      return this.summaryCancellationData.filter(item => this.isApprovedStatus(item.status)).length;
     } else if (status === 'REJECTED') {
-      return this.filteredCancellationData.filter(item => this.isRejectedStatus(item.status)).length;
+      return this.summaryCancellationData.filter(item => this.isRejectedStatus(item.status)).length;
+    } else if (status === 'UNDER_PROCESS') {
+      return this.summaryCancellationData.filter(item => this.isUnderProcessLikeStatus(item.status)).length;
     }
-    return this.filteredCancellationData.filter(
+    return this.summaryCancellationData.filter(
       item => this.normalizeStatus(item.status) === this.normalizeStatus(status)
     ).length;
   }
 
   getUrgentCancellationCount(): number {
-    return this.filteredCancellationData.filter(item =>
+    return this.summaryCancellationData.filter(item =>
       item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
     ).length;
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStatus(filter);
+    const current = this.normalizeStatus(this.cancellationStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.cancellationStatusFilter = '';
+      this.applyCancellationFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.cancellationStatusFilter = '';
+      this.applyCancellationFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.cancellationStatusFilter = filter;
+    this.applyCancellationFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStatus(this.cancellationStatusFilter);
+    if (['pending', 'approved', 'underprocess'].includes(normalized)) {
+      this.activeSummaryFilter = this.cancellationStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
   }
 
   // Action methods
@@ -850,17 +945,37 @@ export class CancellationComponent implements OnInit {
   }
 
   private parseDate(dateString: string): Date {
-    // Handle DD-MM-YYYY format (common in the app)
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      // Assuming DD-MM-YYYY format
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-      const year = parseInt(parts[2], 10);
+    const s = String(dateString || '').trim();
+    if (!s) return new Date(NaN);
+
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const year = parseInt(iso[1], 10);
+      const month = parseInt(iso[2], 10) - 1;
+      const day = parseInt(iso[3], 10);
       return new Date(year, month, day);
     }
-    // Fallback to standard Date parsing
-    return new Date(dateString);
+
+    // DD-MM-YYYY
+    const dmyDash = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmyDash) {
+      const day = parseInt(dmyDash[1], 10);
+      const month = parseInt(dmyDash[2], 10) - 1;
+      const year = parseInt(dmyDash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    // DD/MM/YYYY
+    const dmySlash = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (dmySlash) {
+      const day = parseInt(dmySlash[1], 10);
+      const month = parseInt(dmySlash[2], 10) - 1;
+      const year = parseInt(dmySlash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    return new Date(s);
   }
 
   // Pagination methods

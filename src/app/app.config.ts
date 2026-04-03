@@ -2,6 +2,7 @@ import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } fr
 import { provideRouter } from '@angular/router';
 import {
   provideHttpClient,
+  withInterceptors,
   withInterceptorsFromDi,
   withFetch
 } from '@angular/common/http';
@@ -13,13 +14,14 @@ import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { JwtRefreshInterceptor } from './core/interceptors/jwt-refresh.interceptor';
 import { routes } from './app.routes';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
+import { uiLoadingInterceptorFn } from './core/interceptors/ui-loading.interceptor-fn';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts'; // ✅ Added for Chart.js
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withFetch(), withInterceptorsFromDi()),
+    provideHttpClient(withFetch(), withInterceptors([uiLoadingInterceptorFn]), withInterceptorsFromDi()),
     provideAnimationsAsync(),
     provideAnimations(),
     provideToastr(),

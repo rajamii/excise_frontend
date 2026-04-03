@@ -1,138 +1,144 @@
 <!-- Revalidation Register Header -->
 <div class="revalidation-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-  </div>
-
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
-        <div class="card-icon">
-          <i class="bi bi-list-ul"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ filteredRevalidationData.length }}</h3>
-          <p class="card-label">Total Revalidations</p>
-        </div>
+  <div class="revalidation-summary-grid mb-4">
+    <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('ALL')" [class.active]="!revalidationStatusFilter">
+      <div class="card-icon">
+        <i class="bi bi-list-ul"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ summaryRevalidationData.length }}</h3>
+        <p class="card-label">Total Revalidations</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card expired-requests">
-        <div class="card-icon">
-          <i class="bi bi-exclamation-triangle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getRevalidationStatusCount('EXPIRED') }}</h3>
-          <p class="card-label">Expired</p>
-        </div>
+
+    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+      <div class="card-icon">
+        <i class="bi bi-check-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRevalidationStatusCount('APPROVED') }}</h3>
+        <p class="card-label">Approved</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card live-requests">
-        <div class="card-icon">
-          <i class="bi bi-broadcast"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getLiveRevalidationCount() }}</h3>
-          <p class="card-label">Live Applications</p>
-        </div>
+
+    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+      <div class="card-icon">
+        <i class="bi bi-clock"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRevalidationStatusCount('PENDING') }}</h3>
+        <p class="card-label">Pending</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card total-amount">
-        <div class="card-icon">
-          <i class="bi bi-currency-rupee"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">₹{{ getTotalRevalidationAmount() | number:'1.2-2' }}</h3>
-          <p class="card-label">Total Amount</p>
-        </div>
+
+    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+      <div class="card-icon">
+        <i class="bi bi-gear"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRevalidationStatusCount('UNDER_PROCESS') }}</h3>
+        <p class="card-label">Under Process</p>
       </div>
     </div>
-  </div>
 
-  <!-- Compact Filter Section for Revalidation -->
-  <div class="compact-filter-section mb-3">
-    <div class="d-flex align-items-center gap-3 flex-wrap">
-      <div class="filter-label-text">
-        <i class="bi bi-funnel me-1"></i>
-        <small class="text-muted">Filters:</small>
+    <div class="summary-card action-required-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('ACTION_REQUIRED')" [class.active]="activeSummaryFilter === 'ACTION_REQUIRED'">
+      <div class="card-icon">
+        <i class="bi bi-exclamation-circle"></i>
       </div>
-
-      <!-- Date Filter -->
-      <div class="compact-filter">
-        <input type="date" class="form-control form-control-sm" [(ngModel)]="revalidationDateFilter"
-          (change)="onRevalidationDateFilterChange()" placeholder="Date" title="Filter by date">
+      <div class="card-content">
+        <h3 class="card-value">{{ getRevalidationStatusCount('ACTION_REQUIRED') }}</h3>
+        <p class="card-label">Action Required</p>
       </div>
-
-      <!-- Month Filter -->
-      <div class="compact-filter">
-        <input type="month" class="form-control form-control-sm" [(ngModel)]="revalidationMonthFilter"
-          (change)="onRevalidationMonthFilterChange()" placeholder="Month" title="Filter by month">
-      </div>
-
-      <!-- Year Filter -->
-      <div class="compact-filter">
-        <select class="form-select form-select-sm" [(ngModel)]="revalidationYearFilter"
-          (change)="onRevalidationYearFilterChange()" title="Filter by year">
-          <option value="">All Years</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-        </select>
-      </div>
-
-      <!-- Status Filter -->
-      <div class="compact-filter">
-        <select class="form-select form-select-sm" [(ngModel)]="revalidationStatusFilter"
-          (change)="onRevalidationStatusFilterChange()" title="Filter by status">
-          <option value="">All Status</option>
-          <option value="EXPIRED">Expired</option>
-          <option value="INVALID">Invalid</option>
-          <option value="PENDING">Pending</option>
-          <option value="PROCESSING">Processing</option>
-        </select>
-      </div>
-
-      <!-- Clear Button - only show when filters are active -->
-      <button class="btn btn-outline-danger btn-sm" (click)="clearRevalidationFilters()"
-        *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter"
-        title="Clear all filters">
-        <i class="bi bi-x-circle"></i>
-        Clear
-      </button>
-    </div>
-
-    <!-- Filter Results Summary -->
-    <div class="filter-results-compact mt-2"
-      *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter">
-      <small class="text-info">
-        <i class="bi bi-info-circle me-1"></i>
-        Showing <strong>{{ filteredRevalidationData.length }}</strong> of <strong>{{ revlidationData.length
-          }}</strong> revalidations
-        <span *ngIf="revalidationDateFilter" class="filter-tag">Date: {{ revalidationDateFilter | date:'dd MMM
-          yyyy' }}</span>
-        <span *ngIf="revalidationMonthFilter" class="filter-tag">Month: {{ revalidationMonthFilter | date:'MMM
-          yyyy' }}</span>
-        <span *ngIf="revalidationYearFilter" class="filter-tag">Year: {{ revalidationYearFilter }}</span>
-        <span *ngIf="revalidationStatusFilter" class="filter-tag">Status: {{ revalidationStatusFilter
-          }}</span>
-      </small>
     </div>
   </div>
+</div>
 
-  <!-- Revalidation Register Table -->
-  <div class="revalidation-register-table">
-    <div class="register-container">
-      <div class="register-header-bar">
-        <h5 class="register-table-title">
-          <i class="bi bi-table me-2"></i>
-          Revalidation Register Entries
-        </h5>
-        <div class="register-info">
-          <span class="entries-count">{{ filteredRevalidationData.length }} Entries</span>
-        </div>
+<!-- Compact Filter Section for Revalidation -->
+<div class="compact-filter-section mb-3">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <div class="filter-label-text">
+      <i class="bi bi-funnel me-1"></i>
+      <small class="text-muted">Filters:</small>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="compact-filter">
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="revalidationDateFilter"
+        (change)="onRevalidationDateFilterChange()" placeholder="Date" title="Filter by date">
+    </div>
+
+    <!-- Month Filter -->
+    <div class="compact-filter">
+      <input type="month" class="form-control form-control-sm" [(ngModel)]="revalidationMonthFilter"
+        (ngModelChange)="onRevalidationMonthFilterChange()" placeholder="Month" title="Filter by month">
+    </div>
+
+    <!-- Year Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="revalidationYearFilter"
+        (change)="onRevalidationYearFilterChange()" title="Filter by year">
+        <option value="">All Years</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+        <option value="2023">2023</option>
+      </select>
+    </div>
+
+    <!-- Company Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="revalidationCompanyFilter"
+        (change)="onRevalidationCompanyFilterChange()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of revalidationCompanyOptions" [value]="company">{{ company }}</option>
+      </select>
+    </div>
+
+    <!-- Clear Button - only show when filters are active -->
+    <button class="btn btn-outline-danger btn-sm" (click)="clearRevalidationFilters()"
+      *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter"
+      title="Clear all filters">
+      <i class="bi bi-x-circle"></i>
+      Clear
+    </button>
+  </div>
+
+  <!-- Filter Results Summary -->
+  <div class="filter-results-compact mt-2"
+    *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter">
+    <small class="text-info">
+      <i class="bi bi-info-circle me-1"></i>
+      Showing <strong>{{ filteredRevalidationData.length }}</strong> of <strong>{{ revlidationData.length
+        }}</strong> revalidations
+      <span *ngIf="revalidationDateFilter" class="filter-tag">Date: {{ revalidationDateFilter | date:'dd MMM
+        yyyy' }}</span>
+      <span *ngIf="revalidationMonthFilter" class="filter-tag">Month: {{ revalidationMonthFilter | date:'MMM
+        yyyy' }}</span>
+      <span *ngIf="revalidationYearFilter" class="filter-tag">Year: {{ revalidationYearFilter }}</span>
+      <span *ngIf="revalidationCompanyFilter" class="filter-tag">Company: {{ revalidationCompanyFilter }}</span>
+      <span *ngIf="revalidationStatusFilter" class="filter-tag">Status: {{ revalidationStatusFilter
+        }}</span>
+    </small>
+  </div>
+</div>
+
+<!-- Revalidation Register Table -->
+<div class="revalidation-register-table">
+  <div class="register-container">
+    <div class="register-header-bar">
+      <h5 class="register-table-title">
+        <i class="bi bi-table me-2"></i>
+        Revalidation Register Entries
+      </h5>
+      <div class="register-info">
+        <span class="entries-count">{{ filteredRevalidationData.length }} Entries</span>
       </div>
+    </div>
 
       <div class="table-responsive" *ngIf="filteredRevalidationData.length > 0">
         <table class="table register-table">

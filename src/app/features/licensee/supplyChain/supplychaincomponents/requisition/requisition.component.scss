@@ -108,6 +108,13 @@
 
 // Requisition Register Styles
 .requisition-register-header {
+  .requisition-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    width: 100%;
+  }
+
   .top-action-row {
     position: static;
     margin-bottom: 0.5rem !important;
@@ -166,35 +173,95 @@
 
 // Summary Cards
 .summary-card {
+  --summary-accent-start: #1C2B78;
+  --summary-accent-end: #2d4aa7;
   background: white;
   border-radius: 12px;
-  padding: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  min-height: 86px;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
 
+  &.summary-card-clickable {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  &.summary-card-clickable:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  &.active {
+    border-color: rgba(13, 110, 253, 0.45);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0) 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--summary-accent-start), var(--summary-accent-end));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    border-color: rgba(15, 23, 42, 0.14);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+
+  &.active::after {
+    transform: scaleX(1);
   }
 
   .card-icon {
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 44px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.15rem;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    position: relative;
+    z-index: 2;
   }
 
   .card-content {
     flex: 1;
+    position: relative;
+    z-index: 2;
 
     .card-value {
-      font-size: 1.75rem;
+      font-size: 1.55rem;
       font-weight: 700;
       margin-bottom: 0.25rem;
       line-height: 1;
@@ -214,7 +281,7 @@
     .card-icon {
       width: 40px;
       height: 40px;
-      font-size: 1.25rem;
+      font-size: 1.1rem;
     }
 
     .card-content {
@@ -229,6 +296,8 @@
   }
 
   &.total-requests {
+    --summary-accent-start: #667eea;
+    --summary-accent-end: #764ba2;
     .card-icon {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -239,6 +308,8 @@
   }
 
   &.approved-requests {
+    --summary-accent-start: #28a745;
+    --summary-accent-end: #20c997;
     .card-icon {
       background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
       color: white;
@@ -249,6 +320,8 @@
   }
 
   &.pending-requests {
+    --summary-accent-start: #ffc107;
+    --summary-accent-end: #ff9800;
     .card-icon {
       background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
       color: white;
@@ -265,6 +338,18 @@
     }
     .card-value {
       color: #17a2b8;
+    }
+  }
+
+  &.under-process-requests {
+    --summary-accent-start: #5c6bc0;
+    --summary-accent-end: #3949ab;
+    .card-icon {
+      background: linear-gradient(135deg, #5c6bc0 0%, #3949ab 100%);
+      color: white;
+    }
+    .card-value {
+      color: #5c6bc0;
     }
   }
 }
@@ -830,6 +915,8 @@
 
 // Rejected requests summary card
 .summary-card.rejected-requests {
+  --summary-accent-start: #ef5350;
+  --summary-accent-end: #e53935;
   .card-icon {
     background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
     color: white;

@@ -15,6 +15,10 @@ export const licenseeRoutes: Routes = [
     loadComponent: () => import('./licensee-dashboard/licensee-dashboard.component').then(m => m.LicenseeDashboardComponent)
   },
   {
+    path: 'final-license',
+    loadComponent: () => import('./final-license/final-license.component').then(m => m.FinalLicenseComponent)
+  },
+  {
     path: 'apply-license',
     loadComponent: () => import('./apply-license/apply-license.component').then(m => m.ApplyLicenseComponent)
   },

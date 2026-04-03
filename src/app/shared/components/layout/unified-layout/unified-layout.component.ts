@@ -168,8 +168,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private setupInitialSidebarState() {
-    // Set initial sidebar state based on user role
-    const shouldBeOpen = !this.isLicenseeUser();
+    // Keep sidebar closed by default on login
+    const shouldBeOpen = false;
     this.isSidenavOpen = shouldBeOpen;
     console.log('🔍 Setup initial sidebar state - shouldBeOpen:', shouldBeOpen, 'isLicenseeUser:', this.isLicenseeUser());
   }
@@ -277,7 +277,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   snavToggle(sidenav: any) {
     sidenav.toggle();
     // Update our state to match the actual sidenav state
-    this.isSidenavOpen = sidenav.opened;
+    this.isSidenavOpen = !this.isSidenavOpen;
     console.log('🔍 Sidebar toggled - new state:', this.isSidenavOpen);
   }
 
@@ -421,9 +421,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // For all officer roles, navigate to dashboard with section parameter
     // This keeps the unified layout and sidebar open
     
-    if (section === 'hologram-inventory') {
-      // Navigate to the hologram overview page
-      this.router.navigate(['/dev-hologram-overview']);
+  if (section === 'hologram-inventory') {
+      // Keep unified dashboard layout for inventory/overview
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'hologram-overview' }
+      });
     } else if (section === 'itcell-hologram') {
       // For IT Cell hologram procurement, navigate with tab parameter to show the hologram tab
       this.router.navigate(['/dashboard'], { 
@@ -576,7 +578,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration',
       // Officer nested page
-      'hologram-overview': 'hologram-register'
+      'hologram-overview': 'hologram-inventory'
     };
 
     return parentSectionMap[value] || value;
@@ -883,7 +885,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   canAccessSection(section: string): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      return false;
+    }
+
+    // Joint Commissioner should NOT access New Hologram Procurement.
+    if (roleId === 9 && section === 'hologram') {
       return false;
     }
 
@@ -905,7 +914,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     // Keep commissioner procurement tab visible even if DB navigation tokens are incomplete.
-    if (this.isCommissionerUser() && section === 'hologram') {
+    if (roleId === 10 && section === 'hologram') {
       return true;
     }
 

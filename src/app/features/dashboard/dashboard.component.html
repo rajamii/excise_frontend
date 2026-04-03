@@ -4,20 +4,30 @@
   <!-- Dashboard Content Wrapper -->
   <div class="dashboard-content">
 
-    <!-- Filter Container: Application Type Filter (for roles that need it) -->
-    <div class="filter-container"
-      *ngIf="currentUser?.roleId === 2 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
-      <mat-form-field appearance="outline" class="application-type-filter">
-        <mat-label>Filter by Application Type</mat-label>
-        <mat-icon matPrefix>filter_list</mat-icon>
-        <mat-select [(value)]="selectedApplicationType" (selectionChange)="onApplicationTypeChange()">
-          <mat-option value="all">All Applications</mat-option>
-          <mat-option value="license-renewal">License Application</mat-option>
-          <mat-option value="new-license">New License</mat-option>
-          <mat-option value="salesman-barman">Salesman/Barman</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </div>
+    <!-- Welcome Banner (shown on dashboard landing) -->
+    <section
+      class="welcome-banner"
+      *ngIf="currentUser && !selectedSupplyChainSection"
+      aria-label="Welcome">
+      <div class="welcome-banner__inner">
+        <div class="welcome-banner__left">
+          <div class="welcome-banner__kicker">{{ greetingText }}</div>
+          <div class="welcome-banner__title">
+            Welcome, <span class="welcome-banner__name">{{ userDisplayName }}</span>
+          </div>
+          <div class="welcome-banner__subtitle">
+            Signed in as <span class="welcome-banner__role">{{ userRoleDisplayName }}</span>
+          </div>
+        </div>
+
+        <div class="welcome-banner__right">
+          <div class="welcome-banner__date" aria-label="Today">
+            <mat-icon aria-hidden="true">event</mat-icon>
+            <span>{{ now | date:'fullDate' }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Role-Specific Full Dashboards (when no specific section is selected) -->
     <div *ngIf="shouldShowRoleSpecificDashboard()" class="role-specific-dashboard">
@@ -73,7 +83,7 @@
           *ngIf="selectedSupplyChainSection === 'commissioner-monthly-view-details' && isCommissionerUser()">
         </app-hologram-monthly-report>
         <app-hologramprocurement
-          *ngIf="selectedSupplyChainSection === 'hologram' && currentUser?.roleId !== 10"></app-hologramprocurement>
+          *ngIf="selectedSupplyChainSection === 'hologram' && !isCommissionerUser()"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
         <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet' && canRenderWalletSection()"></app-payment-confirmation>
         <app-registration-management
@@ -391,7 +401,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="appliedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'applied'">
+            [tableType]="'applied'" (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -406,7 +416,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="pendingDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'pending'" (payment)="onPaymentConfirmed($event)">
+            [tableType]="'pending'" (view)="viewApplication($event)" (payment)="onPaymentConfirmed($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -421,7 +431,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="approvedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'approved'">
+            [tableType]="'approved'" (view)="viewApplication($event)" (print)="openFinalLicense($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -436,7 +446,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="rejectedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'rejected'">
+            [tableType]="'rejected'" (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>

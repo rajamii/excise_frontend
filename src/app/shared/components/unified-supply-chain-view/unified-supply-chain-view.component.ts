@@ -1576,12 +1576,37 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     shouldShowRightSideDecisionPanel(): boolean {
         if (!this.applicationData) return false;
         if (this.isTransit()) {
-            return this.hasText((this.applicationData as any)?.approvedByDisplay) || this.hasText((this.applicationData as any)?.cancelledByDisplay);
+            return (
+                this.hasText((this.applicationData as any)?.approvedByDisplay) ||
+                this.hasText((this.applicationData as any)?.cancelledByDisplay) ||
+                this.isTransitPendingSidebar()
+            );
         }
         if (this.isRequisition()) {
             return this.isApplicationRejected() && this.hasText(this.getRejectedByDisplayName());
         }
         return false;
+    }
+
+    isTransitPendingSidebar(): boolean {
+        if (!this.applicationData || !this.isTransit()) return false;
+
+        // If already approved/cancelled we don't show "Pending With" sidebar.
+        if (this.hasText((this.applicationData as any)?.approvedByDisplay) || this.hasText((this.applicationData as any)?.cancelledByDisplay)) {
+            return false;
+        }
+
+        const status = String((this.applicationData as any)?.status || '').trim();
+        const stageName = String((this.applicationData as any)?.currentStageName || (this.applicationData as any)?.current_stage_name || '').trim();
+        const statusCode = String((this.applicationData as any)?.statusCode || (this.applicationData as any)?.status_code || '').trim().toUpperCase();
+
+        const token = `${status} ${stageName}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const pendingLike =
+            token.includes('pending') ||
+            (token.includes('paymentsuccess') && token.includes('forward') && (token.includes('officer') || token.includes('oic'))) ||
+            statusCode === 'TRP_02';
+
+        return pendingLike;
     }
 
     isRightSideDecisionNegative(): boolean {
@@ -1592,12 +1617,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     getRightSideDecisionLabel(): string {
         if (this.isRequisition() && this.isApplicationRejected()) return 'Rejected By';
+        if (this.isTransit() && this.isTransitPendingSidebar()) return 'Pending With';
         return this.hasText((this.applicationData as any)?.cancelledByDisplay) ? 'Cancelled By' : 'Approved By';
     }
 
     getRightSideDecisionName(): string {
         if (this.isRequisition() && this.isApplicationRejected()) {
             return this.getRejectedByDisplayName();
+        }
+        if (this.isTransit() && this.isTransitPendingSidebar()) {
+            return 'Officer In-Charge';
         }
         return String((this.applicationData as any)?.cancelledByDisplay || (this.applicationData as any)?.approvedByDisplay || '').trim();
     }

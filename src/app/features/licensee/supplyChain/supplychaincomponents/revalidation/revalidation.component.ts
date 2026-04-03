@@ -51,8 +51,20 @@ export class RevalidationComponent implements OnInit {
   revalidationMonthFilter: string = '';
   revalidationYearFilter: string = '';
   revalidationStatusFilter: string = '';
+  revalidationCompanyFilter: string = '';
+  revalidationCompanyOptions: string[] = [];
+  activeSummaryFilter: string = '';
+
+  private getCompanyNameForFilter(item: TableData): string {
+    const factory = String(item?.factoryName || '').trim();
+    if (factory && factory.toLowerCase() !== 'n/a' && factory !== '-') {
+      return factory;
+    }
+    return String(item?.distilleryName || '').trim();
+  }
 
   filteredRevalidationData: TableData[] = [];
+  summaryRevalidationData: TableData[] = [];
 
   revlidationData: TableData[] = [];
 
@@ -141,7 +153,7 @@ export class RevalidationComponent implements OnInit {
         Object.freeze(item.allowedActions);
       });
 
-      this.filteredRevalidationData = [...this.revlidationData];
+      this.applyRevalidationFilters();
       console.log('DEBUG: Processed Data length:', this.filteredRevalidationData.length);
       console.log('DEBUG: Each item allowedActions:');
       this.filteredRevalidationData.forEach(item => {
@@ -173,52 +185,64 @@ export class RevalidationComponent implements OnInit {
       statusFilter: this.revalidationStatusFilter
     });
 
-    this.filteredRevalidationData = this.revlidationData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
+    this.summaryRevalidationData = this.revlidationData.filter(item => {
+      const submissionDate =
+        this.parseDate(item.submissionDateRaw) ||
+        this.parseDate(item.submissionDate);
 
-      const dateParts = item.submissionDate.split('-');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const monthName = dateParts[1];
-        const year = parseInt(dateParts[2]);
+      if (!submissionDate) {
+        return !this.revalidationDateFilter && !this.revalidationMonthFilter && !this.revalidationYearFilter;
+      }
 
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames.indexOf(monthName) + 1;
+      if (this.revalidationDateFilter && this.toIsoDay(submissionDate) !== this.revalidationDateFilter) {
+        return false;
+      }
 
-        if (month > 0) {
-          const itemDate = new Date(year, month - 1, day);
+      if (this.revalidationMonthFilter && this.toIsoMonth(submissionDate) !== this.revalidationMonthFilter) {
+        return false;
+      }
 
-          if (this.revalidationDateFilter) {
-            const filterDate = new Date(this.revalidationDateFilter);
-            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth() &&
-              itemDate.getDate() === filterDate.getDate();
-          }
+      if (this.revalidationYearFilter && String(submissionDate.getFullYear()) !== String(this.revalidationYearFilter)) {
+        return false;
+      }
 
-          if (this.revalidationMonthFilter) {
-            const filterDate = new Date(this.revalidationMonthFilter + '-01');
-            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth();
-          }
+      return true;
+    });
 
-          if (this.revalidationYearFilter) {
-            const filterYear = parseInt(this.revalidationYearFilter);
-            matchesYear = itemDate.getFullYear() === filterYear;
-          }
+    this.revalidationCompanyOptions = Array.from(
+      new Set(
+        this.summaryRevalidationData
+          .map(item => this.getCompanyNameForFilter(item))
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    this.filteredRevalidationData = this.summaryRevalidationData.filter(item => {
+      if (this.revalidationCompanyFilter) {
+        const company = this.getCompanyNameForFilter(item);
+        if (company !== this.revalidationCompanyFilter) {
+          return false;
         }
       }
 
-      if (this.revalidationStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.revalidationStatusFilter.toLowerCase());
+      if (!this.revalidationStatusFilter) {
+        return true;
       }
 
-      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
-
-      return finalMatch;
+      const filter = this.normalizeStageToken(this.revalidationStatusFilter);
+      if (filter === 'actionrequired') {
+        return this.isActionRequiredLikeStatus(item);
+      }
+      if (filter === 'approved') {
+        return this.isApprovedLikeStatus(item);
+      }
+      if (filter === 'pending') {
+        return this.isPendingLikeStatus(item);
+      }
+      if (filter === 'underprocess') {
+        return this.isUnderProcessLikeStatus(item);
+      }
+      return this.normalizeStageToken(item.status).includes(filter);
     });
 
     console.log('Filtered data after filter:');
@@ -234,6 +258,9 @@ export class RevalidationComponent implements OnInit {
     this.revalidationMonthFilter = '';
     this.revalidationYearFilter = '';
     this.revalidationStatusFilter = '';
+    this.revalidationCompanyFilter = '';
+    this.activeSummaryFilter = '';
+    this.summaryRevalidationData = [...this.revlidationData];
     this.filteredRevalidationData = [...this.revlidationData];
     this.resetPagination();
   }
@@ -251,13 +278,125 @@ export class RevalidationComponent implements OnInit {
   }
 
   onRevalidationStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyRevalidationFilters();
   }
 
+  onRevalidationCompanyFilterChange(): void {
+    this.applyRevalidationFilters();
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStageToken(filter);
+    const current = this.normalizeStageToken(this.revalidationStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.revalidationStatusFilter = '';
+      this.applyRevalidationFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.revalidationStatusFilter = '';
+      this.applyRevalidationFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.revalidationStatusFilter = filter;
+    this.applyRevalidationFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStageToken(this.revalidationStatusFilter);
+    if (['pending', 'approved', 'underprocess', 'actionrequired'].includes(normalized)) {
+      this.activeSummaryFilter = this.revalidationStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private parseDate(value: string | undefined): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private toIsoDay(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private toIsoMonth(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }
+
+  private isInvalidLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    return status.includes('invalid') || status.includes('expire');
+  }
+
+  private isActionRequiredLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    return status.includes('importpermitextends45days');
+  }
+
+  private isApprovedLikeStatus(item: TableData): boolean {
+    if (this.isActionRequiredLikeStatus(item)) {
+      return false;
+    }
+    const status = this.normalizeStageToken(item?.status);
+    const code = this.normalizeStageToken(item?.statusCode);
+    return (
+      status.includes('approv') ||
+      status.includes('issued') ||
+      code === 'rv09'
+    );
+  }
+
+  private isPendingLikeStatus(item: TableData): boolean {
+    if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
+      return false;
+    }
+    const status = this.normalizeStageToken(item?.status);
+    return status.includes('pending');
+  }
+
+  private isUnderProcessLikeStatus(item: TableData): boolean {
+    if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
+      return false;
+    }
+    if (this.isPendingLikeStatus(item)) {
+      return false;
+    }
+    return true;
+  }
+
   getRevalidationStatusCount(status: string): number {
-    return this.revlidationData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
-    ).length;
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'actionrequired') {
+      return this.summaryRevalidationData.filter(item => this.isActionRequiredLikeStatus(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.summaryRevalidationData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    if (filter === 'pending') {
+      return this.summaryRevalidationData.filter(item => this.isPendingLikeStatus(item)).length;
+    }
+    if (filter === 'underprocess') {
+      return this.summaryRevalidationData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+    }
+    return this.summaryRevalidationData.filter(item => this.normalizeStageToken(item.status).includes(filter)).length;
   }
 
   getLiveRevalidationCount(): number {
@@ -614,14 +753,6 @@ export class RevalidationComponent implements OnInit {
       status.includes('commissioner') &&
       !status.includes('reject');
     return looksApprovedByCommissioner || statusCode === 'rv09';
-  }
-
-  private parseDate(value: string | undefined): Date | null {
-    if (!value) {
-      return null;
-    }
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   private formatDisplayDate(date: Date): string {

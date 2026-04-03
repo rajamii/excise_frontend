@@ -1,4 +1,4 @@
-import { catchError, map, Observable, of } from "rxjs";
+import { catchError, map, Observable, of, throwError } from "rxjs";
 import { environment } from "../../../../../environments/environment";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
@@ -86,35 +86,47 @@ export class SupplyChainService {
       .pipe(map((response: any) => response.data || []));
   }
 
-  getLiquorBrands(distilleryName?: string): Observable<{ brandName: string; sizes: number[] }[]> {
-    let params = new HttpParams();
-    if (distilleryName) params = params.set('distillery', distilleryName);
-
-    return this.http
-      .get<{
-        success?: boolean;
-        data?: { brandName: string; sizes: number[] }[];
-      }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`,
-        { params }
-      )
-      .pipe(map((response: any) => response.data || []));
-  }
+  getLiquorBrands(distilleryName?: string): Observable<{ brandName: string; sizes: number[] }[]> { 
+    let params = new HttpParams(); 
+    if (distilleryName) params = params.set('distillery', distilleryName); 
+ 
+    const parse = (response: any) => response?.data || response?.results || response || []; 
+ 
+    // Some deployments expose this endpoint via short route `/brands/`, others only via masters route.
+    return this.http 
+      .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>( 
+        `${environment.apiBaseUrl}/brands/`, 
+        { params } 
+      ) 
+      .pipe( 
+        map(parse), 
+        catchError(() => 
+          this.http 
+            .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>( 
+              `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`, 
+              { params } 
+            ) 
+            .pipe(map(parse)) 
+        ) 
+      ); 
+  } 
 
   public getLiquorRates(
     brandName: string,
     size: string
   ): Observable<LiquorRates> {
+    const rawSize = String(size || '').trim();
+    const packSizeMl = rawSize.replace(/[^0-9]/g, '');
     return this.http
       .get<{
         success: boolean;
         data: LiquorRates;
       }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/rates/`,
+        `${environment.apiBaseUrl}/rates/`,
         {
           params: {
             brand_name: brandName,
-            pack_size_ml: size.replace('ml', ''),
+            pack_size_ml: packSizeMl,
           },
         }
       )
@@ -127,20 +139,7 @@ export class SupplyChainService {
         }),
         catchError((error) => {
           console.error('Error fetching liquor rates:', error);
-          // Return default values on error
-          return of({
-            brand: brandName,
-            size: `${size}ml`,
-            exFactoryPrice: 0,
-            educationCess: 0,
-            exciseDuty: 0,
-            additionalExcise: 0,
-            additionalExcise12_5: 0,
-            bottlingFee: 0,
-            exportFee: 0,
-            mrpPerBottle: 0,
-            totalPricePerCase: 0,
-          });
+          return throwError(() => error);
         })
       );
   }
@@ -403,39 +402,50 @@ export class SupplyChainService {
     );
   }
 
-  getBrandWarehouseStock(distilleryName?: string, brandName?: string, licenseId?: string): Observable<any[]> {
-    const params: any = {};
-    if (distilleryName) params.distillery_name = distilleryName;
-    if (brandName) params.brand_name = brandName;
-    const normalizedLicenseId = String(licenseId || '').trim();
-    if (normalizedLicenseId.startsWith('NA/') || normalizedLicenseId.startsWith('NLI/')) {
-      params.license_id = normalizedLicenseId;
-    }
-
-    console.log('getBrandWarehouseStock called with params:', params);
-
-    return this.http.get<any[]>(
-      `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/`,
-      { params }
-    ).pipe(
-      map((response: any) => {
-        console.log('getBrandWarehouseStock raw response:', response);
-        if (Array.isArray(response)) {
-          console.log('Response is array, length:', response.length);
-          return response;
-        }
-        if (response?.results) {
-          console.log('Response has results, length:', response.results.length);
-          return response.results;
-        }
-        console.log('Response format not recognized, returning empty array');
-        return [];
-      }),
-      catchError((error) => {
-        console.error('getBrandWarehouseStock error', error);
-        return of([]);
-      })
-    );
-  }
-}
+  getBrandWarehouseStock(distilleryName?: string, brandName?: string, licenseId?: string): Observable<any[]> { 
+    const params: any = {}; 
+    if (distilleryName) params.distillery_name = distilleryName; 
+    if (brandName) params.brand_name = brandName; 
+    const normalizedLicenseId = String(licenseId || '').trim(); 
+    if (normalizedLicenseId) { 
+      // Backend accepts plain license ids too (not only NA/NLI prefixed ones). 
+      params.license_id = normalizedLicenseId; 
+    } 
+ 
+    console.log('getBrandWarehouseStock called with params:', params); 
+ 
+    const parse = (response: any) => { 
+      console.log('getBrandWarehouseStock raw response:', response); 
+      if (Array.isArray(response)) { 
+        console.log('Response is array, length:', response.length); 
+        return response; 
+      } 
+      if (response?.results) { 
+        console.log('Response has results, length:', response.results.length); 
+        return response.results; 
+      } 
+      console.log('Response format not recognized, returning empty array'); 
+      return []; 
+    }; 
+ 
+    // NOTE: On some servers (nginx), only `/transactional/...` routes are proxied to Django,
+    // while the short alias `/brand-warehouse/` is served by the frontend (HTML) causing JSON parse errors.
+    const transactionalUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/`; 
+    const shortUrl = `${environment.apiBaseUrl}/brand-warehouse/`; 
+ 
+    return this.http.get<any[]>(transactionalUrl, { params }).pipe( 
+      map(parse), 
+      catchError((error) => { 
+        console.error('getBrandWarehouseStock error (transactional route)', error); 
+        return this.http.get<any[]>(shortUrl, { params }).pipe( 
+          map(parse), 
+          catchError((error2) => { 
+            console.error('getBrandWarehouseStock error (short route)', error2); 
+            return of([]); 
+          }) 
+        ); 
+      }) 
+    ); 
+  } 
+} 
 

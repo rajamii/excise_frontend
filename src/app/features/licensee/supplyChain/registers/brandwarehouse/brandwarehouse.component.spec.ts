@@ -345,4 +345,50 @@ describe('BrandwarehouseComponent', () => {
   it('should get current distillery name', () => {
     expect(component.getCurrentDistillery()).toBe('Sikkim');
   });
+
+  it('should paginate transit permits without getting stuck', () => {
+    component.selectedTransitPermits = Array.from({ length: 12 }).map((_, i) => ({
+      permitNo: `P-${i + 1}`,
+      date: '2026-03-27',
+      distributorName: 'Test',
+      depotAddress: 'Test',
+      vehicleNumber: 'V',
+      cases: 1,
+      bottlesPerCase: 12,
+      totalBottles: 12,
+      status: 'APPROVED',
+      approvedBy: 'Test',
+      approvalDate: '2026-03-27'
+    }) as any);
+
+    component.permitSelectedMonth = 'ALL';
+    component.permitPageSize = 5;
+    component.onPermitPageSizeChange();
+
+    expect(component.permitTotalPages).toBe(3);
+    expect(component.paginatedTransitPermits.length).toBe(5);
+    expect(component.permitSummaryText).toBe('1-5 of 12');
+
+    component.changePermitPage(2);
+    expect(component.permitCurrentPage).toBe(2);
+    expect(component.paginatedTransitPermits[0].permitNo).toBe('P-6');
+    expect(component.permitSummaryText).toBe('6-10 of 12');
+  });
+
+  it('should filter transit permits by month and reset to page 1', () => {
+    component.selectedTransitPermits = [
+      { permitNo: 'M1', date: '2026-03-01' } as any,
+      { permitNo: 'M2', date: '2026-03-15' } as any,
+      { permitNo: 'A1', date: '2026-04-01' } as any,
+    ];
+
+    component.permitPageSize = 5;
+    component.permitCurrentPage = 2;
+    component.permitSelectedMonth = '03';
+    component.onPermitMonthChange();
+
+    expect(component.permitCurrentPage).toBe(1);
+    expect(component.filteredTransitPermits.length).toBe(2);
+    expect(component.paginatedTransitPermits.map(p => p.permitNo)).toEqual(['M1', 'M2']);
+  });
 });
