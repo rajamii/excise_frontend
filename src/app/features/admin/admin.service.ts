@@ -12,6 +12,7 @@ import { Role } from '../../core/models/role.model';
 import { LicenseSubcategory } from '../../core/models/license-subcategory.model';
 import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
+import { LicenseFormTermsResponse } from './master/license-terms/license-terms.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -61,6 +62,7 @@ export interface CreateOICOfficerPayload {
 export class AdminService {
   private readonly baseUrl = environment.apiBaseUrl;
   private readonly mastersUrl = `${this.baseUrl}/masters/core`;
+  private readonly licenseMastersUrl = `${this.baseUrl}/masters/license`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
 
   constructor(private http: HttpClient) { }
@@ -306,5 +308,24 @@ export class AdminService {
   // Deletes a road by ID
   deleteRoad(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/roads/${id}/delete/`);
+  }
+
+  // ========================== LICENSE TERMS (LEGACY CODES) ==========================
+
+  getLicenseFormTerms(licenseeCatCode: number, licenseeScatCode: number): Observable<LicenseFormTermsResponse> {
+    return this.http.get<LicenseFormTermsResponse>(
+      `${this.licenseMastersUrl}/form-terms/?licensee_cat_code=${licenseeCatCode}&licensee_scat_code=${licenseeScatCode}`
+    );
+  }
+
+  updateLicenseFormTerms(licenseeCatCode: number, licenseeScatCode: number, terms: string[]): Observable<LicenseFormTermsResponse> {
+    return this.http.put<LicenseFormTermsResponse>(
+      `${this.licenseMastersUrl}/form-terms/update/`,
+      {
+        licensee_cat_code: licenseeCatCode,
+        licensee_scat_code: licenseeScatCode,
+        terms,
+      }
+    );
   }
 }

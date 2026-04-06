@@ -1,4 +1,8 @@
 import { Component, OnInit, OnDestroy, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, takeUntil, interval } from 'rxjs';
 import { PerformanceService } from '../../../core/services/performance.service';
 
@@ -10,8 +14,12 @@ interface PerformanceMetrics {
   networkRequests: number;
 }
 
+type PerformanceMetricKey = keyof PerformanceMetrics;
+
 @Component({
   selector: 'app-performance-monitor',
+  standalone: true,
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './performance-monitor.component.html',
   styleUrls: ['./performance-monitor.component.scss']
 })
@@ -143,6 +151,14 @@ export class PerformanceMonitorComponent implements OnInit, OnDestroy {
         return metricName;
     }
   }
+
+  readonly metricKeys: PerformanceMetricKey[] = [
+    'loadTime',
+    'renderTime',
+    'apiResponseTime',
+    'memoryUsage',
+    'networkRequests',
+  ];
 
   getPerformanceScore(): number {
     const { loadTime, renderTime, apiResponseTime, memoryUsage } = this.metrics;
