@@ -208,6 +208,13 @@
 
     <!-- Main Content Area -->
     <mat-sidenav-content class="main-content">
+      <!-- Left edge trigger: hover near left side to reveal arrow, click to open sidebar -->
+      <div class="sidenav-edge-trigger" *ngIf="!isSidenavOpen">
+        <button type="button" class="edge-arrow" (click)="openSidenav()" aria-label="Open sidebar">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+
       <!-- Top Navigation Bar (visible when sidebar is closed) -->
       <div class="top-nav-bar" *ngIf="!isSidenavOpen">
         <div class="top-nav-content">

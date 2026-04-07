@@ -312,6 +312,18 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
   }
 
+  openSidenav(): void {
+    if (this.isSidenavOpen) {
+      return;
+    }
+
+    try {
+      this.sidenav?.open();
+    } finally {
+      this.isSidenavOpen = true;
+    }
+  }
+
   // Method to handle the "View Profile" button click - exactly like original
   viewProfile(): void {
     console.log('Button Clicked!');

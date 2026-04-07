@@ -632,6 +632,55 @@
 }
 
 // ========================================
+// SIDENAV EDGE TRIGGER (when sidebar is closed)
+// ========================================
+.sidenav-edge-trigger {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 22px !important;
+  z-index: 110 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  .edge-arrow {
+    width: 32px !important;
+    height: 68px !important;
+    margin-left: 0 !important;
+    border: 1px solid rgba(59, 76, 184, 0.35) !important;
+    border-left: none !important;
+    border-radius: 0 14px 14px 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    opacity: 0 !important;
+    transform: translateX(-28px) !important;
+    transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease !important;
+    pointer-events: auto !important;
+
+    &:hover {
+      background: #ffffff !important;
+    }
+
+    mat-icon {
+      color: #3b4cb8 !important;
+      font-size: 22px !important;
+    }
+  }
+
+  &:hover .edge-arrow,
+  &:focus-within .edge-arrow {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+  }
+}
+
+// ========================================
 // TOP NAVIGATION BAR (when sidebar is closed)
 // ========================================
 .top-nav-bar {
