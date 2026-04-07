@@ -209,7 +209,15 @@
     <!-- Main Content Area -->
     <mat-sidenav-content class="main-content">
       <!-- Left edge trigger: hover near left side to reveal arrow, click to open sidebar -->
-      <div class="sidenav-edge-trigger" *ngIf="!isSidenavOpen">
+      <div
+        class="sidenav-edge-trigger"
+        *ngIf="!isSidenavOpen"
+        (click)="openSidenav()"
+        tabindex="0"
+        (keydown.enter)="openSidenav()"
+        (keydown.space)="openSidenav(); $event.preventDefault()"
+        aria-label="Open sidebar"
+      >
         <button type="button" class="edge-arrow" (click)="openSidenav()" aria-label="Open sidebar">
           <mat-icon>chevron_right</mat-icon>
         </button>

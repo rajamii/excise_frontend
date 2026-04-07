@@ -639,13 +639,35 @@
   left: 0 !important;
   top: 0 !important;
   bottom: 0 !important;
-  width: 22px !important;
+  width: 24px !important;
   z-index: 110 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
+  cursor: pointer !important;
+  outline: none !important;
+
+  &::before {
+    content: '' !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 6px !important;
+    background: linear-gradient(
+      to right,
+      rgba(59, 76, 184, 0.0),
+      rgba(59, 76, 184, 0.18),
+      rgba(59, 76, 184, 0.0)
+    ) !important;
+    opacity: 0 !important;
+    transition: opacity 0.15s ease !important;
+  }
 
   .edge-arrow {
+    position: absolute !important;
+    top: 50% !important;
+    left: 0 !important;
     width: 32px !important;
     height: 68px !important;
     margin-left: 0 !important;
@@ -659,7 +681,7 @@
     justify-content: center !important;
     cursor: pointer !important;
     opacity: 0 !important;
-    transform: translateX(-28px) !important;
+    transform: translate(-28px, -50%) !important;
     transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease !important;
     pointer-events: auto !important;
 
@@ -676,7 +698,12 @@
   &:hover .edge-arrow,
   &:focus-within .edge-arrow {
     opacity: 1 !important;
-    transform: translateX(0) !important;
+    transform: translate(0, -50%) !important;
+  }
+
+  &:hover::before,
+  &:focus-within::before {
+    opacity: 1 !important;
   }
 }
 
