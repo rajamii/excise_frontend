@@ -34,7 +34,7 @@
 
       <mat-divider></mat-divider>
 
-      <div class="actions">
+      <div class="actions" *ngIf="canManageTerms">
         <button matButton="filled" (click)="addTerm()" [disabled]="loading || saving">
           <mat-icon>add</mat-icon> Add Term
         </button>
@@ -47,7 +47,7 @@
         Loading...
       </div>
 
-      <div class="terms" *ngIf="!loading">
+      <div class="terms" *ngIf="!loading && canManageTerms; else selectLicensePrompt">
         <div class="term-row" *ngFor="let t of termRows; let i = index">
           <div class="term-meta">
             <div class="sl">#{{ t.sl_no || (i + 1) }}</div>
@@ -70,6 +70,12 @@
           </mat-form-field>
         </div>
       </div>
+
+      <ng-template #selectLicensePrompt>
+        <div class="loading" *ngIf="!loading">
+          Select a license category and subcategory to manage terms.
+        </div>
+      </ng-template>
     </mat-card-content>
   </mat-card>
 </div>

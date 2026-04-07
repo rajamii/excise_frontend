@@ -50,6 +50,10 @@ export class ListComponent implements OnInit {
 
   termRows: Array<{ sl_no: number; text: string }> = [];
 
+  get canManageTerms(): boolean {
+    return this.resolvedLegacyCatCode !== null && this.resolvedLegacyScatCode !== null;
+  }
+
   constructor(
     private masterService: MasterService,
     private adminService: AdminService
@@ -185,6 +189,9 @@ export class ListComponent implements OnInit {
   }
 
   addTerm(): void {
+    if (!this.canManageTerms) {
+      return;
+    }
     const next = this.termRows.length + 1;
     this.termRows.push({ sl_no: next, text: '' });
   }
