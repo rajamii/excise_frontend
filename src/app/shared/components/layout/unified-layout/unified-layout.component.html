@@ -29,7 +29,7 @@
           <!-- Licensee Navigation -->
           <div *ngIf="isLicenseeUser()" class="licensee-nav">
             <!-- Dashboard -->
-            <a routerLink="/dashboard" class="nav-item dashboard-nav-item" [class.active]="isDashboardHomeActive()">
+            <a routerLink="/dashboard" class="nav-item dashboard-nav-item" [class.active]="isDashboardHomeActive()" (click)="closeSidenav()">
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
@@ -151,7 +151,7 @@
             </ng-container>
 
             <!-- Site Admin master navigation -->
-            <div *ngIf="isSiteAdminUser()">
+            <div *ngIf="isSiteAdminUser()" (click)="closeSidenav()">
               <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item">
                 <mat-icon class="nav-icon">people</mat-icon>
                 <span class="nav-text">User</span>
