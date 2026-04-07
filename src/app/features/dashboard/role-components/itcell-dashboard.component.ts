@@ -102,14 +102,7 @@ interface ITCellData {
         </div>
       </div>
 
-      <!-- Empty State -->
-      <div class="empty-state" *ngIf="filteredApplications.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-inbox"></i>
-        </div>
-        <h5>No Applications Found</h5>
-        <p>There are no applications requiring IT Cell verification at this time.</p>
-      </div>
+      <!-- Empty State removed (hide message) -->
     </div>
   `,
   styles: [`

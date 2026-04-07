@@ -40,7 +40,7 @@ interface PermitData {
       </app-dashboard-statistics>
 
       <!-- Data Table -->
-      <div class="data-table-section" *ngIf="filteredPermits.length > 0">
+      <div class="data-table-section" *ngIf="false">
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
@@ -101,13 +101,7 @@ interface PermitData {
       </div>
 
       <!-- Empty State -->
-      <div class="empty-state" *ngIf="filteredPermits.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-inbox"></i>
-        </div>
-        <h5>No Applications Found</h5>
-        <p>There are no applications to review at this time.</p>
-      </div>
+      <!-- Empty State removed (hide message) -->
     </div>
   `,
   styles: [`
