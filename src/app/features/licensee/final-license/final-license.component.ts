@@ -202,17 +202,19 @@ export class FinalLicenseComponent implements OnDestroy {
           generatedOn: String(data?.generatedOn || current.generatedOn || '')
         }));
 
-        if (data?.qrCodeDataUrl) {
-          this.qrCodeUrl.set(String(data.qrCodeDataUrl));
+        const embeddedQr = this.extractEmbeddedQrDataUrl(data);
+        if (embeddedQr) {
+          this.qrCodeUrl.set(embeddedQr);
           this.qrStatus.set('QR: embedded');
         } else {
           this.loadQrCode();
         }
 
-        if (data?.passportPhotoDataUrl) {
+        const embeddedPhoto = this.extractEmbeddedPhotoDataUrl(data);
+        if (embeddedPhoto) {
           this.templateData.update(current => ({
             ...current,
-            passportPhotoUrl: String(data.passportPhotoDataUrl)
+            passportPhotoUrl: embeddedPhoto
           }));
           this.photoStatus.set('Photo: embedded');
         } else {
@@ -233,6 +235,14 @@ export class FinalLicenseComponent implements OnDestroy {
         this.loading.set(false);
       }
     });
+  }
+
+  private extractEmbeddedQrDataUrl(data: any): string {
+    return String(data?.qrCodeDataUrl || data?.qr_code_data_url || '').trim();
+  }
+
+  private extractEmbeddedPhotoDataUrl(data: any): string {
+    return String(data?.passportPhotoDataUrl || data?.passport_photo_data_url || '').trim();
   }
 
   downloadPdf(): void {
@@ -282,6 +292,10 @@ export class FinalLicenseComponent implements OnDestroy {
   }
 
   private loadQrCode(): void {
+    void this.loadQrCodeAsync();
+  }
+
+  private async loadQrCodeAsync(): Promise<void> {
     const applicationId = this.queryAppId();
     if (!applicationId) return;
 
@@ -290,22 +304,25 @@ export class FinalLicenseComponent implements OnDestroy {
       this.qrObjectUrl = null;
     }
 
+    // Clear the previous (possibly revoked) object URL immediately so repeated prints
+    // don't race and render a blank/broken QR in the print preview.
+    this.qrCodeUrl.set('');
+    this.qrStatus.set('QR: loading');
+
     const req$ = this.isNewLicense
       ? this.licenseAppService.getNewFinalLicenseQrCode(applicationId)
       : this.licenseAppService.getOldFinalLicenseQrCode(applicationId);
 
-    req$.subscribe({
-      next: (blob: Blob) => {
-        this.qrObjectUrl = URL.createObjectURL(blob);
-        this.qrCodeUrl.set(this.qrObjectUrl || '');
-        this.qrStatus.set('QR: loaded');
-      },
-      error: (err: any) => {
-        const status = err?.status ? `(${err.status})` : '';
-        this.qrStatus.set(`QR: failed ${status}`.trim());
-        this.qrCodeUrl.set('');
-      }
-    });
+    try {
+      const blob = await firstValueFrom(req$);
+      this.qrObjectUrl = URL.createObjectURL(blob);
+      this.qrCodeUrl.set(this.qrObjectUrl || '');
+      this.qrStatus.set('QR: loaded');
+    } catch (err: any) {
+      const status = err?.status ? `(${err.status})` : '';
+      this.qrStatus.set(`QR: failed ${status}`.trim());
+      this.qrCodeUrl.set('');
+    }
   }
 
   goBack(): void {
@@ -338,8 +355,12 @@ export class FinalLicenseComponent implements OnDestroy {
       if (newValidationCode) this.validationCode.set(newValidationCode);
       if (newValidationUrl) this.validationPdfUrl.set(newValidationUrl);
 
-      // Refresh QR from backend (it encodes the latest stored link).
-      this.loadQrCode();
+      // Prefer embedded QR from final-license payload (supports both camelCase/snake_case backends).
+      // Fallback to the QR image endpoint if payload doesn't contain it.
+      const refreshed = await this.refreshEmbeddedQrFromFinalLicense();
+      if (!refreshed) {
+        await this.loadQrCodeAsync();
+      }
     } catch (err: any) {
       const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to prepare print.';
       this.error.set(String(msg));
@@ -353,6 +374,26 @@ export class FinalLicenseComponent implements OnDestroy {
     }
 
     return true;
+  }
+
+  private async refreshEmbeddedQrFromFinalLicense(): Promise<boolean> {
+    const applicationId = this.queryAppId();
+    if (!applicationId) return false;
+
+    const req$ = this.isNewLicense
+      ? this.licenseAppService.getNewFinalLicenseData(applicationId)
+      : this.licenseAppService.getOldFinalLicenseData(applicationId);
+
+    try {
+      const data: any = await firstValueFrom(req$);
+      const embeddedQr = this.extractEmbeddedQrDataUrl(data);
+      if (!embeddedQr) return false;
+      this.qrCodeUrl.set(embeddedQr);
+      this.qrStatus.set('QR: embedded');
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async waitForLicenseLoad(timeoutMs: number): Promise<void> {

@@ -426,6 +426,12 @@ body.print-prep {
     print-color-adjust: exact;
   }
 
+  .page-loader-overlay,
+  .top-loader,
+  .cdk-overlay-container {
+    display: none !important;
+  }
+
   .no-print {
     display: none !important;
   }
