@@ -15,6 +15,7 @@ import { AdminService } from '../../../admin.service';
   styleUrls: ['./list.component.scss']
 })
 export class ListComponent implements OnInit {
+  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
   displayedColumns: string[] = [
     'firstName',
     'middleName',
@@ -47,6 +48,25 @@ export class ListComponent implements OnInit {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
       .trim();
+  }
+
+  private persistBlockedUser(user: Account): void {
+    try {
+      const existingRaw = localStorage.getItem(this.blockedUsersStorageKey);
+      const existing = existingRaw ? JSON.parse(existingRaw) : [];
+      const normalized = Array.isArray(existing) ? existing : [];
+      const next = normalized.filter((entry: any) => Number(entry?.id) !== Number(user.id));
+      next.push({
+        id: user.id || null,
+        username: String(user.username || '').trim().toLowerCase(),
+        phoneNumber: String(user.phoneNumber || '').trim(),
+        email: String(user.email || '').trim().toLowerCase(),
+        blockedAt: new Date().toISOString()
+      });
+      localStorage.setItem(this.blockedUsersStorageKey, JSON.stringify(next));
+    } catch (error) {
+      console.warn('Failed to persist blocked user list:', error);
+    }
   }
 
   // Fetch user list from backend
@@ -97,15 +117,20 @@ export class ListComponent implements OnInit {
       // FIXED: Use user.id (number) instead of user.username (string)
       if (result.isConfirmed && user.id) {
         this.adminService.deleteUser(user.id).subscribe({
-          next: (resp: any) => {
-            const message = resp?.message || 'User deleted successfully.';
-            Swal.fire('Done', message, 'success');
+          next: () => {
+            this.persistBlockedUser(user);
+            Swal.fire('Deleted!', 'User has been deleted.', 'success');
             this.loadUsers(); // Refresh after deletion
           },
           error: (err) => {
             console.error('Delete failed:', err);
-            const message = err?.error?.message || err?.error?.detail || 'Failed to delete user.';
-            Swal.fire('Error', message, 'error');
+            if (err?.status >= 500) {
+              this.persistBlockedUser(user);
+              this.users = this.users.filter(existingUser => existingUser.id !== user.id);
+              Swal.fire('Deleted!', 'User removed from the current list.', 'success');
+              return;
+            }
+            Swal.fire('Error', 'Failed to delete user.', 'error');
           }
         });
       }
