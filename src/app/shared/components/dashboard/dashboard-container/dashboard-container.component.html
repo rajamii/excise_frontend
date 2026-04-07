@@ -7,19 +7,6 @@
         <mat-icon>dashboard</mat-icon>
         {{ config.roleName }} Dashboard
       </h1>
-      
-      <!-- Application Type Filter (for admin roles) -->
-      <div class="filter-container" *ngIf="roleService.isAdminRole(user.roleId)">
-        <mat-form-field appearance="outline" class="application-type-filter">
-          <mat-icon matPrefix class="filter-icon">filter_list</mat-icon>
-          <mat-label>Application Type</mat-label>
-          <mat-select [(value)]="selectedApplicationType" (selectionChange)="onApplicationTypeChange()">
-            <mat-option *ngFor="let type of applicationTypes" [value]="type.value">
-              {{ type.label }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
     </div>
   </div>
 

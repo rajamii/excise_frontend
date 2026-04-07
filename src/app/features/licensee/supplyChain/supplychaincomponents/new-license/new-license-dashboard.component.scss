@@ -9,6 +9,8 @@
 }
 
 .summary-card {
+  --summary-accent-start: #1C2B78;
+  --summary-accent-end: #2d4aa7;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e5e7eb;
   border-radius: 14px;
@@ -19,10 +21,51 @@
   gap: 0.85rem;
   min-height: 84px;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+
+  &.summary-card-clickable {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  &.summary-card-clickable:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25), 0 10px 22px rgba(15, 23, 42, 0.11);
+  }
+
+  &.active {
+    border-color: rgba(13, 110, 253, 0.45);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.22), 0 10px 22px rgba(15, 23, 42, 0.11);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--summary-accent-start), var(--summary-accent-end));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.11);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+
+  &.active::after {
+    transform: scaleX(1);
   }
 
   .card-icon {
@@ -34,9 +77,13 @@
     justify-content: center;
     color: #fff;
     font-size: 1.1rem;
+    position: relative;
+    z-index: 2;
   }
 
   .card-content {
+    position: relative;
+    z-index: 2;
     .card-value {
       margin: 0;
       font-size: 1.45rem;
@@ -53,20 +100,49 @@
   }
 }
 
-.applied-requests .card-icon {
-  background: linear-gradient(135deg, #7b6dff, #4b3db7);
+.applied-requests {
+  --summary-accent-start: #7b6dff;
+  --summary-accent-end: #4b3db7;
+
+  .card-icon {
+    background: linear-gradient(135deg, #7b6dff, #4b3db7);
+  }
 }
-.pending-requests .card-icon {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+
+.pending-requests {
+  --summary-accent-start: #f59e0b;
+  --summary-accent-end: #d97706;
+
+  .card-icon {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+  }
 }
-.objection-requests .card-icon {
-  background: linear-gradient(135deg, #f97316, #c2410c);
+
+.objection-requests {
+  --summary-accent-start: #f97316;
+  --summary-accent-end: #c2410c;
+
+  .card-icon {
+    background: linear-gradient(135deg, #f97316, #c2410c);
+  }
 }
-.approved-requests .card-icon {
-  background: linear-gradient(135deg, #22c55e, #15803d);
+
+.approved-requests {
+  --summary-accent-start: #22c55e;
+  --summary-accent-end: #15803d;
+
+  .card-icon {
+    background: linear-gradient(135deg, #22c55e, #15803d);
+  }
 }
-.rejected-requests .card-icon {
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
+
+.rejected-requests {
+  --summary-accent-start: #ef4444;
+  --summary-accent-end: #b91c1c;
+
+  .card-icon {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+  }
 }
 
 .compact-filter-section {
@@ -123,6 +199,54 @@
 
 .table-wrapper {
   overflow-x: auto;
+}
+
+.pagination-bar {
+  border-top: 1px solid #e2e8f0;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .page-summary {
+    font-size: 0.82rem;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .page-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .page-size {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .page-size-label {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .page-size-select {
+    width: 90px;
+  }
+
+  .page-indicator {
+    font-size: 0.8rem;
+    color: #334155;
+    font-weight: 700;
+    white-space: nowrap;
+  }
 }
 
 table {

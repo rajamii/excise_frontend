@@ -1,55 +1,48 @@
 <!-- Cancellation Register Header -->
 <div class="cancellation-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="header-actions">
-
-    </div>
-  </div>
-
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
-        <div class="card-icon">
-          <i class="bi bi-list-ul"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ filteredCancellationData.length }}</h3>
-          <p class="card-label">Total Cancellations</p>
-        </div>
+  <div class="cancellation-summary-grid mb-4">
+    <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('ALL')" [class.active]="!cancellationStatusFilter">
+      <div class="card-icon">
+        <i class="bi bi-list-ul"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ summaryCancellationData.length }}</h3>
+        <p class="card-label">Total Cancellations</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card urgent-requests">
-        <div class="card-icon">
-          <i class="bi bi-exclamation-triangle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getUrgentCancellationCount() }}</h3>
-          <p class="card-label">Urgent/Critical</p>
-        </div>
+
+    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+      <div class="card-icon">
+        <i class="bi bi-check-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getCancellationStatusCount('APPROVED') }}</h3>
+        <p class="card-label">Approved</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card pending-requests">
-        <div class="card-icon">
-          <i class="bi bi-clock"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getCancellationStatusCount('PENDING') }}</h3>
-          <p class="card-label">Pending Review</p>
-        </div>
+
+    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+      <div class="card-icon">
+        <i class="bi bi-clock"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getCancellationStatusCount('PENDING') }}</h3>
+        <p class="card-label">Pending Review</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card approved-requests">
-        <div class="card-icon">
-          <i class="bi bi-check-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getCancellationStatusCount('APPROVED') }}</h3>
-          <p class="card-label">Approved</p>
-        </div>
+
+    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+      <div class="card-icon">
+        <i class="bi bi-gear"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getCancellationStatusCount('UNDER_PROCESS') }}</h3>
+        <p class="card-label">Under Process</p>
       </div>
     </div>
   </div>
@@ -69,35 +62,39 @@
         (change)="onCancellationDateFilterChange()" placeholder="Date" title="Filter by date">
     </div>
 
-    <!-- Status Filter -->
+    <!-- Month Filter -->
     <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="cancellationStatusFilter"
-        (change)="onCancellationStatusFilterChange()" title="Filter by status">
-        <option value="">All Status</option>
-        <option value="PENDING">Pending Review</option>
-        <option value="APPROVED">Approved</option>
-        <option value="REJECTED">Rejected</option>
-        <option value="PROCESSING">Processing</option>
+      <select class="form-select form-select-sm" [(ngModel)]="cancellationMonthFilter"
+        (change)="onCancellationMonthFilterChange()" title="Filter by month">
+        <option value="">All Months</option>
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4">April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
       </select>
     </div>
 
-    <!-- Reason Filter -->
+    <!-- Company Filter -->
     <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="cancellationReasonFilter"
-        (change)="onCancellationReasonFilterChange()" title="Filter by reason">
-        <option value="">All Reasons</option>
-        <option value="Business Closure">Business Closure</option>
-        <option value="Voluntary Surrender">Voluntary Surrender</option>
-        <option value="Non-Compliance">Non-Compliance</option>
-        <option value="License Transfer">License Transfer</option>
-        <option value="Financial Issues">Financial Issues</option>
-        <option value="Regulatory Violation">Regulatory Violation</option>
+      <select class="form-select form-select-sm" [(ngModel)]="cancellationCompanyFilter"
+        (change)="onCancellationCompanyFilterChange()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of cancellationCompanyOptions" [value]="company">{{ company }}</option>
       </select>
     </div>
 
     <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearCancellationFilters()"
-      *ngIf="cancellationDateFilter || cancellationStatusFilter || cancellationReasonFilter" title="Clear all filters">
+      *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationStatusFilter || cancellationCompanyFilter"
+      title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
     </button>

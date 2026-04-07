@@ -62,8 +62,9 @@ export class TransitComponent implements OnInit {
 
   // Filter properties for transit
   transitDateFilter: string = '';
+  transitMonthFilter: string = '';
   transitStatusFilter: string = '';
-  transitDestinationFilter: string = '';
+  activeSummaryFilter: string = '';
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15, 20, 50];
@@ -71,6 +72,7 @@ export class TransitComponent implements OnInit {
   pageSize: number = 5;
 
   filteredTransitData: TableData[] = [];
+  summaryTransitData: TableData[] = [];
 
   // Store raw backend data for brand details
   rawTransitData: any[] = [];
@@ -261,22 +263,49 @@ export class TransitComponent implements OnInit {
 
   // Filter methods
   applyTransitFilters(): void {
-    let filtered = [...this.transitData];
+    let summary = [...this.transitData];
 
     if (this.transitDateFilter) {
-      filtered = filtered.filter(item => {
+      summary = summary.filter(item => {
         const itemDate = this.parseDate(item.submissionDate);
         const filterDate = new Date(this.transitDateFilter);
         return itemDate.toDateString() === filterDate.toDateString();
       });
     }
 
-    if (this.transitStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.transitStatusFilter);
+    if (this.transitMonthFilter) {
+      const monthNum = parseInt(this.transitMonthFilter, 10);
+      summary = summary.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.getMonth() + 1 === monthNum;
+      });
     }
 
-    if (this.transitDestinationFilter) {
-      filtered = filtered.filter(item => item.destination === this.transitDestinationFilter);
+    this.summaryTransitData = summary;
+
+    let filtered = [...summary];
+
+    if (this.transitStatusFilter) {
+      const filter = this.normalizeStageToken(this.transitStatusFilter);
+      filtered = filtered.filter(item => {
+        if (filter === 'pending' || filter === 'underreview') {
+          return this.isPendingSummaryStatus(item);
+        }
+        if (filter === 'issued') {
+          return this.isIssuedLikeStatus(item);
+        }
+        if (filter === 'approved') {
+          return this.isApprovedLikeStatus(item);
+        }
+        if (filter === 'rejected') {
+          return this.isRejectedLikeStatus(item);
+        }
+        if (filter === 'underprocess') {
+          return this.isUnderProcessLikeStatus(item);
+        }
+        const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+        return token.includes(filter);
+      });
     }
 
     this.filteredTransitData = filtered;
@@ -285,8 +314,9 @@ export class TransitComponent implements OnInit {
 
   clearTransitFilters(): void {
     this.transitDateFilter = '';
+    this.transitMonthFilter = '';
     this.transitStatusFilter = '';
-    this.transitDestinationFilter = '';
+    this.activeSummaryFilter = '';
     this.applyTransitFilters();
   }
 
@@ -294,29 +324,132 @@ export class TransitComponent implements OnInit {
     this.applyTransitFilters();
   }
 
-  onTransitStatusFilterChange(): void {
+  onTransitMonthFilterChange(): void {
     this.applyTransitFilters();
   }
 
-  onTransitDestinationFilterChange(): void {
+  onTransitStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyTransitFilters();
   }
 
   // Summary methods
   getTransitStatusCount(status: string): number {
-    return this.filteredTransitData.filter(item => item.status === status).length;
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'pending' || filter === 'underreview') {
+      return this.summaryTransitData.filter(item => this.isPendingSummaryStatus(item)).length;
+    }
+    if (filter === 'issued') {
+      return this.summaryTransitData.filter(item => this.isIssuedLikeStatus(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.summaryTransitData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    if (filter === 'rejected') {
+      return this.summaryTransitData.filter(item => this.isRejectedLikeStatus(item)).length;
+    }
+    if (filter === 'underprocess') {
+      return this.summaryTransitData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+    }
+    return this.summaryTransitData.filter(
+      item => `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`.includes(filter)
+    ).length;
   }
 
   getUrgentTransitCount(): number {
     // Since we removed priority, we can base urgency on status or other criteria
     // For now, let's count items that need immediate attention (PENDING status)
-    return this.filteredTransitData.filter(item =>
-      item.status === 'PENDING'
-    ).length;
+    return this.summaryTransitData.filter(item => this.isPendingSummaryStatus(item)).length;
   }
 
   getTotalTransitAmount(): number {
-    return this.filteredTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+    return this.summaryTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStageToken(filter);
+    const current = this.normalizeStageToken(this.transitStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.transitStatusFilter = '';
+      this.applyTransitFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.transitStatusFilter = '';
+      this.applyTransitFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.transitStatusFilter = filter;
+    this.applyTransitFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStageToken(this.transitStatusFilter);
+    if (['pending', 'approved', 'rejected', 'underprocess'].includes(normalized)) {
+      this.activeSummaryFilter = this.transitStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private isRejectedLikeStatus(item: TableData): boolean {
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    return token.includes('reject');
+  }
+
+  private isApprovedLikeStatus(item: TableData): boolean {
+    if (this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    return token.includes('approv') || token.includes('issued') || token.includes('complete');
+  }
+
+  private isIssuedLikeStatus(item: TableData): boolean {
+    if (this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    return token.includes('issued');
+  }
+
+  private isPendingSummaryStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    const isPendingLike =
+      token.includes('pending') ||
+      token.includes('review') ||
+      token.includes('submit') ||
+      token.includes('applied');
+
+    const isPaymentForwardedToOfficer =
+      token.includes('paymentsuccess') &&
+      token.includes('forward') &&
+      (token.includes('officer') || token.includes('oic'));
+
+    return isPendingLike || isPaymentForwardedToOfficer;
+  }
+
+  private isUnderProcessLikeStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    if (this.isPendingSummaryStatus(item)) {
+      return false;
+    }
+    return true;
   }
 
   // Action methods
@@ -380,7 +513,9 @@ export class TransitComponent implements OnInit {
     const statusIndicatesPayment = status.includes('forwarded') ||
                                    status.includes('approved') ||
                                    status.includes('paymentsuccessful') ||
+                                   status.includes('pending') ||
                                    status.includes('paid') ||
+                                   statusCode === 'TRP_02' ||
                                    statusCode === 'TRP_03' ||
                                    statusCode === 'TRP_04';
     
@@ -447,19 +582,26 @@ export class TransitComponent implements OnInit {
     if (this.userRole === 'licensee') return false;
 
     const backendStatus = item.backendStatus || '';
+    const normalized = String(backendStatus || '').trim();
+    const token = normalized.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
 
     switch (this.userRole) {
       case 'oic':
         // OIC can approve/reject when payment is done and forwarded to them
-        return backendStatus === 'PaymentSuccessfulandForwardedToOfficerincharge';
+        return (
+          statusCode === 'TRP_02' ||
+          token.includes('pending') ||
+          normalized === 'PaymentSuccessfulandForwardedToOfficerincharge'
+        );
       case 'permit':
         // Permit section can approve/reject when forwarded to them
-        return backendStatus.toLowerCase().includes('permit section') ||
-          backendStatus.toLowerCase().includes('forwarded to permit');
+        return normalized.toLowerCase().includes('permit section') ||
+          normalized.toLowerCase().includes('forwarded to permit');
       case 'commissioner':
         // Commissioner can approve/reject when forwarded to them
-        return backendStatus.toLowerCase().includes('commissioner') ||
-          backendStatus.toLowerCase().includes('forwarded to commissioner');
+        return normalized.toLowerCase().includes('commissioner') ||
+          normalized.toLowerCase().includes('forwarded to commissioner');
       default:
         return false;
     }
@@ -493,7 +635,7 @@ export class TransitComponent implements OnInit {
     }
 
     // Ready for Payment / Pending states
-    if (statusLower.includes('ready for payment') || statusLower === 'pending' || statusLower.includes('waiting')) {
+    if (statusLower.includes('ready for payment') || statusLower.includes('pending') || statusLower.includes('waiting')) {
       return 'pending';
     }
 
@@ -527,7 +669,7 @@ export class TransitComponent implements OnInit {
     }
 
     // Ready for Payment / Pending states
-    if (statusLower.includes('ready for payment') || statusLower === 'pending' || statusLower.includes('waiting')) {
+    if (statusLower.includes('ready for payment') || statusLower.includes('pending') || statusLower.includes('waiting')) {
       return 'bi-clock-fill';
     }
 
@@ -550,11 +692,37 @@ export class TransitComponent implements OnInit {
   }
 
   private parseDate(dateString: string): Date {
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const s = String(dateString || '').trim();
+    if (!s) return new Date(NaN);
+
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const year = parseInt(iso[1], 10);
+      const month = parseInt(iso[2], 10) - 1;
+      const day = parseInt(iso[3], 10);
+      return new Date(year, month, day);
     }
-    return new Date(dateString);
+
+    // DD-MM-YYYY
+    const dmyDash = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmyDash) {
+      const day = parseInt(dmyDash[1], 10);
+      const month = parseInt(dmyDash[2], 10) - 1;
+      const year = parseInt(dmyDash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    // DD/MM/YYYY
+    const dmySlash = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (dmySlash) {
+      const day = parseInt(dmySlash[1], 10);
+      const month = parseInt(dmySlash[2], 10) - 1;
+      const year = parseInt(dmySlash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    return new Date(s);
   }
 
   navigateTo(route: string) {

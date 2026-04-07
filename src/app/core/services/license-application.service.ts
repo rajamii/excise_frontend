@@ -708,6 +708,36 @@ export class LicenseApplicationService {
     return this.http.get(`${this.newLicenseUrl}/detail/${encodedId}/`);
   }
 
+  getNewFinalLicenseData(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/`);
+  }
+
+  getOldFinalLicenseData(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/`);
+  }
+
+  getNewFinalLicensePassportPhoto(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
+  }
+
+  getOldFinalLicensePassportPhoto(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
+  }
+
+  getNewFinalLicenseQrCode(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
+  }
+
+  getOldFinalLicenseQrCode(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
+  }
+
   getNewLicenseObjections(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.newLicenseUrl}/${encodedId}/objections/`);

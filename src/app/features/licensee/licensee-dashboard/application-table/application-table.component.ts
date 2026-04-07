@@ -8,6 +8,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { UnifiedApplication } from '../../../../core/models/unified-application.model';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
+import { RoleService } from '../../../../core/services/role.service';
 
 @Component({
     selector: 'app-application-table',
@@ -58,7 +59,8 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
 
     constructor(
         private router: Router,
-        private dialog: MatDialog
+        private dialog: MatDialog,
+        private roleService: RoleService
     ) { }
 
     ngOnInit(): void {
@@ -142,5 +144,16 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
             maxHeight: '80vh',
             data: { application: element }
         });
+    }
+
+    // Method to check if current user is licensee
+    isLicenseeUser(): boolean {
+        return this.roleService.isLicenseeRole();
+    }
+
+    // Method to check if View Timeline button should be shown
+    shouldShowTimelineButton(): boolean {
+        // Hide timeline button for licensee users in approved applications
+        return !(this.tableType === 'approved' && this.isLicenseeUser());
     }
 }

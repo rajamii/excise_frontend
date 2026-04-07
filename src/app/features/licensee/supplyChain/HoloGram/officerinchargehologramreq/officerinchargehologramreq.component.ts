@@ -392,6 +392,24 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.updatePagination();
   }
 
+  onStatusCardClick(status: '' | 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): void {
+    this.filters.status = this.filters.status === status ? '' : status;
+    this.applyFilters();
+  }
+
+  isStatusCardActive(status: '' | 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): boolean {
+    return this.filters.status === status;
+  }
+
+  onHologramTypeCardClick(type: '' | 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
+    this.filters.hologramType = this.filters.hologramType === type ? '' : type;
+    this.applyFilters();
+  }
+
+  isHologramTypeCardActive(type: '' | 'LOCAL' | 'EXPORT' | 'DEFENCE'): boolean {
+    return this.filters.hologramType === type;
+  }
+
   clearFilters() {
     this.filters = {
       referenceNumber: '',
@@ -701,9 +719,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   getRequestCount(status?: string): number {
     if (status) {
-      return this.filteredRequests.filter(req => this.mapStatusToCategory(req) === status).length;
+      return this.hologramRequests.filter(req => this.mapStatusToCategory(req) === status).length;
     }
-    return this.filteredRequests.length;
+    return this.hologramRequests.length;
   }
 
   // Categorize using DB workflow metadata; avoid hardcoded stage names.

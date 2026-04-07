@@ -40,21 +40,41 @@ interface BlDetailRow {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card pending">
+        <article class="stat-card total stat-card-clickable" role="button" tabindex="0" aria-label="Show all ENA details"
+          (click)="onStatCardClick('ALL')" (keydown.enter)="onStatCardClick('ALL')"
+          (keydown.space)="onStatCardClick('ALL'); $event.preventDefault()"
+          [class.active]="isStatCardActive('ALL')">
+          <div>
+            <span class="stat-kicker">All submissions</span>
+            <h3>Total Applications</h3>
+          </div>
+          <div class="stat-pill">{{ getTotalCount() }}</div>
+        </article>
+
+        <article class="stat-card pending stat-card-clickable" role="button" tabindex="0" aria-label="Filter pending ENA details"
+  (click)="onStatCardClick('PENDING')" (keydown.enter)="onStatCardClick('PENDING')"
+  (keydown.space)="onStatCardClick('PENDING'); $event.preventDefault()"
+  [class.active]="isStatCardActive('PENDING')">
           <div>
             <span class="stat-kicker">Awaiting action</span>
             <h3>Pending</h3>
           </div>
           <div class="stat-pill">{{ getCount('PENDING') }}</div>
         </article>
-        <article class="stat-card approved">
+        <article class="stat-card approved stat-card-clickable" role="button" tabindex="0" aria-label="Filter approved ENA details"
+  (click)="onStatCardClick('APPROVED')" (keydown.enter)="onStatCardClick('APPROVED')"
+  (keydown.space)="onStatCardClick('APPROVED'); $event.preventDefault()"
+  [class.active]="isStatCardActive('APPROVED')">
           <div>
             <span class="stat-kicker">Cleared by OIC</span>
             <h3>Approved</h3>
           </div>
           <div class="stat-pill">{{ getCount('APPROVED') }}</div>
         </article>
-        <article class="stat-card rejected">
+        <article class="stat-card rejected stat-card-clickable" role="button" tabindex="0" aria-label="Filter rejected ENA details"
+  (click)="onStatCardClick('REJECTED')" (keydown.enter)="onStatCardClick('REJECTED')"
+  (keydown.space)="onStatCardClick('REJECTED'); $event.preventDefault()"
+  [class.active]="isStatCardActive('REJECTED')">
           <div>
             <span class="stat-kicker">Sent back</span>
             <h3>Rejected</h3>
@@ -67,22 +87,25 @@ interface BlDetailRow {
         <div class="filters-heading">
           <div>
             <h4>Review Filters</h4>
-            <p>Switch between live queue and reviewed entries without losing the reference history.</p>
+          <br>
           </div>
         </div>
         <div class="filters-grid">
           <label class="field-block">
-            <span class="field-label">Review Status</span>
-            <select class="field-input" [(ngModel)]="reviewStatus" (change)="loadRows()">
-              <option value="ALL">All</option>
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
+            <span class="field-label">Month</span>
+            <input type="month" class="field-input" [(ngModel)]="selectedMonth" (ngModelChange)="resetPagination()">
+          </label>
+          <label class="field-block">
+            <span class="field-label">From Date</span>
+            <input type="date" class="field-input" [(ngModel)]="fromDate" (ngModelChange)="resetPagination()">
+          </label>
+          <label class="field-block">
+            <span class="field-label">To Date</span>
+            <input type="date" class="field-input" [(ngModel)]="toDate" (ngModelChange)="resetPagination()">
           </label>
           <label class="field-block search-block">
             <span class="field-label">Search</span>
-            <input class="field-input" [(ngModel)]="searchTerm" placeholder="Search by ref no, licensee, distillery or tanker">
+            <input class="field-input" [(ngModel)]="searchTerm" (ngModelChange)="resetPagination()" placeholder="Search by ref no, licensee, distillery or tanker">
           </label>
         </div>
       </section>
@@ -112,7 +135,7 @@ interface BlDetailRow {
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of filteredRows">
+              <tr *ngFor="let row of paginatedRows">
                 <td class="ref-cell">
                   <div class="ref-primary">{{ row.referenceNo }}</div>
                   <div class="ref-secondary">ENA submission</div>
@@ -162,6 +185,21 @@ interface BlDetailRow {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="table-footer" *ngIf="filteredRows.length > 0">
+          <div class="table-footer-left">
+            <span class="footer-label">Rows per page</span>
+            <select class="footer-select" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+              <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+            </select>
+          </div>
+          <div class="table-footer-right">
+            <span class="footer-range">{{ getPaginationLabel() }}</span>
+            <button type="button" class="pager-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage <= 1">Prev</button>
+            <span class="footer-page">Page {{ currentPage }} / {{ getTotalPages() }}</span>
+            <button type="button" class="pager-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= getTotalPages()">Next</button>
+          </div>
         </div>
       </section>
 
@@ -299,6 +337,7 @@ interface BlDetailRow {
       border: 1px solid rgba(148, 163, 184, 0.18);
       border-radius: 22px;
       box-shadow: var(--shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
     .hero-panel {
@@ -389,12 +428,14 @@ interface BlDetailRow {
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
       margin-bottom: 1rem;
     }
 
     .stat-card {
+      --stat-accent-start: #0ea5e9;
+      --stat-accent-end: #2563eb;
       position: relative;
       border-radius: 20px;
       padding: 1.15rem 1.2rem;
@@ -404,6 +445,29 @@ interface BlDetailRow {
       overflow: hidden;
       border: 1px solid transparent;
       box-shadow: var(--shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+
+    .stat-card-clickable {
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .stat-card-clickable:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+    }
+
+    .stat-card-clickable:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2), 0 18px 38px rgba(15, 23, 42, 0.12);
+    }
+
+    .stat-card.active {
+      border-color: rgba(13, 110, 253, 0.4);
+      box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15), 0 18px 38px rgba(15, 23, 42, 0.12);
     }
 
     .stat-card::before {
@@ -414,7 +478,40 @@ interface BlDetailRow {
       border-radius: 20px 0 0 20px;
     }
 
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--stat-accent-start), var(--stat-accent-end));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.25s ease;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .stat-card-clickable:hover::after,
+    .stat-card.active::after {
+      transform: scaleX(1);
+    }
+
+    .stat-card.total {
+      --stat-accent-start: #3b82f6;
+      --stat-accent-end: #1d4ed8;
+      background: linear-gradient(135deg, rgba(219, 234, 254, 0.9), rgba(191, 219, 254, 0.7));
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .stat-card.total::before {
+      background: #1d4ed8;
+    }
+
     .stat-card.pending {
+      --stat-accent-start: #f59e0b;
+      --stat-accent-end: #d97706;
       background: linear-gradient(135deg, #fff8dc, #fff2b8);
       border-color: #f3df89;
     }
@@ -424,6 +521,8 @@ interface BlDetailRow {
     }
 
     .stat-card.approved {
+      --stat-accent-start: #22c55e;
+      --stat-accent-end: #15803d;
       background: linear-gradient(135deg, #e6f8ee, #cbf0dc);
       border-color: #9dd5b6;
     }
@@ -433,6 +532,8 @@ interface BlDetailRow {
     }
 
     .stat-card.rejected {
+      --stat-accent-start: #ef4444;
+      --stat-accent-end: #b91c1c;
       background: linear-gradient(135deg, #fce8e8, #f7d3d3);
       border-color: #efb6b6;
     }
@@ -493,9 +594,9 @@ interface BlDetailRow {
 
     .filters-grid {
       display: grid;
-      grid-template-columns: 260px minmax(0, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 1rem;
-      margin-top: 1rem;
+      align-items: start;
     }
 
     .field-block {
@@ -564,6 +665,52 @@ interface BlDetailRow {
       background: #fff;
     }
 
+
+    .table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 0.5rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .table-footer-left,
+    .table-footer-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-select {
+      border: 1px solid #dbe4ef;
+      border-radius: 12px;
+      padding: 0.35rem 0.65rem;
+      background: #fff;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .pager-btn {
+      border: 1px solid #dbe4ef;
+      background: #fff;
+      color: #0f172a;
+      border-radius: 12px;
+      padding: 0.35rem 0.7rem;
+      font-weight: 800;
+    }
+
+    .pager-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .footer-page {
+      font-weight: 800;
+      color: #0f172a;
+    }
     .bl-table {
       width: 100%;
       border-collapse: separate;
@@ -909,7 +1056,7 @@ interface BlDetailRow {
 
     .details-metrics {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
       margin-bottom: 1rem;
     }
@@ -972,7 +1119,7 @@ interface BlDetailRow {
 
     .details-info-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
       margin-bottom: 1.15rem;
     }
@@ -1156,18 +1303,30 @@ export class OicBlDetailsComponent implements OnInit {
   searchTerm = '';
   actingId: number | null = null;
   selectedDetailsRow: BlDetailRow | null = null;
+  selectedMonth: string = '';
+  fromDate: string = '';
+  toDate: string = '';
 
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize = 5;
+  currentPage = 1;
   ngOnInit(): void {
+    // Set default to current running month
+    const currentDate = new Date();
+    const currentMonth = currentDate.toISOString().slice(0, 7); // YYYY-MM format
+    this.selectedMonth = currentMonth;
+    
     this.loadRows();
   }
 
   loadRows(): void {
     this.loading = true;
     this.errorMessage = '';
-    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus(this.reviewStatus).subscribe({
+    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('ALL').subscribe({
       next: (response: any) => {
         const rows = Array.isArray(response?.data) ? response.data : [];
         this.rows = rows.map((row: any) => this.mapRow(row));
+        this.resetPagination();
         this.loading = false;
       },
       error: () => {
@@ -1178,11 +1337,16 @@ export class OicBlDetailsComponent implements OnInit {
   }
 
   get filteredRows(): BlDetailRow[] {
+    const statusFiltered = this.reviewStatus === 'ALL'
+      ? this.rows
+      : this.rows.filter((row) => row.approvalStatus === this.reviewStatus);
+
     const token = this.searchTerm.trim().toLowerCase();
     if (!token) {
-      return this.rows;
+      return statusFiltered;
     }
-    return this.rows.filter((row) =>
+
+    return statusFiltered.filter((row) =>
       [
         row.referenceNo,
         row.licenseeId,
@@ -1193,9 +1357,75 @@ export class OicBlDetailsComponent implements OnInit {
       ].some((value) => String(value || '').toLowerCase().includes(token))
     );
   }
-
   getCount(status: 'PENDING' | 'APPROVED' | 'REJECTED'): number {
     return this.rows.filter((row) => row.approvalStatus === status).length;
+  }
+
+  
+  
+
+  getTotalCount(): number {
+    return this.rows.length;
+  }
+
+  onStatCardClick(status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): void {
+    this.reviewStatus = status === 'ALL' ? 'ALL' : (this.reviewStatus === status ? 'ALL' : status);
+    this.resetPagination();
+  }
+
+  resetPagination(): void {
+    this.currentPage = 1;
+  }
+
+  onPageSizeChange(value: any): void {
+    const parsed = Number(value);
+    this.pageSize = Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+    this.resetPagination();
+  }
+
+  getTotalPages(): number {
+    const total = this.filteredRows.length;
+    const size = this.pageSize || 5;
+    return Math.max(1, Math.ceil(total / size));
+  }
+
+  goToPage(page: number): void {
+    const totalPages = this.getTotalPages();
+    const next = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    this.currentPage = next;
+  }
+
+  getPaginationLabel(): string {
+    const total = this.filteredRows.length;
+    if (total <= 0) return 'Showing 0 of 0';
+
+    const size = this.pageSize || 5;
+    const totalPages = this.getTotalPages();
+    const safePage = Math.min(Math.max(1, this.currentPage), totalPages);
+    const startIndex = (safePage - 1) * size;
+    const start = startIndex + 1;
+    const end = Math.min(total, startIndex + size);
+    return `Showing ${start}-${end} of ${total}`;
+  }
+
+  get paginatedRows(): BlDetailRow[] {
+    const rows = this.filteredRows;
+    if (rows.length === 0) return [];
+
+    const totalPages = this.getTotalPages();
+    if (this.currentPage > totalPages) {
+      this.currentPage = totalPages;
+    } else if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+
+    const size = this.pageSize || 5;
+    const start = (this.currentPage - 1) * size;
+    return rows.slice(start, start + size);
+  }
+
+  isStatCardActive(status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): boolean {
+    return this.reviewStatus === status;
   }
 
   openDetailsModal(row: BlDetailRow): void {

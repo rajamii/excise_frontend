@@ -1,16 +1,25 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
-import { map, tap, catchError } from 'rxjs/operators';
+import { map, tap, catchError, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { DashboardCount } from '../models/dashboard.model';
 import { UnifiedApplication } from '../models/unified-application.model';
 import { Objection } from '../models/license-application.model';
+import { AccountService } from './account.service';
 
 @Injectable({ providedIn: 'root' })
 export class UnifiedDashboardService {
   private baseUrl = `${environment.apiBaseUrl}/transactional`;
   private workflowUrl = `${environment.apiBaseUrl}/auth/`;
+  private unifiedAppsCache$?: Observable<{
+    applied: UnifiedApplication[];
+    pending: UnifiedApplication[];
+    approved: UnifiedApplication[];
+    rejected: UnifiedApplication[];
+    awaitingPayment?: UnifiedApplication[];
+  }>;
+  private cacheUserKey: string | null = null;
 
   private endpoints = {
     renewal: `${this.baseUrl}/license_application`,
@@ -19,7 +28,30 @@ export class UnifiedDashboardService {
     company: `${this.baseUrl}/company-registration` // ✅ ADDED: Company registration endpoint
   };
 
-  constructor(private http: HttpClient) { }
+  private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
+    const id = String(applicationId || '').trim().toUpperCase();
+    if (!id) return '';
+    if (id.startsWith('NLI/')) return 'new-license';
+    if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('NA/')) return 'new-license';
+    if (id.startsWith('LA/')) return 'license-renewal';
+    return '';
+  }
+
+  constructor(private http: HttpClient, private accountService: AccountService) {
+    // Prevent cross-user data leakage (SPA keeps services alive between logins).
+    this.accountService.getAuthenticationState().subscribe((account) => {
+      const nextKey = account?.username ? String(account.username) : null;
+      if (nextKey !== this.cacheUserKey) {
+        this.cacheUserKey = nextKey;
+        this.clearUnifiedAppsCache();
+      }
+    });
+  }
+
+  private clearUnifiedAppsCache(): void {
+    this.unifiedAppsCache$ = undefined;
+  }
 
   /** ✅ FIXED: Combine counts from all 4 application types (added company) */
   getUnifiedDashboardCounts(): Observable<DashboardCount> {
@@ -62,14 +94,27 @@ export class UnifiedDashboardService {
   }
 
   /** ✅ FIXED: Get applications from all 4 types (added company) */
-  getUnifiedApplicationsByStatus(): Observable<{
+  getUnifiedApplicationsByStatus(forceRefresh = false): Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-       
+    if (!forceRefresh && this.unifiedAppsCache$) {
+      return this.unifiedAppsCache$;
+    }
+
+    const uniqueByKey = (apps: UnifiedApplication[]): UnifiedApplication[] => {
+      const seen = new Set<string>();
+      return (apps || []).filter((app) => {
+        const key = `${app.type}::${app.applicationId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+
     const requests = [
       this.http.get<any>(`${this.endpoints.renewal}/list-by-status/`).pipe(
         catchError(err => {
@@ -98,7 +143,7 @@ export class UnifiedDashboardService {
       )
     ];
 
-    return forkJoin(requests).pipe(
+    this.unifiedAppsCache$ = forkJoin(requests).pipe(
       map(([renewal, newLic, salesman, company]) => {
         const normalize = (data: any, type: UnifiedApplication['type']) => {
           if (!data) {
@@ -219,14 +264,17 @@ export class UnifiedDashboardService {
         });
 
         return {
-          applied: stillApplied,
-          pending: stillPending,
-          approved: stillApproved,
-          rejected: allRejected,
-          awaitingPayment: awaitingPaymentApps
+          applied: uniqueByKey(stillApplied),
+          pending: uniqueByKey(stillPending),
+          approved: uniqueByKey(stillApproved),
+          rejected: uniqueByKey(allRejected),
+          awaitingPayment: uniqueByKey(awaitingPaymentApps),
         };
-      })
+      }),
+      shareReplay({ bufferSize: 1, refCount: true })
     );
+
+    return this.unifiedAppsCache$;
   }
 
   private getApplicantName(app: any, type: UnifiedApplication['type']): string {
@@ -280,8 +328,11 @@ export class UnifiedDashboardService {
       'salesman-barman': this.endpoints.salesman,
       'company-registration': this.endpoints.company // ✅ ADDED
     };
+
+    const inferred = this.inferAppTypeFromId(applicationId);
+    const resolvedType = inferred || type;
     const encodedId = encodeURIComponent(applicationId);
-    const url = `${mapping[type]}/detail/${encodedId}/`;
+    const url = `${mapping[resolvedType]}/detail/${encodedId}/`;
     return this.http.get<any>(url);
   }
 

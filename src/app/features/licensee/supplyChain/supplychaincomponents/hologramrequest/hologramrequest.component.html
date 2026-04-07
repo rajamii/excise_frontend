@@ -1,54 +1,48 @@
 <!-- Header Section -->
 <div class="hologram-request-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-
-
-  </div>
-
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
-        <div class="card-icon">
-          <i class="bi bi-list-ul"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ hologramRequestList.length }}</h3>
-          <p class="card-label">Total Requests</p>
-        </div>
+  <div class="hologram-request-summary-grid mb-4">
+    <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('ALL')" [class.active]="!statusFilter">
+      <div class="card-icon">
+        <i class="bi bi-list-ul"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ summaryHologramRequestList.length }}</h3>
+        <p class="card-label">Total Requests</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card pending-requests">
-        <div class="card-icon">
-          <i class="bi bi-clock"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getRequestStatusCount('PENDING') }}</h3>
-          <p class="card-label">Pending</p>
-        </div>
+
+    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+      <div class="card-icon">
+        <i class="bi bi-check-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getSummaryRequestStatusCount('APPROVED') }}</h3>
+        <p class="card-label">Approved</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card approved-requests">
-        <div class="card-icon">
-          <i class="bi bi-check-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getRequestStatusCount('APPROVED') }}</h3>
-          <p class="card-label">Approved</p>
-        </div>
+
+    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+      <div class="card-icon">
+        <i class="bi bi-gear"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getSummaryRequestStatusCount('UNDER_PROCESS') }}</h3>
+        <p class="card-label">Under Process</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card total-holograms">
-        <div class="card-icon">
-          <i class="bi bi-qr-code"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getTotalRequestedHolograms() | number }}</h3>
-          <p class="card-label">Total Holograms</p>
-        </div>
+
+    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+      <div class="card-icon">
+        <i class="bi bi-x-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getSummaryRequestStatusCount('REJECTED') }}</h3>
+        <p class="card-label">Rejected</p>
       </div>
     </div>
   </div>
@@ -75,18 +69,6 @@
         (change)="onMonthFilterChange()" placeholder="Month" title="Filter by month">
     </div>
 
-    <!-- Status Filter -->
-    <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="statusFilter" (change)="onStatusFilterChange()"
-        title="Filter by status">
-        <option value="">All Status</option>
-        <option value="PENDING">Pending</option>
-        <option value="APPROVED">Approved</option>
-        <option value="PROCESSING">Processing</option>
-        <option value="REJECTED">Rejected</option>
-      </select>
-    </div>
-
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()"
       *ngIf="dateFilter || monthFilter || statusFilter" title="Clear all filters">
@@ -100,10 +82,10 @@
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredHologramRequestList.length }}</strong> of <strong>{{
-        hologramRequestList.length }}</strong> requests
+        summaryHologramRequestList.length }}</strong> requests
       <span *ngIf="dateFilter" class="filter-tag">Date: {{ dateFilter | date:'dd MMM yyyy' }}</span>
       <span *ngIf="monthFilter" class="filter-tag">Month: {{ monthFilter | date:'MMM yyyy' }}</span>
-      <span *ngIf="statusFilter" class="filter-tag">Status: {{ statusFilter }}</span>
+      <span *ngIf="statusFilter" class="filter-tag">Status: {{ getStatusFilterLabel(statusFilter) }}</span>
     </small>
   </div>
 </div>
@@ -255,10 +237,17 @@
           <span class="summary-label">Total Holograms:</span>
           <span class="summary-value">{{ getTotalRequestedHolograms() | number }}</span>
         </div>
-
         <div class="summary-item">
-          <span class="summary-label">Pending Requests:</span>
-          <span class="summary-value">{{ getRequestStatusCount('PENDING') }}</span>
+          <span class="summary-label">Approved:</span>
+          <span class="summary-value">{{ getFilteredRequestStatusCount('APPROVED') }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Under Process:</span>
+          <span class="summary-value">{{ getFilteredRequestStatusCount('UNDER_PROCESS') }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Rejected:</span>
+          <span class="summary-value">{{ getFilteredRequestStatusCount('REJECTED') }}</span>
         </div>
       </div>
     </div>

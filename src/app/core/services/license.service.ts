@@ -51,4 +51,19 @@ export class LicenseService {
       })
     );
   }
+
+  getLicenseDetail(licenseId: string): Observable<any> {
+    const encodedId = encodeURIComponent(String(licenseId || '').trim());
+    return this.http.get(`${this.baseUrl}/detail/${encodedId}/`);
+  }
+
+  printLicense(licenseId: string): Observable<any> {
+    const encodedId = encodeURIComponent(String(licenseId || '').trim());
+    return this.http.get(`${this.baseUrl}/${encodedId}/print/`);
+  }
+
+  payPrintFee(licenseId: string): Observable<any> {
+    const encodedId = encodeURIComponent(String(licenseId || '').trim());
+    return this.http.post(`${this.baseUrl}/${encodedId}/pay-print-fee/`, {});
+  }
 }

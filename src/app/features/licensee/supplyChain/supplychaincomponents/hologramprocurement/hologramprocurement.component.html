@@ -3,26 +3,23 @@
 
 <!-- Hologram Register Header -->
 <div class="hologram-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-
-
-  </div>
-
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
+  <div class="row g-3 mb-4 justify-content-center">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('ALL')" [class.active]="!hologramStatusFilter">
         <div class="card-icon">
           <i class="bi bi-list-ul"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ filteredHologramData.length }}</h3>
+          <h3 class="card-value">{{ summaryHologramData.length }}</h3>
           <p class="card-label">Total Holograms</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card submitted-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card submitted-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('SUBMITTED')" [class.active]="activeSummaryFilter === 'SUBMITTED'">
         <div class="card-icon">
           <i class="bi bi-check-circle"></i>
         </div>
@@ -32,18 +29,43 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card draft-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
         <div class="card-icon">
-          <i class="bi bi-file-earmark"></i>
+          <i class="bi bi-check-circle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getHologramStatusCount('DRAFT') }}</h3>
-          <p class="card-label">Draft</p>
+          <h3 class="card-value">{{ getHologramStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+        <div class="card-icon">
+          <i class="bi bi-gear"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getHologramStatusCount('UNDER_PROCESS') }}</h3>
+          <p class="card-label">Under Process</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card edited-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('EDITED')" [class.active]="activeSummaryFilter === 'EDITED'">
+        <div class="card-icon">
+          <i class="bi bi-pencil-square"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getHologramStatusCount('EDITED') }}</h3>
+          <p class="card-label">Edited</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
       <div class="summary-card total-quantity">
         <div class="card-icon">
           <i class="bi bi-boxes"></i>
@@ -74,7 +96,7 @@
     <!-- Month Filter -->
     <div class="compact-filter">
       <input type="month" class="form-control form-control-sm" [(ngModel)]="hologramMonthFilter"
-        (change)="onHologramMonthFilterChange()" placeholder="Month" title="Filter by month">
+        (ngModelChange)="onHologramMonthFilterChange()" placeholder="Month" title="Filter by month">
     </div>
 
     <!-- Year Filter -->
@@ -88,21 +110,18 @@
       </select>
     </div>
 
-    <!-- Status Filter -->
+    <!-- Company Filter -->
     <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="hologramStatusFilter"
-        (change)="onHologramStatusFilterChange()" title="Filter by status">
-        <option value="">All Status</option>
-        <option value="SUBMITTED">Submitted</option>
-        <option value="DRAFT">Draft</option>
-        <option value="APPROVED">Approved</option>
-        <option value="PROCESSING">Processing</option>
+      <select class="form-select form-select-sm" [(ngModel)]="hologramCompanyFilter"
+        (change)="onHologramCompanyFilterChange()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of hologramCompanyOptions" [value]="company">{{ company }}</option>
       </select>
     </div>
 
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearHologramFilters()"
-      *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter"
+      *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter || hologramCompanyFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -111,13 +130,14 @@
 
   <!-- Filter Results Summary -->
   <div class="filter-results-compact mt-2"
-    *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter">
+    *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter || hologramCompanyFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredHologramData.length }}</strong> of <strong>{{ hologramList.length }}</strong> holograms
       <span *ngIf="hologramDateFilter" class="filter-tag">Date: {{ hologramDateFilter | date:'dd MMM yyyy' }}</span>
       <span *ngIf="hologramMonthFilter" class="filter-tag">Month: {{ hologramMonthFilter | date:'MMM yyyy' }}</span>
       <span *ngIf="hologramYearFilter" class="filter-tag">Year: {{ hologramYearFilter }}</span>
+      <span *ngIf="hologramCompanyFilter" class="filter-tag">Company: {{ hologramCompanyFilter }}</span>
       <span *ngIf="hologramStatusFilter" class="filter-tag">Status: {{ hologramStatusFilter }}</span>
     </small>
   </div>

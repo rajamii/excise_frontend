@@ -2,7 +2,7 @@
 <div *ngIf="loaded" class="unified-layout-container">
   <mat-sidenav-container class="sidenav-container">
     <!-- Clean Sidebar -->
-    <mat-sidenav #sidenav mode="side" [opened]="true" (openedChange)="onSidenavStateChange($event)"
+    <mat-sidenav #sidenav mode="side" [opened]="isSidenavOpen" (openedChange)="onSidenavStateChange($event)"
       class="clean-sidenav">
 
       <!-- Sidebar Content -->
@@ -191,6 +191,10 @@
               <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item">
                 <mat-icon class="nav-icon">layers</mat-icon>
                 <span class="nav-text">License Subcategory</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">gavel</mat-icon>
+                <span class="nav-text">Terms &amp; Conditions</span>
               </a>
               <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item">
                 <mat-icon class="nav-icon">route</mat-icon>

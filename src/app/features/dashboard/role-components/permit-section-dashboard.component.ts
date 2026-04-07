@@ -36,14 +36,11 @@ interface PermitData {
     <div class="permit-section-dashboard">
       <!-- Dashboard Statistics -->
       <app-dashboard-statistics
-        [statistics]="getDashboardStatistics()"
-        [filterOptions]="getFilterOptions()"
-        [showSelectionMessage]="!selectedApplicationType || selectedApplicationType === 'all'"
-        (filterChange)="onDashboardFilterChange($event)">
+        [statistics]="getDashboardStatistics()">
       </app-dashboard-statistics>
 
-      <!-- Data Table - Only show when a specific type is selected -->
-      <div class="data-table-section" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredPermits.length > 0">
+      <!-- Data Table -->
+      <div class="data-table-section" *ngIf="filteredPermits.length > 0">
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
@@ -103,13 +100,13 @@ interface PermitData {
         </div>
       </div>
 
-      <!-- Empty State for specific type with no data -->
-      <div class="empty-state" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredPermits.length === 0">
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredPermits.length === 0">
         <div class="empty-icon">
           <i class="bi bi-inbox"></i>
         </div>
-        <h5>No {{ selectedApplicationType | titlecase }} Applications Found</h5>
-        <p>There are no {{ selectedApplicationType }} applications to review at this time.</p>
+        <h5>No Applications Found</h5>
+        <p>There are no applications to review at this time.</p>
       </div>
     </div>
   `,

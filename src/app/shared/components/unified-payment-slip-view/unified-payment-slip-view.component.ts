@@ -184,7 +184,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
 
     console.log('🔍 PAYMENT SLIP VIEW: Loading transit/cancellation data...');
 
-    const cancellationUrl = `${environment.apiBaseUrl}/brand-warehouse/tp-cancellations/`;
+    const cancellationUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/tp-cancellations/`;
 
     forkJoin({
       transit: this.supplyChainService.getTransitPermits(this.referenceNo).pipe(catchError(() => of([]))),

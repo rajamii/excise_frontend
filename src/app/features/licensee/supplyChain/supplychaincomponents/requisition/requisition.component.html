@@ -10,71 +10,81 @@
   </div>
 
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
-        <div class="card-icon">
-          <i class="bi bi-list-ul"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ filteredRequisitionData.length }}</h3>
-          <p class="card-label">{{ isCommissioner() ? 'Total Applications' : 'Total Requisitions' }}</p>
-        </div>
+  <div class="requisition-summary-grid mb-4">
+    <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('ALL')" [class.active]="!requisitionStatusFilter">
+      <div class="card-icon">
+        <i class="bi bi-list-ul"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ summaryRequisitionData.length }}</h3>
+        <p class="card-label">{{ isCommissioner() ? 'Total Applications' : 'Total Requisitions' }}</p>
       </div>
     </div>
-    <div class="col-md-3" *ngIf="isCommissioner()">
-      <div class="summary-card pending-requests">
-        <div class="card-icon">
-          <i class="bi bi-clock"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
-          <p class="card-label">Pending Review</p>
-        </div>
+
+    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0" *ngIf="isCommissioner()"
+      (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+      <div class="card-icon">
+        <i class="bi bi-clock"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
+        <p class="card-label">Pending Review</p>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card approved-requests">
-        <div class="card-icon">
-          <i class="bi bi-check-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getRequisitionStatusCount('APPROVED') }}</h3>
-          <p class="card-label">Approved</p>
-        </div>
+
+    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+      <div class="card-icon">
+        <i class="bi bi-check-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRequisitionStatusCount('APPROVED') }}</h3>
+        <p class="card-label">Approved</p>
       </div>
     </div>
-    <div class="col-md-3" *ngIf="isCommissioner()">
-      <div class="summary-card rejected-requests">
-        <div class="card-icon">
-          <i class="bi bi-x-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
-          <p class="card-label">Rejected</p>
-        </div>
+
+    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0" *ngIf="isCommissioner()"
+      (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+      <div class="card-icon">
+        <i class="bi bi-x-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
+        <p class="card-label">Rejected</p>
       </div>
     </div>
-    <div class="col-md-3" *ngIf="!isCommissioner()">
-      <div class="summary-card pending-requests">
-        <div class="card-icon">
-          <i class="bi bi-clock"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getRequisitionStatusCount('REVIEW') }}</h3>
-          <p class="card-label">Under Review</p>
-        </div>
+
+    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0" *ngIf="!isCommissioner()"
+      (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+      <div class="card-icon">
+        <i class="bi bi-clock"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
+        <p class="card-label">Pending</p>
       </div>
     </div>
-    <div class="col-md-3" *ngIf="!isCommissioner()">
-      <div class="summary-card total-amount">
-        <div class="card-icon">
-          <i class="bi bi-currency-rupee"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">₹{{ getTotalRequisitionAmount() | number:'1.2-2' }}</h3>
-          <p class="card-label">Total Amount</p>
-        </div>
+
+    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0" *ngIf="!isCommissioner()"
+      (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+      <div class="card-icon">
+        <i class="bi bi-x-circle"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
+        <p class="card-label">Rejected</p>
+      </div>
+    </div>
+
+    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0" *ngIf="!isCommissioner()"
+      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+      <div class="card-icon">
+        <i class="bi bi-gear"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRequisitionStatusCount('UNDER_PROCESS') }}</h3>
+        <p class="card-label">Under Process</p>
       </div>
     </div>
   </div>
@@ -97,7 +107,7 @@
     <!-- Month Filter -->
     <div class="compact-filter">
       <input type="month" class="form-control form-control-sm" [(ngModel)]="requisitionMonthFilter"
-        (change)="onRequisitionMonthFilterChange()" placeholder="Month" title="Filter by month">
+        (ngModelChange)="onRequisitionMonthFilterChange()" placeholder="Month" title="Filter by month">
     </div>
 
     <!-- Year Filter -->
@@ -111,21 +121,18 @@
       </select>
     </div>
 
-    <!-- Status Filter -->
+    <!-- Company Filter -->
     <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="requisitionStatusFilter"
-        (change)="onRequisitionStatusFilterChange()" title="Filter by status">
-        <option value="">All Status</option>
-        <option value="APPROVED">Approved</option>
-        <option value="REVIEW">Under Review</option>
-        <option value="PROCESSING">Processing</option>
-        <option value="VERIFICATION">Verification</option>
+      <select class="form-select form-select-sm" [(ngModel)]="requisitionCompanyFilter"
+        (change)="onRequisitionCompanyFilterChange()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of requisitionCompanyOptions" [value]="company">{{ company }}</option>
       </select>
     </div>
 
     <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearRequisitionFilters()"
-      *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter"
+      *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter || requisitionCompanyFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -134,7 +141,7 @@
 
   <!-- Filter Results Summary -->
   <div class="filter-results-compact mt-2"
-    *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter">
+    *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter || requisitionCompanyFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredRequisitionData.length }}</strong> of <strong>{{ requisitionData.length }}</strong>
@@ -144,6 +151,7 @@
       <span *ngIf="requisitionMonthFilter" class="filter-tag">Month: {{ requisitionMonthFilter | date:'MMM yyyy'
         }}</span>
       <span *ngIf="requisitionYearFilter" class="filter-tag">Year: {{ requisitionYearFilter }}</span>
+      <span *ngIf="requisitionCompanyFilter" class="filter-tag">Company: {{ requisitionCompanyFilter }}</span>
       <span *ngIf="requisitionStatusFilter" class="filter-tag">Status: {{ requisitionStatusFilter }}</span>
     </small>
   </div>
