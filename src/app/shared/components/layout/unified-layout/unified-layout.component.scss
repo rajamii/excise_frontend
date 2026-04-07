@@ -653,11 +653,11 @@
     left: 0 !important;
     top: 0 !important;
     bottom: 0 !important;
-    width: 6px !important;
+    width: 12px !important;
     background: linear-gradient(
       to right,
       rgba(59, 76, 184, 0.0),
-      rgba(59, 76, 184, 0.18),
+      rgba(59, 76, 184, 0.45),
       rgba(59, 76, 184, 0.0)
     ) !important;
     opacity: 0 !important;
@@ -704,6 +704,11 @@
   &:hover::before,
   &:focus-within::before {
     opacity: 1 !important;
+  }
+
+  &:hover,
+  &:focus-within {
+    box-shadow: inset 6px 0 14px rgba(59, 76, 184, 0.35) !important;
   }
 }
 
