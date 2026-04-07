@@ -390,7 +390,7 @@ interface CommissionerData {
       </app-dashboard-statistics>
 
        <!-- Data Table -->
-        <div class="data-table-section" *ngIf="filteredApplications.length > 0">
+        <div class="data-table-section" *ngIf="false">
           <div class="filter-bar" *ngIf="filteredApplications.length > 0">
             <div class="filter-item">
               <label class="filter-label">Company</label>
@@ -465,7 +465,7 @@ interface CommissionerData {
       </div>
 
       <!-- Empty State -->
-      <div class="empty-state" *ngIf="filteredApplications.length === 0">
+      <div class="empty-state" *ngIf="false">
         <div class="empty-icon">
           <i class="bi bi-inbox"></i>
         </div>
