@@ -116,8 +116,11 @@
             <td>{{ row.establishmentName }}</td>
             <td>{{ row.currentStage }}</td>
             <td>
-              <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
+              <button class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                 <i class="bi bi-eye-fill"></i>
+              </button>
+              <button class="btn btn-link p-0 action-eye" title="View Timeline" (click)="viewTimeline(row)">
+                <i class="bi bi-clock-history"></i>
               </button>
             </td>
           </tr>

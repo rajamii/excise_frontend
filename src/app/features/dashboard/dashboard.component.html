@@ -229,7 +229,7 @@
         </mat-card>
 
         <!-- Approved Stat Card -->
-        <mat-card class="stat-card approved" (click)="showTable('approved')" *ngIf="shouldShowStatCard('approved')">
+        <mat-card class="stat-card approved" *ngIf="shouldShowStatCard('approved')">
           <div class="card-header">
             <div class="circle-icon green-bg">
               <mat-icon>check_circle</mat-icon>
@@ -381,16 +381,6 @@
 
     <!-- Dashboard Tables Section - Show when no supply chain section selected and not role-specific dashboard -->
     <ng-container *ngIf="!error && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
-      <!-- Default Table Card -->
-      <mat-card *ngIf="activeTable === 'default'">
-        <mat-card-header>
-          <mat-card-title>Statistics</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="text-center text-muted p-4">Select a category above to view applications</p>
-        </mat-card-content>
-      </mat-card>
-
       <!-- Applied Table Card -->
       <mat-card *ngIf="activeTable === 'applied'">
         <mat-card-header>
@@ -417,21 +407,6 @@
         <mat-card-content>
           <app-application-table [dataSource]="pendingDataSource" [displayedColumns]="displayedColumns"
             [tableType]="'pending'" (view)="viewApplication($event)" (payment)="onPaymentConfirmed($event)">
-          </app-application-table>
-        </mat-card-content>
-      </mat-card>
-
-      <!-- Approved Table Card -->
-      <mat-card *ngIf="activeTable === 'approved'">
-        <mat-card-header>
-          <button mat-icon-button (click)="goBack()">
-            <mat-icon>arrow_back</mat-icon>
-          </button>
-          <mat-card-title>Approved Applications</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <app-application-table [dataSource]="approvedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'approved'" (view)="viewApplication($event)" (print)="openFinalLicense($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>

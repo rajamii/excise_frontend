@@ -62,16 +62,6 @@ interface FilterOption {
           </div>
         </div>
       </div>
-
-      <!-- Statistics Header -->
-      <div class="statistics-header">
-        <h3>Statistics</h3>
-      </div>
-
-      <!-- Message when no category selected -->
-      <div class="selection-message" *ngIf="showSelectionMessage">
-        <p>Select a category above to view applications</p>
-      </div>
     </div>
   `,
   styles: [`
@@ -146,27 +136,6 @@ interface FilterOption {
       color: #6b7280;
       margin-top: 0.25rem;
       letter-spacing: 0.05em;
-    }
-
-    .statistics-header {
-      background: #3b4cb8;
-      color: white;
-      padding: 1rem 1.5rem;
-      border-radius: 0.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .statistics-header h3 {
-      margin: 0;
-      font-size: 1.25rem;
-      font-weight: 600;
-    }
-
-    .selection-message {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: #6b7280;
-      font-size: 1.125rem;
     }
 
     @media (max-width: 768px) {

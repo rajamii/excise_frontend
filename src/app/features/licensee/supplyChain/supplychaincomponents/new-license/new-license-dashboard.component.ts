@@ -5,8 +5,12 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 
 import { environment } from '../../../../../../environments/environment';
+import Swal from 'sweetalert2';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
 
 interface NewLicenseCounts {
   applied: number;
@@ -38,13 +42,14 @@ interface GroupedNewLicenseResponse {
 @Component({
   selector: 'app-new-license-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MaterialModule],
   templateUrl: './new-license-dashboard.component.html',
   styleUrls: ['./new-license-dashboard.component.scss']
 })
 export class NewLicenseDashboardComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -221,6 +226,26 @@ export class NewLicenseDashboardComponent implements OnInit {
         ref: row.applicationId,
         type: 'new-license',
         source: 'licensee'
+      }
+    });
+  }
+
+  viewTimeline(row: NewLicenseItem): void {
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    const encoded = encodeURIComponent(applicationId);
+    this.http.get<any>(`${this.apiBase}/detail/${encoded}/`).subscribe({
+      next: (res: any) => {
+        this.dialog.open(ApplicationMovementComponent, {
+          width: '700px',
+          maxHeight: '80vh',
+          data: { movementDataSource: { data: [res] } }
+        });
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
+        void Swal.fire('Error', String(msg), 'error');
       }
     });
   }

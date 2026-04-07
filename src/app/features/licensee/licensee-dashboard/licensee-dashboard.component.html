@@ -28,8 +28,8 @@
       }
     </mat-card>
 
-    <!-- Approved Stat Card -->
-    <mat-card class="stat-card approved" (click)="showTable('approved')">
+    <!-- Approved Stat Card (display only) -->
+    <mat-card class="stat-card approved">
       <div class="circle-icon green-bg">
         <img src="assets/images/dashboard/approved.png" alt="Approved Icon">
       </div>
@@ -49,18 +49,6 @@
 
   <!-- Dashboard Tables Section -->
   <ng-container>
-    <!-- Default Table Card -->
-    @if (activeTable === 'default') {
-      <mat-card>
-        <mat-card-header>
-          Statistics
-        </mat-card-header>
-        <mat-card-content>
-          <p class="text-center text-muted p-4">Select a category above to view applications</p>
-        </mat-card-content>
-      </mat-card>
-    }
-
     <!-- Applied Table Card -->
     @if (activeTable === 'applied') {
       <mat-card>
@@ -97,27 +85,6 @@
             [tableType]="'pending'"
             (view)="viewApplication($event)"
             (payment)="onPaymentConfirmed($event)">
-          </app-application-table>
-        </mat-card-content>
-      </mat-card>
-    }
-
-    <!-- Approved Table Card -->
-    @if (activeTable === 'approved') {
-      <mat-card>
-        <button mat-icon-button (click)="goBack()">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        <mat-card-header>
-          Approved Applications
-        </mat-card-header>
-        <mat-card-content>
-          <app-application-table
-            [dataSource]="approvedDataSource"
-            [displayedColumns]="displayedColumns"
-            [tableType]="'approved'"
-            (view)="viewApplication($event)"
-            (print)="openFinalLicense($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
