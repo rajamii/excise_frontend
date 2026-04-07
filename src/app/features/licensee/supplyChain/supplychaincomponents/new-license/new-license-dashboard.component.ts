@@ -11,6 +11,7 @@ import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
+import { RoleService } from '../../../../../core/services/role.service';
 
 interface NewLicenseCounts {
   applied: number;
@@ -50,6 +51,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private roleService = inject(RoleService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -109,6 +111,18 @@ export class NewLicenseDashboardComponent implements OnInit {
         this.allRows = this.flattenGroupedData(grouped);
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
+
+        // Admin UX: when opening "New License" from sidebar, default to Pending if there is any pending work.
+        // This avoids landing on Approved / All when there are pending items to process.
+        const isAdmin = this.roleService.isAdminRole();
+        const hasPending = this.serverCounts.pending > 0;
+        const current = (this.statusFilter || '').trim().toLowerCase();
+        if (isAdmin && hasPending && (!current || current === 'approved')) {
+          this.statusFilter = 'pending';
+          this.activeSummaryFilter = 'pending';
+          this.applyFilters();
+        }
+
         if (this.allRows.length === 0) {
           this.error = null;
         }
