@@ -657,13 +657,24 @@
     bottom: 10px !important;
     width: 5px !important;
     border-radius: 999px !important;
-    background: linear-gradient(
-      180deg,
-      rgba(0, 188, 212, 0.0) 0%,
-      rgba(0, 188, 212, 1) 20%,
-      rgba(124, 77, 255, 0.95) 62%,
-      rgba(0, 188, 212, 0.0) 100%
-    ) !important;
+    background:
+      radial-gradient(
+        14px 34px at 50% 0%,
+        rgba(0, 188, 212, 0.9),
+        rgba(0, 188, 212, 0.0) 72%
+      ),
+      radial-gradient(
+        14px 34px at 50% 100%,
+        rgba(124, 77, 255, 0.85),
+        rgba(124, 77, 255, 0.0) 72%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(0, 188, 212, 0.0) 0%,
+        rgba(0, 188, 212, 1) 20%,
+        rgba(124, 77, 255, 0.95) 62%,
+        rgba(0, 188, 212, 0.0) 100%
+      ) !important;
     opacity: 0 !important;
     transition: opacity 0.18s ease !important;
   }
