@@ -39,22 +39,27 @@
 
   <aside
     class="print-warning-sidebar no-print"
-    *ngIf="(printCount() >= 2 && printCount() < freePrintLimit) || paymentRequired()"
+    *ngIf="!loading() && (paymentRequired() || printCount() < freePrintLimit)"
     aria-live="polite"
   >
     <div class="print-warning-card" [class.danger]="paymentRequired()">
       <div class="print-warning-title">
-        <mat-icon aria-hidden="true">{{ paymentRequired() ? 'error' : 'warning' }}</mat-icon>
-        <span>{{ paymentRequired() ? 'Payment Required' : 'Warning' }}</span>
+        <mat-icon aria-hidden="true">{{ paymentRequired() ? 'error' : 'info' }}</mat-icon>
+        <span>{{ paymentRequired() ? 'Payment Required' : 'Print Limit' }}</span>
       </div>
 
-      <div class="print-warning-body" *ngIf="paymentRequired(); else remainingPrints">
+      <div class="print-warning-body" *ngIf="paymentRequired(); else printLimitInfo">
         Free print limit reached. Pay ₹500 to print again.
       </div>
-      <ng-template #remainingPrints>
-        <div class="print-warning-body">
-          Only {{ freePrintLimit - printCount() }} free prints left.
+      <ng-template #printLimitInfo>
+        <div class="print-warning-body" *ngIf="printCount() === 0; else remainingPrints">
+          You have {{ freePrintLimit }} free prints. After that, pay ₹500 to print again.
         </div>
+        <ng-template #remainingPrints>
+          <div class="print-warning-body">
+            Remaining {{ freePrintLimit - printCount() }} free prints. After that, pay ₹500 to print again.
+          </div>
+        </ng-template>
       </ng-template>
     </div>
   </aside>
