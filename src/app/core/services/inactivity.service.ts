@@ -75,7 +75,7 @@ export class InactivityService {
     private dialog: MatDialog
   ) {}
 
-  startWatching(): void {
+  startWatching(resetStoredActivity = false): void {
     if (!isPlatformBrowser(this.platformId) || this.trackingEnabled) {
       return;
     }
@@ -86,11 +86,17 @@ export class InactivityService {
     // Ensure a previous session's warning state can't suppress the next login cycle.
     this.warningVisible = false;
 
-    // If we don't have a stored activity timestamp yet (e.g., first login),
-    // record one immediately so browser-close/reopen can still enforce timeout.
-    const stored = this.readLastActivityMs();
-    if (!stored || stored <= 0) {
+    // If this watcher is starting as part of a fresh login, ignore any leftover
+    // activity timestamp from a prior unauthenticated session/tab.
+    if (resetStoredActivity) {
       this.writeLastActivityMs(Date.now());
+    } else {
+      // If we don't have a stored activity timestamp yet (e.g., first login),
+      // record one immediately so browser-close/reopen can still enforce timeout.
+      const stored = this.readLastActivityMs();
+      if (!stored || stored <= 0) {
+        this.writeLastActivityMs(Date.now());
+      }
     }
 
     this.registerActivityListeners();
