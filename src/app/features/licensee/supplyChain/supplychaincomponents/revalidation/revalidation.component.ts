@@ -45,6 +45,7 @@ interface TableData {
 export class RevalidationComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
 
   // Filter properties for revalidation
   revalidationDateFilter: string = '';
@@ -154,6 +155,7 @@ export class RevalidationComponent implements OnInit {
       });
 
       this.applyRevalidationFilters();
+      this.maybeAutoSelectPendingSummary();
       console.log('DEBUG: Processed Data length:', this.filteredRevalidationData.length);
       console.log('DEBUG: Each item allowedActions:');
       this.filteredRevalidationData.forEach(item => {
@@ -167,6 +169,20 @@ export class RevalidationComponent implements OnInit {
 
     } catch (error) {
       console.error('Error fetching revalidation data:', error);
+    }
+  }
+
+  private maybeAutoSelectPendingSummary(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    if (this.revalidationStatusFilter || this.activeSummaryFilter) return;
+
+    const pendingCount = this.getRevalidationStatusCount('PENDING');
+    if (pendingCount > 0) {
+      this.activeSummaryFilter = 'PENDING';
+      this.revalidationStatusFilter = 'PENDING';
+      this.applyRevalidationFilters();
     }
   }
 

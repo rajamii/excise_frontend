@@ -36,6 +36,7 @@ export class HologramprocurementComponent implements OnInit {
   summaryHologramData: HologramRow[] = [];
   activeSummaryFilter: string = '';
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
   private persistentPaymentRefs = new Set<string>();
   showHologramModal = false;
   selectedHologram: HologramRow | null = null;
@@ -159,6 +160,24 @@ export class HologramprocurementComponent implements OnInit {
         this.hologramList = mapped;
         this.filteredHologramData = [...this.hologramList];
         this.applyHologramFilters(); // Re-apply filters if any
+        if (!this.initialSummaryAutoSelected) {
+          this.initialSummaryAutoSelected = true;
+
+          if (!this.hologramStatusFilter && !this.activeSummaryFilter) {
+            // Hologram procurement doesn't have a "Pending" summary card; pick the first in-progress bucket.
+            const preferred =
+              (this.getHologramStatusCount('SUBMITTED') > 0 && 'SUBMITTED') ||
+              (this.getHologramStatusCount('UNDER_PROCESS') > 0 && 'UNDER_PROCESS') ||
+              (this.getHologramStatusCount('EDITED') > 0 && 'EDITED') ||
+              '';
+
+            if (preferred) {
+              this.activeSummaryFilter = preferred;
+              this.hologramStatusFilter = preferred;
+              this.applyHologramFilters();
+            }
+          }
+        }
       },
       error: (err) => {
         console.error('❌ Error loading procurements:', err);

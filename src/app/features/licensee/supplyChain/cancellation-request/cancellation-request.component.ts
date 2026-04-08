@@ -451,6 +451,23 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         this.loadData();
         this.newlySelectedPermits = [];
         this.selectedPermits = [];
+        const cancellationId = response?.id;
+
+        // Ensure wallet debit exists (idempotent repair) so wallet history/balance updates reliably.
+        if (cancellationId) {
+          this.supplyChainService.syncCancellationWalletDebit(cancellationId).subscribe({
+            next: (syncRes: any) => {
+              const syncBalanceAfter = this.toNumber(syncRes?.wallet_deduction?.balance_after);
+              if (Number.isFinite(syncBalanceAfter) && syncBalanceAfter > 0) {
+                this.availableWalletBalance = syncBalanceAfter;
+              }
+            },
+            error: (syncErr) => {
+              console.warn('Wallet debit sync failed:', syncErr);
+            }
+          });
+        }
+
         this.isSubmittingCancellation = false;
       },
       error: (error) => {

@@ -91,6 +91,7 @@ interface ArrivalMonthSummaryRow {
 export class RequisitionComponent implements OnInit, OnDestroy {
   Math = Math;
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
 
   // Services
   public accountService = inject(AccountService);
@@ -341,6 +342,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         });
 
         this.applyFilters();
+        this.maybeAutoSelectPendingSummary();
         this.tryAutoOpenArrivalModal();
         this.tryAutoOpenCancellationModal();
       },
@@ -354,6 +356,21 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.revalidationActiveByRef = {};
       }
     });
+  }
+
+  private maybeAutoSelectPendingSummary(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    // If user already selected a filter (or came in with one), don't override.
+    if (this.requisitionStatusFilter || this.activeSummaryFilter) return;
+
+    const pendingCount = this.getRequisitionStatusCount('PENDING');
+    if (pendingCount > 0) {
+      this.activeSummaryFilter = 'PENDING';
+      this.requisitionStatusFilter = 'PENDING';
+      this.applyFilters();
+    }
   }
 
   private captureArrivalAutoOpenRequest(): void {
@@ -1686,7 +1703,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
+  private isApprovedCommissionerAwaitingPayment(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+    // Business rule: "APPROVED COMMISSIONER" still needs payment, so keep it in Pending.
+    return combined.includes('approvedcommissioner');
+  }
+
   private isApprovedLikeStatus(item: TableData): boolean {
+    if (this.isApprovedCommissionerAwaitingPayment(item)) {
+      return false;
+    }
     const status = this.normalizeStageToken(item?.status);
     const stage = this.normalizeStageToken(item?.currentStageName);
     return (
@@ -1706,6 +1734,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isPendingLikeStatus(item: TableData): boolean {
+    if (this.isApprovedCommissionerAwaitingPayment(item)) {
+      return true;
+    }
     if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
       return false;
     }
@@ -1728,6 +1759,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isUnderProcessLikeStatus(item: TableData): boolean {
+    if (this.isApprovedCommissionerAwaitingPayment(item)) {
+      return false;
+    }
     if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
       return false;
     }

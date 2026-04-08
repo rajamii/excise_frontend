@@ -318,6 +318,18 @@ export class SupplyChainService {
     );
   }
 
+  syncCancellationWalletDebit(id: number | string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/sync_wallet_debit/`,
+      {}
+    ).pipe(
+      catchError((error) => {
+        console.error('syncCancellationWalletDebit error', error);
+        throw error;
+      })
+    );
+  }
+
 
 
   getTransitPermitById(id: string): Observable<any> {

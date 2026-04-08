@@ -19,6 +19,7 @@ import { UnifiedActionsService } from '../../../shared/services/unified-actions.
 export class ITCELLComponent implements OnInit {
   selectedTabIndex = 0;
   showFullInterface = true; // Control whether to show full interface or clean view
+  private initialSummaryAutoSelected = false;
 
   // Hologram Management
   hologramData: any[] = [];
@@ -120,6 +121,7 @@ export class ITCELLComponent implements OnInit {
         }));
         console.log('📊 Processed hologram data:', this.hologramData);
         this.applyFilters();
+        this.maybeAutoSelectPendingBucket();
       },
       error: (err) => {
         console.error('❌ Error loading holograms:', err);
@@ -127,6 +129,27 @@ export class ITCELLComponent implements OnInit {
         alert('Failed to load hologram data. Please check your connection and try again.');
       }
     });
+  }
+
+  private maybeAutoSelectPendingBucket(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    // Don't override if user already selected a status.
+    const selected = String(this.statusFilter || '').trim();
+    if (selected && selected.toLowerCase() !== 'all') return;
+
+    // This screen uses "Submitted" / "Under IT Cell Review" as the pending-like buckets.
+    const preferred =
+      (this.getStatusCount('Submitted') > 0 && 'Submitted') ||
+      (this.getStatusCount('Under IT Cell Review') > 0 && 'Under IT Cell Review') ||
+      '';
+
+    if (preferred) {
+      this.statusFilter = preferred;
+      this.activeSummaryFilter = preferred;
+      this.applyFilters();
+    }
   }
 
   applyFilters(): void {

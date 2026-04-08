@@ -23,6 +23,7 @@ export class HologramrequestComponent implements OnInit {
   filteredHologramRequestList: any[] = [];
   activeSummaryFilter: string = '';
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
 
   // Filter properties
   dateFilter: string = '';
@@ -85,11 +86,26 @@ export class HologramrequestComponent implements OnInit {
 
         this.hologramRequestList = mapped;
         this.applyFilters();
+        this.maybeAutoSelectUnderProcessSummary();
       },
       error: (err) => {
         console.error('Error loading hologram requests', err);
       }
     });
+  }
+
+  private maybeAutoSelectUnderProcessSummary(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    if (this.statusFilter || this.activeSummaryFilter) return;
+
+    // This screen doesn't have a "Pending" card; "UNDER_PROCESS" includes pending-like work.
+    if (this.getSummaryRequestStatusCount('UNDER_PROCESS') > 0) {
+      this.activeSummaryFilter = 'UNDER_PROCESS';
+      this.statusFilter = 'UNDER_PROCESS';
+      this.applyFilters();
+    }
   }
 
   private isUsageDateToday(request: any): boolean {

@@ -35,6 +35,7 @@ interface TableData {
 export class CancellationComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
 
   // Filter properties for cancellation
   cancellationDateFilter: string = '';
@@ -216,6 +217,7 @@ export class CancellationComponent implements OnInit {
         }
 
         this.applyCancellationFilters();
+        this.maybeAutoSelectPendingSummary();
       },
       error: (err) => {
         console.error('Error fetching cancellations', err);
@@ -225,6 +227,20 @@ export class CancellationComponent implements OnInit {
         this.loadSampleCancellationData();
       }
     });
+  }
+
+  private maybeAutoSelectPendingSummary(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    if (this.cancellationStatusFilter || this.activeSummaryFilter) return;
+
+    const pendingCount = this.getCancellationStatusCount('PENDING');
+    if (pendingCount > 0) {
+      this.activeSummaryFilter = 'PENDING';
+      this.cancellationStatusFilter = 'PENDING';
+      this.applyCancellationFilters();
+    }
   }
 
   // Unified action handler
