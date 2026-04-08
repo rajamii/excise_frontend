@@ -22,23 +22,11 @@
     <div class="meta" *ngIf="error()">
       <span class="meta-label">Error:</span> {{ error() }}
     </div>
-    <div class="meta" *ngIf="photoStatus()">
-      <span class="meta-label">{{ photoStatus() }}</span>
-    </div>
-    <div class="meta" *ngIf="qrStatus()">
-      <span class="meta-label">{{ qrStatus() }}</span>
-    </div>
     <div class="meta">
       <span class="meta-label">Type:</span> {{ requestedFor }}
     </div>
     <div class="meta" *ngIf="printCount()">
       <span class="meta-label">Prints:</span> {{ printCount() }}/{{ freePrintLimit }}
-    </div>
-    <div class="meta warn" *ngIf="printCount() >= 2 && printCount() < freePrintLimit">
-      <span class="meta-label">Warning:</span> Only {{ freePrintLimit - printCount() }} free prints left.
-    </div>
-    <div class="meta warn" *ngIf="paymentRequired()">
-      <span class="meta-label">Payment:</span> Free print limit reached. Pay ₹500 to print again.
     </div>
     <button mat-stroked-button color="warn" *ngIf="paymentRequired()" (click)="payPrintFee()" [disabled]="loading() || printing()">
       Pay ₹500
@@ -48,6 +36,28 @@
       Print
     </button>
   </div>
+
+  <aside
+    class="print-warning-sidebar no-print"
+    *ngIf="(printCount() >= 2 && printCount() < freePrintLimit) || paymentRequired()"
+    aria-live="polite"
+  >
+    <div class="print-warning-card" [class.danger]="paymentRequired()">
+      <div class="print-warning-title">
+        <mat-icon aria-hidden="true">{{ paymentRequired() ? 'error' : 'warning' }}</mat-icon>
+        <span>{{ paymentRequired() ? 'Payment Required' : 'Warning' }}</span>
+      </div>
+
+      <div class="print-warning-body" *ngIf="paymentRequired(); else remainingPrints">
+        Free print limit reached. Pay ₹500 to print again.
+      </div>
+      <ng-template #remainingPrints>
+        <div class="print-warning-body">
+          Only {{ freePrintLimit - printCount() }} free prints left.
+        </div>
+      </ng-template>
+    </div>
+  </aside>
 
   <div class="pages">
     <ng-template #licenseDetails>
