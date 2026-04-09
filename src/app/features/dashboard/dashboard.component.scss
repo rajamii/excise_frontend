@@ -1603,9 +1603,10 @@ mat-card-content {
 
     // Hologram overview should follow normal page scroll like stock inventory (no nested scroll region).
     .section-content.hologram-overview-content {
-        overflow-y: auto;
-        overflow-x: visible;
-        max-height: calc(100vh - 140px);
+        // Let the main layout's `.content-wrapper` own the scrollbar.
+        // Avoid nested scrolling here so the user can reach tabs like "Rolls".
+        overflow: visible;
+        max-height: none;
         height: auto;
         min-height: auto;
     }

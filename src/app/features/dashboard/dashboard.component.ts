@@ -162,6 +162,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   greetingText = 'Welcome';
   userDisplayName = 'User';
   userRoleDisplayName = 'User';
+  private pendingHologramOverviewRedirect = false;
 
   constructor(
     private roleService: RoleService,
@@ -220,8 +221,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (user) {
           this.currentUser = user;
           this.refreshWelcomeText();
+          this.tryRedirectHologramOverview();
         }
       });
+  }
+
+  private tryRedirectHologramOverview(): void {
+    if (!this.pendingHologramOverviewRedirect) return;
+    if (this.currentUser?.roleId !== 7) return; // Only OIC
+
+    this.pendingHologramOverviewRedirect = false;
+    this.router.navigate(['/dashboard/hologram-overview'], { replaceUrl: true });
   }
 
   private refreshWelcomeText(): void {
@@ -277,6 +287,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedSupplyChainSection = initialSection || null;
     this.enforceSectionAccess();
 
+    if (this.selectedSupplyChainSection === 'hologram-overview') {
+      this.pendingHologramOverviewRedirect = true;
+      this.tryRedirectHologramOverview();
+    }
+
     // Subscribe to query parameter changes
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
@@ -284,6 +299,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const section = params['section'];
         this.selectedSupplyChainSection = section || null;
         this.enforceSectionAccess();
+
+        if (this.selectedSupplyChainSection === 'hologram-overview') {
+          this.pendingHologramOverviewRedirect = true;
+          this.tryRedirectHologramOverview();
+        }
 
         // Navigating back to /dashboard (clearing section) should always reload stats.
         if (!this.selectedSupplyChainSection) {
@@ -1346,6 +1366,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openDashboardSection(section: string): void {
+    if (section === 'hologram-overview' && this.currentUser?.roleId === 7) {
+      this.router.navigate(['/dashboard/hologram-overview']);
+      return;
+    }
     this.router.navigate(['/dashboard'], { queryParams: { section } });
   }
 

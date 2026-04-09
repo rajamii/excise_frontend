@@ -462,10 +462,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // This keeps the unified layout and sidebar open
     
   if (section === 'hologram-inventory') {
-      // Keep unified dashboard layout for inventory/overview
-      this.router.navigate(['/dashboard'], {
-        queryParams: { section: 'hologram-overview' }
-      });
+      // Open hologram inventory as a full page (not inside the dashboard section card)
+      this.router.navigate(['/dashboard/hologram-overview']);
     } else if (section === 'itcell-hologram') {
       // For IT Cell hologram procurement, navigate with tab parameter to show the hologram tab
       this.router.navigate(['/dashboard'], { 
@@ -600,13 +598,24 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       }
     });
   }
-  private getCurrentDashboardContext(): { isBaseDashboardRoute: boolean; section: string } {
+  private getCurrentDashboardContext(): { isDashboardRoute: boolean; isBaseDashboardRoute: boolean; section: string } {
     const urlTree = this.router.parseUrl(this.router.url);
     const primarySegments = urlTree.root.children['primary']?.segments?.map((segment) => segment.path) ?? [];
-    const isBaseDashboardRoute = primarySegments.length === 1 && primarySegments[0] === 'dashboard';
-    const section = String(urlTree.queryParams?.['section'] ?? '').trim();
+    const isDashboardRoute = primarySegments.length >= 1 && primarySegments[0] === 'dashboard';
+    const isBaseDashboardRoute = isDashboardRoute && primarySegments.length === 1;
 
-    return { isBaseDashboardRoute, section };
+    const querySection = String(urlTree.queryParams?.['section'] ?? '').trim();
+    const childSegment = isDashboardRoute && primarySegments.length >= 2 ? String(primarySegments[1] || '').trim() : '';
+
+    // Map dashboard child routes to sidebar sections (so the correct menu stays highlighted).
+    let sectionFromPath = '';
+    if (childSegment === 'hologram-overview') {
+      sectionFromPath = 'hologram-inventory';
+    }
+
+    const section = querySection || sectionFromPath;
+
+    return { isDashboardRoute, isBaseDashboardRoute, section };
   }
 
   private resolveSidebarSection(section: string): string {
@@ -636,7 +645,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const context = this.getCurrentDashboardContext();
     const activeSection = this.resolveSidebarSection(context.section);
     const targetSection = this.resolveSidebarSection(section);
-    return context.isBaseDashboardRoute && activeSection === targetSection;
+    return context.isDashboardRoute && activeSection === targetSection;
   }
 
   isWalletActive(): boolean {
