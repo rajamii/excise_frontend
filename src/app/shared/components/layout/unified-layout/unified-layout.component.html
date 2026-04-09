@@ -147,6 +147,7 @@
                 [class.active]="isDashboardSectionActive(item.section)">
                 <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
                 <span class="nav-text">{{ getSidebarLabel(item.section, item.label) }}</span>
+                <span class="nav-badge" *ngIf="getPendingCount(item.section) as pending">{{ pending }}</span>
               </button>
             </ng-container>
 

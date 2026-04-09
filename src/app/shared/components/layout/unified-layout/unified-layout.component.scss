@@ -288,6 +288,22 @@
       flex: 1 !important;
       line-height: 1.4 !important;
     }
+
+    .nav-badge {
+      min-width: 22px !important;
+      height: 18px !important;
+      padding: 0 6px !important;
+      border-radius: 999px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      line-height: 1 !important;
+      background: #f59e0b !important;
+      color: #111827 !important;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06) !important;
+    }
   }
 }
 

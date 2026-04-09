@@ -18,6 +18,7 @@ import { RoleService } from '../../../../core/services/role.service';
 import { User } from '../../../../core/models/dashboard.models';
 import { AccountService } from '../../../../core/services/account.service';
 import { environment } from '../../../../../environments/environment';
+import { SidebarPendingBadgeService } from '../../../services/sidebar-pending-badge.service';
 
 @Component({
   selector: 'app-unified-layout',
@@ -54,6 +55,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
     requisition: 'ENA Requisition',
     revalidation: 'ENA Revalidation',
@@ -102,7 +104,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     private router: Router,
     private dialog: MatDialog,
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService
   ) {}
 
   ngOnInit() {
@@ -256,6 +259,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         this.roleService.setCurrentUser(dbBackedUser);
         this.currentUser = dbBackedUser;
+        this.refreshSidebarBadges(true);
       });
   }
 
@@ -297,6 +301,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   // Handle sidebar state changes (opened/closed)
   onSidenavStateChange(isOpen: boolean) {
     this.isSidenavOpen = isOpen;
+
+    if (isOpen) {
+      this.refreshSidebarBadges();
+    }
     console.log('🔍 Sidebar state changed:', isOpen);
   }
 
@@ -321,7 +329,78 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       this.sidenav?.open();
     } finally {
       this.isSidenavOpen = true;
+      this.refreshSidebarBadges();
     }
+  }
+
+  getPendingCount(section: string): number {
+    const key = String(section || '').trim().toLowerCase();
+    return Number(this.pendingBadgeCounts?.[key] || 0);
+  }
+
+  private refreshSidebarBadges(force = false): void {
+    if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
+        this.pendingBadgeCounts = {};
+        this.triggerUiRefresh();
+      }
+      return;
+    }
+
+    const sections = this.getVisibleOfficerSections();
+    if (sections.length === 0) {
+      if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
+        this.pendingBadgeCounts = {};
+        this.triggerUiRefresh();
+      }
+      return;
+    }
+
+    this.sidebarPendingBadgeService
+      .refresh(sections, force)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (counts) => {
+          this.pendingBadgeCounts = counts || {};
+          this.triggerUiRefresh();
+        },
+        error: () => {
+          this.pendingBadgeCounts = {};
+          this.triggerUiRefresh();
+        }
+      });
+  }
+
+  private getVisibleOfficerSections(): string[] {
+    if (this.isLicenseeUser()) return [];
+
+    const sections: string[] = [];
+    for (const item of this.officerSectionItems) {
+      if (!this.shouldShowOfficerSectionItem(item)) continue;
+      sections.push(item.section);
+    }
+    return sections;
+  }
+
+  private shouldShowOfficerSectionItem(item: {
+    section: string;
+    label: string;
+    icon: string;
+    hideForSiteAdmin?: boolean;
+    hideForPermitSection?: boolean;
+    hideForOic?: boolean;
+    hideForCommissioner?: boolean;
+    showOnlyForOic?: boolean;
+    showOnlyForCommissioner?: boolean;
+  }): boolean {
+    if (item.showOnlyForOic && !this.isOicUser()) return false;
+    if (item.showOnlyForCommissioner && !this.isCommissionerUser()) return false;
+    if (item.hideForSiteAdmin && this.isSiteAdminUser()) return false;
+    if (item.hideForPermitSection && this.isPermitSectionUser()) return false;
+    if (item.hideForOic && this.isOicUser()) return false;
+    if (item.hideForCommissioner && this.isCommissionerUser()) return false;
+    if (!this.canAccessSection(item.section)) return false;
+    return true;
   }
 
   // Method to handle the "View Profile" button click - exactly like original
