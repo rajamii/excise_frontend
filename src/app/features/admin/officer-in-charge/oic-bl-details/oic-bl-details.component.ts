@@ -243,7 +243,7 @@ interface BlDetailRow {
                 </div>
                 <h3>{{ details.referenceNo }}</h3>
                 <p>{{ details.distilleryName || '-' }}</p>
-                <div class="details-meta-pills">
+              <div class="details-meta-pills">
                   <div class="details-meta-pill">
                     <span class="meta-pill-label">Licensee</span>
                     <strong>{{ details.licenseeId || '-' }}</strong>
@@ -253,41 +253,6 @@ interface BlDetailRow {
                     <strong>{{ formatDate(details.submittedAt || '') }}</strong>
                   </div>
                 </div>
-              </div>
-              <div class="details-actions">
-                <button
-                  type="button"
-                  class="details-action-btn secondary"
-                  *ngIf="details.approvalStatus === 'PENDING'"
-                  (click)="toggleDetailsEditMode()"
-                  [disabled]="detailsSaving || actingId === details.id">
-                  {{ detailsEditMode ? 'Cancel Edit' : 'Edit' }}
-                </button>
-                <button
-                  type="button"
-                  class="details-action-btn primary"
-                  *ngIf="details.approvalStatus === 'PENDING' && detailsEditMode"
-                  (click)="saveDetailsDraft()"
-                  [disabled]="detailsSaving || actingId === details.id">
-                  {{ detailsSaving ? 'Saving...' : 'Save' }}
-                </button>
-                <button
-                  type="button"
-                  class="details-action-btn success"
-                  *ngIf="details.approvalStatus === 'PENDING' && canApproveDetails(details)"
-                  (click)="approveSelectedDetails()"
-                  [disabled]="detailsSaving || actingId === details.id">
-                  {{ detailsSaving ? 'Please wait...' : 'Approve' }}
-                </button>
-                <button
-                  type="button"
-                  class="details-action-btn danger"
-                  *ngIf="details.approvalStatus === 'PENDING'"
-                  (click)="rejectSelectedDetails()"
-                  [disabled]="detailsSaving || actingId === details.id">
-                  Reject
-                </button>
-                <button type="button" class="details-close" (click)="closeDetailsModal()">Close</button>
               </div>
             </div>
 
@@ -396,6 +361,38 @@ interface BlDetailRow {
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            <div class="details-footer" (click)="$event.stopPropagation()">
+              <div class="details-footer-left">
+                <button
+                  type="button"
+                  class="details-action-btn secondary"
+                  *ngIf="details.approvalStatus === 'PENDING'"
+                  (click)="detailsEditMode ? saveDetailsDraft() : toggleDetailsEditMode()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  {{ detailsEditMode ? (detailsSaving ? 'Saving...' : 'Save') : 'Edit' }}
+                </button>
+              </div>
+              <div class="details-footer-right">
+                <button
+                  type="button"
+                  class="details-action-btn success"
+                  *ngIf="details.approvalStatus === 'PENDING' && canApproveDetails(details)"
+                  (click)="approveSelectedDetails()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  {{ detailsSaving ? 'Please wait...' : 'Approve' }}
+                </button>
+                <button
+                  type="button"
+                  class="details-action-btn danger"
+                  *ngIf="details.approvalStatus === 'PENDING'"
+                  (click)="rejectSelectedDetails()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  Reject
+                </button>
+                <button type="button" class="details-action-btn ghost" (click)="closeDetailsModal()">Close</button>
               </div>
             </div>
           </div>
@@ -997,7 +994,10 @@ interface BlDetailRow {
     .details-modal-backdrop {
       position: fixed;
       inset: 0;
-      background: linear-gradient(180deg, rgba(241, 245, 249, 0.42), rgba(226, 232, 240, 0.62));
+      background:
+        radial-gradient(circle at 20% 10%, rgba(30, 64, 175, 0.35), transparent 55%),
+        radial-gradient(circle at 80% 0%, rgba(15, 23, 42, 0.55), transparent 60%),
+        rgba(15, 23, 42, 0.55);
       backdrop-filter: blur(10px);
       z-index: 1040;
     }
@@ -1013,29 +1013,46 @@ interface BlDetailRow {
     }
 
     .details-modal-card {
+      position: relative;
       width: min(960px, 100%);
       max-height: calc(100vh - 3rem);
       overflow: auto;
-      background:
-        radial-gradient(circle at top right, rgba(191, 219, 254, 0.38), transparent 22%),
-        radial-gradient(circle at top left, rgba(224, 242, 254, 0.52), transparent 28%),
-        linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
       border-radius: 30px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 28px 70px rgba(148, 163, 184, 0.28);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow:
+        0 34px 90px rgba(15, 23, 42, 0.32),
+        0 12px 34px rgba(15, 23, 42, 0.18);
       padding: 1.6rem;
     }
 
+    .details-modal-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 190px;
+      border-radius: 30px 30px 24px 24px;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.45), transparent 55%),
+        radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.35), transparent 60%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 64, 175, 0.9));
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .details-hero {
+      position: relative;
+      z-index: 1;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: flex-start;
       gap: 1rem;
       padding: 1.1rem 1.15rem 1.25rem;
       margin-bottom: 1.2rem;
       border-radius: 24px;
-      background: linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(248, 250, 252, 0.98));
-      border: 1px solid #dbeafe;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
     }
 
     .details-modal-title {
@@ -1058,9 +1075,9 @@ interface BlDetailRow {
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #1d4ed8;
-      background: #ffffff;
-      border: 1px solid #bfdbfe;
+      color: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       font-weight: 800;
     }
 
@@ -1079,27 +1096,27 @@ interface BlDetailRow {
     }
 
     .details-status-badge.pending {
-      color: #8a5a00;
-      background: #fff7d6;
-      border-color: #f6df93;
+      color: #facc15;
+      background: rgba(250, 204, 21, 0.12);
+      border-color: rgba(250, 204, 21, 0.28);
     }
 
     .details-status-badge.approved {
-      color: #166534;
-      background: #dcfce7;
-      border-color: #9fdfb3;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.12);
+      border-color: rgba(74, 222, 128, 0.28);
     }
 
     .details-status-badge.rejected {
-      color: #991b1b;
-      background: #fee2e2;
-      border-color: #f6b9b9;
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.28);
     }
 
     .details-status-badge.edited {
-      color: #854d0e;
-      background: #fef9c3;
-      border-color: #fde68a;
+      color: #fde047;
+      background: rgba(253, 224, 71, 0.12);
+      border-color: rgba(253, 224, 71, 0.28);
       min-width: 96px;
     }
 
@@ -1107,14 +1124,14 @@ interface BlDetailRow {
       margin: 0;
       font-size: 2rem;
       font-weight: 900;
-      color: #0f172a;
+      color: #f8fafc;
       letter-spacing: -0.03em;
       line-height: 1.05;
     }
 
     .details-modal-title p {
       margin: 0.55rem 0 0;
-      color: #64748b;
+      color: rgba(226, 232, 240, 0.95);
       font-size: 1.03rem;
       line-height: 1.55;
       max-width: 44rem;
@@ -1131,9 +1148,12 @@ interface BlDetailRow {
       min-width: 210px;
       padding: 0.75rem 0.9rem;
       border-radius: 18px;
-      background: rgba(255, 255, 255, 0.88);
-      border: 1px solid #dce9f7;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.9));
+      border: 1px solid rgba(226, 232, 240, 0.7);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 18px 34px rgba(15, 23, 42, 0.22);
+      backdrop-filter: blur(10px);
     }
 
     .meta-pill-label {
@@ -1141,48 +1161,71 @@ interface BlDetailRow {
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #64748b;
+      color: #334155;
       margin-bottom: 0.35rem;
       font-weight: 800;
     }
 
     .details-meta-pill strong {
-      color: #1e293b;
+      color: #0f172a;
       font-size: 0.98rem;
       font-weight: 800;
     }
 
     .details-close {
-      border: 1px solid #d7e1ec;
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 999px;
-      background: #ffffff;
-      color: #334155;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(248, 250, 252, 0.95);
       padding: 0.82rem 1.2rem;
       font-weight: 800;
-      box-shadow: 0 8px 22px rgba(148, 163, 184, 0.14);
+      box-shadow: 0 18px 34px rgba(15, 23, 42, 0.22);
       transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .details-close:hover {
-      background: #f8fbff;
-      border-color: #bfd2e6;
-      box-shadow: 0 12px 26px rgba(148, 163, 184, 0.18);
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 22px 44px rgba(15, 23, 42, 0.26);
       transform: translateY(-1px);
     }
 
-    .details-actions {
+    .details-footer {
+      position: sticky;
+      bottom: -1px;
+      margin: 1.1rem -1.6rem -1.6rem;
+      padding: 0.95rem 1.6rem;
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
-      justify-content: flex-end;
+      gap: 0.65rem;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(248, 250, 252, 0.86);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 0 0 30px 30px;
+      box-shadow: 0 -18px 30px rgba(15, 23, 42, 0.10);
+    }
+
+    .details-footer-left,
+    .details-footer-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
       align-items: center;
     }
 
     .details-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border: 1px solid transparent;
       border-radius: 999px;
-      padding: 0.78rem 1.05rem;
-      font-weight: 800;
+      padding: 0.78rem 1.15rem;
+      min-width: 118px;
+      height: 44px;
+      font-weight: 900;
+      letter-spacing: 0.01em;
       cursor: pointer;
       transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
     }
@@ -1196,8 +1239,9 @@ interface BlDetailRow {
 
     .details-action-btn.secondary {
       background: #ffffff;
-      color: #334155;
-      border-color: #d7e1ec;
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.55);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
     }
 
     .details-action-btn.primary {
@@ -1206,19 +1250,30 @@ interface BlDetailRow {
     }
 
     .details-action-btn.success {
-      background: #16a34a;
+      background: linear-gradient(135deg, #15803d, #16a34a);
       color: #ffffff;
     }
 
     .details-action-btn.danger {
-      background: #ef4444;
+      background: linear-gradient(135deg, #dc2626, #ef4444);
       color: #ffffff;
+    }
+
+    .details-action-btn.ghost {
+      background: rgba(15, 23, 42, 0.06);
+      border-color: rgba(148, 163, 184, 0.45);
+      color: #0f172a;
     }
 
     .details-action-btn:not(:disabled):hover {
       transform: translateY(-1px);
       filter: brightness(1.02);
       box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    }
+
+    .details-action-btn.ghost:not(:disabled):hover {
+      filter: none;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
     }
 
     .details-inline-error {
@@ -1242,11 +1297,13 @@ interface BlDetailRow {
     .metric-card,
     .info-box {
       position: relative;
-      background: linear-gradient(180deg, #ffffff, #f9fbff);
-      border: 1px solid #dbe7f2;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
+      border: 1px solid rgba(148, 163, 184, 0.35);
       border-radius: 22px;
       padding: 1.05rem 1.1rem;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        0 14px 34px rgba(15, 23, 42, 0.08);
     }
 
     .metric-card::before {
@@ -1326,8 +1383,9 @@ interface BlDetailRow {
     .details-table-card {
       padding: 1rem;
       border-radius: 24px;
-      background: linear-gradient(180deg, #ffffff, #f9fbff);
-      border: 1px solid #dbe7f2;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.94));
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
     }
 
     .details-table-head {
