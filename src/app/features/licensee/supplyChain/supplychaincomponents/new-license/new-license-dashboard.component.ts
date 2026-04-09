@@ -88,6 +88,10 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.loadData();
   }
 
+  isLicenseeUser(): boolean {
+    return this.roleService.isLicenseeRole();
+  }
+
   loadData(): void {
     this.isLoading = true;
     this.error = null;
