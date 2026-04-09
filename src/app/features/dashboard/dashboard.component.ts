@@ -22,6 +22,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { ApplicationTableComponent } from '../licensee/licensee-dashboard/application-table/application-table.component';
 import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../core/services/account.service';
+import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
 
@@ -170,6 +171,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private unifiedDashboardService: UnifiedDashboardService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private accountService: AccountService,
+    private hologramService: HologramDataService,
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router
@@ -222,6 +224,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.currentUser = user;
           this.refreshWelcomeText();
           this.tryRedirectHologramOverview();
+
+          // If dashboard stats were loaded before we had role/user info, reload once the user is available.
+          if (!this.selectedSupplyChainSection && !this.shouldShowRoleSpecificDashboard()) {
+            this.loadDashboardStats();
+          }
         }
       });
   }
@@ -393,7 +400,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Use the unified dashboard service for all roles
     forkJoin({
       counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus()
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(),
+      hologramProcurements: this.isLicenseeUser()
+        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        : of([])
     })
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
@@ -422,6 +432,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
             rejected: filteredApplications.rejected.length
           };
 
+          // Licensee UX: include hologram procurement workflow (circulating for approvals) in Pending/Approved totals.
+          if (this.isLicenseeUser()) {
+            const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
+            this.dashboardCounts = {
+              ...this.dashboardCounts,
+              pending: (this.dashboardCounts.pending || 0) + hologramCounts.pending,
+              approved: (this.dashboardCounts.approved || 0) + hologramCounts.approved,
+              rejected: (this.dashboardCounts.rejected || 0) + hologramCounts.rejected
+            };
+          }
+
           // Show submitted + pending + awaiting payment together in Pending table.
           this.updateDataSources({
             applied: [],
@@ -436,6 +457,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.clearDataSources();
         }
       });
+  }
+
+  private countLicenseeHologramProcurements(procurements: any[]): { pending: number; approved: number; rejected: number } {
+    const rows = Array.isArray(procurements) ? procurements : [];
+    let pending = 0;
+    let approved = 0;
+    let rejected = 0;
+
+    for (const row of rows) {
+      const statusToken = this.normalizeStageToken(row?.status);
+      if (!statusToken) continue;
+
+      if (statusToken.includes('reject')) {
+        rejected += 1;
+        continue;
+      }
+
+      // Only count as approved once cartons are assigned (or payment is completed).
+      const isCartonAssigned = statusToken.includes('cartoonassigned') || statusToken.includes('cartonassigned');
+      const isPaymentCompleted = statusToken.includes('paymentcompleted');
+      if (isCartonAssigned || isPaymentCompleted) {
+        approved += 1;
+        continue;
+      }
+
+      // Pending = anything still in workflow approvals / commissioner approval, excluding drafts.
+      if (statusToken.includes('draft')) {
+        continue;
+      }
+      pending += 1;
+    }
+
+    return { pending, approved, rejected };
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   shouldShowRoleSpecificDashboard(): boolean {
