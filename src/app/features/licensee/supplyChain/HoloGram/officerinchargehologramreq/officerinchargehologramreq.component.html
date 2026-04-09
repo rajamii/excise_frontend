@@ -21,7 +21,22 @@
             </div>
             <!-- Summary Cards -->
             <div class="row g-3 mb-4">
-                <div class="col-md-2">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Show all hologram requests"
+                        (click)="clearFilters()" (keydown.enter)="clearFilters()"
+                        (keydown.space)="clearFilters(); $event.preventDefault()"
+                        [class.active]="!filters.status && !filters.hologramType">
+                        <div class="card-icon">
+                            <i class="bi bi-list-check"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getRequestCount() }}</h3>
+                            <p class="card-label">Total Applications</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
                     <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter pending review requests"
                         (click)="onStatusCardClick('PENDING')" (keydown.enter)="onStatusCardClick('PENDING')"
@@ -36,7 +51,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
                     <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter under process requests"
                         (click)="onStatusCardClick('UNDER_PROCESS')" (keydown.enter)="onStatusCardClick('UNDER_PROCESS')"
@@ -51,7 +66,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
                     <div class="summary-card completed-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter completed requests"
                         (click)="onStatusCardClick('APPROVED')" (keydown.enter)="onStatusCardClick('APPROVED')"
@@ -66,7 +81,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
                     <div class="summary-card local-holograms summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter local hologram requests"
                         (click)="onHologramTypeCardClick('LOCAL')" (keydown.enter)="onHologramTypeCardClick('LOCAL')"
@@ -82,7 +97,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
                     <div class="summary-card export-holograms summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter export hologram requests"
                         (click)="onHologramTypeCardClick('EXPORT')" (keydown.enter)="onHologramTypeCardClick('EXPORT')"
@@ -98,7 +113,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
                     <div class="summary-card defence-holograms summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter defence hologram requests"
                         (click)="onHologramTypeCardClick('DEFENCE')" (keydown.enter)="onHologramTypeCardClick('DEFENCE')"

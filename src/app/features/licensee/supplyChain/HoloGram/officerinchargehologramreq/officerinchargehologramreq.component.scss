@@ -61,15 +61,15 @@
     --summary-accent-end: #1d4ed8;
     background: white;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     border: 1px solid #e2e8f0;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    min-height: 110px;
-    height: 110px;
+    gap: 0.75rem;
+    min-height: 88px;
+    height: 88px;
     position: relative;
     overflow: hidden;
 
@@ -118,13 +118,13 @@
     }
 
     .card-icon {
-      width: 50px;
-      height: 50px;
+      width: 42px;
+      height: 42px;
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.25rem;
+      font-size: 1.05rem;
       color: white;
     }
 
@@ -135,14 +135,14 @@
       justify-content: center;
 
       .card-value {
-        font-size: 1.75rem;
+        font-size: 1.45rem;
         font-weight: 700;
         margin: 0;
         line-height: 1;
       }
 
       .card-label {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #6b7280;
         margin: 0.25rem 0 0 0;
         font-weight: 500;
@@ -152,8 +152,8 @@
       }
 
       .card-change {
-        font-size: 0.75rem;
-        margin-top: 0.25rem;
+        font-size: 0.72rem;
+        margin-top: 0.15rem;
       }
     }
 
