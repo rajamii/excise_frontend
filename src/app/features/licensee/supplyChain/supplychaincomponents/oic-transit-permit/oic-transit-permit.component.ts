@@ -232,7 +232,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     localStorage.setItem('finalTransitPermitData', JSON.stringify(element));
 
     // Navigate to final permit view
-    this.router.navigate(['/dev-final-transit-permit-view']);
+    this.router.navigate(['/unified-letter-view/transit']);
   }
 
   onEdit(element: GroupedTransitPermit): void {
@@ -249,7 +249,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
           localStorage.setItem('finalTransitPermitData', JSON.stringify(element));
           this.snackBar.open('Transit permit approved successfully', 'Close', { duration: 3000 });
           this.loadTransitPermits();
-          this.router.navigate(['/dev-final-transit-permit-view']);
+          this.router.navigate(['/unified-letter-view/transit']);
         },
         error: (error) => {
           console.error('Error approving transit permit:', error);

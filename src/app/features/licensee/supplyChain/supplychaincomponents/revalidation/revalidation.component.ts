@@ -442,7 +442,7 @@ export class RevalidationComponent implements OnInit {
     const refNo = item.referenceNo;
 
     if (this.isCommissionerApprovedRevalidation(item)) {
-      this.router.navigate(["/dev-revalidation-permit-slip"], {
+      this.router.navigate(["/unified-letter-view/revalidation"], {
         queryParams: {
           id: item.id,
           ref: refNo,

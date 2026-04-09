@@ -795,9 +795,9 @@ export class UnifiedActionsService {
 
   private handleViewSlipAction(item: any, itemType: string, context?: string): Observable<ActionResult> {
     const slipRoutes: { [key: string]: string } = {
-      'requisition': '/dev-final-requisition-letters',
-      'revalidation': '/dev-revalidation-permit-slip',
-      'transit': '/dev-final-transit-permit-view',
+      'requisition': '/unified-letter-view/requisition',
+      'revalidation': '/unified-letter-view/revalidation',
+      'transit': '/unified-letter-view/transit',
       'hologram': '/payment-slip-view'
     };
 

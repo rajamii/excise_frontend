@@ -900,10 +900,12 @@ private getTransitRejectSummary(): {
     params.set('source', this.context || 'dashboard');
     const query = params.toString();
 
+    // Note: "dev-*" routes are guarded with `devOnly` and will redirect to `/accessdenied` in production builds.
+    // Permit slips should use stable routes that work in both localhost and hosted environments.
     const routeByType: Record<string, string> = {
-      requisition: '/dev-final-requisition-letters',
-      revalidation: '/dev-revalidation-permit-slip',
-      transit: '/dev-final-transit-permit-view',
+      requisition: '/unified-letter-view/requisition',
+      revalidation: '/unified-letter-view/revalidation',
+      transit: '/unified-letter-view/transit',
       hologram: '/payment-slip-view'
     };
     const route = routeByType[String(this.itemType || '').toLowerCase()] || '/payment-slip-view';
