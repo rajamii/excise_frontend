@@ -464,6 +464,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   if (section === 'hologram-inventory') {
       // Open hologram inventory as a full page (not inside the dashboard section card)
       this.router.navigate(['/dashboard/hologram-overview']);
+    } else if (section === 'transit-applications' && this.isOicUser()) {
+      // When OIC opens transit applications from the sidebar, focus pending items by default.
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: section, focus: 'pending' }
+      });
     } else if (section === 'itcell-hologram') {
       // For IT Cell hologram procurement, navigate with tab parameter to show the hologram tab
       this.router.navigate(['/dashboard'], { 

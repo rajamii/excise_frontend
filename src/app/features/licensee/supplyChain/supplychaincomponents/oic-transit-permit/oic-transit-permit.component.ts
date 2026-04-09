@@ -8,7 +8,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { OicTransitPermitService, GroupedTransitPermit } from '../../services/oic-transit-permit.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { trigger, state, style, transition, animate } from '@angular/animations';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 interface BrandDetail {
   slNo: number;
@@ -46,6 +46,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
   dataSource = new MatTableDataSource<GroupedTransitPermit>([]);
   allPermits: GroupedTransitPermit[] = [];
   isLoading = false;
+  private focusPendingOnLoad = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
@@ -54,6 +55,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     private dialog: MatDialog,
     private transitPermitService: OicTransitPermitService,
     private snackBar: MatSnackBar,
+    private route: ActivatedRoute,
     private router: Router
   ) {
     this.filterForm = this.fb.group({
@@ -65,6 +67,10 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      this.focusPendingOnLoad = String(params.get('focus') || '').toLowerCase() === 'pending';
+      this.applyInitialFocusIfNeeded();
+    });
     this.loadTransitPermits();
     this.setupFilterListener();
   }
@@ -82,6 +88,9 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
         this.dataSource.data = permits;
         this.updateStatistics();
         this.isLoading = false;
+
+        // If opened from sidebar with focus=pending, auto-select pending when available.
+        this.applyInitialFocusIfNeeded();
 
         // Apply any existing filters
         this.applyFilters();
@@ -156,6 +165,25 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     if (this.dataSource.paginator) {
       this.dataSource.paginator.firstPage();
     }
+  }
+
+  private applyInitialFocusIfNeeded(): void {
+    if (!this.focusPendingOnLoad) return;
+    if (!this.allPermits || this.allPermits.length === 0) return;
+
+    const hasPending = this.allPermits.some((permit) => this.isPermitPending(permit));
+    if (!hasPending) return;
+
+    if (this.filterForm.get('status')?.value !== 'PENDING') {
+      this.filterForm.patchValue({ status: 'PENDING' }, { emitEvent: true });
+    }
+  }
+
+  private isPermitPending(permit: GroupedTransitPermit): boolean {
+    const allowed = Array.isArray((permit as any)?.allowed_actions)
+      ? (permit as any).allowed_actions.map((a: any) => String(a).toUpperCase())
+      : [];
+    return allowed.includes('APPROVE') || allowed.includes('REJECT');
   }
 
   onStatCardClick(status: 'All Status' | 'PENDING' | 'APPROVED' | 'REJECTED'): void {

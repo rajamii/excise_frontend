@@ -42,7 +42,7 @@ interface ITCellData {
       </app-dashboard-statistics>
 
       <!-- Data Table -->
-      <div class="data-table-section" *ngIf="filteredApplications.length > 0">
+      <div class="data-table-section" *ngIf="false">
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
