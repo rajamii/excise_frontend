@@ -542,7 +542,16 @@
           <i class="bi bi-check-circle-fill me-2" *ngIf="arrivalViewApprovalStatus === 'APPROVED'"></i>
           <i class="bi bi-x-circle-fill me-2" *ngIf="arrivalViewApprovalStatus === 'REJECTED'"></i>
           <i class="bi bi-info-circle-fill me-2" *ngIf="!arrivalViewApprovalStatus"></i>
-          <span>BL approval status: <strong>{{ arrivalViewApprovalStatus || 'N/A' }}</strong><span *ngIf="arrivalViewReviewRemarks"> | Remarks: {{ arrivalViewReviewRemarks }}</span></span>
+          <span>
+            BL approval status: <strong>{{ arrivalViewApprovalStatus || 'N/A' }}</strong>
+            <span *ngIf="arrivalViewReviewRemarks"> | Remarks: {{ arrivalViewReviewRemarks }}</span>
+          </span>
+          <span
+            class="badge bg-warning text-dark ms-2"
+            *ngIf="arrivalViewEditedByOic"
+            [title]="arrivalViewEditedBy ? ('Edited by ' + arrivalViewEditedBy) : 'Edited by OIC'">
+            Edited by OIC
+          </span>
         </div>
 
         <div class="summary-stats-grid mb-4">
@@ -734,7 +743,12 @@
                 <tr *ngFor="let row of filteredArrivalDetailsRows; let i = index">
                   <td class="serial-col">{{ i + 1 }}</td>
                   <td class="date-col">{{ formatArrivalDate(row.arrivalDate) }}</td>
-                  <td class="ref-col">{{ row.referenceNo }}</td>
+                  <td class="ref-col">
+                    {{ row.referenceNo }}
+                    <span class="badge bg-warning text-dark ms-2" *ngIf="row.editedByOic" title="Edited by OIC">
+                      Edited
+                    </span>
+                  </td>
                   <td class="distillery-col">{{ row.distilleryName || '-' }}</td>
                   <td class="tankers-col">{{ row.tankerCount }}</td>
                   <td class="requested-col">{{ row.requestedTotalQuantity | number:'1.2-2' }}</td>

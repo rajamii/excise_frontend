@@ -6,6 +6,9 @@ import { EnaRequisitionService } from '../../../../core/services/ena-requisition
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
+type DraftTankerRow = { tanker_no: string; bulk_liter: number | null };
+type DetailsDraft = { tankerCount: number; tankerDetails: DraftTankerRow[] };
+
 interface BlDetailRow {
   id: number;
   requisitionId: number;
@@ -22,6 +25,9 @@ interface BlDetailRow {
   reviewedAt: string;
   reviewedBy: string;
   reviewRemarks: string;
+  editedByOic: boolean;
+  editedAt: string;
+  editedBy: string;
 }
 
 @Component({
@@ -161,6 +167,9 @@ interface BlDetailRow {
                     }">
                     {{ row.approvalStatus }}
                   </span>
+                  <span class="status-chip edited" *ngIf="row.editedByOic" title="Edited by OIC">
+                    EDITED
+                  </span>
                 </td>
                 <td>
                   <div class="remarks-cell">{{ row.reviewRemarks || 'No remarks added' }}</div>
@@ -171,7 +180,12 @@ interface BlDetailRow {
                       View Details
                     </button>
                     <div class="action-row" *ngIf="row.approvalStatus === 'PENDING'; else reviewedInfo">
-                      <button type="button" class="action-btn approve" (click)="approve(row)" [disabled]="actingId === row.id">
+                      <button
+                        type="button"
+                        class="action-btn approve"
+                        *ngIf="canApproveRow(row)"
+                        (click)="approve(row)"
+                        [disabled]="actingId === row.id">
                         Approve
                       </button>
                       <button type="button" class="action-btn reject" (click)="reject(row)" [disabled]="actingId === row.id">
@@ -223,6 +237,9 @@ interface BlDetailRow {
                     }">
                     {{ details.approvalStatus }}
                   </span>
+                  <span class="details-status-badge edited" *ngIf="details.editedByOic" title="Edited by OIC">
+                    EDITED
+                  </span>
                 </div>
                 <h3>{{ details.referenceNo }}</h3>
                 <p>{{ details.distilleryName || '-' }}</p>
@@ -237,13 +254,54 @@ interface BlDetailRow {
                   </div>
                 </div>
               </div>
-              <button type="button" class="details-close" (click)="closeDetailsModal()">Close</button>
+              <div class="details-actions">
+                <button
+                  type="button"
+                  class="details-action-btn secondary"
+                  *ngIf="details.approvalStatus === 'PENDING'"
+                  (click)="toggleDetailsEditMode()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  {{ detailsEditMode ? 'Cancel Edit' : 'Edit' }}
+                </button>
+                <button
+                  type="button"
+                  class="details-action-btn primary"
+                  *ngIf="details.approvalStatus === 'PENDING' && detailsEditMode"
+                  (click)="saveDetailsDraft()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  {{ detailsSaving ? 'Saving...' : 'Save' }}
+                </button>
+                <button
+                  type="button"
+                  class="details-action-btn success"
+                  *ngIf="details.approvalStatus === 'PENDING' && canApproveDetails(details)"
+                  (click)="approveSelectedDetails()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  {{ detailsSaving ? 'Please wait...' : 'Approve' }}
+                </button>
+                <button
+                  type="button"
+                  class="details-action-btn danger"
+                  *ngIf="details.approvalStatus === 'PENDING'"
+                  (click)="rejectSelectedDetails()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  Reject
+                </button>
+                <button type="button" class="details-close" (click)="closeDetailsModal()">Close</button>
+              </div>
+            </div>
+
+            <div class="details-inline-error" *ngIf="detailsSaveError">
+              {{ detailsSaveError }}
+            </div>
+            <div class="details-inline-error" *ngIf="details.approvalStatus === 'PENDING' && !canApproveDetails(details)">
+              Total bulk liter must match requisition total ({{ details.requestedTotalQuantity | number:'1.2-2' }}) before approval.
             </div>
 
             <div class="details-metrics">
               <div class="metric-card tankers">
                 <span class="metric-label">Tankers</span>
-                <strong>{{ details.tankerCount || 0 }}</strong>
+                <strong>{{ (detailsEditMode ? (detailsDraft?.tankerCount || 0) : (details.tankerCount || 0)) }}</strong>
                 <small>Vehicle count in this ENA entry</small>
               </div>
               <div class="metric-card quantity">
@@ -253,7 +311,12 @@ interface BlDetailRow {
               </div>
               <div class="metric-card total">
                 <span class="metric-label">Total ENA</span>
-                <strong>{{ details.totalBulkLiter || 0 | number:'1.2-2' }}</strong>
+                <strong>
+                  {{
+                    (detailsEditMode ? (getDraftTotalBulkLiter() || 0) : (details.totalBulkLiter || 0))
+                      | number:'1.2-2'
+                  }}
+                </strong>
                 <small>Submitted across tanker rows</small>
               </div>
             </div>
@@ -279,7 +342,24 @@ interface BlDetailRow {
                   <h4>Tanker Manifest</h4>
                   <p>Tanker-wise ENA information submitted by the licensee.</p>
                 </div>
-                <div class="manifest-count">{{ details.tankerDetails.length }} Row{{ details.tankerDetails.length === 1 ? '' : 's' }}</div>
+                <div class="manifest-count">
+                  {{ (detailsEditMode ? (detailsDraft?.tankerDetails?.length || 0) : details.tankerDetails.length) }}
+                  Row{{ (detailsEditMode ? (detailsDraft?.tankerDetails?.length || 0) : details.tankerDetails.length) === 1 ? '' : 's' }}
+                </div>
+              </div>
+              <div class="details-edit-tools" *ngIf="detailsEditMode">
+                <label class="tool-field">
+                  <span>Tankers</span>
+                  <input class="tool-input" type="number" min="1" [ngModel]="detailsDraft?.tankerCount" (ngModelChange)="onDraftTankerCountChange($event)" />
+                </label>
+                <button type="button" class="tool-btn" (click)="addDraftTankerRow()" [disabled]="detailsSaving">+ Add Tanker</button>
+                <div class="tool-hint">
+                  Remaining:
+                  {{
+                    ((details.requestedTotalQuantity || 0) - (getDraftTotalBulkLiter() || 0))
+                      | number:'1.2-2'
+                  }}
+                </div>
               </div>
               <div class="details-table-wrap">
                 <table class="details-table">
@@ -288,13 +368,31 @@ interface BlDetailRow {
                       <th>#</th>
                       <th>Tanker Number</th>
                       <th>Bulk Liter</th>
+                      <th *ngIf="detailsEditMode" class="text-end">Edit</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let item of details.tankerDetails; let i = index">
+                    <tr *ngFor="let item of (detailsEditMode ? (detailsDraft?.tankerDetails || []) : details.tankerDetails); let i = index">
                       <td>{{ i + 1 }}</td>
-                      <td>{{ item.tanker_no || '-' }}</td>
-                      <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
+                      <td>
+                        <ng-container *ngIf="!detailsEditMode; else editTankerNo">
+                          {{ item.tanker_no || '-' }}
+                        </ng-container>
+                        <ng-template #editTankerNo>
+                          <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[i].tanker_no" placeholder="Tanker no" />
+                        </ng-template>
+                      </td>
+                      <td>
+                        <ng-container *ngIf="!detailsEditMode; else editBulkLiter">
+                          {{ item.bulk_liter || 0 | number:'1.2-2' }}
+                        </ng-container>
+                        <ng-template #editBulkLiter>
+                          <input class="details-input" type="number" min="0" step="0.01" [(ngModel)]="detailsDraft!.tankerDetails[i].bulk_liter" placeholder="0.00" />
+                        </ng-template>
+                      </td>
+                      <td *ngIf="detailsEditMode" class="text-end">
+                        <button type="button" class="mini-btn danger" (click)="removeDraftTankerRow(i)" [disabled]="detailsSaving">Remove</button>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -792,6 +890,14 @@ interface BlDetailRow {
       border-color: #f6b9b9;
     }
 
+    .status-chip.edited {
+      margin-left: 0.45rem;
+      color: #854d0e;
+      background: #fef9c3;
+      border-color: #fde68a;
+      min-width: 92px;
+    }
+
     .remarks-cell {
       max-width: 220px;
       color: #475569;
@@ -990,6 +1096,13 @@ interface BlDetailRow {
       border-color: #f6b9b9;
     }
 
+    .details-status-badge.edited {
+      color: #854d0e;
+      background: #fef9c3;
+      border-color: #fde68a;
+      min-width: 96px;
+    }
+
     .details-modal-title h3 {
       margin: 0;
       font-size: 2rem;
@@ -1055,6 +1168,68 @@ interface BlDetailRow {
       border-color: #bfd2e6;
       box-shadow: 0 12px 26px rgba(148, 163, 184, 0.18);
       transform: translateY(-1px);
+    }
+
+    .details-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .details-action-btn {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.78rem 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .details-action-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .details-action-btn.secondary {
+      background: #ffffff;
+      color: #334155;
+      border-color: #d7e1ec;
+    }
+
+    .details-action-btn.primary {
+      background: #1d4ed8;
+      color: #ffffff;
+    }
+
+    .details-action-btn.success {
+      background: #16a34a;
+      color: #ffffff;
+    }
+
+    .details-action-btn.danger {
+      background: #ef4444;
+      color: #ffffff;
+    }
+
+    .details-action-btn:not(:disabled):hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    }
+
+    .details-inline-error {
+      margin: -0.4rem 0 1rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 16px;
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      color: #9f1239;
+      font-weight: 700;
+      font-size: 0.9rem;
     }
 
     .details-metrics {
@@ -1161,6 +1336,82 @@ interface BlDetailRow {
       align-items: flex-start;
       gap: 1rem;
       margin-bottom: 0.9rem;
+    }
+
+    .details-edit-tools {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 0 0 0.85rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 18px;
+      background: rgba(239, 246, 255, 0.75);
+      border: 1px solid #dbeafe;
+    }
+
+    .tool-field {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .tool-field span {
+      font-size: 0.85rem;
+      color: #334155;
+    }
+
+    .tool-input {
+      width: 88px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.55rem 0.65rem;
+      background: #ffffff;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .tool-btn {
+      border: 1px solid #bfdbfe;
+      background: #ffffff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 0.55rem 0.9rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .tool-hint {
+      margin-left: auto;
+      color: #334155;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .details-input {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.55rem 0.65rem;
+      background: #ffffff;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .mini-btn {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.4rem 0.7rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .mini-btn.danger {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #991b1b;
     }
 
     .details-table-head h4 {
@@ -1308,6 +1559,10 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   searchTerm = '';
   actingId: number | null = null;
   selectedDetailsRow: BlDetailRow | null = null;
+  detailsEditMode = false;
+  detailsDraft: DetailsDraft | null = null;
+  detailsSaving = false;
+  detailsSaveError = '';
   selectedMonth: string = '';
   fromDate: string = '';
   toDate: string = '';
@@ -1448,26 +1703,170 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
 
   openDetailsModal(row: BlDetailRow): void {
     this.selectedDetailsRow = row;
+    this.detailsEditMode = false;
+    this.detailsDraft = this.buildDetailsDraft(row);
+    this.detailsSaving = false;
+    this.detailsSaveError = '';
   }
 
   closeDetailsModal(): void {
     this.selectedDetailsRow = null;
+    this.detailsEditMode = false;
+    this.detailsDraft = null;
+    this.detailsSaving = false;
+    this.detailsSaveError = '';
   }
 
   approve(row: BlDetailRow): void {
-    if (!row.id || this.actingId === row.id) {
+    // As per UX: clicking "Approve" should first open the details modal where OIC can edit and then approve.
+    this.openDetailsModal(row);
+  }
+
+  toggleDetailsEditMode(): void {
+    if (!this.selectedDetailsRow) return;
+    if (this.selectedDetailsRow.approvalStatus !== 'PENDING') return;
+
+    this.detailsSaveError = '';
+    this.detailsEditMode = !this.detailsEditMode;
+    if (this.detailsEditMode && !this.detailsDraft) {
+      this.detailsDraft = this.buildDetailsDraft(this.selectedDetailsRow);
+    }
+    if (!this.detailsEditMode) {
+      this.detailsDraft = this.buildDetailsDraft(this.selectedDetailsRow);
+    }
+  }
+
+  onDraftTankerCountChange(value: any): void {
+    if (!this.detailsDraft) return;
+    const next = Math.max(1, Number(value) || 1);
+    this.detailsDraft.tankerCount = next;
+
+    const rows = this.detailsDraft.tankerDetails;
+    while (rows.length < next) {
+      rows.push({ tanker_no: '', bulk_liter: null });
+    }
+    while (rows.length > next) {
+      rows.pop();
+    }
+  }
+
+  addDraftTankerRow(): void {
+    if (!this.detailsDraft) return;
+    this.detailsDraft.tankerCount = Math.max(1, (this.detailsDraft.tankerCount || 0) + 1);
+    this.detailsDraft.tankerDetails.push({ tanker_no: '', bulk_liter: null });
+  }
+
+  removeDraftTankerRow(index: number): void {
+    if (!this.detailsDraft) return;
+    const rows = this.detailsDraft.tankerDetails;
+    if (index < 0 || index >= rows.length) return;
+    rows.splice(index, 1);
+    this.detailsDraft.tankerCount = Math.max(1, rows.length);
+    if (rows.length === 0) {
+      rows.push({ tanker_no: '', bulk_liter: null });
+      this.detailsDraft.tankerCount = 1;
+    }
+  }
+
+  getDraftTotalBulkLiter(): number {
+    const rows = this.detailsDraft?.tankerDetails || [];
+    return rows.reduce((sum, row) => {
+      const val = Number(row?.bulk_liter ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
+  }
+
+  saveDetailsDraft(approveAfterSave = false): void {
+    const details = this.selectedDetailsRow;
+    const draft = this.detailsDraft;
+    if (!details || !draft) return;
+    if (details.approvalStatus !== 'PENDING') return;
+    if (!details.requisitionId) return;
+
+    this.detailsSaving = true;
+    this.detailsSaveError = '';
+
+    const payload = {
+      tanker_count: Math.max(1, Number(draft.tankerCount) || 1),
+      tanker_details: (draft.tankerDetails || []).map((row) => ({
+        tanker_no: String(row?.tanker_no || '').trim(),
+        bulk_liter: Number(row?.bulk_liter ?? 0)
+      }))
+    };
+
+    this.enaRequisitionService.saveRequisitionArrivalDetails(details.requisitionId, payload).subscribe({
+      next: (response: any) => {
+        this.detailsSaving = false;
+        const updated = response?.data;
+        if (updated) {
+          this.applyUpdatedDetails(updated);
+        }
+        this.detailsEditMode = false;
+        this.detailsDraft = this.selectedDetailsRow ? this.buildDetailsDraft(this.selectedDetailsRow) : null;
+        if (approveAfterSave) {
+          this.approveSelectedDetails();
+        }
+      },
+      error: (err: any) => {
+        this.detailsSaving = false;
+        const message =
+          err?.error?.message ||
+          err?.error?.detail ||
+          (typeof err?.error === 'string' ? err.error : '') ||
+          err?.message ||
+          'Unable to save changes.';
+        this.detailsSaveError = message;
+      }
+    });
+  }
+
+  approveSelectedDetails(): void {
+    const details = this.selectedDetailsRow;
+    if (!details?.id) return;
+    if (details.approvalStatus !== 'PENDING') return;
+
+    if (this.detailsEditMode) {
+      // Save first, then approve.
+      this.saveDetailsDraft(true);
       return;
     }
-    this.actingId = row.id;
-    this.enaRequisitionService.reviewRequisitionArrivalDetails(row.id, 'APPROVE').subscribe({
+
+    if (this.actingId === details.id) return;
+    this.actingId = details.id;
+    this.enaRequisitionService.reviewRequisitionArrivalDetails(details.id, 'APPROVE').subscribe({
       next: () => {
         this.actingId = null;
         this.reviewStatus = 'ALL';
+        this.closeDetailsModal();
         this.loadRows();
       },
       error: () => {
         this.actingId = null;
-        this.errorMessage = `Unable to approve ENA details for ${row.referenceNo}.`;
+        this.errorMessage = `Unable to approve ENA details for ${details.referenceNo}.`;
+      }
+    });
+  }
+
+  rejectSelectedDetails(): void {
+    const details = this.selectedDetailsRow;
+    if (!details?.id) return;
+    if (details.approvalStatus !== 'PENDING') return;
+
+    const remarks = window.prompt('Enter rejection reason for ENA details:', details.reviewRemarks || '');
+    if (remarks === null) return;
+
+    if (this.actingId === details.id) return;
+    this.actingId = details.id;
+    this.enaRequisitionService.reviewRequisitionArrivalDetails(details.id, 'REJECT', String(remarks || '').trim()).subscribe({
+      next: () => {
+        this.actingId = null;
+        this.reviewStatus = 'ALL';
+        this.closeDetailsModal();
+        this.loadRows();
+      },
+      error: () => {
+        this.actingId = null;
+        this.errorMessage = `Unable to reject ENA details for ${details.referenceNo}.`;
       }
     });
   }
@@ -1561,8 +1960,99 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       submittedAt: String(row?.submitted_at ?? row?.submittedAt ?? ''),
       reviewedAt: String(row?.reviewed_at ?? row?.reviewedAt ?? ''),
       reviewedBy: String(row?.reviewed_by ?? row?.reviewedBy ?? ''),
-      reviewRemarks: String(row?.review_remarks ?? row?.reviewRemarks ?? '')
+      reviewRemarks: String(row?.review_remarks ?? row?.reviewRemarks ?? ''),
+      editedByOic: Boolean(row?.edited_by_oic ?? row?.editedByOic ?? false),
+      editedAt: String(row?.edited_at ?? row?.editedAt ?? ''),
+      editedBy: String(row?.edited_by ?? row?.editedBy ?? '')
     };
+  }
+
+  canApproveDetails(details: BlDetailRow): boolean {
+    const requested = Number(details?.requestedTotalQuantity ?? 0);
+    if (!Number.isFinite(requested) || requested <= 0) {
+      return true;
+    }
+
+    const total = this.detailsEditMode ? Number(this.getDraftTotalBulkLiter() || 0) : Number(details?.totalBulkLiter ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return false;
+    }
+
+    return Math.abs(total - requested) < 0.01;
+  }
+
+  canApproveRow(row: BlDetailRow): boolean {
+    const requested = Number(row?.requestedTotalQuantity ?? 0);
+    if (!Number.isFinite(requested) || requested <= 0) {
+      return true;
+    }
+
+    const total = Number(row?.totalBulkLiter ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return false;
+    }
+
+    return Math.abs(total - requested) < 0.01;
+  }
+
+  private buildDetailsDraft(row: BlDetailRow): DetailsDraft {
+    const tankerDetails: DraftTankerRow[] = (Array.isArray(row?.tankerDetails) ? row.tankerDetails : []).map((x: any) => ({
+      tanker_no: String(x?.tanker_no ?? x?.tankerNo ?? '').trim(),
+      bulk_liter: (() => {
+        const n = Number(x?.bulk_liter ?? x?.bulkLiter ?? 0);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      })()
+    }));
+
+    const tankerCount = Math.max(1, Number(row?.tankerCount || tankerDetails.length || 1));
+    while (tankerDetails.length < tankerCount) {
+      tankerDetails.push({ tanker_no: '', bulk_liter: null });
+    }
+    while (tankerDetails.length > tankerCount) {
+      tankerDetails.pop();
+    }
+
+    return { tankerCount, tankerDetails };
+  }
+
+  private applyUpdatedDetails(apiRecord: any): void {
+    // Convert serializer response into the UI row shape (update current list + modal details).
+    const existing = this.selectedDetailsRow;
+    if (!existing) return;
+
+    const mergedRow = this.mapRow({
+      ...apiRecord,
+      requisition_id: apiRecord?.requisition,
+      approval_status: apiRecord?.approval_status,
+      tanker_details: apiRecord?.tanker_details,
+      tanker_count: apiRecord?.tanker_count,
+      total_bulk_liter: apiRecord?.total_bulk_liter,
+      reference_no: apiRecord?.reference_no ?? existing.referenceNo,
+      licensee_id: apiRecord?.licensee_id ?? existing.licenseeId,
+      distillery_name: existing.distilleryName,
+      requisition_total_quantity: existing.requestedTotalQuantity
+    });
+
+    // Preserve non-serializer fields (distillery name, etc) from existing row.
+    const updatedRow: BlDetailRow = {
+      ...existing,
+      tankerCount: mergedRow.tankerCount,
+      tankerDetails: mergedRow.tankerDetails,
+      tankerNumbers: mergedRow.tankerNumbers,
+      totalBulkLiter: mergedRow.totalBulkLiter,
+      approvalStatus: mergedRow.approvalStatus,
+      submittedAt: mergedRow.submittedAt || existing.submittedAt,
+      reviewedAt: mergedRow.reviewedAt || existing.reviewedAt,
+      reviewedBy: mergedRow.reviewedBy || existing.reviewedBy,
+      reviewRemarks: mergedRow.reviewRemarks || existing.reviewRemarks
+    };
+
+    this.selectedDetailsRow = updatedRow;
+
+    const idx = this.rows.findIndex((x) => x.id === updatedRow.id);
+    if (idx >= 0) {
+      this.rows[idx] = updatedRow;
+    }
   }
 
   private normalizeTankerDetails(rawDetails: any[], tankerNumbersValue: any, totalBulkLiterValue: any): Array<{ tanker_no: string; bulk_liter: number }> {

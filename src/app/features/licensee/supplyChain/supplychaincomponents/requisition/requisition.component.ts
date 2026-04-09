@@ -71,6 +71,9 @@ interface ArrivalDetailsRow {
   arrivalDate: string;
   requestedTotalQuantity: number;
   distilleryName: string;
+  editedByOic: boolean;
+  editedAt: string;
+  editedBy: string;
 }
 
 interface ArrivalMonthSummaryRow {
@@ -142,6 +145,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalViewEntries: TankerArrivalEntry[] = [];
   arrivalViewApprovalStatus: string = '';
   arrivalViewReviewRemarks: string = '';
+  arrivalViewEditedByOic: boolean = false;
+  arrivalViewEditedAt: string = '';
+  arrivalViewEditedBy: string = '';
   isArrivalSummaryModalOpen: boolean = false;
   isArrivalSummaryLoading: boolean = false;
   arrivalSummaryErrorMessage: string = '';
@@ -1069,7 +1075,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         row?.distilleryName ??
         row?.requisition?.lifted_from_distillery_name ??
         ''
-      )
+      ),
+      editedByOic: Boolean(row?.edited_by_oic ?? row?.editedByOic ?? false),
+      editedAt: String(row?.edited_at ?? row?.editedAt ?? ''),
+      editedBy: String(row?.edited_by ?? row?.editedBy ?? '')
     };
   }
 
@@ -1142,6 +1151,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewEntries = [];
     this.arrivalViewApprovalStatus = '';
     this.arrivalViewReviewRemarks = '';
+    this.arrivalViewEditedByOic = false;
+    this.arrivalViewEditedAt = '';
+    this.arrivalViewEditedBy = '';
     this.isArrivalViewModalOpen = true;
 
     this.enaRequisitionService.getRequisitionArrivalDetails(item.id).subscribe({
@@ -1174,6 +1186,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.arrivalViewTotalBulkLiter = Number(data?.total_bulk_liter ?? data?.totalBulkLiter ?? data?.totalbl ?? 0) || 0;
         this.arrivalViewApprovalStatus = String(data?.approval_status ?? data?.approvalStatus ?? '');
         this.arrivalViewReviewRemarks = String(data?.review_remarks ?? data?.reviewRemarks ?? '');
+        this.arrivalViewEditedByOic = Boolean(data?.edited_by_oic ?? data?.editedByOic ?? false);
+        this.arrivalViewEditedAt = String(data?.edited_at ?? data?.editedAt ?? '');
+        this.arrivalViewEditedBy = String(data?.edited_by ?? data?.editedBy ?? '');
       },
       error: () => {
         this.arrivalViewErrorMessage = 'Unable to load BL details.';
@@ -1189,6 +1204,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewEntries = [];
     this.arrivalViewApprovalStatus = '';
     this.arrivalViewReviewRemarks = '';
+    this.arrivalViewEditedByOic = false;
+    this.arrivalViewEditedAt = '';
+    this.arrivalViewEditedBy = '';
     this.selectedArrivalRequisition = null;
   }
 
