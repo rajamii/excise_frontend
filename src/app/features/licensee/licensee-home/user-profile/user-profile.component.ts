@@ -160,12 +160,46 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     const sub = this.accountService.getAuthenticationState().subscribe(account => {
       if (account) {
         this.user = account;
-        if (account.role) {
-          this.resolvedRoleName = String(account.role);
-        }
+        this.resolvedRoleName = this.resolveRoleName(account);
       }
     });
     this.subscriptions.add(sub);
+  }
+
+  private resolveRoleName(account: any): string {
+    const role = account?.role;
+
+    if (!role) {
+      return 'Licensee';
+    }
+
+    if (typeof role === 'string') {
+      const name = role.trim();
+      return name ? name : 'Licensee';
+    }
+
+    if (typeof role === 'number') {
+      return role === 2 ? 'Licensee' : `Role ${role}`;
+    }
+
+    if (typeof role === 'object') {
+      const candidate =
+        String(role?.displayName || '').trim() ||
+        String(role?.name || '').trim() ||
+        String(role?.roleName || '').trim() ||
+        String(role?.label || '').trim();
+
+      if (candidate) {
+        return candidate;
+      }
+
+      const id = Number(role?.id);
+      if (Number.isFinite(id) && id > 0) {
+        return id === 2 ? 'Licensee' : `Role ${id}`;
+      }
+    }
+
+    return 'Licensee';
   }
 
   /**
