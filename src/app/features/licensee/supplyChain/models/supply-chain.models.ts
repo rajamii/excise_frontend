@@ -25,7 +25,7 @@ export interface Distillery {
 
 export interface Checkpost {
   id: number;
-  checkpostName: string;
+  checkPostName: string;
 }
 
 export interface Purpose {

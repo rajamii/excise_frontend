@@ -21,7 +21,7 @@ import { SupplyChainService } from '../../../licensee/supplyChain/services/suppl
 
 interface Checkpost {
   id: number;
-  checkpostName: string;
+  checkPostName: string;
 }
 
 interface Purpose {
