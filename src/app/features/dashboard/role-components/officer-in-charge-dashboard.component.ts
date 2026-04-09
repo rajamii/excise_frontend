@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupplyChainService } from '../../licensee/supplyChain/services/supplychain.service';
 import { AccountService } from '../../../core/services/account.service';
+import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
 import { DashboardStatisticsComponent } from '../../../shared/components/dashboard-statistics/dashboard-statistics.component';
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
@@ -221,6 +222,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   private supplyChainService = inject(SupplyChainService);
   private unifiedActionsService = inject(UnifiedActionsService);
   private hologramService = inject(HologramDataService);
+  private enaRequisitionService = inject(EnaRequisitionService);
 
   // Data properties
   allApplications: OfficerData[] = [];
@@ -233,6 +235,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     APPROVED: 0,
     REJECTED: 0,
   };
+  private blDetailsPendingCount = 0;
 
   // Pagination
   currentPage: number = 1;
@@ -244,6 +247,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
     this.loadTransitApplications();
     this.loadHologramRequestsCounts();
+    this.loadBlDetailsPendingCount();
   }
 
   openHologramRequests(): void {
@@ -307,10 +311,22 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     const hologramPending = (this.hologramRequestCounts.PENDING || 0) + (this.hologramRequestCounts.UNDER_PROCESS || 0);
     return {
       applied: 0,
-      pending: (this.getStatusCount('ACTIVE') + this.getStatusCount('IN_TRANSIT')) + hologramPending,
+      pending: (this.getStatusCount('ACTIVE') + this.getStatusCount('IN_TRANSIT')) + hologramPending + (this.blDetailsPendingCount || 0),
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('ISSUED'),
       rejected: this.getStatusCount('TERMINATED') + this.getStatusCount('CANCELLED')
     };
+  }
+
+  private loadBlDetailsPendingCount(): void {
+    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').subscribe({
+      next: (response: any) => {
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        this.blDetailsPendingCount = rows.length;
+      },
+      error: () => {
+        this.blDetailsPendingCount = 0;
+      }
+    });
   }
 
   getFilterOptions() {

@@ -115,6 +115,13 @@ export class SidebarPendingBadgeService {
           map((items) => items.filter((x) => !this.isHologramRequestFinal(x)).length)
         );
 
+      case 'bl-details':
+        // ENA arrival bulk-liter submissions awaiting OIC review.
+        return this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').pipe(
+          map((response) => (Array.isArray(response?.data) ? response.data : [])),
+          map((items) => items.length)
+        );
+
       default:
         return of(0);
     }

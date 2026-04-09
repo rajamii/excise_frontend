@@ -1,7 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { EnaRequisitionService } from '../../../../core/services/ena-requisition.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 interface BlDetailRow {
   id: number;
@@ -1293,8 +1296,10 @@ interface BlDetailRow {
     }
   `]
 })
-export class OicBlDetailsComponent implements OnInit {
+export class OicBlDetailsComponent implements OnInit, OnDestroy {
   private enaRequisitionService = inject(EnaRequisitionService);
+  private route = inject(ActivatedRoute);
+  private destroy$ = new Subject<void>();
 
   loading = false;
   errorMessage = '';
@@ -1316,7 +1321,20 @@ export class OicBlDetailsComponent implements OnInit {
     const currentMonth = currentDate.toISOString().slice(0, 7); // YYYY-MM format
     this.selectedMonth = currentMonth;
     
+    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      const focus = String(params.get('focus') || '').toLowerCase();
+      if (focus === 'pending') {
+        this.reviewStatus = 'PENDING';
+        this.resetPagination();
+      }
+    });
+
     this.loadRows();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadRows(): void {
