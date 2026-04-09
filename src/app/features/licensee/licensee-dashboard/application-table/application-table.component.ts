@@ -89,6 +89,20 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
         return element?.currentStage || 'pending';
     }
 
+    getCurrentStageDisplay(element: UnifiedApplication): string {
+        const raw = String(this.getCurrentStage(element) || '').trim();
+        const normalized = raw.toLowerCase().replace(/\s+/g, '_');
+
+        if (this.isLicenseeUser()) {
+            if (normalized.includes('awaiting_payment') || normalized.includes('payment')) return 'Awaiting Payment';
+            if (normalized.includes('approved')) return 'Approved';
+            if (normalized.includes('reject')) return 'Rejected';
+            return 'Pending';
+        }
+
+        return this.stageDisplayMapping[normalized] || this.stageDisplayMapping[raw] || raw || 'N/A';
+    }
+
     getLatestRemarks(element: UnifiedApplication): string {
         if (element?.transactions && element.transactions.length > 0) {
             const lastTransaction = element.transactions[element.transactions.length - 1];

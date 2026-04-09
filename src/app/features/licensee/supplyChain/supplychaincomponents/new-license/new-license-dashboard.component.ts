@@ -281,9 +281,12 @@ export class NewLicenseDashboardComponent implements OnInit {
         establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
         submittedOn: this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on),
         currentStageRaw: String(item?.current_stage_name || item?.currentStageName || item?.current_stage || ''),
-        currentStage: this.formatStageName(
-          item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup
-        ),
+        currentStage: this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(
+              statusGroup,
+              item?.current_stage_name || item?.currentStageName || item?.current_stage || ''
+            )
+          : this.formatStageName(item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup),
         statusGroup
       }));
     };
@@ -324,6 +327,19 @@ export class NewLicenseDashboardComponent implements OnInit {
     return raw
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private simplifyStageForLicensee(statusGroup: NewLicenseItem['statusGroup'], stageValue: any): string {
+    if (statusGroup === 'approved') return 'Approved';
+    if (statusGroup === 'rejected') return 'Rejected';
+
+    const raw = String(stageValue ?? '').toLowerCase();
+    if (raw.includes('approved')) return 'Approved';
+    if (raw.includes('reject')) return 'Rejected';
+    if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+
+    // Licensee UX: don't expose internal role/stage names (commissioner/permit section/etc).
+    return 'Pending';
   }
 
   private getStageFilterOptions(rows: NewLicenseItem[]): string[] {

@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
+import { environment } from '../../../environments/environment';
 
 type PendingCountsBySection = Record<string, number>;
 
@@ -13,8 +15,10 @@ export class SidebarPendingBadgeService {
   private lastKey = '';
   private lastCounts: PendingCountsBySection = {};
   private lastFetchMs = 0;
+  private readonly apiBase = `${environment.apiBaseUrl}/transactional`;
 
   constructor(
+    private http: HttpClient,
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService
@@ -53,6 +57,20 @@ export class SidebarPendingBadgeService {
 
   private fetchPendingCount(section: string): Observable<number> {
     switch (section) {
+      case 'new-license':
+        return this.fetchDashboardPending(`${this.apiBase}/new_license_application/dashboard-counts/`);
+
+      case 'salesman-barman-registration':
+      case 'salesman-barman':
+        return this.fetchDashboardPending(`${this.apiBase}/salesman_barman/dashboard-counts/`);
+
+      case 'company-registration':
+        return this.fetchDashboardPending(`${this.apiBase}/company-registration/dashboard-counts/`);
+
+      case 'license-renewal':
+      case 'license-renewal-application':
+        return this.fetchDashboardPending(`${this.apiBase}/license_application/dashboard-counts/`);
+
       case 'requisition':
         return this.enaRequisitionService.getRequisitions().pipe(
           map((response) => this.toArray(response)),
@@ -100,6 +118,13 @@ export class SidebarPendingBadgeService {
       default:
         return of(0);
     }
+  }
+
+  private fetchDashboardPending(url: string): Observable<number> {
+    return this.http.get<any>(url).pipe(
+      map((counts) => Number(counts?.pending || 0)),
+      catchError(() => of(0))
+    );
   }
 
   private toArray(response: any): any[] {
@@ -170,4 +195,3 @@ export class SidebarPendingBadgeService {
     return false;
   }
 }
-
