@@ -17,7 +17,7 @@ interface CommissionerData {
   distilleryName: string;
   status: string;
   amount: string;
-  type: 'requisition' | 'revalidation' | 'transit' | 'hologram';
+  type: 'requisition' | 'revalidation' | 'transit' | 'hologram' | 'cancellation';
   localQtyLakh?: number;
   exportQtyLakh?: number;
   defenceQtyLakh?: number;
@@ -890,6 +890,74 @@ export class CommissionerDashboardComponent implements OnInit {
     this.loadRevalidations();
     this.loadTransitPermits();
     this.loadHolograms();
+    this.loadCancellations();
+  }
+
+  loadCancellations(): void {
+    this.supplyChainService.getCancellationData().subscribe({
+      next: (data: any[]) => {
+        const cancellations: CommissionerData[] = (data || [])
+          // Keep only items that can reach commissioner (actionable or commissioner/pending text).
+          .filter((item: any) => this.requiresCommissionerReview(item.status) || this.hasApproveOrRejectAction(item))
+          .map((item: any) => ({
+            id: item.id,
+            referenceNo: item.ourRefNo || item.our_ref_no || `CAN-${item.id}`,
+            submissionDate: this.formatDate(
+              item.cancellationDate ||
+              item.cancellation_date ||
+              item.requisitionDate ||
+              item.requisition_date ||
+              item.submissionDate ||
+              item.submission_date
+            ),
+            distilleryName:
+              item.branchName ||
+              item.branch_name ||
+              item.distilleryName ||
+              item.distillery_name ||
+              item.establishmentName ||
+              item.establishment_name ||
+              item.licenseeName ||
+              item.licensee_name ||
+              'N/A',
+            status: item.status || 'PENDING',
+            amount: String(
+              item.totalCancellationAmount ||
+                item.total_cancellation_amount ||
+                item.cancellationBrAmount ||
+                item.cancellation_br_amount ||
+                item.amount ||
+                '0.00'
+            ),
+            type: 'cancellation',
+            allowedActions:
+              item.allowedActions ||
+              item.allowed_actions ||
+              this.getDefaultActionsFromStatus(item.status),
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+          }));
+
+        this.updateApplications('cancellation', cancellations);
+      },
+      error: (error) => console.error('Error loading cancellations:', error)
+    });
+  }
+
+  private getDefaultActionsFromStatus(status: any): string[] {
+    const value = String(status || '').toLowerCase();
+    if (!value) return [];
+    if (value.includes('reject')) return [];
+    if (value.includes('approve')) return [];
+    if (value.includes('pending') || value.includes('forward') || value.includes('submit')) return ['APPROVE', 'REJECT'];
+    return [];
+  }
+
+  private hasApproveOrRejectAction(item: any): boolean {
+    const actions = Array.isArray(item?.allowedActions) ? item.allowedActions : (Array.isArray(item?.allowed_actions) ? item.allowed_actions : []);
+    const upper = actions.map((a: any) => String(a || '').toUpperCase());
+    return upper.includes('APPROVE') || upper.includes('REJECT');
   }
 
   loadRequisitions(): void {
@@ -1057,12 +1125,24 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
+    const actionablePending = this.getActionablePendingCount();
+    const legacyPending = this.getStatusCount('PENDING') + this.getStatusCount('FORWARDED');
+
     return {
       applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED'),
-      pending: this.getStatusCount('PENDING') + this.getStatusCount('FORWARDED'),
+      pending: actionablePending || legacyPending,
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER'),
       rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER')
     };
+  }
+
+  private getActionablePendingCount(): number {
+    // Prefer DB workflow metadata (allowed actions) so pending count stays correct even when stage names change.
+    return this.allApplications.filter((application) => {
+      const actions = Array.isArray(application?.allowedActions) ? application.allowedActions : [];
+      const upper = actions.map((a: any) => String(a || '').toUpperCase());
+      return upper.includes('APPROVE') || upper.includes('REJECT');
+    }).length;
   }
 
   getFilterOptions() {
@@ -1071,7 +1151,8 @@ export class CommissionerDashboardComponent implements OnInit {
       { value: 'requisition', label: 'Requisitions' },
       { value: 'revalidation', label: 'Revalidations' },
       { value: 'transit', label: 'Transit Permits' },
-      { value: 'hologram', label: 'Holograms' }
+      { value: 'hologram', label: 'Holograms' },
+      { value: 'cancellation', label: 'Cancellations' }
     ];
   }
 

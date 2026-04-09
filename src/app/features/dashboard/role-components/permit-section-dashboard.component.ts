@@ -16,7 +16,7 @@ interface PermitData {
   distilleryName: string;
   status: string;
   amount: string;
-  type: 'requisition' | 'revalidation' | 'transit' | 'hologram';
+  type: 'requisition' | 'revalidation' | 'transit' | 'hologram' | 'cancellation';
   allowedActions?: string[];
   allowedActionConfigs?: any[];
   workflowId?: number;
@@ -197,6 +197,7 @@ export class PermitSectionDashboardComponent implements OnInit {
     // Load all types of applications for permit section review
     this.loadRequisitions();
     this.loadRevalidations();
+    this.loadCancellations();
     this.loadHolograms();
 
     if (!this.isPermitSectionUser()) {
@@ -281,6 +282,64 @@ export class PermitSectionDashboardComponent implements OnInit {
     this.updatePermits('hologram', []);
   }
 
+  loadCancellations(): void {
+    this.supplyChainService.getCancellationData().subscribe({
+      next: (data: any[]) => {
+        const cancellations: PermitData[] = (data || []).map((item: any) => ({
+          id: item.id,
+          referenceNo: item.ourRefNo || item.our_ref_no || `CAN-${item.id}`,
+          submissionDate: this.formatDate(
+            item.cancellationDate ||
+              item.cancellation_date ||
+              item.requisitionDate ||
+              item.requisition_date ||
+              item.submissionDate ||
+              item.submission_date
+          ),
+          distilleryName:
+            item.branchName ||
+            item.branch_name ||
+            item.distilleryName ||
+            item.distillery_name ||
+            item.establishmentName ||
+            item.establishment_name ||
+            item.licenseeName ||
+            item.licensee_name ||
+            'N/A',
+          status: item.status || 'PENDING',
+          amount: String(
+            item.totalCancellationAmount ||
+              item.total_cancellation_amount ||
+              item.cancellationBrAmount ||
+              item.cancellation_br_amount ||
+              item.amount ||
+              '0.00'
+          ),
+          type: 'cancellation',
+          allowedActions:
+            item.allowedActions ||
+            item.allowed_actions ||
+            this.getDefaultActionsFromStatus(item.status),
+          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+          workflowId: item.workflow || item.workflow_id || item.workflowId,
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+        }));
+
+        this.updatePermits('cancellation', cancellations);
+      },
+      error: (error) => console.error('Error loading cancellations:', error)
+    });
+  }
+
+  private getDefaultActionsFromStatus(status: any): string[] {
+    const value = String(status || '').toLowerCase();
+    if (!value) return [];
+    if (value.includes('reject')) return [];
+    if (value.includes('approve')) return [];
+    if (value.includes('pending') || value.includes('forward') || value.includes('submit')) return ['APPROVE', 'REJECT'];
+    return [];
+  }
+
   private updatePermits(type: string, newPermits: PermitData[]): void {
     // Remove old permits of this type and add new ones
     this.allPermits = [
@@ -305,9 +364,12 @@ export class PermitSectionDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
+    const actionablePending = this.getActionablePendingCount();
+    const legacyPending = this.getStatusCount('PENDING') + this.getStatusCount('UNDER_REVIEW');
+
     return {
       applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED'),
-      pending: this.getStatusCount('PENDING') + this.getStatusCount('UNDER_REVIEW'),
+      pending: actionablePending || legacyPending,
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER'),
       rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER')
     };
@@ -319,7 +381,8 @@ export class PermitSectionDashboardComponent implements OnInit {
       { value: 'requisition', label: 'Requisitions' },
       { value: 'revalidation', label: 'Revalidations' },
       { value: 'transit', label: 'Transit Permits' },
-      { value: 'hologram', label: 'Holograms' }
+      { value: 'hologram', label: 'Holograms' },
+      { value: 'cancellation', label: 'Cancellations' }
     ];
 
     return this.isPermitSectionUser()
@@ -345,6 +408,15 @@ export class PermitSectionDashboardComponent implements OnInit {
     return this.allPermits.filter(permit => 
       permit.status.toLowerCase().includes(status.toLowerCase())
     ).length;
+  }
+
+  private getActionablePendingCount(): number {
+    // Prefer DB workflow metadata (allowed actions) so pending count stays correct even when stage names change.
+    return this.allPermits.filter((permit) => {
+      const actions = Array.isArray(permit?.allowedActions) ? permit.allowedActions : [];
+      const upper = actions.map((a) => String(a || '').toUpperCase());
+      return upper.includes('APPROVE') || upper.includes('REJECT');
+    }).length;
   }
 
   // Unified action handler

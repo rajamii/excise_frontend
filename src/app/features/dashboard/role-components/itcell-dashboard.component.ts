@@ -240,9 +240,13 @@ export class ITCellDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
+    const actionablePending = this.getActionablePendingCount();
+    const legacyPending =
+      this.getStatusCount('UNDER_IT_CELL_REVIEW') + this.getStatusCount('PENDING_VERIFICATION');
+
     return {
       applied: this.getStatusCount('SUBMITTED'),
-      pending: this.getStatusCount('UNDER_IT_CELL_REVIEW') + this.getStatusCount('PENDING_VERIFICATION'),
+      pending: actionablePending || legacyPending,
       approved: this.getStatusCount('VERIFIED') + this.getStatusCount('FORWARDED_TO_COMMISSIONER'),
       rejected: this.getStatusCount('REJECTED')
     };
@@ -273,6 +277,15 @@ export class ITCellDashboardComponent implements OnInit {
     return this.allApplications.filter(app => 
       app.status.toLowerCase().includes(status.toLowerCase())
     ).length;
+  }
+
+  private getActionablePendingCount(): number {
+    // Prefer DB workflow metadata (allowed actions) so pending count stays correct even when stage names change.
+    return this.allApplications.filter((app) => {
+      const actions = Array.isArray(app?.allowedActions) ? app.allowedActions : [];
+      const upper = actions.map((a) => String(a || '').toUpperCase());
+      return upper.includes('VERIFY') || upper.includes('FORWARD') || upper.includes('REJECT');
+    }).length;
   }
 
   // Unified action handler
