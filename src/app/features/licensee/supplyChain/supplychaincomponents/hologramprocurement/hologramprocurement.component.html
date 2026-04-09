@@ -18,6 +18,18 @@
       </div>
     </div>
     <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+        <div class="card-icon">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getHologramStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
       <div class="summary-card submitted-requests summary-card-clickable" role="button" tabindex="0"
         (click)="onSummaryCardClick('SUBMITTED')" [class.active]="activeSummaryFilter === 'SUBMITTED'">
         <div class="card-icon">
@@ -62,17 +74,6 @@
         <div class="card-content">
           <h3 class="card-value">{{ getHologramStatusCount('EDITED') }}</h3>
           <p class="card-label">Edited</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-      <div class="summary-card total-quantity">
-        <div class="card-icon">
-          <i class="bi bi-boxes"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getTotalHologramQuantity() | number:'1.0-0' }}</h3>
-          <p class="card-label">Total Quantity</p>
         </div>
       </div>
     </div>

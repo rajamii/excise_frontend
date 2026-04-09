@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 import { HologramDataService, HologramProcurement } from '../../services/hologram-data.service';
+import { RoleService } from '../../../../../core/services/role.service';
 
 /* Use the interface from service, but alias or extend if needed for grid */
 type HologramRow = HologramProcurement & {
@@ -57,6 +58,7 @@ export class HologramprocurementComponent implements OnInit {
   currentPage: number = 1;
 
   private hologramService = inject(HologramDataService);
+  private roleService = inject(RoleService);
 
   constructor(
     private router: Router,
@@ -164,8 +166,9 @@ export class HologramprocurementComponent implements OnInit {
           this.initialSummaryAutoSelected = true;
 
           if (!this.hologramStatusFilter && !this.activeSummaryFilter) {
-            // Hologram procurement doesn't have a "Pending" summary card; pick the first in-progress bucket.
+            // Prefer pending bucket when available.
             const preferred =
+              (this.getHologramStatusCount('PENDING') > 0 && 'PENDING') ||
               (this.getHologramStatusCount('SUBMITTED') > 0 && 'SUBMITTED') ||
               (this.getHologramStatusCount('UNDER_PROCESS') > 0 && 'UNDER_PROCESS') ||
               (this.getHologramStatusCount('EDITED') > 0 && 'EDITED') ||
@@ -250,6 +253,9 @@ export class HologramprocurementComponent implements OnInit {
       if (filter === 'draft') {
         return this.isDraftLikeStatus(item);
       }
+      if (filter === 'pending') {
+        return this.isPendingLikeStatus(item);
+      }
       if (filter === 'underprocess') {
         return this.isUnderProcessLikeStatus(item);
       }
@@ -302,6 +308,9 @@ export class HologramprocurementComponent implements OnInit {
   // Summary methods
   getHologramStatusCount(status: string): number {
     const filter = this.normalizeStageToken(status);
+    if (filter === 'pending') {
+      return this.summaryHologramData.filter(item => this.isPendingLikeStatus(item)).length;
+    }
     if (filter === 'submitted') {
       return this.summaryHologramData.filter(item => this.isSubmittedLikeStatus(item)).length;
     }
@@ -353,7 +362,7 @@ export class HologramprocurementComponent implements OnInit {
 
   private syncActiveSummaryFilter(): void {
     const normalized = this.normalizeStageToken(this.hologramStatusFilter);
-    if (['submitted', 'underprocess', 'edited', 'approved'].includes(normalized)) {
+    if (['pending', 'submitted', 'underprocess', 'edited', 'approved'].includes(normalized)) {
       this.activeSummaryFilter = this.hologramStatusFilter;
       return;
     }
@@ -385,8 +394,11 @@ export class HologramprocurementComponent implements OnInit {
 
   private isApprovedLikeStatus(item: HologramRow): boolean {
     const token = this.normalizeStageToken(item.status);
+    // Licensee UX: treat as "Approved" only once cartons are assigned (or payment is completed).
+    // Commissioner approval alone should remain Pending until carton assignment happens.
     const isCartoonAssigned = token.includes('cartoonassigned') || token.includes('cartonassigned');
-    return (token.includes('approv') || isCartoonAssigned) && !token.includes('reject');
+    const isPaymentCompleted = token.includes('paymentcompleted');
+    return (isCartoonAssigned || isPaymentCompleted) && !token.includes('reject');
   }
 
   private isUnderProcessLikeStatus(item: HologramRow): boolean {
@@ -408,6 +420,18 @@ export class HologramprocurementComponent implements OnInit {
       token.includes('processing') ||
       token.includes('forward') ||
       token.includes('under')
+    );
+  }
+
+  private isPendingLikeStatus(item: HologramRow): boolean {
+    // Licensee UX: Pending = submitted + in-workflow + edited (anything still circulating for approvals).
+    if (this.isApprovedLikeStatus(item)) {
+      return false;
+    }
+    return (
+      this.isSubmittedLikeStatus(item) ||
+      this.isUnderProcessLikeStatus(item) ||
+      this.isEditedByCommissionerLike(item)
     );
   }
 
@@ -525,6 +549,11 @@ export class HologramprocurementComponent implements OnInit {
   }
 
   shouldShowMakePayment(item: HologramRow): boolean {
+    // Payment is a licensee-only action; admins (IT Cell, Permit Section, Commissioner, etc.) should not see it.
+    if (!this.roleService.isLicenseeRole()) {
+      return false;
+    }
+
     const status = String(item.status || '').toLowerCase().replace(/\s+/g, '');
     const refNo = String(item.refNo || '').trim();
     const hasPersistentPaymentAccess = !!refNo && this.persistentPaymentRefs.has(refNo);
