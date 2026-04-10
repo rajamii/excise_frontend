@@ -798,14 +798,31 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (this.isCommissioner() || this.isPermitSection()) {
       return false;
     }
-    return this.isCommissionerFinalApproval(item) && !Boolean(item.hasArrivalDetails);
+
+    const status = String(item?.arrivalApprovalStatus || '').toUpperCase();
+    const allowResubmitAfterReject = status === 'REJECTED';
+    return this.isCommissionerFinalApproval(item) && (!Boolean(item.hasArrivalDetails) || allowResubmitAfterReject);
   }
 
   canViewArrivalDetails(item: TableData): boolean {
     if (this.isCommissioner() || this.isPermitSection()) {
       return false;
     }
-    return this.isCommissionerFinalApproval(item) && Boolean(item.hasArrivalDetails);
+
+    const status = String(item?.arrivalApprovalStatus || '').toUpperCase();
+    if (status === 'REJECTED') {
+      // After OIC rejection, tanker data is cleared and licensee must re-enter; hide inventory view.
+      return false;
+    }
+
+    const total = Number(item?.arrivalTotalBulkLiter ?? 0);
+    const hasAnyData = Number.isFinite(total) ? total > 0 : Boolean(item.hasArrivalDetails);
+
+    return this.isCommissionerFinalApproval(item) && Boolean(item.hasArrivalDetails) && hasAnyData;
+  }
+
+  isArrivalRejected(item: TableData): boolean {
+    return String(item?.arrivalApprovalStatus || '').toUpperCase() === 'REJECTED';
   }
 
   canViewArrivalSummary(): boolean {

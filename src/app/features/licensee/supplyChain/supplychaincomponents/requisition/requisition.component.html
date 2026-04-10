@@ -240,7 +240,7 @@
                 type="button"
                 class="btn btn-sm mt-2 arrival-update-btn"
                 (click)="openArrivalModal(item)">
-                Update BL Arrival
+                {{ isArrivalRejected(item) ? 'Re-enter BL Arrival' : 'Update BL Arrival' }}
               </button>
               <button
                 *ngIf="canViewArrivalDetails(item)"
@@ -249,6 +249,12 @@
                 (click)="openArrivalViewModal(item)">
                View BL Inventory
               </button>
+              <span
+                *ngIf="isArrivalRejected(item)"
+                class="badge bg-danger text-white mt-2"
+                style="display: inline-block; width: 100%; padding: 0.5rem 0.6rem; border-radius: 10px; text-align: center; font-weight: 700;">
+                BL Entry Rejected — re-enter tanker details
+              </span>
             </td>
           </tr>
           }

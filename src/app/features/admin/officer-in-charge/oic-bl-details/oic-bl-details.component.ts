@@ -8,6 +8,13 @@ import { takeUntil } from 'rxjs/operators';
 
 type DraftTankerRow = { tanker_no: string; bulk_liter: number | null };
 type DetailsDraft = { tankerCount: number; tankerDetails: DraftTankerRow[] };
+type RejectDialogState = {
+  open: boolean;
+  detailId: number | null;
+  referenceNo: string;
+  licenseeId: string;
+  source: 'table' | 'details';
+};
 
 interface BlDetailRow {
   id: number;
@@ -394,6 +401,50 @@ interface BlDetailRow {
                 </button>
                 <button type="button" class="details-action-btn ghost" (click)="closeDetailsModal()">Close</button>
               </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="rejectDialog.open">
+        <div class="confirm-backdrop" (click)="closeRejectDialog()"></div>
+        <div class="confirm-shell" role="dialog" aria-modal="true">
+          <div class="confirm-card" (click)="$event.stopPropagation()">
+            <div class="confirm-head">
+              <div class="confirm-icon" aria-hidden="true">!</div>
+              <div class="confirm-title">
+                <h3>Reject BL Details</h3>
+                <p>
+                  If you proceed, licensee (<strong>{{ rejectDialog.licenseeId || 'N/A' }}</strong>) must re-enter the tanker details again.
+                </p>
+              </div>
+              <button type="button" class="confirm-close" (click)="closeRejectDialog()">×</button>
+            </div>
+
+            <div class="confirm-body">
+              <div class="confirm-row">
+                <span class="confirm-label">Reference No</span>
+                <span class="confirm-value">{{ rejectDialog.referenceNo }}</span>
+              </div>
+
+              <label class="confirm-field">
+                <span class="confirm-label">Rejection Remarks</span>
+                <textarea
+                  class="confirm-textarea"
+                  rows="3"
+                  [disabled]="rejectSubmitting"
+                  [(ngModel)]="rejectRemarksDraft"
+                  placeholder="Enter reason for rejection (will be visible to the licensee)"></textarea>
+              </label>
+            </div>
+
+            <div class="confirm-actions">
+              <button type="button" class="confirm-btn ghost" (click)="closeRejectDialog()" [disabled]="rejectSubmitting">
+                Cancel
+              </button>
+              <button type="button" class="confirm-btn danger" (click)="confirmReject()" [disabled]="rejectSubmitting || !rejectDialog.detailId">
+                {{ rejectSubmitting ? 'Rejecting...' : 'Reject' }}
+              </button>
             </div>
           </div>
         </div>
@@ -988,6 +1039,187 @@ interface BlDetailRow {
       max-width: 460px;
       margin: 0 auto;
       line-height: 1.6;
+    }
+
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.62);
+      backdrop-filter: blur(10px);
+      z-index: 1060;
+    }
+
+    .confirm-shell {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      z-index: 1070;
+    }
+
+    .confirm-card {
+      width: min(560px, 100%);
+      border-radius: 22px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 34px 90px rgba(15, 23, 42, 0.36);
+      overflow: hidden;
+    }
+
+    .confirm-head {
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+      padding: 1.05rem 1.1rem;
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), rgba(248, 113, 113, 0.12));
+      border-bottom: 1px solid rgba(248, 113, 113, 0.24);
+    }
+
+    .confirm-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-weight: 1000;
+      color: #991b1b;
+      background: rgba(254, 226, 226, 0.9);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      flex: 0 0 auto;
+    }
+
+    .confirm-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .confirm-title h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .confirm-title p {
+      margin: 0.25rem 0 0;
+      color: #475569;
+      line-height: 1.5;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    .confirm-close {
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(255, 255, 255, 0.9);
+      color: #0f172a;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      font-size: 1.2rem;
+      font-weight: 900;
+      cursor: pointer;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+    }
+
+    .confirm-body {
+      padding: 1rem 1.1rem 0.9rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .confirm-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 16px;
+      background: #f1f5f9;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .confirm-label {
+      font-weight: 900;
+      font-size: 0.78rem;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .confirm-value {
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .confirm-field {
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .confirm-textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      padding: 0.75rem 0.85rem;
+      font-weight: 700;
+      color: #0f172a;
+      background: #ffffff;
+      outline: none;
+      resize: vertical;
+      min-height: 92px;
+    }
+
+    .confirm-textarea:focus {
+      border-color: rgba(37, 99, 235, 0.65);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+    }
+
+    .confirm-actions {
+      padding: 0.9rem 1.1rem 1.1rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(248, 250, 252, 0.85);
+    }
+
+    .confirm-btn {
+      height: 42px;
+      min-width: 118px;
+      border-radius: 999px;
+      font-weight: 900;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .confirm-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .confirm-btn.ghost {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.55);
+    }
+
+    .confirm-btn.danger {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: #ffffff;
+      box-shadow: 0 18px 34px rgba(220, 38, 38, 0.22);
+    }
+
+    .confirm-btn:not(:disabled):hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+      box-shadow: 0 18px 34px rgba(15, 23, 42, 0.14);
     }
 
 
@@ -1621,6 +1853,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   detailsDraft: DetailsDraft | null = null;
   detailsSaving = false;
   detailsSaveError = '';
+  rejectDialog: RejectDialogState = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table' };
+  rejectRemarksDraft = '';
+  rejectSubmitting = false;
   selectedMonth: string = '';
   fromDate: string = '';
   toDate: string = '';
@@ -1910,43 +2145,58 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     if (!details?.id) return;
     if (details.approvalStatus !== 'PENDING') return;
 
-    const remarks = window.prompt('Enter rejection reason for ENA details:', details.reviewRemarks || '');
-    if (remarks === null) return;
-
-    if (this.actingId === details.id) return;
-    this.actingId = details.id;
-    this.enaRequisitionService.reviewRequisitionArrivalDetails(details.id, 'REJECT', String(remarks || '').trim()).subscribe({
-      next: () => {
-        this.actingId = null;
-        this.reviewStatus = 'ALL';
-        this.closeDetailsModal();
-        this.loadRows();
-      },
-      error: () => {
-        this.actingId = null;
-        this.errorMessage = `Unable to reject ENA details for ${details.referenceNo}.`;
-      }
-    });
+    this.openRejectDialog(details.id, details.referenceNo, details.licenseeId, 'details');
   }
 
   reject(row: BlDetailRow): void {
     if (!row.id || this.actingId === row.id) {
       return;
     }
-    const remarks = window.prompt('Enter rejection reason for ENA details:', row.reviewRemarks || '');
-    if (remarks === null) {
-      return;
-    }
-    this.actingId = row.id;
-    this.enaRequisitionService.reviewRequisitionArrivalDetails(row.id, 'REJECT', remarks.trim()).subscribe({
+    this.openRejectDialog(row.id, row.referenceNo, row.licenseeId, 'table');
+  }
+
+  openRejectDialog(detailId: number, referenceNo: string, licenseeId: string, source: 'table' | 'details'): void {
+    this.rejectRemarksDraft = '';
+    this.rejectSubmitting = false;
+    this.rejectDialog = {
+      open: true,
+      detailId: Number(detailId) || null,
+      referenceNo: String(referenceNo || ''),
+      licenseeId: String(licenseeId || ''),
+      source
+    };
+  }
+
+  closeRejectDialog(): void {
+    if (this.rejectSubmitting) return;
+    this.rejectDialog = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table' };
+    this.rejectRemarksDraft = '';
+  }
+
+  confirmReject(): void {
+    const detailId = Number(this.rejectDialog?.detailId || 0);
+    if (!detailId || this.rejectSubmitting) return;
+
+    if (this.actingId === detailId) return;
+    this.actingId = detailId;
+    this.rejectSubmitting = true;
+
+    const remarks = String(this.rejectRemarksDraft || '').trim();
+    this.enaRequisitionService.reviewRequisitionArrivalDetails(detailId, 'REJECT', remarks).subscribe({
       next: () => {
         this.actingId = null;
+        this.rejectSubmitting = false;
         this.reviewStatus = 'ALL';
+        if (this.rejectDialog.source === 'details') {
+          this.closeDetailsModal();
+        }
+        this.closeRejectDialog();
         this.loadRows();
       },
       error: () => {
         this.actingId = null;
-        this.errorMessage = `Unable to reject ENA details for ${row.referenceNo}.`;
+        this.rejectSubmitting = false;
+        this.errorMessage = `Unable to reject ENA details for ${this.rejectDialog.referenceNo || 'this entry'}.`;
       }
     });
   }
