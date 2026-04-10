@@ -23,6 +23,37 @@
 	z-index: 1200;
 }
 
+.forgot-password-container {
+	display: flex;
+	justify-content: flex-end;
+	/* Aligns the link to the right side */
+	margin-top: -10px;
+	/* Pulls it closer to the password field */
+	margin-bottom: 20px;
+	/* Adds space before the Login button */
+
+	.forgot-link {
+		font-size: 0.875rem;
+		/* Slightly smaller text */
+		color: #1976d2;
+		/* Standard link blue, or match your primary theme color */
+		text-decoration: none;
+		font-weight: 500;
+		cursor: pointer;
+		transition: color 0.2s ease-in-out;
+
+		&:hover {
+			text-decoration: underline;
+			color: #115293;
+		}
+
+		&:focus-visible {
+			outline: 2px solid #1976d2;
+			outline-offset: 2px;
+		}
+	}
+}
+
 .back-home-btn {
 	display: inline-flex;
 	align-items: center;

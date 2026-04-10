@@ -1,6 +1,6 @@
 export const environment = {
     production: true,
-    //apiBaseUrl: 'https://sems.sikkim.gov.in',
+    // apiBaseUrl: 'https://sems.sikkim.gov.in',
 
 
     //apiBaseUrl: 'http://10.182.154.196:8000',

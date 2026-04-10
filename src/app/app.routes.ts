@@ -439,6 +439,16 @@ export const routes: Routes = [
       ),
   },
 
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./features/login/forgot-password.component').then(m => m.ForgotPasswordComponent)
+  },
+  {
+    // The path MUST match the format constructed in the Django email payload
+    path: 'reset-password/:uid/:token',
+    loadComponent: () => import('./features/login/reset-password.component').then(m => m.ResetPasswordComponent)
+  },
+
   // Access denied aliases
   {
     path: "accessdenied",
@@ -454,6 +464,8 @@ export const routes: Routes = [
     path: "**",
     component: PageNotFoundComponent,
   },
+
+  
 ];
 
 export default routes;

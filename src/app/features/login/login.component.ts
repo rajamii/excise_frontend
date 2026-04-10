@@ -19,11 +19,14 @@ import { District } from '../../core/models/district.model';
 import { Subdivision } from '../../core/models/subdivision.model';
 import { MasterService } from '../../core/services/master.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule, MatProgressSpinnerModule],
+  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule, MatProgressSpinnerModule, RouterLink, CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
