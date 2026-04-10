@@ -127,17 +127,32 @@ export class HologramrequestComponent implements OnInit {
   }
 
   shouldShowUsageDateApprovalNotice(request: any): boolean {
-    return this.getRequestStatusCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
+    return this.getWorkflowCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
   }
 
   shouldShowUsageDateMissedNotice(request: any): boolean {
-    return this.getRequestStatusCategory(request) === 'PENDING' && this.isUsageDatePast(request);
+    // If usage date has passed and the request is still in pending-review bucket, treat it as rejected-by-timeout.
+    return this.getWorkflowCategory(request) === 'PENDING' && this.isUsageDatePast(request);
   }
 
   navigateToHologramRequest(): void {
     this.router.navigate(['/dev-hologramrequestlevel1']);
   }
   private getRequestStatusCategory(requestOrStatus: any): string {
+    const workflow = this.getWorkflowCategory(requestOrStatus);
+
+    // Special rule: if the usage date is in the past and the request is still pending review,
+    // consider it rejected due to no action taken on usage date.
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      if (workflow === 'PENDING' && this.isUsageDatePast(requestOrStatus)) {
+        return 'REJECTED';
+      }
+    }
+
+    return workflow;
+  }
+
+  private getWorkflowCategory(requestOrStatus: any): string {
     if (requestOrStatus && typeof requestOrStatus === 'object') {
       const isInitial = Boolean(requestOrStatus.currentStageIsInitial ?? requestOrStatus.current_stage_is_initial ?? false);
       const isFinal = Boolean(requestOrStatus.currentStageIsFinal ?? requestOrStatus.current_stage_is_final ?? false);

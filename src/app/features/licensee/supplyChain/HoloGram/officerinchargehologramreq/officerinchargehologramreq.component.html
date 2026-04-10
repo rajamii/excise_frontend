@@ -81,39 +81,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-4 col-lg-6 col-md-8 col-sm-12">
-                    <div class="summary-card hologram-types" aria-label="Filter by hologram type">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+                        aria-label="Filter rejected requests"
+                        (click)="onStatusCardClick('REJECTED')" (keydown.enter)="onStatusCardClick('REJECTED')"
+                        (keydown.space)="onStatusCardClick('REJECTED'); $event.preventDefault()"
+                        [class.active]="isStatusCardActive('REJECTED')">
                         <div class="card-icon">
-                            <i class="bi bi-qr-code"></i>
+                            <i class="bi bi-x-circle"></i>
                         </div>
-                        <div class="card-content hologram-types-content">
-                            <p class="card-label hologram-types-label">Holograms Available</p>
-
-                            <div class="hologram-type-options" role="tablist" aria-label="Hologram type filter">
-                                <button type="button" class="hologram-type-option local"
-                                    (click)="onHologramTypeCardClick('LOCAL')"
-                                    [class.active]="isHologramTypeCardActive('LOCAL')"
-                                    [attr.aria-pressed]="isHologramTypeCardActive('LOCAL')">
-                                    <span class="option-value">{{ getAvailableHologramsByType('LOCAL') | number }}</span>
-                                    <span class="option-label">Local</span>
-                                </button>
-
-                                <button type="button" class="hologram-type-option export"
-                                    (click)="onHologramTypeCardClick('EXPORT')"
-                                    [class.active]="isHologramTypeCardActive('EXPORT')"
-                                    [attr.aria-pressed]="isHologramTypeCardActive('EXPORT')">
-                                    <span class="option-value">{{ getAvailableHologramsByType('EXPORT') | number }}</span>
-                                    <span class="option-label">Export</span>
-                                </button>
-
-                                <button type="button" class="hologram-type-option defence"
-                                    (click)="onHologramTypeCardClick('DEFENCE')"
-                                    [class.active]="isHologramTypeCardActive('DEFENCE')"
-                                    [attr.aria-pressed]="isHologramTypeCardActive('DEFENCE')">
-                                    <span class="option-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</span>
-                                    <span class="option-label">Defence</span>
-                                </button>
-                            </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getRequestCount('REJECTED') }}</h3>
+                            <p class="card-label">Rejected</p>
                         </div>
                     </div>
                 </div>
@@ -412,6 +391,64 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Holograms Available Sidebar (like Transit Permit ML Info) -->
+<div class="hologram-available-sidebar">
+    <div class="hologram-available-sidebar-content" [class.expanded]="isHologramAvailableSidebarExpanded">
+        <div class="hologram-available-sidebar-header">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="header-icon-wrapper">
+                        <i class="bi bi-qr-code"></i>
+                    </div>
+                    <div class="header-text">
+                        <h6 class="mb-0 fw-bold">Holograms Available</h6>
+                        <small class="text-muted">Local / Export / Defence</small>
+                    </div>
+                </div>
+                <button type="button" class="hologram-available-close-btn" (click)="toggleHologramAvailableSidebar()"
+                    title="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="hologram-available-sidebar-body">
+            <button type="button" class="hologram-available-item local"
+                (click)="onHologramTypeCardClick('LOCAL'); toggleHologramAvailableSidebar()"
+                [class.active]="isHologramTypeCardActive('LOCAL')">
+                <span class="item-label">Local</span>
+                <span class="item-value">{{ getAvailableHologramsByType('LOCAL') | number }}</span>
+            </button>
+
+            <button type="button" class="hologram-available-item export"
+                (click)="onHologramTypeCardClick('EXPORT'); toggleHologramAvailableSidebar()"
+                [class.active]="isHologramTypeCardActive('EXPORT')">
+                <span class="item-label">Export</span>
+                <span class="item-value">{{ getAvailableHologramsByType('EXPORT') | number }}</span>
+            </button>
+
+            <button type="button" class="hologram-available-item defence"
+                (click)="onHologramTypeCardClick('DEFENCE'); toggleHologramAvailableSidebar()"
+                [class.active]="isHologramTypeCardActive('DEFENCE')">
+                <span class="item-label">Defence</span>
+                <span class="item-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</span>
+            </button>
+
+            <div class="hologram-available-footer-note">
+                <small class="text-muted">Click a type to filter the table.</small>
+            </div>
+        </div>
+    </div>
+
+    <button type="button" class="hologram-available-toggle" *ngIf="!isHologramAvailableSidebarExpanded"
+        (click)="toggleHologramAvailableSidebar()">
+        <div class="toggle-content">
+            <i class="bi bi-info-circle-fill"></i>
+            <span class="toggle-text">Holograms</span>
+        </div>
+    </button>
 </div>
 
 <!-- Allocation Details Modal (Only for Completed Requests) -->

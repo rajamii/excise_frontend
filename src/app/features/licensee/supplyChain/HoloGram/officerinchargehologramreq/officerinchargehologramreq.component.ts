@@ -144,6 +144,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   selectedRequestForRolls: HologramRequest | null = null;
   private currentScopedLicenseId = '';
 
+  // Holograms Available sidebar
+  isHologramAvailableSidebarExpanded = false;
+
   ngOnInit() {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
     console.log('Resolved OIC license scope for request list:', this.currentScopedLicenseId || '(not found)');
@@ -208,6 +211,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         console.error('Error loading hologram requests:', err);
       }
     });
+  }
+
+  toggleHologramAvailableSidebar(): void {
+    this.isHologramAvailableSidebarExpanded = !this.isHologramAvailableSidebarExpanded;
   }
 
   private maybeAutoSelectPendingStatus(): void {
@@ -283,11 +290,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   shouldShowUsageDateApprovalNotice(request: any): boolean {
-    return this.mapStatusToCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
+    return this.mapWorkflowToCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
   }
 
   shouldShowUsageDateMissedNotice(request: any): boolean {
-    return this.mapStatusToCategory(request) === 'PENDING' && this.isUsageDatePast(request);
+    // If usage date has passed and the request is still in the pending-review bucket, treat it as rejected-by-timeout.
+    return this.mapWorkflowToCategory(request) === 'PENDING' && this.isUsageDatePast(request);
   }
 
   canReject(request: any): boolean {
@@ -753,6 +761,20 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   // Categorize using DB workflow metadata; avoid hardcoded stage names.
   mapStatusToCategory(requestOrStatus: any): string {
+    const workflowCategory = this.mapWorkflowToCategory(requestOrStatus);
+
+    // Special rule: if the usage date is in the past and the request is still pending review,
+    // consider it rejected due to no action taken on usage date.
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      if (workflowCategory === 'PENDING' && this.isUsageDatePast(requestOrStatus)) {
+        return 'REJECTED';
+      }
+    }
+
+    return workflowCategory;
+  }
+
+  private mapWorkflowToCategory(requestOrStatus: any): string {
     if (requestOrStatus && typeof requestOrStatus === 'object') {
       const isInitial = Boolean(requestOrStatus.currentStageIsInitial ?? requestOrStatus.current_stage_is_initial ?? false);
       const isFinal = Boolean(requestOrStatus.currentStageIsFinal ?? requestOrStatus.current_stage_is_final ?? false);
