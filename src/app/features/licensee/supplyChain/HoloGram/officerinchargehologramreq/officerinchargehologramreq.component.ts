@@ -45,6 +45,7 @@ interface FilterOptions {
   requestType: string;
   hologramType: string;
   urgencyLevel: string;
+  month: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -116,6 +117,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     requestType: '',
     hologramType: '',
     urgencyLevel: '',
+    month: '',
     dateFrom: '',
     dateTo: ''
   };
@@ -376,6 +378,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const matchesHologramType = !this.filters.hologramType || request.hologramType === this.filters.hologramType;
       const matchesUrgencyLevel = !this.filters.urgencyLevel || request.urgencyLevel === this.filters.urgencyLevel;
 
+      const matchesMonth = !this.filters.month ||
+        (new Date(request.submissionDate).getMonth() + 1) === Number(this.filters.month);
+
       const matchesDateFrom = !this.filters.dateFrom ||
         new Date(request.submissionDate) >= new Date(this.filters.dateFrom);
 
@@ -383,7 +388,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         new Date(request.submissionDate) <= new Date(this.filters.dateTo);
 
       return matchesReference && matchesStatus && matchesRequestType &&
-        matchesHologramType && matchesUrgencyLevel && matchesDateFrom && matchesDateTo;
+        matchesHologramType && matchesUrgencyLevel && matchesMonth && matchesDateFrom && matchesDateTo;
     });
 
     // Sort filtered results by submission date and reference number - newest first (descending order)
@@ -432,10 +437,17 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       requestType: '',
       hologramType: '',
       urgencyLevel: '',
+      month: '',
       dateFrom: '',
       dateTo: ''
     };
     this.applyFilters();
+  }
+
+  getMonthLabel(monthValue: string): string {
+    const month = Number(monthValue);
+    if (!month || month < 1 || month > 12) return '';
+    return new Date(2000, month - 1, 1).toLocaleString('en-US', { month: 'long' });
   }
 
   updatePagination() {

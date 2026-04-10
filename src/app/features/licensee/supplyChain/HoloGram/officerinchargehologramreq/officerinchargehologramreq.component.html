@@ -81,51 +81,39 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-                    <div class="summary-card local-holograms summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Filter local hologram requests"
-                        (click)="onHologramTypeCardClick('LOCAL')" (keydown.enter)="onHologramTypeCardClick('LOCAL')"
-                        (keydown.space)="onHologramTypeCardClick('LOCAL'); $event.preventDefault()"
-                        [class.active]="isHologramTypeCardActive('LOCAL')">
+                <div class="col-xl-4 col-lg-6 col-md-8 col-sm-12">
+                    <div class="summary-card hologram-types" aria-label="Filter by hologram type">
                         <div class="card-icon">
                             <i class="bi bi-qr-code"></i>
                         </div>
-                        <div class="card-content">
-                            <h3 class="card-value">{{ getAvailableHologramsByType('LOCAL') | number }}</h3>
-                            <p class="card-label">Local Holograms</p>
-                            <small class="card-change">Available</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-                    <div class="summary-card export-holograms summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Filter export hologram requests"
-                        (click)="onHologramTypeCardClick('EXPORT')" (keydown.enter)="onHologramTypeCardClick('EXPORT')"
-                        (keydown.space)="onHologramTypeCardClick('EXPORT'); $event.preventDefault()"
-                        [class.active]="isHologramTypeCardActive('EXPORT')">
-                        <div class="card-icon">
-                            <i class="bi bi-qr-code"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3 class="card-value">{{ getAvailableHologramsByType('EXPORT') | number }}</h3>
-                            <p class="card-label">Export Holograms</p>
-                            <small class="card-change">Available</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-                    <div class="summary-card defence-holograms summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Filter defence hologram requests"
-                        (click)="onHologramTypeCardClick('DEFENCE')" (keydown.enter)="onHologramTypeCardClick('DEFENCE')"
-                        (keydown.space)="onHologramTypeCardClick('DEFENCE'); $event.preventDefault()"
-                        [class.active]="isHologramTypeCardActive('DEFENCE')">
-                        <div class="card-icon">
-                            <i class="bi bi-qr-code"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3 class="card-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</h3>
-                            <p class="card-label">Defence Holograms</p>
-                            <small class="card-change">Available</small>
+                        <div class="card-content hologram-types-content">
+                            <p class="card-label hologram-types-label">Holograms Available</p>
+
+                            <div class="hologram-type-options" role="tablist" aria-label="Hologram type filter">
+                                <button type="button" class="hologram-type-option local"
+                                    (click)="onHologramTypeCardClick('LOCAL')"
+                                    [class.active]="isHologramTypeCardActive('LOCAL')"
+                                    [attr.aria-pressed]="isHologramTypeCardActive('LOCAL')">
+                                    <span class="option-value">{{ getAvailableHologramsByType('LOCAL') | number }}</span>
+                                    <span class="option-label">Local</span>
+                                </button>
+
+                                <button type="button" class="hologram-type-option export"
+                                    (click)="onHologramTypeCardClick('EXPORT')"
+                                    [class.active]="isHologramTypeCardActive('EXPORT')"
+                                    [attr.aria-pressed]="isHologramTypeCardActive('EXPORT')">
+                                    <span class="option-value">{{ getAvailableHologramsByType('EXPORT') | number }}</span>
+                                    <span class="option-label">Export</span>
+                                </button>
+
+                                <button type="button" class="hologram-type-option defence"
+                                    (click)="onHologramTypeCardClick('DEFENCE')"
+                                    [class.active]="isHologramTypeCardActive('DEFENCE')"
+                                    [attr.aria-pressed]="isHologramTypeCardActive('DEFENCE')">
+                                    <span class="option-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</span>
+                                    <span class="option-label">Defence</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -146,44 +134,29 @@
                         (change)="applyFilters()" placeholder="Date" title="Filter by date">
                 </div>
 
-                <!-- Status Filter -->
+                <!-- Month Filter -->
                 <div class="compact-filter">
-                    <select class="form-select form-select-sm" [(ngModel)]="filters.status" (change)="applyFilters()"
-                        title="Filter by status">
-                        <option value="">All Status</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="UNDER_PROCESS">Under Process</option>
-                        <option value="APPROVED">Approved</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="REJECTED">Rejected</option>
-                    </select>
-                </div>
-
-                <!-- Request Type Filter -->
-                <div class="compact-filter">
-                    <select class="form-select form-select-sm" [(ngModel)]="filters.requestType"
-                        (change)="applyFilters()" title="Filter by request type">
-                        <option value="">All Types</option>
-                        <option value="NEW_ALLOCATION">New Allocation</option>
-                        <option value="ADDITIONAL_STOCK">Additional Stock</option>
-                        <option value="REPLACEMENT">Replacement</option>
-                    </select>
-                </div>
-
-                <!-- Hologram Type Filter -->
-                <div class="compact-filter">
-                    <select class="form-select form-select-sm" [(ngModel)]="filters.hologramType"
-                        (change)="applyFilters()" title="Filter by hologram type">
-                        <option value="">All Types</option>
-                        <option value="LOCAL">Local</option>
-                        <option value="EXPORT">Export</option>
-                        <option value="DEFENCE">Defence</option>
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.month" (change)="applyFilters()"
+                        title="Filter by month">
+                        <option value="">All Months</option>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
                     </select>
                 </div>
 
                 <!-- Clear Button -->
                 <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()"
-                    *ngIf="filters.dateFrom || filters.status || filters.requestType || filters.hologramType"
+                    *ngIf="filters.dateFrom || filters.month || filters.status || filters.hologramType"
                     title="Clear all filters">
                     <i class="bi bi-x-circle"></i>
                     Clear
@@ -192,15 +165,15 @@
 
             <!-- Filter Results Summary -->
             <div class="filter-results-compact mt-2"
-                *ngIf="filters.dateFrom || filters.status || filters.requestType || filters.hologramType">
+                *ngIf="filters.dateFrom || filters.month || filters.status || filters.hologramType">
                 <small class="text-info">
                     <i class="bi bi-info-circle me-1"></i>
                     Showing <strong>{{ filteredRequests.length }}</strong> of <strong>{{ hologramRequests.length
                         }}</strong> requests
                     <span *ngIf="filters.dateFrom" class="filter-tag">Date: {{ filters.dateFrom | date:'dd MMM yyyy'
                         }}</span>
+                    <span *ngIf="filters.month" class="filter-tag">Month: {{ getMonthLabel(filters.month) }}</span>
                     <span *ngIf="filters.status" class="filter-tag">Status: {{ filters.status }}</span>
-                    <span *ngIf="filters.requestType" class="filter-tag">Type: {{ filters.requestType }}</span>
                     <span *ngIf="filters.hologramType" class="filter-tag">Hologram: {{ filters.hologramType }}</span>
                 </small>
             </div>
@@ -365,17 +338,17 @@
                         <i class="bi bi-file-earmark-x"></i>
                     </div>
                     <h5 class="empty-title">
-                        {{ (filters.dateFrom || filters.status || filters.requestType || filters.hologramType) ?
+                        {{ (filters.dateFrom || filters.month || filters.status || filters.hologramType) ?
                         'No Matching Requests Found' : 'No Hologram Requests Found' }}
                     </h5>
                     <p class="empty-message">
-                        {{ (filters.dateFrom || filters.status || filters.requestType || filters.hologramType) ?
+                        {{ (filters.dateFrom || filters.month || filters.status || filters.hologramType) ?
                         'No requests match your current filter criteria. Try adjusting your filters or clear them to see
                         all requests.' :
                         'No hologram requests have been submitted yet.' }}
                     </p>
                     <button class="btn btn-primary"
-                        *ngIf="filteredRequests.length === 0 && !filters.dateFrom && !filters.status && !filters.requestType && !filters.hologramType">
+                        *ngIf="filteredRequests.length === 0 && !filters.dateFrom && !filters.month && !filters.status && !filters.hologramType">
                         <i class="bi bi-plus-circle me-2"></i>
                         Create New Request
                     </button>
