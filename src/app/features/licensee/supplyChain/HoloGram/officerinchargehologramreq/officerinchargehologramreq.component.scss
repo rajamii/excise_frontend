@@ -3,7 +3,7 @@
 // Use the exact same styles as supply chain hologram request register
 .hologram-request-register-header {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 16px 16px 0 0;
   border-bottom: 2px solid #e2e8f0;
 
@@ -61,17 +61,18 @@
     --summary-accent-end: #1d4ed8;
     background: white;
     border-radius: 12px;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     border: 1px solid #e2e8f0;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    min-height: 88px;
-    height: 88px;
+    min-height: 80px;
+    height: 80px;
     position: relative;
     overflow: hidden;
+    width: 100%;
 
     &:hover {
       transform: translateY(-4px);

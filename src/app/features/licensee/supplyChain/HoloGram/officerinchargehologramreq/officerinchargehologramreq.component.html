@@ -9,7 +9,7 @@
                         <i class="bi bi-file-earmark-text me-2"></i>
                         Hologram Request Register
                     </h4>
-                    <p class="register-subtitle">Track and manage all hologram requests from supply chain users</p>
+                   
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-outline-primary me-2" (click)="refreshRequests()"
@@ -20,8 +20,8 @@
                 </div>
             </div>
             <!-- Summary Cards -->
-            <div class="row g-3 mb-4">
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="row g-2 mb-4">
+                <div class="col">
                     <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Show all hologram requests"
                         (click)="clearFilters()" (keydown.enter)="clearFilters()"
@@ -36,7 +36,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="col">
                     <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter pending review requests"
                         (click)="onStatusCardClick('PENDING')" (keydown.enter)="onStatusCardClick('PENDING')"
@@ -51,7 +51,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="col">
                     <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter under process requests"
                         (click)="onStatusCardClick('UNDER_PROCESS')" (keydown.enter)="onStatusCardClick('UNDER_PROCESS')"
@@ -66,7 +66,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="col">
                     <div class="summary-card completed-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter completed requests"
                         (click)="onStatusCardClick('APPROVED')" (keydown.enter)="onStatusCardClick('APPROVED')"
@@ -81,7 +81,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="col">
                     <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
                         aria-label="Filter rejected requests"
                         (click)="onStatusCardClick('REJECTED')" (keydown.enter)="onStatusCardClick('REJECTED')"
