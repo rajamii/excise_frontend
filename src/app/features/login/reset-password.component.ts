@@ -59,7 +59,7 @@ export class ResetPasswordComponent implements OnInit {
   resetForm: FormGroup;
   uid: string = '';
   token: string = '';
-  
+
   isLoading = false;
   message = '';
   isError = false;
@@ -93,7 +93,7 @@ export class ResetPasswordComponent implements OnInit {
     if (this.resetForm.valid && !this.invalidLink) {
       this.isLoading = true;
       this.message = '';
-      
+
       const payload = {
         uidb64: this.uid,
         token: this.token,
@@ -106,15 +106,29 @@ export class ResetPasswordComponent implements OnInit {
           this.isError = false;
           this.message = 'Password successfully reset! You can now log in.';
           this.resetForm.reset();
-          
+
           // Optional: Auto-redirect to login after 3 seconds
           setTimeout(() => this.router.navigate(['/login']), 3000);
         },
         error: (err) => {
           this.isLoading = false;
           this.isError = true;
-          // Django usually returns specific errors for expired tokens
-          this.message = err.error?.error || 'Failed to reset password. The link may have expired.';
+          // Better error extraction to catch Django validation errors
+          if (err.error?.error) {
+            this.message = err.error.error;
+          } else if (err.error?.new_password) {
+            // Catches backend weak password errors (e.g. "This password is too common")
+            this.message = err.error.new_password[0];
+          } else if (err.error?.non_field_errors) {
+            this.message = err.error.non_field_errors[0];
+          } else if (err.error?.detail) {
+            this.message = err.error.detail;
+          } else {
+            this.message = 'Failed to reset password. Please check your password strength or request a new link.';
+          }
+
+          // Log it to the console so you can see exactly what the backend rejected
+          console.error('Password reset failed:', err.error);
         }
       });
     }
