@@ -36,8 +36,13 @@ export class HologramdetailsComponent implements OnInit {
   @Output() hologramRequestsClicked = new EventEmitter<void>();
   @Output() hologramOverviewClicked = new EventEmitter<void>();
 
+  Math = Math;
+
   hologramRecords: HologramRecord[] = [];
+  summaryRecords: HologramRecord[] = [];
   filteredRecords: HologramRecord[] = [];
+  paginatedRecords: HologramRecord[] = [];
+  activeStatusCategory: '' | 'PENDING' | 'UNDER_PROCESS' | 'COMPLETED' = '';
 
   // Officer information
   currentOfficer = {
@@ -52,9 +57,13 @@ export class HologramdetailsComponent implements OnInit {
   selectedDate: string = '';
   selectedMonth: string = '';
   selectedYear: string = '';
-  selectedStatus: string = '';
   searchText: string = '';
 
+  // Pagination
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize: number = 10;
+  currentPage: number = 1;
+  totalPages: number = 1;
 
 
   // Update arrival properties
@@ -200,6 +209,7 @@ export class HologramdetailsComponent implements OnInit {
         });
 
         this.applyFilters();
+        this.updatePagination();
         console.log('Loaded hologram records from backend:', this.hologramRecords);
       },
       error: (err) => {
@@ -278,7 +288,7 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   applyFilters() {
-    this.filteredRecords = this.hologramRecords.filter(record => {
+    this.summaryRecords = this.hologramRecords.filter(record => {
       const recordDate = new Date(record.date);
 
       // Specific date filter
@@ -292,26 +302,65 @@ export class HologramdetailsComponent implements OnInit {
       const yearMatch = !this.selectedYear ||
         recordDate.getFullYear().toString() === this.selectedYear;
 
-      // Status filter
-      const statusMatch = !this.selectedStatus || record.status === this.selectedStatus;
-
       // Search filter
       const searchMatch = !this.searchText ||
         record.fromSerial.toLowerCase().includes(this.searchText.toLowerCase()) ||
         record.toSerial.toLowerCase().includes(this.searchText.toLowerCase()) ||
         (record.remarks && record.remarks.toLowerCase().includes(this.searchText.toLowerCase()));
 
-      return dateMatch && monthMatch && yearMatch && statusMatch && searchMatch;
+      return dateMatch && monthMatch && yearMatch && searchMatch;
     });
+
+    this.filteredRecords = this.summaryRecords.filter((record) => {
+      if (!this.activeStatusCategory) return true;
+      return this.mapProcurementRecordToCategory(record) === this.activeStatusCategory;
+    });
+
+    this.currentPage = 1;
+    this.updatePagination();
   }
 
   clearFilters() {
     this.selectedDate = '';
     this.selectedMonth = '';
     this.selectedYear = '';
-    this.selectedStatus = '';
     this.searchText = '';
+    this.activeStatusCategory = '';
     this.applyFilters();
+  }
+
+  onSummaryStatusClick(category: '' | 'PENDING' | 'UNDER_PROCESS' | 'COMPLETED'): void {
+    this.activeStatusCategory = this.activeStatusCategory === category ? '' : category;
+    this.applyFilters();
+  }
+
+  getProcurementCountByCategory(category: 'PENDING' | 'UNDER_PROCESS' | 'COMPLETED'): number {
+    return this.summaryRecords.filter((record) => this.mapProcurementRecordToCategory(record) === category).length;
+  }
+
+  private mapProcurementRecordToCategory(record: HologramRecord): 'PENDING' | 'UNDER_PROCESS' | 'COMPLETED' | 'OTHER' {
+    if (this.isArrivedStage(record)) return 'COMPLETED';
+    if (this.isPendingArrivalStage(record)) return 'PENDING';
+    if (this.isPendingApprovalStage(record)) return 'UNDER_PROCESS';
+    return 'OTHER';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.updatePagination();
+  }
+
+  updatePagination(): void {
+    this.totalPages = Math.max(1, Math.ceil(this.filteredRecords.length / this.pageSize));
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.paginatedRecords = this.filteredRecords.slice(startIndex, endIndex);
   }
 
 

@@ -115,6 +115,21 @@ export class SidebarPendingBadgeService {
           map((items) => items.filter((x) => !this.isHologramRequestFinal(x)).length)
         );
 
+      // OIC hologram procurement register (badge should show items waiting for carton assignment / arrival update)
+      case 'hologram-register':
+        return this.hologramService.getProcurements().pipe(
+          map((items) => this.toArray(items)),
+          map((items) =>
+            items.filter((p: any) => {
+              const actions = this.extractAllowedActions(p);
+              const hasAssign = actions.some((a) => a === 'ASSIGN_CARTONS');
+              const details = p?.carton_details || p?.cartoon_details || p?.cartonDetails || [];
+              const hasDetails = Array.isArray(details) && details.length > 0;
+              return hasAssign && !hasDetails;
+            }).length
+          )
+        );
+
       case 'bl-details':
         // ENA arrival bulk-liter submissions awaiting OIC review.
         return this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').pipe(

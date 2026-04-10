@@ -21,14 +21,71 @@
     <!-- Stock Summary Dashboard -->
     <div class="stock-summary-section">
         <div class="row g-4">
-            <div class="col-lg-6 col-md-6">
-                <div class="summary-card total-records">
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card total-applications summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Show all hologram procurement applications"
+                    (click)="onSummaryStatusClick('')" (keydown.enter)="onSummaryStatusClick('')"
+                    (keydown.space)="onSummaryStatusClick(''); $event.preventDefault()"
+                    [class.active]="!activeStatusCategory">
                     <div class="card-icon">
-                        <i class="bi bi-list-ul"></i>
+                        <i class="bi bi-list-check"></i>
                     </div>
                     <div class="card-content">
-                        <h3 class="card-value">{{ filteredRecords.length }}</h3>
-                        <p class="card-label">Total Records</p>
+                        <h3 class="card-value">{{ summaryRecords.length }}</h3>
+                        <p class="card-label">Total Applications</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Filter pending procurement applications"
+                    (click)="onSummaryStatusClick('PENDING')" (keydown.enter)="onSummaryStatusClick('PENDING')"
+                    (keydown.space)="onSummaryStatusClick('PENDING'); $event.preventDefault()"
+                    [class.active]="activeStatusCategory === 'PENDING'">
+                    <div class="card-icon">
+                        <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-value">{{ getProcurementCountByCategory('PENDING') }}</h3>
+                        <p class="card-label">
+                            Pending
+                            <span *ngIf="getProcurementCountByCategory('PENDING') > 0" class="badge bg-danger ms-2">
+                                {{ getProcurementCountByCategory('PENDING') }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card under-process summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Filter under process procurement applications"
+                    (click)="onSummaryStatusClick('UNDER_PROCESS')" (keydown.enter)="onSummaryStatusClick('UNDER_PROCESS')"
+                    (keydown.space)="onSummaryStatusClick('UNDER_PROCESS'); $event.preventDefault()"
+                    [class.active]="activeStatusCategory === 'UNDER_PROCESS'">
+                    <div class="card-icon">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-value">{{ getProcurementCountByCategory('UNDER_PROCESS') }}</h3>
+                        <p class="card-label">Under Process</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card completed-requests summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Filter completed procurement applications"
+                    (click)="onSummaryStatusClick('COMPLETED')" (keydown.enter)="onSummaryStatusClick('COMPLETED')"
+                    (keydown.space)="onSummaryStatusClick('COMPLETED'); $event.preventDefault()"
+                    [class.active]="activeStatusCategory === 'COMPLETED'">
+                    <div class="card-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-value">{{ getProcurementCountByCategory('COMPLETED') }}</h3>
+                        <p class="card-label">Completed</p>
                     </div>
                 </div>
             </div>
@@ -125,9 +182,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @for (record of filteredRecords; track record.id; let i = $index) {
+                        @for (record of paginatedRecords; track record.id; let i = $index) {
                         <tr class="register-row">
-                            <td class="sl-no">{{ i + 1 }}</td>
+                            <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
                             <td class="date-col">
                                 <div class="date-display">
                                     <span class="date-main">{{ record.date | date:'dd/MM/yyyy' }}</span>
@@ -225,6 +282,41 @@
                 </table>
             </div>
             }
+
+            <!-- Pagination -->
+            <div class="register-pagination" *ngIf="filteredRecords.length > 0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="pagination-info">
+                        <span class="info-text">
+                            Showing {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize,
+                            filteredRecords.length) }}
+                            of {{ filteredRecords.length }} entries
+                        </span>
+                    </div>
+                    <div class="pagination-controls">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="page-size-selector">
+                                <label class="selector-label">Show:</label>
+                                <select class="form-select form-select-sm" [(ngModel)]="pageSize"
+                                    (change)="onPageSizeChange()">
+                                    <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                                </select>
+                            </div>
+                            <div class="pagination-buttons btn-group">
+                                <button class="btn btn-outline-secondary" (click)="goToPage(1)"
+                                    [disabled]="currentPage === 1">«</button>
+                                <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
+                                    [disabled]="currentPage === 1">‹</button>
+                                <span class="btn btn-light disabled">{{ currentPage }} / {{ totalPages }}</span>
+                                <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
+                                    [disabled]="currentPage === totalPages">›</button>
+                                <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)"
+                                    [disabled]="currentPage === totalPages">»</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Register Summary Footer -->
             <div class="register-footer" *ngIf="filteredRecords.length > 0">

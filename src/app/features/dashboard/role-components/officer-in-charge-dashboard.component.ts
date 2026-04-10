@@ -235,6 +235,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     APPROVED: 0,
     REJECTED: 0,
   };
+  private hologramProcurementPendingCount = 0;
   private blDetailsPendingCount = 0;
 
   // Pagination
@@ -247,6 +248,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
     this.loadTransitApplications();
     this.loadHologramRequestsCounts();
+    this.loadHologramProcurementPendingCount();
     this.loadBlDetailsPendingCount();
   }
 
@@ -311,10 +313,33 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     const hologramPending = (this.hologramRequestCounts.PENDING || 0) + (this.hologramRequestCounts.UNDER_PROCESS || 0);
     return {
       applied: 0,
-      pending: (this.getStatusCount('ACTIVE') + this.getStatusCount('IN_TRANSIT')) + hologramPending + (this.blDetailsPendingCount || 0),
+      pending: (this.getStatusCount('ACTIVE') + this.getStatusCount('IN_TRANSIT')) +
+        hologramPending +
+        (this.hologramProcurementPendingCount || 0) +
+        (this.blDetailsPendingCount || 0),
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('ISSUED'),
       rejected: this.getStatusCount('TERMINATED') + this.getStatusCount('CANCELLED')
     };
+  }
+
+  private loadHologramProcurementPendingCount(): void {
+    this.hologramService.getProcurements().subscribe({
+      next: (procurements: any[]) => {
+        const scoped = this.filterByCurrentLicense(procurements || []);
+        this.hologramProcurementPendingCount = scoped.filter((p: any) => {
+          const actions = Array.isArray(p?.allowed_actions)
+            ? p.allowed_actions
+            : (Array.isArray(p?.allowedActions) ? p.allowedActions : []);
+          const hasAssign = actions.some((a: any) => String(a || '').trim().toLowerCase() === 'assign_cartons');
+          const details = (p as any).carton_details || (p as any).cartoon_details || (p as any).cartonDetails || [];
+          const hasDetails = Array.isArray(details) && details.length > 0;
+          return hasAssign && !hasDetails;
+        }).length;
+      },
+      error: () => {
+        this.hologramProcurementPendingCount = 0;
+      }
+    });
   }
 
   private loadBlDetailsPendingCount(): void {
