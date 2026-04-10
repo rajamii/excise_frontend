@@ -6,7 +6,7 @@ import { EnaRequisitionService } from '../../../../core/services/ena-requisition
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-type DraftTankerRow = { tanker_no: string; bulk_liter: number | null };
+type DraftTankerRow = { permit_no?: string; tanker_no: string; bulk_liter: number | null };
 type DetailsDraft = { tankerCount: number; tankerDetails: DraftTankerRow[] };
 type RejectDialogState = {
   open: boolean;
@@ -23,7 +23,7 @@ interface BlDetailRow {
   licenseeId: string;
   distilleryName: string;
   tankerCount: number;
-  tankerDetails: Array<{ tanker_no: string; bulk_liter: number }>;
+  tankerDetails: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }>;
   tankerNumbers: string;
   totalBulkLiter: number;
   requestedTotalQuantity: number;
@@ -270,12 +270,18 @@ interface BlDetailRow {
               Total bulk liter must match requisition total ({{ details.requestedTotalQuantity | number:'1.2-2' }}) before approval.
             </div>
 
-            <div class="details-metrics">
-              <div class="metric-card tankers">
-                <span class="metric-label">Tankers</span>
-                <strong>{{ (detailsEditMode ? (detailsDraft?.tankerCount || 0) : (details.tankerCount || 0)) }}</strong>
-                <small>Vehicle count in this ENA entry</small>
-              </div>
+              <div class="details-metrics">
+                <div class="metric-card tankers">
+                  <span class="metric-label">Tankers</span>
+                  <strong>{{
+                    detailsEditMode
+                      ? (isPermitWise(details)
+                          ? (detailsDraft?.tankerDetails?.length || 0)
+                          : (detailsDraft?.tankerCount || 0))
+                      : (details.tankerCount || 0)
+                  }}</strong>
+                  <small>Vehicle count in this ENA entry</small>
+                </div>
               <div class="metric-card quantity">
                 <span class="metric-label">Requested Qty</span>
                 <strong>{{ details.requestedTotalQuantity || 0 | number:'1.2-2' }}</strong>
@@ -319,7 +325,40 @@ interface BlDetailRow {
                   Row{{ (detailsEditMode ? (detailsDraft?.tankerDetails?.length || 0) : details.tankerDetails.length) === 1 ? '' : 's' }}
                 </div>
               </div>
-              <div class="details-edit-tools" *ngIf="detailsEditMode">
+
+              <div class="details-edit-tools" *ngIf="detailsEditMode && isPermitWise(details)">
+                <label class="tool-field">
+                  <span>Permit</span>
+                  <select class="tool-input" [ngModel]="detailsSelectedPermitNo" (ngModelChange)="onDetailsPermitChange($event)">
+                    <option *ngFor="let permitNo of getDetailsPermitNumbers(details)" [ngValue]="permitNo">
+                      {{ formatDetailsPermitOption(details, permitNo) }}
+                    </option>
+                  </select>
+                </label>
+                <button type="button" class="tool-btn" (click)="addDraftTankerRowForSelectedPermit()" [disabled]="detailsSaving || !detailsSelectedPermitNo">
+                  + Add Tanker
+                </button>
+                <div class="tool-hint">
+                  Entered:
+                  {{ (getDraftPermitSum(detailsSelectedPermitNo) || 0) | number:'1.2-2' }}
+                </div>
+              </div>
+
+              <div class="details-edit-tools" *ngIf="!detailsEditMode && isPermitWise(details)">
+                <label class="tool-field">
+                  <span>Permit</span>
+                  <select class="tool-input" [ngModel]="detailsSelectedPermitNo" (ngModelChange)="onDetailsPermitChange($event)">
+                    <option *ngFor="let permitNo of getDetailsPermitNumbers(details)" [ngValue]="permitNo">
+                      {{ formatDetailsPermitOption(details, permitNo) }}
+                    </option>
+                  </select>
+                </label>
+                <div class="tool-hint">
+                  Showing tanker rows for selected permit.
+                </div>
+              </div>
+
+              <div class="details-edit-tools" *ngIf="detailsEditMode && !isPermitWise(details)">
                 <label class="tool-field">
                   <span>Tankers</span>
                   <input class="tool-input" type="number" min="1" [ngModel]="detailsDraft?.tankerCount" (ngModelChange)="onDraftTankerCountChange($event)" />
@@ -333,7 +372,8 @@ interface BlDetailRow {
                   }}
                 </div>
               </div>
-              <div class="details-table-wrap">
+
+              <div class="details-table-wrap" *ngIf="isPermitWise(details); else nonPermitDetailsTable">
                 <table class="details-table">
                   <thead>
                     <tr>
@@ -344,31 +384,69 @@ interface BlDetailRow {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let item of (detailsEditMode ? (detailsDraft?.tankerDetails || []) : details.tankerDetails); let i = index">
-                      <td>{{ i + 1 }}</td>
-                      <td>
-                        <ng-container *ngIf="!detailsEditMode; else editTankerNo">
-                          {{ item.tanker_no || '-' }}
-                        </ng-container>
-                        <ng-template #editTankerNo>
-                          <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[i].tanker_no" placeholder="Tanker no" />
-                        </ng-template>
-                      </td>
-                      <td>
-                        <ng-container *ngIf="!detailsEditMode; else editBulkLiter">
-                          {{ item.bulk_liter || 0 | number:'1.2-2' }}
-                        </ng-container>
-                        <ng-template #editBulkLiter>
-                          <input class="details-input" type="number" min="0" step="0.01" [(ngModel)]="detailsDraft!.tankerDetails[i].bulk_liter" placeholder="0.00" />
-                        </ng-template>
-                      </td>
-                      <td *ngIf="detailsEditMode" class="text-end">
-                        <button type="button" class="mini-btn danger" (click)="removeDraftTankerRow(i)" [disabled]="detailsSaving">Remove</button>
-                      </td>
-                    </tr>
+                    <ng-container *ngIf="detailsEditMode; else permitViewRows">
+                      <tr *ngFor="let draftIndex of detailsVisibleDraftPermitIndices; let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td>
+                          <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].tanker_no" placeholder="Tanker no" />
+                        </td>
+                        <td>
+                          <input class="details-input" type="number" min="0" step="0.01" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].bulk_liter" placeholder="0.00" />
+                        </td>
+                        <td class="text-end">
+                          <button type="button" class="mini-btn danger" (click)="removeDraftTankerRow(draftIndex)" [disabled]="detailsSaving">Remove</button>
+                        </td>
+                      </tr>
+                    </ng-container>
+                    <ng-template #permitViewRows>
+                      <tr *ngFor="let item of detailsVisiblePermitViewRows; let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td>{{ item.tanker_no || '-' }}</td>
+                        <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
+                      </tr>
+                    </ng-template>
                   </tbody>
                 </table>
               </div>
+
+              <ng-template #nonPermitDetailsTable>
+                <div class="details-table-wrap">
+                  <table class="details-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Tanker Number</th>
+                        <th>Bulk Liter</th>
+                        <th *ngIf="detailsEditMode" class="text-end">Edit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of (detailsEditMode ? (detailsDraft?.tankerDetails || []) : details.tankerDetails); let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td>
+                          <ng-container *ngIf="!detailsEditMode; else editTankerNo2">
+                            {{ item.tanker_no || '-' }}
+                          </ng-container>
+                          <ng-template #editTankerNo2>
+                            <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[i].tanker_no" placeholder="Tanker no" />
+                          </ng-template>
+                        </td>
+                        <td>
+                          <ng-container *ngIf="!detailsEditMode; else editBulkLiter2">
+                            {{ item.bulk_liter || 0 | number:'1.2-2' }}
+                          </ng-container>
+                          <ng-template #editBulkLiter2>
+                            <input class="details-input" type="number" min="0" step="0.01" [(ngModel)]="detailsDraft!.tankerDetails[i].bulk_liter" placeholder="0.00" />
+                          </ng-template>
+                        </td>
+                        <td *ngIf="detailsEditMode" class="text-end">
+                          <button type="button" class="mini-btn danger" (click)="removeDraftTankerRow(i)" [disabled]="detailsSaving">Remove</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-template>
             </div>
 
             <div class="details-footer" (click)="$event.stopPropagation()">
@@ -1851,6 +1929,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   selectedDetailsRow: BlDetailRow | null = null;
   detailsEditMode = false;
   detailsDraft: DetailsDraft | null = null;
+  detailsSelectedPermitNo = '';
+  detailsVisiblePermitViewRows: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }> = [];
+  detailsVisibleDraftPermitIndices: number[] = [];
   detailsSaving = false;
   detailsSaveError = '';
   rejectDialog: RejectDialogState = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table' };
@@ -1998,6 +2079,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     this.selectedDetailsRow = row;
     this.detailsEditMode = false;
     this.detailsDraft = this.buildDetailsDraft(row);
+    const permits = this.getDetailsPermitNumbers(row);
+    this.detailsSelectedPermitNo = permits[0] || '';
+    this.refreshDetailsPermitRows();
     this.detailsSaving = false;
     this.detailsSaveError = '';
   }
@@ -2006,6 +2090,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     this.selectedDetailsRow = null;
     this.detailsEditMode = false;
     this.detailsDraft = null;
+    this.detailsSelectedPermitNo = '';
+    this.detailsVisiblePermitViewRows = [];
+    this.detailsVisibleDraftPermitIndices = [];
     this.detailsSaving = false;
     this.detailsSaveError = '';
   }
@@ -2027,6 +2114,136 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     if (!this.detailsEditMode) {
       this.detailsDraft = this.buildDetailsDraft(this.selectedDetailsRow);
     }
+
+    const permits = this.getDetailsPermitNumbers(this.selectedDetailsRow);
+    if (this.isPermitWise(this.selectedDetailsRow) && (!this.detailsSelectedPermitNo || !permits.includes(this.detailsSelectedPermitNo))) {
+      this.detailsSelectedPermitNo = permits[0] || '';
+    }
+    this.refreshDetailsPermitRows();
+  }
+
+  onDetailsPermitChange(value: any): void {
+    this.detailsSelectedPermitNo = String(value || '').trim();
+    this.refreshDetailsPermitRows();
+  }
+
+  getDetailsPermitNumbers(details: BlDetailRow | null | undefined): string[] {
+    const rows: any[] = this.detailsEditMode
+      ? (this.detailsDraft?.tankerDetails as any[]) || []
+      : (details?.tankerDetails as any[]) || [];
+    const set = new Set<string>();
+    for (const row of rows) {
+      const token = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+      if (token) set.add(token);
+    }
+    const list = Array.from(set);
+    list.sort((a, b) => {
+      const an = Number(a);
+      const bn = Number(b);
+      const aIsNum = Number.isFinite(an) && String(an) === a;
+      const bIsNum = Number.isFinite(bn) && String(bn) === b;
+      if (aIsNum && bIsNum) return an - bn;
+      return a.localeCompare(b);
+    });
+    return list;
+  }
+
+  private computeExpectedByPermit(details: BlDetailRow | null | undefined): Record<string, number> {
+    const permitNos = this.getDetailsPermitNumbers(details);
+    const requested = Number(details?.requestedTotalQuantity ?? 0);
+    if (!Number.isFinite(requested) || requested <= 0 || permitNos.length === 0) return {};
+
+    const factor = 100;
+    const base = Math.floor((requested / permitNos.length) * factor) / factor;
+    let running = 0;
+    const out: Record<string, number> = {};
+    for (let i = 0; i < permitNos.length; i++) {
+      const permitNo = permitNos[i];
+      const expected = i === permitNos.length - 1 ? Math.round((requested - running) * factor) / factor : base;
+      running += expected;
+      out[permitNo] = expected;
+    }
+    return out;
+  }
+
+  getDraftPermitSum(permitNo: string): number {
+    const token = String(permitNo || '').trim();
+    if (!token) return 0;
+    const rows = (this.detailsDraft?.tankerDetails || []) as any[];
+    return rows.reduce((sum, row) => {
+      const rowPermit = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+      if (rowPermit !== token) return sum;
+      const liters = Number(row?.bulk_liter ?? 0);
+      return sum + (Number.isFinite(liters) ? liters : 0);
+    }, 0);
+  }
+
+  formatDetailsPermitOption(details: BlDetailRow, permitNo: string): string {
+    const expectedMap = this.computeExpectedByPermit(details);
+    const expected = Number(expectedMap[String(permitNo || '').trim()] ?? 0) || 0;
+    const sum = this.detailsEditMode ? this.getDraftPermitSum(permitNo) : this.getDetailsPermitSum(details, permitNo);
+    return `${permitNo} (${sum.toFixed(2)} / ${expected.toFixed(2)})`;
+  }
+
+  private getDetailsPermitSum(details: BlDetailRow, permitNo: string): number {
+    const token = String(permitNo || '').trim();
+    if (!token) return 0;
+    const rows = (details?.tankerDetails || []) as any[];
+    return rows.reduce((sum, row) => {
+      const rowPermit = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+      if (rowPermit !== token) return sum;
+      const liters = Number(row?.bulk_liter ?? 0);
+      return sum + (Number.isFinite(liters) ? liters : 0);
+    }, 0);
+  }
+
+  private refreshDetailsPermitRows(): void {
+    const details = this.selectedDetailsRow;
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+
+    this.detailsVisiblePermitViewRows = [];
+    this.detailsVisibleDraftPermitIndices = [];
+
+    if (!details || !token) return;
+
+    if (this.detailsEditMode) {
+      const rows: any[] = Array.isArray(this.detailsDraft?.tankerDetails) ? (this.detailsDraft!.tankerDetails as any[]) : [];
+      rows.forEach((row, index) => {
+        const permit = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+        if (permit === token) {
+          this.detailsVisibleDraftPermitIndices.push(index);
+        }
+      });
+      return;
+    }
+
+    const rows: any[] = Array.isArray(details?.tankerDetails) ? (details.tankerDetails as any[]) : [];
+    this.detailsVisiblePermitViewRows = rows.filter((row) => String(row?.permit_no ?? row?.permitNo ?? '').trim() === token);
+  }
+
+  // Backward-compatible helpers (older template references)
+  getDraftEntriesForSelectedPermit(): Array<{ index: number; row: DraftTankerRow }> {
+    const rows = this.detailsDraft?.tankerDetails || [];
+    return this.detailsVisibleDraftPermitIndices.map((index) => ({ index, row: rows[index] }));
+  }
+
+  getDetailsEntriesForSelectedPermit(details: BlDetailRow): Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }> {
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!details || !token) return [];
+    if (!this.detailsEditMode && this.selectedDetailsRow?.id === details.id && this.detailsVisiblePermitViewRows.length > 0) {
+      return this.detailsVisiblePermitViewRows;
+    }
+    const rows: any[] = Array.isArray(details?.tankerDetails) ? (details.tankerDetails as any[]) : [];
+    return rows.filter((row) => String(row?.permit_no ?? row?.permitNo ?? '').trim() === token);
+  }
+
+  addDraftTankerRowForSelectedPermit(): void {
+    if (!this.detailsDraft) return;
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!token) return;
+    this.detailsDraft.tankerDetails.push({ permit_no: token, tanker_no: '', bulk_liter: null });
+    this.detailsDraft.tankerCount = Math.max(1, this.detailsDraft.tankerDetails.length);
+    this.refreshDetailsPermitRows();
   }
 
   onDraftTankerCountChange(value: any): void {
@@ -2056,9 +2273,15 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     rows.splice(index, 1);
     this.detailsDraft.tankerCount = Math.max(1, rows.length);
     if (rows.length === 0) {
-      rows.push({ tanker_no: '', bulk_liter: null });
+      if (this.isPermitWise(this.selectedDetailsRow)) {
+        const permitNo = String(this.detailsSelectedPermitNo || '').trim() || undefined;
+        rows.push({ permit_no: permitNo, tanker_no: '', bulk_liter: null });
+      } else {
+        rows.push({ tanker_no: '', bulk_liter: null });
+      }
       this.detailsDraft.tankerCount = 1;
     }
+    this.refreshDetailsPermitRows();
   }
 
   getDraftTotalBulkLiter(): number {
@@ -2080,8 +2303,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     this.detailsSaveError = '';
 
     const payload = {
-      tanker_count: Math.max(1, Number(draft.tankerCount) || 1),
+      tanker_count: Math.max(1, (draft.tankerDetails || []).length),
       tanker_details: (draft.tankerDetails || []).map((row) => ({
+        permit_no: String((row as any)?.permit_no || '').trim() || undefined,
         tanker_no: String(row?.tanker_no || '').trim(),
         bulk_liter: Number(row?.bulk_liter ?? 0)
       }))
@@ -2096,6 +2320,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         }
         this.detailsEditMode = false;
         this.detailsDraft = this.selectedDetailsRow ? this.buildDetailsDraft(this.selectedDetailsRow) : null;
+        const permits = this.getDetailsPermitNumbers(this.selectedDetailsRow);
+        this.detailsSelectedPermitNo = permits[0] || this.detailsSelectedPermitNo;
+        this.refreshDetailsPermitRows();
         if (approveAfterSave) {
           this.approveSelectedDetails();
         }
@@ -2201,19 +2428,24 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
-  formatTankerNumbers(details: Array<{ tanker_no: string; bulk_liter: number }>): string {
+  formatTankerNumbers(details: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }>): string {
     if (!Array.isArray(details) || details.length === 0) {
       return '-';
     }
     return details.map((item) => String(item?.tanker_no || '').trim()).filter(Boolean).join(', ') || '-';
   }
 
-  formatTankerDetails(details: Array<{ tanker_no: string; bulk_liter: number }>): string {
+  formatTankerDetails(details: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }>): string {
     if (!Array.isArray(details) || details.length === 0) {
       return '-';
     }
     return details
-      .map((item) => `${String(item?.tanker_no || '').trim()} (${Number(item?.bulk_liter || 0).toFixed(2)} ENA)`)
+      .map((item) => {
+        const permit = String((item as any)?.permit_no ?? '').trim();
+        const tanker = String(item?.tanker_no || '').trim();
+        const bl = Number(item?.bulk_liter || 0).toFixed(2);
+        return permit ? `Permit ${permit}: ${tanker} (${bl} ENA)` : `${tanker} (${bl} ENA)`;
+      })
       .join(', ');
   }
 
@@ -2305,6 +2537,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
 
   private buildDetailsDraft(row: BlDetailRow): DetailsDraft {
     const tankerDetails: DraftTankerRow[] = (Array.isArray(row?.tankerDetails) ? row.tankerDetails : []).map((x: any) => ({
+      permit_no: String(x?.permit_no ?? x?.permitNo ?? '').trim() || undefined,
       tanker_no: String(x?.tanker_no ?? x?.tankerNo ?? '').trim(),
       bulk_liter: (() => {
         const n = Number(x?.bulk_liter ?? x?.bulkLiter ?? 0);
@@ -2312,15 +2545,24 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       })()
     }));
 
-    const tankerCount = Math.max(1, Number(row?.tankerCount || tankerDetails.length || 1));
-    while (tankerDetails.length < tankerCount) {
-      tankerDetails.push({ tanker_no: '', bulk_liter: null });
-    }
-    while (tankerDetails.length > tankerCount) {
-      tankerDetails.pop();
+    const permitWise = tankerDetails.some((x: any) => Boolean(String(x?.permit_no ?? '').trim()));
+    const tankerCount = Math.max(1, Number((permitWise ? tankerDetails.length : (row?.tankerCount || tankerDetails.length)) || 1));
+    if (!permitWise) {
+      while (tankerDetails.length < tankerCount) {
+        tankerDetails.push({ tanker_no: '', bulk_liter: null });
+      }
+      while (tankerDetails.length > tankerCount) {
+        tankerDetails.pop();
+      }
     }
 
     return { tankerCount, tankerDetails };
+  }
+
+  isPermitWise(details: BlDetailRow | null | undefined): boolean {
+    if (!details) return false;
+    const rows: any[] = Array.isArray(details.tankerDetails) ? (details.tankerDetails as any[]) : [];
+    return rows.some((x) => Boolean(String(x?.permit_no ?? x?.permitNo ?? '').trim()));
   }
 
   private applyUpdatedDetails(apiRecord: any): void {
@@ -2363,9 +2605,10 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private normalizeTankerDetails(rawDetails: any[], tankerNumbersValue: any, totalBulkLiterValue: any): Array<{ tanker_no: string; bulk_liter: number }> {
+  private normalizeTankerDetails(rawDetails: any[], tankerNumbersValue: any, totalBulkLiterValue: any): Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }> {
     const normalized = (Array.isArray(rawDetails) ? rawDetails : [])
       .map((item: any) => {
+        const permitNo = String(item?.permit_no ?? item?.permitNo ?? item?.permit ?? '').trim();
         const tankerNo = String(
           item?.tanker_no ??
           item?.tankerNo ??
@@ -2380,9 +2623,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
           item?.bulkLitre ??
           0
         ) || 0;
-        return { tanker_no: tankerNo, bulk_liter: bulkLiter };
+        return { permit_no: permitNo || undefined, tanker_no: tankerNo, bulk_liter: bulkLiter };
       })
-      .filter((item) => item.tanker_no || item.bulk_liter > 0);
+      .filter((item) => item.permit_no || item.tanker_no || item.bulk_liter > 0);
 
     if (normalized.length > 0) {
       return normalized;

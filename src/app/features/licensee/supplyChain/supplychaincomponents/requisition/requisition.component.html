@@ -394,18 +394,25 @@
           <div class="count-input-wrapper">
             <label class="form-label">
               <i class="bi bi-truck me-2"></i>
-              <span class="fw-semibold">Total Tankers</span>
+              <span class="fw-semibold">{{ arrivalPermitNumbers.length > 0 ? 'Total Permits' : 'Total Tankers' }}</span>
             </label>
             <input
+              *ngIf="arrivalPermitNumbers.length === 0; else permitCounts"
               type="number"
               class="form-control tanker-count-input"
               min="1"
               [(ngModel)]="arrivalTankerCount"
               (change)="onArrivalTankerCountChange()">
+            <ng-template #permitCounts>
+              <input type="text" class="form-control tanker-count-input" [value]="arrivalPermitNumbers.length" readonly disabled>
+              <div class="mt-2 text-muted small">
+                Total Tankers (saved): <strong>{{ arrivalTankerCount }}</strong>
+              </div>
+            </ng-template>
           </div>
           <div class="helper-text">
             <i class="bi bi-info-circle me-1"></i>
-            Fill tanker-wise arrival details below. They will be routed to the mapped OIC for approval
+            Fill {{ arrivalPermitNumbers.length > 0 ? 'permit-wise' : 'tanker-wise' }} arrival details below. They will be routed to the mapped OIC for approval
           </div>
         </div>
 
@@ -414,37 +421,117 @@
             <i class="bi bi-list-check"></i>
             <h6 class="section-title">Tanker Entry Details</h6>
           </div>
-          <div class="table-container">
-            <table class="table arrival-table mb-0">
-              <thead>
-                <tr>
-                  <th class="text-center" style="width: 80px;">#</th>
-                  <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
-                  <th><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let row of arrivalEntries; let i = index">
-                  <td class="text-center serial-col">{{ i + 1 }}</td>
-                  <td>
-                    <input
-                      class="form-control form-control-sm tanker-input"
-                      [(ngModel)]="row.tanker_no"
-                      placeholder="Enter tanker number">
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      class="form-control form-control-sm liter-input"
-                      min="0.01"
-                      step="0.01"
-                      [(ngModel)]="row.bulk_liter"
-                      placeholder="Enter bulk liter">
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+
+          <ng-container *ngIf="arrivalPermitNumbers.length > 0; else tankerWiseTable">
+            <div class="row g-3 align-items-end mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">
+                  <i class="bi bi-journal-text me-2"></i>Permit Number
+                </label>
+                <select class="form-select"
+                  [(ngModel)]="selectedArrivalPermitNo"
+                  (change)="onArrivalPermitChange()">
+                  <option value="">Select permit</option>
+                  <option *ngFor="let permitNo of arrivalPermitNumbers" [ngValue]="permitNo">
+                    {{ permitNo }}{{ isArrivalPermitSaved(permitNo) ? ' (saved)' : '' }}
+                  </option>
+                </select>
+                <div class="text-muted small mt-1" *ngIf="selectedArrivalPermitNo">
+                  Expected for permit {{ selectedArrivalPermitNo }}:
+                  <strong>{{ (getArrivalExpectedBulkLiterForPermit(selectedArrivalPermitNo) || 0) | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+              <div class="col-md-6 text-md-end">
+                <button type="button" class="btn btn-outline-primary me-2" (click)="addArrivalPermitTankerRow()"
+                  [disabled]="!selectedArrivalPermitNo">
+                  <i class="bi bi-plus-circle me-2"></i>Add Tanker
+                </button>
+                <button type="button" class="btn btn-success" (click)="saveSelectedPermit()"
+                  [disabled]="!canSaveSelectedPermit()">
+                  <i class="bi bi-save me-2"></i>Save Permit
+                </button>
+              </div>
+            </div>
+
+            <div class="table-container" *ngIf="selectedArrivalPermitNo">
+              <table class="table arrival-table mb-0">
+                <thead>
+                  <tr>
+                    <th class="text-center" style="width: 80px;">#</th>
+                    <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
+                    <th><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
+                    <th class="text-end" style="width: 120px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of arrivalPermitDraftEntries; let i = index">
+                    <td class="text-center serial-col">{{ i + 1 }}</td>
+                    <td>
+                      <input
+                        class="form-control form-control-sm tanker-input"
+                        [(ngModel)]="row.tanker_no"
+                        (ngModelChange)="markArrivalPermitDirty()"
+                        placeholder="Enter tanker number">
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm liter-input"
+                        min="0.01"
+                        step="0.01"
+                        [(ngModel)]="row.bulk_liter"
+                        (ngModelChange)="markArrivalPermitDirty()"
+                        placeholder="Enter bulk liter">
+                    </td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeArrivalPermitTankerRow(i)">
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="text-muted small mt-2" *ngIf="selectedArrivalPermitNo">
+              Entered for permit {{ selectedArrivalPermitNo }}: <strong>{{ getArrivalPermitDraftTotalBulkLiter() | number:'1.2-2' }}</strong>
+              <span *ngIf="isArrivalPermitSaved(selectedArrivalPermitNo)" class="ms-2 text-success">(Saved)</span>
+            </div>
+          </ng-container>
+
+          <ng-template #tankerWiseTable>
+            <div class="table-container">
+              <table class="table arrival-table mb-0">
+                <thead>
+                  <tr>
+                    <th class="text-center" style="width: 80px;">#</th>
+                    <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
+                    <th><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of arrivalEntries; let i = index">
+                    <td class="text-center serial-col">{{ i + 1 }}</td>
+                    <td>
+                      <input
+                        class="form-control form-control-sm tanker-input"
+                        [(ngModel)]="row.tanker_no"
+                        placeholder="Enter tanker number">
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm liter-input"
+                        min="0.01"
+                        step="0.01"
+                        [(ngModel)]="row.bulk_liter"
+                        placeholder="Enter bulk liter">
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </ng-template>
         </div>
 
         <div *ngIf="arrivalErrorMessage" class="alert alert-danger d-flex align-items-center mb-3">
@@ -591,6 +678,7 @@
               <thead>
                 <tr>
                   <th class="text-center" style="width: 80px;">#</th>
+                  <th *ngIf="arrivalViewEntries[0]?.permit_no"><i class="bi bi-journal-text me-2"></i>Permit No</th>
                   <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
                   <th class="text-end"><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
                 </tr>
@@ -598,6 +686,7 @@
               <tbody>
                 <tr *ngFor="let row of arrivalViewEntries; let i = index">
                   <td class="text-center serial-col">{{ i + 1 }}</td>
+                  <td *ngIf="arrivalViewEntries[0]?.permit_no" class="permit-col">{{ row.permit_no || '-' }}</td>
                   <td class="tanker-col">{{ row.tanker_no }}</td>
                   <td class="text-end liter-col">{{ row.bulk_liter || 0 | number:'1.2-2' }}</td>
                 </tr>

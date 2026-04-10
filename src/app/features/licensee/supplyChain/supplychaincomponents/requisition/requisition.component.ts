@@ -34,6 +34,7 @@ interface TableData {
   allowedActionConfigs?: any[];
   quantity?: number;
   numberOfPermits?: number;
+  detailsPermitsNumber?: string;
   bulkSpiritType?: string;
   strengthTo?: string;
   liftedFrom?: string;
@@ -56,6 +57,7 @@ interface TableData {
 
 
 interface TankerArrivalEntry {
+  permit_no?: string;
   tanker_no: string;
   bulk_liter: number | null;
 }
@@ -138,6 +140,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalErrorMessage: string = '';
   arrivalTankerCount: number = 1;
   arrivalEntries: TankerArrivalEntry[] = [];
+  arrivalPermitNumbers: string[] = [];
+  arrivalAllowedBulkLiterByPermit: Record<string, number> = {};
+  selectedArrivalPermitNo: string = '';
+  arrivalPermitDraftEntries: TankerArrivalEntry[] = [];
+  arrivalSavedEntriesByPermit: Record<string, TankerArrivalEntry[]> = {};
+  private arrivalPermitRevisionByPermit: Record<string, number> = {};
+  private arrivalPermitSavedRevisionByPermit: Record<string, number> = {};
   isArrivalViewModalOpen: boolean = false;
   arrivalViewErrorMessage: string = '';
   arrivalViewTankerCount: number = 0;
@@ -312,7 +321,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             // Additional properties that might be needed
             quantity: item.quantity || item.totalQuantity || item.total_quantity,
-            numberOfPermits: item.numberOfPermits || item.number_of_permits || 1,
+            numberOfPermits:
+              item.numberOfPermits ||
+              item.number_of_permits ||
+              item.requisiton_number_of_permits ||
+              item.requisition_number_of_permits ||
+              1,
+            detailsPermitsNumber: item.detailsPermitsNumber || item.details_permits_number || '',
             bulkSpiritType: item.bulkSpiritType || item.bulk_spirit_type,
             strengthTo: item.strengthTo || item.strength_to,
             liftedFrom: item.liftedFrom || item.lifted_from,
@@ -1107,8 +1122,15 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
     this.selectedArrivalRequisition = item;
     this.arrivalErrorMessage = '';
-    this.arrivalTankerCount = 1;
-    this.arrivalEntries = [{ tanker_no: '', bulk_liter: null }];
+    this.arrivalPermitNumbers = this.resolveArrivalPermitNumbers(item);
+    this.rebuildArrivalPermitAllocation();
+    this.selectedArrivalPermitNo = this.arrivalPermitNumbers[0] || '';
+    this.arrivalSavedEntriesByPermit = {};
+    this.arrivalPermitRevisionByPermit = {};
+    this.arrivalPermitSavedRevisionByPermit = {};
+    this.arrivalPermitDraftEntries = this.buildDefaultArrivalPermitDraftEntries();
+    this.arrivalTankerCount = this.arrivalPermitNumbers.length > 0 ? 0 : 1;
+    this.arrivalEntries = this.arrivalPermitNumbers.length > 0 ? [] : [{ tanker_no: '', bulk_liter: null }];
     this.isArrivalModalOpen = true;
 
     this.enaRequisitionService.getRequisitionArrivalDetails(item.id).subscribe({
@@ -1119,17 +1141,30 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         }
 
         const entries = Array.isArray(data.tanker_details) ? data.tanker_details : [];
-        const tankerCount = Number(data.tanker_count || entries.length || 1);
+        const normalizedExisting: TankerArrivalEntry[] = entries
+          .map((row: any) => ({
+            permit_no: String(row?.permit_no ?? row?.permitNo ?? '').trim() || undefined,
+            tanker_no: String(row?.tanker_no ?? row?.tankerNo ?? '').trim(),
+            bulk_liter: (() => {
+              const n = Number(row?.bulk_liter ?? row?.bulkLiter ?? 0);
+              return Number.isFinite(n) && n > 0 ? n : null;
+            })()
+          }))
+          .filter((x: TankerArrivalEntry) => x.permit_no || x.tanker_no || (x.bulk_liter ?? 0) > 0);
 
-        this.arrivalTankerCount = tankerCount > 0 ? tankerCount : 1;
-        this.arrivalEntries = entries.length
-          ? entries.map((row: any) => ({
-              tanker_no: String(row?.tanker_no || ''),
-              bulk_liter: Number(row?.bulk_liter || 0) || null
-            }))
-          : [{ tanker_no: '', bulk_liter: null }];
-
-        this.syncArrivalEntriesLength();
+        if (this.arrivalPermitNumbers.length > 0) {
+          this.hydrateArrivalPermitsFromExisting(normalizedExisting);
+          this.selectedArrivalPermitNo = this.arrivalPermitNumbers[0] || '';
+          this.arrivalPermitDraftEntries = this.loadArrivalPermitDraftEntries(this.selectedArrivalPermitNo);
+          this.recalculateArrivalDerivedCounts();
+        } else {
+          const tankerCount = Number(data.tanker_count || normalizedExisting.length || 1);
+          this.arrivalTankerCount = tankerCount > 0 ? tankerCount : 1;
+          this.arrivalEntries = normalizedExisting.length
+            ? normalizedExisting.map((row) => ({ tanker_no: row.tanker_no, bulk_liter: row.bulk_liter }))
+            : [{ tanker_no: '', bulk_liter: null }];
+          this.syncArrivalEntriesLength();
+        }
       },
       error: (error: any) => {
         const status = Number(error?.status || 0);
@@ -1154,6 +1189,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalErrorMessage = '';
     this.arrivalTankerCount = 1;
     this.arrivalEntries = [];
+    this.arrivalPermitNumbers = [];
+    this.arrivalAllowedBulkLiterByPermit = {};
+    this.selectedArrivalPermitNo = '';
+    this.arrivalPermitDraftEntries = [];
+    this.arrivalSavedEntriesByPermit = {};
+    this.arrivalPermitRevisionByPermit = {};
+    this.arrivalPermitSavedRevisionByPermit = {};
   }
 
   openArrivalViewModal(item: TableData): void {
@@ -1196,6 +1238,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         }
 
         this.arrivalViewEntries = entries.map((row: any) => ({
+          permit_no: String(row?.permit_no ?? row?.permitNo ?? '').trim() || undefined,
           tanker_no: String(row?.tanker_no ?? row?.tankerNo ?? ''),
           bulk_liter: Number(row?.bulk_liter ?? row?.bulkLiter ?? 0) || 0
         }));
@@ -1228,6 +1271,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   onArrivalTankerCountChange(): void {
+    if (this.arrivalPermitNumbers.length > 0) {
+      // Permit-wise mode: tanker count is derived from saved tankers.
+      this.recalculateArrivalDerivedCounts();
+      return;
+    }
     if (!Number.isFinite(this.arrivalTankerCount)) {
       this.arrivalTankerCount = 1;
     }
@@ -1237,7 +1285,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   private syncArrivalEntriesLength(): void {
     while (this.arrivalEntries.length < this.arrivalTankerCount) {
-      this.arrivalEntries.push({ tanker_no: '', bulk_liter: null });
+      this.arrivalEntries.push({ tanker_no: '', bulk_liter: null, permit_no: undefined });
     }
     while (this.arrivalEntries.length > this.arrivalTankerCount) {
       this.arrivalEntries.pop();
@@ -1245,6 +1293,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   getArrivalTotalBulkLiter(): number {
+    if (this.arrivalPermitNumbers.length > 0) {
+      return Object.values(this.arrivalSavedEntriesByPermit).reduce((sum, rows) => {
+        return (
+          sum +
+          (rows || []).reduce((innerSum, row) => {
+            const liters = Number(row?.bulk_liter ?? 0);
+            return innerSum + (Number.isFinite(liters) ? liters : 0);
+          }, 0)
+        );
+      }, 0);
+    }
+
     return this.arrivalEntries.reduce((sum, row) => {
       const liters = Number(row.bulk_liter || 0);
       return sum + (Number.isFinite(liters) ? liters : 0);
@@ -1255,10 +1315,66 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return Number(this.selectedArrivalRequisition?.requestedTotalQuantity || 0);
   }
 
+  private resolveArrivalPermitNumbers(item: TableData | null): string[] {
+    const raw = String(item?.detailsPermitsNumber || '').trim();
+    const tokens = raw
+      .split(',')
+      .map((x) => String(x || '').trim())
+      .filter(Boolean);
+    if (tokens.length > 0) {
+      return tokens;
+    }
+    const count = Math.max(0, Math.floor(Number(item?.numberOfPermits || 0) || 0));
+    if (count <= 0) {
+      return [];
+    }
+    return Array.from({ length: count }, (_, i) => String(i + 1));
+  }
+
+  private rebuildArrivalPermitAllocation(): void {
+    const permits = this.arrivalPermitNumbers;
+    const total = Number(this.getArrivalAllowedBulkLiter() || 0);
+    const count = permits.length;
+    this.arrivalAllowedBulkLiterByPermit = {};
+    if (!Number.isFinite(total) || total <= 0 || count <= 0) {
+      return;
+    }
+
+    const factor = 100;
+    const base = Math.floor((total / count) * factor) / factor;
+    let running = 0;
+    for (let i = 0; i < count; i++) {
+      const permitNo = permits[i];
+      const expected =
+        i === count - 1 ? Math.round((total - running) * factor) / factor : base;
+      running += expected;
+      this.arrivalAllowedBulkLiterByPermit[permitNo] = expected;
+    }
+  }
+
+  getArrivalExpectedBulkLiterForPermit(permitNo: string | null | undefined): number | null {
+    const token = String(permitNo || '').trim();
+    if (!token) return null;
+    const expected = Number(this.arrivalAllowedBulkLiterByPermit[token]);
+    return Number.isFinite(expected) && expected > 0 ? expected : null;
+  }
+
+  isArrivalPermitTaken(permitNo: string, rowIndex: number): boolean {
+    const token = String(permitNo || '').trim();
+    if (!token) return false;
+    return this.arrivalEntries.some((row, idx) => idx !== rowIndex && String(row?.permit_no || '').trim() === token);
+  }
+
   private hasValidArrivalRows(): boolean {
+    if (this.arrivalPermitNumbers.length > 0) {
+      // Permit-wise mode validity: every permit saved and each saved permit sum matches expected.
+      return this.areAllArrivalPermitsSaved() && this.isArrivalTotalMatchingRequested();
+    }
+
     if (this.arrivalTankerCount <= 0 || this.arrivalEntries.length !== this.arrivalTankerCount) {
       return false;
     }
+
     return this.arrivalEntries.every((row) => {
       const tankerNo = String(row.tanker_no || '').trim();
       const liters = Number(row.bulk_liter || 0);
@@ -1282,6 +1398,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (!this.selectedArrivalRequisition?.id) {
       return false;
     }
+    if (this.arrivalPermitNumbers.length > 0) {
+      return this.hasValidArrivalRows();
+    }
     return this.hasValidArrivalRows() && this.isArrivalTotalMatchingRequested();
   }
 
@@ -1292,23 +1411,17 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
 
     if (this.arrivalTankerCount <= 0) {
-      this.arrivalErrorMessage = 'Tanker count must be greater than 0.';
+      this.arrivalErrorMessage = 'Count must be greater than 0.';
       return;
     }
 
-    const normalizedRows = this.arrivalEntries.map((row, index) => ({
-      tanker_no: String(row.tanker_no || '').trim(),
-      bulk_liter: Number(row.bulk_liter || 0),
-      row: index + 1
-    }));
-
-    const invalidRow = normalizedRows.find((row) => !row.tanker_no || !Number.isFinite(row.bulk_liter) || row.bulk_liter <= 0);
-    if (invalidRow) {
-      this.arrivalErrorMessage = `Please enter valid tanker number and bulk liter for tanker ${invalidRow.row}.`;
+    const normalizedRows = this.normalizeArrivalRowsForSave();
+    if (!normalizedRows.ok) {
+      this.arrivalErrorMessage = normalizedRows.message;
       return;
     }
 
-    const enteredTotalBulkLiter = normalizedRows.reduce((sum, row) => sum + row.bulk_liter, 0);
+    const enteredTotalBulkLiter = normalizedRows.rows.reduce((sum, row) => sum + row.bulk_liter, 0);
     const allowedBulkLiter = this.getArrivalAllowedBulkLiter();
     if (allowedBulkLiter > 0 && enteredTotalBulkLiter > allowedBulkLiter) {
       this.arrivalErrorMessage =
@@ -1323,7 +1436,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
     const payload = {
       tanker_count: this.arrivalTankerCount,
-      tanker_details: normalizedRows.map((row) => ({
+      tanker_details: normalizedRows.rows.map((row) => ({
+        permit_no: row.permit_no || undefined,
         tanker_no: row.tanker_no,
         bulk_liter: row.bulk_liter
       }))
@@ -1378,6 +1492,236 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.arrivalErrorMessage = apiMessage || 'Failed to save arrival details.';
       }
     });
+  }
+
+  // Permit-wise arrival helpers
+  private buildDefaultArrivalPermitDraftEntries(): TankerArrivalEntry[] {
+    return [{ tanker_no: '', bulk_liter: null }];
+  }
+
+  onArrivalPermitChange(): void {
+    if (!this.selectedArrivalPermitNo) {
+      this.arrivalPermitDraftEntries = this.buildDefaultArrivalPermitDraftEntries();
+      return;
+    }
+    this.arrivalPermitDraftEntries = this.loadArrivalPermitDraftEntries(this.selectedArrivalPermitNo);
+  }
+
+  private loadArrivalPermitDraftEntries(permitNo: string): TankerArrivalEntry[] {
+    const saved = this.arrivalSavedEntriesByPermit[String(permitNo || '').trim()];
+    const rows = Array.isArray(saved) && saved.length > 0 ? saved : this.buildDefaultArrivalPermitDraftEntries();
+    return rows.map((x) => ({
+      permit_no: String(permitNo || '').trim(),
+      tanker_no: String(x?.tanker_no || '').trim(),
+      bulk_liter: x?.bulk_liter != null ? Number(x.bulk_liter) : null
+    }));
+  }
+
+  markArrivalPermitDirty(): void {
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    if (!permitNo) return;
+    this.arrivalPermitRevisionByPermit[permitNo] = (this.arrivalPermitRevisionByPermit[permitNo] || 0) + 1;
+  }
+
+  addArrivalPermitTankerRow(): void {
+    this.arrivalPermitDraftEntries.push({ permit_no: this.selectedArrivalPermitNo, tanker_no: '', bulk_liter: null });
+    this.markArrivalPermitDirty();
+    this.recalculateArrivalDerivedCounts();
+  }
+
+  removeArrivalPermitTankerRow(index: number): void {
+    if (index < 0 || index >= this.arrivalPermitDraftEntries.length) return;
+    this.arrivalPermitDraftEntries.splice(index, 1);
+    if (this.arrivalPermitDraftEntries.length === 0) {
+      this.arrivalPermitDraftEntries = this.buildDefaultArrivalPermitDraftEntries();
+    }
+    this.markArrivalPermitDirty();
+    this.recalculateArrivalDerivedCounts();
+  }
+
+  getArrivalPermitDraftTotalBulkLiter(): number {
+    return (this.arrivalPermitDraftEntries || []).reduce((sum, row) => {
+      const liters = Number(row?.bulk_liter ?? 0);
+      return sum + (Number.isFinite(liters) ? liters : 0);
+    }, 0);
+  }
+
+  isArrivalPermitSaved(permitNo: string): boolean {
+    const token = String(permitNo || '').trim();
+    if (!token) return false;
+    const savedRows = this.arrivalSavedEntriesByPermit[token];
+    if (!Array.isArray(savedRows) || savedRows.length === 0) return false;
+    return (this.arrivalPermitSavedRevisionByPermit[token] || 0) === (this.arrivalPermitRevisionByPermit[token] || 0);
+  }
+
+  private isArrivalPermitDraftValid(): { ok: boolean; message: string } {
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    if (!permitNo) {
+      return { ok: false, message: 'Please select a permit number.' };
+    }
+
+    const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
+    if (expected == null) {
+      return { ok: false, message: 'Unable to determine expected bulk liter for selected permit.' };
+    }
+
+    const normalized = this.arrivalPermitDraftEntries.map((row, index) => ({
+      tanker_no: String(row?.tanker_no || '').trim(),
+      bulk_liter: Number(row?.bulk_liter ?? 0),
+      row: index + 1
+    }));
+
+    const invalid = normalized.find((x) => !x.tanker_no || !Number.isFinite(x.bulk_liter) || x.bulk_liter <= 0);
+    if (invalid) {
+      return { ok: false, message: `Please enter valid tanker number and bulk liter for tanker row ${invalid.row}.` };
+    }
+
+    const sum = normalized.reduce((s, x) => s + x.bulk_liter, 0);
+    if (Math.abs(sum - expected) >= 0.0001) {
+      return { ok: false, message: `Total bulk liter for permit ${permitNo} must be exactly ${expected.toFixed(2)}.` };
+    }
+
+    return { ok: true, message: '' };
+  }
+
+  canSaveSelectedPermit(): boolean {
+    if (this.isArrivalSaving) return false;
+    if (this.arrivalPermitNumbers.length === 0) return false;
+    return this.isArrivalPermitDraftValid().ok;
+  }
+
+  saveSelectedPermit(): void {
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    if (!permitNo) return;
+    const valid = this.isArrivalPermitDraftValid();
+    if (!valid.ok) {
+      this.arrivalErrorMessage = valid.message;
+      return;
+    }
+
+    this.arrivalSavedEntriesByPermit[permitNo] = this.arrivalPermitDraftEntries.map((x) => ({
+      permit_no: permitNo,
+      tanker_no: String(x?.tanker_no || '').trim(),
+      bulk_liter: x?.bulk_liter != null ? Number(x.bulk_liter) : null
+    }));
+    // Mark saved revision equal to current revision (draft considered saved).
+    this.arrivalPermitSavedRevisionByPermit[permitNo] = this.arrivalPermitRevisionByPermit[permitNo] || 0;
+    this.arrivalErrorMessage = '';
+    this.recalculateArrivalDerivedCounts();
+  }
+
+  private areAllArrivalPermitsSaved(): boolean {
+    if (this.arrivalPermitNumbers.length === 0) return false;
+    return this.arrivalPermitNumbers.every((permitNo) => this.isArrivalPermitSaved(permitNo));
+  }
+
+  private recalculateArrivalDerivedCounts(): void {
+    if (this.arrivalPermitNumbers.length === 0) return;
+    const totalTankers = Object.values(this.arrivalSavedEntriesByPermit).reduce((sum, rows) => sum + (rows?.length || 0), 0);
+    this.arrivalTankerCount = Math.max(0, totalTankers);
+  }
+
+  private hydrateArrivalPermitsFromExisting(existing: TankerArrivalEntry[]): void {
+    const permits = this.arrivalPermitNumbers;
+    const permitSet = new Set(permits);
+    const rowsWithPermit = existing.filter((x) => Boolean(String(x?.permit_no || '').trim()));
+
+    if (rowsWithPermit.length === 0 && existing.length === permits.length) {
+      // Backward compatibility: existing data saved without permit_no but one row per permit.
+      for (let i = 0; i < permits.length; i++) {
+        const permitNo = permits[i];
+        const row = existing[i];
+        if (!row) continue;
+        this.arrivalSavedEntriesByPermit[permitNo] = [
+          { permit_no: permitNo, tanker_no: String(row?.tanker_no || '').trim(), bulk_liter: row?.bulk_liter ?? null }
+        ];
+        this.arrivalPermitRevisionByPermit[permitNo] = 0;
+        this.arrivalPermitSavedRevisionByPermit[permitNo] = 0;
+      }
+      return;
+    }
+
+    const grouped: Record<string, TankerArrivalEntry[]> = {};
+    for (const row of rowsWithPermit) {
+      const permitNo = String(row.permit_no || '').trim();
+      if (!permitSet.has(permitNo)) continue;
+      if (!grouped[permitNo]) grouped[permitNo] = [];
+      grouped[permitNo].push({
+        permit_no: permitNo,
+        tanker_no: String(row?.tanker_no || '').trim(),
+        bulk_liter: row?.bulk_liter ?? null
+      });
+    }
+
+    for (const permitNo of permits) {
+      const rows = grouped[permitNo];
+      if (Array.isArray(rows) && rows.length > 0) {
+        this.arrivalSavedEntriesByPermit[permitNo] = rows;
+        this.arrivalPermitRevisionByPermit[permitNo] = 0;
+        this.arrivalPermitSavedRevisionByPermit[permitNo] = 0;
+      }
+    }
+  }
+
+  private normalizeArrivalRowsForSave():
+    | { ok: true; rows: Array<{ permit_no: string; tanker_no: string; bulk_liter: number }> }
+    | { ok: false; message: string } {
+    if (this.arrivalPermitNumbers.length > 0) {
+      if (!this.areAllArrivalPermitsSaved()) {
+        return { ok: false, message: 'Please save tanker details for all permits before submitting.' };
+      }
+      const dirtyPermits = this.arrivalPermitNumbers.filter((p) => !this.isArrivalPermitSaved(p));
+      if (dirtyPermits.length > 0) {
+        return { ok: false, message: 'Please save changes for all permits before submitting.' };
+      }
+
+      const flattened: Array<{ permit_no: string; tanker_no: string; bulk_liter: number }> = [];
+      for (const permitNo of this.arrivalPermitNumbers) {
+        const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
+        if (expected == null) {
+          return { ok: false, message: `Unable to determine expected bulk liter for permit ${permitNo}.` };
+        }
+        const rows = this.arrivalSavedEntriesByPermit[permitNo] || [];
+        if (!Array.isArray(rows) || rows.length === 0) {
+          return { ok: false, message: `Please save tanker details for permit ${permitNo}.` };
+        }
+        const sum = rows.reduce((s, r) => s + (Number(r?.bulk_liter ?? 0) || 0), 0);
+        if (Math.abs(sum - expected) >= 0.0001) {
+          return { ok: false, message: `Total bulk liter for permit ${permitNo} must be exactly ${expected.toFixed(2)}.` };
+        }
+        for (const [idx, r] of rows.entries()) {
+          const tankerNo = String(r?.tanker_no || '').trim();
+          const liters = Number(r?.bulk_liter ?? 0);
+          if (!tankerNo || !Number.isFinite(liters) || liters <= 0) {
+            return { ok: false, message: `Please enter valid tanker number and bulk liter for permit ${permitNo} row ${idx + 1}.` };
+          }
+          flattened.push({ permit_no: permitNo, tanker_no: tankerNo, bulk_liter: liters });
+        }
+      }
+      this.arrivalTankerCount = flattened.length;
+      if (this.arrivalTankerCount <= 0) {
+        return { ok: false, message: 'Please add tanker details before submitting.' };
+      }
+      return { ok: true, rows: flattened };
+    }
+
+    // Non-permit mode (legacy)
+    const normalizedRows = this.arrivalEntries.map((row, index) => ({
+      permit_no: '',
+      tanker_no: String(row.tanker_no || '').trim(),
+      bulk_liter: Number(row.bulk_liter || 0),
+      row: index + 1
+    }));
+
+    const invalidRow = normalizedRows.find((row) => !row.tanker_no || !Number.isFinite(row.bulk_liter) || row.bulk_liter <= 0);
+    if (invalidRow) {
+      return { ok: false, message: `Please enter valid tanker number and bulk liter for row ${invalidRow.row}.` };
+    }
+
+    return {
+      ok: true,
+      rows: normalizedRows.map((x) => ({ permit_no: x.permit_no, tanker_no: x.tanker_no, bulk_liter: x.bulk_liter }))
+    };
   }
 
   clearFilters(): void {
