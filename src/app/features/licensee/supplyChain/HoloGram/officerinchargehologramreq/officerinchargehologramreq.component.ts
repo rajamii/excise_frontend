@@ -1,8 +1,9 @@
 import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
-import { forkJoin, Observable } from 'rxjs';
+import { forkJoin, Observable, firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramDataService, HologramRequest as ApiHologramRequest } from '../../services/hologram-data.service';
+import Swal from 'sweetalert2';
 
 interface HologramRequest {
   id: string;
@@ -309,7 +310,19 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     }
 
     const actions = this.toUpperActions(request.allowedActions || request.allowed_actions || []);
-    return actions.includes('REJECT');
+
+    // Prefer backend-driven actions when present, but be resilient:
+    // some payloads only send ISSUE/APPROVE while still allowing reject in workflow.
+    if (actions.length === 0) {
+      return true;
+    }
+
+    if (actions.includes('REJECT') || actions.includes('REJECT_REQUEST') || actions.includes('DECLINE')) {
+      return true;
+    }
+
+    // If OIC can approve/issue at this stage, allow showing reject as well.
+    return actions.includes('ISSUE') || actions.includes('APPROVE');
   }
 
   private normalizeHologramType(type: string): 'LOCAL' | 'EXPORT' | 'DEFENCE' {
@@ -534,15 +547,52 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   rejectRequest(request: HologramRequest) {
-    this.selectedRequest = request;
-    this.rejectionReason = '';
-    // In real app, open rejection modal
-    const reason = prompt('Enter rejection reason (required):');
-
-    if (reason && reason.trim()) {
-      this.rejectionReason = reason;
-      this.confirmRejection();
+    if (!request?.originalId) {
+      Swal.fire('Error', 'Invalid request data.', 'error');
+      return;
     }
+
+    void Swal.fire({
+      title: 'Reject Hologram Request',
+      input: 'textarea',
+      inputLabel: 'Reason (required)',
+      inputPlaceholder: 'Type the rejection reason...',
+      inputAttributes: {
+        'aria-label': 'Rejection reason'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Reject',
+      confirmButtonColor: '#dc3545',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      preConfirm: async (value) => {
+        const reason = String(value || '').trim();
+        if (!reason) {
+          Swal.showValidationMessage('Rejection reason is required.');
+          return;
+        }
+
+        try {
+          await firstValueFrom(
+            this.hologramService.performAction('request', request.originalId!, 'reject', reason)
+          );
+        } catch (err: any) {
+          const msg =
+            err?.error?.error ||
+            err?.error?.detail ||
+            err?.message ||
+            'Failed to reject request.';
+          Swal.showValidationMessage(String(msg));
+          return;
+        }
+
+        return reason;
+      }
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      void Swal.fire('Rejected', 'Request rejected successfully.', 'success');
+      this.loadHologramRequests();
+    });
   }
 
   confirmApproval() {

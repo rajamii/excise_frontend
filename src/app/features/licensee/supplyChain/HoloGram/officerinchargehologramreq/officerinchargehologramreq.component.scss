@@ -394,6 +394,9 @@
   max-height: 80vh;
   display: flex;
   align-items: center;
+  // Prevent the sidebar container from blocking clicks on the table/actions.
+  // Only the visible toggle/panel should be clickable.
+  pointer-events: none;
 }
 
 .hologram-available-sidebar-content {
@@ -406,6 +409,7 @@
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   border: 2px solid rgba(59, 130, 246, 0.12);
+  pointer-events: auto;
 
   &.expanded {
     transform: translateX(0);
@@ -535,6 +539,7 @@
   border: none;
   background: transparent;
   padding: 0;
+  pointer-events: auto;
 
   .toggle-content {
     background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 60%, #0369a1 100%);

@@ -112,7 +112,18 @@ export class SidebarPendingBadgeService {
       case 'oic-hologram-requests':
         return this.hologramService.getRequests().pipe(
           map((items) => this.toArray(items)),
-          map((items) => items.filter((x) => !this.isHologramRequestFinal(x)).length)
+          map((items) =>
+            items.filter((x) => {
+              // Match the UI "Pending Review" bucket, not "Under Process".
+              const category = this.mapHologramRequestToCategory(x);
+              if (category !== 'PENDING') return false;
+
+              // If usage date is in the past and it still looks pending, treat as rejected-by-timeout.
+              if (this.isUsageDatePast(x)) return false;
+
+              return true;
+            }).length
+          )
         );
 
       // OIC hologram procurement register (badge should show items waiting for carton assignment / arrival update)
@@ -215,5 +226,38 @@ export class SidebarPendingBadgeService {
     if (entryActions.includes('REJECT') && isFinal) return true;
 
     return false;
+  }
+
+  private isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usage_date || request?.usageDate || '').trim();
+    if (!usageDate) return false;
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
+  }
+
+  private mapHologramRequestToCategory(request: any): 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED' {
+    if (!request || typeof request !== 'object') {
+      const stageText = String(request || '').toUpperCase();
+      if (stageText.includes('REJECT')) return 'REJECTED';
+      if (stageText.includes('COMPLETE') || stageText.includes('APPROV')) return 'APPROVED';
+      return 'PENDING';
+    }
+
+    const isInitial = Boolean(request?.currentStageIsInitial ?? request?.current_stage_is_initial ?? false);
+    const isFinal = Boolean(request?.currentStageIsFinal ?? request?.current_stage_is_final ?? false);
+    const entryActions = this.toUpperActions(request?.currentStageEntryActions || request?.current_stage_entry_actions || []);
+    const allowedActions = this.extractAllowedActions(request);
+
+    if (isFinal && entryActions.includes('REJECT')) return 'REJECTED';
+    if (isFinal) return 'APPROVED';
+
+    // Pending-review bucket: either initial stage OR backend says OIC can take action.
+    if (allowedActions.includes('ISSUE') || allowedActions.includes('APPROVE') || allowedActions.includes('REJECT')) return 'PENDING';
+    if (isInitial) return 'PENDING';
+
+    return 'UNDER_PROCESS';
   }
 }

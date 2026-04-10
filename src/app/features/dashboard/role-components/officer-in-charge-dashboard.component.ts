@@ -310,10 +310,11 @@ export class OfficerInChargeDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
-    const hologramPending = (this.hologramRequestCounts.PENDING || 0) + (this.hologramRequestCounts.UNDER_PROCESS || 0);
+    const hologramPending = (this.hologramRequestCounts.PENDING || 0);
+    const transitPending = this.countActionable(this.allApplications, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL']);
     return {
       applied: 0,
-      pending: (this.getStatusCount('ACTIVE') + this.getStatusCount('IN_TRANSIT')) +
+      pending: transitPending +
         hologramPending +
         (this.hologramProcurementPendingCount || 0) +
         (this.blDetailsPendingCount || 0),
@@ -410,6 +411,23 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     return list.map((x) => String(x || '').toUpperCase()).filter(Boolean);
   }
 
+  private countActionable(items: any[], actionableActions: string[]): number {
+    const actionable = new Set(this.toUpperActions(actionableActions));
+    return (items || []).filter((item) => {
+      const actions = this.toUpperActions(item?.allowedActions || item?.allowed_actions || []);
+      return actions.some((action) => actionable.has(action));
+    }).length;
+  }
+
+  private isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usage_date || request?.usageDate || '').trim();
+    if (!usageDate) return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
+  }
+
   private categorizeHologramRequest(request: any): HologramRequestCategory {
     const isInitial = Boolean(request?.currentStageIsInitial ?? request?.current_stage_is_initial ?? false);
     const isFinal = Boolean(request?.currentStageIsFinal ?? request?.current_stage_is_final ?? false);
@@ -418,9 +436,14 @@ export class OfficerInChargeDashboardComponent implements OnInit {
 
     if (isFinal && entryActions.includes('REJECT')) return 'REJECTED';
     if (isFinal) return 'APPROVED';
-    if (isInitial) return 'PENDING';
+    if (isInitial) {
+      // If usage date already passed and still in pending-review stage, treat as rejected-by-timeout.
+      if (this.isUsageDatePast(request)) return 'REJECTED';
+      return 'PENDING';
+    }
 
     if (allowedActions.includes('ISSUE') || allowedActions.includes('APPROVE') || allowedActions.includes('REJECT')) {
+      if (this.isUsageDatePast(request)) return 'REJECTED';
       return 'PENDING';
     }
 
