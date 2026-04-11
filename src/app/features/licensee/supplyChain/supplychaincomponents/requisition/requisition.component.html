@@ -250,7 +250,7 @@
                View BL Inventory
               </button>
               <span
-                *ngIf="isArrivalRejected(item)"
+                *ngIf="shouldShowArrivalRejectedBadge(item)"
                 class="badge bg-danger text-white mt-2"
                 style="display: inline-block; width: 100%; padding: 0.5rem 0.6rem; border-radius: 10px; text-align: center; font-weight: 700;">
                 BL Entry Rejected — re-enter tanker details

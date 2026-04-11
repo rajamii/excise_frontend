@@ -899,6 +899,24 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return String(item?.arrivalApprovalStatus || '').toUpperCase() === 'REJECTED';
   }
 
+  shouldShowArrivalRejectedBadge(item: TableData): boolean {
+    if (!this.isArrivalRejected(item)) {
+      return false;
+    }
+
+    const totalPermits = Number(item?.arrivalTotalPermitsCount ?? 0) || 0;
+    const remaining = Number(item?.arrivalRemainingPermitsCount ?? 0) || 0;
+    const rejectedPermits = Number(item?.arrivalRejectedPermitsCount ?? 0) || 0;
+
+    // Only show this banner when the licensee actually needs to re-enter data.
+    // In permit-wise mode that means there are rejected/remaining permits; in legacy mode we rely on status alone.
+    if (totalPermits > 0 && remaining <= 0 && rejectedPermits <= 0) {
+      return false;
+    }
+
+    return this.canUpdateArrival(item);
+  }
+
   canViewArrivalSummary(): boolean {
     return !this.isCommissioner() && !this.isPermitSection();
   }
