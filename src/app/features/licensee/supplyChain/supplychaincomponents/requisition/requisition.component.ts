@@ -170,6 +170,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalViewEditedByOic: boolean = false;
   arrivalViewEditedAt: string = '';
   arrivalViewEditedBy: string = '';
+  arrivalViewPermitStatusByPermit: Record<string, string> = {};
+  arrivalViewCancelledPermits: string[] = [];
+  arrivalViewCancelRequestedPermits: string[] = [];
   isArrivalSummaryModalOpen: boolean = false;
   isArrivalSummaryLoading: boolean = false;
   arrivalSummaryErrorMessage: string = '';
@@ -1279,6 +1282,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewEditedByOic = false;
     this.arrivalViewEditedAt = '';
     this.arrivalViewEditedBy = '';
+    this.arrivalViewPermitStatusByPermit = {};
+    this.arrivalViewCancelledPermits = [];
+    this.arrivalViewCancelRequestedPermits = [];
     this.isArrivalViewModalOpen = true;
 
     this.enaRequisitionService.getRequisitionArrivalDetails(item.id, 'ALL').subscribe({
@@ -1289,6 +1295,47 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           this.arrivalViewErrorMessage = 'No arrival details found for this requisition.';
           return;
         }
+
+        // Use requisition permits list so we can show cancelled permits even without tanker rows.
+        this.arrivalViewPermitNumbers = this.resolveArrivalPermitNumbers(item);
+        this.arrivalViewPermitNumbers.sort((a, b) => {
+          const an = Number(a);
+          const bn = Number(b);
+          const aNum = Number.isFinite(an) && String(an) === a;
+          const bNum = Number.isFinite(bn) && String(bn) === b;
+          if (aNum && bNum) return an - bn;
+          return a.localeCompare(b);
+        });
+
+        const statuses = data?.permit_statuses ?? data?.permitStatuses ?? {};
+        if (statuses && typeof statuses === 'object') {
+          Object.keys(statuses).forEach((permitNo) => {
+            const token = String(permitNo || '').trim();
+            if (!token) return;
+            this.arrivalViewPermitStatusByPermit[token] = String((statuses as any)[permitNo] || '').toUpperCase();
+          });
+        }
+
+        if ((!this.arrivalViewPermitNumbers || this.arrivalViewPermitNumbers.length === 0) && statuses && typeof statuses === 'object') {
+          this.arrivalViewPermitNumbers = Object.keys(statuses)
+            .map((p) => String(p || '').trim())
+            .filter(Boolean);
+          this.arrivalViewPermitNumbers.sort((a, b) => {
+            const an = Number(a);
+            const bn = Number(b);
+            const aNum = Number.isFinite(an) && String(an) === a;
+            const bNum = Number.isFinite(bn) && String(bn) === b;
+            if (aNum && bNum) return an - bn;
+            return a.localeCompare(b);
+          });
+        }
+
+        this.arrivalViewCancelledPermits = (this.arrivalViewPermitNumbers || []).filter(
+          (p) => this.getArrivalViewPermitServerStatus(p) === 'CANCELLED'
+        );
+        this.arrivalViewCancelRequestedPermits = (this.arrivalViewPermitNumbers || []).filter(
+          (p) => this.getArrivalViewPermitServerStatus(p) === 'CANCEL_REQUESTED'
+        );
 
         const entriesRaw = data?.tanker_details ?? data?.tankerDetails ?? [];
         let entries: any[] = [];
@@ -1322,18 +1369,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.arrivalViewEditedAt = String(data?.edited_at ?? data?.editedAt ?? '');
         this.arrivalViewEditedBy = String(data?.edited_by ?? data?.editedBy ?? '');
 
-        this.arrivalViewPermitNumbers = Array.from(
-          new Set(this.arrivalViewEntries.map((x: any) => String(x?.permit_no || '').trim()).filter(Boolean))
-        );
-        this.arrivalViewPermitNumbers.sort((a, b) => {
-          const an = Number(a);
-          const bn = Number(b);
-          const aNum = Number.isFinite(an) && String(an) === a;
-          const bNum = Number.isFinite(bn) && String(bn) === b;
-          if (aNum && bNum) return an - bn;
-          return a.localeCompare(b);
-        });
-        this.selectedArrivalViewPermitNo = this.arrivalViewPermitNumbers[0] || '';
+        // Default to "All permits".
+        this.selectedArrivalViewPermitNo = '';
         this.onArrivalViewPermitChange();
       },
       error: () => {
@@ -1356,6 +1393,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewEditedByOic = false;
     this.arrivalViewEditedAt = '';
     this.arrivalViewEditedBy = '';
+    this.arrivalViewPermitStatusByPermit = {};
+    this.arrivalViewCancelledPermits = [];
+    this.arrivalViewCancelRequestedPermits = [];
     this.selectedArrivalRequisition = null;
   }
 
@@ -1368,6 +1408,37 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalViewVisibleEntries = (this.arrivalViewEntries || []).filter(
       (row: any) => String(row?.permit_no || '').trim() === token
     );
+  }
+
+  getArrivalViewPermitServerStatus(permitNo: string): string {
+    const token = String(permitNo || '').trim();
+    return String(this.arrivalViewPermitStatusByPermit[token] || '').toUpperCase();
+  }
+
+  getArrivalViewPermitLabelSuffix(permitNo: string): string {
+    const status = this.getArrivalViewPermitServerStatus(permitNo);
+    if (status === 'APPROVED') return ' (approved)';
+    if (status === 'PENDING') return ' (submitted)';
+    if (status === 'CANCEL_REQUESTED') return ' (cancelled - pending)';
+    if (status === 'CANCELLED') return ' (cancelled)';
+    if (status === 'REJECTED') return ' (rejected)';
+    return '';
+  }
+
+  isArrivalViewSelectedPermitCancelled(): boolean {
+    const token = String(this.selectedArrivalViewPermitNo || '').trim();
+    if (!token) return false;
+    const status = this.getArrivalViewPermitServerStatus(token);
+    return status === 'CANCELLED' || status === 'CANCEL_REQUESTED';
+  }
+
+  getArrivalViewSelectedPermitCancelMessage(): string {
+    const token = String(this.selectedArrivalViewPermitNo || '').trim();
+    if (!token) return '';
+    const status = this.getArrivalViewPermitServerStatus(token);
+    if (status === 'CANCELLED') return `Permit ${token} has been cancelled.`;
+    if (status === 'CANCEL_REQUESTED') return `Permit ${token} cancellation is submitted and pending approval.`;
+    return '';
   }
 
   onArrivalTankerCountChange(): void {
@@ -1669,7 +1740,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   isArrivalPermitLocked(permitNo: string): boolean {
     const status = this.getArrivalPermitServerStatus(permitNo);
-    return status === 'PENDING' || status === 'APPROVED' || status === 'CANCELLED';
+    return status === 'PENDING' || status === 'APPROVED' || status === 'CANCELLED' || status === 'CANCEL_REQUESTED';
   }
 
   markArrivalPermitDirty(): void {

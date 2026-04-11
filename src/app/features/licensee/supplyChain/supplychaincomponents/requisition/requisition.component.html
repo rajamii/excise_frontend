@@ -439,12 +439,14 @@
                         ? ' (approved)'
                         : (getArrivalPermitServerStatus(permitNo) === 'PENDING'
                             ? ' (submitted)'
+                            : (getArrivalPermitServerStatus(permitNo) === 'CANCEL_REQUESTED'
+                                ? ' (cancelled - pending)'
                             : (getArrivalPermitServerStatus(permitNo) === 'CANCELLED'
                                 ? ' (cancelled)'
                                 : (getArrivalPermitServerStatus(permitNo) === 'REJECTED'
                                     ? ' (rejected)'
-                                    : (isArrivalPermitSaved(permitNo) ? ' (saved)' : ''))))
-                    }}
+                                    : (isArrivalPermitSaved(permitNo) ? ' (saved)' : '')))))
+                     }}
                   </option>
                 </select>
                 <div class="text-muted small mt-1" *ngIf="selectedArrivalPermitNo">
@@ -457,10 +459,12 @@
                     {{
                       getArrivalPermitServerStatus(selectedArrivalPermitNo) === 'APPROVED'
                         ? 'Approved'
+                        : (getArrivalPermitServerStatus(selectedArrivalPermitNo) === 'CANCEL_REQUESTED'
+                            ? 'Cancelled (Pending)'
                         : (getArrivalPermitServerStatus(selectedArrivalPermitNo) === 'CANCELLED'
                             ? 'Cancelled'
-                            : 'Submitted to OIC (Pending)')
-                    }}
+                            : 'Submitted to OIC (Pending)'))
+                     }}
                   </strong>
                 </div>
               </div>
@@ -710,7 +714,7 @@
           </div>
         </div>
 
-        <div class="tanker-details-section" *ngIf="arrivalViewEntries.length > 0">
+        <div class="tanker-details-section" *ngIf="arrivalViewEntries.length > 0 || arrivalViewPermitNumbers.length > 0">
           <div class="section-header">
             <i class="bi bi-list-ul"></i>
             <h6 class="section-title">Tanker Details</h6>
@@ -723,8 +727,20 @@
                 [(ngModel)]="selectedArrivalViewPermitNo"
                 (change)="onArrivalViewPermitChange()">
                 <option value="">All permits</option>
-                <option *ngFor="let permitNo of arrivalViewPermitNumbers" [ngValue]="permitNo">{{ permitNo }}</option>
+                <option *ngFor="let permitNo of arrivalViewPermitNumbers" [ngValue]="permitNo">
+                  {{ permitNo }}{{ getArrivalViewPermitLabelSuffix(permitNo) }}
+                </option>
               </select>
+            </div>
+            <div class="col-12" *ngIf="arrivalViewCancelledPermits.length > 0 || arrivalViewCancelRequestedPermits.length > 0">
+              <div class="text-muted small">
+                <span *ngIf="arrivalViewCancelledPermits.length > 0">
+                  Cancelled permits: <strong>{{ arrivalViewCancelledPermits.join(', ') }}</strong>
+                </span>
+                <span *ngIf="arrivalViewCancelRequestedPermits.length > 0" class="ms-3">
+                  Cancelled (pending): <strong>{{ arrivalViewCancelRequestedPermits.join(', ') }}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -739,6 +755,21 @@
                 </tr>
               </thead>
               <tbody>
+                <tr *ngIf="!selectedArrivalViewPermitNo && arrivalViewEntries.length === 0">
+                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 4 : 3" class="text-center text-muted py-3">
+                    No tanker details submitted yet.
+                  </td>
+                </tr>
+                <tr *ngIf="selectedArrivalViewPermitNo && arrivalViewVisibleEntries.length === 0 && isArrivalViewSelectedPermitCancelled()">
+                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 4 : 3" class="text-center text-muted py-3">
+                    {{ getArrivalViewSelectedPermitCancelMessage() }}
+                  </td>
+                </tr>
+                <tr *ngIf="selectedArrivalViewPermitNo && arrivalViewVisibleEntries.length === 0 && !isArrivalViewSelectedPermitCancelled()">
+                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 4 : 3" class="text-center text-muted py-3">
+                    No tanker details found for this permit.
+                  </td>
+                </tr>
                 <tr *ngFor="let row of (selectedArrivalViewPermitNo ? arrivalViewVisibleEntries : arrivalViewEntries); let i = index">
                   <td class="text-center serial-col">{{ i + 1 }}</td>
                   <td *ngIf="arrivalViewPermitNumbers.length > 0" class="permit-col">{{ row.permit_no || '-' }}</td>
