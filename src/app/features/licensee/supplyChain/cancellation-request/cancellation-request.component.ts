@@ -40,6 +40,7 @@ interface WalletSummaryRowLike {
   styleUrls: ['./cancellation-request.component.scss'],
 })
 export class CancellationRequestComponent implements OnInit, OnChanges {
+  readonly cancellationChargePerPermit = 1000;
   @Input() referenceNo: string = '';
   @Output() close = new EventEmitter<void>();
 
@@ -244,6 +245,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   private generatePermitsFromRequisition(
     permitStateMap: Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>
   ) {
+    const perPermitRefundAmount = this.getPerPermitRefundAmount();
     const detailsNumbersRaw =
       this.requisitionData?.details_permits_number ||
       this.requisitionData?.detailsPermitsNumber ||
@@ -257,7 +259,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     if (explicitPermitNumbers.length > 0) {
       this.permits = explicitPermitNumbers.map((num: string) => ({
         number: num,
-        amount: 1000,
+        amount: perPermitRefundAmount,
         isCancelled: permitStateMap.get(num)?.isCancelled || false,
         isLocked: permitStateMap.get(num)?.isLocked || false,
         lockReason: permitStateMap.get(num)?.lockReason || '',
@@ -271,12 +273,13 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       this.requisitionData?.requisiton_number_of_permits ||
       0;
 
-    this.generatePermits(totalCount, permitStateMap);
+    this.generatePermits(totalCount, permitStateMap, perPermitRefundAmount);
   }
 
   generatePermits(
     totalCount: any,
-    permitStateMap: Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>
+    permitStateMap: Map<string, { isCancelled: boolean; isLocked: boolean; lockReason: string }>,
+    perPermitRefundAmount: number
   ) {
     this.permits = [];
     const count = Number(totalCount);
@@ -288,7 +291,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       const numStr = i.toString();
       this.permits.push({
         number: numStr,
-        amount: 1000,
+        amount: perPermitRefundAmount,
         isCancelled: permitStateMap.get(numStr)?.isCancelled || false,
         isLocked: permitStateMap.get(numStr)?.isLocked || false,
         lockReason: permitStateMap.get(numStr)?.lockReason || '',
@@ -322,8 +325,8 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   getTotalBalance(): number {
-    if (this.requisitionData?.grainEnaNumber) {
-      return Number(this.requisitionData.grainEnaNumber) * this.newlySelectedPermits.length;
+    if (this.getPerPermitQuantity() > 0) {
+      return this.getPerPermitQuantity() * this.newlySelectedPermits.length;
     }
     return 0;
   }
@@ -355,9 +358,78 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     if (this.isSubmittingCancellation) {
       return;
     }
-    const cancellationCharges = this.newlySelectedPermits.length * 1000;
-    this.successMessage = `Refund of Rs ${cancellationCharges.toLocaleString()} will be processed after approval by the Commissioner.`;
+    const refundAmount = this.getPermitRefundAmount();
+    const feeAmount = this.getCancellationCharges();
+    this.successMessage =
+      `On proceed, permit amount will be credited back (${this.formatCurrency(refundAmount)}) ` +
+      `and cancellation charges will be deducted (${this.formatCurrency(feeAmount)}).`;
     this.showDeclarationModal = true;
+  }
+
+  getPermitDropdownLabel(): string {
+    if (this.isPermitSelectionLocked()) {
+      return 'No permits available for cancellation';
+    }
+
+    const selected = (this.selectedPermits || [])
+      .map((num) => {
+        const permit = (this.permits || []).find((p) => p.number === num);
+        if (!permit) return null;
+        return {
+          number: permit.number,
+          amount: this.toNumber(permit.amount),
+          isCancelled: !!permit.isCancelled,
+        };
+      })
+      .filter(Boolean) as Array<{ number: string; amount: number; isCancelled: boolean }>;
+
+    if (!selected.length) return 'Select Permits';
+
+    const perPermitQty = this.getPerPermitQuantityLabel();
+    const visible = selected
+      .slice(0, 2)
+      .map(
+        (p) =>
+          `${p.number} (${this.formatCurrency(p.amount)} / permit${perPermitQty ? `, ${perPermitQty}` : ''})${p.isCancelled ? ' (Cancelled)' : ''}`
+      );
+    const remaining = selected.length - visible.length;
+    return `Selected: ${visible.join(', ')}${remaining > 0 ? ` +${remaining} more` : ''}`;
+  }
+
+  getPerPermitQuantityLabel(): string {
+    const value = this.getPerPermitQuantity();
+    if (!Number.isFinite(value) || value <= 0) return '';
+    return `${value.toFixed(2)} BL/permit`;
+  }
+
+  getPerPermitQuantity(): number {
+    const raw =
+      this.requisitionData?.grainEnaNumber ??
+      this.requisitionData?.grain_ena_number ??
+      this.requisitionData?.perPermitQty ??
+      this.requisitionData?.per_permit_qty ??
+      null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  getPerPermitRefundAmount(): number {
+    const totalPayment = this.toNumber(
+      this.requisitionData?.payment_amount ??
+      this.requisitionData?.paymentAmount ??
+      this.requisitionData?.amount ??
+      this.requisitionData?.total_amount ??
+      this.requisitionData?.totalAmount
+    );
+    const permitCount = this.toNumber(
+      this.requisitionData?.requisiton_number_of_permits ??
+      this.requisitionData?.requisitonNumberOfPermits
+    );
+
+    if (totalPayment > 0 && permitCount > 0) {
+      return Number((totalPayment / permitCount).toFixed(2));
+    }
+    return 0;
   }
 
   openWalletConfirmation() {
@@ -434,9 +506,16 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
     this.supplyChainService.submitCancellation(payload).subscribe({
       next: (response: any) => {
-        const deductedAmount = this.toNumber(response?.wallet_deduction?.amount ?? this.getCancellationCharges());
-        const balanceAfter = this.toNumber(response?.wallet_deduction?.balance_after ?? this.getBalanceAfterDeduction());
-        const transactionId = String(response?.wallet_deduction?.transaction_id || '').trim();
+        const effects = response?.wallet_effects || null;
+        const fee = effects?.fee || response?.wallet_deduction || null;
+        const refund = effects?.refund || response?.wallet_refund || null;
+
+        const deductedAmount = this.toNumber(fee?.amount ?? this.getCancellationCharges());
+        const refundedAmount = this.toNumber(refund?.amount ?? this.getPermitRefundAmount());
+        const balanceAfter = this.toNumber(effects?.balance_after ?? fee?.balance_after ?? this.getBalanceAfterProceed());
+
+        const feeTxnId = String(fee?.transaction_id || '').trim();
+        const refundTxnId = String(refund?.transaction_id || '').trim();
 
         this.availableWalletBalance = balanceAfter;
         this.showWalletConfirmationModal = false;
@@ -444,9 +523,11 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         this.showSuccessModal = true;
         this.successMessage =
           `${response.message || 'Cancellation request submitted successfully.'}<br>` +
-          `Wallet deducted: <strong>${this.formatCurrency(deductedAmount)}</strong><br>` +
-          `Balance after deduction: <strong>${this.formatCurrency(balanceAfter)}</strong>` +
-          (transactionId ? `<br>Wallet transaction ID: <strong>${transactionId}</strong>` : '');
+          `Permit amount credited back: <strong>${this.formatCurrency(refundedAmount)}</strong><br>` +
+          `Cancellation charge deducted: <strong>${this.formatCurrency(deductedAmount)}</strong><br>` +
+          `Balance after proceed: <strong>${this.formatCurrency(balanceAfter)}</strong>` +
+          (refundTxnId ? `<br>Refund txn ID: <strong>${refundTxnId}</strong>` : '') +
+          (feeTxnId ? `<br>Fee txn ID: <strong>${feeTxnId}</strong>` : '');
 
         this.loadData();
         this.newlySelectedPermits = [];
@@ -457,7 +538,9 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         if (cancellationId) {
           this.supplyChainService.syncCancellationWalletDebit(cancellationId).subscribe({
             next: (syncRes: any) => {
-              const syncBalanceAfter = this.toNumber(syncRes?.wallet_deduction?.balance_after);
+              const syncEffects = syncRes?.wallet_effects || null;
+              const syncFee = syncEffects?.fee || syncRes?.wallet_deduction || null;
+              const syncBalanceAfter = this.toNumber(syncEffects?.balance_after ?? syncFee?.balance_after);
               if (Number.isFinite(syncBalanceAfter) && syncBalanceAfter > 0) {
                 this.availableWalletBalance = syncBalanceAfter;
               }
@@ -500,15 +583,25 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   getCancellationCharges(): number {
-    return this.newlySelectedPermits.length * 1000;
+    return this.newlySelectedPermits.length * this.cancellationChargePerPermit;
   }
 
-  getBalanceAfterDeduction(): number {
-    return this.availableWalletBalance - this.getCancellationCharges();
+  getPermitRefundAmount(): number {
+    const selectedPermitNos = new Set(this.newlySelectedPermits);
+    return Number(
+      this.permits
+        .filter((permit) => selectedPermitNos.has(permit.number))
+        .reduce((sum, permit) => sum + this.toNumber(permit.amount), 0)
+        .toFixed(2)
+    );
+  }
+
+  getBalanceAfterProceed(): number {
+    return this.availableWalletBalance + this.getPermitRefundAmount() - this.getCancellationCharges();
   }
 
   hasSufficientWalletBalance(): boolean {
-    return this.getBalanceAfterDeduction() >= 0;
+    return this.getBalanceAfterProceed() >= 0;
   }
 
   canProceedWithWalletConfirmation(): boolean {

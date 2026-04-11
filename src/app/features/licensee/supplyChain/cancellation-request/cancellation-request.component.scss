@@ -95,6 +95,10 @@
   margin-bottom: 1rem;
 }
 
+.wallet-balance-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .wallet-summary-tile,
 .wallet-balance-card {
   border-radius: 18px;
@@ -124,6 +128,11 @@
 .wallet-balance-card.current {
   background: #eef5ff;
   border-color: #cfe0ff;
+}
+
+.wallet-balance-card.refund {
+  background: #effcf6;
+  border-color: #bce8cf;
 }
 
 .wallet-balance-card.deduct {
