@@ -266,7 +266,7 @@ interface BlDetailRow {
             <div class="details-inline-error" *ngIf="detailsSaveError">
               {{ detailsSaveError }}
             </div>
-            <div class="details-inline-error" *ngIf="details.approvalStatus === 'PENDING' && !canApproveDetails(details)">
+            <div class="details-inline-error" *ngIf="details.approvalStatus === 'PENDING' && !isPermitWise(details) && !canApproveDetails(details)">
               Total bulk liter must match requisition total ({{ details.requestedTotalQuantity | number:'1.2-2' }}) before approval.
             </div>
 
@@ -2304,6 +2304,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
 
     const payload = {
       tanker_count: Math.max(1, (draft.tankerDetails || []).length),
+      detail_id: details.id,
       tanker_details: (draft.tankerDetails || []).map((row) => ({
         permit_no: String((row as any)?.permit_no || '').trim() || undefined,
         tanker_no: String(row?.tanker_no || '').trim(),
@@ -2513,6 +2514,14 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       return true;
     }
 
+    if (this.isPermitWise(details)) {
+      const total = this.detailsEditMode ? Number(this.getDraftTotalBulkLiter() || 0) : Number(details?.totalBulkLiter ?? 0);
+      if (!Number.isFinite(total) || total <= 0) {
+        return false;
+      }
+      return total <= requested + 0.01;
+    }
+
     const total = this.detailsEditMode ? Number(this.getDraftTotalBulkLiter() || 0) : Number(details?.totalBulkLiter ?? 0);
     if (!Number.isFinite(total) || total <= 0) {
       return false;
@@ -2525,6 +2534,14 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     const requested = Number(row?.requestedTotalQuantity ?? 0);
     if (!Number.isFinite(requested) || requested <= 0) {
       return true;
+    }
+
+    if (this.isPermitWise(row)) {
+      const total = Number(row?.totalBulkLiter ?? 0);
+      if (!Number.isFinite(total) || total <= 0) {
+        return false;
+      }
+      return total <= requested + 0.01;
     }
 
     const total = Number(row?.totalBulkLiter ?? 0);
