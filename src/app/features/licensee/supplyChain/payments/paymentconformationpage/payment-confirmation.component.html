@@ -1,7 +1,27 @@
 <div class="container-fluid p-0">
   <!-- Wallet Cards Section -->
   <div class="container-fluid py-4">
+    <div class="d-flex justify-content-end mb-3">
+      <div class="btn-group wallet-view-toggle" role="group" aria-label="Wallet view">
+        <button
+          type="button"
+          class="btn"
+          [ngClass]="walletViewMode === 'wallets' ? 'btn-primary' : 'btn-outline-primary'"
+          (click)="setWalletViewMode('wallets')">
+          Wallets
+        </button>
+        <button
+          type="button"
+          class="btn"
+          [ngClass]="walletViewMode === 'others' ? 'btn-primary' : 'btn-outline-primary'"
+          (click)="setWalletViewMode('others')">
+          Others
+        </button>
+      </div>
+    </div>
+
     <div class="wallet-cards-grid">
+      @if (walletViewMode === 'wallets') {
       <!-- Excise Duty Card -->
       <div class="wallet-summary-card excise-card history-hover" (click)="openWalletHistory('excise')">
         <div class="wallet-summary-header">
@@ -63,6 +83,47 @@
           </button>
         </div>
       </div>
+      } @else {
+      <!-- Security Deposit Card -->
+      <div class="wallet-summary-card security-deposit-card history-hover" (click)="openWalletHistory('security_deposit')">
+        <div class="wallet-summary-header">
+          <div class="wallet-summary-title-wrap">
+            <span class="wallet-summary-icon text-success"><i class="bi bi-shield-lock"></i></span>
+            <div class="wallet-summary-title">Security Deposit Wallet</div>
+          </div>
+          <span class="wallet-summary-tag">Deposit</span>
+        </div>
+        <div class="wallet-summary-balance text-success">
+          <span class="currency">&#8377;</span>{{ securityDepositBalance | number:'1.2-2' }}
+        </div>
+        <div class="wallet-summary-meta">Used for manufacturing license security deposit</div>
+        <div class="wallet-summary-actions">
+          <button class="btn btn-primary btn-sm" (click)="addMoney('security_deposit'); $event.stopPropagation()">
+            <i class="bi bi-plus-circle me-1"></i>Add Money
+          </button>
+        </div>
+      </div>
+
+      <!-- License Fee Card -->
+      <div class="wallet-summary-card license-fee-card history-hover" (click)="openWalletHistory('license_fee')">
+        <div class="wallet-summary-header">
+          <div class="wallet-summary-title-wrap">
+            <span class="wallet-summary-icon text-secondary"><i class="bi bi-file-earmark-text"></i></span>
+            <div class="wallet-summary-title">License Fee Wallet</div>
+          </div>
+          <span class="wallet-summary-tag">Fee</span>
+        </div>
+        <div class="wallet-summary-balance text-secondary">
+          <span class="currency">&#8377;</span>{{ licenseFeeBalance | number:'1.2-2' }}
+        </div>
+        <div class="wallet-summary-meta">Used for manufacturing license fee payments</div>
+        <div class="wallet-summary-actions">
+          <button class="btn btn-primary btn-sm" (click)="addMoney('license_fee'); $event.stopPropagation()">
+            <i class="bi bi-plus-circle me-1"></i>Add Money
+          </button>
+        </div>
+      </div>
+      }
     </div>
 
     <!-- Action Buttons -->
@@ -74,6 +135,7 @@
 
     <!-- Tabs Navigation -->
     <ul class="nav nav-tabs mb-4">
+      @if (walletViewMode === 'wallets') {
       <li class="nav-item" *ngIf="canShowTab('requisition')">
         <button class="nav-link" [class.active]="activeTab === 'requisition'" (click)="setActiveTab('requisition')">
           <i class="bi bi-file-text me-1"></i>Requisition
@@ -89,16 +151,28 @@
           <i class="bi bi-x-circle me-1"></i>Cancellation
         </button>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" *ngIf="canShowTab('transit')">
         <button class="nav-link" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
           <i class="bi bi-truck me-1"></i>Transit Permit
         </button>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" *ngIf="canShowTab('hologram')">
         <button class="nav-link" [class.active]="activeTab === 'hologram'" (click)="setActiveTab('hologram')">
           <i class="bi bi-shield-check me-1"></i>Hologram
         </button>
       </li>
+      } @else {
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'security_deposit'" (click)="setActiveTab('security_deposit')">
+          <i class="bi bi-shield-lock me-1"></i>Security Deposit
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'license_fee'" (click)="setActiveTab('license_fee')">
+          <i class="bi bi-file-earmark-text me-1"></i>License Fee
+        </button>
+      </li>
+      }
       <li class="nav-item">
         <button class="nav-link" [class.active]="activeTab === 'recharge'" (click)="setActiveTab('recharge')">
           <i class="bi bi-credit-card me-1"></i>Wallet Recharge
@@ -357,6 +431,77 @@
         </table>
       </div>
       }
+
+      <!-- Security Deposit Tab -->
+      @if (activeTab === 'security_deposit') {
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered">
+          <thead class="table-success">
+            <tr>
+              <th>Txn ID</th>
+              <th>Type</th>
+              <th>Payment For</th>
+              <th>Amount</th>
+              <th>Reference</th>
+              <th>Status</th>
+              <th>Date/Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of getPaginatedRowsForTab('security_deposit'); track item.id) {
+            <tr>
+              <td>{{ item.txnId }}</td>
+              <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
+              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td>{{ item.reference }}</td>
+              <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
+            </tr>
+            }
+            @if (getRowsForTab('security_deposit').length === 0) {
+            <tr><td colspan="7" class="text-center text-muted py-4">No security deposit wallet transactions found.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      }
+
+      <!-- License Fee Tab -->
+      @if (activeTab === 'license_fee') {
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered">
+          <thead class="table-success">
+            <tr>
+              <th>Txn ID</th>
+              <th>Type</th>
+              <th>Payment For</th>
+              <th>Amount</th>
+              <th>Reference</th>
+              <th>Status</th>
+              <th>Date/Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of getPaginatedRowsForTab('license_fee'); track item.id) {
+            <tr>
+              <td>{{ item.txnId }}</td>
+              <td>{{ item.type }}</td>
+              <td>{{ item.paymentFor }}</td>
+              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td>{{ item.reference }}</td>
+              <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
+            </tr>
+            }
+            @if (getRowsForTab('license_fee').length === 0) {
+            <tr><td colspan="7" class="text-center text-muted py-4">No license fee wallet transactions found.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      }
+
       <!-- Wallet Recharge Tab -->
       @if (activeTab === 'recharge') {
       <div class="table-responsive">
@@ -550,21 +695,32 @@
       [ngClass]="{
         'wallet-theme-excise': selectedWalletForHistory === 'excise',
         'wallet-theme-education': selectedWalletForHistory === 'education',
-        'wallet-theme-hologram': selectedWalletForHistory === 'hologram'
+        'wallet-theme-hologram': selectedWalletForHistory === 'hologram',
+        'wallet-theme-security': selectedWalletForHistory === 'security_deposit',
+        'wallet-theme-license': selectedWalletForHistory === 'license_fee'
       }">
       <div class="modal-header wallet-history-header">
         <h5 class="modal-title wallet-history-title">
           <i class="bi bi-clock-history me-2"></i>
           {{
-            selectedWalletForHistory === 'excise'
-              ? 'Excise / Additional'
-              : (selectedWalletForHistory === 'education' ? 'Education Cess' : 'Hologram')
+            selectedWalletForHistory === 'security_deposit'
+              ? 'Security Deposit'
+              : (selectedWalletForHistory === 'license_fee'
+                ? 'License Fee'
+                : (selectedWalletForHistory === 'education'
+                  ? 'Education Cess'
+                  : (selectedWalletForHistory === 'hologram' ? 'Hologram' : 'Excise / Additional')))
           }} Wallet History
         </h5>
         <div class="wallet-history-bars" aria-hidden="true">
+          @if (walletViewMode === 'others') {
+          <button type="button" [class.active]="selectedWalletForHistory === 'security_deposit'" (click)="switchWalletHistory('security_deposit')">Security Deposit</button>
+          <button type="button" [class.active]="selectedWalletForHistory === 'license_fee'" (click)="switchWalletHistory('license_fee')">License Fee</button>
+          } @else {
           <button type="button" [class.active]="selectedWalletForHistory === 'excise'" (click)="switchWalletHistory('excise')">Excise</button>
           <button type="button" [class.active]="selectedWalletForHistory === 'education'" (click)="switchWalletHistory('education')">Education</button>
           <button type="button" [class.active]="selectedWalletForHistory === 'hologram'" (click)="switchWalletHistory('hologram')">Hologram</button>
+          }
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>

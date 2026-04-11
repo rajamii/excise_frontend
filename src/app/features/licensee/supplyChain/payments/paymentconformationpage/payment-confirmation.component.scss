@@ -223,6 +223,54 @@
   }
 }
 
+.security-deposit-card {
+  background: linear-gradient(145deg, #f4fff7 0%, #ecfdf5 100%);
+  border-color: #bbf7d0;
+
+  .wallet-summary-icon {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .wallet-summary-tag {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .wallet-summary-balance {
+    color: #15803d;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
+.license-fee-card {
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  border-color: #cbd5e1;
+
+  .wallet-summary-icon {
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .wallet-summary-tag {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+    color: #334155;
+  }
+
+  .wallet-summary-balance {
+    color: #334155;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
 .view-hover {
   cursor: pointer;
   position: relative;
@@ -699,6 +747,16 @@
 ::ng-deep #walletHistoryModal .wallet-theme-hologram .wallet-history-bars button.active {
   background: #fef3c7;
   color: #92400e;
+}
+
+::ng-deep #walletHistoryModal .wallet-theme-security .wallet-history-bars button.active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+::ng-deep #walletHistoryModal .wallet-theme-license .wallet-history-bars button.active {
+  background: #e2e8f0;
+  color: #334155;
 }
 
 ::ng-deep #walletHistoryModal .modal-dialog {
