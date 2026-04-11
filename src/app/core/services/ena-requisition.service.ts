@@ -114,12 +114,18 @@ export class EnaRequisitionService {
   reviewRequisitionArrivalDetails(
     detailId: number,
     action: 'APPROVE' | 'REJECT',
-    remarks: string = ''
+    remarks: string = '',
+    permitNo?: string
   ): Observable<any> {
+    const payload: any = { action, remarks };
+    const permitToken = String(permitNo || '').trim();
+    if (permitToken) {
+      payload.permit_no = permitToken;
+    }
     return this.http
       .post(
         `${this.apiUrl}arrival-bulk-liter-details/${detailId}/review/`,
-        { action, remarks },
+        payload,
         this.httpOptions
       )
       .pipe(catchError(this.handleError));

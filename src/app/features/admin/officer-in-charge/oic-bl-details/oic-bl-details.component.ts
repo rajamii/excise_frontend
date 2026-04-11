@@ -3,8 +3,8 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { EnaRequisitionService } from '../../../../core/services/ena-requisition.service';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, from } from 'rxjs';
+import { concatMap, takeUntil } from 'rxjs/operators';
 
 type DraftTankerRow = { permit_no?: string; tanker_no: string; bulk_liter: number | null };
 type DetailsDraft = { tankerCount: number; tankerDetails: DraftTankerRow[] };
@@ -13,6 +13,7 @@ type RejectDialogState = {
   detailId: number | null;
   referenceNo: string;
   licenseeId: string;
+  permitNo?: string;
   source: 'table' | 'details';
 };
 
@@ -154,7 +155,7 @@ interface BlDetailRow {
               <tr *ngFor="let row of paginatedRows">
                 <td class="ref-cell">
                   <div class="ref-primary">{{ row.referenceNo }}</div>
-                  <div class="ref-secondary">ENA submission</div>
+                  <div class="ref-secondary">{{ getPermitSummary(row) }}</div>
                 </td>
                 <td>
                   <div class="primary-text">{{ row.licenseeId || '-' }}</div>
@@ -353,8 +354,46 @@ interface BlDetailRow {
                     </option>
                   </select>
                 </label>
+                <button type="button" class="tool-btn success" (click)="approveSelectedDetails()"
+                  [disabled]="detailsSaving || permitReviewFinalizing || !detailsSelectedPermitNo">
+                  Approve Permit
+                </button>
+                <button type="button" class="tool-btn danger" (click)="rejectSelectedDetails()"
+                  [disabled]="detailsSaving || permitReviewFinalizing || !detailsSelectedPermitNo">
+                  Reject Permit
+                </button>
+                <button type="button" class="tool-btn ghost" (click)="clearSelectedPermitDecision()"
+                  [disabled]="detailsSaving || permitReviewFinalizing || !detailsSelectedPermitNo">
+                  Clear
+                </button>
                 <div class="tool-hint">
                   Showing tanker rows for selected permit.
+                  <span *ngIf="getSelectedPermitDecisionLabel()"> | Decision: <strong>{{ getSelectedPermitDecisionLabel() }}</strong></span>
+                </div>
+              </div>
+
+                <div class="permit-review-overview"
+                *ngIf="!detailsEditMode && isPermitWise(details) && getPermitReviewDecisionRows().length > 0">
+                <div class="overview-head">
+                  <strong>Review overview</strong>
+                  <span class="overview-meta">{{ getPermitReviewProgressLabel() || (getPermitReviewDecisionRows().length + ' permit(s) selected') }}</span>
+                </div>
+                <div class="overview-list">
+                  <div class="overview-item" *ngFor="let d of getPermitReviewDecisionRows()"
+                    [ngClass]="{ 'approve': d.action === 'APPROVE', 'reject': d.action === 'REJECT' }">
+                    <div class="overview-primary">
+                      <strong>Permit {{ d.permitNo }}</strong>
+                      <span class="overview-pill" [ngClass]="{ 'approve': d.action === 'APPROVE', 'reject': d.action === 'REJECT' }">
+                        {{ d.action === 'APPROVE' ? 'Approve' : 'Reject' }}
+                      </span>
+                    </div>
+                    <div class="overview-remarks" *ngIf="d.action === 'REJECT' && d.remarks">
+                      Remarks: {{ d.remarks }}
+                    </div>
+                  </div>
+                </div>
+                <div class="details-inline-error" *ngIf="permitReviewFinalizeError">
+                  {{ permitReviewFinalizeError }}
                 </div>
               </div>
 
@@ -464,18 +503,36 @@ interface BlDetailRow {
                 <button
                   type="button"
                   class="details-action-btn success"
-                  *ngIf="details.approvalStatus === 'PENDING' && canApproveDetails(details)"
+                  *ngIf="details.approvalStatus === 'PENDING' && !isPermitWise(details) && canApproveDetails(details)"
                   (click)="approveSelectedDetails()"
                   [disabled]="detailsSaving || actingId === details.id">
-                  {{ detailsSaving ? 'Please wait...' : 'Approve' }}
+                  {{
+                    detailsSaving
+                      ? 'Please wait...'
+                      : 'Approve'
+                  }}
                 </button>
                 <button
                   type="button"
                   class="details-action-btn danger"
-                  *ngIf="details.approvalStatus === 'PENDING'"
+                  *ngIf="details.approvalStatus === 'PENDING' && !isPermitWise(details)"
                   (click)="rejectSelectedDetails()"
                   [disabled]="detailsSaving || actingId === details.id">
                   Reject
+                </button>
+                <button
+                  type="button"
+                  class="details-action-btn success"
+                  *ngIf="details.approvalStatus === 'PENDING' && isPermitWise(details)"
+                  (click)="finalizePermitReview()"
+                  [disabled]="detailsEditMode || !canFinalizePermitReview()">
+                  {{
+                    permitReviewFinalizing
+                      ? 'Finalizing...'
+                      : (canFinalizePermitReview()
+                          ? ('Finalize ' + getPermitReviewDecisionRows().length + ' Permit(s)')
+                          : ('Finalize (' + getPermitReviewProgressLabel() + ')'))
+                  }}
                 </button>
                 <button type="button" class="details-action-btn ghost" (click)="closeDetailsModal()">Close</button>
               </div>
@@ -491,7 +548,7 @@ interface BlDetailRow {
             <div class="confirm-head">
               <div class="confirm-icon" aria-hidden="true">!</div>
               <div class="confirm-title">
-                <h3>Reject BL Details</h3>
+                <h3>{{ rejectDialog.permitNo ? ('Reject Permit ' + rejectDialog.permitNo) : 'Reject BL Details' }}</h3>
                 <p>
                   If you proceed, licensee (<strong>{{ rejectDialog.licenseeId || 'N/A' }}</strong>) must re-enter the tanker details again.
                 </p>
@@ -505,6 +562,11 @@ interface BlDetailRow {
                 <span class="confirm-value">{{ rejectDialog.referenceNo }}</span>
               </div>
 
+              <div class="confirm-row" *ngIf="rejectDialog.permitNo">
+                <span class="confirm-label">Permit No</span>
+                <span class="confirm-value">{{ rejectDialog.permitNo }}</span>
+              </div>
+
               <label class="confirm-field">
                 <span class="confirm-label">Rejection Remarks</span>
                 <textarea
@@ -512,7 +574,7 @@ interface BlDetailRow {
                   rows="3"
                   [disabled]="rejectSubmitting"
                   [(ngModel)]="rejectRemarksDraft"
-                  placeholder="Enter reason for rejection (will be visible to the licensee)"></textarea>
+                  placeholder="Enter reason for rejection (required)"></textarea>
               </label>
             </div>
 
@@ -520,7 +582,8 @@ interface BlDetailRow {
               <button type="button" class="confirm-btn ghost" (click)="closeRejectDialog()" [disabled]="rejectSubmitting">
                 Cancel
               </button>
-              <button type="button" class="confirm-btn danger" (click)="confirmReject()" [disabled]="rejectSubmitting || !rejectDialog.detailId">
+              <button type="button" class="confirm-btn danger" (click)="confirmReject()"
+                [disabled]="rejectSubmitting || !rejectDialog.detailId || (rejectDialog.permitNo && !(rejectRemarksDraft || '').trim())">
                 {{ rejectSubmitting ? 'Rejecting...' : 'Reject' }}
               </button>
             </div>
@@ -1751,11 +1814,116 @@ interface BlDetailRow {
       cursor: pointer;
     }
 
+    .tool-btn.success {
+      border-color: #bbf7d0;
+      color: #166534;
+      background: #f0fdf4;
+    }
+
+    .tool-btn.danger {
+      border-color: #fecaca;
+      color: #b91c1c;
+      background: #fef2f2;
+    }
+
+    .tool-btn.ghost {
+      border-color: #e2e8f0;
+      color: #334155;
+      background: #ffffff;
+    }
+
+    .tool-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .tool-hint {
       margin-left: auto;
       color: #334155;
       font-weight: 800;
       font-size: 0.9rem;
+    }
+
+    .permit-review-overview {
+      margin-top: 0.75rem;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: 18px;
+      padding: 0.85rem 0.95rem;
+    }
+
+    .overview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      color: #0f172a;
+      margin-bottom: 0.6rem;
+    }
+
+    .overview-meta {
+      color: #475569;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .overview-list {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .overview-item {
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .overview-item.approve {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .overview-item.reject {
+      border-color: #fecaca;
+      background: #fef2f2;
+    }
+
+    .overview-primary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .overview-pill {
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      font-weight: 900;
+      font-size: 0.85rem;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #334155;
+    }
+
+    .overview-pill.approve {
+      border-color: #bbf7d0;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .overview-pill.reject {
+      border-color: #fecaca;
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .overview-remarks {
+      margin-top: 0.35rem;
+      color: #334155;
+      font-weight: 800;
+      font-size: 0.9rem;
+      word-break: break-word;
     }
 
     .details-input {
@@ -1934,7 +2102,11 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   detailsVisibleDraftPermitIndices: number[] = [];
   detailsSaving = false;
   detailsSaveError = '';
-  rejectDialog: RejectDialogState = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table' };
+  permitReviewDecisionByPermit: Record<string, 'APPROVE' | 'REJECT' | ''> = {};
+  permitReviewRemarksByPermit: Record<string, string> = {};
+  permitReviewFinalizeError = '';
+  permitReviewFinalizing = false;
+  rejectDialog: RejectDialogState = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table', permitNo: '' };
   rejectRemarksDraft = '';
   rejectSubmitting = false;
   selectedMonth: string = '';
@@ -2084,6 +2256,10 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     this.refreshDetailsPermitRows();
     this.detailsSaving = false;
     this.detailsSaveError = '';
+    this.permitReviewDecisionByPermit = {};
+    this.permitReviewRemarksByPermit = {};
+    this.permitReviewFinalizeError = '';
+    this.permitReviewFinalizing = false;
   }
 
   closeDetailsModal(): void {
@@ -2095,6 +2271,10 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     this.detailsVisibleDraftPermitIndices = [];
     this.detailsSaving = false;
     this.detailsSaveError = '';
+    this.permitReviewDecisionByPermit = {};
+    this.permitReviewRemarksByPermit = {};
+    this.permitReviewFinalizeError = '';
+    this.permitReviewFinalizing = false;
   }
 
   approve(row: BlDetailRow): void {
@@ -2182,7 +2362,10 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     const expectedMap = this.computeExpectedByPermit(details);
     const expected = Number(expectedMap[String(permitNo || '').trim()] ?? 0) || 0;
     const sum = this.detailsEditMode ? this.getDraftPermitSum(permitNo) : this.getDetailsPermitSum(details, permitNo);
-    return `${permitNo} (${sum.toFixed(2)} / ${expected.toFixed(2)})`;
+    const token = String(permitNo || '').trim();
+    const decision = String(this.permitReviewDecisionByPermit[token] || '');
+    const suffix = decision === 'APPROVE' ? ' (will approve)' : decision === 'REJECT' ? ' (will reject)' : '';
+    return `${permitNo} (${sum.toFixed(2)} / ${expected.toFixed(2)})${suffix}`;
   }
 
   private getDetailsPermitSum(details: BlDetailRow, permitNo: string): number {
@@ -2346,6 +2529,16 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     if (!details?.id) return;
     if (details.approvalStatus !== 'PENDING') return;
 
+    // Permit-wise: stage decision and finalize later.
+    if (this.isPermitWise(details)) {
+      const permitNo = String(this.detailsSelectedPermitNo || '').trim();
+      if (!permitNo) return;
+      this.permitReviewDecisionByPermit[permitNo] = 'APPROVE';
+      // Clear any previous reject remarks for this permit.
+      delete this.permitReviewRemarksByPermit[permitNo];
+      return;
+    }
+
     if (this.detailsEditMode) {
       // Save first, then approve.
       this.saveDetailsDraft(true);
@@ -2373,17 +2566,23 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     if (!details?.id) return;
     if (details.approvalStatus !== 'PENDING') return;
 
-    this.openRejectDialog(details.id, details.referenceNo, details.licenseeId, 'details');
+    const permitNo = this.isPermitWise(details) ? String(this.detailsSelectedPermitNo || '').trim() : '';
+    this.openRejectDialog(details.id, details.referenceNo, details.licenseeId, 'details', permitNo);
   }
 
   reject(row: BlDetailRow): void {
     if (!row.id || this.actingId === row.id) {
       return;
     }
+    // Permit-wise submissions must be rejected from the details view (permit selection required).
+    if (this.isPermitWise(row)) {
+      this.openDetailsModal(row);
+      return;
+    }
     this.openRejectDialog(row.id, row.referenceNo, row.licenseeId, 'table');
   }
 
-  openRejectDialog(detailId: number, referenceNo: string, licenseeId: string, source: 'table' | 'details'): void {
+  openRejectDialog(detailId: number, referenceNo: string, licenseeId: string, source: 'table' | 'details', permitNo: string = ''): void {
     this.rejectRemarksDraft = '';
     this.rejectSubmitting = false;
     this.rejectDialog = {
@@ -2391,14 +2590,120 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       detailId: Number(detailId) || null,
       referenceNo: String(referenceNo || ''),
       licenseeId: String(licenseeId || ''),
+      permitNo: String(permitNo || '').trim(),
       source
     };
   }
 
   closeRejectDialog(): void {
     if (this.rejectSubmitting) return;
-    this.rejectDialog = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table' };
+    this.rejectDialog = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table', permitNo: '' };
     this.rejectRemarksDraft = '';
+  }
+
+  clearSelectedPermitDecision(): void {
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!token) return;
+    delete this.permitReviewDecisionByPermit[token];
+    delete this.permitReviewRemarksByPermit[token];
+  }
+
+  getSelectedPermitDecisionLabel(): string {
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!token) return '';
+    const decision = String(this.permitReviewDecisionByPermit[token] || '');
+    if (decision === 'APPROVE') return 'Will approve';
+    if (decision === 'REJECT') return 'Will reject';
+    return '';
+  }
+
+  getPermitReviewDecisionRows(): Array<{ permitNo: string; action: 'APPROVE' | 'REJECT'; remarks: string }> {
+    const details = this.selectedDetailsRow;
+    if (!details || !this.isPermitWise(details)) return [];
+
+    const permits = this.getDetailsPermitNumbers(details);
+    const rows: Array<{ permitNo: string; action: 'APPROVE' | 'REJECT'; remarks: string }> = [];
+    for (const permitNo of permits) {
+      const token = String(permitNo || '').trim();
+      const decision = String(this.permitReviewDecisionByPermit[token] || '');
+      if (decision !== 'APPROVE' && decision !== 'REJECT') continue;
+      rows.push({
+        permitNo: token,
+        action: decision as any,
+        remarks: String(this.permitReviewRemarksByPermit[token] || '').trim()
+      });
+    }
+    rows.sort((a, b) => {
+      const an = Number(a.permitNo);
+      const bn = Number(b.permitNo);
+      const aIsNum = Number.isFinite(an) && String(an) === a.permitNo;
+      const bIsNum = Number.isFinite(bn) && String(bn) === b.permitNo;
+      if (aIsNum && bIsNum) return an - bn;
+      return a.permitNo.localeCompare(b.permitNo);
+    });
+    return rows;
+  }
+
+  getPermitReviewProgressLabel(): string {
+    const details = this.selectedDetailsRow;
+    if (!details || !this.isPermitWise(details)) return '';
+    const total = this.getDetailsPermitNumbers(details).length;
+    const decided = this.getPermitReviewDecisionRows().length;
+    if (total <= 0) return '';
+    return `${decided}/${total} permit(s) decided`;
+  }
+
+  canFinalizePermitReview(): boolean {
+    const details = this.selectedDetailsRow;
+    if (!details || !this.isPermitWise(details)) return false;
+    if (details.approvalStatus !== 'PENDING') return false;
+    if (this.permitReviewFinalizing || this.detailsSaving) return false;
+
+    const permits = this.getDetailsPermitNumbers(details);
+    if (permits.length <= 0) return false;
+
+    const rows = this.getPermitReviewDecisionRows();
+    if (rows.length !== permits.length) return false;
+    // Reject requires remarks.
+    return rows.every((r) => (r.action === 'REJECT' ? Boolean(String(r.remarks || '').trim()) : true));
+  }
+
+  finalizePermitReview(): void {
+    const details = this.selectedDetailsRow;
+    if (!details || !details.id) return;
+    if (!this.isPermitWise(details)) return;
+    if (!this.canFinalizePermitReview()) return;
+
+    const decisions = this.getPermitReviewDecisionRows();
+    this.permitReviewFinalizing = true;
+    this.permitReviewFinalizeError = '';
+
+    // Sequentially apply permit decisions. Backend will split the submission into per-permit rows.
+    from(decisions)
+      .pipe(
+        concatMap((d) =>
+          this.enaRequisitionService.reviewRequisitionArrivalDetails(details.id, d.action, d.remarks, d.permitNo)
+        )
+      )
+      .subscribe({
+        next: () => {},
+        error: (err: any) => {
+          this.permitReviewFinalizing = false;
+          const message =
+            err?.error?.message ||
+            err?.error?.detail ||
+            (typeof err?.error === 'string' ? err.error : '') ||
+            err?.message ||
+            'Unable to finalize permit review.';
+          this.permitReviewFinalizeError = message;
+        },
+        complete: () => {
+          this.permitReviewFinalizing = false;
+          this.reviewStatus = 'ALL';
+          this.closeDetailsModal();
+          this.loadRows();
+        }
+      });
   }
 
   confirmReject(): void {
@@ -2406,11 +2711,26 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     if (!detailId || this.rejectSubmitting) return;
 
     if (this.actingId === detailId) return;
-    this.actingId = detailId;
-    this.rejectSubmitting = true;
 
     const remarks = String(this.rejectRemarksDraft || '').trim();
-    this.enaRequisitionService.reviewRequisitionArrivalDetails(detailId, 'REJECT', remarks).subscribe({
+    const permitNo = String(this.rejectDialog?.permitNo || '').trim();
+
+    // Permit-wise: "Reject Permit" inside Tanker Manifest should stage the decision (save locally) for final review.
+    if (permitNo && this.selectedDetailsRow && this.isPermitWise(this.selectedDetailsRow) && this.rejectDialog.source === 'details') {
+      if (!remarks) {
+        // Keep dialog open; rejection requires remarks.
+        return;
+      }
+      this.permitReviewDecisionByPermit[permitNo] = 'REJECT';
+      this.permitReviewRemarksByPermit[permitNo] = remarks;
+      this.closeRejectDialog();
+      return;
+    }
+
+    // Non-permit or table-level reject: immediate API call.
+    this.actingId = detailId;
+    this.rejectSubmitting = true;
+    this.enaRequisitionService.reviewRequisitionArrivalDetails(detailId, 'REJECT', remarks, permitNo).subscribe({
       next: () => {
         this.actingId = null;
         this.rejectSubmitting = false;
@@ -2448,6 +2768,27 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         return permit ? `Permit ${permit}: ${tanker} (${bl} ENA)` : `${tanker} (${bl} ENA)`;
       })
       .join(', ');
+  }
+
+  getPermitSummary(row: BlDetailRow): string {
+    if (!row) return 'ENA submission';
+    const permits = Array.from(
+      new Set(
+        (row.tankerDetails || [])
+          .map((x: any) => String(x?.permit_no ?? x?.permitNo ?? '').trim())
+          .filter(Boolean)
+      )
+    );
+    if (permits.length === 0) return 'ENA submission';
+    permits.sort((a, b) => {
+      const an = Number(a);
+      const bn = Number(b);
+      const aNum = Number.isFinite(an) && String(an) === a;
+      const bNum = Number.isFinite(bn) && String(bn) === b;
+      if (aNum && bNum) return an - bn;
+      return a.localeCompare(b);
+    });
+    return `Permits: ${permits.join(', ')}`;
   }
 
   formatDate(value: string): string {
