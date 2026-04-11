@@ -2030,8 +2030,85 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    this.showInfoMessage('Recharge request submitted. Wallet balance will refresh from backend after payment success.');
-    this.closeUnifiedAddMoneyView();
+    const context = this.selectedAddMoneyContext;
+    if (!context) {
+      this.showErrorMessage('Unable to proceed: wallet context not found.');
+      return;
+    }
+
+    const licenseeId = String(this.activeLicenseeId || this.resolveActiveLicenseeIdFromSession() || '').trim();
+    if (!licenseeId) {
+      this.showErrorMessage('Unable to proceed: licensee id not found.');
+      return;
+    }
+
+    const headOfAccount = String(context.hoa || '').trim();
+    if (!headOfAccount) {
+      this.showErrorMessage('Unable to proceed: Head Of Account not found.');
+      return;
+    }
+
+    const walletType = this.mapAddMoneyWalletTypeToApi(context.walletType);
+    const transactionId = String(this.addMoneyTransactionId || '').trim();
+    if (!transactionId) {
+      this.showErrorMessage('Unable to proceed: Wallet Transaction ID not found.');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Processing Recharge',
+      text: 'Crediting wallet for testing...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.paymentIntegrationService.creditWalletRecharge(licenseeId, {
+      transaction_id: transactionId,
+      wallet_type: walletType,
+      head_of_account: headOfAccount,
+      amount: Number(this.addMoneyAmount || 0),
+      remarks: `Dummy recharge via UI (${context.walletLabel})`
+    }).subscribe({
+      next: (response) => {
+        Swal.close();
+        this.closeUnifiedAddMoneyView();
+        this.setActiveTab('recharge');
+        this.refreshWalletData();
+
+        const created = response?.wallet_transaction || null;
+        const walletTransactionId = String(created?.wallet_transaction_id || created?.walletTransactionId || '').trim();
+        const createdAt = String(created?.created_at || created?.createdAt || '').trim();
+        const statusText = String(created?.payment_status || created?.paymentStatus || 'success');
+
+        this.router.navigate(['/dashboard/wallet-recharge/success'], {
+          queryParams: {
+            transactionId,
+            walletTransactionId: walletTransactionId || undefined,
+            walletType,
+            hoa: headOfAccount,
+            amount: Number(this.addMoneyAmount || 0),
+            status: statusText,
+            createdAt: createdAt || undefined
+          }
+        });
+      },
+      error: (err) => {
+        Swal.close();
+        console.error('Wallet recharge credit failed:', err);
+        const errorMessage =
+          err?.error?.detail ||
+          err?.error?.error ||
+          err?.error?.message ||
+          err?.message ||
+          'Recharge failed';
+        this.showErrorMessage(String(errorMessage));
+      }
+    });
+  }
+
+  private mapAddMoneyWalletTypeToApi(walletType: AddMoneyWalletType): string {
+    if (walletType === 'education') return 'education_cess';
+    return walletType;
   }
 
   downloadDetails(): void {

@@ -1,0 +1,175 @@
+.wallet-recharge-success {
+  .hero {
+    min-height: calc(100vh - 84px);
+    padding: 36px 16px;
+    background: radial-gradient(1000px 450px at 30% 10%, rgba(28, 100, 242, 0.18), transparent 60%),
+      radial-gradient(900px 500px at 80% 30%, rgba(16, 185, 129, 0.16), transparent 65%),
+      linear-gradient(180deg, #f7fafc 0%, #eef2ff 100%);
+  }
+
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(2, 6, 23, 0.08);
+    padding: 22px;
+  }
+
+  .header {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    flex: 0 0 auto;
+    box-shadow: 0 10px 22px rgba(16, 185, 129, 0.25);
+  }
+
+  .check {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .subtitle {
+    margin-top: 2px;
+    color: #475569;
+    font-size: 13px;
+  }
+
+  .grid {
+    padding-top: 14px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.02);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  .label {
+    color: #334155;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .value {
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight: 650;
+  }
+
+  .amount {
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: capitalize;
+  }
+
+  .pill.success {
+    background: rgba(16, 185, 129, 0.14);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.32);
+  }
+
+  .copy {
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    background: #fff;
+    color: #0f172a;
+    border-radius: 10px;
+    padding: 4px 10px;
+    font-weight: 800;
+    font-size: 12px;
+  }
+
+  .copy:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 900;
+    font-size: 13px;
+    border: 1px solid transparent;
+  }
+
+  .btn.primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18);
+  }
+
+  .btn.secondary {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.16);
+  }
+
+  @media (max-width: 720px) {
+    .row {
+      grid-template-columns: 1fr;
+    }
+    .actions {
+      justify-content: stretch;
+    }
+    .btn {
+      width: 100%;
+    }
+  }
+}
+

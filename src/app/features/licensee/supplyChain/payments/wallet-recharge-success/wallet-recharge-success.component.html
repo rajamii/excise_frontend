@@ -1,0 +1,65 @@
+<section class="wallet-recharge-success">
+  <div class="hero">
+    <div class="container">
+      <div class="card">
+        <div class="header">
+          <div class="badge" aria-hidden="true">
+            <span class="check">✓</span>
+          </div>
+          <div class="titles">
+            <div class="title">Wallet Recharge Successful</div>
+            <div class="subtitle">Amount credited for testing (dummy flow).</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="row">
+            <div class="label">Wallet Transaction ID</div>
+            <div class="value mono">
+              {{ vm.transactionId || '-' }}
+              <button class="copy" type="button" (click)="copy(vm.transactionId)" [disabled]="!vm.transactionId">Copy</button>
+            </div>
+          </div>
+
+          <div class="row" *ngIf="vm.walletTransactionId">
+            <div class="label">Record ID</div>
+            <div class="value mono">{{ vm.walletTransactionId }}</div>
+          </div>
+
+          <div class="row">
+            <div class="label">Wallet Type</div>
+            <div class="value">{{ vm.walletType || '-' }}</div>
+          </div>
+
+          <div class="row">
+            <div class="label">Head Of Account</div>
+            <div class="value mono">{{ vm.hoa || '-' }}</div>
+          </div>
+
+          <div class="row">
+            <div class="label">Amount</div>
+            <div class="value amount">₹{{ formattedAmount }}</div>
+          </div>
+
+          <div class="row">
+            <div class="label">Status</div>
+            <div class="value">
+              <span class="pill success">{{ vm.status || 'success' }}</span>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="label">Credited At</div>
+            <div class="value">{{ createdAtLabel }}</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" type="button" (click)="goToWalletRecharge()">Back to Wallet Recharge</button>
+          <button class="btn secondary" type="button" (click)="goToWalletHistory()">View Wallet History</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+

@@ -53,6 +53,19 @@ export class PaymentIntegrationService {
     return this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/recharge/`, { params });
   }
 
+  creditWalletRecharge(
+    licenseeId: string,
+    payload: {
+      transaction_id: string;
+      wallet_type: string;
+      head_of_account: string;
+      amount: number;
+      remarks?: string;
+    }
+  ): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/wallet/${licenseeId}/recharge/credit/`, payload);
+  }
+
   getWalletHistory(licenseeId: string, limit = 500): Observable<WalletTransactionResponse> {
     const params = new HttpParams().set('limit', String(limit));
     return this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/history/`, { params });
