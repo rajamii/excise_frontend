@@ -41,6 +41,7 @@ interface TransitItem {
 
 interface RechargeItem {
   id: string;
+  transactionId: string;
   transactionType: string;
   hoa: string;
   amount: number;
@@ -77,7 +78,7 @@ interface HologramItem {
   paymentSlipUploaded?: boolean;
 }
 
-type WalletHistoryType = 'Added' | 'Utilized' | 'Refunded';
+type WalletHistoryType = 'Credited' | 'Debited' | 'Refunded';
 type WalletHistoryCategory = 'excise' | 'education' | 'hologram';
 
 interface WalletHistoryTransaction {
@@ -684,6 +685,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.rechargeData = rows.map((row: any, index: number) => ({
       id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+      transactionId: String(this.pickAny(row, ['transaction_id', 'transactionId', 'reference_no', 'referenceNo'], '-')),
       transactionType: this.pickAny(row, ['transaction_type', 'transactionType'], 'Wallet Recharge'),
       hoa: this.pickAny(row, ['head_of_account', 'headOfAccount'], '-'),
       amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
@@ -707,8 +709,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
       const isCredit = entryType === 'credit' || entryType === 'cr';
       const type: WalletHistoryType = isCredit
-        ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Added')
-        : 'Utilized';
+        ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Credited')
+        : 'Debited';
 
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
@@ -1129,7 +1131,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     from: '',
     to: '',
     month: '', // Monthly filter
-    type: '', // Added | Utilized | Refunded
+    type: '', // Credited | Debited | Refunded
     minAmount: '',
     maxAmount: ''
   };

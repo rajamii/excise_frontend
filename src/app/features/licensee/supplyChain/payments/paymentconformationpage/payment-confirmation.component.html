@@ -364,6 +364,7 @@
           <thead class="table-success">
             <tr>
               <th>Transaction Type</th>
+              <th>Transaction ID</th>
               <th>HOA</th>
               <th>Amount</th>
               <th>Date</th>
@@ -374,6 +375,7 @@
             @for (item of getPaginatedRowsForTab('recharge'); track item.id) {
             <tr>
               <td>{{ item.transactionType }}</td>
+              <td>{{ item.transactionId }}</td>
               <td>{{ item.hoa }}</td>
               <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.date | date:'dd-MMM-yyyy HH:mm:ss' }}</td>
@@ -599,8 +601,8 @@
                 <select class="form-select form-select-sm" [(ngModel)]="walletHistoryFilters.type"
                   (ngModelChange)="applyWalletHistoryFilters()">
                   <option value="">All</option>
-                  <option value="Added">Added</option>
-                  <option value="Utilized">Utilized</option>
+                  <option value="Credited">Credited</option>
+                  <option value="Debited">Debited</option>
                   <option value="Refunded">Refunded</option>
                 </select>
               </div>
@@ -642,8 +644,8 @@
                 <td>
                   <span class="history-type-badge"
                     [ngClass]="{
-                      'type-added': t.type==='Added',
-                      'type-utilized': t.type==='Utilized',
+                      'type-credited': t.type==='Credited',
+                      'type-debited': t.type==='Debited',
                       'type-refunded': t.type==='Refunded'
                     }">{{ t.type }}</span>
                 </td>

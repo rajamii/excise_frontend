@@ -834,13 +834,13 @@
   border: 1px solid transparent;
 }
 
-::ng-deep #walletHistoryModal .history-type-badge.type-added {
+::ng-deep #walletHistoryModal .history-type-badge.type-credited {
   color: #065f46;
   background: #d1fae5;
   border-color: #6ee7b7;
 }
 
-::ng-deep #walletHistoryModal .history-type-badge.type-utilized {
+::ng-deep #walletHistoryModal .history-type-badge.type-debited {
   color: #7f1d1d;
   background: #fee2e2;
   border-color: #fca5a5;
