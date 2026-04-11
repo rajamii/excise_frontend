@@ -1,25 +1,6 @@
 <div class="container-fluid p-0">
   <!-- Wallet Cards Section -->
   <div class="container-fluid py-4">
-    <div class="d-flex justify-content-end mb-3">
-      <div class="btn-group wallet-view-toggle" role="group" aria-label="Wallet view">
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="walletViewMode === 'wallets' ? 'btn-primary' : 'btn-outline-primary'"
-          (click)="setWalletViewMode('wallets')">
-          Wallets
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="walletViewMode === 'others' ? 'btn-primary' : 'btn-outline-primary'"
-          (click)="setWalletViewMode('others')">
-          Others
-        </button>
-      </div>
-    </div>
-
     <div class="wallet-cards-grid">
       @if (walletViewMode === 'wallets') {
       <!-- Excise Duty Card -->

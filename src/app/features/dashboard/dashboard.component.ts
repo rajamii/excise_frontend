@@ -149,6 +149,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
+  walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
   private showBreweryOrDistilleryMenus = false;
 
@@ -293,6 +294,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const initialSection = this.route.snapshot.queryParamMap.get('section');
     this.selectedSupplyChainSection = initialSection || null;
     this.enforceSectionAccess();
+    this.walletViewMode = this.readWalletViewFromParams(this.route.snapshot.queryParams);
 
     if (this.selectedSupplyChainSection === 'hologram-overview') {
       this.pendingHologramOverviewRedirect = true;
@@ -306,6 +308,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const section = params['section'];
         this.selectedSupplyChainSection = section || null;
         this.enforceSectionAccess();
+        this.walletViewMode = this.readWalletViewFromParams(params);
 
         if (this.selectedSupplyChainSection === 'hologram-overview') {
           this.pendingHologramOverviewRedirect = true;
@@ -318,6 +321,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadDashboardData();
         }
       });
+  }
+
+  private readWalletViewFromParams(params: any): 'wallets' | 'others' {
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return 'wallets';
+    }
+    const value = String(params?.walletView || '').trim().toLowerCase();
+    return value === 'others' ? 'others' : 'wallets';
+  }
+
+  shouldShowWalletViewToggle(): boolean {
+    return this.selectedSupplyChainSection === 'wallet' && this.canRenderWalletSection();
+  }
+
+  setWalletViewMode(mode: 'wallets' | 'others'): void {
+    if (!mode || this.walletViewMode === mode) return;
+    this.walletViewMode = mode;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { walletView: mode },
+      queryParamsHandling: 'merge'
+    });
   }
 
   private initializeDashboard() {

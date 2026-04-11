@@ -58,9 +58,33 @@
           <h2>{{ getSupplyChainSectionTitle() }}</h2>
         </div>
 
-        <!-- Header Right: Action Button -->
-        <div class="header-right" *ngIf="showHeaderAction()">
-          <button mat-raised-button color="accent" (click)="onHeaderAction()" class="header-action-btn">
+        <!-- Header Right: Wallet Toggle + Action Button -->
+        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle()">
+          <div class="wallet-view-toggle" *ngIf="shouldShowWalletViewToggle()">
+            <button
+              mat-button
+              type="button"
+              class="wallet-view-btn"
+              [class.active]="walletViewMode === 'wallets'"
+              (click)="setWalletViewMode('wallets')">
+              Wallets
+            </button>
+            <button
+              mat-button
+              type="button"
+              class="wallet-view-btn"
+              [class.active]="walletViewMode === 'others'"
+              (click)="setWalletViewMode('others')">
+              Others
+            </button>
+          </div>
+
+          <button
+            *ngIf="showHeaderAction()"
+            mat-raised-button
+            color="accent"
+            (click)="onHeaderAction()"
+            class="header-action-btn">
             <mat-icon>{{ getHeaderActionIcon() }}</mat-icon>
             {{ getHeaderActionLabel() }}
           </button>
