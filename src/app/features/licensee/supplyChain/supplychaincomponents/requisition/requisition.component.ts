@@ -843,19 +843,31 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     const approvedPermits = Number(item?.arrivalApprovedPermitsCount ?? 0) || 0;
     const cancelledPermits = Number(item?.arrivalCancelledPermitsCount ?? 0) || 0;
 
+    if (!this.isCommissionerFinalApproval(item)) {
+      return false;
+    }
+
+    // If everything is already resolved, do not show update.
+    if (status === 'APPROVED' && remaining <= 0 && rejectedPermits <= 0) {
+      return false;
+    }
+    if (totalPermits > 0 && (approvedPermits + cancelledPermits) >= totalPermits && remaining <= 0 && rejectedPermits <= 0) {
+      return false;
+    }
+
     // Permit-wise partial arrival: allow updating while there are permits remaining to be submitted (or rejected permits to re-submit).
-    if (this.isCommissionerFinalApproval(item) && (remaining > 0 || rejectedPermits > 0)) {
+    if (remaining > 0 || rejectedPermits > 0) {
       return true;
     }
 
-    // If all permits are resolved (approved/cancelled) then hide update.
-    if (this.isCommissionerFinalApproval(item) && totalPermits > 0 && (approvedPermits + cancelledPermits) >= totalPermits && remaining <= 0 && rejectedPermits <= 0) {
+    // If we have permit counts and nothing left, hide update.
+    if (totalPermits > 0) {
       return false;
     }
 
     // Backward compatible: if we don't have permit counts, fall back to previous behavior.
     const allowResubmitAfterReject = status === 'REJECTED';
-    return this.isCommissionerFinalApproval(item) && (!Boolean(item.hasArrivalDetails) || allowResubmitAfterReject);
+    return !Boolean(item.hasArrivalDetails) || allowResubmitAfterReject;
   }
 
   canViewArrivalDetails(item: TableData): boolean {
