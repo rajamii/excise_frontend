@@ -876,18 +876,21 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
 
     const status = String(item?.arrivalApprovalStatus || '').toUpperCase();
-    if (status === 'REJECTED') {
-      // After OIC rejection, tanker data is cleared and licensee must re-enter; hide inventory view.
-      return false;
-    }
-
     const approvedPermits = Number(item?.arrivalApprovedPermitsCount ?? 0) || 0;
     const pendingPermits = Number(item?.arrivalPendingPermitsCount ?? 0) || 0;
+    const cancelledPermits = Number(item?.arrivalCancelledPermitsCount ?? 0) || 0;
     const total = Number(item?.arrivalTotalBulkLiter ?? 0);
     const hasAnySubmitted =
       approvedPermits > 0 ||
       pendingPermits > 0 ||
+      cancelledPermits > 0 ||
       (Number.isFinite(total) ? total > 0 : Boolean(item.hasArrivalDetails));
+
+    if (status === 'REJECTED' && !cancelledPermits) {
+      // After OIC rejection, tanker data is cleared and licensee must re-enter; keep inventory hidden unless
+      // there are cancelled permits to show in the "BL Details" modal.
+      return false;
+    }
 
     return this.isCommissionerFinalApproval(item) && hasAnySubmitted;
   }
