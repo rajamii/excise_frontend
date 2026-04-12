@@ -126,18 +126,18 @@
         </button>
       </div>
       <div class="filter-body">
-        <div class="row g-3">
-          <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="row g-2 align-items-end">
+          <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
             <div class="filter-input-group">
               <label class="filter-label">
                 <i class="bi bi-hash text-primary"></i>
                 Transaction ID
               </label>
               <input type="text" class="filter-input" [(ngModel)]="tabFilters.transactionId"
-                (ngModelChange)="applyFiltersToActiveTab()" placeholder="Enter transaction ID">
+                (ngModelChange)="applyFiltersToActiveTab()" placeholder="Enter ID">
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-xl-1 col-lg-2 col-md-3 col-sm-6">
             <div class="filter-input-group">
               <label class="filter-label">
                 <i class="bi bi-calendar-month text-success"></i>
@@ -147,7 +147,7 @@
                 (ngModelChange)="applyFiltersToActiveTab()">
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6">
             <div class="filter-input-group">
               <label class="filter-label">
                 <i class="bi bi-calendar-check text-info"></i>
@@ -157,7 +157,7 @@
                 (ngModelChange)="applyFiltersToActiveTab()">
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6">
             <div class="filter-input-group">
               <label class="filter-label">
                 <i class="bi bi-calendar-x text-warning"></i>
@@ -167,7 +167,7 @@
                 (ngModelChange)="applyFiltersToActiveTab()">
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-xl-1 col-lg-2 col-md-3 col-sm-6">
             <div class="filter-input-group">
               <label class="filter-label">
                 <i class="bi bi-tag text-danger"></i>
@@ -175,32 +175,37 @@
               </label>
               <select class="filter-input" [(ngModel)]="tabFilters.type"
                 (ngModelChange)="applyFiltersToActiveTab()">
-                <option value="">All Types</option>
+                <option value="">All</option>
                 <option value="Credited">Credited</option>
                 <option value="Debited">Debited</option>
                 <option value="Refunded">Refunded</option>
               </select>
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-xl-1 col-lg-2 col-md-3 col-sm-6">
             <div class="filter-input-group">
               <label class="filter-label">
                 <i class="bi bi-currency-rupee text-success"></i>
-                Min Amount
+                Min Amt
               </label>
               <input type="number" class="filter-input" [(ngModel)]="tabFilters.minAmount"
-                (ngModelChange)="applyFiltersToActiveTab()" placeholder="Min">
+                (ngModelChange)="applyFiltersToActiveTab()" placeholder="0">
             </div>
           </div>
-          <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="col-xl-1 col-lg-2 col-md-3 col-sm-6">
             <div class="filter-input-group">
               <label class="filter-label">
                 <i class="bi bi-currency-rupee text-danger"></i>
-                Max Amount
+                Max Amt
               </label>
               <input type="number" class="filter-input" [(ngModel)]="tabFilters.maxAmount"
-                (ngModelChange)="applyFiltersToActiveTab()" placeholder="Max">
+                (ngModelChange)="applyFiltersToActiveTab()" placeholder="0">
             </div>
+          </div>
+          <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <button class="btn btn-sm btn-light w-100" (click)="clearTabFilters()" title="Clear All Filters">
+              <i class="bi bi-arrow-clockwise me-1"></i>Reset
+            </button>
           </div>
         </div>
       </div>
