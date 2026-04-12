@@ -40,7 +40,7 @@
               <span class="nav-text">New License</span>
             </button>
 
-            <button class="nav-item wallet-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
+            <button class="nav-item wallet-nav-item" *ngIf="showManufacturingWalletNav" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
               <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
               <span class="nav-text">Wallet</span>
             </button>

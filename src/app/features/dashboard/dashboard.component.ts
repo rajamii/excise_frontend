@@ -25,6 +25,7 @@ import { AccountService } from '../../core/services/account.service';
 import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
+import { isLicenseeWalletNavEligible } from '../../shared/utils/wallet-nav-eligibility.util';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
@@ -152,6 +153,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
   private showBreweryOrDistilleryMenus = false;
+  private showManufacturingWalletNav = false;
 
   // Professional dashboard enhancements
   previousCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
@@ -605,11 +607,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.isLicenseeUser()) {
       this.licenseeMenuAccessResolved = true;
       this.showBreweryOrDistilleryMenus = false;
+      this.showManufacturingWalletNav = false;
       return;
     }
 
     this.licenseeMenuAccessResolved = false;
     this.showBreweryOrDistilleryMenus = false;
+    this.showManufacturingWalletNav = false;
 
     forkJoin({
       licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
@@ -633,11 +637,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const hasBrewery = combinedRows.some((item) => this.isBrewery(item));
 
         this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+        this.showManufacturingWalletNav = combinedRows.some((item) => isLicenseeWalletNavEligible(item));
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
       },
       error: () => {
         this.showBreweryOrDistilleryMenus = false;
+        this.showManufacturingWalletNav = false;
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
       }

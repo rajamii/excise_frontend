@@ -19,6 +19,7 @@ import { User } from '../../../../core/models/dashboard.models';
 import { AccountService } from '../../../../core/services/account.service';
 import { environment } from '../../../../../environments/environment';
 import { SidebarPendingBadgeService } from '../../../services/sidebar-pending-badge.service';
+import { isLicenseeWalletNavEligible } from '../../../utils/wallet-nav-eligibility.util';
 
 @Component({
   selector: 'app-unified-layout',
@@ -55,6 +56,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
+  showManufacturingWalletNav = false;
   pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
     requisition: 'ENA Requisition',
@@ -506,7 +509,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   navigateToWalletView(section: string = 'wallet'): void {
-    if (this.isLicenseeUser() && !this.showBreweryOrDistilleryMenus) {
+    if (this.isLicenseeUser() && !this.showManufacturingWalletNav) {
       return;
     }
 
@@ -514,7 +517,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       queryParams: {
         section,
         tab: 'recharge',
-        source: 'sidenav-wallet'
+        source: 'sidenav-wallet',
+        walletView: this.showBreweryOrDistilleryMenus ? 'wallets' : 'others'
       }
     });
     this.closeSidenav();
@@ -775,12 +779,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!this.isLicenseeUser()) {
       this.showDistilleryMenus = false;
       this.showBreweryOrDistilleryMenus = false;
+      this.showManufacturingWalletNav = false;
       return;
     }
 
     // Default for new users: keep only base menu options visible.
     this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
+    this.showManufacturingWalletNav = false;
 
     forkJoin({
       licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
@@ -807,7 +813,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
         const allRows = Array.isArray(allApplications) ? allApplications : [];
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
-        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll];
+        const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
+        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
 
         console.log('Menu data sources:', {
           licenses: licenseRows.length,
@@ -821,6 +828,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         console.error('Failed to evaluate menu access from combined sources:', error);
         this.showDistilleryMenus = false;
         this.showBreweryOrDistilleryMenus = false;
+        this.showManufacturingWalletNav = false;
         this.triggerUiRefresh();
       }
     });
@@ -834,12 +842,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.showDistilleryMenus = hasDistillery;
     // Brewery OR Distillery: transit + hologram menus.
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+    this.showManufacturingWalletNav = rows.some((item) => isLicenseeWalletNavEligible(item));
 
     console.log('Resolved menu flags:', {
       hasDistillery,
       hasBrewery,
       showDistilleryMenus: this.showDistilleryMenus,
-      showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus
+      showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus,
+      showManufacturingWalletNav: this.showManufacturingWalletNav
     });
 
     if (rows.length > 0) {
@@ -863,6 +873,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       ''
     ).toLowerCase();
     return stage.includes('approved');
+  }
+
+  private isAwaitingPaymentStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+    ).toLowerCase();
+    return stage.includes('awaiting') && stage.includes('payment');
   }
 
   private isDistillery(item: any): boolean {

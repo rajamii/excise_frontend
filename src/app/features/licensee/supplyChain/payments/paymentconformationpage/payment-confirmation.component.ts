@@ -101,12 +101,20 @@ interface MyLicenseRow {
   licenseSubCategoryId?: number;
   license_sub_category?: string;
   licenseSubCategory?: string;
+  license_category?: string | Record<string, unknown>;
+  licenseCategory?: string | Record<string, unknown>;
+  license_category_name?: string;
+  licenseCategoryName?: string;
+  license_type?: string | number | Record<string, unknown>;
+  licenseType?: string | number | Record<string, unknown>;
+  license_type_name?: string;
+  licenseTypeName?: string;
   status?: string;
   stage_name?: string;
   stageName?: string;
 }
 
-type WalletModuleType = 'distillery' | 'brewery' | '';
+type WalletModuleType = 'distillery' | 'brewery' | 'other' | '';
 type PaymentModuleTab = 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
 type OtherModuleTab = 'security_deposit' | 'license_fee';
 type WalletTableTab = PaymentModuleTab | OtherModuleTab | 'recharge' | 'history';
@@ -565,6 +573,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return false;
     }
 
+    const licenseId = String(row.license_id ?? row.licenseId ?? '').trim();
+    if (licenseId) {
+      return true;
+    }
+
     const status = String(row.status || '').toLowerCase();
     const stage = String(row.stage_name ?? row.stageName ?? '').toLowerCase();
     if (!status && !stage) {
@@ -607,15 +620,96 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (subCategoryName.includes('brew')) {
       return 'brewery';
     }
+
+    // Issued licenses that are not brewery/distillery (FLR shop, bar, etc.): backend module_type "other".
+    const licenseId = String(row.license_id ?? row.licenseId ?? '').trim();
+    if (licenseId) {
+      return 'other';
+    }
+
+    const stageText = String(
+      row.stage_name ??
+      row.stageName ??
+      row.status ??
+      (row as any).current_stage_name ??
+      (row as any).currentStageName ??
+      ''
+    ).toLowerCase();
+    if (stageText.includes('approved') || (stageText.includes('awaiting') && stageText.includes('payment'))) {
+      return 'other';
+    }
+
+    if (this.isManufacturingCategoryFromLicenseRow(row)) {
+      return 'other';
+    }
     return '';
+  }
+
+  private extractLicenseCategoryTextFromRow(row: MyLicenseRow | null | undefined): string {
+    if (!row) {
+      return '';
+    }
+    const nested = row.license_category ?? row.licenseCategory;
+    if (nested && typeof nested === 'object') {
+      const raw =
+        (nested as any)?.license_category ??
+        (nested as any)?.licenseCategory ??
+        (nested as any)?.category_name ??
+        (nested as any)?.name ??
+        '';
+      return String(raw ?? '').toLowerCase();
+    }
+    const raw =
+      row.license_category_name ??
+      row.licenseCategoryName ??
+      (typeof nested === 'string' ? nested : '') ??
+      '';
+    return String(raw ?? '').toLowerCase();
+  }
+
+  private extractLicenseTypeTextFromRow(row: MyLicenseRow | null | undefined): string {
+    if (!row) {
+      return '';
+    }
+    const nested = row.license_type ?? row.licenseType;
+    if (nested && typeof nested === 'object') {
+      const raw =
+        (nested as any)?.license_type ??
+        (nested as any)?.licenseType ??
+        (nested as any)?.name ??
+        '';
+      return String(raw ?? '').toLowerCase();
+    }
+    const raw =
+      row.license_type_name ??
+      row.licenseTypeName ??
+      (typeof nested === 'string' ? nested : '') ??
+      '';
+    return String(raw ?? '').toLowerCase();
+  }
+
+  private isManufacturingCategoryFromLicenseRow(row: MyLicenseRow | null | undefined): boolean {
+    const category = this.extractLicenseCategoryTextFromRow(row);
+    if (category.includes('manufactur')) {
+      return true;
+    }
+    const licenseType = this.extractLicenseTypeTextFromRow(row);
+    return licenseType.includes('manufactur');
   }
 
   private applyResolvedModuleType(moduleType: WalletModuleType): void {
     this.resolvedLicenseModuleType = moduleType;
     this.isBreweryUser = moduleType === 'brewery';
-    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.walletModuleLabel =
+      moduleType === 'brewery'
+        ? 'Brewery'
+        : moduleType === 'distillery'
+          ? 'Distillery'
+          : moduleType === 'other'
+            ? 'License'
+            : 'Distillery';
 
-    // Only manufacturing (brewery/distillery) users can use the main "Wallets" view.
+    // Brewery/distillery use the full "Wallets" tabs; other manufacturing uses the same wallet page in "Others" mode.
     const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
     if (!isManufacturing && this.walletViewMode !== 'others') {
       this.walletViewMode = 'others';
@@ -747,7 +841,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       }
     });
 
-    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.walletModuleLabel =
+      this.resolvedLicenseModuleType === 'brewery'
+        ? 'Brewery'
+        : this.resolvedLicenseModuleType === 'distillery'
+          ? 'Distillery'
+          : this.resolvedLicenseModuleType === 'other'
+            ? 'License'
+            : this.isBreweryUser
+              ? 'Brewery'
+              : 'Distillery';
     this.ensureActiveTabAllowed();
   }
 
