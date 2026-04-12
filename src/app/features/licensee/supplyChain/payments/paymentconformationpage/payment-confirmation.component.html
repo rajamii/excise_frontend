@@ -65,41 +65,41 @@
         </div>
       </div>
       } @else {
-      <!-- Security Deposit Card -->
-      <div class="wallet-summary-card security-deposit-card history-hover" (click)="openWalletHistory('security_deposit')">
-        <div class="wallet-summary-header">
-          <div class="wallet-summary-title-wrap">
-            <span class="wallet-summary-icon text-success"><i class="bi bi-shield-lock"></i></span>
-            <div class="wallet-summary-title">Security Deposit Wallet</div>
-          </div>
-          <span class="wallet-summary-tag">Deposit</span>
-        </div>
-        <div class="wallet-summary-balance text-success">
-          <span class="currency">&#8377;</span>{{ securityDepositBalance | number:'1.2-2' }}
-        </div>
-        <div class="wallet-summary-meta">Used for manufacturing license security deposit</div>
-        <div class="wallet-summary-actions">
-          <button class="btn btn-primary btn-sm" (click)="addMoney('security_deposit'); $event.stopPropagation()">
-            <i class="bi bi-plus-circle me-1"></i>Add Money
-          </button>
-        </div>
-      </div>
-
       <!-- License Fee Card -->
       <div class="wallet-summary-card license-fee-card history-hover" (click)="openWalletHistory('license_fee')">
         <div class="wallet-summary-header">
           <div class="wallet-summary-title-wrap">
-            <span class="wallet-summary-icon text-secondary"><i class="bi bi-file-earmark-text"></i></span>
+            <span class="wallet-summary-icon"><i class="bi bi-file-earmark-text"></i></span>
             <div class="wallet-summary-title">License Fee Wallet</div>
           </div>
           <span class="wallet-summary-tag">Fee</span>
         </div>
-        <div class="wallet-summary-balance text-secondary">
+        <div class="wallet-summary-balance">
           <span class="currency">&#8377;</span>{{ licenseFeeBalance | number:'1.2-2' }}
         </div>
         <div class="wallet-summary-meta">Used for manufacturing license fee payments</div>
         <div class="wallet-summary-actions">
           <button class="btn btn-primary btn-sm" (click)="addMoney('license_fee'); $event.stopPropagation()">
+            <i class="bi bi-plus-circle me-1"></i>Add Money
+          </button>
+        </div>
+      </div>
+
+      <!-- Security Deposit Card -->
+      <div class="wallet-summary-card security-deposit-card history-hover" (click)="openWalletHistory('security_deposit')">
+        <div class="wallet-summary-header">
+          <div class="wallet-summary-title-wrap">
+            <span class="wallet-summary-icon"><i class="bi bi-shield-lock"></i></span>
+            <div class="wallet-summary-title">Security Deposit Wallet</div>
+          </div>
+          <span class="wallet-summary-tag">Deposit</span>
+        </div>
+        <div class="wallet-summary-balance">
+          <span class="currency">&#8377;</span>{{ securityDepositBalance | number:'1.2-2' }}
+        </div>
+        <div class="wallet-summary-meta">Used for manufacturing license security deposit</div>
+        <div class="wallet-summary-actions">
+          <button class="btn btn-primary btn-sm" (click)="addMoney('security_deposit'); $event.stopPropagation()">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
         </div>
@@ -144,13 +144,13 @@
       </li>
       } @else {
       <li class="nav-item">
-        <button class="nav-link" [class.active]="activeTab === 'security_deposit'" (click)="setActiveTab('security_deposit')">
-          <i class="bi bi-shield-lock me-1"></i>Security Deposit
+        <button class="nav-link" [class.active]="activeTab === 'license_fee'" (click)="setActiveTab('license_fee')">
+          <i class="bi bi-file-earmark-text me-1"></i>License Fee
         </button>
       </li>
       <li class="nav-item">
-        <button class="nav-link" [class.active]="activeTab === 'license_fee'" (click)="setActiveTab('license_fee')">
-          <i class="bi bi-file-earmark-text me-1"></i>License Fee
+        <button class="nav-link" [class.active]="activeTab === 'security_deposit'" (click)="setActiveTab('security_deposit')">
+          <i class="bi bi-shield-lock me-1"></i>Security Deposit
         </button>
       </li>
       }
