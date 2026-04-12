@@ -316,7 +316,18 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       if (viewParam === 'others') {
         this.walletViewMode = 'others';
       } else if (viewParam === 'wallets') {
-        this.walletViewMode = 'wallets';
+        // Enforce: only brewery/distillery can use "wallets" view.
+        const isManufacturing =
+          this.resolvedLicenseModuleType === 'brewery' ||
+          this.resolvedLicenseModuleType === 'distillery';
+        this.walletViewMode = isManufacturing ? 'wallets' : 'others';
+        if (!isManufacturing) {
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { walletView: 'others' },
+            queryParamsHandling: 'merge'
+          });
+        }
       }
       this.autoSelectLastPaidTabOnLoad =
         !requestedTab ||
@@ -603,6 +614,18 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.resolvedLicenseModuleType = moduleType;
     this.isBreweryUser = moduleType === 'brewery';
     this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+
+    // Only manufacturing (brewery/distillery) users can use the main "Wallets" view.
+    const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
+    if (!isManufacturing && this.walletViewMode !== 'others') {
+      this.walletViewMode = 'others';
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { walletView: 'others' },
+        queryParamsHandling: 'merge'
+      });
+    }
+
     this.ensureActiveTabAllowed();
   }
 

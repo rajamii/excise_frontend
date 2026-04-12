@@ -332,7 +332,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   shouldShowWalletViewToggle(): boolean {
-    return this.selectedSupplyChainSection === 'wallet' && this.canRenderWalletSection();
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return false;
+    }
+    if (!this.isLicenseeUser()) {
+      return true;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return false;
+    }
+    return this.showBreweryOrDistilleryMenus;
   }
 
   setWalletViewMode(mode: 'wallets' | 'others'): void {
@@ -554,13 +563,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   canRenderWalletSection(): boolean {
-    if (!this.isLicenseeUser()) {
-      return true;
-    }
-    if (!this.licenseeMenuAccessResolved) {
-      return true;
-    }
-    return this.showBreweryOrDistilleryMenus;
+    return true;
   }
 
   private enforceSectionAccess(): void {
@@ -593,20 +596,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.isLicenseeUser()) {
       return;
     }
-    if (!this.licenseeMenuAccessResolved) {
-      return;
-    }
-    if (this.showBreweryOrDistilleryMenus) {
-      return;
-    }
-
-    this.selectedSupplyChainSection = null;
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { section: null, tab: null, source: null },
-      queryParamsHandling: 'merge',
-      replaceUrl: true
-    });
+    // Wallet section is available to all licensee users. Non-manufacturing users are restricted to "Others" view
+    // inside the wallet page itself.
+    return;
   }
 
   private loadLicenseeMenuAccess(): void {
@@ -635,7 +627,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
         const allRows = Array.isArray(allApplications) ? allApplications : [];
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
-        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll];
+        const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
+        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
         const hasDistillery = combinedRows.some((item) => this.isDistillery(item));
         const hasBrewery = combinedRows.some((item) => this.isBrewery(item));
 
@@ -660,6 +653,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ''
     ).toLowerCase();
     return stage.includes('approved');
+  }
+
+  private isAwaitingPaymentStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+    ).toLowerCase();
+    return stage.includes('awaiting') && stage.includes('payment');
   }
 
   private isDistillery(item: any): boolean {
@@ -1051,6 +1055,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       queryParams: {
         section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
+        walletView: this.showBreweryOrDistilleryMenus ? 'wallets' : 'others',
         source: 'dashboard-wallet'
       }
     });
