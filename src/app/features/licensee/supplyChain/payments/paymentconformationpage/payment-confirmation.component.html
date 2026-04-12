@@ -115,110 +115,180 @@
     </div>
 
     <!-- Filters Section -->
-    <div class="card mb-3">
-      <div class="card-body py-2">
-        <div class="d-flex flex-wrap align-items-end gap-2">
-          <div class="col-auto">
-            <label class="form-label small mb-1">Transaction ID</label>
-            <input type="text" class="form-control form-control-sm" [(ngModel)]="tabFilters.transactionId"
-              (ngModelChange)="applyFiltersToActiveTab()" placeholder="Search by ID">
+    <div class="filter-card mb-4">
+      <div class="filter-header">
+        <div class="filter-title">
+          <i class="bi bi-funnel-fill me-2"></i>
+          <span>Filter Transactions</span>
+        </div>
+        <button class="btn btn-sm btn-light" (click)="clearTabFilters()" title="Clear All Filters">
+          <i class="bi bi-arrow-clockwise me-1"></i>Reset
+        </button>
+      </div>
+      <div class="filter-body">
+        <div class="row g-3">
+          <div class="col-lg-3 col-md-4 col-sm-6">
+            <div class="filter-input-group">
+              <label class="filter-label">
+                <i class="bi bi-hash text-primary"></i>
+                Transaction ID
+              </label>
+              <input type="text" class="filter-input" [(ngModel)]="tabFilters.transactionId"
+                (ngModelChange)="applyFiltersToActiveTab()" placeholder="Enter transaction ID">
+            </div>
           </div>
-          <div class="col-auto">
-            <label class="form-label small mb-1">Month</label>
-            <input type="month" class="form-control form-control-sm" [(ngModel)]="tabFilters.month"
-              (ngModelChange)="applyFiltersToActiveTab()">
+          <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="filter-input-group">
+              <label class="filter-label">
+                <i class="bi bi-calendar-month text-success"></i>
+                Month
+              </label>
+              <input type="month" class="filter-input" [(ngModel)]="tabFilters.month"
+                (ngModelChange)="applyFiltersToActiveTab()">
+            </div>
           </div>
-          <div class="col-auto">
-            <label class="form-label small mb-1">From</label>
-            <input type="date" class="form-control form-control-sm" [(ngModel)]="tabFilters.from"
-              (ngModelChange)="applyFiltersToActiveTab()">
+          <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="filter-input-group">
+              <label class="filter-label">
+                <i class="bi bi-calendar-check text-info"></i>
+                From Date
+              </label>
+              <input type="date" class="filter-input" [(ngModel)]="tabFilters.from"
+                (ngModelChange)="applyFiltersToActiveTab()">
+            </div>
           </div>
-          <div class="col-auto">
-            <label class="form-label small mb-1">To</label>
-            <input type="date" class="form-control form-control-sm" [(ngModel)]="tabFilters.to"
-              (ngModelChange)="applyFiltersToActiveTab()">
+          <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="filter-input-group">
+              <label class="filter-label">
+                <i class="bi bi-calendar-x text-warning"></i>
+                To Date
+              </label>
+              <input type="date" class="filter-input" [(ngModel)]="tabFilters.to"
+                (ngModelChange)="applyFiltersToActiveTab()">
+            </div>
           </div>
-          <div class="col-auto">
-            <label class="form-label small mb-1">Type</label>
-            <select class="form-select form-select-sm" [(ngModel)]="tabFilters.type"
-              (ngModelChange)="applyFiltersToActiveTab()">
-              <option value="">All</option>
-              <option value="Credited">Credited</option>
-              <option value="Debited">Debited</option>
-              <option value="Refunded">Refunded</option>
-            </select>
+          <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="filter-input-group">
+              <label class="filter-label">
+                <i class="bi bi-tag text-danger"></i>
+                Type
+              </label>
+              <select class="filter-input" [(ngModel)]="tabFilters.type"
+                (ngModelChange)="applyFiltersToActiveTab()">
+                <option value="">All Types</option>
+                <option value="Credited">Credited</option>
+                <option value="Debited">Debited</option>
+                <option value="Refunded">Refunded</option>
+              </select>
+            </div>
           </div>
-          <div class="col-auto">
-            <label class="form-label small mb-1">Min Amount</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="tabFilters.minAmount"
-              (ngModelChange)="applyFiltersToActiveTab()" placeholder="0" style="width: 120px;">
+          <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="filter-input-group">
+              <label class="filter-label">
+                <i class="bi bi-currency-rupee text-success"></i>
+                Min Amount
+              </label>
+              <input type="number" class="filter-input" [(ngModel)]="tabFilters.minAmount"
+                (ngModelChange)="applyFiltersToActiveTab()" placeholder="Min">
+            </div>
           </div>
-          <div class="col-auto">
-            <label class="form-label small mb-1">Max Amount</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="tabFilters.maxAmount"
-              (ngModelChange)="applyFiltersToActiveTab()" placeholder="0" style="width: 120px;">
-          </div>
-          <div class="col-auto ms-auto">
-            <button class="btn btn-outline-secondary btn-sm" (click)="clearTabFilters()"
-              title="Clear Filters">
-              <i class="bi bi-arrow-clockwise me-1"></i>Clear
-            </button>
+          <div class="col-lg-2 col-md-4 col-sm-6">
+            <div class="filter-input-group">
+              <label class="filter-label">
+                <i class="bi bi-currency-rupee text-danger"></i>
+                Max Amount
+              </label>
+              <input type="number" class="filter-input" [(ngModel)]="tabFilters.maxAmount"
+                (ngModelChange)="applyFiltersToActiveTab()" placeholder="Max">
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Tabs Navigation -->
-    <ul class="nav nav-tabs mb-4">
+    <ul class="nav nav-tabs mb-4 border-0">
       @if (walletViewMode === 'wallets') {
       <li class="nav-item" *ngIf="canShowTab('requisition')">
-        <button class="nav-link" [class.active]="activeTab === 'requisition'" (click)="setActiveTab('requisition')">
-          <i class="bi bi-file-text me-1"></i>Requisition
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'requisition'" (click)="setActiveTab('requisition')">
+          <i class="bi bi-file-text me-2"></i>Requisition
         </button>
       </li>
       <li class="nav-item" *ngIf="canShowTab('revalidation')">
-        <button class="nav-link" [class.active]="activeTab === 'revalidation'" (click)="setActiveTab('revalidation')">
-          <i class="bi bi-arrow-repeat me-1"></i>Revalidation
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'revalidation'" (click)="setActiveTab('revalidation')">
+          <i class="bi bi-arrow-repeat me-2"></i>Revalidation
         </button>
       </li>
       <li class="nav-item" *ngIf="canShowTab('cancellation')">
-        <button class="nav-link" [class.active]="activeTab === 'cancellation'" (click)="setActiveTab('cancellation')">
-          <i class="bi bi-x-circle me-1"></i>Cancellation
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'cancellation'" (click)="setActiveTab('cancellation')">
+          <i class="bi bi-x-circle me-2"></i>Cancellation
         </button>
       </li>
       <li class="nav-item" *ngIf="canShowTab('transit')">
-        <button class="nav-link" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
-          <i class="bi bi-truck me-1"></i>Transit Permit
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
+          <i class="bi bi-truck me-2"></i>Transit Permit
         </button>
       </li>
       <li class="nav-item" *ngIf="canShowTab('hologram')">
-        <button class="nav-link" [class.active]="activeTab === 'hologram'" (click)="setActiveTab('hologram')">
-          <i class="bi bi-shield-check me-1"></i>Hologram
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'hologram'" (click)="setActiveTab('hologram')">
+          <i class="bi bi-shield-check me-2"></i>Hologram
         </button>
       </li>
       } @else {
       <li class="nav-item">
-        <button class="nav-link" [class.active]="activeTab === 'license_fee'" (click)="setActiveTab('license_fee')">
-          <i class="bi bi-file-earmark-text me-1"></i>License Fee
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'license_fee'" (click)="setActiveTab('license_fee')">
+          <i class="bi bi-file-earmark-text me-2"></i>License Fee
         </button>
       </li>
       <li class="nav-item">
-        <button class="nav-link" [class.active]="activeTab === 'security_deposit'" (click)="setActiveTab('security_deposit')">
-          <i class="bi bi-shield-lock me-1"></i>Security Deposit
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'security_deposit'" (click)="setActiveTab('security_deposit')">
+          <i class="bi bi-shield-lock me-2"></i>Security Deposit
         </button>
       </li>
       }
       <li class="nav-item">
-        <button class="nav-link" [class.active]="activeTab === 'recharge'" (click)="setActiveTab('recharge')">
-          <i class="bi bi-credit-card me-1"></i>Wallet Recharge
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'recharge'" (click)="setActiveTab('recharge')">
+          <i class="bi bi-credit-card me-2"></i>Wallet Recharge
         </button>
       </li>
       <li class="nav-item">
-        <button class="nav-link" [class.active]="activeTab === 'history'" (click)="setActiveTab('history')">
-          <i class="bi bi-clock-history me-1"></i>Wallet History
+        <button class="nav-link px-4 py-2 fw-semibold" [class.active]="activeTab === 'history'" (click)="setActiveTab('history')">
+          <i class="bi bi-clock-history me-2"></i>Wallet History
         </button>
       </li>
     </ul>
+
+    <style>
+      .nav-tabs {
+        border-bottom: 2px solid #e9ecef !important;
+      }
+      
+      .nav-tabs .nav-link {
+        border: none;
+        color: #1f2937;
+        background: transparent;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+      
+      .nav-tabs .nav-link:hover {
+        color: #111827;
+        background: #f8f9fa;
+        border-bottom-color: #dee2e6;
+      }
+      
+      .nav-tabs .nav-link.active {
+        color: #dc2626;
+        background: linear-gradient(to bottom, rgba(220, 38, 38, 0.08), transparent);
+        border-bottom-color: #dc2626;
+        font-weight: 600;
+      }
+      
+      .nav-tabs .nav-link.active i {
+        color: #dc2626;
+      }
+    </style>
 
     <!-- Tab Content -->
     <div class="tab-content">
