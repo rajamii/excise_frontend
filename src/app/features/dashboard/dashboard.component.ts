@@ -347,7 +347,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.licenseeMenuAccessResolved) {
       return false;
     }
-    return this.showBreweryOrDistilleryMenus;
+    // Do not tie this to showBreweryOrDistilleryMenus: that flag is false while license fee is
+    // still awaiting payment (supply-chain sidebar is hidden), but brewery/distillery users must
+    // still switch between Excise/Education/Hologram (Wallets) and License Fee/Security Deposit (Others).
+    return this.showManufacturingWalletNav;
   }
 
   setWalletViewMode(mode: 'wallets' | 'others'): void {
