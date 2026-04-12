@@ -521,7 +521,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         section,
         tab: 'recharge',
         source: 'sidenav-wallet',
-        walletView: this.showBreweryOrDistilleryMenus ? 'wallets' : 'others'
+        walletView: 'wallets'
       }
     });
     this.closeSidenav();

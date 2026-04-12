@@ -324,18 +324,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       if (viewParam === 'others') {
         this.walletViewMode = 'others';
       } else if (viewParam === 'wallets') {
-        // Enforce: only brewery/distillery can use "wallets" view.
-        const isManufacturing =
-          this.resolvedLicenseModuleType === 'brewery' ||
-          this.resolvedLicenseModuleType === 'distillery';
-        this.walletViewMode = isManufacturing ? 'wallets' : 'others';
-        if (!isManufacturing) {
-          this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { walletView: 'others' },
-            queryParamsHandling: 'merge'
-          });
-        }
+        // Keep wallets mode as-is; internal view will adjust based on license type
+        this.walletViewMode = 'wallets';
       }
       this.autoSelectLastPaidTabOnLoad =
         !requestedTab ||
@@ -713,11 +703,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
     if (!isManufacturing && this.walletViewMode !== 'others') {
       this.walletViewMode = 'others';
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { walletView: 'others' },
-        queryParamsHandling: 'merge'
-      });
     }
 
     this.ensureActiveTabAllowed();

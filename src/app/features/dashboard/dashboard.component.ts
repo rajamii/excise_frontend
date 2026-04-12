@@ -1107,7 +1107,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       queryParams: {
         section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
-        walletView: this.showBreweryOrDistilleryMenus ? 'wallets' : 'others',
+        walletView: 'wallets',
         source: 'dashboard-wallet'
       }
     });
