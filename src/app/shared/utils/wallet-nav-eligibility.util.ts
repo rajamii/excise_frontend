@@ -95,3 +95,72 @@ export function isLicenseeWalletNavEligible(item: any): boolean {
   }
   return hasLicenseCategoryAndSubcategorySelected(item);
 }
+
+/**
+ * Application rows: awaiting license fee stage and fee not marked paid.
+ */
+function applicationRowAwaitingFeeUnpaid(item: any): boolean {
+  if (item?.license_id || item?.licenseId) {
+    return false;
+  }
+  const stage = str(
+    item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+  ).toLowerCase();
+  if (!(stage.includes('awaiting') && stage.includes('payment'))) {
+    return false;
+  }
+  const paid = !!(item?.is_license_fee_paid ?? item?.isLicenseFeePaid);
+  return !paid;
+}
+
+/**
+ * Issued license (`/masters/license/me/`) can exist before license fee is paid. Those rows must
+ * not enable ENA/transit/hologram until `is_license_fee_paid` is true on the source application.
+ */
+export function isAwaitingLicenseFeePaymentPending(item: any): boolean {
+  const hasLic = !!(item?.license_id ?? item?.licenseId);
+  if (hasLic) {
+    const paid = item?.is_license_fee_paid ?? item?.isLicenseFeePaid;
+    if (paid === true) {
+      return false;
+    }
+    if (paid === false) {
+      return true;
+    }
+    return false;
+  }
+  return applicationRowAwaitingFeeUnpaid(item);
+}
+
+/**
+ * Rows that may drive distillery/brewery sidebar. Drops awaiting-fee applications and
+ * issued licenses linked to those applications (by `source_object_id` ↔ `application_id`).
+ */
+export function filterRowsForSupplyChainSidebarMenus(rows: any[]): any[] {
+  const unpaidAppIds = new Set<string>();
+  for (const r of rows) {
+    if (applicationRowAwaitingFeeUnpaid(r)) {
+      const id = str(r?.application_id ?? r?.applicationId ?? r?.pk ?? '');
+      if (id) {
+        unpaidAppIds.add(id);
+      }
+    }
+  }
+  return rows.filter((item) => {
+    if (isAwaitingLicenseFeePaymentPending(item)) {
+      return false;
+    }
+    const licId = item?.license_id ?? item?.licenseId;
+    if (licId) {
+      const src = str(item?.source_object_id ?? item?.sourceObjectId ?? '');
+      if (src && unpaidAppIds.has(src)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}

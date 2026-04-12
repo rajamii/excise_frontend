@@ -19,7 +19,10 @@ import { User } from '../../../../core/models/dashboard.models';
 import { AccountService } from '../../../../core/services/account.service';
 import { environment } from '../../../../../environments/environment';
 import { SidebarPendingBadgeService } from '../../../services/sidebar-pending-badge.service';
-import { isLicenseeWalletNavEligible } from '../../../utils/wallet-nav-eligibility.util';
+import {
+  filterRowsForSupplyChainSidebarMenus,
+  isLicenseeWalletNavEligible
+} from '../../../utils/wallet-nav-eligibility.util';
 
 @Component({
   selector: 'app-unified-layout',
@@ -835,10 +838,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private applySubtypeMenuRules(rows: any[]): void {
-    const hasDistillery = rows.some((item) => this.isDistillery(item));
-    const hasBrewery = rows.some((item) => this.isBrewery(item));
+    const menuRows = filterRowsForSupplyChainSidebarMenus(rows);
+    const hasDistillery = menuRows.some((item) => this.isDistillery(item));
+    const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
-    // Distillery: full supply-chain menu.
+    // Distillery: full supply-chain menu (hidden until license fee paid if still awaiting payment).
     this.showDistilleryMenus = hasDistillery;
     // Brewery OR Distillery: transit + hologram menus.
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;

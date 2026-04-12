@@ -25,7 +25,10 @@ import { AccountService } from '../../core/services/account.service';
 import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
-import { isLicenseeWalletNavEligible } from '../../shared/utils/wallet-nav-eligibility.util';
+import {
+  filterRowsForSupplyChainSidebarMenus,
+  isLicenseeWalletNavEligible
+} from '../../shared/utils/wallet-nav-eligibility.util';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
@@ -152,6 +155,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedSupplyChainSection: string | null = null;
   walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
+  private showDistilleryMenus = false;
   private showBreweryOrDistilleryMenus = false;
   private showManufacturingWalletNav = false;
 
@@ -569,6 +573,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    // Licensee: cannot open ENA / transit / hologram until license fee is paid (exclude awaiting unpaid rows).
+    if (
+      this.isLicenseeUser() &&
+      this.licenseeMenuAccessResolved &&
+      this.selectedSupplyChainSection
+    ) {
+      const sec = String(this.selectedSupplyChainSection);
+      const enaSections = new Set([
+        'requisition',
+        'revalidation',
+        'cancellation',
+        'import-permit'
+      ]);
+      const breweryDistSections = new Set([
+        'transit',
+        'hologram',
+        'hologram-request',
+        'transit-permit',
+        'oic-transit',
+        'hologram-new',
+        'hologram-request-form'
+      ]);
+      const blocked =
+        (enaSections.has(sec) && !this.showDistilleryMenus) ||
+        (breweryDistSections.has(sec) && !this.showBreweryOrDistilleryMenus);
+      if (blocked) {
+        this.selectedSupplyChainSection = null;
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: null, tab: null, source: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+        return;
+      }
+    }
+
     // Joint Commissioner should not access New Hologram Procurement.
     if (this.currentUser?.roleId === 9 && String(this.selectedSupplyChainSection || '') === 'hologram') {
       this.selectedSupplyChainSection = null;
@@ -606,12 +647,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private loadLicenseeMenuAccess(): void {
     if (!this.isLicenseeUser()) {
       this.licenseeMenuAccessResolved = true;
+      this.showDistilleryMenus = false;
       this.showBreweryOrDistilleryMenus = false;
       this.showManufacturingWalletNav = false;
       return;
     }
 
     this.licenseeMenuAccessResolved = false;
+    this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
     this.showManufacturingWalletNav = false;
 
@@ -633,15 +676,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
         const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
         const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
-        const hasDistillery = combinedRows.some((item) => this.isDistillery(item));
-        const hasBrewery = combinedRows.some((item) => this.isBrewery(item));
+        const menuRows = filterRowsForSupplyChainSidebarMenus(combinedRows);
+        const hasDistillery = menuRows.some((item) => this.isDistillery(item));
+        const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
+        this.showDistilleryMenus = hasDistillery;
         this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
         this.showManufacturingWalletNav = combinedRows.some((item) => isLicenseeWalletNavEligible(item));
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
       },
       error: () => {
+        this.showDistilleryMenus = false;
         this.showBreweryOrDistilleryMenus = false;
         this.showManufacturingWalletNav = false;
         this.licenseeMenuAccessResolved = true;
