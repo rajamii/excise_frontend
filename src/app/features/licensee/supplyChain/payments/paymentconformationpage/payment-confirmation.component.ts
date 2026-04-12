@@ -2759,7 +2759,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const history = historyByRef.get(refKey);
       const canPay = this.canPayHologram(item);
       const isPaid = !canPay;
-      const dateTime = history?.dateTime || item.paymentDate || new Date();
+      const dateTime = history?.dateTime || item.paymentDate || (item as any).createdAt || (item as any).date || '';
       const status = history?.status || (isPaid ? 'Payment Successful' : 'Pending');
       const type = history?.type || (isPaid ? 'Wallet Utilization' : 'Pending Payment');
       const amount = Number(history?.amount ?? item.hologramFee ?? 0);
