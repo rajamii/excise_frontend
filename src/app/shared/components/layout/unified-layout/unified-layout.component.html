@@ -208,7 +208,7 @@
     </mat-sidenav>
 
     <!-- Main Content Area -->
-    <mat-sidenav-content class="main-content">
+    <mat-sidenav-content class="unified-main-content">
       <!-- Left edge trigger: hover near left side to reveal arrow, click to open sidebar -->
       <div
         class="sidenav-edge-trigger"
@@ -250,7 +250,7 @@
       </div>
 
       <!-- Main Content -->
-      <div class="content-wrapper" [class.with-top-nav]="!isSidenavOpen">
+      <div class="unified-content-wrapper" [class.with-top-nav]="!isSidenavOpen">
         <router-outlet></router-outlet>
       </div>
     </mat-sidenav-content>
