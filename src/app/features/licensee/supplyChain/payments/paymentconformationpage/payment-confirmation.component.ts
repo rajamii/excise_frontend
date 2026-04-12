@@ -1318,10 +1318,22 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   // Wallet history (utilization and additions)
   selectedWalletForHistory: WalletHistoryCategory | null = null;
   walletHistoryFilters = {
+    transactionId: '', // Transaction ID filter
     from: '',
     to: '',
     month: '', // Monthly filter
     type: '', // Credited | Debited | Refunded
+    minAmount: '',
+    maxAmount: ''
+  };
+
+  // Main tab filters (for all tabs)
+  tabFilters = {
+    transactionId: '',
+    month: '',
+    from: '',
+    to: '',
+    type: '',
     minAmount: '',
     maxAmount: ''
   };
@@ -1410,6 +1422,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const f = this.walletHistoryFilters;
     
     this.walletHistoryFiltered = txns.filter(t => {
+      // Handle transaction ID filter
+      const txnIdOk = f.transactionId ? t.id.toLowerCase().includes(f.transactionId.toLowerCase()) : true;
+      
       // Handle monthly filter
       const monthOk = f.month ? this.isTransactionInMonth(t.date, f.month) : true;
       
@@ -1423,7 +1438,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const minOk = f.minAmount ? t.amount >= Number(f.minAmount) : true;
       const maxOk = f.maxAmount ? t.amount <= Number(f.maxAmount) : true;
       
-      return monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
+      return txnIdOk && monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
     });
     
     // Reset to first page when filters change
@@ -1432,7 +1447,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   clearWalletHistoryFilters(apply: boolean = true): void {
-    this.walletHistoryFilters = { from: '', to: '', month: '', type: '', minAmount: '', maxAmount: '' };
+    this.walletHistoryFilters = { transactionId: '', from: '', to: '', month: '', type: '', minAmount: '', maxAmount: '' };
     if (apply) {
       this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
     }
@@ -2797,28 +2812,94 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getRowsForTab(tab: WalletTableTab): any[] {
+    let rows: any[] = [];
     switch (tab) {
       case 'requisition':
-        return this.getPaymentTransactionsFor('requisition');
+        rows = this.getPaymentTransactionsFor('requisition');
+        break;
       case 'revalidation':
-        return this.getPaymentTransactionsFor('revalidation');
+        rows = this.getPaymentTransactionsFor('revalidation');
+        break;
       case 'cancellation':
-        return this.getPaymentTransactionsFor('cancellation');
+        rows = this.getPaymentTransactionsFor('cancellation');
+        break;
       case 'transit':
-        return this.getPaymentTransactionsFor('transit');
+        rows = this.getPaymentTransactionsFor('transit');
+        break;
       case 'hologram':
-        return this.getHologramTabRows();
+        rows = this.getHologramTabRows();
+        break;
       case 'security_deposit':
-        return this.getWalletTransactionsForWalletType('security_deposit');
+        rows = this.getWalletTransactionsForWalletType('security_deposit');
+        break;
       case 'license_fee':
-        return this.getWalletTransactionsForWalletType('license_fee');
+        rows = this.getWalletTransactionsForWalletType('license_fee');
+        break;
       case 'recharge':
-        return this.getRechargeRowsForCurrentView();
+        rows = this.getRechargeRowsForCurrentView();
+        break;
       case 'history':
-        return this.getHistoryRowsForCurrentView();
+        rows = this.getHistoryRowsForCurrentView();
+        break;
       default:
-        return [];
+        rows = [];
     }
+    
+    // Apply filters
+    return this.applyTabFilters(rows);
+  }
+
+  applyTabFilters(rows: any[]): any[] {
+    const f = this.tabFilters;
+    
+    return rows.filter(row => {
+      // Transaction ID filter
+      const txnId = row.txnId || row.id || row.reference || '';
+      const txnIdOk = f.transactionId ? txnId.toLowerCase().includes(f.transactionId.toLowerCase()) : true;
+      
+      // Date filters
+      const rowDate = row.dateTime || row.date || '';
+      const dateStr = rowDate ? new Date(rowDate).toISOString().split('T')[0] : '';
+      
+      // Month filter
+      const monthOk = f.month ? (dateStr && dateStr.substring(0, 7) === f.month) : true;
+      
+      // Date range filter
+      const afterFrom = f.from ? dateStr >= f.from : true;
+      const beforeTo = f.to ? dateStr <= f.to : true;
+      
+      // Type filter
+      const rowType = row.type || '';
+      const typeOk = f.type ? rowType === f.type : true;
+      
+      // Amount filters
+      const amount = Number(row.amount || 0);
+      const minOk = f.minAmount ? amount >= Number(f.minAmount) : true;
+      const maxOk = f.maxAmount ? amount <= Number(f.maxAmount) : true;
+      
+      return txnIdOk && monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
+    });
+  }
+
+  applyFiltersToActiveTab(): void {
+    // Reset to first page when filters change
+    const tab = this.getCurrentWalletTableTab();
+    if (tab) {
+      this.tableCurrentPageByTab[tab] = 1;
+    }
+  }
+
+  clearTabFilters(): void {
+    this.tabFilters = {
+      transactionId: '',
+      month: '',
+      from: '',
+      to: '',
+      type: '',
+      minAmount: '',
+      maxAmount: ''
+    };
+    this.applyFiltersToActiveTab();
   }
 
   setWalletViewMode(mode: WalletViewMode): void {
@@ -2877,6 +2958,28 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private isOtherWalletType(walletTypeRaw: string, hoaRaw: string): boolean {
     const type = String(walletTypeRaw || '').trim().toLowerCase() || this.inferWalletTypeFromHoa(String(hoaRaw || '').trim());
     return type === 'security_deposit' || type === 'license_fee';
+  }
+
+  getWalletTypeLabel(walletTypeOrHoa: string): string {
+    const type = String(walletTypeOrHoa || '').trim().toLowerCase();
+    const inferredType = type || this.inferWalletTypeFromHoa(walletTypeOrHoa);
+    
+    switch (inferredType) {
+      case 'excise':
+      case 'brewery':
+        return 'Excise Duty';
+      case 'education':
+      case 'education_cess':
+        return 'Education Cess';
+      case 'hologram':
+        return 'Hologram';
+      case 'security_deposit':
+        return 'Security Deposit';
+      case 'license_fee':
+        return 'License Fee';
+      default:
+        return 'Excise Duty';
+    }
   }
 
   getPaginatedRowsForTab(tab: WalletTableTab): any[] {

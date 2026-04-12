@@ -114,6 +114,60 @@
       </button>
     </div>
 
+    <!-- Filters Section -->
+    <div class="card mb-3">
+      <div class="card-body py-2">
+        <div class="d-flex flex-wrap align-items-end gap-2">
+          <div class="col-auto">
+            <label class="form-label small mb-1">Transaction ID</label>
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="tabFilters.transactionId"
+              (ngModelChange)="applyFiltersToActiveTab()" placeholder="Search by ID">
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">Month</label>
+            <input type="month" class="form-control form-control-sm" [(ngModel)]="tabFilters.month"
+              (ngModelChange)="applyFiltersToActiveTab()">
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">From</label>
+            <input type="date" class="form-control form-control-sm" [(ngModel)]="tabFilters.from"
+              (ngModelChange)="applyFiltersToActiveTab()">
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">To</label>
+            <input type="date" class="form-control form-control-sm" [(ngModel)]="tabFilters.to"
+              (ngModelChange)="applyFiltersToActiveTab()">
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">Type</label>
+            <select class="form-select form-select-sm" [(ngModel)]="tabFilters.type"
+              (ngModelChange)="applyFiltersToActiveTab()">
+              <option value="">All</option>
+              <option value="Credited">Credited</option>
+              <option value="Debited">Debited</option>
+              <option value="Refunded">Refunded</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">Min Amount</label>
+            <input type="number" class="form-control form-control-sm" [(ngModel)]="tabFilters.minAmount"
+              (ngModelChange)="applyFiltersToActiveTab()" placeholder="0" style="width: 120px;">
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">Max Amount</label>
+            <input type="number" class="form-control form-control-sm" [(ngModel)]="tabFilters.maxAmount"
+              (ngModelChange)="applyFiltersToActiveTab()" placeholder="0" style="width: 120px;">
+          </div>
+          <div class="col-auto ms-auto">
+            <button class="btn btn-outline-secondary btn-sm" (click)="clearTabFilters()"
+              title="Clear Filters">
+              <i class="bi bi-arrow-clockwise me-1"></i>Clear
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Tabs Navigation -->
     <ul class="nav nav-tabs mb-4">
       @if (walletViewMode === 'wallets') {
@@ -489,8 +543,9 @@
         <table class="table table-hover table-bordered">
           <thead class="table-success">
             <tr>
-              <th>Transaction Type</th>
               <th>Transaction ID</th>
+              <th>Type</th>
+              <th>Transaction Type</th>
               <th>HOA</th>
               <th>Amount</th>
               <th>Date</th>
@@ -500,8 +555,9 @@
           <tbody>
             @for (item of getPaginatedRowsForTab('recharge'); track item.id) {
             <tr>
-              <td>{{ item.transactionType }}</td>
               <td>{{ item.transactionId }}</td>
+              <td>{{ getWalletTypeLabel(item.walletType || item.hoa) }}</td>
+              <td>{{ item.transactionType }}</td>
               <td>{{ item.hoa }}</td>
               <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.date | date:'dd-MMM-yyyy HH:mm:ss' }}</td>
@@ -511,7 +567,7 @@
             </tr>
             }
             @if (getRowsForTab('recharge').length === 0) {
-            <tr><td colspan="6" class="text-center text-muted py-4">No wallet recharge transactions found.</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-4">No wallet recharge transactions found.</td></tr>
             }
           </tbody>
         </table>
