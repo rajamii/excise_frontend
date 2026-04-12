@@ -761,7 +761,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const candidateAliases = this.expandLicenseAliases(candidate);
     if (candidateAliases.length === 0) return true;
 
-    return candidateAliases.some((c) => activeAliases.includes(c));
+    if (candidateAliases.some((c) => activeAliases.includes(c))) {
+      return true;
+    }
+
+    // Same logged-in user but wallet rows still keyed by legacy username (e.g. TH...) while active license is NA/...
+    const sessionUser = String(this.resolveActiveLicenseeIdFromSession() || '').trim().toLowerCase();
+    const rowUser = String(this.pickAny(item, ['user_id', 'userId'], '') || '').trim().toLowerCase();
+    if (sessionUser && rowUser && sessionUser === rowUser) {
+      return true;
+    }
+    return false;
   }
 
   private applyWalletSummary(payload: any): void {
@@ -2824,16 +2834,27 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private getRechargeRowsForCurrentView(): RechargeItem[] {
     const rows = [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    if (this.walletViewMode !== 'others') {
+    // "Others" (license fee + security deposit): show every recharge here so the tab is not empty;
+    // detailed splits stay under License Fee / Security Deposit tabs.
+    if (this.walletViewMode === 'others') {
       return rows;
     }
-    return rows.filter((row) => this.isOtherWalletType(String(row.walletType || ''), String(row.hoa || '')));
+    // "Wallets" (brewery/distillery): fee/deposit wallets are not part of this view — hide those recharges.
+    return rows.filter((row) => {
+      const wt =
+        String(row.walletType || '').toLowerCase() ||
+        this.inferWalletTypeFromHoa(String(row.hoa || '').trim());
+      return wt !== 'license_fee' && wt !== 'security_deposit';
+    });
   }
 
   private getHistoryRowsForCurrentView(): HistoryItem[] {
     const rows = [...this.historyData].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
     if (this.walletViewMode !== 'others') {
-      return rows;
+      return rows.filter((row) => {
+        const resolved = this.resolveWalletTypeForRow(row);
+        return resolved !== 'license_fee' && resolved !== 'security_deposit';
+      });
     }
     return rows.filter((row) => this.isOtherWalletType(String(row.walletType || ''), String(row.hoa || '')));
   }
@@ -2842,14 +2863,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const mergedRows = [...this.optimisticPaymentHistory, ...this.historyData].filter((item) => this.isForActiveLicense(item));
 
     return mergedRows
-      .filter((item) => {
-        const resolved = this.resolveWalletTypeForRow(item);
-        if (resolved !== walletType) return false;
-        const type = String(item?.type || '').toLowerCase();
-        const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
-        const isRefundLike = type.includes('refund');
-        return isDebitLike || isRefundLike;
-      })
+      .filter((item) => this.resolveWalletTypeForRow(item) === walletType)
       .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
   }
 

@@ -510,6 +510,9 @@
               </td>
             </tr>
             }
+            @if (getRowsForTab('recharge').length === 0) {
+            <tr><td colspan="6" class="text-center text-muted py-4">No wallet recharge transactions found.</td></tr>
+            }
           </tbody>
         </table>
       </div>
