@@ -1321,7 +1321,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     transactionId: '', // Transaction ID filter
     from: '',
     to: '',
-    month: '', // Monthly filter
+    month: String(new Date().getMonth() + 1).padStart(2, '0'), // Monthly filter
     type: '', // Credited | Debited | Refunded
     minAmount: '',
     maxAmount: ''
@@ -1330,7 +1330,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   // Main tab filters (for all tabs)
   tabFilters = {
     transactionId: '',
-    month: '',
+    month: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0'),
     from: '',
     to: '',
     type: '',
@@ -1447,7 +1447,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   clearWalletHistoryFilters(apply: boolean = true): void {
-    this.walletHistoryFilters = { transactionId: '', from: '', to: '', month: '', type: '', minAmount: '', maxAmount: '' };
+    this.walletHistoryFilters = { transactionId: '', from: '', to: '', month: String(new Date().getMonth() + 1).padStart(2, '0'), type: '', minAmount: '', maxAmount: '' };
     if (apply) {
       this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
     }
@@ -2909,7 +2909,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   clearTabFilters(): void {
     this.tabFilters = {
       transactionId: '',
-      month: '',
+      month: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0'),
       from: '',
       to: '',
       type: '',
