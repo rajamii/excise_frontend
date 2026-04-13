@@ -40,7 +40,9 @@ export class CaptchaComponent implements OnInit {
         const imagePath = data.image_url || data.imageUrl;
         if (!imagePath) {
           console.error('Captcha response missing image path', data);
-          alert('Failed to load captcha. Please try again.');
+          if (navigator.onLine) {
+            alert('Failed to load captcha. Please try again.');
+          }
           return;
         }
         this.captchaImageUrl = `${this.baseUrl}${imagePath}`;
@@ -49,7 +51,9 @@ export class CaptchaComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading captcha:', error);
-        alert('Failed to load captcha. Please try again.');
+        if (navigator.onLine) {
+          alert('Failed to load captcha. Please try again.');
+        }
       },
     });
   }

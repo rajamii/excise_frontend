@@ -253,3 +253,100 @@
   0%, 100% { transform: scale(0.98); opacity: 0.85; }
   50% { transform: scale(1.04); opacity: 1; }
 }
+
+/* --- Offline Overlay Styles --- */
+.offline-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  animation: fadeInOffline 0.3s ease-out forwards;
+}
+
+.offline-card {
+  width: min(460px, calc(100vw - 48px));
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 20px;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  box-shadow: 0 24px 48px rgba(2, 6, 23, 0.35);
+  transform: translateY(20px);
+  animation: slideUpOffline 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.offline-icon-wrapper {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(255, 107, 53, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.offline-icon-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 107, 53, 0.25);
+  animation: pulseRingOffline 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.offline-icon {
+  width: 44px;
+  height: 44px;
+  color: #ff6b35;
+  animation: floatIconOffline 3s ease-in-out infinite;
+}
+
+.offline-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.offline-sub {
+  font-size: 16px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@keyframes fadeInOffline {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpOffline {
+  from { 
+    opacity: 0;
+    transform: translateY(24px); 
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0); 
+  }
+}
+
+@keyframes floatIconOffline {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulseRingOffline {
+  0% { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}

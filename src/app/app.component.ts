@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, HostListener } from '@angular/core';
 import {
   Router,
   NavigationCancel,
@@ -36,6 +36,17 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'excise_frontend';
   //showHeaderFooter = true; // Default to showing header/footer
   showCarousel = false;
+  isOffline = typeof navigator !== 'undefined' ? !navigator.onLine : false;
+
+  @HostListener('window:offline')
+  setNetworkOffline() {
+    this.isOffline = true;
+  }
+
+  @HostListener('window:online')
+  setNetworkOnline() {
+    this.isOffline = false;
+  }
   private readonly destroy$ = new Subject<void>();
 
   private router = inject(Router);
