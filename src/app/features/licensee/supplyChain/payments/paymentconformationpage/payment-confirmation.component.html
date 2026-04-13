@@ -620,7 +620,6 @@
             <tr>
               <th>Transaction ID</th>
               <th>Type</th>
-              <th>Transaction Type</th>
               <th>HOA</th>
               <th>Amount</th>
               <th>Date</th>
@@ -632,7 +631,6 @@
             <tr>
               <td>{{ item.transactionId }}</td>
               <td>{{ getWalletTypeLabel(item.walletType || item.hoa) }}</td>
-              <td>{{ item.transactionType }}</td>
               <td>{{ item.hoa }}</td>
               <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.date | date:'dd-MMM-yyyy HH:mm:ss' }}</td>
@@ -642,7 +640,7 @@
             </tr>
             }
             @if (getRowsForTab('recharge').length === 0) {
-            <tr><td colspan="7" class="text-center text-muted py-4">No wallet recharge transactions found.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">No wallet recharge transactions found.</td></tr>
             }
           </tbody>
         </table>

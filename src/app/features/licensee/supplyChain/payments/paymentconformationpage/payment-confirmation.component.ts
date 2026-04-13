@@ -2869,8 +2869,25 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const beforeTo = f.to ? dateStr <= f.to : true;
       
       // Type filter
-      const rowType = row.type || '';
-      const typeOk = f.type ? rowType === f.type : true;
+      const rowType = String(row.type || row.transactionType || '');
+      const rowStatus = String(row.status || '');
+      
+      let typeOk = true;
+      if (f.type) {
+        const filterType = f.type.toLowerCase();
+        const typeLower = rowType.toLowerCase();
+        const statusLower = rowStatus.toLowerCase();
+        
+        if (filterType === 'refunded') {
+          typeOk = typeLower.includes('refund') || statusLower.includes('refund') || typeLower === filterType;
+        } else if (filterType === 'credited') {
+          typeOk = typeLower.includes('credit') || statusLower.includes('credit') || typeLower.includes('recharge') || typeLower === filterType;
+        } else if (filterType === 'debited') {
+          typeOk = typeLower.includes('debit') || statusLower.includes('debit') || typeLower.includes('utilization') || typeLower === filterType;
+        } else {
+          typeOk = typeLower === filterType || statusLower === filterType;
+        }
+      }
       
       // Amount filters
       const amount = Number(row.amount || 0);
