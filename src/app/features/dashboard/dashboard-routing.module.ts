@@ -4,6 +4,7 @@ import { DashboardComponent } from './dashboard.component';
 import { RoleDashboardGuard } from '../../core/guards';
 import { UnifiedLayoutComponent } from '../../shared/components/layout/unified-layout/unified-layout.component';
 import { UserRouteAccessService } from '../../core/config/user-route-access.service';
+import { ListComponent as LicenseTermsListComponent } from '../admin/master/license-terms/list/list.component';
 
 const routes: Routes = [
   {
@@ -86,6 +87,12 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_subcategories.view' }
       },
       {
+        path: 'admin/license-terms',
+        component: LicenseTermsListComponent,
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/roads',
         loadComponent: () =>
           import('../admin/master/road/list/list.component').then((m) => m.ListComponent),
@@ -110,6 +117,7 @@ const routes: Routes = [
       { path: 'license-categories', redirectTo: 'admin/license-categories', pathMatch: 'full' },
       { path: 'license-titles', redirectTo: 'admin/license-titles', pathMatch: 'full' },
       { path: 'license-subcategories', redirectTo: 'admin/license-subcategories', pathMatch: 'full' },
+      { path: 'license-terms', redirectTo: 'admin/license-terms', pathMatch: 'full' },
       { path: 'roads', redirectTo: 'admin/roads', pathMatch: 'full' },
       { path: 'oic', redirectTo: 'admin/oic', pathMatch: 'full' }
     ]

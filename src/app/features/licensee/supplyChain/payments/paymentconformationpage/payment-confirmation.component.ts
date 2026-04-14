@@ -174,6 +174,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
   pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
   private hasHandledPendingWalletPayment = false;
+  private cancellationWalletSyncAttempted = new Set<string>();
 
   // Monthly filter method - declared early to avoid TypeScript issues
   private setCurrentMonthAutomatically(): void {
@@ -588,16 +589,40 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.activeTab = this.isBreweryUser ? 'transit' : 'requisition';
   }
 
+  private expandLicenseAliases(value: any): string[] {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return [];
+
+    const out: string[] = [normalized];
+    if (normalized.startsWith('nli/')) {
+      out.push(`na/${normalized.slice(4)}`);
+    } else if (normalized.startsWith('na/')) {
+      out.push(`nli/${normalized.slice(3)}`);
+    }
+
+    // Preserve order, remove duplicates.
+    const seen = new Set<string>();
+    return out.filter((item) => {
+      const key = String(item || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   private isForActiveLicense(item: any): boolean {
-    const active = String(this.activeLicenseeId || '').trim().toLowerCase();
-    if (!active) return true;
+    const activeRaw = String(this.activeLicenseeId || '').trim();
+    const activeAliases = this.expandLicenseAliases(activeRaw);
+    if (activeAliases.length === 0) return true;
 
     const candidate = String(
       this.pickAny(item, ['licensee_id', 'licenseeId', 'license_id', 'licenseId', 'user_id', 'userId'], '')
     ).trim().toLowerCase();
 
-    if (!candidate) return true;
-    return candidate === active;
+    const candidateAliases = this.expandLicenseAliases(candidate);
+    if (candidateAliases.length === 0) return true;
+
+    return candidateAliases.some((c) => activeAliases.includes(c));
   }
 
   private applyWalletSummary(payload: any): void {
@@ -978,8 +1003,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.supplyChainService.getCancellations().subscribe({
       next: (data) => {
         console.log('Fetched Cancellation Data:', data);
+        const allRows = Array.isArray(data) ? data : [];
         // Map backend data to PaymentItem interface
-        this.cancellationData = data.filter(item =>
+        this.cancellationData = allRows.filter(item =>
           this.isForActiveLicense(item) && (
           this.isCancellationPaymentQueueStatus(item.status)
           )
@@ -1003,8 +1029,78 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
             }, 500);
           }
         }
+
+        this.syncMissingCancellationWalletDebits(allRows);
       },
       error: (err) => console.error('Error fetching cancellation data', err)
+    });
+  }
+
+  private syncMissingCancellationWalletDebits(rows: any[]): void {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return;
+    }
+
+    const existingRefs = new Set(
+      (this.historyData || [])
+        .map((item) => String(item?.reference || '').trim().toUpperCase())
+        .filter((ref) => !!ref)
+    );
+
+    const pendingRows = rows.filter((row) => {
+      if (!this.isForActiveLicense(row)) {
+        return false;
+      }
+
+      const id = String(row?.id || '').trim();
+      if (!id || this.cancellationWalletSyncAttempted.has(id)) {
+        return false;
+      }
+
+      const status = this.normalizeStatus(
+        String(row?.status || row?.current_stage_name || row?.currentStageName || '')
+      );
+      if (status.includes('reject')) {
+        return false;
+      }
+
+      const amount = this.toNumber(row?.totalCancellationAmount ?? row?.total_cancellation_amount ?? row?.cancellation_br_amount);
+      if (!(amount > 0)) {
+        return false;
+      }
+
+      const reference = String(row?.ourRefNo || row?.our_ref_no || '').trim().toUpperCase();
+      if (reference && existingRefs.has(reference)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (pendingRows.length === 0) {
+      return;
+    }
+
+    const syncRequests: Observable<any>[] = pendingRows.map((row) => {
+      const id = String(row?.id || '').trim();
+      this.cancellationWalletSyncAttempted.add(id);
+      return this.supplyChainService.syncCancellationWalletDebit(id).pipe(
+        catchError((error) => {
+          console.warn('Cancellation wallet sync failed for id:', id, error);
+          return of({ __syncError: true, id });
+        })
+      );
+    });
+
+    forkJoin(syncRequests).subscribe((results) => {
+      const hasSuccessfulSync = (results || []).some((result: any) => {
+        const debit = result?.wallet_deduction;
+        return debit?.debited === true || debit?.reason === 'already_debited';
+      });
+
+      if (hasSuccessfulSync) {
+        this.refreshWalletData();
+      }
     });
   }
 
@@ -1725,8 +1821,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   confirmPayment(): void {
     if (!this.selectedItem) return;
 
-    const isHologramPayment = this.activeTab === 'hologram';
-    const availableBalance = isHologramPayment ? this.hologramWalletBalance : this.educationCessBalance;
+    const availableBalance = this.getSelectedWalletBalance();
     if (availableBalance < this.selectedItem.amount) {
       this.showInsufficientBalanceAlert();
       return;
@@ -1782,13 +1877,29 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         next: (res) => {
           this.showSuccessMessage(`Cancellation Payment of Rs ${item.amount} processed successfully!`);
           item.status = String(res?.new_status || res?.status || 'SUBMITTED_PAYSLIP');
+          const deducted = Number(res?.wallet_deduction?.amount ?? item.amount ?? 0);
+          const balanceAfter = Number(res?.wallet_deduction?.balance_after ?? (this.getSelectedWalletBalance() - deducted));
+          const txnId = String(res?.wallet_deduction?.transaction_id || 'N/A');
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Payment Successful',
+            html:
+              `<div style="text-align:left">` +
+              `<div><strong>Deducted Amount:</strong> Rs ${deducted.toFixed(2)}</div>` +
+              `<div><strong>Remaining Wallet Balance:</strong> Rs ${balanceAfter.toFixed(2)}</div>` +
+              `<div><strong>Transaction ID:</strong> ${txnId}</div>` +
+              `</div>`,
+            confirmButtonText: 'OK'
+          });
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
           this.refreshWalletData();
         },
         error: (err) => {
           console.error('Cancellation Payment failed:', err);
-          this.showErrorMessage(`Cancellation Payment failed: ${err.error?.error || err.message}`);
+          const errorMessage = err?.error?.error || err?.error?.detail || err?.message || 'Cancellation Payment failed';
+          this.showErrorMessage(`Cancellation Payment failed: ${errorMessage}`);
         }
       });
     } else {
@@ -2096,7 +2207,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getSelectedWalletBalance(): number {
-    return this.activeTab === 'hologram' ? this.hologramWalletBalance : this.educationCessBalance;
+    if (this.activeTab === 'hologram') {
+      return this.hologramWalletBalance;
+    }
+    if (this.activeTab === 'revalidation') {
+      return this.educationCessBalance;
+    }
+    return this.isBreweryUser ? this.breweryWalletBalance : this.exciseWalletBalance;
   }
 
   getSelectedWalletBalanceAfterDeduction(): number {
@@ -2266,11 +2383,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     };
     const keyword = keywordByTab[tab];
 
-    const activeLicensee = String(this.activeLicenseeId || '').trim().toLowerCase();
     const mergedRows = [...this.optimisticPaymentHistory, ...this.historyData].filter((item) => {
-      if (!activeLicensee) return true;
-      const rowLicensee = String(item?.licenseeId || '').trim().toLowerCase();
-      return !rowLicensee || rowLicensee === activeLicensee;
+      return this.isForActiveLicense(item);
     });
 
     return mergedRows.filter((item) => {

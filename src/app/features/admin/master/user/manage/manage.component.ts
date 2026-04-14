@@ -155,7 +155,7 @@ export class ManageComponent extends BaseComponent implements OnInit {
   loadRoles(): void {
     this.userService.getRoles().subscribe({
       next: (data) => {
-        this.roles = data;
+        this.roles = [...data].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
         // If editing, find and set the exact role object
         if (this.isEditMode && this.user.role?.id) {
           this.user.role = this.roles.find(r => r.id === this.user.role!.id)!;
@@ -163,6 +163,14 @@ export class ManageComponent extends BaseComponent implements OnInit {
       },
       error: () => Swal.fire('Error', 'Failed to load roles.', 'error'),
     });
+  }
+
+  toTitleCase(snakeCase: string): string {
+    return (snakeCase || '')
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+      .trim();
   }
 
   /**

@@ -746,10 +746,15 @@ export class LoginComponent extends BaseComponent {
       const currentUser = this.accountService.getUserProfileSync();
       if (currentUser) {
         const previousUrl = this.stateStorgeService.getUrl();
-        if (previousUrl && previousUrl !== '/login') {
+        const safePreviousUrl = typeof previousUrl === 'string' ? previousUrl.trim() : '';
+        if (safePreviousUrl && safePreviousUrl !== '/login' && safePreviousUrl.startsWith('/dashboard')) {
           this.stateStorgeService.clearUrl();
-          this.router.navigateByUrl(previousUrl);
+          this.router.navigateByUrl(safePreviousUrl);
           return;
+        }
+        if (safePreviousUrl) {
+          // Prevent cross-dashboard redirects (e.g. officer dashboard URL from a prior session)
+          this.stateStorgeService.clearUrl();
         }
         this.redirectBasedOnRole(currentUser.role?.id);
         return;
@@ -764,10 +769,14 @@ export class LoginComponent extends BaseComponent {
               return;
             }
             const previousUrl = this.stateStorgeService.getUrl();
-            if (previousUrl && previousUrl !== '/login') {
+            const safePreviousUrl = typeof previousUrl === 'string' ? previousUrl.trim() : '';
+            if (safePreviousUrl && safePreviousUrl !== '/login' && safePreviousUrl.startsWith('/dashboard')) {
               this.stateStorgeService.clearUrl();
-              this.router.navigateByUrl(previousUrl);
+              this.router.navigateByUrl(safePreviousUrl);
               return;
+            }
+            if (safePreviousUrl) {
+              this.stateStorgeService.clearUrl();
             }
             this.redirectBasedOnRole(user.role?.id);
           } else {

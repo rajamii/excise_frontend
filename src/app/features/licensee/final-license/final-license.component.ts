@@ -5,6 +5,8 @@ import { MaterialModule } from '../../../shared/material.module';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { catchError, firstValueFrom } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import Swal from 'sweetalert2';
+import { LicenseService } from '../../../core/services/license.service';
 
 type FinalLicenseTemplateData = {
   licenseNumber: string;
@@ -57,11 +59,20 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly commSignUrl = 'assets/comm_sign.jpg';
   readonly printing = signal<boolean>(false);
 
+  readonly printCount = signal<number>(0);
+  readonly isPrintFeePaid = signal<boolean>(false);
+  readonly freePrintLimit = 5;
+  readonly paymentRequired = signal<boolean>(false);
+
   private readonly resolvedApiType = signal<'new-license' | 'license-renewal' | ''>('');
 
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
   private termsPaginating = false;
+  private hasPrintedOnceInView = false;
+  private loadedPrintCount: number | null = null;
+  private loadedIsPrintFeePaid: boolean | null = null;
+  private prePrintToken = '';
 
   readonly templateData = signal<FinalLicenseTemplateData>({
     licenseNumber: '',
@@ -83,7 +94,8 @@ export class FinalLicenseComponent implements OnDestroy {
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
-    private readonly licenseAppService: LicenseApplicationService
+    private readonly licenseAppService: LicenseApplicationService,
+    private readonly licenseService: LicenseService
   ) {
     this.route.queryParamMap.subscribe(params => {
       const rawAppId = String(params.get('applicationId') || '').trim();
@@ -102,6 +114,13 @@ export class FinalLicenseComponent implements OnDestroy {
         this.queryAppType.set(incomingType);
       }
       this.returnUrl.set(params.get('returnUrl') || '');
+
+      // Per-application view state (reset when URL changes)
+      this.hasPrintedOnceInView = false;
+      this.loadedPrintCount = null;
+      this.loadedIsPrintFeePaid = null;
+      this.prePrintToken = String(params.get('prePrintToken') || '').trim();
+      this.paymentRequired.set(false);
 
       this.loadFinalLicense();
     });
@@ -202,23 +221,30 @@ export class FinalLicenseComponent implements OnDestroy {
           generatedOn: String(data?.generatedOn || current.generatedOn || '')
         }));
 
-        if (data?.qrCodeDataUrl) {
-          this.qrCodeUrl.set(String(data.qrCodeDataUrl));
+        this.printCount.set(this.extractPrintCount(data));
+        this.isPrintFeePaid.set(this.extractIsPrintFeePaid(data));
+
+        const embeddedQr = this.extractEmbeddedQrDataUrl(data);
+        if (embeddedQr) {
+          this.qrCodeUrl.set(embeddedQr);
           this.qrStatus.set('QR: embedded');
         } else {
           this.loadQrCode();
         }
 
-        if (data?.passportPhotoDataUrl) {
+        const embeddedPhoto = this.extractEmbeddedPhotoDataUrl(data);
+        if (embeddedPhoto) {
           this.templateData.update(current => ({
             ...current,
-            passportPhotoUrl: String(data.passportPhotoDataUrl)
+            passportPhotoUrl: embeddedPhoto
           }));
           this.photoStatus.set('Photo: embedded');
         } else {
           this.photoStatus.set(data?.passportPhotoExists === false ? 'Photo: missing file' : '');
           this.loadPassportPhoto();
         }
+
+        void this.refreshPrintInfo();
         this.loading.set(false);
       },
       error: (err: any) => {
@@ -233,6 +259,99 @@ export class FinalLicenseComponent implements OnDestroy {
         this.loading.set(false);
       }
     });
+  }
+
+  private extractEmbeddedQrDataUrl(data: any): string {
+    return String(data?.qrCodeDataUrl || data?.qr_code_data_url || '').trim();
+  }
+
+  private extractEmbeddedPhotoDataUrl(data: any): string {
+    return String(data?.passportPhotoDataUrl || data?.passport_photo_data_url || '').trim();
+  }
+
+  private extractPrintCount(data: any): number {
+    const raw = data?.print_count ?? data?.printCount ?? 0;
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  private extractIsPrintFeePaid(data: any): boolean {
+    return Boolean(data?.is_print_fee_paid ?? data?.isPrintFeePaid ?? false);
+  }
+
+  private getPrintIdentifier(): string {
+    const licenseNumber = String(this.templateData()?.licenseNumber || '').trim();
+    if (licenseNumber) return licenseNumber;
+    return String(this.queryAppId() || '').trim();
+  }
+
+  private prePrintUsedStorageKey(token: string): string {
+    return `final_license_preprint_used:${encodeURIComponent(String(token || '').trim())}`;
+  }
+
+  private isPrePrintTokenUsed(token: string): boolean {
+    const t = String(token || '').trim();
+    if (!t) return true;
+    try {
+      return window.sessionStorage?.getItem(this.prePrintUsedStorageKey(t)) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private markPrePrintTokenUsed(token: string): void {
+    const t = String(token || '').trim();
+    if (!t) return;
+    try {
+      window.sessionStorage?.setItem(this.prePrintUsedStorageKey(t), '1');
+    } catch {
+      // ignore
+    }
+  }
+
+  private async refreshPrintInfo(): Promise<void> {
+    const identifier = this.getPrintIdentifier();
+    if (!identifier) return;
+
+    try {
+      const res: any = await firstValueFrom(this.licenseService.getLicenseDetail(identifier));
+      const count = this.extractPrintCount(res);
+      const paid = this.extractIsPrintFeePaid(res);
+      this.printCount.set(count);
+      this.isPrintFeePaid.set(paid);
+
+      if (this.loadedPrintCount === null) this.loadedPrintCount = count;
+      if (this.loadedIsPrintFeePaid === null) this.loadedIsPrintFeePaid = paid;
+      if (this.isPrintFeePaid()) this.paymentRequired.set(false);
+    } catch {
+      // Not all datasets have a master License row available at first load.
+      // Keep the UI functional; print endpoint will still enforce the rule.
+    }
+  }
+
+  async payPrintFee(): Promise<void> {
+    const identifier = this.getPrintIdentifier();
+    if (!identifier) return;
+
+    try {
+      const res: any = await firstValueFrom(this.licenseService.payPrintFee(identifier));
+      this.printCount.set(this.extractPrintCount(res));
+      this.isPrintFeePaid.set(this.extractIsPrintFeePaid(res));
+      this.paymentRequired.set(false);
+      await Swal.fire('Paid', 'Print fee recorded. You can print one duplicate copy now.', 'success');
+    } catch (err: any) {
+      const msg = err?.error?.detail || err?.error?.error || err?.error?.message || err?.message || 'Failed to record print fee.';
+      await Swal.fire('Error', String(msg), 'error');
+    }
+  }
+
+  get needsPayment(): boolean {
+    return this.printCount() >= this.freePrintLimit && !this.isPrintFeePaid();
+  }
+
+  get canPrint(): boolean {
+    if (this.printCount() < this.freePrintLimit) return true;
+    return this.isPrintFeePaid();
   }
 
   downloadPdf(): void {
@@ -282,6 +401,10 @@ export class FinalLicenseComponent implements OnDestroy {
   }
 
   private loadQrCode(): void {
+    void this.loadQrCodeAsync();
+  }
+
+  private async loadQrCodeAsync(): Promise<void> {
     const applicationId = this.queryAppId();
     if (!applicationId) return;
 
@@ -290,22 +413,25 @@ export class FinalLicenseComponent implements OnDestroy {
       this.qrObjectUrl = null;
     }
 
+    // Clear the previous (possibly revoked) object URL immediately so repeated prints
+    // don't race and render a blank/broken QR in the print preview.
+    this.qrCodeUrl.set('');
+    this.qrStatus.set('QR: loading');
+
     const req$ = this.isNewLicense
       ? this.licenseAppService.getNewFinalLicenseQrCode(applicationId)
       : this.licenseAppService.getOldFinalLicenseQrCode(applicationId);
 
-    req$.subscribe({
-      next: (blob: Blob) => {
-        this.qrObjectUrl = URL.createObjectURL(blob);
-        this.qrCodeUrl.set(this.qrObjectUrl || '');
-        this.qrStatus.set('QR: loaded');
-      },
-      error: (err: any) => {
-        const status = err?.status ? `(${err.status})` : '';
-        this.qrStatus.set(`QR: failed ${status}`.trim());
-        this.qrCodeUrl.set('');
-      }
-    });
+    try {
+      const blob = await firstValueFrom(req$);
+      this.qrObjectUrl = URL.createObjectURL(blob);
+      this.qrCodeUrl.set(this.qrObjectUrl || '');
+      this.qrStatus.set('QR: loaded');
+    } catch (err: any) {
+      const status = err?.status ? `(${err.status})` : '';
+      this.qrStatus.set(`QR: failed ${status}`.trim());
+      this.qrCodeUrl.set('');
+    }
   }
 
   goBack(): void {
@@ -322,37 +448,82 @@ export class FinalLicenseComponent implements OnDestroy {
     void this.printWithLoader();
   }
 
-  private async rotateVerificationForPrint(): Promise<boolean> {
+  private async rotateVerificationForPrint(): Promise<{ ok: boolean; reason?: 'payment' | 'not_allowed'; message?: string }> {
     const applicationId = this.queryAppId();
-    if (!applicationId) return false;
+    if (!applicationId) return { ok: false, reason: 'not_allowed', message: 'Missing application id.' };
 
-    const req$ = this.isNewLicense
-      ? this.licenseAppService.printNewLicense(applicationId)
-      : this.licenseAppService.printLicense(applicationId);
+    const identifier = this.getPrintIdentifier() || applicationId;
+    const req$ = this.licenseService.printLicense(identifier);
 
     try {
       const resp: any = await firstValueFrom(req$);
+
+      const updatedCount = this.extractPrintCount(resp);
+      this.printCount.set(updatedCount);
+      this.isPrintFeePaid.set(this.extractIsPrintFeePaid(resp));
+      this.paymentRequired.set(false);
 
       const newValidationCode = String(resp?.validationCode || resp?.validation_code || '').trim();
       const newValidationUrl = String(resp?.validationPdfUrl || resp?.validation_pdf_url || '').trim();
       if (newValidationCode) this.validationCode.set(newValidationCode);
       if (newValidationUrl) this.validationPdfUrl.set(newValidationUrl);
 
-      // Refresh QR from backend (it encodes the latest stored link).
-      this.loadQrCode();
-    } catch (err: any) {
-      const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to prepare print.';
-      this.error.set(String(msg));
-      // If printing is blocked by business rules (e.g. not approved yet),
-      // still allow the user to open the browser print dialog for preview.
-      if (Number(err?.status) === 403) {
-        const low = String(msg || '').toLowerCase();
-        if (low.includes('not approved') || low.includes('print limit') || low.includes('fee')) return false;
+      // Prefer embedded QR from final-license payload (supports both camelCase/snake_case backends).
+      // Fallback to the QR image endpoint if payload doesn't contain it.
+      const refreshed = await this.refreshEmbeddedQrFromFinalLicense();
+      if (!refreshed) {
+        await this.loadQrCodeAsync();
       }
+    } catch (err: any) {
+      const msg = err?.error?.detail || err?.error?.error || err?.error?.message || err?.message || 'Failed to prepare print.';
+      this.error.set(String(msg));
+
+      if (Number(err?.status) === 403) {
+        const feeRequired = Number(err?.error?.fee_required || 0);
+        const low = String(msg || '').toLowerCase();
+
+        if (feeRequired > 0 || low.includes('print limit') || low.includes('fee') || low.includes('payment')) {
+          this.paymentRequired.set(true);
+          return {
+            ok: false,
+            reason: 'payment',
+            message: 'You have reached the free print limit. Please pay ₹500 to print a duplicate copy.'
+          };
+        }
+
+        if (low.includes('not approved')) {
+          this.paymentRequired.set(false);
+          return { ok: false, reason: 'not_allowed', message: String(msg || 'License is not approved yet.') };
+        }
+
+        this.paymentRequired.set(false);
+        return { ok: false, reason: 'not_allowed', message: String(msg || 'Printing is not allowed.') };
+      }
+
       throw err;
     }
 
-    return true;
+    return { ok: true };
+  }
+
+  private async refreshEmbeddedQrFromFinalLicense(): Promise<boolean> {
+    const applicationId = this.queryAppId();
+    if (!applicationId) return false;
+
+    const req$ = this.isNewLicense
+      ? this.licenseAppService.getNewFinalLicenseData(applicationId)
+      : this.licenseAppService.getOldFinalLicenseData(applicationId);
+
+    try {
+      const data: any = await firstValueFrom(req$);
+      const embeddedQr = this.extractEmbeddedQrDataUrl(data);
+      if (!embeddedQr) return false;
+      this.qrCodeUrl.set(embeddedQr);
+      this.qrStatus.set('QR: embedded');
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async waitForLicenseLoad(timeoutMs: number): Promise<void> {
@@ -383,9 +554,26 @@ export class FinalLicenseComponent implements OnDestroy {
     }, 20000);
 
     try {
-      // Try to rotate verification token for printing. If policy blocks it (403),
-      // still proceed with printing a preview using the currently loaded QR/link.
-      await this.rotateVerificationForPrint();
+      // If this page was opened via a "Print" action elsewhere (dashboard/dialog),
+      // the backend may already have recorded the print count + rotated the token.
+      // In that case, the first click here should open the browser print dialog
+      // without incrementing print_count again.
+      const shouldSkipBackendPrint =
+        !this.hasPrintedOnceInView &&
+        !!this.prePrintToken &&
+        !this.isPrePrintTokenUsed(this.prePrintToken);
+
+      if (!shouldSkipBackendPrint) {
+        const prep = await this.rotateVerificationForPrint();
+        if (!prep.ok) {
+          this.printing.set(false);
+          cleanup();
+          await this.waitForNextFrame();
+          const title = prep.reason === 'payment' ? 'Payment Required' : 'Not allowed';
+          await Swal.fire(title, String(prep.message || ''), prep.reason === 'payment' ? 'warning' : 'info');
+          return;
+        }
+      }
 
       await this.waitForNextFrame();
       await this.waitForNextFrame();
@@ -398,6 +586,8 @@ export class FinalLicenseComponent implements OnDestroy {
       await this.waitForNextFrame();
       await this.waitForNextFrame();
       window.print();
+      this.hasPrintedOnceInView = true;
+      if (shouldSkipBackendPrint) this.markPrePrintTokenUsed(this.prePrintToken);
     } finally {
       window.clearTimeout(failSafe);
     }

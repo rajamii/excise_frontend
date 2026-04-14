@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, Router, RouterModule } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { RouterOutlet, Router, RouterModule, NavigationEnd } from '@angular/router';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,7 +11,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpClient } from '@angular/common/http';
 import { Subject, forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, filter, takeUntil } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { RoleService } from '../../../../core/services/role.service';
@@ -44,6 +44,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
   private readonly dashboardConfigApiBase = `${environment.apiBaseUrl}/auth/roles/dashboard-config`;
   
+  @ViewChild('sidenav') sidenav?: MatSidenav;
+
   currentUser: User | null = null;
   userName = '';
   isSidenavOpen = false;
@@ -109,6 +111,18 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     
     // Initialize user info first
     this.initializeUserAndAuth();
+
+    // Auto-close the sidebar after navigation from menu selections.
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        if (this.isSidenavOpen) {
+          this.closeSidenav();
+        }
+      });
   }
 
   ngAfterViewInit() {
@@ -287,6 +301,30 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     console.log('🔍 Sidebar state changed:', isOpen);
   }
 
+  closeSidenav(): void {
+    if (!this.isSidenavOpen) {
+      return;
+    }
+
+    try {
+      this.sidenav?.close();
+    } finally {
+      this.isSidenavOpen = false;
+    }
+  }
+
+  openSidenav(): void {
+    if (this.isSidenavOpen) {
+      return;
+    }
+
+    try {
+      this.sidenav?.open();
+    } finally {
+      this.isSidenavOpen = true;
+    }
+  }
+
   // Method to handle the "View Profile" button click - exactly like original
   viewProfile(): void {
     console.log('Button Clicked!');
@@ -386,6 +424,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.router.navigate(['/dashboard'], { 
       queryParams: { section: section } 
     });
+    this.closeSidenav();
   }
 
   navigateToWalletView(section: string = 'wallet'): void {
@@ -400,6 +439,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         source: 'sidenav-wallet'
       }
     });
+    this.closeSidenav();
   }
 
   navigateToLicenseeRegistration(type: 'company' | 'collaboration' | 'salesman-barman' | 'label'): void {
@@ -414,6 +454,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.router.navigate(['/dashboard'], {
       queryParams: { section }
     });
+    this.closeSidenav();
   }
 
   // Navigate to role-specific sections
@@ -436,6 +477,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         queryParams: { section: section } 
       });
     }
+
+    this.closeSidenav();
   }
 
   // Navigation method - exactly like original
@@ -477,6 +520,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       default:
         this.router.navigate(['/dev-supply-chain']);
     }
+
+    this.closeSidenav();
   }
 
   // License info dialog - exactly like original

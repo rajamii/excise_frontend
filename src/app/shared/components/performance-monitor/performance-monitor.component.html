@@ -34,7 +34,7 @@
     <div class="metrics-section">
       <div 
         class="metric-item" 
-        *ngFor="let metric of ['loadTime', 'renderTime', 'apiResponseTime', 'memoryUsage', 'networkRequests']">
+        *ngFor="let metric of metricKeys">
         <div class="metric-label">{{ getMetricLabel(metric) }}</div>
         <div 
           class="metric-value" 

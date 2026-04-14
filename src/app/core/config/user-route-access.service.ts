@@ -30,7 +30,7 @@ export const UserRouteAccessService: CanActivateFn = (
 
   const isDevOnly = next.data?.['devOnly'] === true;
   if (isDevOnly && !isDevMode()) {
-    router.navigate(['accessdenied']);
+    router.navigate(['/accessdenied']);
     return false;
   }
 
@@ -53,7 +53,7 @@ export const UserRouteAccessService: CanActivateFn = (
       if (isDevMode()) {
         console.error('User does not have required authorities:', authorities);
       }
-      router.navigate(['accessdenied']);
+      router.navigate(['/accessdenied']);
     }
     return allowed;
   };
@@ -103,7 +103,7 @@ export const UserRouteAccessService: CanActivateFn = (
                 requiredPermission
               );
             }
-            router.navigate(['accessdenied']);
+            router.navigate(['/accessdenied']);
           }
           return allowed;
         })

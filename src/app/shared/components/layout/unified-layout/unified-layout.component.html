@@ -29,7 +29,7 @@
           <!-- Licensee Navigation -->
           <div *ngIf="isLicenseeUser()" class="licensee-nav">
             <!-- Dashboard -->
-            <a routerLink="/dashboard" class="nav-item dashboard-nav-item" [class.active]="isDashboardHomeActive()">
+            <a routerLink="/dashboard" class="nav-item dashboard-nav-item" [class.active]="isDashboardHomeActive()" (click)="closeSidenav()">
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
@@ -151,7 +151,7 @@
             </ng-container>
 
             <!-- Site Admin master navigation -->
-            <div *ngIf="isSiteAdminUser()">
+            <div *ngIf="isSiteAdminUser()" (click)="closeSidenav()">
               <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item">
                 <mat-icon class="nav-icon">people</mat-icon>
                 <span class="nav-text">User</span>
@@ -192,6 +192,10 @@
                 <mat-icon class="nav-icon">layers</mat-icon>
                 <span class="nav-text">License Subcategory</span>
               </a>
+              <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">gavel</mat-icon>
+                <span class="nav-text">Terms &amp; Conditions</span>
+              </a>
               <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item">
                 <mat-icon class="nav-icon">route</mat-icon>
                 <span class="nav-text">Road</span>
@@ -204,6 +208,21 @@
 
     <!-- Main Content Area -->
     <mat-sidenav-content class="main-content">
+      <!-- Left edge trigger: hover near left side to reveal arrow, click to open sidebar -->
+      <div
+        class="sidenav-edge-trigger"
+        *ngIf="!isSidenavOpen"
+        (click)="openSidenav()"
+        tabindex="0"
+        (keydown.enter)="openSidenav()"
+        (keydown.space)="openSidenav(); $event.preventDefault()"
+        aria-label="Open sidebar"
+      >
+        <button type="button" class="edge-arrow" (click)="openSidenav()" aria-label="Open sidebar">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+
       <!-- Top Navigation Bar (visible when sidebar is closed) -->
       <div class="top-nav-bar" *ngIf="!isSidenavOpen">
         <div class="top-nav-content">

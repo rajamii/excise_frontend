@@ -5,8 +5,13 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 
 import { environment } from '../../../../../../environments/environment';
+import Swal from 'sweetalert2';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
+import { RoleService } from '../../../../../core/services/role.service';
 
 interface NewLicenseCounts {
   applied: number;
@@ -38,13 +43,15 @@ interface GroupedNewLicenseResponse {
 @Component({
   selector: 'app-new-license-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MaterialModule],
   templateUrl: './new-license-dashboard.component.html',
   styleUrls: ['./new-license-dashboard.component.scss']
 })
 export class NewLicenseDashboardComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
+  private roleService = inject(RoleService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -69,6 +76,9 @@ export class NewLicenseDashboardComponent implements OnInit {
   allRows: NewLicenseItem[] = [];
   summaryRows: NewLicenseItem[] = [];
   filteredRows: NewLicenseItem[] = [];
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize = 5;
+  pageIndex = 0;
   stageFilterOptions: string[] = [];
   statusFilter = '';
   searchFilter = '';
@@ -101,6 +111,18 @@ export class NewLicenseDashboardComponent implements OnInit {
         this.allRows = this.flattenGroupedData(grouped);
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
+
+        // Admin UX: when opening "New License" from sidebar, default to Pending if there is any pending work.
+        // This avoids landing on Approved / All when there are pending items to process.
+        const isAdmin = this.roleService.isAdminRole();
+        const hasPending = this.serverCounts.pending > 0;
+        const current = (this.statusFilter || '').trim().toLowerCase();
+        if (isAdmin && hasPending && (!current || current === 'approved')) {
+          this.statusFilter = 'pending';
+          this.activeSummaryFilter = 'pending';
+          this.applyFilters();
+        }
+
         if (this.allRows.length === 0) {
           this.error = null;
         }
@@ -148,6 +170,45 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.counts = canUseServerCounts ? this.serverCounts : calculated;
 
     this.syncActiveSummaryFilter();
+
+    // Reset pagination whenever filters change.
+    this.pageIndex = 0;
+  }
+
+  get totalPages(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.ceil(this.filteredRows.length / this.pageSize);
+  }
+
+  get pageStart(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return this.pageIndex * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.filteredRows.length);
+  }
+
+  get pagedRows(): NewLicenseItem[] {
+    if (this.filteredRows.length === 0) return [];
+    const start = this.pageIndex * this.pageSize;
+    return this.filteredRows.slice(start, start + this.pageSize);
+  }
+
+  onPageSizeChange(): void {
+    this.pageIndex = 0;
+  }
+
+  prevPage(): void {
+    if (this.pageIndex <= 0) return;
+    this.pageIndex -= 1;
+  }
+
+  nextPage(): void {
+    if (this.totalPages === 0) return;
+    if (this.pageIndex >= this.totalPages - 1) return;
+    this.pageIndex += 1;
   }
 
   clearFilters(): void {
@@ -179,6 +240,26 @@ export class NewLicenseDashboardComponent implements OnInit {
         ref: row.applicationId,
         type: 'new-license',
         source: 'licensee'
+      }
+    });
+  }
+
+  viewTimeline(row: NewLicenseItem): void {
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    const encoded = encodeURIComponent(applicationId);
+    this.http.get<any>(`${this.apiBase}/detail/${encoded}/`).subscribe({
+      next: (res: any) => {
+        this.dialog.open(ApplicationMovementComponent, {
+          width: '700px',
+          maxHeight: '80vh',
+          data: { movementDataSource: { data: [res] } }
+        });
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
+        void Swal.fire('Error', String(msg), 'error');
       }
     });
   }

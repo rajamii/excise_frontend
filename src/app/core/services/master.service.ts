@@ -21,7 +21,7 @@ export class MasterService {
   private readonly BASE_URL = `${environment.apiBaseUrl}/masters/core`;
 
   // User endpoints (licensee profiles live here)
-  private readonly USER_BASE_URL = `$${environment.apiBaseUrl}/auth/users`;
+  private readonly USER_BASE_URL = `${environment.apiBaseUrl}/auth/users`;
   
   // =========================================================================
   // ENDPOINT URLs

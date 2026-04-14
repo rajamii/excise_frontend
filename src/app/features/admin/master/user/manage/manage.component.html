@@ -144,7 +144,7 @@
           #roleModel="ngModel"
         >
           <mat-option *ngFor="let role  of roles" [value]="role ">
-            {{ role.id }}
+            {{ toTitleCase(role.name || '-') }}
           </mat-option>
         </mat-select>
         <mat-error *ngIf="roleModel.errors?.['required']">

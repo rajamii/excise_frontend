@@ -22,20 +22,47 @@
     <div class="meta" *ngIf="error()">
       <span class="meta-label">Error:</span> {{ error() }}
     </div>
-    <div class="meta" *ngIf="photoStatus()">
-      <span class="meta-label">{{ photoStatus() }}</span>
-    </div>
-    <div class="meta" *ngIf="qrStatus()">
-      <span class="meta-label">{{ qrStatus() }}</span>
-    </div>
     <div class="meta">
       <span class="meta-label">Type:</span> {{ requestedFor }}
     </div>
+    <div class="meta" *ngIf="printCount()">
+      <span class="meta-label">Prints:</span> {{ printCount() }}/{{ freePrintLimit }}
+    </div>
+    <button mat-stroked-button color="warn" *ngIf="paymentRequired()" (click)="payPrintFee()" [disabled]="loading() || printing()">
+      Pay ₹500
+    </button>
     <button mat-flat-button color="primary" (click)="print()" [disabled]="loading() || printing()">
       <mat-icon>print</mat-icon>
       Print
     </button>
   </div>
+
+  <aside
+    class="print-warning-sidebar no-print"
+    *ngIf="!loading() && (paymentRequired() || printCount() < freePrintLimit)"
+    aria-live="polite"
+  >
+    <div class="print-warning-card" [class.danger]="paymentRequired()">
+      <div class="print-warning-title">
+        <mat-icon aria-hidden="true">{{ paymentRequired() ? 'error' : 'info' }}</mat-icon>
+        <span>{{ paymentRequired() ? 'Payment Required' : 'Print Limit' }}</span>
+      </div>
+
+      <div class="print-warning-body" *ngIf="paymentRequired(); else printLimitInfo">
+        Free print limit reached. Pay ₹500 to print again.
+      </div>
+      <ng-template #printLimitInfo>
+        <div class="print-warning-body" *ngIf="printCount() === 0; else remainingPrints">
+          You have {{ freePrintLimit }} free prints. After that, pay ₹500 to print again.
+        </div>
+        <ng-template #remainingPrints>
+          <div class="print-warning-body">
+            Remaining {{ freePrintLimit - printCount() }} free prints. After that, pay ₹500 to print again.
+          </div>
+        </ng-template>
+      </ng-template>
+    </div>
+  </aside>
 
   <div class="pages">
     <ng-template #licenseDetails>

@@ -42,6 +42,14 @@ export class ListComponent implements OnInit {
     this.loadUsers();
   }
 
+  toTitleCase(snakeCase: string): string {
+    return (snakeCase || '')
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+      .trim();
+  }
+
   private persistBlockedUser(user: Account): void {
     try {
       const existingRaw = localStorage.getItem(this.blockedUsersStorageKey);

@@ -94,6 +94,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   private hologramService = inject(HologramDataService);
 
   Math = Math;
+  private initialSummaryAutoSelected = false;
 
   // Officer information - same as officer-in-charge component
   currentOfficer = {
@@ -199,11 +200,25 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         this.hologramRequests.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
 
         this.applyFilters();
+        this.maybeAutoSelectPendingStatus();
       },
       error: (err) => {
         console.error('Error loading hologram requests:', err);
       }
     });
+  }
+
+  private maybeAutoSelectPendingStatus(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    // Don't override if user already selected a filter.
+    if (this.filters.status) return;
+
+    if (this.getRequestCount('PENDING') > 0) {
+      this.filters.status = 'PENDING';
+      this.applyFilters();
+    }
   }
 
   getDisplayReferenceNo(referenceNo: string): string {

@@ -57,7 +57,7 @@
           <!-- Role & creator (with formatting) -->
           <ng-container matColumnDef="role">
             <mat-header-cell *matHeaderCellDef> Role </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.role?.id ?? '-' }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ toTitleCase(u.role?.name || '') || '-' }} </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="createdBy">

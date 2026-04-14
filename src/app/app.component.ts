@@ -44,6 +44,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private inactivityService = inject(InactivityService);
   private dialog = inject(MatDialog);
   readonly loading = inject(UiLoadingService);
+  private wasAuthenticated = false;
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
@@ -69,13 +70,17 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((user) => {
         if (user) {
-          this.inactivityService.startWatching();
+          const isOnLoginScreen = this.normalizePath(this.router.url).startsWith('/login');
+          const resetStoredActivity = !this.wasAuthenticated && isOnLoginScreen;
+          this.wasAuthenticated = true;
+          this.inactivityService.startWatching(resetStoredActivity);
           return;
         }
 
         // Ensure stale dialogs from previous protected screens are removed
         // when session expires and app navigates to login.
         this.dialog.closeAll();
+        this.wasAuthenticated = false;
         this.inactivityService.stopWatching();
       });
   }
