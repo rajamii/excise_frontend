@@ -59,6 +59,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
   pendingBadgeCounts: Record<string, number> = {};
@@ -516,12 +517,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
 
+    const walletView: 'wallets' | 'others' =
+      this.isLicenseeUser() && !this.hasBreweryOrDistilleryWalletViews ? 'others' : 'wallets';
     this.router.navigate(['/dashboard'], {
       queryParams: {
         section,
         tab: 'recharge',
         source: 'sidenav-wallet',
-        walletView: 'wallets'
+        walletView
       }
     });
     this.closeSidenav();
@@ -782,6 +785,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!this.isLicenseeUser()) {
       this.showDistilleryMenus = false;
       this.showBreweryOrDistilleryMenus = false;
+      this.hasBreweryOrDistilleryWalletViews = false;
       this.showManufacturingWalletNav = false;
       return;
     }
@@ -789,6 +793,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Default for new users: keep only base menu options visible.
     this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
+    this.hasBreweryOrDistilleryWalletViews = false;
     this.showManufacturingWalletNav = false;
 
     forkJoin({
@@ -831,6 +836,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         console.error('Failed to evaluate menu access from combined sources:', error);
         this.showDistilleryMenus = false;
         this.showBreweryOrDistilleryMenus = false;
+        this.hasBreweryOrDistilleryWalletViews = false;
         this.showManufacturingWalletNav = false;
         this.triggerUiRefresh();
       }
@@ -838,6 +844,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private applySubtypeMenuRules(rows: any[]): void {
+    const hasDistilleryAny = rows.some((item) => this.isDistillery(item));
+    const hasBreweryAny = rows.some((item) => this.isBrewery(item));
     const menuRows = filterRowsForSupplyChainSidebarMenus(rows);
     const hasDistillery = menuRows.some((item) => this.isDistillery(item));
     const hasBrewery = menuRows.some((item) => this.isBrewery(item));
@@ -846,6 +854,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.showDistilleryMenus = hasDistillery;
     // Brewery OR Distillery: transit + hologram menus.
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+    this.hasBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
     this.showManufacturingWalletNav = rows.some((item) => isLicenseeWalletNavEligible(item));
 
     console.log('Resolved menu flags:', {

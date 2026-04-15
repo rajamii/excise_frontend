@@ -157,6 +157,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private licenseeMenuAccessResolved = false;
   private showDistilleryMenus = false;
   private showBreweryOrDistilleryMenus = false;
+  private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
 
   // Professional dashboard enhancements
@@ -301,6 +302,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedSupplyChainSection = initialSection || null;
     this.enforceSectionAccess();
     this.walletViewMode = this.readWalletViewFromParams(this.route.snapshot.queryParams);
+    this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
 
     if (this.selectedSupplyChainSection === 'hologram-overview') {
       this.pendingHologramOverviewRedirect = true;
@@ -315,6 +317,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.selectedSupplyChainSection = section || null;
         this.enforceSectionAccess();
         this.walletViewMode = this.readWalletViewFromParams(params);
+        this.ensureWalletViewParamAllowed(params);
 
         if (this.selectedSupplyChainSection === 'hologram-overview') {
           this.pendingHologramOverviewRedirect = true;
@@ -333,8 +336,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.selectedSupplyChainSection !== 'wallet') {
       return 'wallets';
     }
+    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+      return 'others';
+    }
     const value = String(params?.walletView || '').trim().toLowerCase();
     return value === 'others' ? 'others' : 'wallets';
+  }
+
+  private ensureWalletViewParamAllowed(params: any): void {
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return;
+    }
+    if (!this.isLicenseeUser()) {
+      return;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return;
+    }
+    if (this.showBreweryOrDistilleryWalletViews) {
+      return;
+    }
+
+    const raw = String(params?.walletView || '').trim().toLowerCase();
+    if (raw === 'others' || raw === '') {
+      return;
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { walletView: 'others' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   shouldShowWalletViewToggle(): boolean {
@@ -347,13 +380,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.licenseeMenuAccessResolved) {
       return false;
     }
-    // Do not tie this to showBreweryOrDistilleryMenus: that flag is false while license fee is
-    // still awaiting payment (supply-chain sidebar is hidden), but brewery/distillery users must
-    // still switch between Excise/Education/Hologram (Wallets) and License Fee/Security Deposit (Others).
-    return this.showManufacturingWalletNav;
+    return this.showManufacturingWalletNav && this.showBreweryOrDistilleryWalletViews;
   }
 
   setWalletViewMode(mode: 'wallets' | 'others'): void {
+    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+      mode = 'others';
+    }
     if (!mode || this.walletViewMode === mode) return;
     this.walletViewMode = mode;
     this.router.navigate([], {
@@ -652,6 +685,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.licenseeMenuAccessResolved = true;
       this.showDistilleryMenus = false;
       this.showBreweryOrDistilleryMenus = false;
+      this.showBreweryOrDistilleryWalletViews = false;
       this.showManufacturingWalletNav = false;
       return;
     }
@@ -659,6 +693,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.licenseeMenuAccessResolved = false;
     this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
+    this.showBreweryOrDistilleryWalletViews = false;
     this.showManufacturingWalletNav = false;
 
     forkJoin({
@@ -679,19 +714,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
         const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
         const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
+        const hasDistilleryAny = combinedRows.some((item) => this.isDistillery(item));
+        const hasBreweryAny = combinedRows.some((item) => this.isBrewery(item));
         const menuRows = filterRowsForSupplyChainSidebarMenus(combinedRows);
         const hasDistillery = menuRows.some((item) => this.isDistillery(item));
         const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
         this.showDistilleryMenus = hasDistillery;
         this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+        this.showBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
         this.showManufacturingWalletNav = combinedRows.some((item) => isLicenseeWalletNavEligible(item));
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
+        this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
       },
       error: () => {
         this.showDistilleryMenus = false;
         this.showBreweryOrDistilleryMenus = false;
+        this.showBreweryOrDistilleryWalletViews = false;
         this.showManufacturingWalletNav = false;
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
@@ -1106,11 +1146,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Open wallet dialog
   openWallet(): void {
+    const walletView =
+      this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews
+        ? 'others'
+        : 'wallets';
     this.router.navigate(['/dashboard'], {
       queryParams: {
         section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
-        walletView: 'wallets',
+        walletView,
         source: 'dashboard-wallet'
       }
     });
