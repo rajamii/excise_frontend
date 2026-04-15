@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -73,6 +73,10 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
   standalone: true,
   imports: [
     CommonModule,
+    NgIf,
+    NgFor,
+    NgClass,
+    DatePipe,
     MatIconModule,
     MatButtonModule,
     MatCardModule,
@@ -810,6 +814,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-request-form': 'hologram-request',
       'new-license-apply': 'new-license',
       'company-registration-apply': 'company-registration',
+      'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration'
     };
 
@@ -1030,6 +1035,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'company-registration': 'Company Registration',
       'company-registration-apply': 'Company Registration',
       'company-collaboration': 'Company Collaboration',
+      'company-collaboration-apply': 'Company Collaboration',
       'salesman-barman-registration': 'Salesman/Barman Registration',
       'salesman-barman-registration-apply': 'Salesman/Barman Registration',
       'label-registration': 'Label Registration',
@@ -1085,6 +1091,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-request',
       'new-license',
       'company-registration',
+      'company-collaboration',
       'salesman-barman-registration'
     ];
 
@@ -1101,6 +1108,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram-request': return 'New Request';
       case 'new-license': return 'Apply New License';
       case 'company-registration': return 'Apply Company';
+      case 'company-collaboration': return 'Apply Collaboration';
       case 'salesman-barman-registration': return 'Apply Salesman/Barman';
       default: return 'Create New';
     }
@@ -1116,6 +1124,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram-request': return 'add_circle';
       case 'new-license': return 'add_circle';
       case 'company-registration': return 'add_circle';
+      case 'company-collaboration': return 'add_circle';
       case 'salesman-barman-registration': return 'add_circle';
       default: return 'add';
     }
@@ -1137,6 +1146,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'new-license-apply' } });
     } else if (section === 'company-registration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'company-registration-apply' } });
+    } else if (section === 'company-collaboration') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'company-collaboration-apply' } });
     } else if (section === 'salesman-barman-registration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'salesman-barman-registration-apply' } });
     }

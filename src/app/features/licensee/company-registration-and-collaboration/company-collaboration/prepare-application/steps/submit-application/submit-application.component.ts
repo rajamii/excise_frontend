@@ -33,7 +33,6 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
   acceptTerms = false;
   isSubmitting = false;
   applicationId: string | null = null;
-  collaborationId: string | null = null;
   submissionMode: 'online' | null = null;
 
   private lastDataCheck = '';
@@ -149,27 +148,24 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       const formData = this.buildFormData();
       const response = await firstValueFrom(this.collaborationService.applyCompanyCollaboration(formData));
 
-      const collaborationId =
-        response?.id ?? response?.data?.id ?? response?.collaborationId ?? response?.collaboration_id;
-      this.collaborationId =
-        collaborationId !== undefined && collaborationId !== null && String(collaborationId).trim()
-          ? String(collaborationId)
-          : null;
       this.applicationId =
-        response?.applicationId ||
         response?.application_id ||
-        response?.data?.applicationId ||
+        response?.applicationId ||
         response?.data?.application_id ||
-        this.generateApplicationId();
+        response?.data?.applicationId ||
+        null;
       this.submissionMode = 'online';
-      this.saveSubmission('Submitted', 'online', response?.id || response?.applicationId || response?.application_id);
+      this.saveSubmission('Submitted', 'online');
+
+      // FIX: Clear session data and show the in-page success screen.
+      // Do NOT navigate away here — let the user use the action buttons below.
+      this.clearApplicationData();
 
       await Swal.fire(
         'Success',
         `Application submitted successfully. ID: ${this.applicationId}`,
         'success'
       );
-      this.clearApplicationData();
     } catch (error) {
       const httpError = error as HttpErrorResponse;
       console.error('Company collaboration submit failed:', httpError);
@@ -208,15 +204,8 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     formData.append('brand_owner_email', String(this.bottlerDetails.brandOwnerEmail || ''));
 
     formData.append('licensee_name', String(this.companyDetails.bottlerName || ''));
-    formData.append('application_id', String(this.companyDetails.applicationId || ''));
     formData.append('licensee_address', String(this.companyDetails.bottlerAddress || ''));
-    // contact_person not collected in Step 1 (auto-fetched from bottler profile)
-    // contact_number not collected in Step 1
-    // email_address not collected in Step 1
     formData.append('license_number', String(this.companyDetails.bottlerId || ''));
-    // license_type not collected in Step 1
-    // establishment_type not collected in Step 1
-    // business_reg_number not collected in Step 1
 
     formData.append('selected_brand_ids', JSON.stringify(selectedBrandIds));
     formData.append('selected_brands', JSON.stringify(this.selectedBrands));
@@ -235,26 +224,18 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     return formData;
   }
 
-  private normalizeMobileNumber(value: string | undefined): string {
-    if (!value) {
-      return '';
-    }
-    return String(value).replace(/\D/g, '').slice(0, 10);
-  }
-
   private createUndertakingFile(): File {
     const undertakingBlob = new Blob(['Company Collaboration Undertaking'], { type: 'text/plain' });
     return new File([undertakingBlob], 'undertaking.txt', { type: 'text/plain' });
   }
 
-  private saveSubmission(status: string, mode: 'online' | 'local', collaborationId?: string): void {
+  private saveSubmission(status: string, mode: 'online' | 'local'): void {
     const payload: CompanyCollaborationSubmission = {
-      applicationId: this.applicationId || this.generateApplicationId(),
+      applicationId: this.applicationId || '',
       status,
       submittedAt: new Date().toISOString(),
       mode,
       totalAmount: this.getTotalAmount(),
-      collaborationId
     };
     sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.submission, JSON.stringify(payload));
   }
@@ -298,15 +279,6 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       : `${currentYear - 1}-${currentYear.toString().slice(-2)}`;
   }
 
-  private generateApplicationId(): string {
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const day = String(currentDate.getDate()).padStart(2, '0');
-    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `COLLAB/${year}${month}${day}/${randomNum}`;
-  }
-
   downloadReceipt(): void {
     Swal.fire({
       title: 'Receipt Download',
@@ -316,30 +288,9 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     });
   }
 
-  async openApplicationSummary(): Promise<void> {
-    if (!this.applicationId) {
-      return;
-    }
-
-    const queryParams = {
-      id: this.collaborationId || this.applicationId,
-      ref: this.applicationId,
-      type: 'company-collaboration',
-      source: 'licensee'
-    };
-
-    try {
-      const navigated = await this.router.navigate(['/supply-chain-view'], { queryParams });
-      if (!navigated && typeof window !== 'undefined') {
-        const params = new URLSearchParams(queryParams);
-        window.location.href = `/supply-chain-view?${params.toString()}`;
-      }
-    } catch {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(queryParams);
-        window.location.href = `/supply-chain-view?${params.toString()}`;
-      }
-    }
+  // FIX: Navigate to dashboard instead of the non-existent list route.
+  openApplicationSummary(): void {
+    this.router.navigate(['/dashboard']);
   }
 
   goToDashboard(): void {

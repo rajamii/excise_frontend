@@ -1,30 +1,16 @@
-import { Component, DoCheck, EventEmitter, Output, OnDestroy, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, OnDestroy, OnInit } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { FormsModule } from '@angular/forms';
 import {
   COMPANY_COLLAB_STORAGE_KEYS,
   CompanyCollaborationBrand,
-  CompanyCollaborationFeeStructure
+  CompanyCollaborationFeeStructure,
+  LiquorCategory,
+  LiquorKind,
+  LiquorType
 } from '../../../../../../../core/models/company-collaboration.model';
 import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
-
-// ---------------------------------------------------------------------------
-// DB field → dropdown mapping
-//
-//  brand_warehouse column  │  CompanyCollaborationBrand field  │  Dropdown
-// ─────────────────────────┼───────────────────────────────────┼────────────────
-//  distillery_name         │  category                         │  Liquor Category
-//  brand_type (derived)    │  kind       (IMFL / OSBI)         │  Liquor Kind
-//  brand_type              │  type                             │  Liquor Type
-//  brand_details           │  brand_name                       │  Brands table rows
-//  capacity_size           │  sizes                            │  Pack-size columns
-// ---------------------------------------------------------------------------
-
-/**
- * Liquor types that belong to OSBI (Other State Brewery Industry) per Sikkim
- * excise classification. Everything else is IMFL.
- */
-const OSBI_TYPES = new Set(['Beer', 'Wine']);
 
 @Component({
   selector: 'app-select-brands',
@@ -33,7 +19,7 @@ const OSBI_TYPES = new Set(['Beer', 'Wine']);
   templateUrl: './select-brands.component.html',
   styleUrl: './select-brands.component.scss'
 })
-export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
+export class SelectBrandsComponent implements OnInit, OnDestroy {
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
@@ -43,268 +29,210 @@ export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
   isLoadingFee = false;
   showOverview = false;
   feeStructure: CompanyCollaborationFeeStructure | null = null;
-  displayedColumns: string[] = ['serialNo', 'brandCode', 'brandName', 'type', 'strength', 'sizes', 'action'];
+  displayedColumns: string[] = ['serialNo', 'brandCode', 'brandName', 'category', 'kind', 'type', 'action'];
 
-  // ── Active filter values ───────────────────────────────────────────────────
-  /** Maps to brand_warehouse.distillery_name  →  brand.category */
-  selectedCategory: string = '';
-  /** Derived from brand_warehouse.brand_type  →  'IMFL' | 'OSBI' */
-  selectedKind: string = '';
-  /** Maps to brand_warehouse.brand_type       →  brand.type */
-  selectedType: string = '';
-  searchTerm: string = '';
+  // ── Master dropdown data ───────────────────────────────────────────────────
+  allCategories: LiquorCategory[] = [];
+  allKinds: LiquorKind[] = [];
+  allTypes: LiquorType[] = [];
 
-  // ── Dropdown option lists (cascade) ───────────────────────────────────────
-  /** Distinct distillery_name values */
-  categories: string[] = [];
-  /** 'IMFL' and/or 'OSBI' — derived from brand_type */
-  kinds: string[] = [];
-  /** Distinct brand_type values, filtered by selectedCategory + selectedKind */
-  types: string[] = [];
+  categories: LiquorCategory[] = [];
+  kinds: LiquorKind[] = [];
+  types: LiquorType[] = [];
 
-  /** Distinct pack sizes in the current filtered result, sorted descending */
-  availableSizes: string[] = [];
+  selectedCatCode: number | null = null;
+  selectedKindId:  number | null = null;
+  selectedTypeId:  number | null = null;
+  searchTerm = '';
 
-  /** brandId → selected size strings */
-  selectedSizeMap: Record<string, string[]> = {};
-
-  /** Brands with at least one size selected */
+  // ── Selection state — set of selected brand IDs ────────────────────────────
+  selectedBrandIds = new Set<string>();
   selectedBrands: CompanyCollaborationBrand[] = [];
 
-  private lastBottlerSignature = '';
+  constructor(private svc: CompanyCollaborationService) {}
 
-  constructor(private companyCollaborationService: CompanyCollaborationService) {}
+  ngOnInit(): void { this.loadMasterData(); }
 
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-  // ---------------------------------------------------------------------------
-
-  ngOnInit(): void {
-    this.lastBottlerSignature = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails) || '';
-    this.loadBrands();
-  }
-
-  /** Re-load brands whenever the bottler selection changes in session storage */
-  ngDoCheck(): void {
-    const current = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails) || '';
-    if (current !== this.lastBottlerSignature) {
-      this.lastBottlerSignature = current;
-      this.loadBrands();
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.saveSelection();
-  }
+  ngOnDestroy(): void { this.saveSelection(); }
 
   // ---------------------------------------------------------------------------
-  // Kind derivation — brand_warehouse has no explicit kind column,
-  // so we derive it client-side from brand_type.
+  // Master data loading
   // ---------------------------------------------------------------------------
 
-  /**
-   * Returns 'OSBI' for Beer/Wine, 'IMFL' for everything else.
-   * Matches Sikkim Excise classification.
-   */
-  private deriveKind(brandType: string): string {
-    return OSBI_TYPES.has(brandType) ? 'OSBI' : 'IMFL';
-  }
-
-  // ---------------------------------------------------------------------------
-  // Merge rows that share the same brand_details into one row with all sizes
-  // (brand_warehouse stores one row per capacity_size)
-  // ---------------------------------------------------------------------------
-
-  private mergeBrandsByName(brands: CompanyCollaborationBrand[]): CompanyCollaborationBrand[] {
-    const map = new Map<string, CompanyCollaborationBrand>();
-    brands.forEach((brand) => {
-      const sizes = this.normaliseSizes(brand.sizes);
-      // Inject derived `kind` so cascade filtering works without a backend change
-      const enriched = { ...brand, sizes, kind: this.deriveKind(brand.type || '') };
-      const key = brand.brand_name.trim().toLowerCase();
-      if (map.has(key)) {
-        const existing = map.get(key)!;
-        map.set(key, { ...existing, sizes: [...new Set([...existing.sizes, ...sizes])] });
-      } else {
-        map.set(key, enriched);
-      }
-    });
-    return Array.from(map.values());
-  }
-
-  /** API may return sizes as a comma-string, a single number, or an array */
-  private normaliseSizes(raw: any): string[] {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
-    if (typeof raw === 'string') return raw.split(',').map((s) => s.trim()).filter(Boolean);
-    return [String(raw)];
-  }
-
-  // ---------------------------------------------------------------------------
-  // Filter initialisation — all three lists are derived from brand_warehouse
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Builds the top-level (Category) dropdown from distillery_name.
-   * Kind and Type lists are built by the cascade methods below.
-   */
-  private initializeFilters(): void {
-    // Liquor Category  ←  brand_warehouse.distillery_name  (via brand.category)
-    this.categories = [...new Set(this.allBrands.map((b) => b.category).filter(Boolean))].sort();
-
-    // Kick off cascade so kinds/types reflect any pre-selected category
-    this.rebuildKinds();
-  }
-
-  /**
-   * Liquor Kind  ←  derived from brand_warehouse.brand_type
-   * Filtered to only include kinds available within the currently selected Category.
-   */
-  private rebuildKinds(): void {
-    const source = this.selectedCategory
-      ? this.allBrands.filter((b) => b.category === this.selectedCategory)
-      : this.allBrands;
-
-    this.kinds = [...new Set(source.map((b) => (b as any).kind).filter(Boolean))].sort();
-
-    // If the currently chosen kind is no longer in the list, reset it
-    if (this.selectedKind && !this.kinds.includes(this.selectedKind)) {
-      this.selectedKind = '';
-    }
-
-    this.rebuildTypes();
-  }
-
-  /**
-   * Liquor Type  ←  brand_warehouse.brand_type  (via brand.type)
-   * Filtered to only include types available within the selected Category + Kind.
-   */
-  private rebuildTypes(): void {
-    let source = this.allBrands;
-    if (this.selectedCategory) source = source.filter((b) => b.category === this.selectedCategory);
-    if (this.selectedKind)     source = source.filter((b) => (b as any).kind === this.selectedKind);
-
-    this.types = [...new Set(source.map((b) => b.type).filter(Boolean))].sort();
-
-    // If the currently chosen type is no longer in the list, reset it
-    if (this.selectedType && !this.types.includes(this.selectedType)) {
-      this.selectedType = '';
-    }
-  }
-
-  private ensureFilterSelection(): void {
-    if (this.selectedCategory && !this.categories.includes(this.selectedCategory)) this.selectedCategory = '';
-    if (this.selectedKind     && !this.kinds.includes(this.selectedKind))           this.selectedKind = '';
-    if (this.selectedType     && !this.types.includes(this.selectedType))           this.selectedType = '';
-  }
-
-  // ---------------------------------------------------------------------------
-  // Public cascade handlers — called by (selectionChange) in the template
-  // ---------------------------------------------------------------------------
-
-  /** Called when the user picks a Liquor Category (distillery_name) */
-  onCategoryChange(): void {
-    this.selectedKind = '';
-    this.selectedType = '';
-    this.rebuildKinds();   // rebuilds kinds → calls rebuildTypes internally
-    this.filterBrands();
-  }
-
-  /** Called when the user picks a Liquor Kind (IMFL / OSBI) */
-  onKindChange(): void {
-    this.selectedType = '';
-    this.rebuildTypes();
-    this.filterBrands();
-  }
-
-  /** Called when the user picks a Liquor Type (brand_type) */
-  onTypeChange(): void {
-    this.filterBrands();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Brand loading
-  // ---------------------------------------------------------------------------
-
-  private loadBrands(): void {
-    const bottlerDetails = this.getBottlerDetails();
-    const brandOwnerCode = String(bottlerDetails?.brandOwnerCode || bottlerDetails?.brandOwner || '').trim();
-    const brandOwnerName = String(bottlerDetails?.brandOwnerName || '').trim();
-
+  private loadMasterData(): void {
+    this.isLoadingBrands = true;
     this.showOverview = false;
 
-    if (!brandOwnerCode) {
-      this.resetAllBrandState();
-      return;
-    }
+    forkJoin({
+      categories: this.svc.getLiquorCategories(),
+      kinds:      this.svc.getLiquorKinds(),
+      types:      this.svc.getLiquorTypes(),
+      brands:     this.svc.getBrands()
+    }).subscribe({
+      next: ({ categories, kinds, types, brands }) => {
+        this.allCategories = categories.map((c: any) => ({
+          liquorCatCode: c.liquorCatCode ?? c.liquor_cat_code,
+          liquorCatDesc: c.liquorCatDesc ?? c.liquor_cat_desc,
+          liquorCatAbbr: c.liquorCatAbbr ?? c.liquor_cat_abbr
+        }));
+        this.allKinds = kinds.map((k: any) => ({
+          id:             k.id,
+          liquorCatCode:  k.liquorCat       ?? k.liquor_cat,
+          liquorKindCode: k.liquorKindCode  ?? k.liquor_kind_code,
+          liquorKindDesc: k.liquorKindDesc  ?? k.liquor_kind_desc,
+          liquorKindAbbr: k.liquorKindAbbr  ?? k.liquor_kind_abbr
+        }));
+        this.allTypes = types.map((t: any) => ({
+          id:             t.id,
+          liquorCatCode:  t.liquorCat       ?? t.liquor_cat,
+          liquorKindId:   t.liquorKind      ?? t.liquor_kind,
+          liquorTypeCode: t.liquorTypeCode  ?? t.liquor_type_code,
+          liquorTypeDesc: t.liquorTypeDesc  ?? t.liquor_type_desc
+        }));
 
-    this.isLoadingBrands = true;
-    this.companyCollaborationService.getBrandsByOwner(brandOwnerCode, brandOwnerName).subscribe({
-      next: (brands) => {
-        // brand_warehouse rows → enriched brand objects with derived `kind`
-        this.allBrands = this.mergeBrandsByName(brands);
-        this.initializeFilters();
-        this.ensureFilterSelection();
+        this.allBrands = brands;
+        this.categories = [...this.allCategories];
+        this.rebuildKinds();
         this.loadSavedSelection();
-        this.pruneSelection();
         this.filterBrands();
         this.updateSelectedBrands();
         this.saveSelection();
         this.isLoadingBrands = false;
       },
-      error: (error) => {
-        console.error('Failed to load collaboration brands:', error);
-        this.resetAllBrandState();
+      error: (err) => {
+        console.error('Failed to load master data:', err);
         this.isLoadingBrands = false;
       }
     });
   }
 
-  private resetAllBrandState(): void {
-    this.allBrands = [];
-    this.filteredBrands = [];
-    this.availableSizes = [];
-    this.categories = [];
-    this.kinds = [];
-    this.types = [];
-    this.selectedSizeMap = {};
-    this.selectedBrands = [];
-    this.feeStructure = null;
-    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
-    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
-    this.saveSelection();
+  // ---------------------------------------------------------------------------
+  // Cascade handlers
+  // ---------------------------------------------------------------------------
+
+  onCategoryChange(): void {
+    this.selectedKindId = null;
+    this.selectedTypeId = null;
+    this.rebuildKinds();
+    this.filterBrands();
   }
 
-  private getBottlerDetails(): any {
-    const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
-    if (!saved) return null;
-    try { return JSON.parse(saved); } catch { return null; }
+  onKindChange(): void {
+    this.selectedTypeId = null;
+    this.rebuildTypes();
+    this.filterBrands();
+  }
+
+  onTypeChange(): void { this.filterBrands(); }
+
+  private rebuildKinds(): void {
+    this.kinds = this.selectedCatCode
+      ? this.allKinds.filter((k) => k.liquorCatCode === this.selectedCatCode)
+      : [...this.allKinds];
+    if (this.selectedKindId && !this.kinds.find((k) => k.id === this.selectedKindId)) {
+      this.selectedKindId = null;
+    }
+    this.rebuildTypes();
+  }
+
+  private rebuildTypes(): void {
+    let source = this.allTypes;
+    if (this.selectedCatCode) source = source.filter((t) => t.liquorCatCode === this.selectedCatCode);
+    if (this.selectedKindId)  source = source.filter((t) => t.liquorKindId  === this.selectedKindId);
+    this.types = source;
+    if (this.selectedTypeId && !this.types.find((t) => t.id === this.selectedTypeId)) {
+      this.selectedTypeId = null;
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Filter logic — applied after every cascade / search change
+  // Brand filtering
   // ---------------------------------------------------------------------------
 
   filterBrands(): void {
     this.filteredBrands = this.allBrands.filter((brand) => {
-      // Liquor Category  ←  distillery_name
-      const matchesCategory = !this.selectedCategory || brand.category === this.selectedCategory;
-      // Liquor Kind  ←  derived IMFL / OSBI
-      const matchesKind = !this.selectedKind || (brand as any).kind === this.selectedKind;
-      // Liquor Type  ←  brand_type
-      const matchesType = !this.selectedType || brand.type === this.selectedType;
-      // Free-text search on brand_details / brand_code
-      const matchesSearch = !this.searchTerm ||
+      const catMatch  = !this.selectedCatCode || brand.liquorCatCode === this.selectedCatCode;
+      const kindMatch = !this.selectedKindId  || brand.liquorKindId  === this.selectedKindId;
+      const typeMatch = !this.selectedTypeId  || brand.liquorTypeId  === this.selectedTypeId;
+      const search    = !this.searchTerm      ||
         brand.brand_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         brand.brand_code.toLowerCase().includes(this.searchTerm.toLowerCase());
-
-      return matchesCategory && matchesKind && matchesType && matchesSearch;
+      return catMatch && kindMatch && typeMatch && search;
     });
+  }
 
-    // Recompute pack-size columns from filtered result (capacity_size values)
-    const sizeSet = new Set<string>();
-    this.filteredBrands.forEach((b) => b.sizes.forEach((s) => sizeSet.add(s)));
-    this.availableSizes = Array.from(sizeSet).sort((a, b) => parseFloat(b) - parseFloat(a));
+  // ---------------------------------------------------------------------------
+  // Selection helpers
+  // ---------------------------------------------------------------------------
+
+  isSelected(brandId: string | number): boolean {
+    return this.selectedBrandIds.has(String(brandId));
+  }
+
+  toggleBrand(brand: CompanyCollaborationBrand): void {
+    const key = String(brand.id);
+    const updated = new Set(this.selectedBrandIds);
+    if (updated.has(key)) {
+      updated.delete(key);
+    } else {
+      updated.add(key);
+    }
+    this.selectedBrandIds = updated;
+    this.updateSelectedBrands();
+    this.saveSelection();
+    if (this.showOverview) this.refreshFeeStructure();
+  }
+
+  isAllSelected(): boolean {
+    return this.filteredBrands.length > 0 &&
+      this.filteredBrands.every((b) => this.isSelected(b.id));
+  }
+
+  isIndeterminate(): boolean {
+    const n = this.filteredBrands.filter((b) => this.isSelected(b.id)).length;
+    return n > 0 && n < this.filteredBrands.length;
+  }
+
+  masterToggle(): void {
+    const updated = new Set(this.selectedBrandIds);
+    if (this.isAllSelected()) {
+      this.filteredBrands.forEach((b) => updated.delete(String(b.id)));
+    } else {
+      this.filteredBrands.forEach((b) => updated.add(String(b.id)));
+    }
+    this.selectedBrandIds = updated;
+    this.updateSelectedBrands();
+    this.saveSelection();
+    if (this.showOverview) this.refreshFeeStructure();
+  }
+
+  removeBrand(brandId: string | number): void {
+    const updated = new Set(this.selectedBrandIds);
+    updated.delete(String(brandId));
+    this.selectedBrandIds = updated;
+    this.updateSelectedBrands();
+    this.saveSelection();
+    if (this.showOverview) this.refreshFeeStructure();
+  }
+
+  getSelectedBrandCount(): number { return this.selectedBrandIds.size; }
+
+  resetSelection(): void {
+    this.selectedBrandIds = new Set();
+    this.selectedCatCode = null;
+    this.selectedKindId  = null;
+    this.selectedTypeId  = null;
+    this.searchTerm = '';
+    this.selectedBrands = [];
+    this.feeStructure = null;
+    this.showOverview = false;
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
+    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
+    this.svc.clearSelectedBrands();
+    this.rebuildKinds();
+    this.filterBrands();
   }
 
   // ---------------------------------------------------------------------------
@@ -315,173 +243,43 @@ export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
     const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
     if (!saved) return;
     try {
-      const parsed = JSON.parse(saved) as Record<string, string[]>;
-      this.selectedSizeMap = {};
-      Object.entries(parsed).forEach(([id, sizes]) => {
-        if (Array.isArray(sizes) && sizes.length > 0) {
-          this.selectedSizeMap[id] = sizes;
-        }
-      });
-    } catch (err) {
-      console.error('Error loading saved brand selection:', err);
+      const parsed = JSON.parse(saved) as string[];
+      this.selectedBrandIds = new Set(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      this.selectedBrandIds = new Set();
     }
   }
 
   private saveSelection(): void {
-    this.updateSelectedBrands();
-    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(this.selectedSizeMap));
-    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(this.selectedBrands));
-    this.companyCollaborationService.setSelectedBrands(this.selectedBrands);
-  }
-
-  private pruneSelection(): void {
-    const validIds = new Set(this.allBrands.map((b) => String(b.id)));
-    const pruned: Record<string, string[]> = {};
-    Object.keys(this.selectedSizeMap).forEach((id) => {
-      if (validIds.has(id)) pruned[id] = this.selectedSizeMap[id];
-    });
-    this.selectedSizeMap = pruned;
+    sessionStorage.setItem(
+      COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds,
+      JSON.stringify(Array.from(this.selectedBrandIds))
+    );
+    sessionStorage.setItem(
+      COMPANY_COLLAB_STORAGE_KEYS.selectedBrands,
+      JSON.stringify(this.selectedBrands)
+    );
+    this.svc.setSelectedBrands(this.selectedBrands);
   }
 
   private updateSelectedBrands(): void {
-    this.selectedBrands = this.allBrands
-      .filter((b) => {
-        const sizes = this.selectedSizeMap[String(b.id)];
-        return sizes && sizes.length > 0;
-      })
-      .map((b) => ({ ...b, selectedSizes: [...this.selectedSizeMap[String(b.id)]] }));
-  }
-
-  // ---------------------------------------------------------------------------
-  // Selection helpers
-  // ---------------------------------------------------------------------------
-
-  isSizeSelected(brandId: string | number, size: string): boolean {
-    const sizes = this.selectedSizeMap[String(brandId)];
-    return sizes ? sizes.includes(size) : false;
-  }
-
-  isSelected(brandId: string | number): boolean {
-    const sizes = this.selectedSizeMap[String(brandId)];
-    return !!(sizes && sizes.length > 0);
-  }
-
-  toggleBrandSize(brandId: string | number, size: string): void {
-    const key = String(brandId);
-    const current = this.selectedSizeMap[key] ?? [];
-    const updated = current.includes(size)
-      ? current.filter((s) => s !== size)
-      : [...current, size];
-
-    if (updated.length === 0) {
-      const copy = { ...this.selectedSizeMap };
-      delete copy[key];
-      this.selectedSizeMap = copy;
-    } else {
-      this.selectedSizeMap = { ...this.selectedSizeMap, [key]: updated };
-    }
-
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  toggleAllSizesForBrand(brand: CompanyCollaborationBrand): void {
-    const key = String(brand.id);
-    const allSelected = brand.sizes.every((s) => this.isSizeSelected(brand.id, s));
-    if (allSelected) {
-      const copy = { ...this.selectedSizeMap };
-      delete copy[key];
-      this.selectedSizeMap = copy;
-    } else {
-      this.selectedSizeMap = { ...this.selectedSizeMap, [key]: [...brand.sizes] };
-    }
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  isAllSizesSelectedForBrand(brand: CompanyCollaborationBrand): boolean {
-    return brand.sizes.length > 0 && brand.sizes.every((s) => this.isSizeSelected(brand.id, s));
-  }
-
-  isSomeSizesSelectedForBrand(brand: CompanyCollaborationBrand): boolean {
-    const n = brand.sizes.filter((s) => this.isSizeSelected(brand.id, s)).length;
-    return n > 0 && n < brand.sizes.length;
-  }
-
-  isAllSelected(): boolean {
-    return this.filteredBrands.length > 0 && this.filteredBrands.every((b) => this.isSelected(b.id));
-  }
-
-  isIndeterminate(): boolean {
-    const n = this.filteredBrands.filter((b) => this.isSelected(b.id)).length;
-    return n > 0 && n < this.filteredBrands.length;
-  }
-
-  masterToggle(): void {
-    const copy = { ...this.selectedSizeMap };
-    if (this.isAllSelected()) {
-      this.filteredBrands.forEach((b) => delete copy[String(b.id)]);
-    } else {
-      this.filteredBrands.forEach((b) => { copy[String(b.id)] = [...b.sizes]; });
-    }
-    this.selectedSizeMap = copy;
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  getSelectedCount(): number {
-    return Object.values(this.selectedSizeMap).reduce((sum, sizes) => sum + sizes.length, 0);
-  }
-
-  getSelectedBrandCount(): number {
-    return this.selectedBrands.length;
-  }
-
-  removeBrand(brandId: string | number): void {
-    const copy = { ...this.selectedSizeMap };
-    delete copy[String(brandId)];
-    this.selectedSizeMap = copy;
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  resetSelection(): void {
-    this.selectedSizeMap = {};
-    this.selectedCategory = '';
-    this.selectedKind = '';
-    this.selectedType = '';
-    this.searchTerm = '';
-    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
-    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
-    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
-    sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
-    this.companyCollaborationService.clearSelectedBrands();
-    this.selectedBrands = [];
-    this.feeStructure = null;
-    this.showOverview = false;
-    this.rebuildKinds();
-    this.filterBrands();
+    this.selectedBrands = this.allBrands.filter((b) => this.selectedBrandIds.has(String(b.id)));
   }
 
   // ---------------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------------
 
-  goBack(): void {
-    this.saveSelection();
-    this.back.emit();
-  }
+  goBack(): void { this.saveSelection(); this.back.emit(); }
 
   addSelectedBrands(): void {
     this.saveSelection();
-    if (this.getSelectedCount() === 0) return;
+    if (this.selectedBrandIds.size === 0) return;
     this.showOverview = true;
     this.refreshFeeStructure();
   }
 
-  addMoreProduct(): void {
-    this.showOverview = false;
-  }
+  addMoreProduct(): void { this.showOverview = false; }
 
   proceedToSubmit(): void {
     this.saveSelection();
@@ -496,16 +294,12 @@ export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
 
   getTotalAmount(): number {
     if (!this.feeStructure) return 0;
-    return (
-      Number(this.feeStructure.applicationFee   || 0) +
-      Number(this.feeStructure.collaborationFee || 0) +
-      Number(this.feeStructure.securityDeposit  || 0)
-    );
+    return Number(this.feeStructure.applicationFee || 0)
+         + Number(this.feeStructure.collaborationFee || 0)
+         + Number(this.feeStructure.securityDeposit || 0);
   }
 
-  getCurrentDate(): string {
-    return new Date().toLocaleDateString('en-GB');
-  }
+  getCurrentDate(): string { return new Date().toLocaleDateString('en-GB'); }
 
   private refreshFeeStructure(): void {
     if (this.selectedBrands.length === 0) {
@@ -514,10 +308,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy, DoCheck {
       return;
     }
     this.isLoadingFee = true;
-    this.companyCollaborationService.getFeeStructure(
-      this.selectedBrands.map((b) => b.id),
-      this.selectedBrands
-    ).subscribe({
+    this.svc.getFeeStructure().subscribe({
       next: (fee) => {
         this.feeStructure = fee;
         sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure, JSON.stringify(fee));

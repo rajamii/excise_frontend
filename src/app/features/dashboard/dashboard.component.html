@@ -111,12 +111,12 @@
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
         <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'"></app-payment-confirmation>
         <app-registration-management
-          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'salesman-barman-registration'">
+          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-collaboration' || selectedSupplyChainSection === 'salesman-barman-registration'">
         </app-registration-management>
         <app-prepare-application
           *ngIf="selectedSupplyChainSection === 'company-registration-apply'"></app-prepare-application>
         <app-company-collaboration-prepare-application
-          *ngIf="selectedSupplyChainSection === 'company-collaboration'">
+          *ngIf="selectedSupplyChainSection === 'company-collaboration-apply'">
         </app-company-collaboration-prepare-application>
         <app-salesman-registration
           *ngIf="selectedSupplyChainSection === 'salesman-barman-registration-apply'"></app-salesman-registration>

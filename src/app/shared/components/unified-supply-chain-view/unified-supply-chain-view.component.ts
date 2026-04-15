@@ -12,6 +12,7 @@ import { EnaRequisitionService } from '../../../core/services/ena-requisition.se
 import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
 import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
+import { CompanyCollaborationService } from '../../../core/services/company-collaboration.service';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
@@ -274,6 +275,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private supplyChainService: SupplyChainService,
         private hologramDataService: HologramDataService,
         private companyRegistrationService: CompanyRegistrationService,
+        private companyCollaborationService: CompanyCollaborationService,
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private licenseApplicationService: LicenseApplicationService,
         private unifiedActionsService: UnifiedActionsService,
@@ -472,6 +474,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     brAmount: ['paymentAmount', 'payment_amount']
                 }
             },
+            'company-collaboration': {
+                service: this.companyCollaborationService,
+                listMethod: 'listCompanyCollaborations',
+                detailMethod: 'getCompanyCollaborationDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.COMPANY_COLLABORATION],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no', 'id'],
+                    submissionDate: ['created_at', 'createdAt', 'updated_at', 'updatedAt'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage', 'currentStage', 'current_stage_id', 'currentStageId'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['licensee_name', 'licenseeName', 'brand_owner_name', 'brandOwnerName'],
+                    brAmount: ['total_amount']
+                }
+            },
             'salesman-barman-registration': {
                 service: this.salesmanBarmanRegistrationService,
                 listMethod: 'getSalesmanBarmanList',
@@ -614,7 +633,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         // For workflows where backend often sends generic "PENDING",
         // prefer explicit current stage name for user-facing status.
         if (
-            (this.applicationType === 'salesman-barman-registration' || this.applicationType === 'company-registration') &&
+            (
+                this.applicationType === 'salesman-barman-registration' ||
+                this.applicationType === 'company-registration' ||
+                this.applicationType === 'company-collaboration'
+            ) &&
             mappedData.currentStageName &&
             (!mappedData.status || String(mappedData.status).toUpperCase() === 'PENDING')
         ) {
@@ -889,6 +912,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount'])
                 );
                 break;
+            case 'company-collaboration':
+                const overviewSummary = apiData?.overview_summary ?? apiData?.overviewSummary ?? {};
+                const feeStructure = apiData?.fee_structure ?? apiData?.feeStructure ?? {};
+                mappedData['distilleryName'] =
+                    this.extractFieldValue(apiData, ['licensee_name', 'licenseeName', 'brand_owner_name', 'brandOwnerName']) ||
+                    'Not specified';
+                mappedData['brAmount'] = this.parseNumericValue(
+                    overviewSummary?.totalAmount ??
+                    overviewSummary?.total_amount ??
+                    feeStructure?.totalAmount ??
+                    feeStructure?.total_amount,
+                    this.parseNumericValue(feeStructure?.applicationFee) +
+                    this.parseNumericValue(feeStructure?.application_fee) +
+                    this.parseNumericValue(feeStructure?.collaborationFee) +
+                    this.parseNumericValue(feeStructure?.collaboration_fee) +
+                    this.parseNumericValue(feeStructure?.collaborationFees) +
+                    this.parseNumericValue(feeStructure?.collaboration_fees) +
+                    this.parseNumericValue(feeStructure?.securityDeposit) +
+                    this.parseNumericValue(feeStructure?.security_deposit)
+                );
+                break;
             case 'salesman-barman-registration':
                 mappedData['distilleryName'] =
                     this.extractFieldValue(apiData, ['license_category_name', 'licenseCategoryName', 'license_category']) ||
@@ -1012,6 +1056,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         }
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    getCompanyCollaborationBrands(): any[] {
+        const selectedBrands =
+            this.applicationData?.['selected_brands'] ??
+            this.applicationData?.['selectedBrands'] ??
+            [];
+        return Array.isArray(selectedBrands) ? selectedBrands : [];
+    }
+
+    getDocumentUrl(value: any): string {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return '';
+        }
+
+        if (/^https?:\/\//i.test(raw)) {
+            return raw;
+        }
+
+        const baseUrl = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+        const path = raw.replace(/^\/+/, '');
+        return `${baseUrl}/${path}`;
     }
 
     private extractAllowedActions(apiData: any): string[] {
@@ -1404,6 +1471,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
+    isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
 
     getApplicationTitle(): string {
@@ -1421,7 +1489,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'revalidation',
             'cancellation',
             'transit',
-            'hologram'
+            'hologram',
+            'new-license',
+            'company-registration',
+            'company-collaboration',
+            'salesman-barman-registration'
         ];
 
         if (supplyChainDashboardTypes.includes(this.applicationType)) {

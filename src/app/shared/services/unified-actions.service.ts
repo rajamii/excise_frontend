@@ -278,6 +278,7 @@ export class UnifiedActionsService {
         return this.performHologramWorkflowAction(item, 'approve', 'Approved', 'Approved');
       case 'new-license':
       case 'company-registration':
+      case 'company-collaboration':
       case 'salesman-barman-registration':
         return this.executeWorkflowAdvance(item, 'approve', 'Approved');
 
@@ -336,6 +337,7 @@ export class UnifiedActionsService {
         return this.performHologramWorkflowAction(item, 'reject', reason, 'Rejected');
       case 'new-license':
       case 'company-registration':
+      case 'company-collaboration':
       case 'salesman-barman-registration':
         return this.executeWorkflowAdvance(item, 'reject', reason);
 
@@ -355,7 +357,7 @@ export class UnifiedActionsService {
     if (itemType === 'hologram') {
       return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
-    if (['new-license', 'company-registration', 'salesman-barman-registration'].includes(itemType)) {
+    if (['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
       return this.executeWorkflowAdvance(item, 'forward', 'Forwarded');
     }
 
@@ -935,7 +937,7 @@ export class UnifiedActionsService {
   }
 
   private handleRaiseObjectionAction(item: any, itemType: string): Observable<ActionResult> {
-    if (!['new-license', 'company-registration', 'salesman-barman-registration'].includes(itemType)) {
+    if (!['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
       return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
     }
 

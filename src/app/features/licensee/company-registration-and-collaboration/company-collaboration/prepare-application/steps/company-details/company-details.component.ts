@@ -93,11 +93,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
           this.isLoadingBottlers = false;
 
           const current = this.companyDetailsForm.get('bottlerId')?.value;
-          if (!current && this.bottlerOptions.length > 0) {
-            this.companyDetailsForm.patchValue({ bottlerId: this.bottlerOptions[0].id }, { emitEvent: true });
-          } else {
-            this.applyBottlerDetails(current);
-          }
+          if (current) this.applyBottlerDetails(current);
         },
         error: () => {
           this.bottlerOptions = [];
