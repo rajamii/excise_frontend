@@ -624,20 +624,32 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
-                                    <td>{{ applicationData.referenceNo || applicationData.id }}</td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Applicant Name</td>
                                     <td>{{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Establishment Name</td>
-                                    <td>{{ applicationData.establishment_name || applicationData.establishmentName || 'Not available' }}</td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Father/Husband Name</td>
                                     <td>{{ applicationData.father_husband_name || applicationData.fatherHusbandName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN</td>
+                                    <td>{{ applicationData.pan || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">DOB</td>
+                                    <td>{{ applicationData.dob || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Gender</td>
+                                    <td>{{ applicationData.gender || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Nationality</td>
+                                    <td>{{ applicationData.nationality || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Address</td>
+                                    <td>{{ applicationData.address || 'Not Available' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Email</td>
@@ -646,6 +658,10 @@
                                 <tr>
                                     <td class="fw-semibold bg-light">Mobile Number</td>
                                     <td>{{ applicationData.mobile_number || applicationData.mobileNumber || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Has Sikkim Subject</td>
+                                    <td>{{ applicationData.sikkimSubject || 'Not Available' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -657,6 +673,14 @@
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Establishment Name</td>
+                                    <td>{{ applicationData.establishment_name || applicationData.establishmentName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Type</td>
+                                    <td>{{ applicationData.site_type || 'Not Available' }}</td>
+                                </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">License Type</td>
                                     <td>{{ applicationData.license_type_name || applicationData.licenseTypeName || applicationData.license_type || 'Not available' }}</td>
@@ -682,8 +706,33 @@
                                     <td>{{ applicationData.police_station_name || applicationData.policeStationName || 'Not available' }}</td>
                                 </tr>
                                 <tr>
+                                    <td class="fw-semibold bg-light">Pin Code</td>
+                                    <td>{{ applicationData.pinCode || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
                                     <td class="fw-semibold bg-light">Yearly License Fee</td>
                                     <td class="text-success fw-bold">Rs {{ applicationData.yearly_license_fee || applicationData.yearlyLicenseFee || applicationData.brAmount || 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Company Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Name</td>
+                                    <td>{{ applicationData.companyName || 'Not Applicable' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Mobile Number</td>
+                                    <td>{{ applicationData.companyMobileNumber || 'Not Applicable' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Email</td>
+                                    <td>{{ applicationData.companyEmailId || 'Not Applicable' }}</td>
                                 </tr>
                             </tbody>
                         </table>

@@ -106,6 +106,7 @@ export interface UnifiedApplicationData {
     license_category?: string;
     license_sub_category_name?: string;
     licenseSubCategoryName?: string;
+    site_type?: string;
     site_district_name?: string;
     siteDistrictName?: string;
     site_subdivision_name?: string;
