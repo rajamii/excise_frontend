@@ -99,6 +99,53 @@ export interface UnifiedApplicationData {
     email?: string;
     mobile_number?: string;
     mobileNumber?: string;
+    residential_status?: string;
+    residentialStatus?: string;
+    mode_of_operation?: string;
+    modeOfOperation?: string;
+    present_address?: string;
+    presentAddress?: string;
+    permanent_address?: string;
+    permanentAddress?: string;
+    has_sikkim_certificate?: string;
+    hasSikkimCertificate?: string;
+    has_excise_license?: string;
+    hasExciseLicense?: string;
+    family_excise_license?: string;
+    familyExciseLicense?: string;
+    criminal_conviction?: string;
+    criminalConviction?: string;
+
+    location_category?: string;
+    locationCategory?: string;
+    location_name?: string;
+    locationName?: string;
+    ward_name?: string;
+    wardName?: string;
+    business_address?: string;
+    businessAddress?: string;
+    road_name?: string;
+    roadName?: string;
+    pin_code?: string;
+    construction_type?: string;
+    constructionType?: string;
+    length?: string | number;
+    breadth?: string | number;
+    site_owned?: string;
+    siteOwned?: string;
+    noc_obtained?: string;
+    nocObtained?: string;
+
+    pass_photo?: string;
+    passPhoto?: string;
+    pan_card?: string;
+    panCard?: string;
+    sikkim_certificate?: string;
+    sikkimCertificate?: string;
+    dob_proof?: string;
+    dobProof?: string;
+    noc_landlord?: string;
+    nocLandlord?: string;
     license_type_name?: string;
     licenseTypeName?: string;
     license_type?: string;
@@ -1646,6 +1693,75 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     hasText(value: unknown): boolean {
         if (value === null || value === undefined) return false;
         return String(value).trim().length > 0;
+    }
+
+    getFileUrl(value: unknown): string {
+        if (!this.hasText(value)) return '#';
+        const valueStr = String(value).trim();
+
+        if (valueStr.startsWith('http://') || valueStr.startsWith('https://')) {
+            return valueStr;
+        }
+
+        const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+        const path = valueStr.startsWith('/') ? valueStr : `/${valueStr}`;
+        return `${base}${path}`;
+    }
+
+    private isFilePath(value: unknown): boolean {
+        if (!this.hasText(value)) return false;
+        const valueStr = String(value).toLowerCase();
+        return (
+            valueStr.includes('/media/') ||
+            valueStr.endsWith('.pdf') ||
+            valueStr.endsWith('.jpg') ||
+            valueStr.endsWith('.jpeg') ||
+            valueStr.endsWith('.png') ||
+            valueStr.endsWith('.webp') ||
+            valueStr.endsWith('.doc') ||
+            valueStr.endsWith('.docx')
+        );
+    }
+
+    private isImagePath(value: unknown): boolean {
+        if (!this.hasText(value)) return false;
+        const valueStr = String(value).toLowerCase();
+        return valueStr.endsWith('.jpg') || valueStr.endsWith('.jpeg') || valueStr.endsWith('.png') || valueStr.endsWith('.webp');
+    }
+
+    private pickFirstValue(keys: string[]): unknown {
+        const data: any = this.applicationData as any;
+        for (const key of keys) {
+            const candidate = data?.[key];
+            if (this.hasText(candidate)) return candidate;
+        }
+        return null;
+    }
+
+    getNewLicenseUploads(): Array<{ label: string; url: string; isImage: boolean }> {
+        if (!this.applicationData || this.applicationType !== 'new-license') return [];
+
+        const docFields: Array<{ label: string; keys: string[] }> = [
+            { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
+            { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
+            { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
+            { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
+            { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
+        ];
+
+        const uploads: Array<{ label: string; url: string; isImage: boolean }> = [];
+
+        for (const field of docFields) {
+            const rawValue = this.pickFirstValue(field.keys);
+            if (!this.isFilePath(rawValue)) continue;
+            uploads.push({
+                label: field.label,
+                url: this.getFileUrl(rawValue),
+                isImage: this.isImagePath(rawValue)
+            });
+        }
+
+        return uploads;
     }
 
     printApplication(): void {

@@ -233,11 +233,11 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   }
 
   getAvailableButtons(): ActionButtonConfig[] {
-    return this.getFilteredConfigs();
+    return this.ensureAdminNewLicenseDetailsButton(this.getFilteredConfigs());
   }
 
   getDisplayButtons(): ActionButtonConfig[] {
-    const filtered = this.getFilteredConfigs();
+    const filtered = this.ensureAdminNewLicenseDetailsButton(this.getFilteredConfigs());
     if (this.displayMode === 'detailed') {
       // In detailed mode, show secondary actions as icons (excluding PRINT)
       return filtered
@@ -282,6 +282,28 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     );
   }
 
+  private ensureAdminNewLicenseDetailsButton(configs: ActionButtonConfig[]): ActionButtonConfig[] {
+    const exclude = this.normalizeActionList(this.excludeActions);
+    if (
+      this.itemType === 'new-license' &&
+      this.context !== 'licensee' &&
+      !exclude.includes('VIEW') &&
+      !configs.some(config => this.normalizeActionName(config.action) === 'VIEW')
+    ) {
+      return [
+        ...configs,
+        {
+          action: 'VIEW',
+          label: 'Details',
+          icon: 'visibility',
+          color: 'primary',
+          tooltip: 'View Details'
+        }
+      ];
+    }
+    return configs;
+  }
+
   /**
    * MAIN ACTION HANDLER - All button logic centralized here
    */
@@ -289,12 +311,83 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const normalizedAction = this.normalizeActionName(button?.action);
     const normalizedButton: ActionButtonConfig = { ...button, action: normalizedAction };
 
+    if (this.shouldRequireNewLicenseUploadsDeclaration(normalizedAction)) {
+      this.showNewLicenseUploadsDeclaration(normalizedButton).then((ok) => {
+        if (ok) this.executeAction(normalizedButton);
+      });
+      return;
+    }
+
     // Handle confirmation if required
     if (normalizedButton.requiresConfirmation) {
       this.showConfirmationDialog(normalizedButton);
     } else {
       this.executeAction(normalizedButton);
     }
+  }
+
+  private shouldRequireNewLicenseUploadsDeclaration(action: string): boolean {
+    const token = this.normalizeActionName(action);
+    const isWorkflowDecision = token === 'APPROVE' || token === 'REJECT' || token === 'RAISE_OBJECTION';
+    const isAdminContext = this.context !== 'licensee';
+    return this.itemType === 'new-license' && isAdminContext && isWorkflowDecision;
+  }
+
+  private showNewLicenseUploadsDeclaration(button: ActionButtonConfig): Promise<boolean> {
+    const label = String(button?.label || button?.action || 'Proceed').trim();
+    const action = this.normalizeActionName(button?.action);
+
+    const confirmationText =
+      button?.confirmationMessage ||
+      (action === 'APPROVE'
+        ? 'Please confirm you have verified all the details and uploaded documents.'
+        : action === 'REJECT'
+          ? 'Please confirm you have verified all the details and uploaded documents before rejecting.'
+          : 'Please confirm you have verified all the details and uploaded documents before raising an objection.');
+
+    return Swal.fire({
+      title: 'Declaration',
+      html: `
+        <div style="text-align:left;">
+          <div style="margin-bottom: 10px; color: #374151; font-size: 14px;">
+            ${this.escapeHtml(confirmationText)}
+          </div>
+          <div style="display:flex; align-items:flex-start; gap:10px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb;">
+            <input type="checkbox" id="uploadsDeclaration" style="margin-top: 2px;" />
+            <label for="uploadsDeclaration" style="margin: 0; cursor: pointer; color: #111827; font-size: 14px; line-height: 1.35;">
+              I declare that I have checked all uploaded documents and they are correct.
+            </label>
+          </div>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Proceed (${label})`,
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: action === 'REJECT' ? '#dc3545' : '#2563eb',
+      cancelButtonColor: '#6c757d',
+      focusConfirm: false,
+      didOpen: () => {
+        const confirmBtn = Swal.getConfirmButton();
+        if (confirmBtn) confirmBtn.disabled = true;
+
+        const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
+        if (!checkbox) return;
+        checkbox.addEventListener('change', () => {
+          const isChecked = !!checkbox.checked;
+          const btn = Swal.getConfirmButton();
+          if (btn) btn.disabled = !isChecked;
+        });
+      },
+      preConfirm: () => {
+        const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
+        if (!checkbox?.checked) {
+          Swal.showValidationMessage('Please accept the declaration to continue.');
+          return false as any;
+        }
+        return true;
+      }
+    }).then((result) => !!result.isConfirmed);
   }
 
   private showConfirmationDialog(button: ActionButtonConfig): void {
