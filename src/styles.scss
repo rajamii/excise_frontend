@@ -751,3 +751,16 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
     height: 22px !important;
   }
 }
+
+// ── Document viewer global overlays (must escape any stacking context) ───────
+.docs-modal-backdrop,
+.doc-viewer-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+}
+
+.docs-modal-backdrop { z-index: 9000 !important; background: rgba(0,0,0,0.55) !important; backdrop-filter: blur(3px); }
+.doc-viewer-backdrop  { z-index: 9100 !important; background: rgba(0,0,0,0.75) !important; }
+
+.docs-modal  { position: fixed !important; inset: 0 !important; z-index: 9001 !important; }
+.doc-viewer  { position: fixed !important; inset: 0 !important; z-index: 9101 !important; }

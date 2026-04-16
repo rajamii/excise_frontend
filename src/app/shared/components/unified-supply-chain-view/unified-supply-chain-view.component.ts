@@ -1,5 +1,6 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, of } from 'rxjs';
@@ -311,6 +312,22 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     applicationType: ApplicationType = 'requisition';
     isLoading = false;
     errorMessage = '';
+
+    // Uploaded documents modal state
+    docsModalOpen = false;
+    activeDoc: { label: string; url: string; isImage: boolean; safeUrl?: any } | null = null;
+    newLicenseUploads: Array<{ label: string; url: string; isImage: boolean }> = [];
+
+    openDocsModal(): void { this.docsModalOpen = true; this.cdr.detectChanges(); }
+    closeDocsModal(): void { this.docsModalOpen = false; this.activeDoc = null; this.cdr.detectChanges(); }
+    openDocViewer(doc: { label: string; url: string; isImage: boolean }): void {
+        this.activeDoc = {
+            ...doc,
+            safeUrl: doc.isImage ? doc.url : this.sanitizer.bypassSecurityTrustResourceUrl(doc.url)
+        };
+        this.cdr.detectChanges();
+    }
+    closeDocViewer(): void { this.activeDoc = null; this.cdr.detectChanges(); }
     
     private readonly isBrowser: boolean;
 
@@ -328,6 +345,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private unifiedActionsService: UnifiedActionsService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
+        private sanitizer: DomSanitizer,
+        private cdr: ChangeDetectorRef,
         @Inject(PLATFORM_ID) platformId: Object
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
@@ -700,6 +719,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.addComputedFields(mappedData, apiData, config);
 
         this.applicationData = mappedData;
+        this.calculateNewLicenseUploads();
         this.loadWorkflowActions();
     }
 
@@ -1738,8 +1758,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return null;
     }
 
-    getNewLicenseUploads(): Array<{ label: string; url: string; isImage: boolean }> {
-        if (!this.applicationData || this.applicationType !== 'new-license') return [];
+    calculateNewLicenseUploads(): void {
+        this.newLicenseUploads = [];
+        if (!this.applicationData || this.applicationType !== 'new-license') return;
 
         const docFields: Array<{ label: string; keys: string[] }> = [
             { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
@@ -1749,19 +1770,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
         ];
 
-        const uploads: Array<{ label: string; url: string; isImage: boolean }> = [];
-
         for (const field of docFields) {
             const rawValue = this.pickFirstValue(field.keys);
             if (!this.isFilePath(rawValue)) continue;
-            uploads.push({
+            this.newLicenseUploads.push({
                 label: field.label,
                 url: this.getFileUrl(rawValue),
                 isImage: this.isImagePath(rawValue)
             });
         }
-
-        return uploads;
     }
 
     printApplication(): void {

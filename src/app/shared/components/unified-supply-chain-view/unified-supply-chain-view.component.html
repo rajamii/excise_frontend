@@ -816,29 +816,21 @@
                     </div>
                 </div>
 
-                <div class="section-card mb-4" *ngIf="getNewLicenseUploads().length > 0">
-                    <h5 class="section-title">Uploaded Documents</h5>
-                    <div class="row g-3">
-                        <div class="col-md-6 col-lg-4" *ngFor="let doc of getNewLicenseUploads()">
-                            <div class="upload-card">
-                                <div class="upload-card__title">{{ doc.label }}</div>
-                                <ng-container *ngIf="doc.isImage; else fileLink">
-                                    <a [href]="doc.url" target="_blank" rel="noopener">
-                                        <img [src]="doc.url" [alt]="doc.label" class="upload-card__image" />
-                                    </a>
-                                </ng-container>
-                                <ng-template #fileLink>
-                                    <a [href]="doc.url" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-file-earmark-text me-1"></i>View
-                                    </a>
-                                </ng-template>
-                            </div>
+                <div class="section-card mb-4 no-print" *ngIf="newLicenseUploads.length > 0">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small">{{ newLicenseUploads.length }} document(s) attached</span>
                         </div>
+                        <button type="button" class="btn-view-docs" (click)="openDocsModal()">
+                            <i class="bi bi-folder2-open me-2"></i>View Uploaded Documents
+                            <span class="docs-count-badge">{{ newLicenseUploads.length }}</span>
+                        </button>
                     </div>
                     <div class="text-muted mt-2 small">
                         Please verify all uploads before using Approve / Reject / Objection actions.
                     </div>
                 </div>
+
                 }
 
                 @if (isCompanyRegistration()) {
@@ -1253,4 +1245,79 @@
     }
 
 </div>
+
+<!-- ── Uploaded Documents Modal (portal-level, outside all stacking contexts) ── -->
+<div class="docs-modal-backdrop" *ngIf="docsModalOpen" (click)="closeDocsModal()"></div>
+<div class="docs-modal" *ngIf="docsModalOpen" role="dialog" aria-modal="true" aria-label="Uploaded Documents" (click)="closeDocsModal()">
+    <div class="docs-modal-container" (click)="$event.stopPropagation()">
+        <div class="docs-modal-header">
+            <div class="docs-modal-title">
+                <i class="bi bi-folder2-open me-2"></i>Uploaded Documents
+                <span class="docs-count-badge ms-2">{{ newLicenseUploads.length }}</span>
+            </div>
+            <button type="button" class="docs-modal-close" (click)="closeDocsModal()" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="docs-modal-body">
+            <div class="docs-grid">
+                <div class="doc-item" *ngFor="let doc of newLicenseUploads" (click)="openDocViewer(doc)">
+                    <div class="doc-item__preview">
+                        <ng-container *ngIf="doc.isImage; else pdfThumb">
+                            <img [src]="doc.url" [alt]="doc.label" class="doc-item__img" />
+                        </ng-container>
+                        <ng-template #pdfThumb>
+                            <div class="doc-item__pdf-icon">
+                                <i class="bi bi-file-earmark-pdf-fill"></i>
+                                <span>PDF</span>
+                            </div>
+                        </ng-template>
+                        <div class="doc-item__overlay">
+                            <i class="bi bi-eye-fill"></i>
+                            <span>Click to View</span>
+                        </div>
+                    </div>
+                    <div class="doc-item__label">{{ doc.label }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="docs-modal-footer">
+            <span class="text-muted small">Click any document to open it in full view</span>
+        </div>
+    </div>
+</div>
+
+<!-- ── Full Document Viewer ── -->
+<ng-container *ngIf="activeDoc as doc">
+    <div class="doc-viewer-backdrop" (click)="closeDocViewer()"></div>
+    <div class="doc-viewer" role="dialog" aria-modal="true">
+        <div class="doc-viewer-container" (click)="$event.stopPropagation()">
+            <div class="doc-viewer-header">
+                <span class="doc-viewer-title">
+                    <i class="bi bi-file-earmark me-2"></i>{{ doc.label }}
+                </span>
+                <div class="doc-viewer-actions">
+                    <a [href]="doc.url" target="_blank" rel="noopener" class="btn-doc-action" title="Open in new tab">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <button type="button" class="btn-doc-action" (click)="closeDocViewer()" title="Close" aria-label="Close viewer">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="doc-viewer-body">
+                <ng-container *ngIf="doc.isImage; else pdfFullView">
+                    <img [src]="doc.url" [alt]="doc.label" class="doc-viewer-img" />
+                </ng-container>
+                <ng-template #pdfFullView>
+                    <object [data]="doc.safeUrl" type="application/pdf" class="doc-viewer-iframe" style="width: 100%; height: 100%;">
+                        <iframe [src]="doc.safeUrl" class="doc-viewer-iframe" title="PDF Viewer" style="border: none;">
+                            <p>Your browser does not support PDFs. <a [href]="doc.url" target="_blank">Download the PDF</a>.</p>
+                        </iframe>
+                    </object>
+                </ng-template>
+            </div>
+        </div>
+    </div>
+</ng-container>
 
