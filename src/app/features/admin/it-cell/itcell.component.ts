@@ -194,6 +194,8 @@ export class ITCELLComponent implements OnInit {
       const filter = this.normalizeStageToken(this.statusFilter);
       if (filter === 'approved') {
         filtered = filtered.filter(item => this.isApprovedLikeStatus(item));
+      } else if (filter === 'edited') {
+        filtered = filtered.filter(item => Boolean(item?.editedByCommissioner));
       } else {
         filtered = filtered.filter(item => item.status === this.statusFilter);
       }
@@ -363,6 +365,9 @@ export class ITCELLComponent implements OnInit {
 
   getStatusCount(status: string): number {
     const filter = this.normalizeStageToken(status);
+    if (filter === 'edited') {
+      return this.summaryHologramData.filter(h => Boolean(h?.editedByCommissioner)).length;
+    }
     if (filter === 'approved') {
       return this.summaryHologramData.filter(h => this.isApprovedLikeStatus(h)).length;
     }

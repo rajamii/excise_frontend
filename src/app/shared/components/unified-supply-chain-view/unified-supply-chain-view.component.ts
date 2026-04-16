@@ -1560,6 +1560,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     goBack(): void {
         const source = this.route.snapshot.queryParamMap.get('source');
+
+        // IT Cell hologram flows should return to the IT Cell dashboard section, not the licensee hologram section.
+        if (source === 'itcell' || source === 'it-cell') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'itcell-hologram', tab: 'hologram' } });
+            return;
+        }
         const supplyChainDashboardTypes: ApplicationType[] = [
             'requisition',
             'revalidation',
