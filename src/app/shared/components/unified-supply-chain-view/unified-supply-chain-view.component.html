@@ -816,21 +816,6 @@
                     </div>
                 </div>
 
-                <div class="section-card mb-4 no-print" *ngIf="newLicenseUploads.length > 0">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="text-muted small">{{ newLicenseUploads.length }} document(s) attached</span>
-                        </div>
-                        <button type="button" class="btn-view-docs" (click)="openDocsModal()">
-                            <i class="bi bi-folder2-open me-2"></i>View Uploaded Documents
-                            <span class="docs-count-badge">{{ newLicenseUploads.length }}</span>
-                        </button>
-                    </div>
-                    <div class="text-muted mt-2 small">
-                        Please verify all uploads before using Approve / Reject / Objection actions.
-                    </div>
-                </div>
-
                 }
 
                 @if (isCompanyRegistration()) {
@@ -1191,6 +1176,12 @@
     
         </div>
          <!-- Print Button -->
+                <div class="no-print d-flex justify-content-center mt-2 mb-2" *ngIf="newLicenseUploads.length > 0">
+                    <button type="button" class="btn-view-docs" (click)="openDocsModal()">
+                        <i class="bi bi-folder2-open me-2"></i>View Uploaded Documents
+                        <span class="docs-count-badge">{{ newLicenseUploads.length }}</span>
+                    </button>
+                </div>
                 <div class="no-print d-flex justify-content-center mt-2" *ngIf="!isHologram()">
                     <button class="btn btn-primary btn-lg" (click)="printApplication()">
                         <i class="bi bi-printer me-2"></i>Print Application
