@@ -78,6 +78,8 @@ interface HologramItem {
   exportQty: number;
   defenceQty: number;
   paymentDate: Date | null;
+  createdAt?: string | Date | null;
+  date?: string | Date | null;
   paymentSlipUploaded?: boolean;
 }
 
@@ -1083,6 +1085,19 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
             const hologramFee = totalQty * 0.15;
             const paymentDetails: any = (item as any).paymentDetails || (item as any).payment_details || {};
             const paidAt = paymentDetails?.paid_at ? new Date(paymentDetails.paid_at) : null;
+            const createdAt =
+              (item as any).createdAt ||
+              (item as any).created_at ||
+              (item as any).submittedAt ||
+              (item as any).submitted_at ||
+              (item as any).date ||
+              (item as any).created ||
+              null;
+            const recordDate =
+              (item as any).date ||
+              (item as any).createdAt ||
+              (item as any).created_at ||
+              null;
             const referenceNo =
               (item as any).refNo ||
               (item as any).ref_no ||
@@ -1105,6 +1120,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               exportQty,
               defenceQty,
               paymentDate: paidAt,
+              createdAt,
+              date: recordDate,
               paymentDetails,
               paymentStatus: normalizedStatus
             } as HologramItem;
