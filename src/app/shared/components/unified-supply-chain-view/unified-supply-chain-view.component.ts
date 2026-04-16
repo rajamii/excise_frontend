@@ -1212,6 +1212,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return USER_CONTEXTS.LICENSEE; // Default context
     }
 
+    isLicenseeContext(): boolean {
+        return this.getUserContext() === USER_CONTEXTS.LICENSEE;
+    }
+
     onUnifiedAction(event: { action: string, item: any }): void {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();

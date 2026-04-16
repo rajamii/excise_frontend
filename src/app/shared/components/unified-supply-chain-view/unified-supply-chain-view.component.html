@@ -64,15 +64,14 @@
                             </p>
                             <p><strong>Submission Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy"
                                 }}</p>
-                            <p><strong>Distillery:</strong> {{ hasText(applicationData.distilleryName) ? applicationData.distilleryName : 'Not specified' }}</p>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="info-card">
                             <h6 class="text-primary mb-2">Status Information</h6>
                             <p><strong>Current Status:</strong></p>
-                            <span [ngClass]="getStatusBadgeClass(applicationData.status)" class="d-block mt-1">
-                                {{ getFormattedStatus(applicationData.status) }}
+                            <span [ngClass]="getStatusBadgeClass(isLicenseeContext() ? 'PENDING' : applicationData.status)" class="d-block mt-1">
+                                {{ isLicenseeContext() ? 'Pending' : getFormattedStatus(applicationData.status) }}
                             </span>
                             <p class="mt-2"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
