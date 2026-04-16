@@ -198,7 +198,6 @@
       </header>
 
         <div class="content">
-          <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
           <div class="section-title" *ngIf="terms().length">The aforesaid License has been granted as per the following terms and conditions:</div>
           <ol class="terms" type="I" *ngIf="termsPages()[0]?.items?.length">
             <li *ngFor="let t of termsPages()[0].items">{{ t }}</li>
