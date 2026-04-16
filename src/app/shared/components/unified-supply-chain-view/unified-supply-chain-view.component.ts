@@ -315,15 +315,20 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     // Uploaded documents modal state
     docsModalOpen = false;
-    activeDoc: { label: string; url: string; isImage: boolean; safeUrl?: any } | null = null;
+    activeDoc: { label: string; url: string; isImage: boolean } | null = null;
     newLicenseUploads: Array<{ label: string; url: string; isImage: boolean }> = [];
 
     openDocsModal(): void { this.docsModalOpen = true; this.cdr.detectChanges(); }
     closeDocsModal(): void { this.docsModalOpen = false; this.activeDoc = null; this.cdr.detectChanges(); }
     openDocViewer(doc: { label: string; url: string; isImage: boolean }): void {
+        const url = this.normalizeDocUrl(doc.url);
+        if (!doc.isImage) {
+            window.open(url, '_blank', 'noopener');
+            return;
+        }
         this.activeDoc = {
             ...doc,
-            safeUrl: doc.isImage ? doc.url : this.sanitizer.bypassSecurityTrustResourceUrl(doc.url)
+            url
         };
         this.cdr.detectChanges();
     }
@@ -1727,6 +1732,17 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const path = valueStr.startsWith('/') ? valueStr : `/${valueStr}`;
         return `${base}${path}`;
     }
+
+    private normalizeDocUrl(url: string): string {
+        const raw = String(url || '').trim();
+        if (!raw) return raw;
+        try {
+            return encodeURI(raw);
+        } catch {
+            return raw;
+        }
+    }
+
 
     private isFilePath(value: unknown): boolean {
         if (!this.hasText(value)) return false;

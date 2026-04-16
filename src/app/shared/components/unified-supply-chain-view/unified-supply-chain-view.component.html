@@ -1297,16 +1297,7 @@
                 </div>
             </div>
             <div class="doc-viewer-body">
-                <ng-container *ngIf="doc.isImage; else pdfFullView">
-                    <img [src]="doc.url" [alt]="doc.label" class="doc-viewer-img" />
-                </ng-container>
-                <ng-template #pdfFullView>
-                    <object [data]="doc.safeUrl" type="application/pdf" class="doc-viewer-iframe" style="width: 100%; height: 100%;">
-                        <iframe [src]="doc.safeUrl" class="doc-viewer-iframe" title="PDF Viewer" style="border: none;">
-                            <p>Your browser does not support PDFs. <a [href]="doc.url" target="_blank">Download the PDF</a>.</p>
-                        </iframe>
-                    </object>
-                </ng-template>
+                <img [src]="doc.url" [alt]="doc.label" class="doc-viewer-img" />
             </div>
         </div>
     </div>
