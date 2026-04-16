@@ -311,7 +311,9 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   // Dashboard statistics methods
   getDashboardStatistics() {
     const hologramPending = (this.hologramRequestCounts.PENDING || 0);
-    const transitPending = this.countActionable(this.allApplications, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL']);
+    // For OIC, "Transit Applications" badge is driven by the filtered list itself (termination/monitoring queue),
+    // not always by allowed_actions from backend (which can be missing on some environments).
+    const transitPending = Array.isArray(this.allApplications) ? this.allApplications.length : 0;
     return {
       applied: 0,
       pending: transitPending +
@@ -327,20 +329,50 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     this.hologramService.getProcurements().subscribe({
       next: (procurements: any[]) => {
         const scoped = this.filterByCurrentLicense(procurements || []);
-        this.hologramProcurementPendingCount = scoped.filter((p: any) => {
-          const actions = Array.isArray(p?.allowed_actions)
-            ? p.allowed_actions
-            : (Array.isArray(p?.allowedActions) ? p.allowedActions : []);
-          const hasAssign = actions.some((a: any) => String(a || '').trim().toLowerCase() === 'assign_cartons');
-          const details = (p as any).carton_details || (p as any).cartoon_details || (p as any).cartonDetails || [];
-          const hasDetails = Array.isArray(details) && details.length > 0;
-          return hasAssign && !hasDetails;
-        }).length;
+        this.hologramProcurementPendingCount = this.countOicHologramProcurementPending(scoped);
       },
       error: () => {
         this.hologramProcurementPendingCount = 0;
       }
     });
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private countOicHologramProcurementPending(rows: any[]): number {
+    const items = Array.isArray(rows) ? rows : [];
+
+    const hasAnyActions = items.some((row) => this.extractAllowedActions(row).length > 0);
+    if (hasAnyActions) {
+      const actionable = new Set(['ASSIGN_CARTONS', 'UPDATE_ARRIVAL']);
+      return items.filter((row) => {
+        const actions = this.extractAllowedActions(row);
+        const hasAssignCartons = actions.includes('ASSIGN_CARTONS');
+        const hasUpdateArrival = actions.includes('UPDATE_ARRIVAL');
+        if (!hasAssignCartons && !hasUpdateArrival) return false;
+
+        const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
+        const hasDetails = Array.isArray(details) && details.length > 0;
+
+        if (hasAssignCartons && !hasDetails) return true;
+        if (hasUpdateArrival && hasDetails) return true;
+        return false;
+      }).length;
+    }
+
+    // Fallback when backend doesn't return allowed actions consistently.
+    return items.filter((row) => {
+      const statusToken = this.normalizeStageToken(row?.status);
+      if (!statusToken) return false;
+
+      if (statusToken.includes('paymentcompleted')) return false;
+      if (statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) return false;
+      if (statusToken.includes('rejected') || statusToken.includes('reject')) return false;
+
+      return statusToken.includes('approved') || statusToken.includes('pending') || statusToken.includes('under');
+    }).length;
   }
 
   private loadBlDetailsPendingCount(): void {
@@ -411,11 +443,34 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     return list.map((x) => String(x || '').toUpperCase()).filter(Boolean);
   }
 
+  private extractAllowedActions(item: any): string[] {
+    const allowed =
+      item?.allowedActions ??
+      item?.allowed_actions ??
+      item?.allowed_action ??
+      item?.actions ??
+      item?.currentStageEntryActions ??
+      item?.current_stage_entry_actions ??
+      [];
+    return this.toUpperActions(allowed);
+  }
+
   private countActionable(items: any[], actionableActions: string[]): number {
     const actionable = new Set(this.toUpperActions(actionableActions));
-    return (items || []).filter((item) => {
-      const actions = this.toUpperActions(item?.allowedActions || item?.allowed_actions || []);
-      return actions.some((action) => actionable.has(action));
+
+    const rows = Array.isArray(items) ? items : [];
+    const hasAnyActions = rows.some((row) => this.extractAllowedActions(row).length > 0);
+    if (hasAnyActions) {
+      return rows.filter((row) => {
+        const actions = this.extractAllowedActions(row);
+        return actions.some((action) => actionable.has(action));
+      }).length;
+    }
+
+    // Fallback when backend doesn't return allowed actions consistently.
+    return rows.filter((row) => {
+      const statusText = String(row?.status || row?.current_stage_name || row?.currentStageName || '').toLowerCase();
+      return statusText.includes('pending') || statusText.includes('under') || statusText.includes('submitted');
     }).length;
   }
 

@@ -102,6 +102,13 @@ export class SidebarPendingBadgeService {
           map((items) => this.countActionable(items, ['VERIFY', 'FORWARD', 'APPROVE', 'REJECT']))
         );
 
+      // OIC hologram procurement register view (carton assignment / arrival confirmations).
+      case 'hologram-register':
+        return this.hologramService.getProcurements().pipe(
+          map((items) => this.toArray(items)),
+          map((items) => this.countOicHologramProcurementPending(items))
+        );
+
       case 'itcell-hologram':
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items).filter((x) => this.requiresItCellReview(String(x?.status || '')))),
@@ -122,21 +129,6 @@ export class SidebarPendingBadgeService {
               if (this.isUsageDatePast(x)) return false;
 
               return true;
-            }).length
-          )
-        );
-
-      // OIC hologram procurement register (badge should show items waiting for carton assignment / arrival update)
-      case 'hologram-register':
-        return this.hologramService.getProcurements().pipe(
-          map((items) => this.toArray(items)),
-          map((items) =>
-            items.filter((p: any) => {
-              const actions = this.extractAllowedActions(p);
-              const hasAssign = actions.some((a) => a === 'ASSIGN_CARTONS');
-              const details = p?.carton_details || p?.cartoon_details || p?.cartonDetails || [];
-              const hasDetails = Array.isArray(details) && details.length > 0;
-              return hasAssign && !hasDetails;
             }).length
           )
         );
@@ -201,6 +193,49 @@ export class SidebarPendingBadgeService {
     return (items || []).filter((item) => {
       const statusText = String(item?.status || item?.current_stage_name || item?.currentStageName || '').toLowerCase();
       return statusText.includes('pending') || statusText.includes('under') || statusText.includes('submitted');
+    }).length;
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private countOicHologramProcurementPending(items: any[]): number {
+    const rows = Array.isArray(items) ? items : [];
+
+    const hasAnyActions = rows.some((row) => this.extractAllowedActions(row).length > 0);
+    if (hasAnyActions) {
+      const actionable = new Set(['ASSIGN_CARTONS', 'UPDATE_ARRIVAL']);
+      return rows.filter((row) => {
+        const actions = this.extractAllowedActions(row);
+        const hasAssignCartons = actions.includes('ASSIGN_CARTONS');
+        const hasUpdateArrival = actions.includes('UPDATE_ARRIVAL');
+        if (!hasAssignCartons && !hasUpdateArrival) return false;
+
+        const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
+        const hasDetails = Array.isArray(details) && details.length > 0;
+
+        // Align with UI expectations:
+        // - ASSIGN_CARTONS -> pending when cartons are not yet assigned
+        // - UPDATE_ARRIVAL -> pending when cartons exist (arrival update happens after assignment)
+        if (hasAssignCartons && !hasDetails) return true;
+        if (hasUpdateArrival && hasDetails) return true;
+        return false;
+      }).length;
+    }
+
+    // Fallback when backend doesn't return allowed actions consistently.
+    return rows.filter((row) => {
+      const statusToken = this.normalizeStageToken(row?.status);
+      if (!statusToken) return false;
+
+      // Completed / not actionable.
+      if (statusToken.includes('paymentcompleted')) return false;
+      if (statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) return false;
+      if (statusToken.includes('rejected') || statusToken.includes('reject')) return false;
+
+      // Pending-ish: waiting for OIC procurement register work.
+      return statusToken.includes('approved') || statusToken.includes('pending') || statusToken.includes('under');
     }).length;
   }
 
