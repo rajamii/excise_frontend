@@ -28,6 +28,8 @@ interface BlDetailRow {
   tankerNumbers: string;
   totalBulkLiter: number;
   requestedTotalQuantity: number;
+  requisitionNumberOfPermits: number;
+  detailsPermitsNumber: string;
   approvalStatus: string;
   submittedAt: string;
   reviewedAt: string;
@@ -418,6 +420,7 @@ interface BlDetailRow {
                     <tr>
                       <th>#</th>
                       <th>Tanker Number</th>
+                      <th class="text-end">Expected BL</th>
                       <th>Bulk Liter</th>
                       <th *ngIf="detailsEditMode" class="text-end">Edit</th>
                     </tr>
@@ -428,6 +431,9 @@ interface BlDetailRow {
                         <td>{{ i + 1 }}</td>
                         <td>
                           <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].tanker_no" placeholder="Tanker no" />
+                        </td>
+                        <td class="text-end">
+                          {{ getExpectedBulkLiterForPermit(details, detailsSelectedPermitNo) | number:'1.2-2' }}
                         </td>
                         <td>
                           <input class="details-input" type="number" min="0" step="0.01" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].bulk_liter" placeholder="0.00" />
@@ -441,6 +447,9 @@ interface BlDetailRow {
                       <tr *ngFor="let item of detailsVisiblePermitViewRows; let i = index">
                         <td>{{ i + 1 }}</td>
                         <td>{{ item.tanker_no || '-' }}</td>
+                        <td class="text-end">
+                          {{ getExpectedBulkLiterForPermit(details, detailsSelectedPermitNo) | number:'1.2-2' }}
+                        </td>
                         <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
                       </tr>
                     </ng-template>
@@ -2329,7 +2338,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   }
 
   private computeExpectedByPermit(details: BlDetailRow | null | undefined): Record<string, number> {
-    const permitNos = this.getDetailsPermitNumbers(details);
+    const permitNos = this.resolveRequisitionPermitNumbers(details);
     const requested = Number(details?.requestedTotalQuantity ?? 0);
     if (!Number.isFinite(requested) || requested <= 0 || permitNos.length === 0) return {};
 
@@ -2344,6 +2353,33 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       out[permitNo] = expected;
     }
     return out;
+  }
+
+  private resolveRequisitionPermitNumbers(details: BlDetailRow | null | undefined): string[] {
+    const raw = String(details?.detailsPermitsNumber ?? '').trim();
+    const tokens = raw
+      .split(',')
+      .map((x) => String(x || '').trim())
+      .filter(Boolean);
+    if (tokens.length > 0) {
+      return tokens;
+    }
+
+    const count = Math.max(0, Math.floor(Number(details?.requisitionNumberOfPermits ?? 0) || 0));
+    if (count > 0) {
+      return Array.from({ length: count }, (_, i) => String(i + 1));
+    }
+
+    // Fallback: derive only from the submitted tanker details.
+    return this.getDetailsPermitNumbers(details);
+  }
+
+  getExpectedBulkLiterForPermit(details: BlDetailRow | null | undefined, permitNo: string): number {
+    const token = String(permitNo || '').trim();
+    if (!token) return 0;
+    const expectedMap = this.computeExpectedByPermit(details);
+    const expected = Number(expectedMap[token] ?? 0) || 0;
+    return expected;
   }
 
   getDraftPermitSum(permitNo: string): number {
@@ -2838,6 +2874,8 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       tankerNumbers: String(row?.tanker_numbers ?? row?.tankerNumbers ?? ''),
       totalBulkLiter: Number(row?.total_bulk_liter ?? row?.totalBulkLiter ?? 0) || 0,
       requestedTotalQuantity: Number(row?.requisition_total_quantity ?? row?.requisitionTotalQuantity ?? 0) || 0,
+      requisitionNumberOfPermits: Number(row?.requisition_number_of_permits ?? row?.requisitionNumberOfPermits ?? 0) || 0,
+      detailsPermitsNumber: String(row?.details_permits_number ?? row?.detailsPermitsNumber ?? ''),
       approvalStatus: String(row?.approval_status ?? row?.approvalStatus ?? 'PENDING').toUpperCase(),
       submittedAt: String(row?.submitted_at ?? row?.submittedAt ?? ''),
       reviewedAt: String(row?.reviewed_at ?? row?.reviewedAt ?? ''),

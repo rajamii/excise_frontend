@@ -526,6 +526,9 @@
             <div class="text-muted small mt-2" *ngIf="selectedArrivalPermitNo">
               Entered for permit {{ selectedArrivalPermitNo }}: <strong>{{ getArrivalPermitDraftTotalBulkLiter() | number:'1.2-2' }}</strong>
               <span *ngIf="isArrivalPermitSaved(selectedArrivalPermitNo)" class="ms-2 text-success">(Saved)</span>
+              <span *ngIf="!isArrivalPermitSaved(selectedArrivalPermitNo) && isArrivalPermitDraftUnderfilled()" class="ms-2 badge bg-warning text-dark">
+                Less than expected
+              </span>
             </div>
           </ng-container>
 
@@ -751,22 +754,23 @@
                   <th class="text-center" style="width: 80px;">#</th>
                   <th *ngIf="arrivalViewPermitNumbers.length > 0"><i class="bi bi-journal-text me-2"></i>Permit No</th>
                   <th><i class="bi bi-truck me-2"></i>Tanker Number</th>
+                  <th *ngIf="arrivalViewPermitNumbers.length > 0" class="text-end"><i class="bi bi-bullseye me-2"></i>Expected BL</th>
                   <th class="text-end"><i class="bi bi-droplet me-2"></i>Bulk Liter</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngIf="!selectedArrivalViewPermitNo && arrivalViewEntries.length === 0">
-                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 4 : 3" class="text-center text-muted py-3">
+                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 5 : 3" class="text-center text-muted py-3">
                     No tanker details submitted yet.
                   </td>
                 </tr>
                 <tr *ngIf="selectedArrivalViewPermitNo && arrivalViewVisibleEntries.length === 0 && isArrivalViewSelectedPermitCancelled()">
-                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 4 : 3" class="text-center text-muted py-3">
+                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 5 : 3" class="text-center text-muted py-3">
                     {{ getArrivalViewSelectedPermitCancelMessage() }}
                   </td>
                 </tr>
                 <tr *ngIf="selectedArrivalViewPermitNo && arrivalViewVisibleEntries.length === 0 && !isArrivalViewSelectedPermitCancelled()">
-                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 4 : 3" class="text-center text-muted py-3">
+                  <td [attr.colspan]="arrivalViewPermitNumbers.length > 0 ? 5 : 3" class="text-center text-muted py-3">
                     No tanker details found for this permit.
                   </td>
                 </tr>
@@ -774,6 +778,9 @@
                   <td class="text-center serial-col">{{ i + 1 }}</td>
                   <td *ngIf="arrivalViewPermitNumbers.length > 0" class="permit-col">{{ row.permit_no || '-' }}</td>
                   <td class="tanker-col">{{ row.tanker_no }}</td>
+                  <td *ngIf="arrivalViewPermitNumbers.length > 0" class="text-end liter-col">
+                    {{ (getArrivalViewExpectedBulkLiterForPermit(row.permit_no) || 0) | number:'1.2-2' }}
+                  </td>
                   <td class="text-end liter-col">{{ row.bulk_liter || 0 | number:'1.2-2' }}</td>
                 </tr>
               </tbody>

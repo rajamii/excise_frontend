@@ -1636,11 +1636,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         `Entered total bulk liter (${enteredTotalBulkLiter.toFixed(2)}) cannot exceed requested total quantity (${allowedBulkLiter.toFixed(2)}).`;
       return;
     }
-    if (this.arrivalPermitNumbers.length === 0 && allowedBulkLiter > 0 && Math.abs(enteredTotalBulkLiter - allowedBulkLiter) >= 0.0001) {
-      this.arrivalErrorMessage =
-        `Entered total bulk liter (${enteredTotalBulkLiter.toFixed(2)}) must exactly match requested total quantity (${allowedBulkLiter.toFixed(2)}).`;
-      return;
-    }
+    // Allow less-than-requested bulk liter (short receipt) but do not allow exceeding the requested quantity.
 
     const payload = {
       tanker_count: this.arrivalTankerCount,
@@ -1720,9 +1716,39 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           error?.error?.tanker_details?.[0] ||
           error?.error?.tanker_details ||
           error?.message;
+        if (apiMessage && typeof apiMessage === 'object') {
+          try {
+            this.arrivalErrorMessage = JSON.stringify(apiMessage);
+            return;
+          } catch {
+            // fall through
+          }
+        }
         this.arrivalErrorMessage = apiMessage || 'Failed to save arrival details.';
       }
     });
+  }
+
+  getArrivalViewExpectedBulkLiterForPermit(permitNo: string | null | undefined): number | null {
+    const token = String(permitNo || '').trim();
+    if (!token) return null;
+
+    const permits = (this.arrivalViewPermitNumbers || []).map((x) => String(x || '').trim()).filter(Boolean);
+    const count = permits.length;
+    const total = Number(this.selectedArrivalRequisition?.requestedTotalQuantity || 0);
+    if (!Number.isFinite(total) || total <= 0 || count <= 0) return null;
+
+    const factor = 100;
+    const base = Math.floor((total / count) * factor) / factor;
+    let running = 0;
+    for (let i = 0; i < count; i++) {
+      const p = permits[i];
+      const expected = i === count - 1 ? Math.round((total - running) * factor) / factor : base;
+      if (p === token) return expected;
+      running += expected;
+    }
+
+    return null;
   }
 
   // Permit-wise arrival helpers
@@ -1808,6 +1834,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
+  isArrivalPermitDraftUnderfilled(): boolean {
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    if (!permitNo) return false;
+    const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
+    if (expected == null || expected <= 0) return false;
+    const entered = this.getArrivalPermitDraftTotalBulkLiter();
+    // Underfilled means strictly less than expected (after rounding tolerance).
+    return expected - entered > 0.0001;
+  }
+
   isArrivalPermitSaved(permitNo: string): boolean {
     const token = String(permitNo || '').trim();
     if (!token) return false;
@@ -1839,8 +1875,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
 
     const sum = normalized.reduce((s, x) => s + x.bulk_liter, 0);
-    if (Math.abs(sum - expected) >= 0.0001) {
-      return { ok: false, message: `Total bulk liter for permit ${permitNo} must be exactly ${expected.toFixed(2)}.` };
+    if (sum - expected > 0.0001) {
+      return { ok: false, message: `Total bulk liter for permit ${permitNo} cannot exceed ${expected.toFixed(2)}.` };
     }
 
     return { ok: true, message: '' };
@@ -1954,8 +1990,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           return { ok: false, message: `Please save tanker details for permit ${permitNo}.` };
         }
         const sum = rows.reduce((s, r) => s + (Number(r?.bulk_liter ?? 0) || 0), 0);
-        if (Math.abs(sum - expected) >= 0.0001) {
-          return { ok: false, message: `Total bulk liter for permit ${permitNo} must be exactly ${expected.toFixed(2)}.` };
+        if (sum - expected > 0.0001) {
+          return { ok: false, message: `Total bulk liter for permit ${permitNo} cannot exceed ${expected.toFixed(2)}.` };
         }
         for (const [idx, r] of rows.entries()) {
           const tankerNo = String(r?.tanker_no || '').trim();
