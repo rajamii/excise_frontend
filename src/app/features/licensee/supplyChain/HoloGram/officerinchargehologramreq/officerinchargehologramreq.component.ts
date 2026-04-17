@@ -1415,11 +1415,27 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       return typeMatch && statusMatch && hasAvailable;
     });
     
-    // CRITICAL: Sort by receivedDate for FIFO (First In, First Out) - oldest first
+    // CRITICAL: Sort for FIFO (First In, First Out) - oldest stock first.
+    // NOTE: Multiple cartons can share the same receivedDate (e.g. all entered on the same day).
+    // In that case, fall back to the earliest serial range (fromSerial) so that "a1(a) 1-200"
+    // is consumed before "a1(d) 701-1000".
+    const getNumeric = (value: string | undefined): number => {
+      if (!value) return Number.POSITIVE_INFINITY;
+      const digits = value.replace(/\D/g, '');
+      return digits ? Number(digits) : Number.POSITIVE_INFINITY;
+    };
+
     availableInventory.sort((a, b) => {
       const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
       const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
-      return dateA - dateB; // Ascending order - oldest first
+      if (dateA !== dateB) return dateA - dateB; // Ascending - oldest first
+
+      const fromA = getNumeric(a.fromSerial);
+      const fromB = getNumeric(b.fromSerial);
+      if (fromA !== fromB) return fromA - fromB; // Ascending - earliest serial first
+
+      // Final deterministic tie-breaker
+      return String(a.cartoonNumber).localeCompare(String(b.cartoonNumber));
     });
 
     console.log('Available Inventory After Filter (FIFO sorted):', availableInventory.map(i => ({
