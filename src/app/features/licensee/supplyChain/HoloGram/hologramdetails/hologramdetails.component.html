@@ -195,8 +195,17 @@
                                 <span class="ref-number">{{ record.ourRefNo || '-' }}</span>
                             </td>
                             <td class="cartoon-no">
-                                <span class="cartoon-number">{{ getUniqueCartoonNumbers(record).join(', ') || '-'
-                                    }}</span>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="cartoon-number">
+                                        {{ getCartonNamesPreview(record) || '-' }}
+                                    </span>
+                                    @if (hasMoreCartonNames(record)) {
+                                    <button type="button" class="btn btn-link btn-sm p-0"
+                                        (click)="openCartonNamesModal(record)">
+                                        See all names ({{ getUniqueCartoonNumbers(record).length }})
+                                    </button>
+                                    }
+                                </div>
                             </td>
                             <td class="type-col">
                                 <div class="d-flex flex-wrap gap-1">
@@ -350,6 +359,57 @@
                 <button class="btn btn-primary" (click)="clearFilters()">
                     <i class="bi bi-arrow-clockwise me-2"></i>
                     Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Carton Names Modal -->
+<div class="modal fade show" *ngIf="showCartonNamesModal"
+    style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1060;" (click)="closeCartonNamesModal()">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061;" (click)="$event.stopPropagation()">
+        <div class="modal-content" style="z-index: 1062;">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-list-ul me-2"></i>
+                    Carton Names ({{ selectedCartonNames.length }})
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="closeCartonNamesModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light mb-3">
+                    <strong>Reference:</strong> {{ selectedRecordForCartonNames?.ourRefNo || '-' }}
+                </div>
+
+                @if (selectedCartonNames.length > 0) {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;" class="text-center">Sl. No.</th>
+                                <th>Carton / Roll Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let name of selectedCartonNames; let i = index">
+                                <td class="text-center">{{ i + 1 }}</td>
+                                <td class="font-monospace">{{ name }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                } @else {
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">No carton names available.</p>
+                </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeCartonNamesModal()">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Close
                 </button>
             </div>
         </div>

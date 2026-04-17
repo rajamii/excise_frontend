@@ -92,6 +92,11 @@ export class HologramdetailsComponent implements OnInit {
   showRollDetailsModal: boolean = false;
   selectedRecordForRollDetails: HologramRecord | null = null;
 
+  // Carton names modal (for long lists)
+  showCartonNamesModal: boolean = false;
+  selectedRecordForCartonNames: HologramRecord | null = null;
+  selectedCartonNames: string[] = [];
+
   // Saved cartons list
   savedCartons: SavedRoll[] = [];
 
@@ -1686,6 +1691,29 @@ export class HologramdetailsComponent implements OnInit {
     });
     
     return Array.from(uniqueNumbers).sort();
+  }
+
+  getCartonNamesPreview(record: HologramRecord, limit: number = 3): string {
+    const names = this.getUniqueCartoonNumbers(record);
+    if (names.length === 0) return '';
+    if (names.length <= limit) return names.join(', ');
+    return `${names.slice(0, limit).join(', ')} ...`;
+  }
+
+  hasMoreCartonNames(record: HologramRecord, limit: number = 3): boolean {
+    return this.getUniqueCartoonNumbers(record).length > limit;
+  }
+
+  openCartonNamesModal(record: HologramRecord): void {
+    this.selectedRecordForCartonNames = record;
+    this.selectedCartonNames = this.getUniqueCartoonNumbers(record);
+    this.showCartonNamesModal = true;
+  }
+
+  closeCartonNamesModal(): void {
+    this.showCartonNamesModal = false;
+    this.selectedRecordForCartonNames = null;
+    this.selectedCartonNames = [];
   }
 
 
