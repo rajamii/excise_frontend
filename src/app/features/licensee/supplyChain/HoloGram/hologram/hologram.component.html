@@ -296,7 +296,7 @@
 
         <!-- Payment Section - Shows after submission -->
         @if (isSubmitted) {
-        <div class="card shadow-lg border-0 mt-4">
+        <div id="paymentSection" class="card shadow-lg border-0 mt-4">
           <div class="card-header bg-warning text-dark text-center py-3">
             <h4 class="mb-0 fw-bold">
               <i class="bi bi-currency-rupee me-2"></i>
@@ -308,12 +308,9 @@
             <div class="alert alert-info mb-4">
               <h5 class="alert-heading">
                 <i class="bi bi-info-circle me-2"></i>
-                Offline Payment Required
+                Wallet Payment Required
               </h5>
-              <p class="mb-0">
-                Payment must be made offline to the printing press or tendered company. 
-                After making the payment, please upload the payment slip received from them.
-              </p>
+            
             </div>
 
             <!-- Payment Calculation Table -->

@@ -424,7 +424,7 @@ export class HologramComponent {
         };
         this.isSubmitted = true;
         this.showSuccessMessage = true;
-        this.showPreview = true;
+        this.showPreview = false;
 
         console.log('✅ Application submitted successfully via API:', res);
       },
@@ -438,9 +438,9 @@ export class HologramComponent {
   closeSuccessModal(): void {
     this.showSuccessModal = false;
 
-    // Scroll to government form after closing success modal
+    // Scroll to payment section after closing success modal
     setTimeout(() => {
-      document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('paymentSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   }
 
