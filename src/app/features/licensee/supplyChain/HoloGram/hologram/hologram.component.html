@@ -20,7 +20,7 @@
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Date</label>
-                  <input type="date" class="form-control" [(ngModel)]="formData.date" required>
+                  <input type="date" class="form-control" [(ngModel)]="formData.date" [min]="todayDate" [max]="todayDate" required>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Company</label>

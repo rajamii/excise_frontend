@@ -32,6 +32,7 @@ export class HologramComponent {
 
   Math = Math;
   currentYear = new Date().getFullYear();
+  todayDate = new Date().toISOString().split('T')[0];
   errorMessage = '';
   showPreview = false;
   submittedData?: HologramFormData;
