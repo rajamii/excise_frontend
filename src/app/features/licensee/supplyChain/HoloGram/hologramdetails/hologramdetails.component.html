@@ -383,54 +383,46 @@
                     <strong>Status:</strong> Ready for physical arrival update
                 </div>
 
+                @if (selectedRecordForUpdate && !isExpectedQuantityLakhAligned()) {
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Expected quantity must be in multiples of {{ cartonSize | number }} (1 lakh) to auto-assign 5 rolls per carton.
+                </div>
+                }
+
                 <div class="row">
                     <!-- Left Side: Current Carton Entry Form -->
                     <div class="col-md-6">
                         <div class="card border-primary">
-                            <div class="card-header bg-primary text-white">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     <i class="bi bi-box me-2"></i>
                                     Enter Carton Details
                                 </h6>
+                                @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark">
+                                        Carton {{ getSavedCartonCount() + 1 }} of {{ getExpectedCartonCount() }}
+                                    </span>
+                                    @if (getSavedCartonCount() < getExpectedCartonCount()) {
+                                    <select class="form-select form-select-sm w-auto"
+                                        (change)="prepareNextCartonEntry(); $any($event.target).value = ''">
+                                        <option value="">Carton actions</option>
+                                        <option value="add">Add another carton details</option>
+                                    </select>
+                                    }
+                                </div>
+                                }
                             </div>
                             <div class="card-body">
                                 <div class="form-group mb-3">
-                                    <label class="form-label fw-bold d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="bi bi-box me-1"></i>
-                                            Carton Number <span class="text-danger">*</span>
-                                            @if (lockedCartonNumber) {
-                                            <span class="badge bg-success ms-2">
-                                                <i class="bi bi-lock-fill me-1"></i>
-                                                Locked
-                                            </span>
-                                            }
-                                        </span>
-                                        @if (lockedCartonNumber) {
-                                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                            (click)="unlockCartonNumber()"
-                                            title="Edit carton number (will clear all saved rolls)">
-                                            <i class="bi bi-pencil-square me-1"></i>
-                                            Edit
-                                        </button>
-                                        }
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-box me-1"></i>
+                                        Carton Number <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control" placeholder="e.g., A1"
-                                        [(ngModel)]="currentCarton.cartoonNumber" [readonly]="lockedCartonNumber !== ''"
-                                        (input)="onCartonInputChange()"
-                                        [class.bg-light]="lockedCartonNumber !== ''">
-                                    @if (!lockedCartonNumber) {
-                                    <div class="form-text">Enter the carton/box number - it will be locked after first
-                                        save</div>
-                                    }
-                                    @if (lockedCartonNumber) {
-                                    <div class="form-text text-success">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        Carton locked: <strong>{{ lockedCartonNumber }}</strong>. Next roll will be
-                                        saved as <strong>{{ lockedCartonNumber }}({{
-                                            getSuffixLetter(cartonSuffixCounter) }})</strong>
-                                    </div>
-                                    }
+                                        [(ngModel)]="currentCarton.cartoonNumber" (input)="onCartonInputChange()">
+                                    <div class="form-text">Enter the carton/box number for this 1,00,000 batch</div>
                                 </div>
 
                                 <!-- Hologram Type Selector - only show when multiple types are requested -->
@@ -463,11 +455,11 @@
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">
                                         <i class="bi bi-arrow-left me-1"></i>
-                                        To Serial Number <span class="text-danger">*</span>
+                                        To Serial Number
                                     </label>
-                                    <input type="text" class="form-control font-monospace" placeholder="e.g., 5000"
-                                        [(ngModel)]="currentCarton.toSerial" (input)="onSerialInputChange()">
-                                    <div class="form-text">Ending serial number from hologram roll</div>
+                                    <input type="text" class="form-control font-monospace bg-light" placeholder="Auto"
+                                        [(ngModel)]="currentCarton.toSerial" readonly>
+                                    <div class="form-text">Auto-calculated (From + 99,999)</div>
                                 </div>
 
                                 <div class="form-group mb-3">
@@ -477,8 +469,46 @@
                                     </label>
                                     <input type="number" class="form-control bg-light"
                                         [value]="currentCarton.numberOfHolograms" readonly>
-                                    <div class="form-text">Auto-calculated from serial number range</div>
+                                    <div class="form-text">Auto-calculated (always 1,00,000 per carton)</div>
                                 </div>
+
+                                @if (autoGeneratedRollsPreview.length > 0) {
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="fw-bold">
+                                            <i class="bi bi-list-ul me-1"></i>
+                                            Auto-assigned Rolls ({{ autoGeneratedRollsPreview.length }})
+                                        </div>
+                                        <span class="badge bg-info">
+                                            {{ rollSize | number }} × {{ rollsPerCarton }} = {{ cartonSize | number }}
+                                        </span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 60px;" class="text-center">#</th>
+                                                    <th>Roll No.</th>
+                                                    <th>From</th>
+                                                    <th>To</th>
+                                                    <th class="text-end" style="width: 120px;">Qty</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (r of autoGeneratedRollsPreview; track $index; let i = $index) {
+                                                <tr>
+                                                    <td class="text-center">{{ i + 1 }}</td>
+                                                    <td class="font-monospace">{{ getCleanCartoonNumber(r.cartoonNumber) }}</td>
+                                                    <td class="font-monospace">{{ r.fromSerial }}</td>
+                                                    <td class="font-monospace">{{ r.toSerial }}</td>
+                                                    <td class="text-end">{{ r.numberOfHolograms | number }}</td>
+                                                </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                }
 
                                 <!-- Real-time validation error -->
                                 @if (serialRangeValidationError) {
@@ -492,8 +522,9 @@
                                 @if (currentCarton.numberOfHolograms > 0 && !serialRangeValidationError) {
                                 <div class="alert alert-success">
                                     <i class="bi bi-check-circle-fill me-2"></i>
-                                    ✅ This carton will contain <strong>{{ currentCarton.numberOfHolograms | number
-                                        }}</strong> holograms. Click "Save Carton" to add it.
+                                    ✅ This carton will create <strong>{{ rollsPerCarton }}</strong> rolls of
+                                    <strong>{{ rollSize | number }}</strong> each (total <strong>{{ cartonSize | number }}</strong>).
+                                    Click "Save Carton" to add all rolls.
                                 </div>
                                 }
 
@@ -513,20 +544,13 @@
                                 class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     <i class="bi bi-boxes me-2"></i>
-                                    Saved Cartons ({{ savedCartons.length }})
-                                </h6>
-                                <div class="d-flex align-items-center gap-2">
-                                    @if (lockedCartonNumber) {
-                                    <span class="badge bg-light text-dark">
-                                        <i class="bi bi-lock-fill me-1"></i>
-                                        {{ lockedCartonNumber }}
-                                    </span>
-                                    <button type="button" class="btn btn-sm btn-warning" (click)="unlockCartonNumber()"
-                                        title="Edit carton number">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
+                                    @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+                                    Saved Cartons ({{ getSavedCartonCount() }} / {{ getExpectedCartonCount() }})
+                                    } @else {
+                                    Saved Cartons ({{ getSavedCartonCount() }})
                                     }
-                                </div>
+                                </h6>
+                                <span class="badge bg-light text-dark">Rolls: {{ savedCartons.length }}</span>
                             </div>
                             <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                                 @if (savedCartons.length === 0) {
@@ -537,33 +561,52 @@
                                 </div>
                                 }
 
-                                @for (carton of savedCartons; track $index; let i = $index) {
+                                @for (group of getSavedCartonGroups(); track $index; let i = $index) {
                                 <div class="card mb-2 border-secondary">
                                     <div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-start">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div class="flex-grow-1">
                                                 <strong class="text-primary">
                                                     <i class="bi bi-box-seam me-1"></i>
-                                                    {{ getCleanCartoonNumber(carton.cartoonNumber) }}
+                                                    {{ getCleanCartoonNumber(group.baseCartoonNumber) }}
                                                 </strong>
-                                                @if (carton.type) {
-                                                <span class="badge bg-secondary ms-1">{{ carton.type }}</span>
+                                                @if (group.type) {
+                                                <span class="badge bg-secondary ms-1">{{ group.type }}</span>
                                                 }
                                                 <div class="small text-muted mt-1">
-                                                    <i class="bi bi-arrow-right me-1"></i>
-                                                    Serial: {{ carton.fromSerial }} to {{ carton.toSerial }}
-                                                </div>
-                                                <div class="small mt-1">
-                                                    <span class="badge bg-info">
-                                                        <i class="bi bi-calculator me-1"></i>
-                                                        {{ carton.numberOfHolograms | number }} holograms
-                                                    </span>
+                                                    <i class="bi bi-list-ol me-1"></i>
+                                                    {{ group.rolls.length }} roll(s)
                                                 </div>
                                             </div>
                                             <button type="button" class="btn btn-sm btn-outline-danger"
-                                                (click)="removeSavedCarton(i)" title="Remove this roll">
+                                                (click)="removeSavedCarton(group.baseCartoonNumber)" title="Remove this carton">
                                                 <i class="bi bi-trash"></i>
                                             </button>
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="width: 60px;" class="text-center">#</th>
+                                                        <th>Roll No.</th>
+                                                        <th>From</th>
+                                                        <th>To</th>
+                                                        <th class="text-end" style="width: 120px;">Qty</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @for (r of group.rolls; track $index; let j = $index) {
+                                                    <tr>
+                                                        <td class="text-center">{{ j + 1 }}</td>
+                                                        <td class="font-monospace">{{ getCleanCartoonNumber(r.cartoonNumber) }}</td>
+                                                        <td class="font-monospace">{{ r.fromSerial }}</td>
+                                                        <td class="font-monospace">{{ r.toSerial }}</td>
+                                                        <td class="text-end">{{ r.numberOfHolograms | number }}</td>
+                                                    </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 </div>
@@ -576,8 +619,15 @@
                             <div class="card-body">
                                 <div class="row text-center">
                                     <div class="col-4">
-                                        <h5 class="text-primary mb-0">{{ savedCartons.length }}</h5>
+                                        @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+                                        <h5 class="text-primary mb-0">
+                                            {{ getSavedCartonCount() }} / {{ getExpectedCartonCount() }}
+                                        </h5>
+                                        <small class="text-muted">Cartons (Current/Expected)</small>
+                                        } @else {
+                                        <h5 class="text-primary mb-0">{{ getSavedCartonCount() }}</h5>
                                         <small class="text-muted">Cartons</small>
+                                        }
                                     </div>
                                     <div class="col-4">
                                         <h5 class="mb-0"
@@ -624,7 +674,7 @@
             selectedRecordForUpdate.numberOfHolograms) {
             <div class="alert alert-success d-flex align-items-center mt-3" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
-                <div>✅ Perfect! All {{ savedCartons.length }} carton(s) have been entered with a total of {{
+                <div>✅ Perfect! All {{ getSavedCartonCount() }} carton(s) have been entered with a total of {{
                     totalCalculatedHolograms | number }} holograms matching the expected quantity. You can now confirm
                     the arrival.</div>
             </div>
@@ -634,7 +684,7 @@
                 selectedRecordForUpdate.numberOfHolograms) { <div
                 class="alert alert-info d-flex align-items-center mt-3" role="alert">
                 <i class="bi bi-info-circle-fill me-2"></i>
-                <div>📦 You have entered {{ savedCartons.length }} carton(s) with {{ totalCalculatedHolograms | number
+                <div>📦 You have entered {{ getSavedCartonCount() }} carton(s) with {{ totalCalculatedHolograms | number
                     }} holograms. Continue adding cartons to reach {{ selectedRecordForUpdate.numberOfHolograms | number
                     }} holograms.</div>
         </div>
@@ -648,7 +698,11 @@
         <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
             [disabled]="savedCartons.length === 0 || totalCalculatedHolograms !== selectedRecordForUpdate?.numberOfHolograms">
             <i class="bi bi-check-circle me-2"></i>
-            Confirm Arrival ({{ savedCartons.length }} Carton{{ savedCartons.length > 1 ? 's' : '' }})
+            @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+            Confirm Arrival ({{ getSavedCartonCount() }}/{{ getExpectedCartonCount() }} Carton{{ getExpectedCartonCount() > 1 ? 's' : '' }})
+            } @else {
+            Confirm Arrival ({{ getSavedCartonCount() }} Carton{{ getSavedCartonCount() > 1 ? 's' : '' }})
+            }
         </button>
     </div>
 </div>

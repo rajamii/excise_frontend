@@ -49,9 +49,9 @@
                           [(ngModel)]="formData.localQtyLakh"
                           (ngModelChange)="onSeriesQuantityChange('local')"
                           [disabled]="isSeriesInputDisabled('local')"
-                          min="0"
-                          step="1"
-                          placeholder="e.g. 1500">
+                          min="100000"
+                          step="100000"
+                          placeholder="e.g. 100000">
                       </td>
                     </tr>
                     <tr>
@@ -64,8 +64,9 @@
                           [(ngModel)]="formData.exportQtyLakh"
                           (ngModelChange)="onSeriesQuantityChange('export')"
                           [disabled]="isSeriesInputDisabled('export')"
-                          min="0"
-                          step="1">
+                          min="100000"
+                          step="100000"
+                          placeholder="e.g. 100000">
                       </td>
                     </tr>
                     <tr>
@@ -78,8 +79,9 @@
                           [(ngModel)]="formData.defenceQtyLakh"
                           (ngModelChange)="onSeriesQuantityChange('defence')"
                           [disabled]="isSeriesInputDisabled('defence')"
-                          min="0"
-                          step="1">
+                          min="100000"
+                          step="100000"
+                          placeholder="e.g. 100000">
                       </td>
                     </tr>
                     <tr>
