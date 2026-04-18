@@ -117,6 +117,8 @@ export class HologramprocurementComponent implements OnInit {
           const editedByToken = String(editedByRaw || '').toLowerCase();
           const normalizedPaymentStatus = String((item as any).paymentStatus || (item as any).payment_status || '').toLowerCase();
           const isWalletPaid = normalizedPaymentStatus === 'completed' || normalizedPaymentStatus === 'success';
+          // Mark as edited by commissioner if edit_history exists (only commissioner can edit)
+          const isEditedByCommissioner = !!hasEditHistory;
 
           return {
             ...item,
@@ -130,7 +132,7 @@ export class HologramprocurementComponent implements OnInit {
             exportQtyLakh: requestedExport, // FIXED: Original requested quantity
             defenceQtyLakh: requestedDefence, // FIXED: Original requested quantity
             paymentCompleted: isWalletPaid || item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
-            editedByCommissioner: !!hasEditHistory && editedByToken.includes('commissioner'),
+            editedByCommissioner: isEditedByCommissioner,
             editHistory: hasEditHistory || undefined,
             companyName: item.manufacturingUnit || item.licenseeName || '', // Map to companyName
             status: item.status || 'Submitted', // Default status
@@ -383,13 +385,9 @@ export class HologramprocurementComponent implements OnInit {
   }
 
   private isEditedByCommissionerLike(item: HologramRow): boolean {
-    if (item.editedByCommissioner) {
-      return true;
-    }
+    if (item.editedByCommissioner) return true;
     const history: any = (item as any).editHistory || (item as any).edit_history;
-    if (!history) return false;
-    const editedBy = this.normalizeStageToken(history?.editedBy || history?.edited_by);
-    return editedBy.includes('commissioner');
+    return !!history;
   }
 
   private isApprovedLikeStatus(item: HologramRow): boolean {
@@ -517,6 +515,11 @@ export class HologramprocurementComponent implements OnInit {
 
   getTotalHolograms(hologram: HologramRow): number {
     return this.getHologramTotal(hologram);
+  }
+
+  getEditHistory(hologram: HologramRow | null): any {
+    if (!hologram) return null;
+    return (hologram as any).editHistory || (hologram as any).edit_history || null;
   }
 
   // Navigation methods
