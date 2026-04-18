@@ -245,6 +245,7 @@ interface CommissionerData {
                           <input
                             type="number"
                             min="0"
+                            step="100000"
                             class="form-control form-control-sm text-end d-inline-block"
                             style="max-width: 140px;"
                             [(ngModel)]="hologramEditForm.localQty">
@@ -257,6 +258,7 @@ interface CommissionerData {
                           <input
                             type="number"
                             min="0"
+                            step="100000"
                             class="form-control form-control-sm text-end d-inline-block"
                             style="max-width: 140px;"
                             [(ngModel)]="hologramEditForm.exportQty">
@@ -269,6 +271,7 @@ interface CommissionerData {
                           <input
                             type="number"
                             min="0"
+                            step="100000"
                             class="form-control form-control-sm text-end d-inline-block"
                             style="max-width: 140px;"
                             [(ngModel)]="hologramEditForm.defenceQty">
@@ -281,6 +284,9 @@ interface CommissionerData {
                       </tr>
                     </tbody>
                   </table>
+                  <div class="px-2 pt-1 pb-1" *ngIf="isHologramEditMode">
+                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Quantities must be in multiples of <strong>1,00,000</strong> (e.g. 1,00,000 / 2,00,000)</small>
+                  </div>
                   <div class="px-2 pb-2" *ngIf="hologramEditSummary">
                     <div class="alert alert-warning py-2 mb-0 small">
                       <strong>Commissioner Change Summary:</strong><br>
@@ -352,6 +358,10 @@ interface CommissionerData {
               </div>
 
               <div class="text-end mt-3">
+                <div class="alert alert-danger py-2 px-3 mb-2 text-start small d-flex align-items-start gap-2" *ngIf="hologramEditError" role="alert">
+                  <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+                  <span>{{ hologramEditError }}</span>
+                </div>
                 <button
                   type="button"
                   class="btn btn-outline-primary btn-sm me-2"
@@ -836,6 +846,7 @@ export class CommissionerDashboardComponent implements OnInit {
   pageSize: number = 10;
   selectedHologramDetails: CommissionerData | null = null;
   isHologramEditMode = false;
+  hologramEditError = '';
   hologramEditForm: { localQty: number; exportQty: number; defenceQty: number } = {
     localQty: 0,
     exportQty: 0,
@@ -1376,6 +1387,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
   cancelHologramEdit(): void {
     this.isHologramEditMode = false;
+    this.hologramEditError = '';
   }
 
   getEditedHologramTotal(): number {
@@ -1385,13 +1397,14 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   saveHologramEdit(application: CommissionerData): void {
+    this.hologramEditError = '';
     const resolvedId = Number(
       application?.id ||
       this.allApplications.find(a => a.referenceNo === application?.referenceNo)?.id ||
       this.filteredApplications.find(a => a.referenceNo === application?.referenceNo)?.id
     );
     if (!resolvedId || Number.isNaN(resolvedId)) {
-      alert('Unable to resolve request id for edit.');
+      this.hologramEditError = 'Unable to resolve request ID. Please close and reopen the details.';
       return;
     }
 
@@ -1400,7 +1413,24 @@ export class CommissionerDashboardComponent implements OnInit {
     const defenceQty = Number(this.hologramEditForm.defenceQty);
 
     if ([localQty, exportQty, defenceQty].some(v => Number.isNaN(v) || v < 0)) {
-      alert('Invalid quantities. Please enter non-negative numbers only.');
+      this.hologramEditError = 'Invalid quantities. Please enter non-negative numbers only.';
+      return;
+    }
+
+    const LAKH = 100000;
+    const invalidQty = [localQty, exportQty, defenceQty].find(v => v > 0 && v % LAKH !== 0);
+    if (invalidQty !== undefined) {
+      this.hologramEditError = `Quantities must be in multiples of 1,00,000 (e.g. 1,00,000 / 2,00,000 / 3,00,000). ${invalidQty.toLocaleString('en-IN')} is not a valid entry.`;
+      return;
+    }
+
+    const totalQty = localQty + exportQty + defenceQty;
+    if (totalQty === 0) {
+      this.hologramEditError = 'Total quantity cannot be zero. Please enter a valid quantity.';
+      return;
+    }
+    if (totalQty === 0) {
+      alert('Total quantity cannot be zero. Please enter a valid quantity.');
       return;
     }
 
@@ -1444,7 +1474,7 @@ export class CommissionerDashboardComponent implements OnInit {
       },
       error: (err: any) => {
         console.error('Error updating hologram quantities:', err);
-        alert(err?.error?.error || 'Failed to update hologram quantities.');
+        this.hologramEditError = err?.error?.error || 'Failed to update hologram quantities. Please try again.';
       }
     });
   }
