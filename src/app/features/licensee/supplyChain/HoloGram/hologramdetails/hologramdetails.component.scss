@@ -2141,3 +2141,218 @@
   }
 }
 
+
+// ── Saved Carton Box ─────────────────────────────────────────────────────────
+.carton-box {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #d1fae5;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.08);
+  background: #fff;
+  transition: box-shadow 0.2s, transform 0.2s;
+
+  &:hover {
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.16);
+    transform: translateY(-2px);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-bottom: 1.5px solid #d1fae5;
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  }
+
+  &__meta {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #065f46;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__type-badge {
+    background: #374151;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  &__rolls {
+    font-size: 0.75rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+  }
+
+  &__delete {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1.5px solid #fca5a5;
+    background: #fff;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-size: 0.9rem;
+
+    &:hover {
+      background: #ef4444;
+      color: #fff;
+      border-color: #ef4444;
+    }
+  }
+
+  &__table-wrap {
+    padding: 0 2px 2px;
+    overflow-x: auto;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+
+    thead tr {
+      background: #f0fdf4;
+    }
+
+    th {
+      padding: 7px 10px;
+      font-weight: 700;
+      color: #374151;
+      border-bottom: 1.5px solid #d1fae5;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #374151;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover td {
+      background: #f0fdf4;
+    }
+  }
+}
+
+// ── Auto-assigned Rolls Preview ───────────────────────────────────────────────
+.rolls-preview {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #bfdbfe;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.08);
+  background: #fff;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-bottom: 1.5px solid #bfdbfe;
+    gap: 8px;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #1e40af;
+
+    i { font-size: 1rem; }
+  }
+
+  &__count {
+    background: #3b82f6;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 20px;
+  }
+
+  &__formula {
+    background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+
+  &__table-wrap {
+    overflow-x: auto;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+
+    thead tr {
+      background: #f0f9ff;
+    }
+
+    th {
+      padding: 7px 10px;
+      font-weight: 700;
+      color: #1e40af;
+      border-bottom: 1.5px solid #bfdbfe;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #374151;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tbody tr:hover td { background: #eff6ff; }
+  }
+}
