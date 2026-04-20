@@ -9,7 +9,7 @@
                         <i class="bi bi-file-earmark-text me-2"></i>
                         Hologram Request Register
                     </h4>
-                   
+
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-outline-primary me-2" (click)="refreshRequests()"
@@ -23,9 +23,8 @@
             <div class="row g-2 mb-4">
                 <div class="col">
                     <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Show all hologram requests"
-                        (click)="clearFilters()" (keydown.enter)="clearFilters()"
-                        (keydown.space)="clearFilters(); $event.preventDefault()"
+                        aria-label="Show all hologram requests" (click)="clearFilters()"
+                        (keydown.enter)="clearFilters()" (keydown.space)="clearFilters(); $event.preventDefault()"
                         [class.active]="!filters.status && !filters.hologramType">
                         <div class="card-icon">
                             <i class="bi bi-list-check"></i>
@@ -38,8 +37,8 @@
                 </div>
                 <div class="col">
                     <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Filter pending review requests"
-                        (click)="onStatusCardClick('PENDING')" (keydown.enter)="onStatusCardClick('PENDING')"
+                        aria-label="Filter pending review requests" (click)="onStatusCardClick('PENDING')"
+                        (keydown.enter)="onStatusCardClick('PENDING')"
                         (keydown.space)="onStatusCardClick('PENDING'); $event.preventDefault()"
                         [class.active]="isStatusCardActive('PENDING')">
                         <div class="card-icon">
@@ -53,8 +52,8 @@
                 </div>
                 <div class="col">
                     <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Filter under process requests"
-                        (click)="onStatusCardClick('UNDER_PROCESS')" (keydown.enter)="onStatusCardClick('UNDER_PROCESS')"
+                        aria-label="Filter under process requests" (click)="onStatusCardClick('UNDER_PROCESS')"
+                        (keydown.enter)="onStatusCardClick('UNDER_PROCESS')"
                         (keydown.space)="onStatusCardClick('UNDER_PROCESS'); $event.preventDefault()"
                         [class.active]="isStatusCardActive('UNDER_PROCESS')">
                         <div class="card-icon">
@@ -68,8 +67,8 @@
                 </div>
                 <div class="col">
                     <div class="summary-card completed-requests summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Filter completed requests"
-                        (click)="onStatusCardClick('APPROVED')" (keydown.enter)="onStatusCardClick('APPROVED')"
+                        aria-label="Filter completed requests" (click)="onStatusCardClick('APPROVED')"
+                        (keydown.enter)="onStatusCardClick('APPROVED')"
                         (keydown.space)="onStatusCardClick('APPROVED'); $event.preventDefault()"
                         [class.active]="isStatusCardActive('APPROVED')">
                         <div class="card-icon">
@@ -83,8 +82,8 @@
                 </div>
                 <div class="col">
                     <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
-                        aria-label="Filter rejected requests"
-                        (click)="onStatusCardClick('REJECTED')" (keydown.enter)="onStatusCardClick('REJECTED')"
+                        aria-label="Filter rejected requests" (click)="onStatusCardClick('REJECTED')"
+                        (keydown.enter)="onStatusCardClick('REJECTED')"
                         (keydown.space)="onStatusCardClick('REJECTED'); $event.preventDefault()"
                         [class.active]="isStatusCardActive('REJECTED')">
                         <div class="card-icon">
@@ -206,10 +205,12 @@
                                     <div class="date-display">
                                         <span class="date-main">{{ request.usageDate | date:'dd/MM/yyyy' }}</span>
                                         <span class="date-day">{{ request.usageDate | date:'EEE' }}</span>
-                                        <span class="usage-activation-hint" *ngIf="shouldShowUsageDateApprovalNotice(request)">
+                                        <span class="usage-activation-hint"
+                                            *ngIf="shouldShowUsageDateApprovalNotice(request)">
                                             OIC can approve &amp; start production on this date
                                         </span>
-                                        <span class="missed-action-hint" *ngIf="shouldShowUsageDateMissedNotice(request)">
+                                        <span class="missed-action-hint"
+                                            *ngIf="shouldShowUsageDateMissedNotice(request)">
                                             Not approved on usage date
                                             <br>
                                             No action taken
@@ -233,7 +234,8 @@
                                 </td>
                                 <td class="rolls-assigned">
                                     <ng-container *ngIf="hasRollsAssigned(request); else notAssigned">
-                                        <button class="btn-details" (click)="viewRollsAssigned(request)" title="View Rolls Assigned">
+                                        <button class="btn-details" (click)="viewRollsAssigned(request)"
+                                            title="View Rolls Assigned">
                                             <i class="bi bi-box-seam me-1"></i>
                                             Details
                                         </button>
@@ -259,16 +261,17 @@
                                     </ng-template>
                                 </td>
                                 <td class="status">
-                                <span class="status-badge" [ngClass]="getStatusClass(request)">
-                                    <i [class]="getStatusIcon(request)" class="me-1"></i>
-                                    {{ getDisplayStatus(request) }}
-                                </span>
+                                    <span class="status-badge" [ngClass]="getStatusClass(request)">
+                                        <i [class]="getStatusIcon(request)" class="me-1"></i>
+                                        {{ getDisplayStatus(request) }}
+                                    </span>
                                 </td>
                                 <td class="actions">
                                     <div class="action-buttons">
                                         <!-- Show view details button only for COMPLETED requests (has allocation data) -->
-                                        <button *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="btn-action view"
-                                            (click)="viewRequestDetails(request)" title="View Allocation Details">
+                                        <button *ngIf="mapStatusToCategory(request) === 'APPROVED'"
+                                            class="btn-action view" (click)="viewRequestDetails(request)"
+                                            title="View Allocation Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
                                         <!-- Show approve/reject buttons based on Dynamic Actions -->
@@ -289,7 +292,8 @@
                                             Not approved on usage date (No action taken)
                                         </span>
                                         <!-- Show status badge for COMPLETED -->
-                                        <span *ngIf="mapStatusToCategory(request) === 'APPROVED'" class="badge bg-success text-white">
+                                        <span *ngIf="mapStatusToCategory(request) === 'APPROVED'"
+                                            class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
                                             Completed
                                         </span>
@@ -300,7 +304,8 @@
                                             Under Process
                                         </span>
                                         <!-- Show status badge for REJECTED -->
-                                        <span *ngIf="mapStatusToCategory(request) === 'REJECTED'" class="badge bg-danger text-white">
+                                        <span *ngIf="mapStatusToCategory(request) === 'REJECTED'"
+                                            class="badge bg-danger text-white">
                                             <i class="bi bi-x-circle-fill me-1"></i>
                                             Rejected
                                         </span>
@@ -326,11 +331,7 @@
                         all requests.' :
                         'No hologram requests have been submitted yet.' }}
                     </p>
-                    <button class="btn btn-primary"
-                        *ngIf="filteredRequests.length === 0 && !filters.dateFrom && !filters.month && !filters.status && !filters.hologramType">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Create New Request
-                    </button>
+
                 </div>
 
                 <!-- Register Summary Footer -->
@@ -771,7 +772,8 @@
                             <div class="col-md-4">
                                 <div class="info-card">
                                     <label class="info-label">Total Hologram Qty:</label>
-                                    <div class="info-value">{{ selectedRequestForRolls.requestedQuantity | number }} units</div>
+                                    <div class="info-value">{{ selectedRequestForRolls.requestedQuantity | number }}
+                                        units</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -807,7 +809,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr *ngFor="let roll of getRollsAssigned(selectedRequestForRolls); let i = index">
+                                        <tr
+                                            *ngFor="let roll of getRollsAssigned(selectedRequestForRolls); let i = index">
                                             <td class="text-center">{{ i + 1 }}</td>
                                             <td>
                                                 <div class="carton-display">
@@ -830,7 +833,8 @@
                                         <tr>
                                             <td colspan="4" class="text-end"><strong>Total Quantity:</strong></td>
                                             <td class="text-end">
-                                                <strong class="text-primary">{{ getTotalRollsQuantity(selectedRequestForRolls) | number }}</strong>
+                                                <strong class="text-primary">{{
+                                                    getTotalRollsQuantity(selectedRequestForRolls) | number }}</strong>
                                             </td>
                                         </tr>
                                     </tfoot>

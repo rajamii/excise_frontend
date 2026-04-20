@@ -428,6 +428,11 @@ export class HologramComponent {
         this.showPreview = false;
 
         console.log('✅ Application submitted successfully via API:', res);
+
+        // Navigate to hologram procurement dashboard after short delay so user sees the transition
+        setTimeout(() => {
+          this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram' } });
+        }, 800);
       },
       error: (err) => {
         console.error('Error submitting application', err);
