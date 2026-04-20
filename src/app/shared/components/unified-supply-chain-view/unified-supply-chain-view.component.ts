@@ -20,6 +20,7 @@ import { ActionButtonConfig } from '../../../core/services/action-config.service
 import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
+import { RoleService } from '../../../core/services/role.service';
 
 // Constants
 import { 
@@ -348,6 +349,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private licenseApplicationService: LicenseApplicationService,
         private unifiedActionsService: UnifiedActionsService,
+        private roleService: RoleService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         private sanitizer: DomSanitizer,
@@ -355,6 +357,20 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         @Inject(PLATFORM_ID) platformId: Object
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
+    }
+
+    private isOicUser(): boolean {
+        const current = this.roleService.getCurrentUser();
+        if (!current) return false;
+
+        if (Number(current.roleId) === 7) return true;
+
+        const roleToken = String(current.role?.name || current.role?.displayName || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+        if (roleToken.includes('officerincharge') || roleToken === 'oic') return true;
+
+        return false;
     }
 
     // Dynamic service configuration
@@ -1566,6 +1582,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             this.router.navigate(['/dashboard'], { queryParams: { section: 'itcell-hologram', tab: 'hologram' } });
             return;
         }
+
+        // OIC transit detail should go back to "Transit Applications" (4-card OIC view), not licensee "Transit Permit".
+        if (this.applicationType === 'transit' && (source === 'officer-in-charge' || this.isOicUser())) {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'transit-applications' } });
+            return;
+        }
+
         const supplyChainDashboardTypes: ApplicationType[] = [
             'requisition',
             'revalidation',
