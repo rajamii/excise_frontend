@@ -72,6 +72,10 @@
               <mat-icon class="nav-icon">add_box</mat-icon>
               <span class="nav-text">Hologram Request</span>
             </button>
+            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('stock-inventory')" [class.active]="isDashboardSectionActive('stock-inventory')">
+              <mat-icon class="nav-icon">inventory</mat-icon>
+              <span class="nav-text">Stock Inventory</span>
+            </button>
 
             <!-- Register - Expandable
             <div class="nav-expandable">
