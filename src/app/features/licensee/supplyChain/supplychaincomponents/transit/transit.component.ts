@@ -407,12 +407,33 @@ export class TransitComponent implements OnInit {
     return token.includes('reject');
   }
 
+  private isPendingLikeToken(token: string): boolean {
+    // Used to avoid misclassifying "approval pending" as approved.
+    return (
+      token.includes('pending') ||
+      token.includes('review') ||
+      token.includes('forward') ||
+      token.includes('underprocess') ||
+      token.includes('underreview') ||
+      token.includes('submit') ||
+      token.includes('applied')
+    );
+  }
+
   private isApprovedLikeStatus(item: TableData): boolean {
     if (this.isRejectedLikeStatus(item)) {
       return false;
     }
     const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
-    return token.includes('approv') || token.includes('issued') || token.includes('complete');
+    if (this.isPendingLikeToken(token)) {
+      return false;
+    }
+    return (
+      token.includes('approved') ||
+      token.includes('issued') ||
+      token.includes('complete') ||
+      token.includes('completed')
+    );
   }
 
   private isIssuedLikeStatus(item: TableData): boolean {
@@ -420,6 +441,9 @@ export class TransitComponent implements OnInit {
       return false;
     }
     const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    if (this.isPendingLikeToken(token)) {
+      return false;
+    }
     return token.includes('issued');
   }
 
