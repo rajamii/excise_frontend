@@ -478,6 +478,14 @@
                             </select>
                           </div>
                           <div class="col-md-2">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="rollsFilters.month"
+                              (change)="applyRollsFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-2">
                             <label class="form-label small fw-bold">Date From</label>
                             <input type="date" class="form-control form-control-sm" [(ngModel)]="rollsFilters.dateFrom"
                               (change)="applyRollsFilters()">
@@ -489,17 +497,17 @@
                           </div>
                           <div class="col-md-2">
                             <label class="form-label small fw-bold">Serial Range</label>
-                            <input type="text" class="form-control form-control-sm"
-                              [(ngModel)]="rollsFilters.serialSearch" (input)="applyRollsFilters()"
-                              placeholder="e.g. HG001001">
-                          </div>
-                          <div class="col-md-2">
-                            <button class="btn btn-outline-secondary btn-sm me-2" (click)="clearRollsFilters()">
-                              <i class="bi bi-x-circle me-1"></i>Clear
-                            </button>
-                            <button class="btn btn-success btn-sm" (click)="exportRollsData()">
-                              <i class="bi bi-download me-1"></i>Export
-                            </button>
+                            <div class="input-group input-group-sm flex-nowrap">
+                              <input type="text" class="form-control"
+                                [(ngModel)]="rollsFilters.serialSearch" (input)="applyRollsFilters()"
+                                placeholder="e.g. HG001001">
+                              <button class="btn btn-outline-secondary" type="button" (click)="clearRollsFilters()">
+                                <i class="bi bi-x-circle me-1"></i>Clear
+                              </button>
+                              <button class="btn btn-success" type="button" (click)="exportRollsData()">
+                                <i class="bi bi-download me-1"></i>Export
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -513,6 +521,28 @@
                     {{ getRollsFilterSummary() }}
                   </small>
                 </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="rollsTablePageSize"
+                      (change)="onRollsTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getRollsTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(1)"
+                      [disabled]="rollsTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(rollsTablePage - 1)"
+                      [disabled]="rollsTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(rollsTablePage + 1)"
+                      [disabled]="rollsTablePage >= getRollsTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(getRollsTableTotalPages())"
+                      [disabled]="rollsTablePage >= getRollsTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -532,7 +562,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @for (roll of (hasActiveRollsFilters() ? filteredRollsData : rollsData); track roll.id) {
+                      @for (roll of getRollsTableRows(); track roll.id) {
                       <tr [class.table-success]="isNewRoll(roll)" [class.new-roll-highlight]="isNewRoll(roll)">
                         <td>{{ roll.receivedDate | date:'dd-MMM-yyyy' }}</td>
                         <td>{{ roll.receivedBy || '—' }}</td>
@@ -572,7 +602,7 @@
                       </tr>
                       } @empty {
                       <tr>
-                        <td colspan="11" class="text-center text-muted">No data available - rollsData is empty</td>
+                        <td colspan="12" class="text-center text-muted">No rolls found for the selected filters.</td>
                       </tr>
                       }
                     </tbody>
@@ -627,6 +657,61 @@
                   </div>
                 </div>
 
+                <div class="row g-3 mb-3">
+                  <div class="col-12">
+                    <div class="filter-card">
+                      <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="availableFilters.month"
+                              (change)="applyAvailableFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date From</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="availableFilters.dateFrom"
+                              (change)="applyAvailableFilters()">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date To</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="availableFilters.dateTo"
+                              (change)="applyAvailableFilters()">
+                          </div>
+                          <div class="col-md-3 d-flex justify-content-end">
+                            <button class="btn btn-outline-secondary btn-sm" (click)="clearAvailableFilters()">
+                              <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="availableTablePageSize"
+                      (change)="onAvailableTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getAvailableTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(1)"
+                      [disabled]="availableTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(availableTablePage - 1)"
+                      [disabled]="availableTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(availableTablePage + 1)"
+                      [disabled]="availableTablePage >= getAvailableTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(getAvailableTableTotalPages())"
+                      [disabled]="availableTablePage >= getAvailableTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -639,11 +724,11 @@
                         <th>Percentage Available</th>
                         <th>Status</th>
                       </tr>
-                    </thead>
-                    <tbody>
-                      @for (available of availableData; track available.id) {
-                      <tr [class.table-success]="isNewAvailable(available)"
-                        [class.new-roll-highlight]="isNewAvailable(available)">
+                      </thead>
+                      <tbody>
+                        @for (available of getAvailableTableRows(); track available.id) {
+                        <tr [class.table-success]="isNewAvailable(available)"
+                          [class.new-roll-highlight]="isNewAvailable(available)">
                         <td>
                           <div class="d-flex align-items-center">
                             <span class="fw-bold text-primary">{{ available.cartoonNumber }}</span>
@@ -683,12 +768,16 @@
                             }
                           </div>
                         </td>
-                      </tr>
-                      }
-                    </tbody>
-                  </table>
+                        </tr>
+                        } @empty {
+                        <tr>
+                          <td colspan="7" class="text-center text-muted">No available rows found for the selected filters.</td>
+                        </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
             </div>
             }
 
@@ -731,6 +820,61 @@
                   </div>
                 </div>
 
+                <div class="row g-3 mb-3">
+                  <div class="col-12">
+                    <div class="filter-card">
+                      <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="issuedFilters.month"
+                              (change)="applyIssuedFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date From</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="issuedFilters.dateFrom"
+                              (change)="applyIssuedFilters()">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date To</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="issuedFilters.dateTo"
+                              (change)="applyIssuedFilters()">
+                          </div>
+                          <div class="col-md-3 d-flex justify-content-end">
+                            <button class="btn btn-outline-secondary btn-sm" (click)="clearIssuedFilters()">
+                              <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="issuedTablePageSize"
+                      (change)="onIssuedTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getIssuedTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(1)"
+                      [disabled]="issuedTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(issuedTablePage - 1)"
+                      [disabled]="issuedTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(issuedTablePage + 1)"
+                      [disabled]="issuedTablePage >= getIssuedTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(getIssuedTableTotalPages())"
+                      [disabled]="issuedTablePage >= getIssuedTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -744,7 +888,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @for (issued of issuedData; track issued.id) {
+                      @for (issued of getIssuedTableRows(); track issued.id) {
                       <tr [class.table-warning]="issued.status === 'IN_PROGRESS'"
                         [class.table-success]="issued.status === 'COMPLETED'">
                         <td>
@@ -815,6 +959,62 @@
                 <small class="text-muted">Completed daily register entries (approved by officer)</small>
               </div>
               <div class="card-body">
+
+                <div class="row g-3 mb-3">
+                  <div class="col-12">
+                    <div class="filter-card">
+                      <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="historyFilters.month"
+                              (change)="applyHistoryFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date From</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="historyFilters.dateFrom"
+                              (change)="applyHistoryFilters()">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date To</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="historyFilters.dateTo"
+                              (change)="applyHistoryFilters()">
+                          </div>
+                          <div class="col-md-3 d-flex justify-content-end">
+                            <button class="btn btn-outline-secondary btn-sm" (click)="clearHistoryFilters()">
+                              <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="historyTablePageSize"
+                      (change)="onHistoryTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getHistoryTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(1)"
+                      [disabled]="historyTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(historyTablePage - 1)"
+                      [disabled]="historyTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(historyTablePage + 1)"
+                      [disabled]="historyTablePage >= getHistoryTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(getHistoryTableTotalPages())"
+                      [disabled]="historyTablePage >= getHistoryTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -830,7 +1030,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @for (history of historyData; track history.id) {
+                      @for (history of getHistoryTableRows(); track history.id) {
                       <tr>
                         <td>
                           {{ history.issueDate | date:'dd-MMM-yyyy' }}

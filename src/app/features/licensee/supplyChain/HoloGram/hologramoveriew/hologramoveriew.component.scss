@@ -331,6 +331,11 @@
   }
 }
 
+.page-size-select {
+  min-width: 72px;
+  padding-right: 2.25rem;
+}
+
 // Responsive design
 @media (max-width: 768px) {
   .hologram-overview-container {

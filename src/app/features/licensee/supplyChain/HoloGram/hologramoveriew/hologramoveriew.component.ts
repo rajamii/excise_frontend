@@ -158,6 +158,12 @@ interface ChartFilters {
   maxQuantity: number | null;
 }
 
+interface TabDateFilters {
+  month: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 
 
 
@@ -177,8 +183,11 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   rollsData: HologramRoll[] = [];
   filteredRollsData: HologramRoll[] = []; // Filtered rolls data
   availableData: AvailableHologram[] = [];
+  filteredAvailableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
+  filteredIssuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
+  filteredHistoryData: HistoryHologram[] = [];
   private savedDailyRegisterEntries: any[] = [];
   showHistoryBrandsModal: boolean = false;
   selectedHistoryForBrands: HistoryHologram | null = null;
@@ -235,16 +244,38 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   rollsFilters: {
     rollStatus: string;
     hologramType: string;
+    month: string;
     dateFrom: string;
     dateTo: string;
     serialSearch: string;
   } = {
       rollStatus: '',
       hologramType: '',
+      month: '',
       dateFrom: '',
       dateTo: '',
       serialSearch: ''
     };
+
+  // Month/Date filters for other overview tabs
+  availableFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
+  issuedFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
+  historyFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
+
+  // Table pagination (Rolls / Available / Issued / History)
+  readonly tablePageSizeOptions: number[] = [5, 10, 15];
+
+  rollsTablePage = 1;
+  rollsTablePageSize = 5;
+
+  availableTablePage = 1;
+  availableTablePageSize = 5;
+
+  issuedTablePage = 1;
+  issuedTablePageSize = 5;
+
+  historyTablePage = 1;
+  historyTablePageSize = 5;
 
 
 
@@ -272,6 +303,86 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     { value: '2023', label: '2023' },
     { value: '2022', label: '2022' }
   ];
+
+  private parseDateInputLocal(value: string): Date | null {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    // HTML date input emits yyyy-mm-dd
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return this.tryParseAnyDate(raw);
+
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const date = new Date(year, monthIndex, day);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private tryParseAnyDate(value: any): Date | null {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    // Common "dd-MMM-yyyy" (e.g. 17-Apr-2026)
+    const dmy = raw.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+    if (dmy) {
+      const day = Number(dmy[1]);
+      const mon = dmy[2].toLowerCase();
+      const year = Number(dmy[3]);
+      const monthMap: Record<string, number> = {
+        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+      };
+      const monthIndex = monthMap[mon];
+      if (monthIndex === undefined) return null;
+      const date = new Date(year, monthIndex, day);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private matchesTabDateFilters(date: Date | null, filters: TabDateFilters): boolean {
+    if (!date) return false;
+
+    if (filters.month) {
+      const monthValue = String(date.getMonth() + 1).padStart(2, '0');
+      if (monthValue !== String(filters.month)) return false;
+    }
+
+    const from = this.parseDateInputLocal(filters.dateFrom);
+    if (from) {
+      const fromStart = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 0, 0, 0, 0);
+      if (date.getTime() < fromStart.getTime()) return false;
+    }
+
+    const to = this.parseDateInputLocal(filters.dateTo);
+    if (to) {
+      const toEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+      if (date.getTime() > toEnd.getTime()) return false;
+    }
+
+    return true;
+  }
+
+  private paginateRows<T>(rows: T[], page: number, pageSize: number): T[] {
+    const safePageSize = Math.max(1, Number(pageSize) || 1);
+    const totalPages = Math.max(1, Math.ceil((rows?.length || 0) / safePageSize));
+    const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    const start = (safePage - 1) * safePageSize;
+    return (rows || []).slice(start, start + safePageSize);
+  }
+
+  private getPaginationLabel(totalRows: number, page: number, pageSize: number): string {
+    const total = Math.max(0, Number(totalRows) || 0);
+    const size = Math.max(1, Number(pageSize) || 1);
+    const totalPages = Math.max(1, Math.ceil(total / size));
+    const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    const start = total === 0 ? 0 : (safePage - 1) * size + 1;
+    const end = total === 0 ? 0 : Math.min(safePage * size, total);
+    return `${start}\u2013${end} of ${total} \u2022 Page ${safePage} of ${totalPages}`;
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -592,6 +703,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // Also sync to localStorage for offline capability
     localStorage.setItem('hologramOverviewAvailable', JSON.stringify(this.availableData));
 
+    this.applyAvailableFilters();
+
     console.log('📊 Available data generated from rolls:', this.availableData.length, 'available');
   }
 
@@ -728,6 +841,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
         });
 
+        this.applyIssuedFilters();
+
         console.log('📊 Issued data loaded:', this.issuedData.length, 'entries (grouped by reference)');
         console.log('📋 Final issuedData:', this.issuedData);
       },
@@ -740,6 +855,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           url: error.url
         });
         this.issuedData = [];
+        this.applyIssuedFilters();
       }
     });
   }
@@ -964,6 +1080,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
         });
 
+        this.applyHistoryFilters();
+
         console.log('📊 History data loaded:', this.historyData.length, 'entries');
         console.log('📋 Final historyData:', this.historyData);
       },
@@ -977,6 +1095,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         });
         this.historyData = [];
         this.savedDailyRegisterEntries = [];
+        this.applyHistoryFilters();
       }
     });
   }
@@ -2086,6 +2205,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   // Rolls filter methods (same logic as Serial filters)
   applyRollsFilters(): void {
+    const hasDateFilters = !!(this.rollsFilters.month || this.rollsFilters.dateFrom || this.rollsFilters.dateTo);
+    const dateFilters: TabDateFilters = {
+      month: this.rollsFilters.month,
+      dateFrom: this.rollsFilters.dateFrom,
+      dateTo: this.rollsFilters.dateTo
+    };
+
     this.filteredRollsData = this.rollsData.filter(roll => {
       if (this.rollsFilters.rollStatus && roll.status !== this.rollsFilters.rollStatus) {
         return false;
@@ -2093,20 +2219,14 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       if (this.rollsFilters.hologramType && roll.type !== this.rollsFilters.hologramType) {
         return false;
       }
-      if (this.rollsFilters.dateFrom) {
-        const rollDate = new Date(roll.receivedDate);
-        const filterDate = new Date(this.rollsFilters.dateFrom);
-        if (rollDate < filterDate) {
+
+      if (hasDateFilters) {
+        const rollDate = this.tryParseAnyDate(roll.receivedDate);
+        if (!this.matchesTabDateFilters(rollDate, dateFilters)) {
           return false;
         }
       }
-      if (this.rollsFilters.dateTo) {
-        const rollDate = new Date(roll.receivedDate);
-        const filterDate = new Date(this.rollsFilters.dateTo);
-        if (rollDate > filterDate) {
-          return false;
-        }
-      }
+
       if (this.rollsFilters.serialSearch &&
         !roll.fromSerial.toLowerCase().includes(this.rollsFilters.serialSearch.toLowerCase()) &&
         !roll.toSerial.toLowerCase().includes(this.rollsFilters.serialSearch.toLowerCase())) {
@@ -2114,12 +2234,15 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       }
       return true;
     });
+
+    this.rollsTablePage = 1;
   }
 
   clearRollsFilters(): void {
     this.rollsFilters = {
       rollStatus: '',
       hologramType: '',
+      month: '',
       dateFrom: '',
       dateTo: '',
       serialSearch: ''
@@ -2130,6 +2253,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   hasActiveRollsFilters(): boolean {
     return !!(this.rollsFilters.rollStatus ||
       this.rollsFilters.hologramType ||
+      this.rollsFilters.month ||
       this.rollsFilters.dateFrom ||
       this.rollsFilters.dateTo ||
       this.rollsFilters.serialSearch);
@@ -2139,11 +2263,170 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     const filters = [];
     if (this.rollsFilters.rollStatus) filters.push(`Status: ${this.rollsFilters.rollStatus}`);
     if (this.rollsFilters.hologramType) filters.push(`Type: ${this.rollsFilters.hologramType}`);
+    if (this.rollsFilters.month) {
+      const label = this.months.find((m) => m.value === this.rollsFilters.month)?.label || this.rollsFilters.month;
+      filters.push(`Month: ${label}`);
+    }
     if (this.rollsFilters.serialSearch) filters.push(`Search: ${this.rollsFilters.serialSearch}`);
 
     return filters.length > 0 ?
       `Filtered by: ${filters.join(', ')} | Showing ${this.filteredRollsData.length} of ${this.rollsData.length} rolls` :
       `Showing all ${this.rollsData.length} rolls`;
+  }
+
+  private getAvailableRowDate(available: AvailableHologram): Date | null {
+    const roll = this.rollsData.find((r) =>
+      String(r.cartoonNumber || '').trim() === String(available.cartoonNumber || '').trim() &&
+      r.type === available.type
+    );
+    return this.tryParseAnyDate(roll?.receivedDate || '');
+  }
+
+  applyAvailableFilters(): void {
+    const hasFilters = !!(this.availableFilters.month || this.availableFilters.dateFrom || this.availableFilters.dateTo);
+    if (!hasFilters) {
+      this.filteredAvailableData = [...this.availableData];
+      this.availableTablePage = 1;
+      return;
+    }
+
+    this.filteredAvailableData = this.availableData.filter((row) =>
+      this.matchesTabDateFilters(this.getAvailableRowDate(row), this.availableFilters)
+    );
+    this.availableTablePage = 1;
+  }
+
+  clearAvailableFilters(): void {
+    this.availableFilters = { month: '', dateFrom: '', dateTo: '' };
+    this.applyAvailableFilters();
+  }
+
+  applyIssuedFilters(): void {
+    const hasFilters = !!(this.issuedFilters.month || this.issuedFilters.dateFrom || this.issuedFilters.dateTo);
+    if (!hasFilters) {
+      this.filteredIssuedData = [...this.issuedData];
+      this.issuedTablePage = 1;
+      return;
+    }
+
+    this.filteredIssuedData = this.issuedData.filter((row) =>
+      this.matchesTabDateFilters(this.tryParseAnyDate(row.issueDate), this.issuedFilters)
+    );
+    this.issuedTablePage = 1;
+  }
+
+  clearIssuedFilters(): void {
+    this.issuedFilters = { month: '', dateFrom: '', dateTo: '' };
+    this.applyIssuedFilters();
+  }
+
+  applyHistoryFilters(): void {
+    const hasFilters = !!(this.historyFilters.month || this.historyFilters.dateFrom || this.historyFilters.dateTo);
+    if (!hasFilters) {
+      this.filteredHistoryData = [...this.historyData];
+      this.historyTablePage = 1;
+      return;
+    }
+
+    this.filteredHistoryData = this.historyData.filter((row) =>
+      this.matchesTabDateFilters(this.tryParseAnyDate(row.issueDate), this.historyFilters)
+    );
+    this.historyTablePage = 1;
+  }
+
+  clearHistoryFilters(): void {
+    this.historyFilters = { month: '', dateFrom: '', dateTo: '' };
+    this.applyHistoryFilters();
+  }
+
+  // Pagination helpers for each tab table
+  getRollsTableRows(): HologramRoll[] {
+    const rows = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return this.paginateRows(rows, this.rollsTablePage, this.rollsTablePageSize);
+  }
+
+  getRollsTableTotal(): number {
+    return (this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData).length;
+  }
+
+  getRollsTableTotalPages(): number {
+    return Math.max(1, Math.ceil(this.getRollsTableTotal() / Math.max(1, this.rollsTablePageSize)));
+  }
+
+  setRollsTablePage(page: number): void {
+    const totalPages = this.getRollsTableTotalPages();
+    this.rollsTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onRollsTablePageSizeChange(): void {
+    this.rollsTablePage = 1;
+  }
+
+  getRollsTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.getRollsTableTotal(), this.rollsTablePage, this.rollsTablePageSize);
+  }
+
+  getAvailableTableRows(): AvailableHologram[] {
+    return this.paginateRows(this.filteredAvailableData, this.availableTablePage, this.availableTablePageSize);
+  }
+
+  getAvailableTableTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredAvailableData?.length || 0) / Math.max(1, this.availableTablePageSize)));
+  }
+
+  setAvailableTablePage(page: number): void {
+    const totalPages = this.getAvailableTableTotalPages();
+    this.availableTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onAvailableTablePageSizeChange(): void {
+    this.availableTablePage = 1;
+  }
+
+  getAvailableTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.filteredAvailableData.length, this.availableTablePage, this.availableTablePageSize);
+  }
+
+  getIssuedTableRows(): IssuedHologram[] {
+    return this.paginateRows(this.filteredIssuedData, this.issuedTablePage, this.issuedTablePageSize);
+  }
+
+  getIssuedTableTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredIssuedData?.length || 0) / Math.max(1, this.issuedTablePageSize)));
+  }
+
+  setIssuedTablePage(page: number): void {
+    const totalPages = this.getIssuedTableTotalPages();
+    this.issuedTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onIssuedTablePageSizeChange(): void {
+    this.issuedTablePage = 1;
+  }
+
+  getIssuedTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.filteredIssuedData.length, this.issuedTablePage, this.issuedTablePageSize);
+  }
+
+  getHistoryTableRows(): HistoryHologram[] {
+    return this.paginateRows(this.filteredHistoryData, this.historyTablePage, this.historyTablePageSize);
+  }
+
+  getHistoryTableTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredHistoryData?.length || 0) / Math.max(1, this.historyTablePageSize)));
+  }
+
+  setHistoryTablePage(page: number): void {
+    const totalPages = this.getHistoryTableTotalPages();
+    this.historyTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onHistoryTablePageSizeChange(): void {
+    this.historyTablePage = 1;
+  }
+
+  getHistoryTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.filteredHistoryData.length, this.historyTablePage, this.historyTablePageSize);
   }
 
 
