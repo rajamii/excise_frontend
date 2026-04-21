@@ -21,14 +21,71 @@
     <!-- Stock Summary Dashboard -->
     <div class="stock-summary-section">
         <div class="row g-4">
-            <div class="col-lg-6 col-md-6">
-                <div class="summary-card total-records">
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card total-applications summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Show all hologram procurement applications"
+                    (click)="onSummaryStatusClick('')" (keydown.enter)="onSummaryStatusClick('')"
+                    (keydown.space)="onSummaryStatusClick(''); $event.preventDefault()"
+                    [class.active]="!activeStatusCategory">
                     <div class="card-icon">
-                        <i class="bi bi-list-ul"></i>
+                        <i class="bi bi-list-check"></i>
                     </div>
                     <div class="card-content">
-                        <h3 class="card-value">{{ filteredRecords.length }}</h3>
-                        <p class="card-label">Total Records</p>
+                        <h3 class="card-value">{{ summaryRecords.length }}</h3>
+                        <p class="card-label">Total Applications</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Filter pending procurement applications"
+                    (click)="onSummaryStatusClick('PENDING')" (keydown.enter)="onSummaryStatusClick('PENDING')"
+                    (keydown.space)="onSummaryStatusClick('PENDING'); $event.preventDefault()"
+                    [class.active]="activeStatusCategory === 'PENDING'">
+                    <div class="card-icon">
+                        <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-value">{{ getProcurementCountByCategory('PENDING') }}</h3>
+                        <p class="card-label">
+                            Pending
+                            <span *ngIf="getProcurementCountByCategory('PENDING') > 0" class="badge bg-danger ms-2">
+                                {{ getProcurementCountByCategory('PENDING') }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card under-process summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Filter under process procurement applications"
+                    (click)="onSummaryStatusClick('UNDER_PROCESS')" (keydown.enter)="onSummaryStatusClick('UNDER_PROCESS')"
+                    (keydown.space)="onSummaryStatusClick('UNDER_PROCESS'); $event.preventDefault()"
+                    [class.active]="activeStatusCategory === 'UNDER_PROCESS'">
+                    <div class="card-icon">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-value">{{ getProcurementCountByCategory('UNDER_PROCESS') }}</h3>
+                        <p class="card-label">Under Process</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="summary-card completed-requests summary-card-clickable" role="button" tabindex="0"
+                    aria-label="Filter completed procurement applications"
+                    (click)="onSummaryStatusClick('COMPLETED')" (keydown.enter)="onSummaryStatusClick('COMPLETED')"
+                    (keydown.space)="onSummaryStatusClick('COMPLETED'); $event.preventDefault()"
+                    [class.active]="activeStatusCategory === 'COMPLETED'">
+                    <div class="card-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-value">{{ getProcurementCountByCategory('COMPLETED') }}</h3>
+                        <p class="card-label">Completed</p>
                     </div>
                 </div>
             </div>
@@ -125,9 +182,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @for (record of filteredRecords; track record.id; let i = $index) {
+                        @for (record of paginatedRecords; track record.id; let i = $index) {
                         <tr class="register-row">
-                            <td class="sl-no">{{ i + 1 }}</td>
+                            <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
                             <td class="date-col">
                                 <div class="date-display">
                                     <span class="date-main">{{ record.date | date:'dd/MM/yyyy' }}</span>
@@ -138,8 +195,17 @@
                                 <span class="ref-number">{{ record.ourRefNo || '-' }}</span>
                             </td>
                             <td class="cartoon-no">
-                                <span class="cartoon-number">{{ getUniqueCartoonNumbers(record).join(', ') || '-'
-                                    }}</span>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="cartoon-number">
+                                        {{ getCartonNamesPreview(record) || '-' }}
+                                    </span>
+                                    @if (hasMoreCartonNames(record)) {
+                                    <button type="button" class="btn btn-link btn-sm p-0"
+                                        (click)="openCartonNamesModal(record)">
+                                        See all names ({{ getUniqueCartoonNumbers(record).length }})
+                                    </button>
+                                    }
+                                </div>
                             </td>
                             <td class="type-col">
                                 <div class="d-flex flex-wrap gap-1">
@@ -226,6 +292,41 @@
             </div>
             }
 
+            <!-- Pagination -->
+            <div class="register-pagination" *ngIf="filteredRecords.length > 0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="pagination-info">
+                        <span class="info-text">
+                            Showing {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize,
+                            filteredRecords.length) }}
+                            of {{ filteredRecords.length }} entries
+                        </span>
+                    </div>
+                    <div class="pagination-controls">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="page-size-selector">
+                                <label class="selector-label">Show:</label>
+                                <select class="form-select form-select-sm" [(ngModel)]="pageSize"
+                                    (change)="onPageSizeChange()">
+                                    <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                                </select>
+                            </div>
+                            <div class="pagination-buttons btn-group">
+                                <button class="btn btn-outline-secondary" (click)="goToPage(1)"
+                                    [disabled]="currentPage === 1">«</button>
+                                <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
+                                    [disabled]="currentPage === 1">‹</button>
+                                <span class="btn btn-light disabled">{{ currentPage }} / {{ totalPages }}</span>
+                                <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
+                                    [disabled]="currentPage === totalPages">›</button>
+                                <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)"
+                                    [disabled]="currentPage === totalPages">»</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Register Summary Footer -->
             <div class="register-footer" *ngIf="filteredRecords.length > 0">
                 <div class="summary-row">
@@ -264,6 +365,57 @@
     </div>
 </div>
 
+<!-- Carton Names Modal -->
+<div class="modal fade show" *ngIf="showCartonNamesModal"
+    style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1060;" (click)="closeCartonNamesModal()">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061;" (click)="$event.stopPropagation()">
+        <div class="modal-content" style="z-index: 1062;">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-list-ul me-2"></i>
+                    Carton Names ({{ selectedCartonNames.length }})
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="closeCartonNamesModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light mb-3">
+                    <strong>Reference:</strong> {{ selectedRecordForCartonNames?.ourRefNo || '-' }}
+                </div>
+
+                @if (selectedCartonNames.length > 0) {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;" class="text-center">Sl. No.</th>
+                                <th>Carton / Roll Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let name of selectedCartonNames; let i = index">
+                                <td class="text-center">{{ i + 1 }}</td>
+                                <td class="font-monospace">{{ name }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                } @else {
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">No carton names available.</p>
+                </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeCartonNamesModal()">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 
 
@@ -291,54 +443,46 @@
                     <strong>Status:</strong> Ready for physical arrival update
                 </div>
 
+                @if (selectedRecordForUpdate && !isExpectedQuantityLakhAligned()) {
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Expected quantity must be in multiples of {{ cartonSize | number }} (1 lakh) to auto-assign 5 rolls per carton.
+                </div>
+                }
+
                 <div class="row">
                     <!-- Left Side: Current Carton Entry Form -->
                     <div class="col-md-6">
                         <div class="card border-primary">
-                            <div class="card-header bg-primary text-white">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     <i class="bi bi-box me-2"></i>
                                     Enter Carton Details
                                 </h6>
+                                @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark">
+                                        Carton {{ getSavedCartonCount() + 1 }} of {{ getExpectedCartonCount() }}
+                                    </span>
+                                    @if (getSavedCartonCount() < getExpectedCartonCount()) {
+                                    <select class="form-select form-select-sm w-auto"
+                                        (change)="prepareNextCartonEntry(); $any($event.target).value = ''">
+                                        <option value="">Carton actions</option>
+                                        <option value="add">Add another carton details</option>
+                                    </select>
+                                    }
+                                </div>
+                                }
                             </div>
                             <div class="card-body">
                                 <div class="form-group mb-3">
-                                    <label class="form-label fw-bold d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="bi bi-box me-1"></i>
-                                            Carton Number <span class="text-danger">*</span>
-                                            @if (lockedCartonNumber) {
-                                            <span class="badge bg-success ms-2">
-                                                <i class="bi bi-lock-fill me-1"></i>
-                                                Locked
-                                            </span>
-                                            }
-                                        </span>
-                                        @if (lockedCartonNumber) {
-                                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                            (click)="unlockCartonNumber()"
-                                            title="Edit carton number (will clear all saved rolls)">
-                                            <i class="bi bi-pencil-square me-1"></i>
-                                            Edit
-                                        </button>
-                                        }
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-box me-1"></i>
+                                        Carton Number <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" class="form-control" placeholder="e.g., A1"
-                                        [(ngModel)]="currentCarton.cartoonNumber" [readonly]="lockedCartonNumber !== ''"
-                                        (input)="onCartonInputChange()"
-                                        [class.bg-light]="lockedCartonNumber !== ''">
-                                    @if (!lockedCartonNumber) {
-                                    <div class="form-text">Enter the carton/box number - it will be locked after first
-                                        save</div>
-                                    }
-                                    @if (lockedCartonNumber) {
-                                    <div class="form-text text-success">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        Carton locked: <strong>{{ lockedCartonNumber }}</strong>. Next roll will be
-                                        saved as <strong>{{ lockedCartonNumber }}({{
-                                            getSuffixLetter(cartonSuffixCounter) }})</strong>
-                                    </div>
-                                    }
+                                        [(ngModel)]="currentCarton.cartoonNumber" (input)="onCartonInputChange()">
+                                    <div class="form-text">Enter the carton/box number for this 1,00,000 batch</div>
                                 </div>
 
                                 <!-- Hologram Type Selector - only show when multiple types are requested -->
@@ -371,11 +515,11 @@
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">
                                         <i class="bi bi-arrow-left me-1"></i>
-                                        To Serial Number <span class="text-danger">*</span>
+                                        To Serial Number
                                     </label>
-                                    <input type="text" class="form-control font-monospace" placeholder="e.g., 5000"
-                                        [(ngModel)]="currentCarton.toSerial" (input)="onSerialInputChange()">
-                                    <div class="form-text">Ending serial number from hologram roll</div>
+                                    <input type="text" class="form-control font-monospace bg-light" placeholder="Auto"
+                                        [(ngModel)]="currentCarton.toSerial" readonly>
+                                    <div class="form-text">Auto-calculated (From + 99,999)</div>
                                 </div>
 
                                 <div class="form-group mb-3">
@@ -385,8 +529,47 @@
                                     </label>
                                     <input type="number" class="form-control bg-light"
                                         [value]="currentCarton.numberOfHolograms" readonly>
-                                    <div class="form-text">Auto-calculated from serial number range</div>
+                                    <div class="form-text">Auto-calculated (always 1,00,000 per carton)</div>
                                 </div>
+
+                                @if (autoGeneratedRollsPreview.length > 0) {
+                                <div class="rolls-preview mb-3">
+                                    <div class="rolls-preview__header">
+                                        <div class="rolls-preview__title">
+                                            <i class="bi bi-list-ul"></i>
+                                            Auto-assigned Rolls
+                                            <span class="rolls-preview__count">{{ autoGeneratedRollsPreview.length }}</span>
+                                        </div>
+                                        <span class="rolls-preview__formula">
+                                            {{ rollSize | number }} × {{ rollsPerCarton }} = {{ cartonSize | number }}
+                                        </span>
+                                    </div>
+                                    <div class="rolls-preview__table-wrap">
+                                        <table class="rolls-preview__table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center" style="width:44px;">#</th>
+                                                    <th>Roll No.</th>
+                                                    <th>From</th>
+                                                    <th>To</th>
+                                                    <th class="text-end">Qty</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (r of autoGeneratedRollsPreview; track $index; let i = $index) {
+                                                <tr>
+                                                    <td class="text-center text-muted">{{ i + 1 }}</td>
+                                                    <td class="font-monospace fw-semibold">{{ getCleanCartoonNumber(r.cartoonNumber) }}</td>
+                                                    <td class="font-monospace text-secondary">{{ r.fromSerial }}</td>
+                                                    <td class="font-monospace text-secondary">{{ r.toSerial }}</td>
+                                                    <td class="text-end fw-bold text-primary">{{ r.numberOfHolograms | number }}</td>
+                                                </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                }
 
                                 <!-- Real-time validation error -->
                                 @if (serialRangeValidationError) {
@@ -400,8 +583,9 @@
                                 @if (currentCarton.numberOfHolograms > 0 && !serialRangeValidationError) {
                                 <div class="alert alert-success">
                                     <i class="bi bi-check-circle-fill me-2"></i>
-                                    ✅ This carton will contain <strong>{{ currentCarton.numberOfHolograms | number
-                                        }}</strong> holograms. Click "Save Carton" to add it.
+                                    ✅ This carton will create <strong>{{ rollsPerCarton }}</strong> rolls of
+                                    <strong>{{ rollSize | number }}</strong> each (total <strong>{{ cartonSize | number }}</strong>).
+                                    Click "Save Carton" to add all rolls.
                                 </div>
                                 }
 
@@ -421,20 +605,13 @@
                                 class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     <i class="bi bi-boxes me-2"></i>
-                                    Saved Cartons ({{ savedCartons.length }})
-                                </h6>
-                                <div class="d-flex align-items-center gap-2">
-                                    @if (lockedCartonNumber) {
-                                    <span class="badge bg-light text-dark">
-                                        <i class="bi bi-lock-fill me-1"></i>
-                                        {{ lockedCartonNumber }}
-                                    </span>
-                                    <button type="button" class="btn btn-sm btn-warning" (click)="unlockCartonNumber()"
-                                        title="Edit carton number">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
+                                    @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+                                    Saved Cartons ({{ getSavedCartonCount() }} / {{ getExpectedCartonCount() }})
+                                    } @else {
+                                    Saved Cartons ({{ getSavedCartonCount() }})
                                     }
-                                </div>
+                                </h6>
+                                <span class="badge bg-light text-dark">Rolls: {{ savedCartons.length }}</span>
                             </div>
                             <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                                 @if (savedCartons.length === 0) {
@@ -445,34 +622,49 @@
                                 </div>
                                 }
 
-                                @for (carton of savedCartons; track $index; let i = $index) {
-                                <div class="card mb-2 border-secondary">
-                                    <div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <strong class="text-primary">
-                                                    <i class="bi bi-box-seam me-1"></i>
-                                                    {{ getCleanCartoonNumber(carton.cartoonNumber) }}
-                                                </strong>
-                                                @if (carton.type) {
-                                                <span class="badge bg-secondary ms-1">{{ carton.type }}</span>
-                                                }
-                                                <div class="small text-muted mt-1">
-                                                    <i class="bi bi-arrow-right me-1"></i>
-                                                    Serial: {{ carton.fromSerial }} to {{ carton.toSerial }}
-                                                </div>
-                                                <div class="small mt-1">
-                                                    <span class="badge bg-info">
-                                                        <i class="bi bi-calculator me-1"></i>
-                                                        {{ carton.numberOfHolograms | number }} holograms
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                                (click)="removeSavedCarton(i)" title="Remove this roll">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                @for (group of getSavedCartonGroups(); track $index; let i = $index) {
+                                <div class="carton-box mb-3">
+                                    <div class="carton-box__header">
+                                        <div class="carton-box__icon">
+                                            <i class="bi bi-box-seam"></i>
                                         </div>
+                                        <div class="carton-box__meta">
+                                            <span class="carton-box__name">{{ getCleanCartoonNumber(group.baseCartoonNumber) }}</span>
+                                            @if (group.type) {
+                                            <span class="carton-box__type-badge">{{ group.type }}</span>
+                                            }
+                                            <span class="carton-box__rolls">
+                                                <i class="bi bi-list-ol me-1"></i>{{ group.rolls.length }} roll(s)
+                                            </span>
+                                        </div>
+                                        <button type="button" class="carton-box__delete" (click)="removeSavedCarton(group.baseCartoonNumber)" title="Remove this carton">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="carton-box__table-wrap">
+                                        <table class="carton-box__table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center" style="width:44px;">#</th>
+                                                    <th>Roll No.</th>
+                                                    <th>From</th>
+                                                    <th>To</th>
+                                                    <th class="text-end">Qty</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (r of group.rolls; track $index; let j = $index) {
+                                                <tr>
+                                                    <td class="text-center text-muted">{{ j + 1 }}</td>
+                                                    <td class="font-monospace fw-semibold">{{ getCleanCartoonNumber(r.cartoonNumber) }}</td>
+                                                    <td class="font-monospace text-secondary">{{ r.fromSerial }}</td>
+                                                    <td class="font-monospace text-secondary">{{ r.toSerial }}</td>
+                                                    <td class="text-end fw-bold text-success">{{ r.numberOfHolograms | number }}</td>
+                                                </tr>
+                                                }
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                                 }
@@ -484,8 +676,15 @@
                             <div class="card-body">
                                 <div class="row text-center">
                                     <div class="col-4">
-                                        <h5 class="text-primary mb-0">{{ savedCartons.length }}</h5>
+                                        @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+                                        <h5 class="text-primary mb-0">
+                                            {{ getSavedCartonCount() }} / {{ getExpectedCartonCount() }}
+                                        </h5>
+                                        <small class="text-muted">Cartons (Current/Expected)</small>
+                                        } @else {
+                                        <h5 class="text-primary mb-0">{{ getSavedCartonCount() }}</h5>
                                         <small class="text-muted">Cartons</small>
+                                        }
                                     </div>
                                     <div class="col-4">
                                         <h5 class="mb-0"
@@ -532,7 +731,7 @@
             selectedRecordForUpdate.numberOfHolograms) {
             <div class="alert alert-success d-flex align-items-center mt-3" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
-                <div>✅ Perfect! All {{ savedCartons.length }} carton(s) have been entered with a total of {{
+                <div>✅ Perfect! All {{ getSavedCartonCount() }} carton(s) have been entered with a total of {{
                     totalCalculatedHolograms | number }} holograms matching the expected quantity. You can now confirm
                     the arrival.</div>
             </div>
@@ -542,7 +741,7 @@
                 selectedRecordForUpdate.numberOfHolograms) { <div
                 class="alert alert-info d-flex align-items-center mt-3" role="alert">
                 <i class="bi bi-info-circle-fill me-2"></i>
-                <div>📦 You have entered {{ savedCartons.length }} carton(s) with {{ totalCalculatedHolograms | number
+                <div>📦 You have entered {{ getSavedCartonCount() }} carton(s) with {{ totalCalculatedHolograms | number
                     }} holograms. Continue adding cartons to reach {{ selectedRecordForUpdate.numberOfHolograms | number
                     }} holograms.</div>
         </div>
@@ -556,7 +755,11 @@
         <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
             [disabled]="savedCartons.length === 0 || totalCalculatedHolograms !== selectedRecordForUpdate?.numberOfHolograms">
             <i class="bi bi-check-circle me-2"></i>
-            Confirm Arrival ({{ savedCartons.length }} Carton{{ savedCartons.length > 1 ? 's' : '' }})
+            @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+            Confirm Arrival ({{ getSavedCartonCount() }}/{{ getExpectedCartonCount() }} Carton{{ getExpectedCartonCount() > 1 ? 's' : '' }})
+            } @else {
+            Confirm Arrival ({{ getSavedCartonCount() }} Carton{{ getSavedCartonCount() > 1 ? 's' : '' }})
+            }
         </button>
     </div>
 </div>

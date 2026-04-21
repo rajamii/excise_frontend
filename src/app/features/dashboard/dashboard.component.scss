@@ -1587,6 +1587,32 @@ mat-card-content {
                 color: #1f2937;
             }
         }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wallet-view-toggle {
+            display: inline-flex;
+            border: 1px solid #c7d2fe;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .wallet-view-btn {
+            border-radius: 0;
+            padding: 6px 14px;
+            font-weight: 600;
+            color: #1f2937;
+
+            &.active {
+                background: #2563eb;
+                color: #ffffff;
+            }
+        }
     }
 
     .section-content {
@@ -1603,9 +1629,10 @@ mat-card-content {
 
     // Hologram overview should follow normal page scroll like stock inventory (no nested scroll region).
     .section-content.hologram-overview-content {
-        overflow-y: auto;
-        overflow-x: visible;
-        max-height: calc(100vh - 140px);
+        // Let the main layout's `.content-wrapper` own the scrollbar.
+        // Avoid nested scrolling here so the user can reach tabs like "Rolls".
+        overflow: visible;
+        max-height: none;
         height: auto;
         min-height: auto;
     }

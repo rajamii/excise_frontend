@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { Observable, ReplaySubject, of, shareReplay, catchError, tap } from 'rxjs';
 import { TokenUtil } from '../../shared/utils/token.util';
 import { Router } from '@angular/router';
+import { RoleService } from './role.service';
 
 @Injectable({
   providedIn: 'root',
@@ -26,6 +27,7 @@ export class AccountService {
 
   constructor(
     private http: HttpClient,
+    private roleService: RoleService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
@@ -250,6 +252,8 @@ export class AccountService {
       clearTimeout(this.logoutTimer);
       this.logoutTimer = undefined;
     }
+
+    this.roleService.clearCurrentUser();
 
     if (isPlatformBrowser(this.platformId)) {
       const blockedUsers = localStorage.getItem(this.blockedUsersStorageKey);

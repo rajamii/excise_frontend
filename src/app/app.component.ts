@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, HostListener } from '@angular/core';
 import {
   Router,
   NavigationCancel,
@@ -36,6 +36,17 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'excise_frontend';
   //showHeaderFooter = true; // Default to showing header/footer
   showCarousel = false;
+  isOffline = typeof navigator !== 'undefined' ? !navigator.onLine : false;
+
+  @HostListener('window:offline')
+  setNetworkOffline() {
+    this.isOffline = true;
+  }
+
+  @HostListener('window:online')
+  setNetworkOnline() {
+    this.isOffline = false;
+  }
   private readonly destroy$ = new Subject<void>();
 
   private router = inject(Router);
@@ -44,6 +55,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private inactivityService = inject(InactivityService);
   private dialog = inject(MatDialog);
   readonly loading = inject(UiLoadingService);
+  private wasAuthenticated = false;
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
@@ -69,13 +81,17 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((user) => {
         if (user) {
-          this.inactivityService.startWatching();
+          const isOnLoginScreen = this.normalizePath(this.router.url).startsWith('/login');
+          const resetStoredActivity = !this.wasAuthenticated && isOnLoginScreen;
+          this.wasAuthenticated = true;
+          this.inactivityService.startWatching(resetStoredActivity);
           return;
         }
 
         // Ensure stale dialogs from previous protected screens are removed
         // when session expires and app navigates to login.
         this.dialog.closeAll();
+        this.wasAuthenticated = false;
         this.inactivityService.stopWatching();
       });
   }

@@ -20,6 +20,25 @@ const routes: Routes = [
           description: 'Role-based unified dashboard'
         },
       },
+      {
+        path: 'wallet-recharge/success',
+        loadComponent: () =>
+          import('../licensee/supplyChain/payments/wallet-recharge-success/wallet-recharge-success.component').then(
+            (m) => m.WalletRechargeSuccessComponent
+          ),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'dashboard.view' }
+      },
+      // Officer in charge: open hologram inventory/overview as a full page (not inside dashboard section card)
+      {
+        path: 'hologram-overview',
+        loadComponent: () =>
+          import('../licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component').then(
+            (m) => m.HologramoveriewComponent,
+          ),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'dashboard.view' },
+      },
       // Site Admin master pages inside unified dashboard layout
       {
         path: 'admin/users',

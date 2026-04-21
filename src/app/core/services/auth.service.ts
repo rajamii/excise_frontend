@@ -9,6 +9,7 @@ import { AccountService } from './account.service';
 @Injectable({
   providedIn: 'root'
 })
+
 export class AuthService {
   private readonly blockedUsersStorageKey = 'frontend_blocked_users';
 
@@ -205,5 +206,15 @@ export class AuthService {
       }),
       catchError(error => throwError(() => error))
     );
+  }
+
+  // Step 1: Send email with the reset link
+  requestPasswordReset(email: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/password-reset/`, { email });
+  }
+
+  // Step 2: Confirm the new password using the token from the email
+  confirmPasswordReset(payload: { uidb64: string, token: string, new_password: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}/password-reset-confirm/`, payload);
   }
 }

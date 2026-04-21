@@ -1,7 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { EnaRequisitionService } from '../../../../core/services/ena-requisition.service';
+import { Subject, from } from 'rxjs';
+import { concatMap, takeUntil } from 'rxjs/operators';
+
+type DraftTankerRow = { permit_no?: string; tanker_no: string; bulk_liter: number | null };
+type DetailsDraft = { tankerCount: number; tankerDetails: DraftTankerRow[] };
+type RejectDialogState = {
+  open: boolean;
+  detailId: number | null;
+  referenceNo: string;
+  licenseeId: string;
+  permitNo?: string;
+  source: 'table' | 'details';
+};
 
 interface BlDetailRow {
   id: number;
@@ -10,15 +24,20 @@ interface BlDetailRow {
   licenseeId: string;
   distilleryName: string;
   tankerCount: number;
-  tankerDetails: Array<{ tanker_no: string; bulk_liter: number }>;
+  tankerDetails: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }>;
   tankerNumbers: string;
   totalBulkLiter: number;
   requestedTotalQuantity: number;
+  requisitionNumberOfPermits: number;
+  detailsPermitsNumber: string;
   approvalStatus: string;
   submittedAt: string;
   reviewedAt: string;
   reviewedBy: string;
   reviewRemarks: string;
+  editedByOic: boolean;
+  editedAt: string;
+  editedBy: string;
 }
 
 @Component({
@@ -138,7 +157,7 @@ interface BlDetailRow {
               <tr *ngFor="let row of paginatedRows">
                 <td class="ref-cell">
                   <div class="ref-primary">{{ row.referenceNo }}</div>
-                  <div class="ref-secondary">ENA submission</div>
+                  <div class="ref-secondary">{{ getPermitSummary(row) }}</div>
                 </td>
                 <td>
                   <div class="primary-text">{{ row.licenseeId || '-' }}</div>
@@ -158,6 +177,9 @@ interface BlDetailRow {
                     }">
                     {{ row.approvalStatus }}
                   </span>
+                  <span class="status-chip edited" *ngIf="row.editedByOic" title="Edited by OIC">
+                    EDITED
+                  </span>
                 </td>
                 <td>
                   <div class="remarks-cell">{{ row.reviewRemarks || 'No remarks added' }}</div>
@@ -168,7 +190,12 @@ interface BlDetailRow {
                       View Details
                     </button>
                     <div class="action-row" *ngIf="row.approvalStatus === 'PENDING'; else reviewedInfo">
-                      <button type="button" class="action-btn approve" (click)="approve(row)" [disabled]="actingId === row.id">
+                      <button
+                        type="button"
+                        class="action-btn approve"
+                        *ngIf="canApproveRow(row)"
+                        (click)="approve(row)"
+                        [disabled]="actingId === row.id">
                         Approve
                       </button>
                       <button type="button" class="action-btn reject" (click)="reject(row)" [disabled]="actingId === row.id">
@@ -220,10 +247,13 @@ interface BlDetailRow {
                     }">
                     {{ details.approvalStatus }}
                   </span>
+                  <span class="details-status-badge edited" *ngIf="details.editedByOic" title="Edited by OIC">
+                    EDITED
+                  </span>
                 </div>
                 <h3>{{ details.referenceNo }}</h3>
                 <p>{{ details.distilleryName || '-' }}</p>
-                <div class="details-meta-pills">
+              <div class="details-meta-pills">
                   <div class="details-meta-pill">
                     <span class="meta-pill-label">Licensee</span>
                     <strong>{{ details.licenseeId || '-' }}</strong>
@@ -234,15 +264,27 @@ interface BlDetailRow {
                   </div>
                 </div>
               </div>
-              <button type="button" class="details-close" (click)="closeDetailsModal()">Close</button>
             </div>
 
-            <div class="details-metrics">
-              <div class="metric-card tankers">
-                <span class="metric-label">Tankers</span>
-                <strong>{{ details.tankerCount || 0 }}</strong>
-                <small>Vehicle count in this ENA entry</small>
-              </div>
+            <div class="details-inline-error" *ngIf="detailsSaveError">
+              {{ detailsSaveError }}
+            </div>
+            <div class="details-inline-error" *ngIf="details.approvalStatus === 'PENDING' && !isPermitWise(details) && !canApproveDetails(details)">
+              Total bulk liter must match requisition total ({{ details.requestedTotalQuantity | number:'1.2-2' }}) before approval.
+            </div>
+
+              <div class="details-metrics">
+                <div class="metric-card tankers">
+                  <span class="metric-label">Tankers</span>
+                  <strong>{{
+                    detailsEditMode
+                      ? (isPermitWise(details)
+                          ? (detailsDraft?.tankerDetails?.length || 0)
+                          : (detailsDraft?.tankerCount || 0))
+                      : (details.tankerCount || 0)
+                  }}</strong>
+                  <small>Vehicle count in this ENA entry</small>
+                </div>
               <div class="metric-card quantity">
                 <span class="metric-label">Requested Qty</span>
                 <strong>{{ details.requestedTotalQuantity || 0 | number:'1.2-2' }}</strong>
@@ -250,7 +292,12 @@ interface BlDetailRow {
               </div>
               <div class="metric-card total">
                 <span class="metric-label">Total ENA</span>
-                <strong>{{ details.totalBulkLiter || 0 | number:'1.2-2' }}</strong>
+                <strong>
+                  {{
+                    (detailsEditMode ? (getDraftTotalBulkLiter() || 0) : (details.totalBulkLiter || 0))
+                      | number:'1.2-2'
+                  }}
+                </strong>
                 <small>Submitted across tanker rows</small>
               </div>
             </div>
@@ -276,26 +323,278 @@ interface BlDetailRow {
                   <h4>Tanker Manifest</h4>
                   <p>Tanker-wise ENA information submitted by the licensee.</p>
                 </div>
-                <div class="manifest-count">{{ details.tankerDetails.length }} Row{{ details.tankerDetails.length === 1 ? '' : 's' }}</div>
+                <div class="manifest-count">
+                  {{ (detailsEditMode ? (detailsDraft?.tankerDetails?.length || 0) : details.tankerDetails.length) }}
+                  Row{{ (detailsEditMode ? (detailsDraft?.tankerDetails?.length || 0) : details.tankerDetails.length) === 1 ? '' : 's' }}
+                </div>
               </div>
-              <div class="details-table-wrap">
+
+              <div class="details-edit-tools" *ngIf="detailsEditMode && isPermitWise(details)">
+                <label class="tool-field">
+                  <span>Permit</span>
+                  <select class="tool-input" [ngModel]="detailsSelectedPermitNo" (ngModelChange)="onDetailsPermitChange($event)">
+                    <option *ngFor="let permitNo of getDetailsPermitNumbers(details)" [ngValue]="permitNo">
+                      {{ formatDetailsPermitOption(details, permitNo) }}
+                    </option>
+                  </select>
+                </label>
+                <button type="button" class="tool-btn" (click)="addDraftTankerRowForSelectedPermit()" [disabled]="detailsSaving || !detailsSelectedPermitNo">
+                  + Add Tanker
+                </button>
+                <div class="tool-hint">
+                  Entered:
+                  {{ (getDraftPermitSum(detailsSelectedPermitNo) || 0) | number:'1.2-2' }}
+                </div>
+              </div>
+
+              <div class="details-edit-tools" *ngIf="!detailsEditMode && isPermitWise(details)">
+                <label class="tool-field">
+                  <span>Permit</span>
+                  <select class="tool-input" [ngModel]="detailsSelectedPermitNo" (ngModelChange)="onDetailsPermitChange($event)">
+                    <option *ngFor="let permitNo of getDetailsPermitNumbers(details)" [ngValue]="permitNo">
+                      {{ formatDetailsPermitOption(details, permitNo) }}
+                    </option>
+                  </select>
+                </label>
+                <button type="button" class="tool-btn success" (click)="approveSelectedDetails()"
+                  [disabled]="detailsSaving || permitReviewFinalizing || !detailsSelectedPermitNo">
+                  Approve Permit
+                </button>
+                <button type="button" class="tool-btn danger" (click)="rejectSelectedDetails()"
+                  [disabled]="detailsSaving || permitReviewFinalizing || !detailsSelectedPermitNo">
+                  Reject Permit
+                </button>
+                <button type="button" class="tool-btn ghost" (click)="clearSelectedPermitDecision()"
+                  [disabled]="detailsSaving || permitReviewFinalizing || !detailsSelectedPermitNo">
+                  Clear
+                </button>
+                <div class="tool-hint">
+                  Showing tanker rows for selected permit.
+                  <span *ngIf="getSelectedPermitDecisionLabel()"> | Decision: <strong>{{ getSelectedPermitDecisionLabel() }}</strong></span>
+                </div>
+              </div>
+
+                <div class="permit-review-overview"
+                *ngIf="!detailsEditMode && isPermitWise(details) && getPermitReviewDecisionRows().length > 0">
+                <div class="overview-head">
+                  <strong>Review overview</strong>
+                  <span class="overview-meta">{{ getPermitReviewProgressLabel() || (getPermitReviewDecisionRows().length + ' permit(s) selected') }}</span>
+                </div>
+                <div class="overview-list">
+                  <div class="overview-item" *ngFor="let d of getPermitReviewDecisionRows()"
+                    [ngClass]="{ 'approve': d.action === 'APPROVE', 'reject': d.action === 'REJECT' }">
+                    <div class="overview-primary">
+                      <strong>Permit {{ d.permitNo }}</strong>
+                      <span class="overview-pill" [ngClass]="{ 'approve': d.action === 'APPROVE', 'reject': d.action === 'REJECT' }">
+                        {{ d.action === 'APPROVE' ? 'Approve' : 'Reject' }}
+                      </span>
+                    </div>
+                    <div class="overview-remarks" *ngIf="d.action === 'REJECT' && d.remarks">
+                      Remarks: {{ d.remarks }}
+                    </div>
+                  </div>
+                </div>
+                <div class="details-inline-error" *ngIf="permitReviewFinalizeError">
+                  {{ permitReviewFinalizeError }}
+                </div>
+              </div>
+
+              <div class="details-edit-tools" *ngIf="detailsEditMode && !isPermitWise(details)">
+                <label class="tool-field">
+                  <span>Tankers</span>
+                  <input class="tool-input" type="number" min="1" [ngModel]="detailsDraft?.tankerCount" (ngModelChange)="onDraftTankerCountChange($event)" />
+                </label>
+                <button type="button" class="tool-btn" (click)="addDraftTankerRow()" [disabled]="detailsSaving">+ Add Tanker</button>
+                <div class="tool-hint">
+                  Remaining:
+                  {{
+                    ((details.requestedTotalQuantity || 0) - (getDraftTotalBulkLiter() || 0))
+                      | number:'1.2-2'
+                  }}
+                </div>
+              </div>
+
+              <div class="details-table-wrap" *ngIf="isPermitWise(details); else nonPermitDetailsTable">
                 <table class="details-table">
                   <thead>
                     <tr>
                       <th>#</th>
                       <th>Tanker Number</th>
+                      <th class="text-end">Expected BL</th>
                       <th>Bulk Liter</th>
+                      <th *ngIf="detailsEditMode" class="text-end">Edit</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let item of details.tankerDetails; let i = index">
-                      <td>{{ i + 1 }}</td>
-                      <td>{{ item.tanker_no || '-' }}</td>
-                      <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
-                    </tr>
+                    <ng-container *ngIf="detailsEditMode; else permitViewRows">
+                      <tr *ngFor="let draftIndex of detailsVisibleDraftPermitIndices; let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td>
+                          <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].tanker_no" placeholder="Tanker no" />
+                        </td>
+                        <td class="text-end">
+                          {{ getExpectedBulkLiterForPermit(details, detailsSelectedPermitNo) | number:'1.2-2' }}
+                        </td>
+                        <td>
+                          <input class="details-input" type="number" min="0" step="0.01" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].bulk_liter" placeholder="0.00" />
+                        </td>
+                        <td class="text-end">
+                          <button type="button" class="mini-btn danger" (click)="removeDraftTankerRow(draftIndex)" [disabled]="detailsSaving">Remove</button>
+                        </td>
+                      </tr>
+                    </ng-container>
+                    <ng-template #permitViewRows>
+                      <tr *ngFor="let item of detailsVisiblePermitViewRows; let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td>{{ item.tanker_no || '-' }}</td>
+                        <td class="text-end">
+                          {{ getExpectedBulkLiterForPermit(details, detailsSelectedPermitNo) | number:'1.2-2' }}
+                        </td>
+                        <td>{{ item.bulk_liter || 0 | number:'1.2-2' }}</td>
+                      </tr>
+                    </ng-template>
                   </tbody>
                 </table>
               </div>
+
+              <ng-template #nonPermitDetailsTable>
+                <div class="details-table-wrap">
+                  <table class="details-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Tanker Number</th>
+                        <th>Bulk Liter</th>
+                        <th *ngIf="detailsEditMode" class="text-end">Edit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of (detailsEditMode ? (detailsDraft?.tankerDetails || []) : details.tankerDetails); let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td>
+                          <ng-container *ngIf="!detailsEditMode; else editTankerNo2">
+                            {{ item.tanker_no || '-' }}
+                          </ng-container>
+                          <ng-template #editTankerNo2>
+                            <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[i].tanker_no" placeholder="Tanker no" />
+                          </ng-template>
+                        </td>
+                        <td>
+                          <ng-container *ngIf="!detailsEditMode; else editBulkLiter2">
+                            {{ item.bulk_liter || 0 | number:'1.2-2' }}
+                          </ng-container>
+                          <ng-template #editBulkLiter2>
+                            <input class="details-input" type="number" min="0" step="0.01" [(ngModel)]="detailsDraft!.tankerDetails[i].bulk_liter" placeholder="0.00" />
+                          </ng-template>
+                        </td>
+                        <td *ngIf="detailsEditMode" class="text-end">
+                          <button type="button" class="mini-btn danger" (click)="removeDraftTankerRow(i)" [disabled]="detailsSaving">Remove</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-template>
+            </div>
+
+            <div class="details-footer" (click)="$event.stopPropagation()">
+              <div class="details-footer-left">
+                <button
+                  type="button"
+                  class="details-action-btn secondary"
+                  *ngIf="details.approvalStatus === 'PENDING'"
+                  (click)="detailsEditMode ? saveDetailsDraft() : toggleDetailsEditMode()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  {{ detailsEditMode ? (detailsSaving ? 'Saving...' : 'Save') : 'Edit' }}
+                </button>
+              </div>
+              <div class="details-footer-right">
+                <button
+                  type="button"
+                  class="details-action-btn success"
+                  *ngIf="details.approvalStatus === 'PENDING' && !isPermitWise(details) && canApproveDetails(details)"
+                  (click)="approveSelectedDetails()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  {{
+                    detailsSaving
+                      ? 'Please wait...'
+                      : 'Approve'
+                  }}
+                </button>
+                <button
+                  type="button"
+                  class="details-action-btn danger"
+                  *ngIf="details.approvalStatus === 'PENDING' && !isPermitWise(details)"
+                  (click)="rejectSelectedDetails()"
+                  [disabled]="detailsSaving || actingId === details.id">
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  class="details-action-btn success"
+                  *ngIf="details.approvalStatus === 'PENDING' && isPermitWise(details)"
+                  (click)="finalizePermitReview()"
+                  [disabled]="detailsEditMode || !canFinalizePermitReview()">
+                  {{
+                    permitReviewFinalizing
+                      ? 'Finalizing...'
+                      : (canFinalizePermitReview()
+                          ? ('Finalize ' + getPermitReviewDecisionRows().length + ' Permit(s)')
+                          : ('Finalize (' + getPermitReviewProgressLabel() + ')'))
+                  }}
+                </button>
+                <button type="button" class="details-action-btn ghost" (click)="closeDetailsModal()">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="rejectDialog.open">
+        <div class="confirm-backdrop" (click)="closeRejectDialog()"></div>
+        <div class="confirm-shell" role="dialog" aria-modal="true">
+          <div class="confirm-card" (click)="$event.stopPropagation()">
+            <div class="confirm-head">
+              <div class="confirm-icon" aria-hidden="true">!</div>
+              <div class="confirm-title">
+                <h3>{{ rejectDialog.permitNo ? ('Reject Permit ' + rejectDialog.permitNo) : 'Reject BL Details' }}</h3>
+                <p>
+                  If you proceed, licensee (<strong>{{ rejectDialog.licenseeId || 'N/A' }}</strong>) must re-enter the tanker details again.
+                </p>
+              </div>
+              <button type="button" class="confirm-close" (click)="closeRejectDialog()">×</button>
+            </div>
+
+            <div class="confirm-body">
+              <div class="confirm-row">
+                <span class="confirm-label">Reference No</span>
+                <span class="confirm-value">{{ rejectDialog.referenceNo }}</span>
+              </div>
+
+              <div class="confirm-row" *ngIf="rejectDialog.permitNo">
+                <span class="confirm-label">Permit No</span>
+                <span class="confirm-value">{{ rejectDialog.permitNo }}</span>
+              </div>
+
+              <label class="confirm-field">
+                <span class="confirm-label">Rejection Remarks</span>
+                <textarea
+                  class="confirm-textarea"
+                  rows="3"
+                  [disabled]="rejectSubmitting"
+                  [(ngModel)]="rejectRemarksDraft"
+                  placeholder="Enter reason for rejection (required)"></textarea>
+              </label>
+            </div>
+
+            <div class="confirm-actions">
+              <button type="button" class="confirm-btn ghost" (click)="closeRejectDialog()" [disabled]="rejectSubmitting">
+                Cancel
+              </button>
+              <button type="button" class="confirm-btn danger" (click)="confirmReject()"
+                [disabled]="rejectSubmitting || !rejectDialog.detailId || (rejectDialog.permitNo && !(rejectRemarksDraft || '').trim())">
+                {{ rejectSubmitting ? 'Rejecting...' : 'Reject' }}
+              </button>
             </div>
           </div>
         </div>
@@ -789,6 +1088,14 @@ interface BlDetailRow {
       border-color: #f6b9b9;
     }
 
+    .status-chip.edited {
+      margin-left: 0.45rem;
+      color: #854d0e;
+      background: #fef9c3;
+      border-color: #fde68a;
+      min-width: 92px;
+    }
+
     .remarks-cell {
       max-width: 220px;
       color: #475569;
@@ -884,11 +1191,195 @@ interface BlDetailRow {
       line-height: 1.6;
     }
 
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.62);
+      backdrop-filter: blur(10px);
+      z-index: 1060;
+    }
+
+    .confirm-shell {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      z-index: 1070;
+    }
+
+    .confirm-card {
+      width: min(560px, 100%);
+      border-radius: 22px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 34px 90px rgba(15, 23, 42, 0.36);
+      overflow: hidden;
+    }
+
+    .confirm-head {
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+      padding: 1.05rem 1.1rem;
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), rgba(248, 113, 113, 0.12));
+      border-bottom: 1px solid rgba(248, 113, 113, 0.24);
+    }
+
+    .confirm-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-weight: 1000;
+      color: #991b1b;
+      background: rgba(254, 226, 226, 0.9);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      flex: 0 0 auto;
+    }
+
+    .confirm-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .confirm-title h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .confirm-title p {
+      margin: 0.25rem 0 0;
+      color: #475569;
+      line-height: 1.5;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    .confirm-close {
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(255, 255, 255, 0.9);
+      color: #0f172a;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      font-size: 1.2rem;
+      font-weight: 900;
+      cursor: pointer;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+    }
+
+    .confirm-body {
+      padding: 1rem 1.1rem 0.9rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .confirm-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 16px;
+      background: #f1f5f9;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .confirm-label {
+      font-weight: 900;
+      font-size: 0.78rem;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .confirm-value {
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .confirm-field {
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .confirm-textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      padding: 0.75rem 0.85rem;
+      font-weight: 700;
+      color: #0f172a;
+      background: #ffffff;
+      outline: none;
+      resize: vertical;
+      min-height: 92px;
+    }
+
+    .confirm-textarea:focus {
+      border-color: rgba(37, 99, 235, 0.65);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+    }
+
+    .confirm-actions {
+      padding: 0.9rem 1.1rem 1.1rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(248, 250, 252, 0.85);
+    }
+
+    .confirm-btn {
+      height: 42px;
+      min-width: 118px;
+      border-radius: 999px;
+      font-weight: 900;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .confirm-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .confirm-btn.ghost {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.55);
+    }
+
+    .confirm-btn.danger {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: #ffffff;
+      box-shadow: 0 18px 34px rgba(220, 38, 38, 0.22);
+    }
+
+    .confirm-btn:not(:disabled):hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+      box-shadow: 0 18px 34px rgba(15, 23, 42, 0.14);
+    }
+
 
     .details-modal-backdrop {
       position: fixed;
       inset: 0;
-      background: linear-gradient(180deg, rgba(241, 245, 249, 0.42), rgba(226, 232, 240, 0.62));
+      background:
+        radial-gradient(circle at 20% 10%, rgba(30, 64, 175, 0.35), transparent 55%),
+        radial-gradient(circle at 80% 0%, rgba(15, 23, 42, 0.55), transparent 60%),
+        rgba(15, 23, 42, 0.55);
       backdrop-filter: blur(10px);
       z-index: 1040;
     }
@@ -904,29 +1395,46 @@ interface BlDetailRow {
     }
 
     .details-modal-card {
+      position: relative;
       width: min(960px, 100%);
       max-height: calc(100vh - 3rem);
       overflow: auto;
-      background:
-        radial-gradient(circle at top right, rgba(191, 219, 254, 0.38), transparent 22%),
-        radial-gradient(circle at top left, rgba(224, 242, 254, 0.52), transparent 28%),
-        linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
       border-radius: 30px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 28px 70px rgba(148, 163, 184, 0.28);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow:
+        0 34px 90px rgba(15, 23, 42, 0.32),
+        0 12px 34px rgba(15, 23, 42, 0.18);
       padding: 1.6rem;
     }
 
+    .details-modal-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 190px;
+      border-radius: 30px 30px 24px 24px;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.45), transparent 55%),
+        radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.35), transparent 60%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 64, 175, 0.9));
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .details-hero {
+      position: relative;
+      z-index: 1;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: flex-start;
       gap: 1rem;
       padding: 1.1rem 1.15rem 1.25rem;
       margin-bottom: 1.2rem;
       border-radius: 24px;
-      background: linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(248, 250, 252, 0.98));
-      border: 1px solid #dbeafe;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
     }
 
     .details-modal-title {
@@ -949,9 +1457,9 @@ interface BlDetailRow {
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #1d4ed8;
-      background: #ffffff;
-      border: 1px solid #bfdbfe;
+      color: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       font-weight: 800;
     }
 
@@ -970,35 +1478,42 @@ interface BlDetailRow {
     }
 
     .details-status-badge.pending {
-      color: #8a5a00;
-      background: #fff7d6;
-      border-color: #f6df93;
+      color: #facc15;
+      background: rgba(250, 204, 21, 0.12);
+      border-color: rgba(250, 204, 21, 0.28);
     }
 
     .details-status-badge.approved {
-      color: #166534;
-      background: #dcfce7;
-      border-color: #9fdfb3;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.12);
+      border-color: rgba(74, 222, 128, 0.28);
     }
 
     .details-status-badge.rejected {
-      color: #991b1b;
-      background: #fee2e2;
-      border-color: #f6b9b9;
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.28);
+    }
+
+    .details-status-badge.edited {
+      color: #fde047;
+      background: rgba(253, 224, 71, 0.12);
+      border-color: rgba(253, 224, 71, 0.28);
+      min-width: 96px;
     }
 
     .details-modal-title h3 {
       margin: 0;
       font-size: 2rem;
       font-weight: 900;
-      color: #0f172a;
+      color: #f8fafc;
       letter-spacing: -0.03em;
       line-height: 1.05;
     }
 
     .details-modal-title p {
       margin: 0.55rem 0 0;
-      color: #64748b;
+      color: rgba(226, 232, 240, 0.95);
       font-size: 1.03rem;
       line-height: 1.55;
       max-width: 44rem;
@@ -1015,9 +1530,12 @@ interface BlDetailRow {
       min-width: 210px;
       padding: 0.75rem 0.9rem;
       border-radius: 18px;
-      background: rgba(255, 255, 255, 0.88);
-      border: 1px solid #dce9f7;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.9));
+      border: 1px solid rgba(226, 232, 240, 0.7);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 18px 34px rgba(15, 23, 42, 0.22);
+      backdrop-filter: blur(10px);
     }
 
     .meta-pill-label {
@@ -1025,33 +1543,130 @@ interface BlDetailRow {
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #64748b;
+      color: #334155;
       margin-bottom: 0.35rem;
       font-weight: 800;
     }
 
     .details-meta-pill strong {
-      color: #1e293b;
+      color: #0f172a;
       font-size: 0.98rem;
       font-weight: 800;
     }
 
     .details-close {
-      border: 1px solid #d7e1ec;
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 999px;
-      background: #ffffff;
-      color: #334155;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(248, 250, 252, 0.95);
       padding: 0.82rem 1.2rem;
       font-weight: 800;
-      box-shadow: 0 8px 22px rgba(148, 163, 184, 0.14);
+      box-shadow: 0 18px 34px rgba(15, 23, 42, 0.22);
       transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .details-close:hover {
-      background: #f8fbff;
-      border-color: #bfd2e6;
-      box-shadow: 0 12px 26px rgba(148, 163, 184, 0.18);
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 22px 44px rgba(15, 23, 42, 0.26);
       transform: translateY(-1px);
+    }
+
+    .details-footer {
+      position: sticky;
+      bottom: -1px;
+      margin: 1.1rem -1.6rem -1.6rem;
+      padding: 0.95rem 1.6rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(248, 250, 252, 0.86);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 0 0 30px 30px;
+      box-shadow: 0 -18px 30px rgba(15, 23, 42, 0.10);
+    }
+
+    .details-footer-left,
+    .details-footer-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      align-items: center;
+    }
+
+    .details-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.78rem 1.15rem;
+      min-width: 118px;
+      height: 44px;
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .details-action-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .details-action-btn.secondary {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.55);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
+    }
+
+    .details-action-btn.primary {
+      background: #1d4ed8;
+      color: #ffffff;
+    }
+
+    .details-action-btn.success {
+      background: linear-gradient(135deg, #15803d, #16a34a);
+      color: #ffffff;
+    }
+
+    .details-action-btn.danger {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: #ffffff;
+    }
+
+    .details-action-btn.ghost {
+      background: rgba(15, 23, 42, 0.06);
+      border-color: rgba(148, 163, 184, 0.45);
+      color: #0f172a;
+    }
+
+    .details-action-btn:not(:disabled):hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    }
+
+    .details-action-btn.ghost:not(:disabled):hover {
+      filter: none;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+    }
+
+    .details-inline-error {
+      margin: -0.4rem 0 1rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 16px;
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      color: #9f1239;
+      font-weight: 700;
+      font-size: 0.9rem;
     }
 
     .details-metrics {
@@ -1064,11 +1679,13 @@ interface BlDetailRow {
     .metric-card,
     .info-box {
       position: relative;
-      background: linear-gradient(180deg, #ffffff, #f9fbff);
-      border: 1px solid #dbe7f2;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
+      border: 1px solid rgba(148, 163, 184, 0.35);
       border-radius: 22px;
       padding: 1.05rem 1.1rem;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        0 14px 34px rgba(15, 23, 42, 0.08);
     }
 
     .metric-card::before {
@@ -1148,8 +1765,9 @@ interface BlDetailRow {
     .details-table-card {
       padding: 1rem;
       border-radius: 24px;
-      background: linear-gradient(180deg, #ffffff, #f9fbff);
-      border: 1px solid #dbe7f2;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.94));
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
     }
 
     .details-table-head {
@@ -1158,6 +1776,187 @@ interface BlDetailRow {
       align-items: flex-start;
       gap: 1rem;
       margin-bottom: 0.9rem;
+    }
+
+    .details-edit-tools {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 0 0 0.85rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 18px;
+      background: rgba(239, 246, 255, 0.75);
+      border: 1px solid #dbeafe;
+    }
+
+    .tool-field {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .tool-field span {
+      font-size: 0.85rem;
+      color: #334155;
+    }
+
+    .tool-input {
+      width: 88px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.55rem 0.65rem;
+      background: #ffffff;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .tool-btn {
+      border: 1px solid #bfdbfe;
+      background: #ffffff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 0.55rem 0.9rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .tool-btn.success {
+      border-color: #bbf7d0;
+      color: #166534;
+      background: #f0fdf4;
+    }
+
+    .tool-btn.danger {
+      border-color: #fecaca;
+      color: #b91c1c;
+      background: #fef2f2;
+    }
+
+    .tool-btn.ghost {
+      border-color: #e2e8f0;
+      color: #334155;
+      background: #ffffff;
+    }
+
+    .tool-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .tool-hint {
+      margin-left: auto;
+      color: #334155;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .permit-review-overview {
+      margin-top: 0.75rem;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: 18px;
+      padding: 0.85rem 0.95rem;
+    }
+
+    .overview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      color: #0f172a;
+      margin-bottom: 0.6rem;
+    }
+
+    .overview-meta {
+      color: #475569;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .overview-list {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .overview-item {
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .overview-item.approve {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .overview-item.reject {
+      border-color: #fecaca;
+      background: #fef2f2;
+    }
+
+    .overview-primary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .overview-pill {
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      font-weight: 900;
+      font-size: 0.85rem;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #334155;
+    }
+
+    .overview-pill.approve {
+      border-color: #bbf7d0;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .overview-pill.reject {
+      border-color: #fecaca;
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .overview-remarks {
+      margin-top: 0.35rem;
+      color: #334155;
+      font-weight: 800;
+      font-size: 0.9rem;
+      word-break: break-word;
+    }
+
+    .details-input {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.55rem 0.65rem;
+      background: #ffffff;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .mini-btn {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.4rem 0.7rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .mini-btn.danger {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #991b1b;
     }
 
     .details-table-head h4 {
@@ -1293,8 +2092,10 @@ interface BlDetailRow {
     }
   `]
 })
-export class OicBlDetailsComponent implements OnInit {
+export class OicBlDetailsComponent implements OnInit, OnDestroy {
   private enaRequisitionService = inject(EnaRequisitionService);
+  private route = inject(ActivatedRoute);
+  private destroy$ = new Subject<void>();
 
   loading = false;
   errorMessage = '';
@@ -1303,6 +2104,20 @@ export class OicBlDetailsComponent implements OnInit {
   searchTerm = '';
   actingId: number | null = null;
   selectedDetailsRow: BlDetailRow | null = null;
+  detailsEditMode = false;
+  detailsDraft: DetailsDraft | null = null;
+  detailsSelectedPermitNo = '';
+  detailsVisiblePermitViewRows: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }> = [];
+  detailsVisibleDraftPermitIndices: number[] = [];
+  detailsSaving = false;
+  detailsSaveError = '';
+  permitReviewDecisionByPermit: Record<string, 'APPROVE' | 'REJECT' | ''> = {};
+  permitReviewRemarksByPermit: Record<string, string> = {};
+  permitReviewFinalizeError = '';
+  permitReviewFinalizing = false;
+  rejectDialog: RejectDialogState = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table', permitNo: '' };
+  rejectRemarksDraft = '';
+  rejectSubmitting = false;
   selectedMonth: string = '';
   fromDate: string = '';
   toDate: string = '';
@@ -1316,7 +2131,20 @@ export class OicBlDetailsComponent implements OnInit {
     const currentMonth = currentDate.toISOString().slice(0, 7); // YYYY-MM format
     this.selectedMonth = currentMonth;
     
+    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      const focus = String(params.get('focus') || '').toLowerCase();
+      if (focus === 'pending') {
+        this.reviewStatus = 'PENDING';
+        this.resetPagination();
+      }
+    });
+
     this.loadRows();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadRows(): void {
@@ -1430,66 +2258,573 @@ export class OicBlDetailsComponent implements OnInit {
 
   openDetailsModal(row: BlDetailRow): void {
     this.selectedDetailsRow = row;
+    this.detailsEditMode = false;
+    this.detailsDraft = this.buildDetailsDraft(row);
+    const permits = this.getDetailsPermitNumbers(row);
+    this.detailsSelectedPermitNo = permits[0] || '';
+    this.refreshDetailsPermitRows();
+    this.detailsSaving = false;
+    this.detailsSaveError = '';
+    this.permitReviewDecisionByPermit = {};
+    this.permitReviewRemarksByPermit = {};
+    this.permitReviewFinalizeError = '';
+    this.permitReviewFinalizing = false;
   }
 
   closeDetailsModal(): void {
     this.selectedDetailsRow = null;
+    this.detailsEditMode = false;
+    this.detailsDraft = null;
+    this.detailsSelectedPermitNo = '';
+    this.detailsVisiblePermitViewRows = [];
+    this.detailsVisibleDraftPermitIndices = [];
+    this.detailsSaving = false;
+    this.detailsSaveError = '';
+    this.permitReviewDecisionByPermit = {};
+    this.permitReviewRemarksByPermit = {};
+    this.permitReviewFinalizeError = '';
+    this.permitReviewFinalizing = false;
   }
 
   approve(row: BlDetailRow): void {
-    if (!row.id || this.actingId === row.id) {
+    // As per UX: clicking "Approve" should first open the details modal where OIC can edit and then approve.
+    this.openDetailsModal(row);
+  }
+
+  toggleDetailsEditMode(): void {
+    if (!this.selectedDetailsRow) return;
+    if (this.selectedDetailsRow.approvalStatus !== 'PENDING') return;
+
+    this.detailsSaveError = '';
+    this.detailsEditMode = !this.detailsEditMode;
+    if (this.detailsEditMode && !this.detailsDraft) {
+      this.detailsDraft = this.buildDetailsDraft(this.selectedDetailsRow);
+    }
+    if (!this.detailsEditMode) {
+      this.detailsDraft = this.buildDetailsDraft(this.selectedDetailsRow);
+    }
+
+    const permits = this.getDetailsPermitNumbers(this.selectedDetailsRow);
+    if (this.isPermitWise(this.selectedDetailsRow) && (!this.detailsSelectedPermitNo || !permits.includes(this.detailsSelectedPermitNo))) {
+      this.detailsSelectedPermitNo = permits[0] || '';
+    }
+    this.refreshDetailsPermitRows();
+  }
+
+  onDetailsPermitChange(value: any): void {
+    this.detailsSelectedPermitNo = String(value || '').trim();
+    this.refreshDetailsPermitRows();
+  }
+
+  getDetailsPermitNumbers(details: BlDetailRow | null | undefined): string[] {
+    const rows: any[] = this.detailsEditMode
+      ? (this.detailsDraft?.tankerDetails as any[]) || []
+      : (details?.tankerDetails as any[]) || [];
+    const set = new Set<string>();
+    for (const row of rows) {
+      const token = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+      if (token) set.add(token);
+    }
+    const list = Array.from(set);
+    list.sort((a, b) => {
+      const an = Number(a);
+      const bn = Number(b);
+      const aIsNum = Number.isFinite(an) && String(an) === a;
+      const bIsNum = Number.isFinite(bn) && String(bn) === b;
+      if (aIsNum && bIsNum) return an - bn;
+      return a.localeCompare(b);
+    });
+    return list;
+  }
+
+  private computeExpectedByPermit(details: BlDetailRow | null | undefined): Record<string, number> {
+    const permitNos = this.resolveRequisitionPermitNumbers(details);
+    const requested = Number(details?.requestedTotalQuantity ?? 0);
+    if (!Number.isFinite(requested) || requested <= 0 || permitNos.length === 0) return {};
+
+    const factor = 100;
+    const base = Math.floor((requested / permitNos.length) * factor) / factor;
+    let running = 0;
+    const out: Record<string, number> = {};
+    for (let i = 0; i < permitNos.length; i++) {
+      const permitNo = permitNos[i];
+      const expected = i === permitNos.length - 1 ? Math.round((requested - running) * factor) / factor : base;
+      running += expected;
+      out[permitNo] = expected;
+    }
+    return out;
+  }
+
+  private resolveRequisitionPermitNumbers(details: BlDetailRow | null | undefined): string[] {
+    const raw = String(details?.detailsPermitsNumber ?? '').trim();
+    const tokens = raw
+      .split(',')
+      .map((x) => String(x || '').trim())
+      .filter(Boolean);
+    if (tokens.length > 0) {
+      return tokens;
+    }
+
+    const count = Math.max(0, Math.floor(Number(details?.requisitionNumberOfPermits ?? 0) || 0));
+    if (count > 0) {
+      return Array.from({ length: count }, (_, i) => String(i + 1));
+    }
+
+    // Fallback: derive only from the submitted tanker details.
+    return this.getDetailsPermitNumbers(details);
+  }
+
+  getExpectedBulkLiterForPermit(details: BlDetailRow | null | undefined, permitNo: string): number {
+    const token = String(permitNo || '').trim();
+    if (!token) return 0;
+    const expectedMap = this.computeExpectedByPermit(details);
+    const expected = Number(expectedMap[token] ?? 0) || 0;
+    return expected;
+  }
+
+  getDraftPermitSum(permitNo: string): number {
+    const token = String(permitNo || '').trim();
+    if (!token) return 0;
+    const rows = (this.detailsDraft?.tankerDetails || []) as any[];
+    return rows.reduce((sum, row) => {
+      const rowPermit = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+      if (rowPermit !== token) return sum;
+      const liters = Number(row?.bulk_liter ?? 0);
+      return sum + (Number.isFinite(liters) ? liters : 0);
+    }, 0);
+  }
+
+  formatDetailsPermitOption(details: BlDetailRow, permitNo: string): string {
+    const expectedMap = this.computeExpectedByPermit(details);
+    const expected = Number(expectedMap[String(permitNo || '').trim()] ?? 0) || 0;
+    const sum = this.detailsEditMode ? this.getDraftPermitSum(permitNo) : this.getDetailsPermitSum(details, permitNo);
+    const token = String(permitNo || '').trim();
+    const decision = String(this.permitReviewDecisionByPermit[token] || '');
+    const suffix = decision === 'APPROVE' ? ' (will approve)' : decision === 'REJECT' ? ' (will reject)' : '';
+    return `${permitNo} (${sum.toFixed(2)} / ${expected.toFixed(2)})${suffix}`;
+  }
+
+  private getDetailsPermitSum(details: BlDetailRow, permitNo: string): number {
+    const token = String(permitNo || '').trim();
+    if (!token) return 0;
+    const rows = (details?.tankerDetails || []) as any[];
+    return rows.reduce((sum, row) => {
+      const rowPermit = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+      if (rowPermit !== token) return sum;
+      const liters = Number(row?.bulk_liter ?? 0);
+      return sum + (Number.isFinite(liters) ? liters : 0);
+    }, 0);
+  }
+
+  private refreshDetailsPermitRows(): void {
+    const details = this.selectedDetailsRow;
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+
+    this.detailsVisiblePermitViewRows = [];
+    this.detailsVisibleDraftPermitIndices = [];
+
+    if (!details || !token) return;
+
+    if (this.detailsEditMode) {
+      const rows: any[] = Array.isArray(this.detailsDraft?.tankerDetails) ? (this.detailsDraft!.tankerDetails as any[]) : [];
+      rows.forEach((row, index) => {
+        const permit = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+        if (permit === token) {
+          this.detailsVisibleDraftPermitIndices.push(index);
+        }
+      });
       return;
     }
-    this.actingId = row.id;
-    this.enaRequisitionService.reviewRequisitionArrivalDetails(row.id, 'APPROVE').subscribe({
+
+    const rows: any[] = Array.isArray(details?.tankerDetails) ? (details.tankerDetails as any[]) : [];
+    this.detailsVisiblePermitViewRows = rows.filter((row) => String(row?.permit_no ?? row?.permitNo ?? '').trim() === token);
+  }
+
+  // Backward-compatible helpers (older template references)
+  getDraftEntriesForSelectedPermit(): Array<{ index: number; row: DraftTankerRow }> {
+    const rows = this.detailsDraft?.tankerDetails || [];
+    return this.detailsVisibleDraftPermitIndices.map((index) => ({ index, row: rows[index] }));
+  }
+
+  getDetailsEntriesForSelectedPermit(details: BlDetailRow): Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }> {
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!details || !token) return [];
+    if (!this.detailsEditMode && this.selectedDetailsRow?.id === details.id && this.detailsVisiblePermitViewRows.length > 0) {
+      return this.detailsVisiblePermitViewRows;
+    }
+    const rows: any[] = Array.isArray(details?.tankerDetails) ? (details.tankerDetails as any[]) : [];
+    return rows.filter((row) => String(row?.permit_no ?? row?.permitNo ?? '').trim() === token);
+  }
+
+  addDraftTankerRowForSelectedPermit(): void {
+    if (!this.detailsDraft) return;
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!token) return;
+    this.detailsDraft.tankerDetails.push({ permit_no: token, tanker_no: '', bulk_liter: null });
+    this.detailsDraft.tankerCount = Math.max(1, this.detailsDraft.tankerDetails.length);
+    this.refreshDetailsPermitRows();
+  }
+
+  onDraftTankerCountChange(value: any): void {
+    if (!this.detailsDraft) return;
+    const next = Math.max(1, Number(value) || 1);
+    this.detailsDraft.tankerCount = next;
+
+    const rows = this.detailsDraft.tankerDetails;
+    while (rows.length < next) {
+      rows.push({ tanker_no: '', bulk_liter: null });
+    }
+    while (rows.length > next) {
+      rows.pop();
+    }
+  }
+
+  addDraftTankerRow(): void {
+    if (!this.detailsDraft) return;
+    this.detailsDraft.tankerCount = Math.max(1, (this.detailsDraft.tankerCount || 0) + 1);
+    this.detailsDraft.tankerDetails.push({ tanker_no: '', bulk_liter: null });
+  }
+
+  removeDraftTankerRow(index: number): void {
+    if (!this.detailsDraft) return;
+    const rows = this.detailsDraft.tankerDetails;
+    if (index < 0 || index >= rows.length) return;
+    rows.splice(index, 1);
+    this.detailsDraft.tankerCount = Math.max(1, rows.length);
+    if (rows.length === 0) {
+      if (this.isPermitWise(this.selectedDetailsRow)) {
+        const permitNo = String(this.detailsSelectedPermitNo || '').trim() || undefined;
+        rows.push({ permit_no: permitNo, tanker_no: '', bulk_liter: null });
+      } else {
+        rows.push({ tanker_no: '', bulk_liter: null });
+      }
+      this.detailsDraft.tankerCount = 1;
+    }
+    this.refreshDetailsPermitRows();
+  }
+
+  getDraftTotalBulkLiter(): number {
+    const rows = this.detailsDraft?.tankerDetails || [];
+    return rows.reduce((sum, row) => {
+      const val = Number(row?.bulk_liter ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
+  }
+
+  saveDetailsDraft(approveAfterSave = false): void {
+    const details = this.selectedDetailsRow;
+    const draft = this.detailsDraft;
+    if (!details || !draft) return;
+    if (details.approvalStatus !== 'PENDING') return;
+    if (!details.requisitionId) return;
+
+    this.detailsSaving = true;
+    this.detailsSaveError = '';
+
+    const payload = {
+      tanker_count: Math.max(1, (draft.tankerDetails || []).length),
+      detail_id: details.id,
+      tanker_details: (draft.tankerDetails || []).map((row) => ({
+        permit_no: String((row as any)?.permit_no || '').trim() || undefined,
+        tanker_no: String(row?.tanker_no || '').trim(),
+        bulk_liter: Number(row?.bulk_liter ?? 0)
+      }))
+    };
+
+    this.enaRequisitionService.saveRequisitionArrivalDetails(details.requisitionId, payload).subscribe({
+      next: (response: any) => {
+        this.detailsSaving = false;
+        const updated = response?.data;
+        if (updated) {
+          this.applyUpdatedDetails(updated);
+        }
+        this.detailsEditMode = false;
+        this.detailsDraft = this.selectedDetailsRow ? this.buildDetailsDraft(this.selectedDetailsRow) : null;
+        const permits = this.getDetailsPermitNumbers(this.selectedDetailsRow);
+        this.detailsSelectedPermitNo = permits[0] || this.detailsSelectedPermitNo;
+        this.refreshDetailsPermitRows();
+        if (approveAfterSave) {
+          this.approveSelectedDetails();
+        }
+      },
+      error: (err: any) => {
+        this.detailsSaving = false;
+        const message =
+          err?.error?.message ||
+          err?.error?.detail ||
+          (typeof err?.error === 'string' ? err.error : '') ||
+          err?.message ||
+          'Unable to save changes.';
+        this.detailsSaveError = message;
+      }
+    });
+  }
+
+  approveSelectedDetails(): void {
+    const details = this.selectedDetailsRow;
+    if (!details?.id) return;
+    if (details.approvalStatus !== 'PENDING') return;
+
+    // Permit-wise: stage decision and finalize later.
+    if (this.isPermitWise(details)) {
+      const permitNo = String(this.detailsSelectedPermitNo || '').trim();
+      if (!permitNo) return;
+      this.permitReviewDecisionByPermit[permitNo] = 'APPROVE';
+      // Clear any previous reject remarks for this permit.
+      delete this.permitReviewRemarksByPermit[permitNo];
+      return;
+    }
+
+    if (this.detailsEditMode) {
+      // Save first, then approve.
+      this.saveDetailsDraft(true);
+      return;
+    }
+
+    if (this.actingId === details.id) return;
+    this.actingId = details.id;
+    this.enaRequisitionService.reviewRequisitionArrivalDetails(details.id, 'APPROVE').subscribe({
       next: () => {
         this.actingId = null;
         this.reviewStatus = 'ALL';
+        this.closeDetailsModal();
         this.loadRows();
       },
       error: () => {
         this.actingId = null;
-        this.errorMessage = `Unable to approve ENA details for ${row.referenceNo}.`;
+        this.errorMessage = `Unable to approve ENA details for ${details.referenceNo}.`;
       }
     });
+  }
+
+  rejectSelectedDetails(): void {
+    const details = this.selectedDetailsRow;
+    if (!details?.id) return;
+    if (details.approvalStatus !== 'PENDING') return;
+
+    const permitNo = this.isPermitWise(details) ? String(this.detailsSelectedPermitNo || '').trim() : '';
+    this.openRejectDialog(details.id, details.referenceNo, details.licenseeId, 'details', permitNo);
   }
 
   reject(row: BlDetailRow): void {
     if (!row.id || this.actingId === row.id) {
       return;
     }
-    const remarks = window.prompt('Enter rejection reason for ENA details:', row.reviewRemarks || '');
-    if (remarks === null) {
+    // Permit-wise submissions must be rejected from the details view (permit selection required).
+    if (this.isPermitWise(row)) {
+      this.openDetailsModal(row);
       return;
     }
-    this.actingId = row.id;
-    this.enaRequisitionService.reviewRequisitionArrivalDetails(row.id, 'REJECT', remarks.trim()).subscribe({
+    this.openRejectDialog(row.id, row.referenceNo, row.licenseeId, 'table');
+  }
+
+  openRejectDialog(detailId: number, referenceNo: string, licenseeId: string, source: 'table' | 'details', permitNo: string = ''): void {
+    this.rejectRemarksDraft = '';
+    this.rejectSubmitting = false;
+    this.rejectDialog = {
+      open: true,
+      detailId: Number(detailId) || null,
+      referenceNo: String(referenceNo || ''),
+      licenseeId: String(licenseeId || ''),
+      permitNo: String(permitNo || '').trim(),
+      source
+    };
+  }
+
+  closeRejectDialog(): void {
+    if (this.rejectSubmitting) return;
+    this.rejectDialog = { open: false, detailId: null, referenceNo: '', licenseeId: '', source: 'table', permitNo: '' };
+    this.rejectRemarksDraft = '';
+  }
+
+  clearSelectedPermitDecision(): void {
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!token) return;
+    delete this.permitReviewDecisionByPermit[token];
+    delete this.permitReviewRemarksByPermit[token];
+  }
+
+  getSelectedPermitDecisionLabel(): string {
+    const token = String(this.detailsSelectedPermitNo || '').trim();
+    if (!token) return '';
+    const decision = String(this.permitReviewDecisionByPermit[token] || '');
+    if (decision === 'APPROVE') return 'Will approve';
+    if (decision === 'REJECT') return 'Will reject';
+    return '';
+  }
+
+  getPermitReviewDecisionRows(): Array<{ permitNo: string; action: 'APPROVE' | 'REJECT'; remarks: string }> {
+    const details = this.selectedDetailsRow;
+    if (!details || !this.isPermitWise(details)) return [];
+
+    const permits = this.getDetailsPermitNumbers(details);
+    const rows: Array<{ permitNo: string; action: 'APPROVE' | 'REJECT'; remarks: string }> = [];
+    for (const permitNo of permits) {
+      const token = String(permitNo || '').trim();
+      const decision = String(this.permitReviewDecisionByPermit[token] || '');
+      if (decision !== 'APPROVE' && decision !== 'REJECT') continue;
+      rows.push({
+        permitNo: token,
+        action: decision as any,
+        remarks: String(this.permitReviewRemarksByPermit[token] || '').trim()
+      });
+    }
+    rows.sort((a, b) => {
+      const an = Number(a.permitNo);
+      const bn = Number(b.permitNo);
+      const aIsNum = Number.isFinite(an) && String(an) === a.permitNo;
+      const bIsNum = Number.isFinite(bn) && String(bn) === b.permitNo;
+      if (aIsNum && bIsNum) return an - bn;
+      return a.permitNo.localeCompare(b.permitNo);
+    });
+    return rows;
+  }
+
+  getPermitReviewProgressLabel(): string {
+    const details = this.selectedDetailsRow;
+    if (!details || !this.isPermitWise(details)) return '';
+    const total = this.getDetailsPermitNumbers(details).length;
+    const decided = this.getPermitReviewDecisionRows().length;
+    if (total <= 0) return '';
+    return `${decided}/${total} permit(s) decided`;
+  }
+
+  canFinalizePermitReview(): boolean {
+    const details = this.selectedDetailsRow;
+    if (!details || !this.isPermitWise(details)) return false;
+    if (details.approvalStatus !== 'PENDING') return false;
+    if (this.permitReviewFinalizing || this.detailsSaving) return false;
+
+    const permits = this.getDetailsPermitNumbers(details);
+    if (permits.length <= 0) return false;
+
+    const rows = this.getPermitReviewDecisionRows();
+    if (rows.length !== permits.length) return false;
+    // Reject requires remarks.
+    return rows.every((r) => (r.action === 'REJECT' ? Boolean(String(r.remarks || '').trim()) : true));
+  }
+
+  finalizePermitReview(): void {
+    const details = this.selectedDetailsRow;
+    if (!details || !details.id) return;
+    if (!this.isPermitWise(details)) return;
+    if (!this.canFinalizePermitReview()) return;
+
+    const decisions = this.getPermitReviewDecisionRows();
+    this.permitReviewFinalizing = true;
+    this.permitReviewFinalizeError = '';
+
+    // Sequentially apply permit decisions. Backend will split the submission into per-permit rows.
+    from(decisions)
+      .pipe(
+        concatMap((d) =>
+          this.enaRequisitionService.reviewRequisitionArrivalDetails(details.id, d.action, d.remarks, d.permitNo)
+        )
+      )
+      .subscribe({
+        next: () => {},
+        error: (err: any) => {
+          this.permitReviewFinalizing = false;
+          const message =
+            err?.error?.message ||
+            err?.error?.detail ||
+            (typeof err?.error === 'string' ? err.error : '') ||
+            err?.message ||
+            'Unable to finalize permit review.';
+          this.permitReviewFinalizeError = message;
+        },
+        complete: () => {
+          this.permitReviewFinalizing = false;
+          this.reviewStatus = 'ALL';
+          this.closeDetailsModal();
+          this.loadRows();
+        }
+      });
+  }
+
+  confirmReject(): void {
+    const detailId = Number(this.rejectDialog?.detailId || 0);
+    if (!detailId || this.rejectSubmitting) return;
+
+    if (this.actingId === detailId) return;
+
+    const remarks = String(this.rejectRemarksDraft || '').trim();
+    const permitNo = String(this.rejectDialog?.permitNo || '').trim();
+
+    // Permit-wise: "Reject Permit" inside Tanker Manifest should stage the decision (save locally) for final review.
+    if (permitNo && this.selectedDetailsRow && this.isPermitWise(this.selectedDetailsRow) && this.rejectDialog.source === 'details') {
+      if (!remarks) {
+        // Keep dialog open; rejection requires remarks.
+        return;
+      }
+      this.permitReviewDecisionByPermit[permitNo] = 'REJECT';
+      this.permitReviewRemarksByPermit[permitNo] = remarks;
+      this.closeRejectDialog();
+      return;
+    }
+
+    // Non-permit or table-level reject: immediate API call.
+    this.actingId = detailId;
+    this.rejectSubmitting = true;
+    this.enaRequisitionService.reviewRequisitionArrivalDetails(detailId, 'REJECT', remarks, permitNo).subscribe({
       next: () => {
         this.actingId = null;
+        this.rejectSubmitting = false;
         this.reviewStatus = 'ALL';
+        if (this.rejectDialog.source === 'details') {
+          this.closeDetailsModal();
+        }
+        this.closeRejectDialog();
         this.loadRows();
       },
       error: () => {
         this.actingId = null;
-        this.errorMessage = `Unable to reject ENA details for ${row.referenceNo}.`;
+        this.rejectSubmitting = false;
+        this.errorMessage = `Unable to reject ENA details for ${this.rejectDialog.referenceNo || 'this entry'}.`;
       }
     });
   }
 
-  formatTankerNumbers(details: Array<{ tanker_no: string; bulk_liter: number }>): string {
+  formatTankerNumbers(details: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }>): string {
     if (!Array.isArray(details) || details.length === 0) {
       return '-';
     }
     return details.map((item) => String(item?.tanker_no || '').trim()).filter(Boolean).join(', ') || '-';
   }
 
-  formatTankerDetails(details: Array<{ tanker_no: string; bulk_liter: number }>): string {
+  formatTankerDetails(details: Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }>): string {
     if (!Array.isArray(details) || details.length === 0) {
       return '-';
     }
     return details
-      .map((item) => `${String(item?.tanker_no || '').trim()} (${Number(item?.bulk_liter || 0).toFixed(2)} ENA)`)
+      .map((item) => {
+        const permit = String((item as any)?.permit_no ?? '').trim();
+        const tanker = String(item?.tanker_no || '').trim();
+        const bl = Number(item?.bulk_liter || 0).toFixed(2);
+        return permit ? `Permit ${permit}: ${tanker} (${bl} ENA)` : `${tanker} (${bl} ENA)`;
+      })
       .join(', ');
+  }
+
+  getPermitSummary(row: BlDetailRow): string {
+    if (!row) return 'ENA submission';
+    const permits = Array.from(
+      new Set(
+        (row.tankerDetails || [])
+          .map((x: any) => String(x?.permit_no ?? x?.permitNo ?? '').trim())
+          .filter(Boolean)
+      )
+    );
+    if (permits.length === 0) return 'ENA submission';
+    permits.sort((a, b) => {
+      const an = Number(a);
+      const bn = Number(b);
+      const aNum = Number.isFinite(an) && String(an) === a;
+      const bNum = Number.isFinite(bn) && String(bn) === b;
+      if (aNum && bNum) return an - bn;
+      return a.localeCompare(b);
+    });
+    return `Permits: ${permits.join(', ')}`;
   }
 
   formatDate(value: string): string {
@@ -1539,17 +2874,137 @@ export class OicBlDetailsComponent implements OnInit {
       tankerNumbers: String(row?.tanker_numbers ?? row?.tankerNumbers ?? ''),
       totalBulkLiter: Number(row?.total_bulk_liter ?? row?.totalBulkLiter ?? 0) || 0,
       requestedTotalQuantity: Number(row?.requisition_total_quantity ?? row?.requisitionTotalQuantity ?? 0) || 0,
+      requisitionNumberOfPermits: Number(row?.requisition_number_of_permits ?? row?.requisitionNumberOfPermits ?? 0) || 0,
+      detailsPermitsNumber: String(row?.details_permits_number ?? row?.detailsPermitsNumber ?? ''),
       approvalStatus: String(row?.approval_status ?? row?.approvalStatus ?? 'PENDING').toUpperCase(),
       submittedAt: String(row?.submitted_at ?? row?.submittedAt ?? ''),
       reviewedAt: String(row?.reviewed_at ?? row?.reviewedAt ?? ''),
       reviewedBy: String(row?.reviewed_by ?? row?.reviewedBy ?? ''),
-      reviewRemarks: String(row?.review_remarks ?? row?.reviewRemarks ?? '')
+      reviewRemarks: String(row?.review_remarks ?? row?.reviewRemarks ?? ''),
+      editedByOic: Boolean(row?.edited_by_oic ?? row?.editedByOic ?? false),
+      editedAt: String(row?.edited_at ?? row?.editedAt ?? ''),
+      editedBy: String(row?.edited_by ?? row?.editedBy ?? '')
     };
   }
 
-  private normalizeTankerDetails(rawDetails: any[], tankerNumbersValue: any, totalBulkLiterValue: any): Array<{ tanker_no: string; bulk_liter: number }> {
+  canApproveDetails(details: BlDetailRow): boolean {
+    const requested = Number(details?.requestedTotalQuantity ?? 0);
+    if (!Number.isFinite(requested) || requested <= 0) {
+      return true;
+    }
+
+    if (this.isPermitWise(details)) {
+      const total = this.detailsEditMode ? Number(this.getDraftTotalBulkLiter() || 0) : Number(details?.totalBulkLiter ?? 0);
+      if (!Number.isFinite(total) || total <= 0) {
+        return false;
+      }
+      return total <= requested + 0.01;
+    }
+
+    const total = this.detailsEditMode ? Number(this.getDraftTotalBulkLiter() || 0) : Number(details?.totalBulkLiter ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return false;
+    }
+
+    return Math.abs(total - requested) < 0.01;
+  }
+
+  canApproveRow(row: BlDetailRow): boolean {
+    const requested = Number(row?.requestedTotalQuantity ?? 0);
+    if (!Number.isFinite(requested) || requested <= 0) {
+      return true;
+    }
+
+    if (this.isPermitWise(row)) {
+      const total = Number(row?.totalBulkLiter ?? 0);
+      if (!Number.isFinite(total) || total <= 0) {
+        return false;
+      }
+      return total <= requested + 0.01;
+    }
+
+    const total = Number(row?.totalBulkLiter ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return false;
+    }
+
+    return Math.abs(total - requested) < 0.01;
+  }
+
+  private buildDetailsDraft(row: BlDetailRow): DetailsDraft {
+    const tankerDetails: DraftTankerRow[] = (Array.isArray(row?.tankerDetails) ? row.tankerDetails : []).map((x: any) => ({
+      permit_no: String(x?.permit_no ?? x?.permitNo ?? '').trim() || undefined,
+      tanker_no: String(x?.tanker_no ?? x?.tankerNo ?? '').trim(),
+      bulk_liter: (() => {
+        const n = Number(x?.bulk_liter ?? x?.bulkLiter ?? 0);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      })()
+    }));
+
+    const permitWise = tankerDetails.some((x: any) => Boolean(String(x?.permit_no ?? '').trim()));
+    const tankerCount = Math.max(1, Number((permitWise ? tankerDetails.length : (row?.tankerCount || tankerDetails.length)) || 1));
+    if (!permitWise) {
+      while (tankerDetails.length < tankerCount) {
+        tankerDetails.push({ tanker_no: '', bulk_liter: null });
+      }
+      while (tankerDetails.length > tankerCount) {
+        tankerDetails.pop();
+      }
+    }
+
+    return { tankerCount, tankerDetails };
+  }
+
+  isPermitWise(details: BlDetailRow | null | undefined): boolean {
+    if (!details) return false;
+    const rows: any[] = Array.isArray(details.tankerDetails) ? (details.tankerDetails as any[]) : [];
+    return rows.some((x) => Boolean(String(x?.permit_no ?? x?.permitNo ?? '').trim()));
+  }
+
+  private applyUpdatedDetails(apiRecord: any): void {
+    // Convert serializer response into the UI row shape (update current list + modal details).
+    const existing = this.selectedDetailsRow;
+    if (!existing) return;
+
+    const mergedRow = this.mapRow({
+      ...apiRecord,
+      requisition_id: apiRecord?.requisition,
+      approval_status: apiRecord?.approval_status,
+      tanker_details: apiRecord?.tanker_details,
+      tanker_count: apiRecord?.tanker_count,
+      total_bulk_liter: apiRecord?.total_bulk_liter,
+      reference_no: apiRecord?.reference_no ?? existing.referenceNo,
+      licensee_id: apiRecord?.licensee_id ?? existing.licenseeId,
+      distillery_name: existing.distilleryName,
+      requisition_total_quantity: existing.requestedTotalQuantity
+    });
+
+    // Preserve non-serializer fields (distillery name, etc) from existing row.
+    const updatedRow: BlDetailRow = {
+      ...existing,
+      tankerCount: mergedRow.tankerCount,
+      tankerDetails: mergedRow.tankerDetails,
+      tankerNumbers: mergedRow.tankerNumbers,
+      totalBulkLiter: mergedRow.totalBulkLiter,
+      approvalStatus: mergedRow.approvalStatus,
+      submittedAt: mergedRow.submittedAt || existing.submittedAt,
+      reviewedAt: mergedRow.reviewedAt || existing.reviewedAt,
+      reviewedBy: mergedRow.reviewedBy || existing.reviewedBy,
+      reviewRemarks: mergedRow.reviewRemarks || existing.reviewRemarks
+    };
+
+    this.selectedDetailsRow = updatedRow;
+
+    const idx = this.rows.findIndex((x) => x.id === updatedRow.id);
+    if (idx >= 0) {
+      this.rows[idx] = updatedRow;
+    }
+  }
+
+  private normalizeTankerDetails(rawDetails: any[], tankerNumbersValue: any, totalBulkLiterValue: any): Array<{ permit_no?: string; tanker_no: string; bulk_liter: number }> {
     const normalized = (Array.isArray(rawDetails) ? rawDetails : [])
       .map((item: any) => {
+        const permitNo = String(item?.permit_no ?? item?.permitNo ?? item?.permit ?? '').trim();
         const tankerNo = String(
           item?.tanker_no ??
           item?.tankerNo ??
@@ -1564,9 +3019,9 @@ export class OicBlDetailsComponent implements OnInit {
           item?.bulkLitre ??
           0
         ) || 0;
-        return { tanker_no: tankerNo, bulk_liter: bulkLiter };
+        return { permit_no: permitNo || undefined, tanker_no: tankerNo, bulk_liter: bulkLiter };
       })
-      .filter((item) => item.tanker_no || item.bulk_liter > 0);
+      .filter((item) => item.permit_no || item.tanker_no || item.bulk_liter > 0);
 
     if (normalized.length > 0) {
       return normalized;

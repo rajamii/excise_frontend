@@ -26,11 +26,13 @@ type SeriesKey = 'local' | 'export' | 'defence';
   styleUrls: ['./hologram.component.scss']
 })
 export class HologramComponent {
+  private readonly qtyStep = 100000; // 1 lakh
   private readonly refPrefix = 'HQR';
   private readonly refDistrictCode = '1101';
 
   Math = Math;
   currentYear = new Date().getFullYear();
+  todayDate = new Date().toISOString().split('T')[0];
   errorMessage = '';
   showPreview = false;
   submittedData?: HologramFormData;
@@ -353,6 +355,17 @@ export class HologramComponent {
       return false;
     }
 
+    // Quantity must be >= 1,00,000 and in increments of 1,00,000 only.
+    const selectedQty = localQty > 0 ? localQty : exportQty > 0 ? exportQty : defenceQty;
+    if (selectedQty < this.qtyStep) {
+      this.errorMessage = `Minimum quantity is ${this.qtyStep.toLocaleString('en-IN')}.`;
+      return false;
+    }
+    if (selectedQty % this.qtyStep !== 0) {
+      this.errorMessage = `Quantity must be in multiples of ${this.qtyStep.toLocaleString('en-IN')} (e.g. 100000, 200000, 300000).`;
+      return false;
+    }
+
     this.errorMessage = '';
     return true;
   }
@@ -412,9 +425,14 @@ export class HologramComponent {
         };
         this.isSubmitted = true;
         this.showSuccessMessage = true;
-        this.showPreview = true;
+        this.showPreview = false;
 
         console.log('✅ Application submitted successfully via API:', res);
+
+        // Navigate to hologram procurement dashboard after short delay so user sees the transition
+        setTimeout(() => {
+          this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram' } });
+        }, 800);
       },
       error: (err) => {
         console.error('Error submitting application', err);
@@ -426,9 +444,9 @@ export class HologramComponent {
   closeSuccessModal(): void {
     this.showSuccessModal = false;
 
-    // Scroll to government form after closing success modal
+    // Scroll to payment section after closing success modal
     setTimeout(() => {
-      document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('paymentSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   }
 

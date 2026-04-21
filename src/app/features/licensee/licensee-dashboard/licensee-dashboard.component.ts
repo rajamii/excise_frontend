@@ -39,7 +39,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
+  activeTable: 'default' | 'applied' | 'pending' | 'rejected' = 'default';
 
   private routerSubscription?: Subscription;
 
@@ -49,7 +49,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private router: Router
   ) { }
 
-  showTable(table: 'applied' | 'pending' | 'approved' | 'rejected') {
+  showTable(table: 'applied' | 'pending' | 'rejected') {
     this.activeTable = table;
   }
 

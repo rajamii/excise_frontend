@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, Router, RouterModule } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { RouterOutlet, Router, RouterModule, NavigationEnd } from '@angular/router';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,13 +11,18 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpClient } from '@angular/common/http';
 import { Subject, forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, filter, takeUntil } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { RoleService } from '../../../../core/services/role.service';
 import { User } from '../../../../core/models/dashboard.models';
 import { AccountService } from '../../../../core/services/account.service';
 import { environment } from '../../../../../environments/environment';
+import { SidebarPendingBadgeService } from '../../../services/sidebar-pending-badge.service';
+import {
+  filterRowsForSupplyChainSidebarMenus,
+  isLicenseeWalletNavEligible
+} from '../../../utils/wallet-nav-eligibility.util';
 
 @Component({
   selector: 'app-unified-layout',
@@ -44,6 +49,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
   private readonly dashboardConfigApiBase = `${environment.apiBaseUrl}/auth/roles/dashboard-config`;
   
+  @ViewChild('sidenav') sidenav?: MatSidenav;
+
   currentUser: User | null = null;
   userName = '';
   isSidenavOpen = false;
@@ -52,6 +59,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  hasBreweryOrDistilleryWalletViews = false;
+  /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
+  showManufacturingWalletNav = false;
+  pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
     requisition: 'ENA Requisition',
     revalidation: 'ENA Revalidation',
@@ -92,6 +103,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
     { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
     { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
+    { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForOic: true },
   ];
 
   constructor(
@@ -100,7 +112,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     private router: Router,
     private dialog: MatDialog,
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService
   ) {}
 
   ngOnInit() {
@@ -108,6 +121,18 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     
     // Initialize user info first
     this.initializeUserAndAuth();
+
+    // Auto-close the sidebar after navigation from menu selections.
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        if (this.isSidenavOpen) {
+          this.closeSidenav();
+        }
+      });
   }
 
   ngAfterViewInit() {
@@ -242,6 +267,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         this.roleService.setCurrentUser(dbBackedUser);
         this.currentUser = dbBackedUser;
+        this.refreshSidebarBadges(true);
       });
   }
 
@@ -283,7 +309,106 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   // Handle sidebar state changes (opened/closed)
   onSidenavStateChange(isOpen: boolean) {
     this.isSidenavOpen = isOpen;
+
+    if (isOpen) {
+      this.refreshSidebarBadges();
+    }
     console.log('🔍 Sidebar state changed:', isOpen);
+  }
+
+  closeSidenav(): void {
+    if (!this.isSidenavOpen) {
+      return;
+    }
+
+    try {
+      this.sidenav?.close();
+    } finally {
+      this.isSidenavOpen = false;
+    }
+  }
+
+  openSidenav(): void {
+    if (this.isSidenavOpen) {
+      return;
+    }
+
+    try {
+      this.sidenav?.open();
+    } finally {
+      this.isSidenavOpen = true;
+      this.refreshSidebarBadges();
+    }
+  }
+
+  getPendingCount(section: string): number {
+    const key = String(section || '').trim().toLowerCase();
+    return Number(this.pendingBadgeCounts?.[key] || 0);
+  }
+
+  private refreshSidebarBadges(force = false): void {
+    if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
+        this.pendingBadgeCounts = {};
+        this.triggerUiRefresh();
+      }
+      return;
+    }
+
+    const sections = this.getVisibleOfficerSections();
+    if (sections.length === 0) {
+      if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
+        this.pendingBadgeCounts = {};
+        this.triggerUiRefresh();
+      }
+      return;
+    }
+
+    this.sidebarPendingBadgeService
+      .refresh(sections, force)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (counts) => {
+          this.pendingBadgeCounts = counts || {};
+          this.triggerUiRefresh();
+        },
+        error: () => {
+          this.pendingBadgeCounts = {};
+          this.triggerUiRefresh();
+        }
+      });
+  }
+
+  private getVisibleOfficerSections(): string[] {
+    if (this.isLicenseeUser()) return [];
+
+    const sections: string[] = [];
+    for (const item of this.officerSectionItems) {
+      if (!this.shouldShowOfficerSectionItem(item)) continue;
+      sections.push(item.section);
+    }
+    return sections;
+  }
+
+  private shouldShowOfficerSectionItem(item: {
+    section: string;
+    label: string;
+    icon: string;
+    hideForSiteAdmin?: boolean;
+    hideForPermitSection?: boolean;
+    hideForOic?: boolean;
+    hideForCommissioner?: boolean;
+    showOnlyForOic?: boolean;
+    showOnlyForCommissioner?: boolean;
+  }): boolean {
+    if (item.showOnlyForOic && !this.isOicUser()) return false;
+    if (item.showOnlyForCommissioner && !this.isCommissionerUser()) return false;
+    if (item.hideForSiteAdmin && this.isSiteAdminUser()) return false;
+    if (item.hideForPermitSection && this.isPermitSectionUser()) return false;
+    if (item.hideForOic && this.isOicUser()) return false;
+    if (item.hideForCommissioner && this.isCommissionerUser()) return false;
+    if (!this.canAccessSection(item.section)) return false;
+    return true;
   }
 
   // Method to handle the "View Profile" button click - exactly like original
@@ -385,20 +510,25 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.router.navigate(['/dashboard'], { 
       queryParams: { section: section } 
     });
+    this.closeSidenav();
   }
 
   navigateToWalletView(section: string = 'wallet'): void {
-    if (this.isLicenseeUser() && !this.showBreweryOrDistilleryMenus) {
+    if (this.isLicenseeUser() && !this.showManufacturingWalletNav) {
       return;
     }
 
+    const walletView: 'wallets' | 'others' =
+      this.isLicenseeUser() && !this.hasBreweryOrDistilleryWalletViews ? 'others' : 'wallets';
     this.router.navigate(['/dashboard'], {
       queryParams: {
         section,
         tab: 'recharge',
-        source: 'sidenav-wallet'
+        source: 'sidenav-wallet',
+        walletView
       }
     });
+    this.closeSidenav();
   }
 
   navigateToLicenseeRegistration(type: 'company' | 'collaboration' | 'salesman-barman' | 'label'): void {
@@ -413,6 +543,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.router.navigate(['/dashboard'], {
       queryParams: { section }
     });
+    this.closeSidenav();
   }
 
   // Navigate to role-specific sections
@@ -421,9 +552,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // This keeps the unified layout and sidebar open
     
   if (section === 'hologram-inventory') {
-      // Keep unified dashboard layout for inventory/overview
+      // Open hologram inventory as a full page (not inside the dashboard section card)
+      this.router.navigate(['/dashboard/hologram-overview']);
+    } else if (section === 'transit-applications' && this.isOicUser()) {
+       // When OIC opens transit applications from the sidebar, focus pending items by default.
+       this.router.navigate(['/dashboard'], {
+         queryParams: { section: section, focus: 'pending' }
+       });
+    } else if (section === 'bl-details' && this.isOicUser() && this.getPendingCount(section) > 0) {
+      // When there are pending ENA arrival details, open the module focused on pending items.
       this.router.navigate(['/dashboard'], {
-        queryParams: { section: 'hologram-overview' }
+        queryParams: { section: section, focus: 'pending' }
       });
     } else if (section === 'itcell-hologram') {
       // For IT Cell hologram procurement, navigate with tab parameter to show the hologram tab
@@ -435,6 +574,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         queryParams: { section: section } 
       });
     }
+
+    this.closeSidenav();
   }
 
   // Navigation method - exactly like original
@@ -476,6 +617,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       default:
         this.router.navigate(['/dev-supply-chain']);
     }
+
+    this.closeSidenav();
   }
 
   // License info dialog - exactly like original
@@ -555,13 +698,24 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       }
     });
   }
-  private getCurrentDashboardContext(): { isBaseDashboardRoute: boolean; section: string } {
+  private getCurrentDashboardContext(): { isDashboardRoute: boolean; isBaseDashboardRoute: boolean; section: string } {
     const urlTree = this.router.parseUrl(this.router.url);
     const primarySegments = urlTree.root.children['primary']?.segments?.map((segment) => segment.path) ?? [];
-    const isBaseDashboardRoute = primarySegments.length === 1 && primarySegments[0] === 'dashboard';
-    const section = String(urlTree.queryParams?.['section'] ?? '').trim();
+    const isDashboardRoute = primarySegments.length >= 1 && primarySegments[0] === 'dashboard';
+    const isBaseDashboardRoute = isDashboardRoute && primarySegments.length === 1;
 
-    return { isBaseDashboardRoute, section };
+    const querySection = String(urlTree.queryParams?.['section'] ?? '').trim();
+    const childSegment = isDashboardRoute && primarySegments.length >= 2 ? String(primarySegments[1] || '').trim() : '';
+
+    // Map dashboard child routes to sidebar sections (so the correct menu stays highlighted).
+    let sectionFromPath = '';
+    if (childSegment === 'hologram-overview') {
+      sectionFromPath = 'hologram-inventory';
+    }
+
+    const section = querySection || sectionFromPath;
+
+    return { isDashboardRoute, isBaseDashboardRoute, section };
   }
 
   private resolveSidebarSection(section: string): string {
@@ -574,6 +728,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'hologram-request-form': 'hologram-request',
       'new-license-apply': 'new-license',
       'company-registration-apply': 'company-registration',
+      'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration',
       // Officer nested page
       'hologram-overview': 'hologram-inventory'
@@ -591,7 +746,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const context = this.getCurrentDashboardContext();
     const activeSection = this.resolveSidebarSection(context.section);
     const targetSection = this.resolveSidebarSection(section);
-    return context.isBaseDashboardRoute && activeSection === targetSection;
+    return context.isDashboardRoute && activeSection === targetSection;
   }
 
   isWalletActive(): boolean {
@@ -632,12 +787,16 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!this.isLicenseeUser()) {
       this.showDistilleryMenus = false;
       this.showBreweryOrDistilleryMenus = false;
+      this.hasBreweryOrDistilleryWalletViews = false;
+      this.showManufacturingWalletNav = false;
       return;
     }
 
     // Default for new users: keep only base menu options visible.
     this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
+    this.hasBreweryOrDistilleryWalletViews = false;
+    this.showManufacturingWalletNav = false;
 
     forkJoin({
       licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
@@ -664,7 +823,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
         const allRows = Array.isArray(allApplications) ? allApplications : [];
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
-        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll];
+        const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
+        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
 
         console.log('Menu data sources:', {
           licenses: licenseRows.length,
@@ -678,25 +838,33 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         console.error('Failed to evaluate menu access from combined sources:', error);
         this.showDistilleryMenus = false;
         this.showBreweryOrDistilleryMenus = false;
+        this.hasBreweryOrDistilleryWalletViews = false;
+        this.showManufacturingWalletNav = false;
         this.triggerUiRefresh();
       }
     });
   }
 
   private applySubtypeMenuRules(rows: any[]): void {
-    const hasDistillery = rows.some((item) => this.isDistillery(item));
-    const hasBrewery = rows.some((item) => this.isBrewery(item));
+    const hasDistilleryAny = rows.some((item) => this.isDistillery(item));
+    const hasBreweryAny = rows.some((item) => this.isBrewery(item));
+    const menuRows = filterRowsForSupplyChainSidebarMenus(rows);
+    const hasDistillery = menuRows.some((item) => this.isDistillery(item));
+    const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
-    // Distillery: full supply-chain menu.
+    // Distillery: full supply-chain menu (hidden until license fee paid if still awaiting payment).
     this.showDistilleryMenus = hasDistillery;
     // Brewery OR Distillery: transit + hologram menus.
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+    this.hasBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
+    this.showManufacturingWalletNav = rows.some((item) => isLicenseeWalletNavEligible(item));
 
     console.log('Resolved menu flags:', {
       hasDistillery,
       hasBrewery,
       showDistilleryMenus: this.showDistilleryMenus,
-      showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus
+      showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus,
+      showManufacturingWalletNav: this.showManufacturingWalletNav
     });
 
     if (rows.length > 0) {
@@ -720,6 +888,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       ''
     ).toLowerCase();
     return stage.includes('approved');
+  }
+
+  private isAwaitingPaymentStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+    ).toLowerCase();
+    return stage.includes('awaiting') && stage.includes('payment');
   }
 
   private isDistillery(item: any): boolean {
@@ -855,6 +1034,33 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('permitsection');
   }
 
+  private getNormalizedRoleName(): string {
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      this.user?.role?.name ||
+      this.user?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    return roleName.replace(/[^a-z0-9]/g, '');
+  }
+
+  private canAccessCompanyCollaborationWorkflow(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if ([3, 5, 10, 12].includes(roleId)) {
+      return true;
+    }
+
+    const normalizedRole = this.getNormalizedRoleName();
+    return [
+      'singlewindow',
+      'permitsection',
+      'deputycommissioner',
+      'commissioner',
+      'siteadmin'
+    ].some((token) => normalizedRole.includes(token));
+  }
+
   canAccessSection(section: string): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
 
@@ -886,6 +1092,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     // Keep commissioner procurement tab visible even if DB navigation tokens are incomplete.
     if (roleId === 10 && section === 'hologram') {
+      return true;
+    }
+
+    if (section === 'company-collaboration' && this.canAccessCompanyCollaborationWorkflow()) {
       return true;
     }
 
@@ -921,6 +1131,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'officer-activity': ['officer_activity', 'officer'],
       'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
       'company-registration': ['company_registration', 'company-registration', 'companyregistration'],
+      'company-collaboration': ['company_collaboration', 'company-collaboration', 'companycollaboration'],
     };
     const matcherTokens = tokenMap[sectionRouteToken] || [sectionRouteToken];
 

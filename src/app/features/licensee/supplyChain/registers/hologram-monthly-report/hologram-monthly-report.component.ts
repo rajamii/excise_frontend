@@ -1877,25 +1877,10 @@ export class HologramMonthlyReportComponent implements OnInit {
         brandsEntered: brands
       };
 
+      // Commissioner monthly view should only show data after OIC has actually saved/entered daily register rows.
+      // "Under Process / Assigned" requests without any brand rows must not appear.
       if (brands.length === 0) {
-        const fallbackQty = Number(entry?.quantity || 0);
-        return [{
-          ...base,
-          issued_qty: fallbackQty,
-          issuedQty: fallbackQty,
-          wastage_qty: 0,
-          wastageQty: 0,
-          issued_from: '-',
-          issuedFrom: '-',
-          issued_to: '-',
-          issuedTo: '-',
-          issued_ranges: fallbackQty > 0 ? [{ fromSerial: '-', toSerial: '-', quantity: fallbackQty }] : [],
-          issuedRanges: fallbackQty > 0 ? [{ fromSerial: '-', toSerial: '-', quantity: fallbackQty }] : [],
-          brand_details: '',
-          brandDetails: '',
-          bottle_size: '',
-          bottleSize: ''
-        }];
+        return [];
       }
 
       return brands.map((brand: any, index: number) => {
@@ -1904,7 +1889,11 @@ export class HologramMonthlyReportComponent implements OnInit {
 
         const issuedQtyFromRanges = issuedRanges.reduce((sum, r) => sum + Number(r?.quantity || 0), 0);
         const brandIssuedQty = Number(brand?.issuedQty ?? brand?.quantity ?? issuedQtyFromRanges ?? 0);
-        const brandWastageQty = Number(brand?.wastageQty ?? 0);
+        const wastageQtyFromRanges = wastageRangesRaw.reduce((sum, r) => sum + Number(r?.quantity || 0), 0);
+        let brandWastageQty = Number(brand?.wastageQty ?? 0);
+        if (!brandWastageQty && wastageQtyFromRanges) {
+          brandWastageQty = wastageQtyFromRanges;
+        }
         const firstSerialRange = this.extractFirstSerialRange([brand]);
 
         const effectiveIssuedRanges =
@@ -2322,8 +2311,18 @@ export class HologramMonthlyReportComponent implements OnInit {
       }
     }
 
-    const serialRanges = this.normalizeRangeArray(brand?.serialRanges);
+    const serialRanges = this.normalizeRangeArray(
+      Array.isArray(brand?.serialRanges) || typeof brand?.serialRanges === 'string'
+        ? brand?.serialRanges
+        : brand?.serial_ranges
+    );
     for (const item of serialRanges) {
+      const type = String(item?.type || '').trim().toUpperCase();
+      // Commissioner overview mixes ISSUED and WASTAGE in a single serialRanges array.
+      // By default, treat this helper as "issued ranges" and skip explicit WASTAGE items.
+      if (type === 'WASTAGE') {
+        continue;
+      }
       const parsedRanges = this.extractAllSerialBounds(item);
       const safeRanges = parsedRanges.length > 0 ? parsedRanges : [{ from: '', to: '' }];
       for (const parsed of safeRanges) {
@@ -2461,18 +2460,76 @@ export class HologramMonthlyReportComponent implements OnInit {
   }
   private getBrandWastageRanges(brand: any): Array<{ fromSerial: string; toSerial: string; quantity: number }> {
     const ranges: Array<{ fromSerial: string; toSerial: string; quantity: number }> = [];
-    const wastageRanges = Array.isArray(brand?.wastageRanges) ? brand.wastageRanges : [];
+
+    const normalizeRangeQuantity = (fromSerial: string, toSerial: string, rawQty: any): number => {
+      let quantity = Number(rawQty ?? 0);
+      if (!quantity && fromSerial && toSerial) {
+        const fromNo = Number(fromSerial);
+        const toNo = Number(toSerial);
+        if (Number.isFinite(fromNo) && Number.isFinite(toNo) && toNo >= fromNo) {
+          quantity = (toNo - fromNo) + 1;
+        }
+      }
+      return quantity;
+    };
+
+    const wastageRanges = this.normalizeRangeArray(
+      Array.isArray(brand?.wastageRanges) || typeof brand?.wastageRanges === 'string'
+        ? brand?.wastageRanges
+        : (
+          brand?.wastage_ranges ??
+          brand?.damageRanges ??
+          brand?.damage_ranges ??
+          brand?.damagedRanges ??
+          brand?.damaged_ranges
+        )
+    );
 
     for (const item of wastageRanges) {
-      const fromSerial = String(item?.from || item?.fromSerial || item?.from_serial || '').trim();
-      const toSerial = String(item?.to || item?.toSerial || item?.to_serial || '').trim();
-      const quantity = Number(item?.count ?? item?.quantity ?? item?.qty ?? 0);
-      if (fromSerial || toSerial || quantity > 0) {
-        ranges.push({ fromSerial, toSerial, quantity });
+      const parsedRanges = this.extractAllSerialBounds(item);
+      const safeRanges = parsedRanges.length > 0 ? parsedRanges : [{ from: '', to: '' }];
+      for (const parsed of safeRanges) {
+        const fromSerial = String(parsed?.from || '').trim();
+        const toSerial = String(parsed?.to || '').trim();
+        const quantity = normalizeRangeQuantity(fromSerial, toSerial, item?.count ?? item?.quantity ?? item?.qty);
+        if (fromSerial || toSerial || quantity > 0) {
+          ranges.push({ fromSerial, toSerial, quantity });
+        }
       }
     }
 
-    return ranges;
+    // Commissioner dashboard overview provides serialRanges with {type:'WASTAGE'} entries.
+    const serialRanges = this.normalizeRangeArray(
+      Array.isArray(brand?.serialRanges) || typeof brand?.serialRanges === 'string'
+        ? brand?.serialRanges
+        : brand?.serial_ranges
+    );
+    for (const item of serialRanges) {
+      const type = String(item?.type || '').trim().toUpperCase();
+      if (type !== 'WASTAGE') {
+        continue;
+      }
+      const parsedRanges = this.extractAllSerialBounds(item);
+      const safeRanges = parsedRanges.length > 0 ? parsedRanges : [{ from: '', to: '' }];
+      for (const parsed of safeRanges) {
+        const fromSerial = String(parsed?.from || '').trim();
+        const toSerial = String(parsed?.to || '').trim();
+        const quantity = normalizeRangeQuantity(fromSerial, toSerial, item?.count ?? item?.quantity ?? item?.qty);
+        if (fromSerial || toSerial || quantity > 0) {
+          ranges.push({ fromSerial, toSerial, quantity });
+        }
+      }
+    }
+
+    const dedup = new Map<string, { fromSerial: string; toSerial: string; quantity: number }>();
+    ranges.forEach((r) => {
+      const key = `${r.fromSerial}|${r.toSerial}|${r.quantity}`;
+      if (!dedup.has(key)) {
+        dedup.set(key, r);
+      }
+    });
+
+    return Array.from(dedup.values());
   }
 
   private matchesApprovalStatus(rawStatus: string): boolean {

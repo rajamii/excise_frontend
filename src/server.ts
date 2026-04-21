@@ -9,12 +9,61 @@ import 'zone.js/node';
 import express from 'express';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Readable } from 'node:stream';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+
+function getBackendBaseUrl(): string {
+  const raw = process.env['BACKEND_BASE_URL'] || process.env['API_BASE_URL'] || 'http://127.0.0.1:8000';
+  return String(raw).replace(/\/+$/, '');
+}
+
+function proxyToBackend(pathPrefix: string) {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      const backendBase = getBackendBaseUrl();
+      const targetUrl = new URL(req.originalUrl, backendBase);
+
+      const headers: Record<string, string> = {};
+      for (const [key, value] of Object.entries(req.headers)) {
+        if (value === undefined) continue;
+        if (key.toLowerCase() === 'host') continue;
+        if (Array.isArray(value)) headers[key] = value.join(', ');
+        else headers[key] = String(value);
+      }
+
+      const method = req.method.toUpperCase();
+      const body = method === 'GET' || method === 'HEAD' ? undefined : (req as any);
+
+      const upstream = await fetch(targetUrl, {
+        method,
+        headers,
+        body,
+        redirect: 'manual',
+      });
+
+      res.status(upstream.status);
+      upstream.headers.forEach((value, key) => {
+        // Avoid leaking hop-by-hop / incompatible headers.
+        if (key.toLowerCase() === 'transfer-encoding') return;
+        res.setHeader(key, value);
+      });
+
+      if (!upstream.body) {
+        res.end();
+        return;
+      }
+
+      Readable.fromWeb(upstream.body as any).pipe(res);
+    } catch (err) {
+      next(err);
+    }
+  };
+}
 
 /**
  * Example Express Rest API endpoints can be defined here.
@@ -38,6 +87,16 @@ app.use(
     redirect: false,
   }),
 );
+
+/**
+ * Proxy Django-served static/media files when running behind a single origin (SSR).
+ * This prevents the Angular router from capturing `/media/**` (and returning the SPA 404)
+ * when the reverse-proxy doesn't explicitly route media paths to the backend.
+ *
+ * Configure backend via env `BACKEND_BASE_URL`, e.g. `https://sems.sikkim.gov.in` or `http://10.182.154.196:8000`.
+ */
+app.use('/media', proxyToBackend('/media'));
+app.use('/static', proxyToBackend('/static'));
 
 /**
  * Handle all other requests by rendering the Angular application.

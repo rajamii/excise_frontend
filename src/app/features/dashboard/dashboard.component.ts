@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -22,8 +22,13 @@ import { MatTableDataSource } from '@angular/material/table';
 import { ApplicationTableComponent } from '../licensee/licensee-dashboard/application-table/application-table.component';
 import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../core/services/account.service';
+import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
+import {
+  filterRowsForSupplyChainSidebarMenus,
+  isLicenseeWalletNavEligible
+} from '../../shared/utils/wallet-nav-eligibility.util';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
@@ -68,6 +73,10 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
   standalone: true,
   imports: [
     CommonModule,
+    NgIf,
+    NgFor,
+    NgClass,
+    DatePipe,
     MatIconModule,
     MatButtonModule,
     MatCardModule,
@@ -148,8 +157,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
+  walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
+  private showDistilleryMenus = false;
   private showBreweryOrDistilleryMenus = false;
+  private showBreweryOrDistilleryWalletViews = false;
+  private showManufacturingWalletNav = false;
 
   // Professional dashboard enhancements
   previousCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
@@ -162,6 +175,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   greetingText = 'Welcome';
   userDisplayName = 'User';
   userRoleDisplayName = 'User';
+  private pendingHologramOverviewRedirect = false;
 
   constructor(
     private roleService: RoleService,
@@ -169,6 +183,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private unifiedDashboardService: UnifiedDashboardService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private accountService: AccountService,
+    private hologramService: HologramDataService,
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router
@@ -220,8 +235,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (user) {
           this.currentUser = user;
           this.refreshWelcomeText();
+          this.tryRedirectHologramOverview();
+
+          // If dashboard stats were loaded before we had role/user info, reload once the user is available.
+          if (!this.selectedSupplyChainSection && !this.shouldShowRoleSpecificDashboard()) {
+            this.loadDashboardStats();
+          }
         }
       });
+  }
+
+  private tryRedirectHologramOverview(): void {
+    if (!this.pendingHologramOverviewRedirect) return;
+    if (this.currentUser?.roleId !== 7) return; // Only OIC
+
+    this.pendingHologramOverviewRedirect = false;
+    this.router.navigate(['/dashboard/hologram-overview'], { replaceUrl: true });
   }
 
   private refreshWelcomeText(): void {
@@ -276,6 +305,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const initialSection = this.route.snapshot.queryParamMap.get('section');
     this.selectedSupplyChainSection = initialSection || null;
     this.enforceSectionAccess();
+    this.walletViewMode = this.readWalletViewFromParams(this.route.snapshot.queryParams);
+    this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
+
+    if (this.selectedSupplyChainSection === 'hologram-overview') {
+      this.pendingHologramOverviewRedirect = true;
+      this.tryRedirectHologramOverview();
+    }
 
     // Subscribe to query parameter changes
     this.route.queryParams
@@ -284,6 +320,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const section = params['section'];
         this.selectedSupplyChainSection = section || null;
         this.enforceSectionAccess();
+        this.walletViewMode = this.readWalletViewFromParams(params);
+        this.ensureWalletViewParamAllowed(params);
+
+        if (this.selectedSupplyChainSection === 'hologram-overview') {
+          this.pendingHologramOverviewRedirect = true;
+          this.tryRedirectHologramOverview();
+        }
 
         // Navigating back to /dashboard (clearing section) should always reload stats.
         if (!this.selectedSupplyChainSection) {
@@ -291,6 +334,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadDashboardData();
         }
       });
+  }
+
+  private readWalletViewFromParams(params: any): 'wallets' | 'others' {
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return 'wallets';
+    }
+    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+      return 'others';
+    }
+    const value = String(params?.walletView || '').trim().toLowerCase();
+    return value === 'others' ? 'others' : 'wallets';
+  }
+
+  private ensureWalletViewParamAllowed(params: any): void {
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return;
+    }
+    if (!this.isLicenseeUser()) {
+      return;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return;
+    }
+    if (this.showBreweryOrDistilleryWalletViews) {
+      return;
+    }
+
+    const raw = String(params?.walletView || '').trim().toLowerCase();
+    if (raw === 'others' || raw === '') {
+      return;
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { walletView: 'others' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  shouldShowWalletViewToggle(): boolean {
+    if (this.selectedSupplyChainSection !== 'wallet') {
+      return false;
+    }
+    if (!this.isLicenseeUser()) {
+      return true;
+    }
+    if (!this.licenseeMenuAccessResolved) {
+      return false;
+    }
+    return this.showManufacturingWalletNav && this.showBreweryOrDistilleryWalletViews;
+  }
+
+  setWalletViewMode(mode: 'wallets' | 'others'): void {
+    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+      mode = 'others';
+    }
+    if (!mode || this.walletViewMode === mode) return;
+    this.walletViewMode = mode;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { walletView: mode },
+      queryParamsHandling: 'merge'
+    });
   }
 
   private initializeDashboard() {
@@ -373,7 +480,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Use the unified dashboard service for all roles
     forkJoin({
       counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus()
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(),
+      hologramProcurements: this.isLicenseeUser()
+        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        : of([])
     })
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
@@ -402,6 +512,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
             rejected: filteredApplications.rejected.length
           };
 
+          // Licensee UX: include hologram procurement workflow (circulating for approvals) in Pending/Approved totals.
+          if (this.isLicenseeUser()) {
+            const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
+            this.dashboardCounts = {
+              ...this.dashboardCounts,
+              pending: (this.dashboardCounts.pending || 0) + hologramCounts.pending,
+              approved: (this.dashboardCounts.approved || 0) + hologramCounts.approved,
+              rejected: (this.dashboardCounts.rejected || 0) + hologramCounts.rejected
+            };
+          }
+
           // Show submitted + pending + awaiting payment together in Pending table.
           this.updateDataSources({
             applied: [],
@@ -416,6 +537,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.clearDataSources();
         }
       });
+  }
+
+  private countLicenseeHologramProcurements(procurements: any[]): { pending: number; approved: number; rejected: number } {
+    const rows = Array.isArray(procurements) ? procurements : [];
+    let pending = 0;
+    let approved = 0;
+    let rejected = 0;
+
+    for (const row of rows) {
+      const statusToken = this.normalizeStageToken(row?.status);
+      if (!statusToken) continue;
+
+      if (statusToken.includes('reject')) {
+        rejected += 1;
+        continue;
+      }
+
+      // Only count as approved once cartons are assigned (or payment is completed).
+      const isCartonAssigned = statusToken.includes('cartoonassigned') || statusToken.includes('cartonassigned');
+      const isPaymentCompleted = statusToken.includes('paymentcompleted');
+      if (isCartonAssigned || isPaymentCompleted) {
+        approved += 1;
+        continue;
+      }
+
+      // Pending = anything still in workflow approvals / commissioner approval, excluding drafts.
+      if (statusToken.includes('draft')) {
+        continue;
+      }
+      pending += 1;
+    }
+
+    return { pending, approved, rejected };
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   shouldShowRoleSpecificDashboard(): boolean {
@@ -451,16 +609,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   canRenderWalletSection(): boolean {
-    if (!this.isLicenseeUser()) {
-      return true;
-    }
-    if (!this.licenseeMenuAccessResolved) {
-      return true;
-    }
-    return this.showBreweryOrDistilleryMenus;
+    return true;
   }
 
   private enforceSectionAccess(): void {
+    // Licensee: cannot open ENA / transit / hologram until license fee is paid (exclude awaiting unpaid rows).
+    if (
+      this.isLicenseeUser() &&
+      this.licenseeMenuAccessResolved &&
+      this.selectedSupplyChainSection
+    ) {
+      const sec = String(this.selectedSupplyChainSection);
+      const enaSections = new Set([
+        'requisition',
+        'revalidation',
+        'cancellation',
+        'import-permit'
+      ]);
+      const breweryDistSections = new Set([
+        'transit',
+        'hologram',
+        'hologram-request',
+        'transit-permit',
+        'oic-transit',
+        'hologram-new',
+        'hologram-request-form'
+      ]);
+      const blocked =
+        (enaSections.has(sec) && !this.showDistilleryMenus) ||
+        (breweryDistSections.has(sec) && !this.showBreweryOrDistilleryMenus);
+      if (blocked) {
+        this.selectedSupplyChainSection = null;
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: null, tab: null, source: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+        return;
+      }
+    }
+
     // Joint Commissioner should not access New Hologram Procurement.
     if (this.currentUser?.roleId === 9 && String(this.selectedSupplyChainSection || '') === 'hologram') {
       this.selectedSupplyChainSection = null;
@@ -490,31 +679,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.isLicenseeUser()) {
       return;
     }
-    if (!this.licenseeMenuAccessResolved) {
-      return;
-    }
-    if (this.showBreweryOrDistilleryMenus) {
-      return;
-    }
-
-    this.selectedSupplyChainSection = null;
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { section: null, tab: null, source: null },
-      queryParamsHandling: 'merge',
-      replaceUrl: true
-    });
+    // Wallet section is available to all licensee users. Non-manufacturing users are restricted to "Others" view
+    // inside the wallet page itself.
+    return;
   }
 
   private loadLicenseeMenuAccess(): void {
     if (!this.isLicenseeUser()) {
       this.licenseeMenuAccessResolved = true;
+      this.showDistilleryMenus = false;
       this.showBreweryOrDistilleryMenus = false;
+      this.showBreweryOrDistilleryWalletViews = false;
+      this.showManufacturingWalletNav = false;
       return;
     }
 
     this.licenseeMenuAccessResolved = false;
+    this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
+    this.showBreweryOrDistilleryWalletViews = false;
+    this.showManufacturingWalletNav = false;
 
     forkJoin({
       licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
@@ -532,16 +716,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
         const allRows = Array.isArray(allApplications) ? allApplications : [];
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
-        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll];
-        const hasDistillery = combinedRows.some((item) => this.isDistillery(item));
-        const hasBrewery = combinedRows.some((item) => this.isBrewery(item));
+        const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
+        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
+        const hasDistilleryAny = combinedRows.some((item) => this.isDistillery(item));
+        const hasBreweryAny = combinedRows.some((item) => this.isBrewery(item));
+        const menuRows = filterRowsForSupplyChainSidebarMenus(combinedRows);
+        const hasDistillery = menuRows.some((item) => this.isDistillery(item));
+        const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
+        this.showDistilleryMenus = hasDistillery;
         this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+        this.showBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
+        this.showManufacturingWalletNav = combinedRows.some((item) => isLicenseeWalletNavEligible(item));
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
+        this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
       },
       error: () => {
+        this.showDistilleryMenus = false;
         this.showBreweryOrDistilleryMenus = false;
+        this.showBreweryOrDistilleryWalletViews = false;
+        this.showManufacturingWalletNav = false;
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
       }
@@ -557,6 +752,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ''
     ).toLowerCase();
     return stage.includes('approved');
+  }
+
+  private isAwaitingPaymentStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+    ).toLowerCase();
+    return stage.includes('awaiting') && stage.includes('payment');
   }
 
   private isDistillery(item: any): boolean {
@@ -608,6 +814,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-request-form': 'hologram-request',
       'new-license-apply': 'new-license',
       'company-registration-apply': 'company-registration',
+      'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration'
     };
 
@@ -828,6 +1035,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'company-registration': 'Company Registration',
       'company-registration-apply': 'Company Registration',
       'company-collaboration': 'Company Collaboration',
+      'company-collaboration-apply': 'Company Collaboration',
       'salesman-barman-registration': 'Salesman/Barman Registration',
       'salesman-barman-registration-apply': 'Salesman/Barman Registration',
       'label-registration': 'Label Registration',
@@ -883,6 +1091,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-request',
       'new-license',
       'company-registration',
+      'company-collaboration',
       'salesman-barman-registration'
     ];
 
@@ -899,6 +1108,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram-request': return 'New Request';
       case 'new-license': return 'Apply New License';
       case 'company-registration': return 'Apply Company';
+      case 'company-collaboration': return 'Apply Collaboration';
       case 'salesman-barman-registration': return 'Apply Salesman/Barman';
       default: return 'Create New';
     }
@@ -914,6 +1124,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram-request': return 'add_circle';
       case 'new-license': return 'add_circle';
       case 'company-registration': return 'add_circle';
+      case 'company-collaboration': return 'add_circle';
       case 'salesman-barman-registration': return 'add_circle';
       default: return 'add';
     }
@@ -935,6 +1146,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'new-license-apply' } });
     } else if (section === 'company-registration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'company-registration-apply' } });
+    } else if (section === 'company-collaboration') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'company-collaboration-apply' } });
     } else if (section === 'salesman-barman-registration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'salesman-barman-registration-apply' } });
     }
@@ -944,10 +1157,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Open wallet dialog
   openWallet(): void {
+    const walletView =
+      this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews
+        ? 'others'
+        : 'wallets';
     this.router.navigate(['/dashboard'], {
       queryParams: {
         section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
+        walletView,
         source: 'dashboard-wallet'
       }
     });
@@ -1346,6 +1564,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openDashboardSection(section: string): void {
+    if (section === 'hologram-overview' && this.currentUser?.roleId === 7) {
+      this.router.navigate(['/dashboard/hologram-overview']);
+      return;
+    }
     this.router.navigate(['/dashboard'], { queryParams: { section } });
   }
 

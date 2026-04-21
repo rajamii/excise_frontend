@@ -22,7 +22,7 @@
         [disabled]="isPermitSelectionLocked()"
         aria-expanded="false"
       >
-        {{ isPermitSelectionLocked() ? 'No permits available for cancellation' : 'Select Permits' }}
+        {{ getPermitDropdownLabel() }}
       </button>
       <div class="dropdown-menu p-2 w-100">
         <div *ngFor="let permit of permits" class="form-check">
@@ -37,6 +37,7 @@
           />
           <label class="form-check-label" [for]="'chkPermit_' + permit.number">
             Permit No. {{ permit.number }} - {{ formatCurrency(permit.amount) }}
+            <span class="text-muted ms-1">({{ getPerPermitQuantityLabel() || 'per permit' }})</span>
             <span *ngIf="permit.isCancelled">(Cancelled)</span>
             <span *ngIf="!permit.isCancelled && permit.isLocked">({{ permit.lockReason }})</span>
           </label>
@@ -91,6 +92,10 @@
             <td><strong>Cancellation Charges</strong></td>
             <td class="text-danger fw-bold">{{ formatCurrency(getCancellationCharges()) }}</td>
           </tr>
+          <tr>
+            <td><strong>Refund Amount</strong></td>
+            <td class="text-success fw-bold">+ {{ formatCurrency(getPermitRefundAmount()) }}</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -140,9 +145,9 @@
       <div class="modal-body">
         <div class="alert alert-warning" *ngIf="newlySelectedPermits.length > 0">
           <strong>Note:</strong> By submitting this cancellation request, you acknowledge that
-          <b>{{ formatCurrency(getCancellationCharges()) }} will be deducted</b>
-          from your account for cancellation charges ({{ newlySelectedPermits.length }}
-          permit(s) Rs 1,000 each).
+          <b>{{ formatCurrency(getPermitRefundAmount()) }} will be credited back</b>
+          (refund) and <b>{{ formatCurrency(getCancellationCharges()) }} will be deducted</b>
+          as cancellation charges ({{ newlySelectedPermits.length }} permit(s), {{ formatCurrency(cancellationChargePerPermit) }} each).
         </div>
         <div class="alert alert-info" *ngIf="selectedPermits.length > newlySelectedPermits.length">
           <strong>Info:</strong>
@@ -196,7 +201,7 @@
           <div class="spinner-border text-success" role="status">
             <span class="visually-hidden">Processing...</span>
           </div>
-          <p class="mb-0 mt-3">Deducting cancellation amount and submitting request...</p>
+          <p class="mb-0 mt-3">Crediting refund, deducting charges and submitting request...</p>
         </div>
 
         <div *ngIf="isWalletLoading && !isSubmittingCancellation" class="text-center py-4">
@@ -232,19 +237,25 @@
               <span class="wallet-summary-label">Current Balance</span>
               <strong>{{ formatCurrency(availableWalletBalance) }}</strong>
             </div>
+            <div class="wallet-balance-card refund">
+              <span class="wallet-summary-label">Refund on Proceed</span>
+              <strong>+ {{ formatCurrency(getPermitRefundAmount()) }}</strong>
+              <small class="text-muted d-block mt-1">{{ formatCurrency(getPerPermitRefundAmount()) }} per permit</small>
+            </div>
             <div class="wallet-balance-card deduct">
-              <span class="wallet-summary-label">Deduction on Proceed</span>
+              <span class="wallet-summary-label">Cancellation Charge</span>
               <strong>- {{ formatCurrency(getCancellationCharges()) }}</strong>
+              <small class="text-muted d-block mt-1">{{ formatCurrency(cancellationChargePerPermit) }} per permit</small>
             </div>
             <div class="wallet-balance-card after" [class.insufficient]="!hasSufficientWalletBalance()">
               <span class="wallet-summary-label">Balance After Proceed</span>
-              <strong>{{ formatCurrency(getBalanceAfterDeduction()) }}</strong>
+              <strong>{{ formatCurrency(getBalanceAfterProceed()) }}</strong>
             </div>
           </div>
 
           <div class="wallet-info-banner mb-3">
             <i class="bi bi-info-circle-fill me-2"></i>
-            This wallet deduction will be applied immediately after you click proceed.
+            On proceed, permit refund will be credited back and cancellation charges will be deducted immediately.
           </div>
 
           <div *ngIf="!hasSufficientWalletBalance()" class="alert alert-danger mb-3">

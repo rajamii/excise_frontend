@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../environments/environment';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
 
 @Component({
@@ -16,6 +16,7 @@ import { forkJoin, of } from 'rxjs';
 })
 export class RegistrationManagementComponent implements OnInit {
   private readonly companyApiBase = `${environment.apiBaseUrl}/transactional/company-registration`;
+  private readonly collaborationApiBase = `${environment.apiBaseUrl}/transactional/company-collaboration`;
   private readonly salesmanApiBase = `${environment.apiBaseUrl}/transactional/salesman_barman`;
 
   currentSection = '';
@@ -103,6 +104,18 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
+    if (this.currentSection === 'company-collaboration') {
+      this.router.navigate(['/supply-chain-view'], {
+        queryParams: {
+          type: 'company-collaboration',
+          id: row.id || row.applicationId,
+          ref: row.applicationId,
+          source: 'licensee'
+        }
+      });
+      return;
+    }
+
     this.router.navigate(['/supply-chain-view'], {
       queryParams: {
         type: 'company-registration',
@@ -117,6 +130,9 @@ export class RegistrationManagementComponent implements OnInit {
     if (this.currentSection === 'salesman-barman-registration') {
       return 'Salesman/Barman Application Entries';
     }
+    if (this.currentSection === 'company-collaboration') {
+      return 'Company Collaboration Entries';
+    }
     return 'Company Registration Entries';
   }
 
@@ -126,6 +142,11 @@ export class RegistrationManagementComponent implements OnInit {
 
     if (this.currentSection === 'salesman-barman-registration') {
       this.loadSalesmanBarmanData();
+      return;
+    }
+
+    if (this.currentSection === 'company-collaboration') {
+      this.loadCompanyCollaborationData();
       return;
     }
 
@@ -142,20 +163,74 @@ export class RegistrationManagementComponent implements OnInit {
         .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [], objection: [] })))
     }).subscribe({
       next: ({ counts, grouped }) => {
+        this.allRows = this.flattenCompanyGroupedData(grouped);
         this.counts = {
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number(counts?.objection || 0),
           rejected: Number(counts?.rejected || 0)
         };
-
-        this.allRows = this.flattenCompanyGroupedData(grouped);
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
         this.isLoading = false;
       },
       error: () => {
         this.error = 'Failed to load company registration entries.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadCompanyCollaborationData(): void {
+    forkJoin({
+      countsResult: this.http
+        .get<any>(`${this.collaborationApiBase}/dashboard-counts/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        ),
+      groupedResult: this.http
+        .get<any>(`${this.collaborationApiBase}/list-by-status/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        ),
+      listResult: this.http
+        .get<any>(`${this.collaborationApiBase}/list/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        )
+    }).subscribe({
+      next: ({ countsResult, groupedResult, listResult }) => {
+        const groupedRows = groupedResult.data
+          ? this.flattenCompanyCollaborationGroupedData(groupedResult.data)
+          : [];
+        const fallbackRows = groupedRows.length === 0 && listResult.data
+          ? this.flattenCompanyCollaborationListData(listResult.data)
+          : [];
+
+        this.allRows = groupedRows.length > 0 ? groupedRows : fallbackRows;
+
+        if (this.allRows.length === 0 && (groupedResult.error || listResult.error)) {
+          this.error = this.extractHttpErrorMessage(
+            groupedResult.error || listResult.error || countsResult.error,
+            'Failed to load company collaboration entries.'
+          );
+          this.filteredRows = [];
+          this.stageFilterOptions = [];
+          this.counts = this.resolveCounts([], countsResult.data || {});
+          this.isLoading = false;
+          return;
+        }
+
+        this.counts = this.resolveCounts(this.allRows, countsResult.data || {});
+        this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: () => {
+        this.error = 'Failed to load company collaboration entries.';
         this.isLoading = false;
       }
     });
@@ -208,6 +283,95 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
+  private flattenCompanyCollaborationGroupedData(grouped: any): Array<{
+    id: string;
+    applicationId: string;
+    submittedOn: string;
+    applicantName: string;
+    establishmentName: string;
+    currentStage: string;
+    currentStageRaw: string;
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+  }> {
+    const mapGroup = (
+      items: any[] | undefined,
+      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'
+    ) => {
+      if (!Array.isArray(items)) return [];
+      return items.map((item: any) => {
+        const rawStage = String(
+          item?.current_stage_name ??
+          item?.currentStageName ??
+          item?.current_stage ??
+          item?.currentStage ??
+          item?.status ??
+          'submitted'
+        );
+
+        return {
+          id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+          applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+          submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
+          applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
+          establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
+          currentStage: this.formatStageName(rawStage),
+          currentStageRaw: rawStage,
+          statusGroup: this.resolveStatusGroup(rawStage, statusGroup)
+        };
+      });
+    };
+
+    const merged = [
+      ...mapGroup(grouped?.pending, 'pending'),
+      ...mapGroup(grouped?.approved, 'approved'),
+      ...mapGroup(grouped?.rejected, 'rejected'),
+      ...mapGroup(grouped?.objection, 'objection'),
+      ...mapGroup(grouped?.applied, 'pending'),
+      ...mapGroup(grouped?.in_review, 'pending')
+    ];
+
+    const seen = new Set<string>();
+    return merged.filter((row) => {
+      const key = String(row.applicationId || row.id || '').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  private flattenCompanyCollaborationListData(items: any): Array<{
+    id: string;
+    applicationId: string;
+    submittedOn: string;
+    applicantName: string;
+    establishmentName: string;
+    currentStage: string;
+    currentStageRaw: string;
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+  }> {
+    return this.unwrapArrayResponse(items).map((item: any) => {
+      const rawStage = String(
+        item?.current_stage_name ??
+        item?.currentStageName ??
+        item?.current_stage ??
+        item?.currentStage ??
+        item?.status ??
+        'submitted'
+      );
+
+      return {
+        id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+        applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+        submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
+        applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
+        establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
+        currentStage: this.formatStageName(rawStage),
+        currentStageRaw: rawStage,
+        statusGroup: this.classifyStatus(rawStage)
+      };
+    });
+  }
+
   private loadSalesmanBarmanData(): void {
     forkJoin({
       counts: this.http
@@ -218,14 +382,13 @@ export class RegistrationManagementComponent implements OnInit {
         .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [] })))
     }).subscribe({
       next: ({ counts, grouped }) => {
+        this.allRows = this.flattenSalesmanGroupedData(grouped);
         this.counts = {
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number((counts as any)?.objection || 0),
           rejected: Number(counts?.rejected || 0)
         };
-
-        this.allRows = this.flattenSalesmanGroupedData(grouped);
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
         this.isLoading = false;
@@ -320,12 +483,43 @@ export class RegistrationManagementComponent implements OnInit {
     );
   }
 
+  private resolveStatusGroup(
+    stageValue: string,
+    fallback: 'approved' | 'pending' | 'objection' | 'rejected'
+  ): 'approved' | 'pending' | 'objection' | 'rejected' {
+    if (fallback === 'approved' || fallback === 'rejected') {
+      return fallback;
+    }
+    return this.classifyStatus(stageValue);
+  }
+
   private classifyStatus(stageValue: string): 'approved' | 'pending' | 'objection' | 'rejected' {
     const value = String(stageValue || '').toLowerCase();
     if (value.includes('reject')) return 'rejected';
     if (value.includes('object')) return 'objection';
     if (value.includes('approve')) return 'approved';
     return 'pending';
+  }
+
+  private resolveCounts(
+    rows: Array<{ statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' }>,
+    rawCounts: any
+  ): {
+    approved: number;
+    pending: number;
+    objection: number;
+    rejected: number;
+  } {
+    if (rows.length > 0) {
+      return this.calculateCounts(rows);
+    }
+
+    return {
+      approved: Number(rawCounts?.approved || 0),
+      pending: Number(rawCounts?.pending || rawCounts?.applied || 0),
+      objection: Number(rawCounts?.objection || 0),
+      rejected: Number(rawCounts?.rejected || 0)
+    };
   }
 
   private calculateCounts(rows: Array<{ statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' }>): {
@@ -378,5 +572,39 @@ export class RegistrationManagementComponent implements OnInit {
     return String(stageValue || '')
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private unwrapArrayResponse(response: any): any[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+    if (Array.isArray(response?.data)) {
+      return response.data;
+    }
+    if (Array.isArray(response?.results)) {
+      return response.results;
+    }
+    if (Array.isArray(response?.items)) {
+      return response.items;
+    }
+    return [];
+  }
+
+  private extractHttpErrorMessage(error: any, fallback: string): string {
+    const detail = error?.error?.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail.trim();
+    }
+
+    const message = error?.error?.message;
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim();
+    }
+
+    if (typeof error?.message === 'string' && error.message.trim()) {
+      return error.message.trim();
+    }
+
+    return fallback;
   }
 }

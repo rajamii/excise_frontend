@@ -41,8 +41,10 @@ interface TransitItem {
 
 interface RechargeItem {
   id: string;
+  transactionId: string;
   transactionType: string;
   hoa: string;
+  walletType?: string;
   amount: number;
   date: Date;
   status: string;
@@ -59,6 +61,8 @@ interface HistoryItem {
   status: string;
   dateTime: Date;
   licenseeId: string;
+  hoa?: string;
+  walletType?: string;
 }
 
 interface HologramItem {
@@ -74,11 +78,13 @@ interface HologramItem {
   exportQty: number;
   defenceQty: number;
   paymentDate: Date | null;
+  createdAt?: string | Date | null;
+  date?: string | Date | null;
   paymentSlipUploaded?: boolean;
 }
 
-type WalletHistoryType = 'Added' | 'Utilized' | 'Refunded';
-type WalletHistoryCategory = 'excise' | 'education' | 'hologram';
+type WalletHistoryType = 'Credited' | 'Debited' | 'Refunded';
+type WalletHistoryCategory = 'excise' | 'education' | 'hologram' | 'security_deposit' | 'license_fee';
 
 interface WalletHistoryTransaction {
   id: string;
@@ -97,14 +103,24 @@ interface MyLicenseRow {
   licenseSubCategoryId?: number;
   license_sub_category?: string;
   licenseSubCategory?: string;
+  license_category?: string | Record<string, unknown>;
+  licenseCategory?: string | Record<string, unknown>;
+  license_category_name?: string;
+  licenseCategoryName?: string;
+  license_type?: string | number | Record<string, unknown>;
+  licenseType?: string | number | Record<string, unknown>;
+  license_type_name?: string;
+  licenseTypeName?: string;
   status?: string;
   stage_name?: string;
   stageName?: string;
 }
 
-type WalletModuleType = 'distillery' | 'brewery' | '';
+type WalletModuleType = 'distillery' | 'brewery' | 'other' | '';
 type PaymentModuleTab = 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
-type WalletTableTab = PaymentModuleTab | 'recharge' | 'history';
+type OtherModuleTab = 'security_deposit' | 'license_fee';
+type WalletTableTab = PaymentModuleTab | OtherModuleTab | 'recharge' | 'history';
+type WalletViewMode = 'wallets' | 'others';
 
 interface PendingWalletPaymentContext {
   id: string;
@@ -130,11 +146,16 @@ interface PendingWalletPaymentPreview {
   shortfall: number;
 }
 
+const SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
+const LICENSE_FEE_HOA = '0099-00-999-99-99';
+
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   excise: '',
   brewery: '',
   education: '',
-  hologram: ''
+  hologram: '',
+  security_deposit: SECURITY_DEPOSIT_HOA,
+  license_fee: LICENSE_FEE_HOA
 };
 
 @Component({
@@ -150,7 +171,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
   private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
   private readonly isBrowser = typeof window !== 'undefined';
-  activeTab = 'requisition';
+  walletViewMode: WalletViewMode = 'wallets';
+  activeTab: WalletTableTab = 'requisition';
   tablePageSizeOptions: number[] = [5, 10, 15];
   private tablePageSizeByTab: Record<WalletTableTab, number> = {
     requisition: 5,
@@ -158,6 +180,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     cancellation: 5,
     transit: 5,
     hologram: 5,
+    security_deposit: 5,
+    license_fee: 5,
     recharge: 5,
     history: 5
   };
@@ -167,6 +191,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     cancellation: 1,
     transit: 1,
     hologram: 1,
+    security_deposit: 1,
+    license_fee: 1,
     recharge: 1,
     history: 1
   };
@@ -174,6 +200,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
   pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
   private hasHandledPendingWalletPayment = false;
+  private cancellationWalletSyncAttempted = new Set<string>();
 
   // Monthly filter method - declared early to avoid TypeScript issues
   private setCurrentMonthAutomatically(): void {
@@ -206,6 +233,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   breweryWalletBalance = 0;
   educationCessBalance = 0;
   hologramWalletBalance = 0;
+  securityDepositBalance = 0;
+  licenseFeeBalance = 0;
   activeLicenseeId = '';
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private resolvedLicenseModuleType: WalletModuleType = '';
@@ -221,6 +250,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     'history'
   ]);
   private readonly breweryTabs = new Set(['transit', 'hologram', 'recharge', 'history']);
+  private readonly otherTabs = new Set<WalletTableTab>(['security_deposit', 'license_fee', 'recharge', 'history']);
 
   // Transit Data
   transitBillNo = '';
@@ -292,6 +322,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.route.queryParams.subscribe(params => {
       const requestedTab = String(params['tab'] || '').trim().toLowerCase();
       const source = String(params['source'] || '').trim().toLowerCase();
+      const viewParam = String(params['walletView'] || '').trim().toLowerCase();
+      if (viewParam === 'others') {
+        this.walletViewMode = 'others';
+      } else if (viewParam === 'wallets') {
+        // Keep wallets mode as-is; internal view will adjust based on license type
+        this.walletViewMode = 'wallets';
+      }
       this.autoSelectLastPaidTabOnLoad =
         !requestedTab ||
         requestedTab === 'recharge' ||
@@ -415,12 +452,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.educationCessBalance = 0;
     this.breweryWalletBalance = 0;
     this.hologramWalletBalance = 0;
+    this.securityDepositBalance = 0;
+    this.licenseFeeBalance = 0;
     this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
     this.rechargeData = [];
     this.historyData = [];
     this.exciseWalletTransactions = [];
     this.educationWalletTransactions = [];
     this.hologramWalletTransactions = [];
+    this.securityDepositWalletTransactions = [];
+    this.licenseFeeWalletTransactions = [];
     this.walletHistoryFiltered = [];
 
     forkJoin({
@@ -524,6 +565,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return false;
     }
 
+    const licenseId = String(row.license_id ?? row.licenseId ?? '').trim();
+    if (licenseId) {
+      return true;
+    }
+
     const status = String(row.status || '').toLowerCase();
     const stage = String(row.stage_name ?? row.stageName ?? '').toLowerCase();
     if (!status && !stage) {
@@ -566,38 +612,168 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (subCategoryName.includes('brew')) {
       return 'brewery';
     }
+
+    // Issued licenses that are not brewery/distillery (FLR shop, bar, etc.): backend module_type "other".
+    const licenseId = String(row.license_id ?? row.licenseId ?? '').trim();
+    if (licenseId) {
+      return 'other';
+    }
+
+    const stageText = String(
+      row.stage_name ??
+      row.stageName ??
+      row.status ??
+      (row as any).current_stage_name ??
+      (row as any).currentStageName ??
+      ''
+    ).toLowerCase();
+    if (stageText.includes('approved') || (stageText.includes('awaiting') && stageText.includes('payment'))) {
+      return 'other';
+    }
+
+    if (this.isManufacturingCategoryFromLicenseRow(row)) {
+      return 'other';
+    }
     return '';
+  }
+
+  private extractLicenseCategoryTextFromRow(row: MyLicenseRow | null | undefined): string {
+    if (!row) {
+      return '';
+    }
+    const nested = row.license_category ?? row.licenseCategory;
+    if (nested && typeof nested === 'object') {
+      const raw =
+        (nested as any)?.license_category ??
+        (nested as any)?.licenseCategory ??
+        (nested as any)?.category_name ??
+        (nested as any)?.name ??
+        '';
+      return String(raw ?? '').toLowerCase();
+    }
+    const raw =
+      row.license_category_name ??
+      row.licenseCategoryName ??
+      (typeof nested === 'string' ? nested : '') ??
+      '';
+    return String(raw ?? '').toLowerCase();
+  }
+
+  private extractLicenseTypeTextFromRow(row: MyLicenseRow | null | undefined): string {
+    if (!row) {
+      return '';
+    }
+    const nested = row.license_type ?? row.licenseType;
+    if (nested && typeof nested === 'object') {
+      const raw =
+        (nested as any)?.license_type ??
+        (nested as any)?.licenseType ??
+        (nested as any)?.name ??
+        '';
+      return String(raw ?? '').toLowerCase();
+    }
+    const raw =
+      row.license_type_name ??
+      row.licenseTypeName ??
+      (typeof nested === 'string' ? nested : '') ??
+      '';
+    return String(raw ?? '').toLowerCase();
+  }
+
+  private isManufacturingCategoryFromLicenseRow(row: MyLicenseRow | null | undefined): boolean {
+    const category = this.extractLicenseCategoryTextFromRow(row);
+    if (category.includes('manufactur')) {
+      return true;
+    }
+    const licenseType = this.extractLicenseTypeTextFromRow(row);
+    return licenseType.includes('manufactur');
   }
 
   private applyResolvedModuleType(moduleType: WalletModuleType): void {
     this.resolvedLicenseModuleType = moduleType;
     this.isBreweryUser = moduleType === 'brewery';
-    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.walletModuleLabel =
+      moduleType === 'brewery'
+        ? 'Brewery'
+        : moduleType === 'distillery'
+          ? 'Distillery'
+          : moduleType === 'other'
+            ? 'License'
+            : 'Distillery';
+
+    // Brewery/distillery use the full "Wallets" tabs; other manufacturing uses the same wallet page in "Others" mode.
+    const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
+    if (!isManufacturing && this.walletViewMode !== 'others') {
+      this.walletViewMode = 'others';
+    }
+
     this.ensureActiveTabAllowed();
   }
 
   canShowTab(tab: string): boolean {
+    const value = String(tab || '').trim().toLowerCase();
+    if (this.walletViewMode === 'others') {
+      return this.otherTabs.has(value as WalletTableTab);
+    }
     const set = this.isBreweryUser ? this.breweryTabs : this.distilleryTabs;
-    return set.has(tab);
+    return set.has(value);
   }
 
   private ensureActiveTabAllowed(): void {
     if (this.canShowTab(this.activeTab)) {
       return;
     }
+    if (this.walletViewMode === 'others') {
+      this.activeTab = 'security_deposit';
+      return;
+    }
     this.activeTab = this.isBreweryUser ? 'transit' : 'requisition';
   }
 
+  private expandLicenseAliases(value: any): string[] {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return [];
+
+    const out: string[] = [normalized];
+    if (normalized.startsWith('nli/')) {
+      out.push(`na/${normalized.slice(4)}`);
+    } else if (normalized.startsWith('na/')) {
+      out.push(`nli/${normalized.slice(3)}`);
+    }
+
+    // Preserve order, remove duplicates.
+    const seen = new Set<string>();
+    return out.filter((item) => {
+      const key = String(item || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   private isForActiveLicense(item: any): boolean {
-    const active = String(this.activeLicenseeId || '').trim().toLowerCase();
-    if (!active) return true;
+    const activeRaw = String(this.activeLicenseeId || '').trim();
+    const activeAliases = this.expandLicenseAliases(activeRaw);
+    if (activeAliases.length === 0) return true;
 
     const candidate = String(
       this.pickAny(item, ['licensee_id', 'licenseeId', 'license_id', 'licenseId', 'user_id', 'userId'], '')
     ).trim().toLowerCase();
 
-    if (!candidate) return true;
-    return candidate === active;
+    const candidateAliases = this.expandLicenseAliases(candidate);
+    if (candidateAliases.length === 0) return true;
+
+    if (candidateAliases.some((c) => activeAliases.includes(c))) {
+      return true;
+    }
+
+    // Same logged-in user but wallet rows still keyed by legacy username (e.g. TH...) while active license is NA/...
+    const sessionUser = String(this.resolveActiveLicenseeIdFromSession() || '').trim().toLowerCase();
+    const rowUser = String(this.pickAny(item, ['user_id', 'userId'], '') || '').trim().toLowerCase();
+    if (sessionUser && rowUser && sessionUser === rowUser) {
+      return true;
+    }
+    return false;
   }
 
   private applyWalletSummary(payload: any): void {
@@ -608,6 +784,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.educationCessBalance = 0;
     this.breweryWalletBalance = 0;
     this.hologramWalletBalance = 0;
+    this.securityDepositBalance = 0;
+    this.licenseFeeBalance = 0;
     this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
     this.isBreweryUser = startsAsBrewery;
 
@@ -626,7 +804,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         moduleType === 'brewery' ||
         (startsAsBrewery && inferredWalletType === 'excise' && !moduleType);
 
-      if (inferredWalletType === 'education_cess') {
+      if (inferredWalletType === 'security_deposit') {
+        this.securityDepositBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.security_deposit = String(hoa);
+        }
+      } else if (inferredWalletType === 'license_fee') {
+        this.licenseFeeBalance += balance;
+        if (hoa) {
+          this.walletHoaByType.license_fee = String(hoa);
+        }
+      } else if (inferredWalletType === 'education_cess') {
         this.educationCessBalance += balance;
         if (hoa) {
           this.walletHoaByType.education = String(hoa);
@@ -650,7 +838,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       }
     });
 
-    this.walletModuleLabel = this.isBreweryUser ? 'Brewery' : 'Distillery';
+    this.walletModuleLabel =
+      this.resolvedLicenseModuleType === 'brewery'
+        ? 'Brewery'
+        : this.resolvedLicenseModuleType === 'distillery'
+          ? 'Distillery'
+          : this.resolvedLicenseModuleType === 'other'
+            ? 'License'
+            : this.isBreweryUser
+              ? 'Brewery'
+              : 'Distillery';
     this.ensureActiveTabAllowed();
   }
 
@@ -659,8 +856,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.rechargeData = rows.map((row: any, index: number) => ({
       id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
+      transactionId: String(this.pickAny(row, ['transaction_id', 'transactionId', 'reference_no', 'referenceNo'], '-')),
       transactionType: this.pickAny(row, ['transaction_type', 'transactionType'], 'Wallet Recharge'),
       hoa: this.pickAny(row, ['head_of_account', 'headOfAccount'], '-'),
+      walletType: String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase() ||
+        this.inferWalletTypeFromHoa(String(this.pickAny(row, ['head_of_account', 'headOfAccount'], ''))),
       amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
       date: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
       status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'))
@@ -682,8 +882,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
       const isCredit = entryType === 'credit' || entryType === 'cr';
       const type: WalletHistoryType = isCredit
-        ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Added')
-        : 'Utilized';
+        ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Credited')
+        : 'Debited';
 
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
@@ -702,6 +902,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     );
     this.educationWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'education_cess');
     this.hologramWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'hologram');
+    this.securityDepositWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'security_deposit');
+    this.licenseFeeWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'license_fee');
 
     if (this.selectedWalletForHistory) {
       this.applyWalletHistoryFilters();
@@ -712,6 +914,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
       const isCredit = entryType === 'credit' || entryType === 'cr';
       const paymentFor = this.resolvePaymentForType(row);
+      const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '') || '');
+      const walletTypeRaw = String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase();
+      const walletType = walletTypeRaw || this.inferWalletTypeFromHoa(hoa);
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
         txnId: this.pickAny(row, ['transaction_id', 'transactionId'], '-'),
@@ -722,7 +927,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
         status: normalizedStatus,
         dateTime: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
-        licenseeId: this.pickAny(row, ['licensee_id', 'licenseeId'], this.activeLicenseeId || '-')
+        licenseeId: this.pickAny(row, ['licensee_id', 'licenseeId'], this.activeLicenseeId || '-'),
+        hoa,
+        walletType
       } as HistoryItem;
     });
 
@@ -735,6 +942,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const txnId = String(this.pickAny(row, ['transaction_id', 'transactionId'], '')).toUpperCase();
     const reference = String(this.pickAny(row, ['reference_no', 'referenceNo'], '')).toUpperCase();
 
+    if (sourceModule.includes('security') && sourceModule.includes('deposit')) {
+      return 'Security Deposit';
+    }
+    if (sourceModule.includes('license') && sourceModule.includes('fee')) {
+      return 'License Fee';
+    }
     if (sourceModule.includes('hologram_procurement') || txnId.startsWith('HGP-')) {
       return 'Hologram Procurement';
     }
@@ -803,6 +1016,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private inferWalletTypeFromHoa(hoa: string): string {
+    if (hoa === SECURITY_DEPOSIT_HOA) {
+      return 'security_deposit';
+    }
+    if (hoa === LICENSE_FEE_HOA) {
+      return 'license_fee';
+    }
     if (hoa === '0045-00-112-45-03') {
       return 'education_cess';
     }
@@ -866,6 +1085,19 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
             const hologramFee = totalQty * 0.15;
             const paymentDetails: any = (item as any).paymentDetails || (item as any).payment_details || {};
             const paidAt = paymentDetails?.paid_at ? new Date(paymentDetails.paid_at) : null;
+            const createdAt =
+              (item as any).createdAt ||
+              (item as any).created_at ||
+              (item as any).submittedAt ||
+              (item as any).submitted_at ||
+              (item as any).date ||
+              (item as any).created ||
+              null;
+            const recordDate =
+              (item as any).date ||
+              (item as any).createdAt ||
+              (item as any).created_at ||
+              null;
             const referenceNo =
               (item as any).refNo ||
               (item as any).ref_no ||
@@ -888,6 +1120,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               exportQty,
               defenceQty,
               paymentDate: paidAt,
+              createdAt,
+              date: recordDate,
               paymentDetails,
               paymentStatus: normalizedStatus
             } as HologramItem;
@@ -978,8 +1212,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.supplyChainService.getCancellations().subscribe({
       next: (data) => {
         console.log('Fetched Cancellation Data:', data);
+        const allRows = Array.isArray(data) ? data : [];
         // Map backend data to PaymentItem interface
-        this.cancellationData = data.filter(item =>
+        this.cancellationData = allRows.filter(item =>
           this.isForActiveLicense(item) && (
           this.isCancellationPaymentQueueStatus(item.status)
           )
@@ -1003,8 +1238,78 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
             }, 500);
           }
         }
+
+        this.syncMissingCancellationWalletDebits(allRows);
       },
       error: (err) => console.error('Error fetching cancellation data', err)
+    });
+  }
+
+  private syncMissingCancellationWalletDebits(rows: any[]): void {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return;
+    }
+
+    const existingRefs = new Set(
+      (this.historyData || [])
+        .map((item) => String(item?.reference || '').trim().toUpperCase())
+        .filter((ref) => !!ref)
+    );
+
+    const pendingRows = rows.filter((row) => {
+      if (!this.isForActiveLicense(row)) {
+        return false;
+      }
+
+      const id = String(row?.id || '').trim();
+      if (!id || this.cancellationWalletSyncAttempted.has(id)) {
+        return false;
+      }
+
+      const status = this.normalizeStatus(
+        String(row?.status || row?.current_stage_name || row?.currentStageName || '')
+      );
+      if (status.includes('reject')) {
+        return false;
+      }
+
+      const amount = this.toNumber(row?.totalCancellationAmount ?? row?.total_cancellation_amount ?? row?.cancellation_br_amount);
+      if (!(amount > 0)) {
+        return false;
+      }
+
+      const reference = String(row?.ourRefNo || row?.our_ref_no || '').trim().toUpperCase();
+      if (reference && existingRefs.has(reference)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (pendingRows.length === 0) {
+      return;
+    }
+
+    const syncRequests: Observable<any>[] = pendingRows.map((row) => {
+      const id = String(row?.id || '').trim();
+      this.cancellationWalletSyncAttempted.add(id);
+      return this.supplyChainService.syncCancellationWalletDebit(id).pipe(
+        catchError((error) => {
+          console.warn('Cancellation wallet sync failed for id:', id, error);
+          return of({ __syncError: true, id });
+        })
+      );
+    });
+
+    forkJoin(syncRequests).subscribe((results) => {
+      const hasSuccessfulSync = (results || []).some((result: any) => {
+        const debit = result?.wallet_deduction;
+        return debit?.debited === true || debit?.reason === 'already_debited';
+      });
+
+      if (hasSuccessfulSync) {
+        this.refreshWalletData();
+      }
     });
   }
 
@@ -1030,10 +1335,22 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   // Wallet history (utilization and additions)
   selectedWalletForHistory: WalletHistoryCategory | null = null;
   walletHistoryFilters = {
+    transactionId: '', // Transaction ID filter
     from: '',
     to: '',
-    month: '', // Monthly filter
-    type: '', // Added | Utilized | Refunded
+    month: String(new Date().getMonth() + 1).padStart(2, '0'), // Monthly filter
+    type: '', // Credited | Debited | Refunded
+    minAmount: '',
+    maxAmount: ''
+  };
+
+  // Main tab filters (for all tabs)
+  tabFilters = {
+    transactionId: '',
+    month: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0'),
+    from: '',
+    to: '',
+    type: '',
     minAmount: '',
     maxAmount: ''
   };
@@ -1052,6 +1369,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   educationWalletTransactions: WalletHistoryTransaction[] = [];
 
   hologramWalletTransactions: WalletHistoryTransaction[] = [];
+
+  securityDepositWalletTransactions: WalletHistoryTransaction[] = [];
+
+  licenseFeeWalletTransactions: WalletHistoryTransaction[] = [];
 
   walletHistoryFiltered: WalletHistoryTransaction[] = [];
 
@@ -1104,6 +1425,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (this.selectedWalletForHistory === 'hologram') {
       return this.hologramWalletTransactions;
     }
+    if (this.selectedWalletForHistory === 'security_deposit') {
+      return this.securityDepositWalletTransactions;
+    }
+    if (this.selectedWalletForHistory === 'license_fee') {
+      return this.licenseFeeWalletTransactions;
+    }
     return [];
   }
 
@@ -1112,6 +1439,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const f = this.walletHistoryFilters;
     
     this.walletHistoryFiltered = txns.filter(t => {
+      // Handle transaction ID filter
+      const txnIdOk = f.transactionId ? t.id.toLowerCase().includes(f.transactionId.toLowerCase()) : true;
+      
       // Handle monthly filter
       const monthOk = f.month ? this.isTransactionInMonth(t.date, f.month) : true;
       
@@ -1125,7 +1455,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const minOk = f.minAmount ? t.amount >= Number(f.minAmount) : true;
       const maxOk = f.maxAmount ? t.amount <= Number(f.maxAmount) : true;
       
-      return monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
+      return txnIdOk && monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
     });
     
     // Reset to first page when filters change
@@ -1134,7 +1464,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   clearWalletHistoryFilters(apply: boolean = true): void {
-    this.walletHistoryFilters = { from: '', to: '', month: '', type: '', minAmount: '', maxAmount: '' };
+    this.walletHistoryFilters = { transactionId: '', from: '', to: '', month: String(new Date().getMonth() + 1).padStart(2, '0'), type: '', minAmount: '', maxAmount: '' };
     if (apply) {
       this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
     }
@@ -1248,7 +1578,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   setActiveTab(tab: string): void {
-    const requested = String(tab || '').trim();
+    const requested = String(tab || '').trim().toLowerCase();
     if (!requested) {
       return;
     }
@@ -1256,7 +1586,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       this.ensureActiveTabAllowed();
       return;
     }
-    this.activeTab = requested;
+    this.activeTab = requested as WalletTableTab;
     const walletTab = this.getCurrentWalletTableTab();
     if (walletTab) {
       this.tableCurrentPageByTab[walletTab] = 1;
@@ -1725,8 +2055,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   confirmPayment(): void {
     if (!this.selectedItem) return;
 
-    const isHologramPayment = this.activeTab === 'hologram';
-    const availableBalance = isHologramPayment ? this.hologramWalletBalance : this.educationCessBalance;
+    const availableBalance = this.getSelectedWalletBalance();
     if (availableBalance < this.selectedItem.amount) {
       this.showInsufficientBalanceAlert();
       return;
@@ -1782,13 +2111,29 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         next: (res) => {
           this.showSuccessMessage(`Cancellation Payment of Rs ${item.amount} processed successfully!`);
           item.status = String(res?.new_status || res?.status || 'SUBMITTED_PAYSLIP');
+          const deducted = Number(res?.wallet_deduction?.amount ?? item.amount ?? 0);
+          const balanceAfter = Number(res?.wallet_deduction?.balance_after ?? (this.getSelectedWalletBalance() - deducted));
+          const txnId = String(res?.wallet_deduction?.transaction_id || 'N/A');
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Payment Successful',
+            html:
+              `<div style="text-align:left">` +
+              `<div><strong>Deducted Amount:</strong> Rs ${deducted.toFixed(2)}</div>` +
+              `<div><strong>Remaining Wallet Balance:</strong> Rs ${balanceAfter.toFixed(2)}</div>` +
+              `<div><strong>Transaction ID:</strong> ${txnId}</div>` +
+              `</div>`,
+            confirmButtonText: 'OK'
+          });
           // Optionally reload data if we switch to loading from API
           this.loadCancellationDataFromApi();
           this.refreshWalletData();
         },
         error: (err) => {
           console.error('Cancellation Payment failed:', err);
-          this.showErrorMessage(`Cancellation Payment failed: ${err.error?.error || err.message}`);
+          const errorMessage = err?.error?.error || err?.error?.detail || err?.message || 'Cancellation Payment failed';
+          this.showErrorMessage(`Cancellation Payment failed: ${errorMessage}`);
         }
       });
     } else {
@@ -1826,6 +2171,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       case 'education':
       case 'hologram':
       case 'brewery':
+      case 'security_deposit':
+      case 'license_fee':
         return walletType;
       default:
         return null;
@@ -1882,6 +2229,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           walletLabel: 'Hologram Wallet',
           hoa: this.walletHoaByType.hologram
         };
+      case 'security_deposit':
+        return {
+          walletType,
+          moduleLabel: 'Manufacturing',
+          walletLabel: 'Security Deposit Wallet',
+          hoa: this.walletHoaByType.security_deposit
+        };
+      case 'license_fee':
+        return {
+          walletType,
+          moduleLabel: 'Manufacturing',
+          walletLabel: 'License Fee Wallet',
+          hoa: this.walletHoaByType.license_fee
+        };
       default:
         return {
           walletType: 'excise',
@@ -1897,7 +2258,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       excise: 'EX',
       brewery: 'BR',
       education: 'EC',
-      hologram: 'HG'
+      hologram: 'HG',
+      security_deposit: 'SD',
+      license_fee: 'LF'
     };
 
     const timestamp = Date.now().toString();
@@ -1919,8 +2282,85 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    this.showInfoMessage('Recharge request submitted. Wallet balance will refresh from backend after payment success.');
-    this.closeUnifiedAddMoneyView();
+    const context = this.selectedAddMoneyContext;
+    if (!context) {
+      this.showErrorMessage('Unable to proceed: wallet context not found.');
+      return;
+    }
+
+    const licenseeId = String(this.activeLicenseeId || this.resolveActiveLicenseeIdFromSession() || '').trim();
+    if (!licenseeId) {
+      this.showErrorMessage('Unable to proceed: licensee id not found.');
+      return;
+    }
+
+    const headOfAccount = String(context.hoa || '').trim();
+    if (!headOfAccount) {
+      this.showErrorMessage('Unable to proceed: Head Of Account not found.');
+      return;
+    }
+
+    const walletType = this.mapAddMoneyWalletTypeToApi(context.walletType);
+    const transactionId = String(this.addMoneyTransactionId || '').trim();
+    if (!transactionId) {
+      this.showErrorMessage('Unable to proceed: Wallet Transaction ID not found.');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Processing Recharge',
+      text: 'Crediting wallet for testing...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.paymentIntegrationService.creditWalletRecharge(licenseeId, {
+      transaction_id: transactionId,
+      wallet_type: walletType,
+      head_of_account: headOfAccount,
+      amount: Number(this.addMoneyAmount || 0),
+      remarks: `Dummy recharge via UI (${context.walletLabel})`
+    }).subscribe({
+      next: (response) => {
+        Swal.close();
+        this.closeUnifiedAddMoneyView();
+        this.setActiveTab('recharge');
+        this.refreshWalletData();
+
+        const created = response?.wallet_transaction || null;
+        const walletTransactionId = String(created?.wallet_transaction_id || created?.walletTransactionId || '').trim();
+        const createdAt = String(created?.created_at || created?.createdAt || '').trim();
+        const statusText = String(created?.payment_status || created?.paymentStatus || 'success');
+
+        this.router.navigate(['/dashboard/wallet-recharge/success'], {
+          queryParams: {
+            transactionId,
+            walletTransactionId: walletTransactionId || undefined,
+            walletType,
+            hoa: headOfAccount,
+            amount: Number(this.addMoneyAmount || 0),
+            status: statusText,
+            createdAt: createdAt || undefined
+          }
+        });
+      },
+      error: (err) => {
+        Swal.close();
+        console.error('Wallet recharge credit failed:', err);
+        const errorMessage =
+          err?.error?.detail ||
+          err?.error?.error ||
+          err?.error?.message ||
+          err?.message ||
+          'Recharge failed';
+        this.showErrorMessage(String(errorMessage));
+      }
+    });
+  }
+
+  private mapAddMoneyWalletTypeToApi(walletType: AddMoneyWalletType): string {
+    if (walletType === 'education') return 'education_cess';
+    return walletType;
   }
 
   downloadDetails(): void {
@@ -2096,7 +2536,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getSelectedWalletBalance(): number {
-    return this.activeTab === 'hologram' ? this.hologramWalletBalance : this.educationCessBalance;
+    if (this.activeTab === 'hologram') {
+      return this.hologramWalletBalance;
+    }
+    if (this.activeTab === 'revalidation') {
+      return this.educationCessBalance;
+    }
+    return this.isBreweryUser ? this.breweryWalletBalance : this.exciseWalletBalance;
   }
 
   getSelectedWalletBalanceAfterDeduction(): number {
@@ -2266,11 +2712,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     };
     const keyword = keywordByTab[tab];
 
-    const activeLicensee = String(this.activeLicenseeId || '').trim().toLowerCase();
     const mergedRows = [...this.optimisticPaymentHistory, ...this.historyData].filter((item) => {
-      if (!activeLicensee) return true;
-      const rowLicensee = String(item?.licenseeId || '').trim().toLowerCase();
-      return !rowLicensee || rowLicensee === activeLicensee;
+      return this.isForActiveLicense(item);
     });
 
     return mergedRows.filter((item) => {
@@ -2333,7 +2776,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const history = historyByRef.get(refKey);
       const canPay = this.canPayHologram(item);
       const isPaid = !canPay;
-      const dateTime = history?.dateTime || item.paymentDate || new Date();
+      const dateTime = history?.dateTime || item.paymentDate || (item as any).createdAt || (item as any).date || '';
       const status = history?.status || (isPaid ? 'Payment Successful' : 'Pending');
       const type = history?.type || (isPaid ? 'Wallet Utilization' : 'Pending Payment');
       const amount = Number(history?.amount ?? item.hologramFee ?? 0);
@@ -2367,7 +2810,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private isWalletTableTab(value: string): value is WalletTableTab {
-    return ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'recharge', 'history'].includes(String(value || '').toLowerCase());
+    return [
+      'requisition',
+      'revalidation',
+      'cancellation',
+      'transit',
+      'hologram',
+      'security_deposit',
+      'license_fee',
+      'recharge',
+      'history'
+    ].includes(String(value || '').toLowerCase());
   }
 
   private getCurrentWalletTableTab(): WalletTableTab | null {
@@ -2376,23 +2829,190 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getRowsForTab(tab: WalletTableTab): any[] {
+    let rows: any[] = [];
     switch (tab) {
       case 'requisition':
-        return this.getPaymentTransactionsFor('requisition');
+        rows = this.getPaymentTransactionsFor('requisition');
+        break;
       case 'revalidation':
-        return this.getPaymentTransactionsFor('revalidation');
+        rows = this.getPaymentTransactionsFor('revalidation');
+        break;
       case 'cancellation':
-        return this.getPaymentTransactionsFor('cancellation');
+        rows = this.getPaymentTransactionsFor('cancellation');
+        break;
       case 'transit':
-        return this.getPaymentTransactionsFor('transit');
+        rows = this.getPaymentTransactionsFor('transit');
+        break;
       case 'hologram':
-        return this.getHologramTabRows();
+        rows = this.getHologramTabRows();
+        break;
+      case 'security_deposit':
+        rows = this.getWalletTransactionsForWalletType('security_deposit');
+        break;
+      case 'license_fee':
+        rows = this.getWalletTransactionsForWalletType('license_fee');
+        break;
       case 'recharge':
-        return [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        rows = this.getRechargeRowsForCurrentView();
+        break;
       case 'history':
-        return [...this.historyData].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+        rows = this.getHistoryRowsForCurrentView();
+        break;
       default:
-        return [];
+        rows = [];
+    }
+    
+    // Apply filters
+    return this.applyTabFilters(rows);
+  }
+
+  applyTabFilters(rows: any[]): any[] {
+    const f = this.tabFilters;
+    
+    return rows.filter(row => {
+      // Transaction ID filter
+      const txnId = row.txnId || row.id || row.reference || '';
+      const txnIdOk = f.transactionId ? txnId.toLowerCase().includes(f.transactionId.toLowerCase()) : true;
+      
+      // Date filters
+      const rowDate = row.dateTime || row.date || '';
+      const dateStr = rowDate ? new Date(rowDate).toISOString().split('T')[0] : '';
+      
+      // Month filter
+      const monthOk = f.month ? (dateStr && dateStr.substring(0, 7) === f.month) : true;
+      
+      // Date range filter
+      const afterFrom = f.from ? dateStr >= f.from : true;
+      const beforeTo = f.to ? dateStr <= f.to : true;
+      
+      // Type filter
+      const rowType = String(row.type || row.transactionType || '');
+      const rowStatus = String(row.status || '');
+      
+      let typeOk = true;
+      if (f.type) {
+        const filterType = f.type.toLowerCase();
+        const typeLower = rowType.toLowerCase();
+        const statusLower = rowStatus.toLowerCase();
+        
+        if (filterType === 'refunded') {
+          typeOk = typeLower.includes('refund') || statusLower.includes('refund') || typeLower === filterType;
+        } else if (filterType === 'credited') {
+          typeOk = typeLower.includes('credit') || statusLower.includes('credit') || typeLower.includes('recharge') || typeLower === filterType;
+        } else if (filterType === 'debited') {
+          typeOk = typeLower.includes('debit') || statusLower.includes('debit') || typeLower.includes('utilization') || typeLower === filterType;
+        } else {
+          typeOk = typeLower === filterType || statusLower === filterType;
+        }
+      }
+      
+      // Amount filters
+      const amount = Number(row.amount || 0);
+      const minOk = f.minAmount ? amount >= Number(f.minAmount) : true;
+      const maxOk = f.maxAmount ? amount <= Number(f.maxAmount) : true;
+      
+      return txnIdOk && monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
+    });
+  }
+
+  applyFiltersToActiveTab(): void {
+    // Reset to first page when filters change
+    const tab = this.getCurrentWalletTableTab();
+    if (tab) {
+      this.tableCurrentPageByTab[tab] = 1;
+    }
+  }
+
+  clearTabFilters(): void {
+    this.tabFilters = {
+      transactionId: '',
+      month: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0'),
+      from: '',
+      to: '',
+      type: '',
+      minAmount: '',
+      maxAmount: ''
+    };
+    this.applyFiltersToActiveTab();
+  }
+
+  setWalletViewMode(mode: WalletViewMode): void {
+    if (this.walletViewMode === mode) return;
+    this.walletViewMode = mode;
+    this.ensureActiveTabAllowed();
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { walletView: mode },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private getRechargeRowsForCurrentView(): RechargeItem[] {
+    const rows = [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // "Others" (license fee + security deposit): show every recharge here so the tab is not empty;
+    // detailed splits stay under License Fee / Security Deposit tabs.
+    if (this.walletViewMode === 'others') {
+      return rows;
+    }
+    // "Wallets" (brewery/distillery): fee/deposit wallets are not part of this view — hide those recharges.
+    return rows.filter((row) => {
+      const wt =
+        String(row.walletType || '').toLowerCase() ||
+        this.inferWalletTypeFromHoa(String(row.hoa || '').trim());
+      return wt !== 'license_fee' && wt !== 'security_deposit';
+    });
+  }
+
+  private getHistoryRowsForCurrentView(): HistoryItem[] {
+    const rows = [...this.historyData].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+    if (this.walletViewMode !== 'others') {
+      return rows.filter((row) => {
+        const resolved = this.resolveWalletTypeForRow(row);
+        return resolved !== 'license_fee' && resolved !== 'security_deposit';
+      });
+    }
+    return rows.filter((row) => this.isOtherWalletType(String(row.walletType || ''), String(row.hoa || '')));
+  }
+
+  private getWalletTransactionsForWalletType(walletType: OtherModuleTab): HistoryItem[] {
+    const mergedRows = [...this.optimisticPaymentHistory, ...this.historyData].filter((item) => this.isForActiveLicense(item));
+
+    return mergedRows
+      .filter((item) => this.resolveWalletTypeForRow(item) === walletType)
+      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+  }
+
+  private resolveWalletTypeForRow(row: { walletType?: string; hoa?: string } | null | undefined): string {
+    const rawType = String(row?.walletType || '').trim().toLowerCase();
+    if (rawType) return rawType;
+    const hoa = String(row?.hoa || '').trim();
+    return this.inferWalletTypeFromHoa(hoa);
+  }
+
+  private isOtherWalletType(walletTypeRaw: string, hoaRaw: string): boolean {
+    const type = String(walletTypeRaw || '').trim().toLowerCase() || this.inferWalletTypeFromHoa(String(hoaRaw || '').trim());
+    return type === 'security_deposit' || type === 'license_fee';
+  }
+
+  getWalletTypeLabel(walletTypeOrHoa: string): string {
+    const type = String(walletTypeOrHoa || '').trim().toLowerCase();
+    const inferredType = type || this.inferWalletTypeFromHoa(walletTypeOrHoa);
+    
+    switch (inferredType) {
+      case 'excise':
+      case 'brewery':
+        return 'Excise Duty';
+      case 'education':
+      case 'education_cess':
+        return 'Education Cess';
+      case 'hologram':
+        return 'Hologram';
+      case 'security_deposit':
+        return 'Security Deposit';
+      case 'license_fee':
+        return 'License Fee';
+      default:
+        return 'Excise Duty';
     }
   }
 

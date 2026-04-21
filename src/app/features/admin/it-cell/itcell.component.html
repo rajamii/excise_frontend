@@ -71,13 +71,14 @@
           </div>
         </div>
         <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-          <div class="summary-card total-quantity">
+          <div class="summary-card edited-requests summary-card-clickable" role="button" tabindex="0"
+            (click)="onSummaryCardClick('Edited')" [class.active]="activeSummaryFilter === 'Edited'">
             <div class="card-icon">
-              <i class="bi bi-boxes"></i>
+              <i class="bi bi-pencil-square"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">{{ getTotalQuantity() | number:'1.0-0' }}</h3>
-              <p class="card-label">Total Quantity</p>
+              <h3 class="card-value">{{ getStatusCount('Edited') }}</h3>
+              <p class="card-label">Edited</p>
             </div>
           </div>
         </div>
@@ -234,10 +235,6 @@
             <div class="summary-item">
               <span class="summary-label">Total Applications:</span>
               <span class="summary-value">{{ filteredHologramData.length }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">Total Quantity:</span>
-              <span class="summary-value">{{ getFilteredTotalQuantity() | number:'1.0-0' }}</span>
             </div>
           </div>
         </div>

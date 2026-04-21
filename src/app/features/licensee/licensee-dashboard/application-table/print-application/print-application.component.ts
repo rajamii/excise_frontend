@@ -55,8 +55,8 @@ export class PrintApplicationComponent {
   private getLicenseResolveId(): string {
     // Backend `masters/license/*` endpoints can resolve by `license_id` OR by `source_object_id` (application id).
     return (
-      this.getFinalLicenseId() ||
       this.getMasterLicenseId() ||
+      this.getFinalLicenseId() ||
       this.getPrintApiId() ||
       ''
     ).trim();
@@ -215,6 +215,7 @@ export class PrintApplicationComponent {
     printObservable.subscribe({
       next: (res: any) => {
         const updatedCount = res?.print_count ?? res?.printCount;
+        const prePrintToken = String(res?.nonce || res?.verificationId || Date.now());
         if (updatedCount !== undefined) {
           this.application.print_count = updatedCount;
           if (this.raw) this.raw.print_count = updatedCount;
@@ -229,6 +230,7 @@ export class PrintApplicationComponent {
               applicationId: finalLicenseId,
               type: inferredType || appType,
               returnUrl: this.data?.returnUrl || '',
+              prePrintToken,
             }
           });
         } else {

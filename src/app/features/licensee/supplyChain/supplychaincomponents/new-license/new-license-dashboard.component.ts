@@ -5,8 +5,13 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 
 import { environment } from '../../../../../../environments/environment';
+import Swal from 'sweetalert2';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
+import { RoleService } from '../../../../../core/services/role.service';
 
 interface NewLicenseCounts {
   applied: number;
@@ -38,13 +43,15 @@ interface GroupedNewLicenseResponse {
 @Component({
   selector: 'app-new-license-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MaterialModule],
   templateUrl: './new-license-dashboard.component.html',
   styleUrls: ['./new-license-dashboard.component.scss']
 })
 export class NewLicenseDashboardComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
+  private roleService = inject(RoleService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -81,6 +88,10 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.loadData();
   }
 
+  isLicenseeUser(): boolean {
+    return this.roleService.isLicenseeRole();
+  }
+
   loadData(): void {
     this.isLoading = true;
     this.error = null;
@@ -104,6 +115,18 @@ export class NewLicenseDashboardComponent implements OnInit {
         this.allRows = this.flattenGroupedData(grouped);
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
+
+        // Admin UX: when opening "New License" from sidebar, default to Pending if there is any pending work.
+        // This avoids landing on Approved / All when there are pending items to process.
+        const isAdmin = this.roleService.isAdminRole();
+        const hasPending = this.serverCounts.pending > 0;
+        const current = (this.statusFilter || '').trim().toLowerCase();
+        if (isAdmin && hasPending && (!current || current === 'approved')) {
+          this.statusFilter = 'pending';
+          this.activeSummaryFilter = 'pending';
+          this.applyFilters();
+        }
+
         if (this.allRows.length === 0) {
           this.error = null;
         }
@@ -225,6 +248,26 @@ export class NewLicenseDashboardComponent implements OnInit {
     });
   }
 
+  viewTimeline(row: NewLicenseItem): void {
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    const encoded = encodeURIComponent(applicationId);
+    this.http.get<any>(`${this.apiBase}/detail/${encoded}/`).subscribe({
+      next: (res: any) => {
+        this.dialog.open(ApplicationMovementComponent, {
+          width: '700px',
+          maxHeight: '80vh',
+          data: { movementDataSource: { data: [res] } }
+        });
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
+        void Swal.fire('Error', String(msg), 'error');
+      }
+    });
+  }
+
   private flattenGroupedData(grouped: GroupedNewLicenseResponse): NewLicenseItem[] {
     const mapGroup = (items: any[] | undefined, statusGroup: NewLicenseItem['statusGroup']): NewLicenseItem[] => {
       if (!Array.isArray(items)) {
@@ -238,9 +281,12 @@ export class NewLicenseDashboardComponent implements OnInit {
         establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
         submittedOn: this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on),
         currentStageRaw: String(item?.current_stage_name || item?.currentStageName || item?.current_stage || ''),
-        currentStage: this.formatStageName(
-          item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup
-        ),
+        currentStage: this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(
+              statusGroup,
+              item?.current_stage_name || item?.currentStageName || item?.current_stage || ''
+            )
+          : this.formatStageName(item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup),
         statusGroup
       }));
     };
@@ -281,6 +327,19 @@ export class NewLicenseDashboardComponent implements OnInit {
     return raw
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private simplifyStageForLicensee(statusGroup: NewLicenseItem['statusGroup'], stageValue: any): string {
+    if (statusGroup === 'approved') return 'Approved';
+    if (statusGroup === 'rejected') return 'Rejected';
+
+    const raw = String(stageValue ?? '').toLowerCase();
+    if (raw.includes('approved')) return 'Approved';
+    if (raw.includes('reject')) return 'Rejected';
+    if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+
+    // Licensee UX: don't expose internal role/stage names (commissioner/permit section/etc).
+    return 'Pending';
   }
 
   private getStageFilterOptions(rows: NewLicenseItem[]): string[] {

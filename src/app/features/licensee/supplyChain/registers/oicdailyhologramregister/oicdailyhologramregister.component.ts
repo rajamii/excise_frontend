@@ -600,8 +600,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
             referenceNo: reqRef || `REQ-${req.id}` || 'N/A',
             rollRange: allocatedRanges.map((r: any) => r.cartoonNumber).join(', '),
             dates: {
-              submission: req.submission_date || firstSavedEntry?.submission_date || firstSavedEntry?.submissionDate || new Date().toISOString().split('T')[0],
-              usage: req.usage_date || firstSavedEntry?.usage_date || firstSavedEntry?.usageDate || req.submission_date || new Date().toISOString().split('T')[0]
+              // Backend endpoints are inconsistent: some return snake_case, others camelCase.
+              // Daily Register API (OIC) uses `submissionDate`/`usageDate` (camelCase).
+              submission: req.submission_date || req.submissionDate || firstSavedEntry?.submission_date || firstSavedEntry?.submissionDate || new Date().toISOString().split('T')[0],
+              usage: req.usage_date || req.usageDate || firstSavedEntry?.usage_date || firstSavedEntry?.usageDate || req.submission_date || req.submissionDate || new Date().toISOString().split('T')[0]
             },
             brandDetails: hasSavedEntries && (firstSavedEntry?.brand_details || firstSavedEntry?.brandDetails)
               ? (firstSavedEntry.brand_details || firstSavedEntry.brandDetails)

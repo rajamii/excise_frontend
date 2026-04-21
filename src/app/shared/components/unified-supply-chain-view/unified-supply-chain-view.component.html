@@ -48,8 +48,7 @@
         <div id="applicationPrintSection" class="card shadow-sm border-0 printable-content">
             <div class="application-header text-center fw-bold mb-3 fs-5">
                 <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-                    <img src="assets/icons/fav-icon.png" alt="Department Seal" class="dept-seal"
-                        style="height: 60px; width: auto; filter: invert(1) brightness(0.2);" />
+                    <img src="assets/icons/fav-icon.png" alt="Department Seal" class="dept-seal" />
                     <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
                 </div>
                 <div class="text-primary fs-4 mt-2">{{ getApplicationTitle() }}</div>
@@ -65,15 +64,14 @@
                             </p>
                             <p><strong>Submission Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy"
                                 }}</p>
-                            <p><strong>Distillery:</strong> {{ hasText(applicationData.distilleryName) ? applicationData.distilleryName : 'Not specified' }}</p>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="info-card">
                             <h6 class="text-primary mb-2">Status Information</h6>
                             <p><strong>Current Status:</strong></p>
-                            <span [ngClass]="getStatusBadgeClass(applicationData.status)" class="d-block mt-1">
-                                {{ getFormattedStatus(applicationData.status) }}
+                            <span [ngClass]="getStatusBadgeClass(isLicenseeContext() ? 'PENDING' : applicationData.status)" class="d-block mt-1">
+                                {{ isLicenseeContext() ? 'Pending' : getFormattedStatus(applicationData.status) }}
                             </span>
                             <p class="mt-2"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
@@ -87,7 +85,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Bulk Spirit Type</td>
                                     <td>{{ applicationData.bulkSpiritType || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
@@ -125,7 +123,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Lifted From</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Lifted From</td>
                                     <td>{{ hasText(applicationData.liftedFrom) ?
                                         applicationData.liftedFrom : 'Not specified' }}</td>
                                 </tr>
@@ -153,7 +151,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Original Permit No</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Original Permit No</td>
                                     <td>{{ applicationData.originalPermitNo }}</td>
                                 </tr>
                                 <tr>
@@ -179,7 +177,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Reason for Revalidation</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Reason for Revalidation</td>
                                     <td>{{ applicationData.reasonForRevalidation }}</td>
                                 </tr>
                                 <tr>
@@ -205,7 +203,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Bulk Spirit Type</td>
                                     <td>{{ applicationData.bulkSpiritType || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
@@ -250,7 +248,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Original Permit No</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Original Permit No</td>
                                     <td>{{ applicationData.originalPermitNo }}</td>
                                 </tr>
                                 <tr>
@@ -276,7 +274,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Bulk Spirit Type</td>
                                     <td>{{ applicationData.bulkSpiritType || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
@@ -318,7 +316,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Reference No</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Reference No</td>
                                     <td>{{ applicationData.referenceNo }}</td>
                                 </tr>
                                 <tr>
@@ -354,7 +352,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">From Location</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">From Location</td>
                                     <td>{{ hasText(applicationData.fromLocation) ?
                                         applicationData.fromLocation : 'Not specified' }}</td>
                                 </tr>
@@ -496,7 +494,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
                                     <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
                                 </tr>
                                 <tr>
@@ -526,7 +524,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Local Quantity</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Local Quantity</td>
                                     <td>{{ (applicationData.localQty || 0) | number:'1.0-0' }} pieces</td>
                                 </tr>
                                 <tr>
@@ -552,7 +550,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Payment Type</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Payment Type</td>
                                     <td>Wallet Payment (Online Payment - After Approval)</td>
                                 </tr>
                                 <tr>
@@ -586,7 +584,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Current Status</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Current Status</td>
                                     <td>
                                         <span [ngClass]="getStatusBadgeClass(applicationData.status)">
                                             {{ getFormattedStatus(applicationData.status) }}
@@ -624,20 +622,44 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
-                                    <td>{{ applicationData.referenceNo || applicationData.id }}</td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Applicant Name</td>
                                     <td>{{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Establishment Name</td>
-                                    <td>{{ applicationData.establishment_name || applicationData.establishmentName || 'Not available' }}</td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Father/Husband Name</td>
                                     <td>{{ applicationData.father_husband_name || applicationData.fatherHusbandName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN</td>
+                                    <td>{{ applicationData.pan || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">DOB</td>
+                                    <td>{{ applicationData.dob || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Gender</td>
+                                    <td>{{ applicationData.gender || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Nationality</td>
+                                    <td>{{ applicationData.nationality || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Residential Status</td>
+                                    <td>{{ applicationData.residential_status || applicationData.residentialStatus || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Mode of Operation</td>
+                                    <td>{{ applicationData.mode_of_operation || applicationData.modeOfOperation || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Present Address</td>
+                                    <td>{{ applicationData.present_address || applicationData.presentAddress || applicationData.address || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Permanent Address</td>
+                                    <td>{{ applicationData.permanent_address || applicationData.permanentAddress || 'Not Available' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Email</td>
@@ -646,6 +668,22 @@
                                 <tr>
                                     <td class="fw-semibold bg-light">Mobile Number</td>
                                     <td>{{ applicationData.mobile_number || applicationData.mobileNumber || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Has Sikkim Certificate</td>
+                                    <td>{{ applicationData.has_sikkim_certificate || applicationData.hasSikkimCertificate || applicationData.sikkimSubject || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Has Excise License</td>
+                                    <td>{{ applicationData.has_excise_license || applicationData.hasExciseLicense || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Family Has Excise License</td>
+                                    <td>{{ applicationData.family_excise_license || applicationData.familyExciseLicense || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Criminal Conviction</td>
+                                    <td>{{ applicationData.criminal_conviction || applicationData.criminalConviction || 'Not Available' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -657,6 +695,14 @@
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Establishment Name</td>
+                                    <td>{{ applicationData.establishment_name || applicationData.establishmentName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Type</td>
+                                    <td>{{ applicationData.site_type || 'Not Available' }}</td>
+                                </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">License Type</td>
                                     <td>{{ applicationData.license_type_name || applicationData.licenseTypeName || applicationData.license_type || 'Not available' }}</td>
@@ -682,6 +728,10 @@
                                     <td>{{ applicationData.police_station_name || applicationData.policeStationName || 'Not available' }}</td>
                                 </tr>
                                 <tr>
+                                    <td class="fw-semibold bg-light">Pin Code</td>
+                                    <td>{{ applicationData.pinCode || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
                                     <td class="fw-semibold bg-light">Yearly License Fee</td>
                                     <td class="text-success fw-bold">Rs {{ applicationData.yearly_license_fee || applicationData.yearlyLicenseFee || applicationData.brAmount || 0 }}</td>
                                 </tr>
@@ -689,6 +739,82 @@
                         </table>
                     </div>
                 </div>
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Company Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Name</td>
+                                    <td>{{ applicationData.companyName || 'Not Applicable' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Mobile Number</td>
+                                    <td>{{ applicationData.companyMobileNumber || 'Not Applicable' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Email</td>
+                                    <td>{{ applicationData.companyEmailId || 'Not Applicable' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Site Location & Structure</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Location Category</td>
+                                    <td>{{ applicationData.location_category || applicationData.locationCategory || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Location Name</td>
+                                    <td>{{ applicationData.location_name || applicationData.locationName || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Ward Name</td>
+                                    <td>{{ applicationData.ward_name || applicationData.wardName || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Business Address</td>
+                                    <td>{{ applicationData.business_address || applicationData.businessAddress || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Road Name</td>
+                                    <td>{{ applicationData.road_name || applicationData.roadName || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Pin Code</td>
+                                    <td>{{ applicationData.pin_code || applicationData.pinCode || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Construction Type</td>
+                                    <td>{{ applicationData.construction_type || applicationData.constructionType || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Length</td>
+                                    <td>{{ (applicationData.length ?? 'Not Available') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Breadth</td>
+                                    <td>{{ (applicationData.breadth ?? 'Not Available') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Owned</td>
+                                    <td>{{ applicationData.site_owned || applicationData.siteOwned || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">NOC Obtained</td>
+                                    <td>{{ applicationData.noc_obtained || applicationData.nocObtained || 'Not Available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 }
 
                 @if (isCompanyRegistration()) {
@@ -698,7 +824,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
                                     <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
                                 </tr>
                                 <tr>
@@ -732,7 +858,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Office Address</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Office Address</td>
                                     <td>{{ applicationData.officeAddress || 'Not available' }}</td>
                                 </tr>
                                 <tr>
@@ -766,7 +892,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Member Name</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Member Name</td>
                                     <td>{{ applicationData.memberName || 'Not available' }}</td>
                                 </tr>
                                 <tr>
@@ -807,6 +933,144 @@
                 </div>
                 }
 
+                @if (isCompanyCollaboration()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Company Collaboration Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
+                                    <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Financial Year</td>
+                                    <td>{{ applicationData['financial_year'] || applicationData['financialYear'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Application Year</td>
+                                    <td>{{ applicationData['application_year'] || applicationData['applicationYear'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Licensee Name</td>
+                                    <td>{{ applicationData['licensee_name'] || applicationData['licenseeName'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Number</td>
+                                    <td>{{ applicationData['license_number'] || applicationData['licenseNumber'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Licensee Address</td>
+                                    <td>{{ applicationData['licensee_address'] || applicationData['licenseeAddress'] || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Collaborating Company Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Brand Owner</td>
+                                    <td>{{ applicationData['brand_owner_name'] || applicationData['brandOwnerName'] || applicationData['brand_owner'] || applicationData['brandOwner'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Brand Owner Code</td>
+                                    <td>{{ applicationData['brand_owner_code'] || applicationData['brandOwnerCode'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN</td>
+                                    <td>{{ applicationData['brand_owner_pan'] || applicationData['brandOwnerPan'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Office Address</td>
+                                    <td>{{ applicationData['brand_owner_office_address'] || applicationData['brandOwnerOfficeAddress'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Factory Address</td>
+                                    <td>{{ applicationData['brand_owner_factory_address'] || applicationData['brandOwnerFactoryAddress'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Mobile / Email</td>
+                                    <td>{{ (applicationData['brand_owner_mobile'] || applicationData['brandOwnerMobile'] || 'NA') + ' / ' + (applicationData['brand_owner_email'] || applicationData['brandOwnerEmail'] || 'NA') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Fee Summary & Undertaking</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Application Fee</td>
+                                    <td>Rs {{ applicationData['fee_structure']?.applicationFee || applicationData['fee_structure']?.application_fee || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Collaboration Fee</td>
+                                    <td>Rs {{ applicationData['fee_structure']?.collaborationFee || applicationData['fee_structure']?.collaboration_fee || applicationData['fee_structure']?.collaborationFees || applicationData['fee_structure']?.collaboration_fees || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Security Deposit</td>
+                                    <td>Rs {{ applicationData['fee_structure']?.securityDeposit || applicationData['fee_structure']?.security_deposit || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Selected Brands</td>
+                                    <td>{{ getCompanyCollaborationBrands().length || applicationData['selected_brand_ids']?.length || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Total Amount</td>
+                                    <td class="text-success fw-bold">Rs {{ applicationData['overview_summary']?.totalAmount || applicationData['overview_summary']?.total_amount || applicationData.brAmount || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Undertaking</td>
+                                    <td>
+                                        <a *ngIf="getDocumentUrl(applicationData['undertaking'])" [href]="getDocumentUrl(applicationData['undertaking'])" target="_blank" rel="noopener">
+                                            View Undertaking
+                                        </a>
+                                        <span *ngIf="!getDocumentUrl(applicationData['undertaking'])">Not available</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Selected Brands</h5>
+                    <div class="table-responsive" *ngIf="getCompanyCollaborationBrands().length > 0; else noCollaborationBrands">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Brand Code</th>
+                                    <th>Brand Name</th>
+                                    <th>Category</th>
+                                    <th>Kind</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let brand of getCompanyCollaborationBrands()">
+                                    <td>{{ brand?.brand_code || brand?.brandCode || brand?.id || 'NA' }}</td>
+                                    <td>{{ brand?.brand_name || brand?.brandName || 'NA' }}</td>
+                                    <td>{{ brand?.category || 'NA' }}</td>
+                                    <td>{{ brand?.kind || 'NA' }}</td>
+                                    <td>{{ brand?.type || 'NA' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <ng-template #noCollaborationBrands>
+                        <div class="alert alert-light mb-0">No brands were attached to this collaboration application.</div>
+                    </ng-template>
+                </div>
+                }
+
                 @if (isSalesmanBarmanRegistration()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Salesman/Barman Applicant Information</h5>
@@ -814,7 +1078,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
                                     <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
                                 </tr>
                                 <tr>
@@ -870,7 +1134,7 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">District</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">District</td>
                                     <td>{{ applicationData.excise_district || applicationData.exciseDistrict || 'Not available' }}</td>
                                 </tr>
                                 <tr>
@@ -911,6 +1175,12 @@
     
         </div>
          <!-- Print Button -->
+                <div class="no-print d-flex justify-content-center mt-2 mb-2" *ngIf="newLicenseUploads.length > 0">
+                    <button type="button" class="btn-view-docs" (click)="openDocsModal()">
+                        <i class="bi bi-folder2-open me-2"></i>View Uploaded Documents
+                        <span class="docs-count-badge">{{ newLicenseUploads.length }}</span>
+                    </button>
+                </div>
                 <div class="no-print d-flex justify-content-center mt-2" *ngIf="!isHologram()">
                     <button class="btn btn-primary btn-lg" (click)="printApplication()">
                         <i class="bi bi-printer me-2"></i>Print Application
@@ -965,4 +1235,70 @@
     }
 
 </div>
+
+<!-- ── Uploaded Documents Modal (portal-level, outside all stacking contexts) ── -->
+<div class="docs-modal-backdrop" *ngIf="docsModalOpen" (click)="closeDocsModal()"></div>
+<div class="docs-modal" *ngIf="docsModalOpen" role="dialog" aria-modal="true" aria-label="Uploaded Documents" (click)="closeDocsModal()">
+    <div class="docs-modal-container" (click)="$event.stopPropagation()">
+        <div class="docs-modal-header">
+            <div class="docs-modal-title">
+                <i class="bi bi-folder2-open me-2"></i>Uploaded Documents
+                <span class="docs-count-badge ms-2">{{ newLicenseUploads.length }}</span>
+            </div>
+            <button type="button" class="docs-modal-close" (click)="closeDocsModal()" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="docs-modal-body">
+            <div class="docs-grid">
+                <div class="doc-item" *ngFor="let doc of newLicenseUploads" (click)="openDocViewer(doc)">
+                    <div class="doc-item__preview">
+                        <ng-container *ngIf="doc.isImage; else pdfThumb">
+                            <img [src]="doc.url" [alt]="doc.label" class="doc-item__img" />
+                        </ng-container>
+                        <ng-template #pdfThumb>
+                            <div class="doc-item__pdf-icon">
+                                <i class="bi bi-file-earmark-pdf-fill"></i>
+                                <span>PDF</span>
+                            </div>
+                        </ng-template>
+                        <div class="doc-item__overlay">
+                            <i class="bi bi-eye-fill"></i>
+                            <span>Click to View</span>
+                        </div>
+                    </div>
+                    <div class="doc-item__label">{{ doc.label }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="docs-modal-footer">
+            <span class="text-muted small">Click any document to open it in full view</span>
+        </div>
+    </div>
+</div>
+
+<!-- ── Full Document Viewer ── -->
+<ng-container *ngIf="activeDoc as doc">
+    <div class="doc-viewer-backdrop" (click)="closeDocViewer()"></div>
+    <div class="doc-viewer" role="dialog" aria-modal="true">
+        <div class="doc-viewer-container" (click)="$event.stopPropagation()">
+            <div class="doc-viewer-header">
+                <span class="doc-viewer-title">
+                    <i class="bi bi-file-earmark me-2"></i>{{ doc.label }}
+                </span>
+                <div class="doc-viewer-actions">
+                    <a [href]="doc.url" target="_blank" rel="noopener" class="btn-doc-action" title="Open in new tab">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <button type="button" class="btn-doc-action" (click)="closeDocViewer()" title="Close" aria-label="Close viewer">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="doc-viewer-body">
+                <img [src]="doc.url" [alt]="doc.label" class="doc-viewer-img" />
+            </div>
+        </div>
+    </div>
+</ng-container>
 

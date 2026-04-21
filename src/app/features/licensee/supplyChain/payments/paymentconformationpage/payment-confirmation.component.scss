@@ -223,6 +223,54 @@
   }
 }
 
+.security-deposit-card {
+  background: linear-gradient(145deg, #fff8f0 0%, #fff1e6 100%);
+  border-color: #fcd9a8;
+
+  .wallet-summary-icon {
+    background: #ffe4c4;
+    color: #c2570a;
+  }
+
+  .wallet-summary-tag {
+    background: #ffe4c4;
+    border-color: #fdba74;
+    color: #9a3412;
+  }
+
+  .wallet-summary-balance {
+    color: #c2570a;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
+.license-fee-card {
+  background: linear-gradient(145deg, #faf5ff 0%, #f3e8ff 100%);
+  border-color: #d8b4fe;
+
+  .wallet-summary-icon {
+    background: #ede9fe;
+    color: #7c3aed;
+  }
+
+  .wallet-summary-tag {
+    background: #ede9fe;
+    border-color: #c4b5fd;
+    color: #5b21b6;
+  }
+
+  .wallet-summary-balance {
+    color: #7c3aed;
+  }
+
+  .wallet-summary-meta {
+    color: #475569;
+  }
+}
+
 .view-hover {
   cursor: pointer;
   position: relative;
@@ -701,6 +749,16 @@
   color: #92400e;
 }
 
+::ng-deep #walletHistoryModal .wallet-theme-security .wallet-history-bars button.active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+::ng-deep #walletHistoryModal .wallet-theme-license .wallet-history-bars button.active {
+  background: #e2e8f0;
+  color: #334155;
+}
+
 ::ng-deep #walletHistoryModal .modal-dialog {
   max-width: min(1180px, 96vw);
 }
@@ -834,13 +892,13 @@
   border: 1px solid transparent;
 }
 
-::ng-deep #walletHistoryModal .history-type-badge.type-added {
+::ng-deep #walletHistoryModal .history-type-badge.type-credited {
   color: #065f46;
   background: #d1fae5;
   border-color: #6ee7b7;
 }
 
-::ng-deep #walletHistoryModal .history-type-badge.type-utilized {
+::ng-deep #walletHistoryModal .history-type-badge.type-debited {
   color: #7f1d1d;
   background: #fee2e2;
   border-color: #fca5a5;
@@ -1033,5 +1091,164 @@
 
   .wallet-deduction-footer {
     flex-direction: column;
+  }
+}
+
+// Enhanced Filter Card Design
+.filter-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(135deg, #1e5a7a 0%, #2b7bb9 100%);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.filter-title {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+.filter-header .btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+  }
+}
+
+.filter-body {
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.filter-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  i {
+    font-size: 0.85rem;
+  }
+}
+
+.filter-input {
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+
+  &:focus {
+    outline: none;
+    border-color: #2b7bb9;
+    box-shadow: 0 0 0 3px rgba(43, 123, 185, 0.1), 0 2px 8px rgba(43, 123, 185, 0.12);
+    transform: translateY(-1px);
+  }
+
+  &::placeholder {
+    color: #94a3b8;
+    font-weight: 500;
+  }
+}
+
+select.filter-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232b7bb9' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 10px;
+  padding-right: 2rem;
+}
+
+// Responsive adjustments for filters
+@media (max-width: 991.98px) {
+  .filter-body {
+    padding: 1.25rem;
+  }
+
+  .filter-input-group {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .filter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .filter-title {
+    font-size: 1rem;
+  }
+
+  .filter-body {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .filter-card {
+    border-radius: 16px;
+  }
+
+  .filter-header {
+    padding: 1rem;
+  }
+
+  .filter-body {
+    padding: 0.85rem;
+  }
+
+  .filter-input {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
   }
 }

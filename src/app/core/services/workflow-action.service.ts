@@ -32,6 +32,7 @@ export interface ApplicationWorkflowData {
     | 'hologram-procurement'
     | 'new-license'
     | 'company-registration'
+    | 'company-collaboration'
     | 'salesman-barman-registration'; // Changed to type to match component
   status: string;
   referenceNo?: string;
@@ -111,14 +112,8 @@ export class WorkflowActionService {
           catchError(() => of([]))
         );
       case 'new-license':
-        if (!workflowApplicationId) {
-          return of([]);
-        }
-        return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/next-stages/`).pipe(
-          map((stages: any[]) => this.mapNextStagesToActionConfigs(stages)),
-          catchError(() => of([]))
-        );
       case 'company-registration':
+      case 'company-collaboration':
       case 'salesman-barman-registration':
         if (!workflowApplicationId) {
           return of([]);
@@ -319,11 +314,14 @@ export class WorkflowActionService {
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${data.id}/perform_action/`;
         break;
       case 'new-license':
+      case 'company-registration':
+      case 'company-collaboration':
+      case 'salesman-barman-registration':
         const workflowApplicationId = this.getWorkflowApplicationId(data);
         const targetStage = typeof actionConfig === 'string' ? undefined : actionConfig.targetStage;
 
         if (!workflowApplicationId || !targetStage) {
-          return of({ success: false, message: 'Missing application id or target stage for new-license action' });
+          return of({ success: false, message: `Missing application id or target stage for ${data.type} action` });
         }
 
         if (actionName === 'RAISE_OBJECTION') {

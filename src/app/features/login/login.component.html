@@ -7,44 +7,202 @@
   </div>
 
   <div class="container" [class.right-panel-active]="isRightPanelActive" id="container">
-  <!-- Sign Up Panel -->
-  <div class="form-container sign-up-container">
-    <div class="form-header">
-      <h1>Create Account</h1>
-      <p>Register as a Licensee</p>
-    </div>
-    <div class="form-content">
-      <form [formGroup]="registrationForm" (ngSubmit)="onRegister()">
+    <!-- Sign Up Panel -->
+    <div class="form-container sign-up-container">
+      <div class="form-header">
+        <h1>Create Account</h1>
+        <p>Register as a Licensee</p>
+      </div>
+      <div class="form-content">
+        <form [formGroup]="registrationForm" (ngSubmit)="onRegister()">
 
-        <!-- STEP 1: Name + Phone Number -->
-        @if (!registrationOtpSent && !registrationComplete) {
-        <input formControlName="firstName" placeholder="First Name" required />
-        <input formControlName="middleName" placeholder="Middle Name" />
-        <input formControlName="lastName" placeholder="Last Name" required />
+          <!-- STEP 1: Name + Phone Number -->
+          @if (!registrationOtpSent && !registrationComplete) {
+          <input formControlName="firstName" placeholder="First Name" required />
+          <input formControlName="middleName" placeholder="Middle Name" />
+          <input formControlName="lastName" placeholder="Last Name" required />
 
-        <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required
-          inputmode="numeric" (keypress)="allowOnlyDigits($event)"
-          (input)="sanitizePhoneInput($event, 'registration')"
-          (keydown.enter)="onRegistrationPhoneEnter($event)" />
+          <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required
+            inputmode="numeric" (keypress)="allowOnlyDigits($event)"
+            (input)="sanitizePhoneInput($event, 'registration')" (keydown.enter)="onRegistrationPhoneEnter($event)" />
 
-        <button mat-raised-button color="primary" class="filled-button" type="button" (click)="sendRegistrationOtp()"
-          [disabled]="isSendingOtp || 
+          <button mat-raised-button color="primary" class="filled-button" type="button" (click)="sendRegistrationOtp()"
+            [disabled]="isSendingOtp || 
                     registrationForm.get('firstName')?.invalid || 
                     registrationForm.get('lastName')?.invalid || 
                     registrationForm.get('phoneNumber')?.invalid">
-          <span *ngIf="!isSendingOtp">Send OTP</span>
-          <span *ngIf="isSendingOtp">
-            Sending OTP...
-            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-          </span>
-        </button>
+            <span *ngIf="!isSendingOtp">Send OTP</span>
+            <span *ngIf="isSendingOtp">
+              Sending OTP...
+              <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+            </span>
+          </button>
 
-        @if (registrationError) {
+          @if (registrationError) {
+          <div class="error-box">
+            <mat-card class="error-card">
+              <mat-card-content>
+                <ul>
+                  @for (msg of registrationErrorMessages; track msg) {
+                  <li>{{ msg }}</li>
+                  }
+                </ul>
+              </mat-card-content>
+            </mat-card>
+          </div>
+          }
+          }
+
+          <!-- STEP 2: OTP Verification -->
+          @if (registrationOtpSent && !otpVerified && !registrationComplete) {
+          <p class="otp-info">
+            OTP sent to +91 {{ registrationForm.controls['phoneNumber'].value }}.<br>
+            Not correct? <a (click)="resetRegistration()">Change Number</a>
+          </p>
+
+          <ng-otp-input (onInputChange)="onRegistrationOtpChange($event)"
+            [config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }">
+          </ng-otp-input>
+
+          <button mat-raised-button color="primary" class="filled-button" (click)="verifyRegistrationOtp()"
+            [disabled]="registrationOtpControl.value?.length !== 4 || !registrationOtpId || registrationOtpControl.invalid">
+            Verify OTP
+          </button>
+
+          @if (registrationError) {
+          <div class="error-box">
+            <mat-card class="error-card">
+              <mat-card-content>
+                <ul>
+                  @for (msg of registrationErrorMessages; track msg) {
+                  <li>{{ msg }}</li>
+                  }
+                </ul>
+              </mat-card-content>
+            </mat-card>
+          </div>
+          }
+          }
+
+          <!-- STEP 3: Remaining Details (after OTP verified) -->
+          @if (otpVerified && !registrationComplete) {
+          <input formControlName="email" type="email" placeholder="Email Address" required />
+          <input formControlName="panNumber" placeholder="PAN Number (e.g. ABCDE1234F)" required />
+          <input formControlName="address" placeholder="Full Address" required />
+
+          <!-- District Select -->
+          <mat-form-field appearance="fill">
+            <mat-label>District</mat-label>
+            <mat-select formControlName="district" (selectionChange)="onDistrictChange($event.value)" required>
+              <mat-option>-- Select District --</mat-option>
+              <mat-option *ngFor="let district of districts" [value]="district.districtCode">
+                {{ district.district }}
+              </mat-option>
+            </mat-select>
+            <mat-spinner *ngIf="loadingDistricts" diameter="20"></mat-spinner>
+          </mat-form-field>
+
+          <!-- Subdivision Select -->
+          <mat-form-field appearance="fill">
+            <mat-label>Subdivision</mat-label>
+            <mat-select formControlName="subdivision" required
+              [disabled]="!registrationForm.get('district')?.value || loadingSubdivisions">
+              <mat-option>-- Select Subdivision --</mat-option>
+              <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
+                {{ sub.subdivision }}
+              </mat-option>
+            </mat-select>
+            <mat-spinner *ngIf="loadingSubdivisions" diameter="20"></mat-spinner>
+          </mat-form-field>
+
+          <!-- Password Field -->
+          <div class="input-wrapper">
+            <input [type]="hideRegPassword ? 'password' : 'text'" formControlName="password"
+              placeholder="Password (min 8 characters)" required class="password-input" />
+            <mat-icon class="toggle-icon" (click)="hideRegPassword = !hideRegPassword">
+              {{ hideRegPassword ? 'visibility' : 'visibility_off' }}
+            </mat-icon>
+          </div>
+
+          <!-- Confirm Password Field -->
+          <div class="input-wrapper">
+            <input [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword"
+              placeholder="Confirm Password" required class="password-input" />
+            <mat-icon class="toggle-icon" (click)="hideConfirmPassword = !hideConfirmPassword">
+              {{ hideConfirmPassword ? 'visibility' : 'visibility_off' }}
+            </mat-icon>
+          </div>
+
+          <app-captcha [formGroup]="registrationForm"></app-captcha>
+
+          <!-- Final Register Button -->
+          <button mat-raised-button color="primary" class="filled-button" (click)="onRegister()"
+            [disabled]="!otpVerified || registrationForm.invalid || isRegistering">
+            <span *ngIf="!isRegistering">Register</span>
+            <span *ngIf="isRegistering">
+              Registering... <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+            </span>
+          </button>
+
+          @if (registrationError) {
+          <div class="error-box">
+            <mat-card class="error-card">
+              <mat-card-content>
+                <ul>
+                  @for (msg of registrationErrorMessages; track msg) {
+                  <li>{{ msg }}</li>
+                  }
+                </ul>
+              </mat-card-content>
+            </mat-card>
+          </div>
+          }
+          }
+
+          <!-- STEP 4: Success -->
+          @if (registrationComplete) {
+          <div class="success-message">
+            <mat-icon>check_circle</mat-icon>
+            <h3>Registration Successful!</h3>
+            <p>Welcome! You're being redirected to your dashboard...</p>
+          </div>
+          }
+        </form>
+      </div>
+    </div>
+
+    <!-- Sign In Panel -->
+    <div class="form-container sign-in-container">
+      <div class="form-header">
+        <h1>Sign In</h1>
+        <!-- Mode toggle: password / OTP -->
+        <div class="switch-toggle">
+          <div class="switch-indicator" [class.right]="!isPasswordMode"></div>
+          <button (click)="toggleMode(true)" [class.active]="isPasswordMode">Password</button>
+          <button (click)="toggleMode(false)" [class.active]="!isPasswordMode">OTP</button>
+        </div>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+        <!-- Password login -->
+        @if (isPasswordMode) {
+        <input formControlName="username" placeholder="Username" required />
+        <div class="password-wrapper">
+          <input [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Password"
+            required />
+          <mat-icon class="toggle-password-icon" (click)="togglePasswordVisibility()">
+            {{ hidePassword ? 'visibility' : 'visibility_off' }}
+          </mat-icon>
+        </div>
+
+        <app-captcha [formGroup]="loginForm"></app-captcha>
+
+        @if (loginError) {
         <div class="error-box">
           <mat-card class="error-card">
             <mat-card-content>
               <ul>
-                @for (msg of registrationErrorMessages; track msg) {
+                @for (msg of loginErrorMessages; track msg) {
                 <li>{{ msg }}</li>
                 }
               </ul>
@@ -52,30 +210,49 @@
           </mat-card>
         </div>
         }
+
+        <button matButton="filled" class="filled-button" type="submit" [disabled]="loginForm.invalid">Sign In</button>
+
+        <div class="forgot-password-container">
+          <a routerLink="/forgot-password" class="forgot-link" tabindex="0">
+            Forgot your password?
+          </a>
+        </div>
         }
 
-        <!-- STEP 2: OTP Verification -->
-        @if (registrationOtpSent && !otpVerified && !registrationComplete) {
+        <!-- OTP login -->
+        @if (!isPasswordMode) {
+        @if (!otpSent) {
+        <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric"
+          autocomplete="tel" required (input)="sanitizePhoneNumberInput('login', $event)"
+          (keydown.enter)="onOtpPhoneEnter($event)" />
+        <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
+          [disabled]="isSendingOtp">Send OTP</button>
+        }
+
+        @if (otpSent) {
         <p class="otp-info">
-          OTP sent to +91 {{ registrationForm.controls['phoneNumber'].value }}.<br>
-          Not correct? <a (click)="resetRegistration()">Change Number</a>
+          OTP sent to +91 {{ loginForm.controls['phoneNumber'].value }}.<br>
+          Not your number? <a (click)="resetPhoneNumber()">Go Back</a>
         </p>
 
-        <ng-otp-input (onInputChange)="onRegistrationOtpChange($event)"
-          [config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }">
+        <ng-otp-input [formControl]="otpControl"
+          [config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }"
+          (onInputChange)="onOtpChange($event)">
         </ng-otp-input>
 
-        <button mat-raised-button color="primary" class="filled-button" (click)="verifyRegistrationOtp()"
-          [disabled]="registrationOtpControl.value?.length !== 4 || !registrationOtpId || registrationOtpControl.invalid">
-          Verify OTP
-        </button>
+        @if (!otpAutoSubmitted) {
+        <button matButton="filled" class="filled-button" type="submit"
+          [disabled]="loginForm.controls['otp'].invalid">Verify</button>
+        }
+        }
 
-        @if (registrationError) {
+        @if (loginError) {
         <div class="error-box">
           <mat-card class="error-card">
             <mat-card-content>
               <ul>
-                @for (msg of registrationErrorMessages; track msg) {
+                @for (msg of loginErrorMessages; track msg) {
                 <li>{{ msg }}</li>
                 }
               </ul>
@@ -83,104 +260,55 @@
           </mat-card>
         </div>
         }
-        }
-
-        <!-- STEP 3: Remaining Details (after OTP verified) -->
-        @if (otpVerified && !registrationComplete) {
-        <input formControlName="email" type="email" placeholder="Email Address" required />
-        <input formControlName="panNumber" placeholder="PAN Number (e.g. ABCDE1234F)" required />
-        <input formControlName="address" placeholder="Full Address" required />
-
-        <!-- District Select -->
-        <mat-form-field appearance="fill">
-          <mat-label>District</mat-label>
-          <mat-select formControlName="district" (selectionChange)="onDistrictChange($event.value)" required>
-            <mat-option>-- Select District --</mat-option>
-            <mat-option *ngFor="let district of districts" [value]="district.districtCode">
-              {{ district.district }}
-            </mat-option>
-          </mat-select>
-          <mat-spinner *ngIf="loadingDistricts" diameter="20"></mat-spinner>
-        </mat-form-field>
-
-        <!-- Subdivision Select -->
-        <mat-form-field appearance="fill">
-          <mat-label>Subdivision</mat-label>
-          <mat-select formControlName="subdivision" required
-            [disabled]="!registrationForm.get('district')?.value || loadingSubdivisions">
-            <mat-option>-- Select Subdivision --</mat-option>
-            <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
-              {{ sub.subdivision }}
-            </mat-option>
-          </mat-select>
-          <mat-spinner *ngIf="loadingSubdivisions" diameter="20"></mat-spinner>
-        </mat-form-field>
-
-        <!-- Password Field -->
-        <div class="input-wrapper">
-          <input [type]="hideRegPassword ? 'password' : 'text'" formControlName="password"
-            placeholder="Password (min 8 characters)" required class="password-input" />
-          <mat-icon class="toggle-icon" (click)="hideRegPassword = !hideRegPassword">
-            {{ hideRegPassword ? 'visibility' : 'visibility_off' }}
-          </mat-icon>
-        </div>
-
-        <!-- Confirm Password Field -->
-        <div class="input-wrapper">
-          <input [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword"
-            placeholder="Confirm Password" required class="password-input" />
-          <mat-icon class="toggle-icon" (click)="hideConfirmPassword = !hideConfirmPassword">
-            {{ hideConfirmPassword ? 'visibility' : 'visibility_off' }}
-          </mat-icon>
-        </div>
-
-        <app-captcha [formGroup]="registrationForm"></app-captcha>
-
-        <!-- Final Register Button -->
-        <button mat-raised-button color="primary" class="filled-button" (click)="onRegister()"
-          [disabled]="!otpVerified || registrationForm.invalid || isRegistering">
-          <span *ngIf="!isRegistering">Register</span>
-          <span *ngIf="isRegistering">
-            Registering... <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-          </span>
-        </button>
-
-        @if (registrationError) {
-        <div class="error-box">
-          <mat-card class="error-card">
-            <mat-card-content>
-              <ul>
-                @for (msg of registrationErrorMessages; track msg) {
-                <li>{{ msg }}</li>
-                }
-              </ul>
-            </mat-card-content>
-          </mat-card>
-        </div>
-        }
-        }
-
-        <!-- STEP 4: Success -->
-        @if (registrationComplete) {
-        <div class="success-message">
-          <mat-icon>check_circle</mat-icon>
-          <h3>Registration Successful!</h3>
-          <p>Welcome! You're being redirected to your dashboard...</p>
-        </div>
         }
       </form>
     </div>
-  </div>
 
-  <!-- Sign In Panel -->
-  <div class="form-container sign-in-container">
-    <div class="form-header">
-      <h1>Sign In</h1>
-      <!-- Mode toggle: password / OTP -->
-      <div class="switch-toggle">
-        <div class="switch-indicator" [class.right]="!isPasswordMode"></div>
-        <button (click)="toggleMode(true)" [class.active]="isPasswordMode">Password</button>
-        <button (click)="toggleMode(false)" [class.active]="!isPasswordMode">OTP</button>
+    <!-- Overlay Panel -->
+    <div class="overlay-container">
+      <div class="overlay">
+        <div class="overlay-panel overlay-left">
+          <header>
+            <img src="assets/icons/fav-icon.png">
+          </header>
+          <content>
+            <h1>Welcome Back!</h1>
+            <p>Login, if you already have an account</p>
+            <button matButton="filled" (click)="switchToSignIn()">Sign In</button>
+          </content>
+          <footer>
+            <h6>HELP DESK</h6>
+            <div class="footer-contact">
+              <mat-icon>call</mat-icon>
+              <span>03592-203963</span>
+            </div>
+            <div class="footer-contact">
+              <mat-icon>email</mat-icon>
+              <span>helpdesk-excise&#64;sikkim.gov.in</span>
+            </div>
+          </footer>
+        </div>
+        <div class="overlay-panel overlay-right">
+          <header>
+            <img src="assets/icons/fav-icon.png">
+          </header>
+          <content>
+            <h1 class="pt-4">Hello!</h1>
+            <p>Register now and apply for licenses</p>
+            <button matButton="filled" (click)="switchToSignUp()">Sign Up</button>
+          </content>
+          <footer>
+            <h6>HELP DESK</h6>
+            <div class="footer-contact">
+              <mat-icon>call</mat-icon>
+              <span>03592-203963</span>
+            </div>
+            <div class="footer-contact">
+              <mat-icon>email</mat-icon>
+              <span>helpdesk-excise&#64;sikkim.gov.in</span>
+            </div>
+          </footer>
+        </div>
       </div>
     </div>
 
@@ -222,8 +350,8 @@
       <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric" required
         (keypress)="allowOnlyDigits($event)" (input)="sanitizePhoneInput($event, 'login')"
         (keydown.enter)="onLoginPhoneEnter($event)" />
-      <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
-        [disabled]="isSendingOtp">Send OTP</button>
+      <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()" [disabled]="isSendingOtp">Send
+        OTP</button>
       }
 
       @if (otpSent) {
@@ -307,13 +435,12 @@
       </div>
     </div>
   </div>
-  </div>
-
-  @if (!isPasswordMode && otpSent && loginOtpPreview) {
-  <aside class="otp-preview-box" aria-live="polite">
-    <span class="otp-preview-label">Login OTP</span>
-    <span class="otp-preview-value">{{ loginOtpPreview }}</span>
-    <span class="otp-preview-note">Use this OTP to complete sign in.</span>
-  </aside>
-  }
 </div>
+
+@if (!isPasswordMode && otpSent && loginOtpPreview) {
+<aside class="otp-preview-box" aria-live="polite">
+  <span class="otp-preview-label">Login OTP</span>
+  <span class="otp-preview-value">{{ loginOtpPreview }}</span>
+  <span class="otp-preview-note">Use this OTP to complete sign in.</span>
+</aside>
+}

@@ -31,7 +31,7 @@
     <ng-container matColumnDef="currentStage">
       <mat-header-cell *matHeaderCellDef> Current Stage </mat-header-cell>
       <mat-cell *matCellDef="let element">
-        {{ stageDisplayMapping[getCurrentStage(element)] || 'N/A' }}
+        {{ getCurrentStageDisplay(element) }}
       </mat-cell>
     </ng-container>
     

@@ -1,8 +1,9 @@
 import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
-import { forkJoin, Observable } from 'rxjs';
+import { forkJoin, Observable, firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramDataService, HologramRequest as ApiHologramRequest } from '../../services/hologram-data.service';
+import Swal from 'sweetalert2';
 
 interface HologramRequest {
   id: string;
@@ -45,6 +46,7 @@ interface FilterOptions {
   requestType: string;
   hologramType: string;
   urgencyLevel: string;
+  month: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -94,6 +96,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   private hologramService = inject(HologramDataService);
 
   Math = Math;
+  private initialSummaryAutoSelected = false;
 
   // Officer information - same as officer-in-charge component
   currentOfficer = {
@@ -115,6 +118,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     requestType: '',
     hologramType: '',
     urgencyLevel: '',
+    month: '',
     dateFrom: '',
     dateTo: ''
   };
@@ -140,6 +144,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   showRollsModal = false;
   selectedRequestForRolls: HologramRequest | null = null;
   private currentScopedLicenseId = '';
+
+  // Holograms Available sidebar
+  isHologramAvailableSidebarExpanded = false;
 
   ngOnInit() {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
@@ -199,11 +206,29 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         this.hologramRequests.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
 
         this.applyFilters();
+        this.maybeAutoSelectPendingStatus();
       },
       error: (err) => {
         console.error('Error loading hologram requests:', err);
       }
     });
+  }
+
+  toggleHologramAvailableSidebar(): void {
+    this.isHologramAvailableSidebarExpanded = !this.isHologramAvailableSidebarExpanded;
+  }
+
+  private maybeAutoSelectPendingStatus(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    // Don't override if user already selected a filter.
+    if (this.filters.status) return;
+
+    if (this.getRequestCount('PENDING') > 0) {
+      this.filters.status = 'PENDING';
+      this.applyFilters();
+    }
   }
 
   getDisplayReferenceNo(referenceNo: string): string {
@@ -266,11 +291,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   shouldShowUsageDateApprovalNotice(request: any): boolean {
-    return this.mapStatusToCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
+    return this.mapWorkflowToCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
   }
 
   shouldShowUsageDateMissedNotice(request: any): boolean {
-    return this.mapStatusToCategory(request) === 'PENDING' && this.isUsageDatePast(request);
+    // If usage date has passed and the request is still in the pending-review bucket, treat it as rejected-by-timeout.
+    return this.mapWorkflowToCategory(request) === 'PENDING' && this.isUsageDatePast(request);
   }
 
   canReject(request: any): boolean {
@@ -284,7 +310,19 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     }
 
     const actions = this.toUpperActions(request.allowedActions || request.allowed_actions || []);
-    return actions.includes('REJECT');
+
+    // Prefer backend-driven actions when present, but be resilient:
+    // some payloads only send ISSUE/APPROVE while still allowing reject in workflow.
+    if (actions.length === 0) {
+      return true;
+    }
+
+    if (actions.includes('REJECT') || actions.includes('REJECT_REQUEST') || actions.includes('DECLINE')) {
+      return true;
+    }
+
+    // If OIC can approve/issue at this stage, allow showing reject as well.
+    return actions.includes('ISSUE') || actions.includes('APPROVE');
   }
 
   private normalizeHologramType(type: string): 'LOCAL' | 'EXPORT' | 'DEFENCE' {
@@ -361,6 +399,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const matchesHologramType = !this.filters.hologramType || request.hologramType === this.filters.hologramType;
       const matchesUrgencyLevel = !this.filters.urgencyLevel || request.urgencyLevel === this.filters.urgencyLevel;
 
+      const matchesMonth = !this.filters.month ||
+        (new Date(request.submissionDate).getMonth() + 1) === Number(this.filters.month);
+
       const matchesDateFrom = !this.filters.dateFrom ||
         new Date(request.submissionDate) >= new Date(this.filters.dateFrom);
 
@@ -368,7 +409,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         new Date(request.submissionDate) <= new Date(this.filters.dateTo);
 
       return matchesReference && matchesStatus && matchesRequestType &&
-        matchesHologramType && matchesUrgencyLevel && matchesDateFrom && matchesDateTo;
+        matchesHologramType && matchesUrgencyLevel && matchesMonth && matchesDateFrom && matchesDateTo;
     });
 
     // Sort filtered results by submission date and reference number - newest first (descending order)
@@ -417,10 +458,17 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       requestType: '',
       hologramType: '',
       urgencyLevel: '',
+      month: '',
       dateFrom: '',
       dateTo: ''
     };
     this.applyFilters();
+  }
+
+  getMonthLabel(monthValue: string): string {
+    const month = Number(monthValue);
+    if (!month || month < 1 || month > 12) return '';
+    return new Date(2000, month - 1, 1).toLocaleString('en-US', { month: 'long' });
   }
 
   updatePagination() {
@@ -499,15 +547,52 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   rejectRequest(request: HologramRequest) {
-    this.selectedRequest = request;
-    this.rejectionReason = '';
-    // In real app, open rejection modal
-    const reason = prompt('Enter rejection reason (required):');
-
-    if (reason && reason.trim()) {
-      this.rejectionReason = reason;
-      this.confirmRejection();
+    if (!request?.originalId) {
+      Swal.fire('Error', 'Invalid request data.', 'error');
+      return;
     }
+
+    void Swal.fire({
+      title: 'Reject Hologram Request',
+      input: 'textarea',
+      inputLabel: 'Reason (required)',
+      inputPlaceholder: 'Type the rejection reason...',
+      inputAttributes: {
+        'aria-label': 'Rejection reason'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Reject',
+      confirmButtonColor: '#dc3545',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      preConfirm: async (value) => {
+        const reason = String(value || '').trim();
+        if (!reason) {
+          Swal.showValidationMessage('Rejection reason is required.');
+          return;
+        }
+
+        try {
+          await firstValueFrom(
+            this.hologramService.performAction('request', request.originalId!, 'reject', reason)
+          );
+        } catch (err: any) {
+          const msg =
+            err?.error?.error ||
+            err?.error?.detail ||
+            err?.message ||
+            'Failed to reject request.';
+          Swal.showValidationMessage(String(msg));
+          return;
+        }
+
+        return reason;
+      }
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      void Swal.fire('Rejected', 'Request rejected successfully.', 'success');
+      this.loadHologramRequests();
+    });
   }
 
   confirmApproval() {
@@ -726,6 +811,20 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   // Categorize using DB workflow metadata; avoid hardcoded stage names.
   mapStatusToCategory(requestOrStatus: any): string {
+    const workflowCategory = this.mapWorkflowToCategory(requestOrStatus);
+
+    // Special rule: if the usage date is in the past and the request is still pending review,
+    // consider it rejected due to no action taken on usage date.
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      if (workflowCategory === 'PENDING' && this.isUsageDatePast(requestOrStatus)) {
+        return 'REJECTED';
+      }
+    }
+
+    return workflowCategory;
+  }
+
+  private mapWorkflowToCategory(requestOrStatus: any): string {
     if (requestOrStatus && typeof requestOrStatus === 'object') {
       const isInitial = Boolean(requestOrStatus.currentStageIsInitial ?? requestOrStatus.current_stage_is_initial ?? false);
       const isFinal = Boolean(requestOrStatus.currentStageIsFinal ?? requestOrStatus.current_stage_is_final ?? false);
@@ -1316,11 +1415,27 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       return typeMatch && statusMatch && hasAvailable;
     });
     
-    // CRITICAL: Sort by receivedDate for FIFO (First In, First Out) - oldest first
+    // CRITICAL: Sort for FIFO (First In, First Out) - oldest stock first.
+    // NOTE: Multiple cartons can share the same receivedDate (e.g. all entered on the same day).
+    // In that case, fall back to the earliest serial range (fromSerial) so that "a1(a) 1-200"
+    // is consumed before "a1(d) 701-1000".
+    const getNumeric = (value: string | undefined): number => {
+      if (!value) return Number.POSITIVE_INFINITY;
+      const digits = value.replace(/\D/g, '');
+      return digits ? Number(digits) : Number.POSITIVE_INFINITY;
+    };
+
     availableInventory.sort((a, b) => {
       const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
       const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
-      return dateA - dateB; // Ascending order - oldest first
+      if (dateA !== dateB) return dateA - dateB; // Ascending - oldest first
+
+      const fromA = getNumeric(a.fromSerial);
+      const fromB = getNumeric(b.fromSerial);
+      if (fromA !== fromB) return fromA - fromB; // Ascending - earliest serial first
+
+      // Final deterministic tie-breaker
+      return String(a.cartoonNumber).localeCompare(String(b.cartoonNumber));
     });
 
     console.log('Available Inventory After Filter (FIFO sorted):', availableInventory.map(i => ({

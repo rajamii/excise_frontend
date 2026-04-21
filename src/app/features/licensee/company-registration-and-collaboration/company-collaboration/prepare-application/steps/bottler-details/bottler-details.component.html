@@ -1,10 +1,9 @@
 <form [formGroup]="bottlerDetailsForm">
   <mat-card>
     <mat-card-header>
-      <div class="heading">Company Details</div>
+      <div class="heading">Bottler Details</div>
       <div class="validation">
-        Select the registered collaborating company. Details will be auto-filled.
-        <em>Note: Only companies registered via Company Registration will appear in the dropdown.</em>
+        Select the collaborating brand owner. Details will be auto-filled from the master records.
       </div>
     </mat-card-header>
 
@@ -16,10 +15,14 @@
           <mat-label>Select Collaborating Company *</mat-label>
           <mat-select formControlName="brandOwner" required>
             <mat-option value="">-- Select Company --</mat-option>
-            @for (owner of brandOwners; track owner.id) {
-              <mat-option [value]="owner.id">
-                {{ owner.company_name }}
-              </mat-option>
+            @if (isLoadingBrandOwners) {
+              <mat-option disabled>Loading...</mat-option>
+            } @else {
+              @for (owner of brandOwners; track owner.id) {
+                <mat-option [value]="owner.id">
+                  {{ owner.company_name }}{{ owner.brand_owner_code ? ' [' + owner.brand_owner_code + ']' : '' }}
+                </mat-option>
+              }
             }
           </mat-select>
           <mat-icon matSuffix>business</mat-icon>
@@ -51,7 +54,6 @@
               <input
                 matInput
                 formControlName="brandOwnerPan"
-                readonly
                 aria-label="PAN number"
                 title="PAN number">
               <mat-icon matSuffix>fingerprint</mat-icon>
@@ -101,7 +103,6 @@
               <input
                 matInput
                 formControlName="brandOwnerEmail"
-                readonly
                 aria-label="Email address"
                 title="Email address">
               <mat-icon matSuffix>email</mat-icon>

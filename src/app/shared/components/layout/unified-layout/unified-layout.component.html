@@ -29,7 +29,7 @@
           <!-- Licensee Navigation -->
           <div *ngIf="isLicenseeUser()" class="licensee-nav">
             <!-- Dashboard -->
-            <a routerLink="/dashboard" class="nav-item dashboard-nav-item" [class.active]="isDashboardHomeActive()">
+            <a routerLink="/dashboard" class="nav-item dashboard-nav-item" [class.active]="isDashboardHomeActive()" (click)="closeSidenav()">
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
@@ -40,7 +40,7 @@
               <span class="nav-text">New License</span>
             </button>
 
-            <button class="nav-item wallet-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
+            <button class="nav-item wallet-nav-item" *ngIf="showManufacturingWalletNav" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
               <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
               <span class="nav-text">Wallet</span>
             </button>
@@ -71,6 +71,10 @@
             <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
               <mat-icon class="nav-icon">add_box</mat-icon>
               <span class="nav-text">Hologram Request</span>
+            </button>
+            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('stock-inventory')" [class.active]="isDashboardSectionActive('stock-inventory')">
+              <mat-icon class="nav-icon">inventory</mat-icon>
+              <span class="nav-text">Stock Inventory</span>
             </button>
 
             <!-- Register - Expandable
@@ -147,11 +151,12 @@
                 [class.active]="isDashboardSectionActive(item.section)">
                 <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
                 <span class="nav-text">{{ getSidebarLabel(item.section, item.label) }}</span>
+                <span class="nav-badge" *ngIf="getPendingCount(item.section) as pending">{{ pending }}</span>
               </button>
             </ng-container>
 
             <!-- Site Admin master navigation -->
-            <div *ngIf="isSiteAdminUser()">
+            <div *ngIf="isSiteAdminUser()" (click)="closeSidenav()">
               <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item">
                 <mat-icon class="nav-icon">people</mat-icon>
                 <span class="nav-text">User</span>
@@ -207,7 +212,22 @@
     </mat-sidenav>
 
     <!-- Main Content Area -->
-    <mat-sidenav-content class="main-content">
+    <mat-sidenav-content class="unified-main-content">
+      <!-- Left edge trigger: hover near left side to reveal arrow, click to open sidebar -->
+      <div
+        class="sidenav-edge-trigger"
+        *ngIf="!isSidenavOpen"
+        (click)="openSidenav()"
+        tabindex="0"
+        (keydown.enter)="openSidenav()"
+        (keydown.space)="openSidenav(); $event.preventDefault()"
+        aria-label="Open sidebar"
+      >
+        <button type="button" class="edge-arrow" (click)="openSidenav()" aria-label="Open sidebar">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+
       <!-- Top Navigation Bar (visible when sidebar is closed) -->
       <div class="top-nav-bar" *ngIf="!isSidenavOpen">
         <div class="top-nav-content">
@@ -234,7 +254,7 @@
       </div>
 
       <!-- Main Content -->
-      <div class="content-wrapper" [class.with-top-nav]="!isSidenavOpen">
+      <div class="unified-content-wrapper" [class.with-top-nav]="!isSidenavOpen">
         <router-outlet></router-outlet>
       </div>
     </mat-sidenav-content>

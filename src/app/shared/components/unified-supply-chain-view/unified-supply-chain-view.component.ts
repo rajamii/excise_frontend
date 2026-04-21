@@ -1,5 +1,6 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, of } from 'rxjs';
@@ -12,12 +13,14 @@ import { EnaRequisitionService } from '../../../core/services/ena-requisition.se
 import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
 import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
+import { CompanyCollaborationService } from '../../../core/services/company-collaboration.service';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
+import { RoleService } from '../../../core/services/role.service';
 
 // Constants
 import { 
@@ -98,6 +101,53 @@ export interface UnifiedApplicationData {
     email?: string;
     mobile_number?: string;
     mobileNumber?: string;
+    residential_status?: string;
+    residentialStatus?: string;
+    mode_of_operation?: string;
+    modeOfOperation?: string;
+    present_address?: string;
+    presentAddress?: string;
+    permanent_address?: string;
+    permanentAddress?: string;
+    has_sikkim_certificate?: string;
+    hasSikkimCertificate?: string;
+    has_excise_license?: string;
+    hasExciseLicense?: string;
+    family_excise_license?: string;
+    familyExciseLicense?: string;
+    criminal_conviction?: string;
+    criminalConviction?: string;
+
+    location_category?: string;
+    locationCategory?: string;
+    location_name?: string;
+    locationName?: string;
+    ward_name?: string;
+    wardName?: string;
+    business_address?: string;
+    businessAddress?: string;
+    road_name?: string;
+    roadName?: string;
+    pin_code?: string;
+    construction_type?: string;
+    constructionType?: string;
+    length?: string | number;
+    breadth?: string | number;
+    site_owned?: string;
+    siteOwned?: string;
+    noc_obtained?: string;
+    nocObtained?: string;
+
+    pass_photo?: string;
+    passPhoto?: string;
+    pan_card?: string;
+    panCard?: string;
+    sikkim_certificate?: string;
+    sikkimCertificate?: string;
+    dob_proof?: string;
+    dobProof?: string;
+    noc_landlord?: string;
+    nocLandlord?: string;
     license_type_name?: string;
     licenseTypeName?: string;
     license_type?: string;
@@ -106,6 +156,7 @@ export interface UnifiedApplicationData {
     license_category?: string;
     license_sub_category_name?: string;
     licenseSubCategoryName?: string;
+    site_type?: string;
     site_district_name?: string;
     siteDistrictName?: string;
     site_subdivision_name?: string;
@@ -262,6 +313,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     applicationType: ApplicationType = 'requisition';
     isLoading = false;
     errorMessage = '';
+
+    // Uploaded documents modal state
+    docsModalOpen = false;
+    activeDoc: { label: string; url: string; isImage: boolean } | null = null;
+    newLicenseUploads: Array<{ label: string; url: string; isImage: boolean }> = [];
+
+    openDocsModal(): void { this.docsModalOpen = true; this.cdr.detectChanges(); }
+    closeDocsModal(): void { this.docsModalOpen = false; this.activeDoc = null; this.cdr.detectChanges(); }
+    openDocViewer(doc: { label: string; url: string; isImage: boolean }): void {
+        const url = this.normalizeDocUrl(doc.url);
+        if (!doc.isImage) {
+            window.open(url, '_blank', 'noopener');
+            return;
+        }
+        this.activeDoc = {
+            ...doc,
+            url
+        };
+        this.cdr.detectChanges();
+    }
+    closeDocViewer(): void { this.activeDoc = null; this.cdr.detectChanges(); }
     
     private readonly isBrowser: boolean;
 
@@ -273,14 +345,32 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private supplyChainService: SupplyChainService,
         private hologramDataService: HologramDataService,
         private companyRegistrationService: CompanyRegistrationService,
+        private companyCollaborationService: CompanyCollaborationService,
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private licenseApplicationService: LicenseApplicationService,
         private unifiedActionsService: UnifiedActionsService,
+        private roleService: RoleService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
+        private sanitizer: DomSanitizer,
+        private cdr: ChangeDetectorRef,
         @Inject(PLATFORM_ID) platformId: Object
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
+    }
+
+    private isOicUser(): boolean {
+        const current = this.roleService.getCurrentUser();
+        if (!current) return false;
+
+        if (Number(current.roleId) === 7) return true;
+
+        const roleToken = String(current.role?.name || current.role?.displayName || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+        if (roleToken.includes('officerincharge') || roleToken === 'oic') return true;
+
+        return false;
     }
 
     // Dynamic service configuration
@@ -471,6 +561,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     brAmount: ['paymentAmount', 'payment_amount']
                 }
             },
+            'company-collaboration': {
+                service: this.companyCollaborationService,
+                listMethod: 'listCompanyCollaborations',
+                detailMethod: 'getCompanyCollaborationDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.COMPANY_COLLABORATION],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no', 'id'],
+                    submissionDate: ['created_at', 'createdAt', 'updated_at', 'updatedAt'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage', 'currentStage', 'current_stage_id', 'currentStageId'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['licensee_name', 'licenseeName', 'brand_owner_name', 'brandOwnerName'],
+                    brAmount: ['total_amount']
+                }
+            },
             'salesman-barman-registration': {
                 service: this.salesmanBarmanRegistrationService,
                 listMethod: 'getSalesmanBarmanList',
@@ -613,7 +720,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         // For workflows where backend often sends generic "PENDING",
         // prefer explicit current stage name for user-facing status.
         if (
-            (this.applicationType === 'salesman-barman-registration' || this.applicationType === 'company-registration') &&
+            (
+                this.applicationType === 'salesman-barman-registration' ||
+                this.applicationType === 'company-registration' ||
+                this.applicationType === 'company-collaboration'
+            ) &&
             mappedData.currentStageName &&
             (!mappedData.status || String(mappedData.status).toUpperCase() === 'PENDING')
         ) {
@@ -629,6 +740,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.addComputedFields(mappedData, apiData, config);
 
         this.applicationData = mappedData;
+        this.calculateNewLicenseUploads();
         this.loadWorkflowActions();
     }
 
@@ -888,6 +1000,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount'])
                 );
                 break;
+            case 'company-collaboration':
+                const overviewSummary = apiData?.overview_summary ?? apiData?.overviewSummary ?? {};
+                const feeStructure = apiData?.fee_structure ?? apiData?.feeStructure ?? {};
+                mappedData['distilleryName'] =
+                    this.extractFieldValue(apiData, ['licensee_name', 'licenseeName', 'brand_owner_name', 'brandOwnerName']) ||
+                    'Not specified';
+                mappedData['brAmount'] = this.parseNumericValue(
+                    overviewSummary?.totalAmount ??
+                    overviewSummary?.total_amount ??
+                    feeStructure?.totalAmount ??
+                    feeStructure?.total_amount,
+                    this.parseNumericValue(feeStructure?.applicationFee) +
+                    this.parseNumericValue(feeStructure?.application_fee) +
+                    this.parseNumericValue(feeStructure?.collaborationFee) +
+                    this.parseNumericValue(feeStructure?.collaboration_fee) +
+                    this.parseNumericValue(feeStructure?.collaborationFees) +
+                    this.parseNumericValue(feeStructure?.collaboration_fees) +
+                    this.parseNumericValue(feeStructure?.securityDeposit) +
+                    this.parseNumericValue(feeStructure?.security_deposit)
+                );
+                break;
             case 'salesman-barman-registration':
                 mappedData['distilleryName'] =
                     this.extractFieldValue(apiData, ['license_category_name', 'licenseCategoryName', 'license_category']) ||
@@ -1013,6 +1146,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return Number.isFinite(parsed) ? parsed : undefined;
     }
 
+    getCompanyCollaborationBrands(): any[] {
+        const selectedBrands =
+            this.applicationData?.['selected_brands'] ??
+            this.applicationData?.['selectedBrands'] ??
+            [];
+        return Array.isArray(selectedBrands) ? selectedBrands : [];
+    }
+
+    getDocumentUrl(value: any): string {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return '';
+        }
+
+        if (/^https?:\/\//i.test(raw)) {
+            return raw;
+        }
+
+        const baseUrl = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+        const path = raw.replace(/^\/+/, '');
+        return `${baseUrl}/${path}`;
+    }
+
     private extractAllowedActions(apiData: any): string[] {
         const actions = apiData?.allowedActions ?? apiData?.allowed_actions ?? [];
         if (!Array.isArray(actions)) return [];
@@ -1070,6 +1226,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (currentUrl.includes('dashboard') && currentUrl.includes('section=')) return USER_CONTEXTS.LICENSEE;
         
         return USER_CONTEXTS.LICENSEE; // Default context
+    }
+
+    isLicenseeContext(): boolean {
+        return this.getUserContext() === USER_CONTEXTS.LICENSEE;
     }
 
     onUnifiedAction(event: { action: string, item: any }): void {
@@ -1403,6 +1563,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
+    isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
 
     getApplicationTitle(): string {
@@ -1415,12 +1576,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     goBack(): void {
         const source = this.route.snapshot.queryParamMap.get('source');
+
+        // IT Cell hologram flows should return to the IT Cell dashboard section, not the licensee hologram section.
+        if (source === 'itcell' || source === 'it-cell') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'itcell-hologram', tab: 'hologram' } });
+            return;
+        }
+
+        // OIC transit detail should go back to "Transit Applications" (4-card OIC view), not licensee "Transit Permit".
+        if (this.applicationType === 'transit' && (source === 'officer-in-charge' || this.isOicUser())) {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'transit-applications' } });
+            return;
+        }
+
         const supplyChainDashboardTypes: ApplicationType[] = [
             'requisition',
             'revalidation',
             'cancellation',
             'transit',
-            'hologram'
+            'hologram',
+            'new-license',
+            'company-registration',
+            'company-collaboration',
+            'salesman-barman-registration'
         ];
 
         if (supplyChainDashboardTypes.includes(this.applicationType)) {
@@ -1573,6 +1751,83 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     hasText(value: unknown): boolean {
         if (value === null || value === undefined) return false;
         return String(value).trim().length > 0;
+    }
+
+    getFileUrl(value: unknown): string {
+        if (!this.hasText(value)) return '#';
+        const valueStr = String(value).trim();
+
+        if (valueStr.startsWith('http://') || valueStr.startsWith('https://')) {
+            return valueStr;
+        }
+
+        const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+        const path = valueStr.startsWith('/') ? valueStr : `/${valueStr}`;
+        return `${base}${path}`;
+    }
+
+    private normalizeDocUrl(url: string): string {
+        const raw = String(url || '').trim();
+        if (!raw) return raw;
+        try {
+            return encodeURI(raw);
+        } catch {
+            return raw;
+        }
+    }
+
+
+    private isFilePath(value: unknown): boolean {
+        if (!this.hasText(value)) return false;
+        const valueStr = String(value).toLowerCase();
+        return (
+            valueStr.includes('/media/') ||
+            valueStr.endsWith('.pdf') ||
+            valueStr.endsWith('.jpg') ||
+            valueStr.endsWith('.jpeg') ||
+            valueStr.endsWith('.png') ||
+            valueStr.endsWith('.webp') ||
+            valueStr.endsWith('.doc') ||
+            valueStr.endsWith('.docx')
+        );
+    }
+
+    private isImagePath(value: unknown): boolean {
+        if (!this.hasText(value)) return false;
+        const valueStr = String(value).toLowerCase();
+        return valueStr.endsWith('.jpg') || valueStr.endsWith('.jpeg') || valueStr.endsWith('.png') || valueStr.endsWith('.webp');
+    }
+
+    private pickFirstValue(keys: string[]): unknown {
+        const data: any = this.applicationData as any;
+        for (const key of keys) {
+            const candidate = data?.[key];
+            if (this.hasText(candidate)) return candidate;
+        }
+        return null;
+    }
+
+    calculateNewLicenseUploads(): void {
+        this.newLicenseUploads = [];
+        if (!this.applicationData || this.applicationType !== 'new-license') return;
+
+        const docFields: Array<{ label: string; keys: string[] }> = [
+            { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
+            { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
+            { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
+            { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
+            { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
+        ];
+
+        for (const field of docFields) {
+            const rawValue = this.pickFirstValue(field.keys);
+            if (!this.isFilePath(rawValue)) continue;
+            this.newLicenseUploads.push({
+                label: field.label,
+                url: this.getFileUrl(rawValue),
+                isImage: this.isImagePath(rawValue)
+            });
+        }
     }
 
     printApplication(): void {

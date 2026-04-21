@@ -17,7 +17,7 @@ interface CommissionerData {
   distilleryName: string;
   status: string;
   amount: string;
-  type: 'requisition' | 'revalidation' | 'transit' | 'hologram';
+  type: 'requisition' | 'revalidation' | 'transit' | 'hologram' | 'cancellation';
   localQtyLakh?: number;
   exportQtyLakh?: number;
   defenceQtyLakh?: number;
@@ -245,6 +245,7 @@ interface CommissionerData {
                           <input
                             type="number"
                             min="0"
+                            step="100000"
                             class="form-control form-control-sm text-end d-inline-block"
                             style="max-width: 140px;"
                             [(ngModel)]="hologramEditForm.localQty">
@@ -257,6 +258,7 @@ interface CommissionerData {
                           <input
                             type="number"
                             min="0"
+                            step="100000"
                             class="form-control form-control-sm text-end d-inline-block"
                             style="max-width: 140px;"
                             [(ngModel)]="hologramEditForm.exportQty">
@@ -269,6 +271,7 @@ interface CommissionerData {
                           <input
                             type="number"
                             min="0"
+                            step="100000"
                             class="form-control form-control-sm text-end d-inline-block"
                             style="max-width: 140px;"
                             [(ngModel)]="hologramEditForm.defenceQty">
@@ -281,6 +284,9 @@ interface CommissionerData {
                       </tr>
                     </tbody>
                   </table>
+                  <div class="px-2 pt-1 pb-1" *ngIf="isHologramEditMode">
+                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Quantities must be in multiples of <strong>1,00,000</strong> (e.g. 1,00,000 / 2,00,000)</small>
+                  </div>
                   <div class="px-2 pb-2" *ngIf="hologramEditSummary">
                     <div class="alert alert-warning py-2 mb-0 small">
                       <strong>Commissioner Change Summary:</strong><br>
@@ -352,6 +358,10 @@ interface CommissionerData {
               </div>
 
               <div class="text-end mt-3">
+                <div class="alert alert-danger py-2 px-3 mb-2 text-start small d-flex align-items-start gap-2" *ngIf="hologramEditError" role="alert">
+                  <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+                  <span>{{ hologramEditError }}</span>
+                </div>
                 <button
                   type="button"
                   class="btn btn-outline-primary btn-sm me-2"
@@ -390,7 +400,7 @@ interface CommissionerData {
       </app-dashboard-statistics>
 
        <!-- Data Table -->
-        <div class="data-table-section" *ngIf="filteredApplications.length > 0">
+        <div class="data-table-section" *ngIf="false">
           <div class="filter-bar" *ngIf="filteredApplications.length > 0">
             <div class="filter-item">
               <label class="filter-label">Company</label>
@@ -465,7 +475,7 @@ interface CommissionerData {
       </div>
 
       <!-- Empty State -->
-      <div class="empty-state" *ngIf="filteredApplications.length === 0">
+      <div class="empty-state" *ngIf="false">
         <div class="empty-icon">
           <i class="bi bi-inbox"></i>
         </div>
@@ -836,6 +846,7 @@ export class CommissionerDashboardComponent implements OnInit {
   pageSize: number = 10;
   selectedHologramDetails: CommissionerData | null = null;
   isHologramEditMode = false;
+  hologramEditError = '';
   hologramEditForm: { localQty: number; exportQty: number; defenceQty: number } = {
     localQty: 0,
     exportQty: 0,
@@ -890,6 +901,74 @@ export class CommissionerDashboardComponent implements OnInit {
     this.loadRevalidations();
     this.loadTransitPermits();
     this.loadHolograms();
+    this.loadCancellations();
+  }
+
+  loadCancellations(): void {
+    this.supplyChainService.getCancellationData().subscribe({
+      next: (data: any[]) => {
+        const cancellations: CommissionerData[] = (data || [])
+          // Keep only items that can reach commissioner (actionable or commissioner/pending text).
+          .filter((item: any) => this.requiresCommissionerReview(item.status) || this.hasApproveOrRejectAction(item))
+          .map((item: any) => ({
+            id: item.id,
+            referenceNo: item.ourRefNo || item.our_ref_no || `CAN-${item.id}`,
+            submissionDate: this.formatDate(
+              item.cancellationDate ||
+              item.cancellation_date ||
+              item.requisitionDate ||
+              item.requisition_date ||
+              item.submissionDate ||
+              item.submission_date
+            ),
+            distilleryName:
+              item.branchName ||
+              item.branch_name ||
+              item.distilleryName ||
+              item.distillery_name ||
+              item.establishmentName ||
+              item.establishment_name ||
+              item.licenseeName ||
+              item.licensee_name ||
+              'N/A',
+            status: item.status || 'PENDING',
+            amount: String(
+              item.totalCancellationAmount ||
+                item.total_cancellation_amount ||
+                item.cancellationBrAmount ||
+                item.cancellation_br_amount ||
+                item.amount ||
+                '0.00'
+            ),
+            type: 'cancellation',
+            allowedActions:
+              item.allowedActions ||
+              item.allowed_actions ||
+              this.getDefaultActionsFromStatus(item.status),
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+          }));
+
+        this.updateApplications('cancellation', cancellations);
+      },
+      error: (error) => console.error('Error loading cancellations:', error)
+    });
+  }
+
+  private getDefaultActionsFromStatus(status: any): string[] {
+    const value = String(status || '').toLowerCase();
+    if (!value) return [];
+    if (value.includes('reject')) return [];
+    if (value.includes('approve')) return [];
+    if (value.includes('pending') || value.includes('forward') || value.includes('submit')) return ['APPROVE', 'REJECT'];
+    return [];
+  }
+
+  private hasApproveOrRejectAction(item: any): boolean {
+    const actions = Array.isArray(item?.allowedActions) ? item.allowedActions : (Array.isArray(item?.allowed_actions) ? item.allowed_actions : []);
+    const upper = actions.map((a: any) => String(a || '').toUpperCase());
+    return upper.includes('APPROVE') || upper.includes('REJECT');
   }
 
   loadRequisitions(): void {
@@ -1057,12 +1136,24 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
+    const actionablePending = this.getActionablePendingCount();
+    const legacyPending = this.getStatusCount('PENDING') + this.getStatusCount('FORWARDED');
+
     return {
       applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED'),
-      pending: this.getStatusCount('PENDING') + this.getStatusCount('FORWARDED'),
+      pending: actionablePending || legacyPending,
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER'),
       rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER')
     };
+  }
+
+  private getActionablePendingCount(): number {
+    // Prefer DB workflow metadata (allowed actions) so pending count stays correct even when stage names change.
+    return this.allApplications.filter((application) => {
+      const actions = Array.isArray(application?.allowedActions) ? application.allowedActions : [];
+      const upper = actions.map((a: any) => String(a || '').toUpperCase());
+      return upper.includes('APPROVE') || upper.includes('REJECT');
+    }).length;
   }
 
   getFilterOptions() {
@@ -1071,7 +1162,8 @@ export class CommissionerDashboardComponent implements OnInit {
       { value: 'requisition', label: 'Requisitions' },
       { value: 'revalidation', label: 'Revalidations' },
       { value: 'transit', label: 'Transit Permits' },
-      { value: 'hologram', label: 'Holograms' }
+      { value: 'hologram', label: 'Holograms' },
+      { value: 'cancellation', label: 'Cancellations' }
     ];
   }
 
@@ -1295,6 +1387,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
   cancelHologramEdit(): void {
     this.isHologramEditMode = false;
+    this.hologramEditError = '';
   }
 
   getEditedHologramTotal(): number {
@@ -1304,13 +1397,14 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   saveHologramEdit(application: CommissionerData): void {
+    this.hologramEditError = '';
     const resolvedId = Number(
       application?.id ||
       this.allApplications.find(a => a.referenceNo === application?.referenceNo)?.id ||
       this.filteredApplications.find(a => a.referenceNo === application?.referenceNo)?.id
     );
     if (!resolvedId || Number.isNaN(resolvedId)) {
-      alert('Unable to resolve request id for edit.');
+      this.hologramEditError = 'Unable to resolve request ID. Please close and reopen the details.';
       return;
     }
 
@@ -1319,7 +1413,24 @@ export class CommissionerDashboardComponent implements OnInit {
     const defenceQty = Number(this.hologramEditForm.defenceQty);
 
     if ([localQty, exportQty, defenceQty].some(v => Number.isNaN(v) || v < 0)) {
-      alert('Invalid quantities. Please enter non-negative numbers only.');
+      this.hologramEditError = 'Invalid quantities. Please enter non-negative numbers only.';
+      return;
+    }
+
+    const LAKH = 100000;
+    const invalidQty = [localQty, exportQty, defenceQty].find(v => v > 0 && v % LAKH !== 0);
+    if (invalidQty !== undefined) {
+      this.hologramEditError = `Quantities must be in multiples of 1,00,000 (e.g. 1,00,000 / 2,00,000 / 3,00,000). ${invalidQty.toLocaleString('en-IN')} is not a valid entry.`;
+      return;
+    }
+
+    const totalQty = localQty + exportQty + defenceQty;
+    if (totalQty === 0) {
+      this.hologramEditError = 'Total quantity cannot be zero. Please enter a valid quantity.';
+      return;
+    }
+    if (totalQty === 0) {
+      alert('Total quantity cannot be zero. Please enter a valid quantity.');
       return;
     }
 
@@ -1363,7 +1474,7 @@ export class CommissionerDashboardComponent implements OnInit {
       },
       error: (err: any) => {
         console.error('Error updating hologram quantities:', err);
-        alert(err?.error?.error || 'Failed to update hologram quantities.');
+        this.hologramEditError = err?.error?.error || 'Failed to update hologram quantities. Please try again.';
       }
     });
   }

@@ -186,6 +186,14 @@ export const routes: Routes = [
       ).then((m) => m.FinalrequistionlettersComponent),
   },
   {
+    path: "unified-letter-view/transit",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finaltransitpermit/finaltransitpermit.component"
+      ).then((m) => m.FinaltransitpermitComponent),
+  },
+  {
     path: "dev-payment-receipt",
     canActivate: [UserRouteAccessService],
     data: { devOnly: true, requiredPermission: "licensee.module.view" },
@@ -431,6 +439,16 @@ export const routes: Routes = [
       ),
   },
 
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./features/login/forgot-password.component').then(m => m.ForgotPasswordComponent)
+  },
+  {
+    // The path MUST match the format constructed in the Django email payload
+    path: 'reset-password/:uid/:token',
+    loadComponent: () => import('./features/login/reset-password.component').then(m => m.ResetPasswordComponent)
+  },
+
   // Access denied aliases
   {
     path: "accessdenied",
@@ -446,6 +464,8 @@ export const routes: Routes = [
     path: "**",
     component: PageNotFoundComponent,
   },
+
+  
 ];
 
 export default routes;

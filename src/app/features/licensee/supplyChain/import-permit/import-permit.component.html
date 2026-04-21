@@ -140,8 +140,8 @@
                   <select class="form-select" [(ngModel)]="formData.checkpostEntry" name="checkpostEntry" required
                     [disabled]="isLoading">
                     <option [ngValue]="''">Select Checkpost</option>
-                    <option *ngFor="let checkpost of checkposts" [ngValue]="checkpost.checkpostName">
-                      {{ checkpost.checkpostName }}
+                    <option *ngFor="let checkpost of checkposts" [ngValue]="checkpost.checkPostName">
+                      {{ checkpost.checkPostName }}
                     </option>
                   </select>
                   <div *ngIf="isLoading" class="text-muted small">

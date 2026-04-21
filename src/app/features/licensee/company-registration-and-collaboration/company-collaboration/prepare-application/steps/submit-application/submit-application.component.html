@@ -134,12 +134,6 @@
                     <span>{{ brand.brand_code }}</span> |
                     <span>{{ brand.category }}</span> |
                     <span>{{ brand.type }}</span>
-                    @if (brand.strength !== null) {
-                      | <span>{{ brand.strength }}% ABV</span>
-                    }
-                  </div>
-                  <div class="brand-sizes">
-                    Pack Sizes: {{ (brand.selectedSizes || brand.sizes).join(', ') }}
                   </div>
                 </div>
               </div>

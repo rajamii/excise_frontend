@@ -2,7 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-export type AddMoneyWalletType = 'excise' | 'education' | 'hologram' | 'brewery';
+export type AddMoneyWalletType =
+  | 'excise'
+  | 'education'
+  | 'hologram'
+  | 'brewery'
+  | 'security_deposit'
+  | 'license_fee';
 
 export interface AddMoneyViewContext {
   walletType: AddMoneyWalletType;

@@ -650,7 +650,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Action methods
   viewPermitSlip(item: any): void {
     console.log('viewPermitSlip called with item:', item);
-    this.router.navigate(["/dev-revalidation-permit-slip"], {
+    this.router.navigate(["/unified-letter-view/revalidation"], {
       queryParams: {
         id: item.id,
         ref: item.referenceNo,

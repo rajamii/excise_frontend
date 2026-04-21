@@ -4,9 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupplyChainService } from '../../licensee/supplyChain/services/supplychain.service';
 import { AccountService } from '../../../core/services/account.service';
+import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
 import { DashboardStatisticsComponent } from '../../../shared/components/dashboard-statistics/dashboard-statistics.component';
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
+import { HologramDataService } from '../../licensee/supplyChain/services/hologram-data.service';
+
+type HologramRequestCategory = 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED';
 
 interface OfficerData {
   id?: number;
@@ -39,7 +43,7 @@ interface OfficerData {
       </app-dashboard-statistics>
 
       <!-- Data Table -->
-      <div class="data-table-section" *ngIf="filteredApplications.length > 0">
+      <div class="data-table-section" *ngIf="false">
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
@@ -100,12 +104,22 @@ interface OfficerData {
       </div>
 
       <!-- Empty State -->
-      <div class="empty-state" *ngIf="filteredApplications.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-inbox"></i>
+      <div class="oic-dashboard-note" *ngIf="false">
+        <div class="note-card">
+          <h5 class="note-title">Requests are available in modules</h5>
+          <p class="note-text">
+            Hologram Requests and Transit Applications are available in their dedicated pages, so we don’t duplicate the
+            table on the OIC dashboard.
+          </p>
+          <div class="note-actions">
+            <button type="button" class="btn btn-primary" (click)="openHologramRequests()">
+              Hologram Requests
+            </button>
+            <button type="button" class="btn btn-outline-primary" (click)="openTransitApplications()">
+              Transit Applications
+            </button>
+          </div>
         </div>
-        <h5>No Applications Found</h5>
-        <p>There are no applications requiring officer-in-charge review at this time.</p>
       </div>
     </div>
   `,
@@ -169,6 +183,36 @@ interface OfficerData {
       margin-bottom: 0;
       font-size: 1rem;
     }
+
+    .oic-dashboard-note {
+      margin-top: 1.25rem;
+    }
+
+    .note-card {
+      background: white;
+      border-radius: 0.75rem;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+      padding: 1rem 1.125rem;
+    }
+
+    .note-title {
+      margin: 0 0 0.375rem 0;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .note-text {
+      margin: 0 0 0.875rem 0;
+      color: #4b5563;
+      font-size: 0.95rem;
+    }
+
+    .note-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
   `]
 })
 export class OfficerInChargeDashboardComponent implements OnInit {
@@ -177,11 +221,22 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   private router = inject(Router);
   private supplyChainService = inject(SupplyChainService);
   private unifiedActionsService = inject(UnifiedActionsService);
+  private hologramService = inject(HologramDataService);
+  private enaRequisitionService = inject(EnaRequisitionService);
 
   // Data properties
   allApplications: OfficerData[] = [];
   filteredApplications: OfficerData[] = [];
   selectedApplicationType: string = 'all';
+  private currentScopedLicenseId = '';
+  private hologramRequestCounts: Record<HologramRequestCategory, number> = {
+    PENDING: 0,
+    UNDER_PROCESS: 0,
+    APPROVED: 0,
+    REJECTED: 0,
+  };
+  private hologramProcurementPendingCount = 0;
+  private blDetailsPendingCount = 0;
 
   // Pagination
   currentPage: number = 1;
@@ -190,7 +245,19 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
+    this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
     this.loadTransitApplications();
+    this.loadHologramRequestsCounts();
+    this.loadHologramProcurementPendingCount();
+    this.loadBlDetailsPendingCount();
+  }
+
+  openHologramRequests(): void {
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'oic-hologram-requests' } });
+  }
+
+  openTransitApplications(): void {
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'transit-applications' } });
   }
 
   loadTransitApplications(): void {
@@ -243,12 +310,81 @@ export class OfficerInChargeDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
+    const hologramPending = (this.hologramRequestCounts.PENDING || 0);
+    // For OIC, "Transit Applications" badge is driven by the filtered list itself (termination/monitoring queue),
+    // not always by allowed_actions from backend (which can be missing on some environments).
+    const transitPending = Array.isArray(this.allApplications) ? this.allApplications.length : 0;
     return {
-      applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED'),
-      pending: this.getStatusCount('ACTIVE') + this.getStatusCount('IN_TRANSIT'),
+      applied: 0,
+      pending: transitPending +
+        hologramPending +
+        (this.hologramProcurementPendingCount || 0) +
+        (this.blDetailsPendingCount || 0),
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('ISSUED'),
       rejected: this.getStatusCount('TERMINATED') + this.getStatusCount('CANCELLED')
     };
+  }
+
+  private loadHologramProcurementPendingCount(): void {
+    this.hologramService.getProcurements().subscribe({
+      next: (procurements: any[]) => {
+        const scoped = this.filterByCurrentLicense(procurements || []);
+        this.hologramProcurementPendingCount = this.countOicHologramProcurementPending(scoped);
+      },
+      error: () => {
+        this.hologramProcurementPendingCount = 0;
+      }
+    });
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private countOicHologramProcurementPending(rows: any[]): number {
+    const items = Array.isArray(rows) ? rows : [];
+
+    const hasAnyActions = items.some((row) => this.extractAllowedActions(row).length > 0);
+    if (hasAnyActions) {
+      const actionable = new Set(['ASSIGN_CARTONS', 'UPDATE_ARRIVAL']);
+      return items.filter((row) => {
+        const actions = this.extractAllowedActions(row);
+        const hasAssignCartons = actions.includes('ASSIGN_CARTONS');
+        const hasUpdateArrival = actions.includes('UPDATE_ARRIVAL');
+        if (!hasAssignCartons && !hasUpdateArrival) return false;
+
+        const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
+        const hasDetails = Array.isArray(details) && details.length > 0;
+
+        if (hasAssignCartons && !hasDetails) return true;
+        if (hasUpdateArrival && hasDetails) return true;
+        return false;
+      }).length;
+    }
+
+    // Fallback when backend doesn't return allowed actions consistently.
+    return items.filter((row) => {
+      const statusToken = this.normalizeStageToken(row?.status);
+      if (!statusToken) return false;
+
+      if (statusToken.includes('paymentcompleted')) return false;
+      if (statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) return false;
+      if (statusToken.includes('rejected') || statusToken.includes('reject')) return false;
+
+      return statusToken.includes('approved') || statusToken.includes('pending') || statusToken.includes('under');
+    }).length;
+  }
+
+  private loadBlDetailsPendingCount(): void {
+    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').subscribe({
+      next: (response: any) => {
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        this.blDetailsPendingCount = rows.length;
+      },
+      error: () => {
+        this.blDetailsPendingCount = 0;
+      }
+    });
   }
 
   getFilterOptions() {
@@ -276,6 +412,183 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     return this.allApplications.filter(app => 
       app.status.toLowerCase().includes(status.toLowerCase())
     ).length;
+  }
+
+  private loadHologramRequestsCounts(): void {
+    this.hologramService.getRequests().subscribe({
+      next: (requests: any[]) => {
+        const scopedRequests = this.filterByCurrentLicense(requests || []);
+        const counts: Record<HologramRequestCategory, number> = {
+          PENDING: 0,
+          UNDER_PROCESS: 0,
+          APPROVED: 0,
+          REJECTED: 0,
+        };
+
+        for (const request of scopedRequests) {
+          counts[this.categorizeHologramRequest(request)] += 1;
+        }
+
+        this.hologramRequestCounts = counts;
+      },
+      error: (error) => {
+        console.error('Error loading hologram requests for OIC stats:', error);
+        this.hologramRequestCounts = { PENDING: 0, UNDER_PROCESS: 0, APPROVED: 0, REJECTED: 0 };
+      }
+    });
+  }
+
+  private toUpperActions(value: any): string[] {
+    const list = Array.isArray(value) ? value : [];
+    return list.map((x) => String(x || '').toUpperCase()).filter(Boolean);
+  }
+
+  private extractAllowedActions(item: any): string[] {
+    const allowed =
+      item?.allowedActions ??
+      item?.allowed_actions ??
+      item?.allowed_action ??
+      item?.actions ??
+      item?.currentStageEntryActions ??
+      item?.current_stage_entry_actions ??
+      [];
+    return this.toUpperActions(allowed);
+  }
+
+  private countActionable(items: any[], actionableActions: string[]): number {
+    const actionable = new Set(this.toUpperActions(actionableActions));
+
+    const rows = Array.isArray(items) ? items : [];
+    const hasAnyActions = rows.some((row) => this.extractAllowedActions(row).length > 0);
+    if (hasAnyActions) {
+      return rows.filter((row) => {
+        const actions = this.extractAllowedActions(row);
+        return actions.some((action) => actionable.has(action));
+      }).length;
+    }
+
+    // Fallback when backend doesn't return allowed actions consistently.
+    return rows.filter((row) => {
+      const statusText = String(row?.status || row?.current_stage_name || row?.currentStageName || '').toLowerCase();
+      return statusText.includes('pending') || statusText.includes('under') || statusText.includes('submitted');
+    }).length;
+  }
+
+  private isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usage_date || request?.usageDate || '').trim();
+    if (!usageDate) return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
+  }
+
+  private categorizeHologramRequest(request: any): HologramRequestCategory {
+    const isInitial = Boolean(request?.currentStageIsInitial ?? request?.current_stage_is_initial ?? false);
+    const isFinal = Boolean(request?.currentStageIsFinal ?? request?.current_stage_is_final ?? false);
+    const allowedActions = this.toUpperActions(request?.allowedActions || request?.allowed_actions || []);
+    const entryActions = this.toUpperActions(request?.currentStageEntryActions || request?.current_stage_entry_actions || []);
+
+    if (isFinal && entryActions.includes('REJECT')) return 'REJECTED';
+    if (isFinal) return 'APPROVED';
+    if (isInitial) {
+      // If usage date already passed and still in pending-review stage, treat as rejected-by-timeout.
+      if (this.isUsageDatePast(request)) return 'REJECTED';
+      return 'PENDING';
+    }
+
+    if (allowedActions.includes('ISSUE') || allowedActions.includes('APPROVE') || allowedActions.includes('REJECT')) {
+      if (this.isUsageDatePast(request)) return 'REJECTED';
+      return 'PENDING';
+    }
+
+    const statusText = String(request?.currentStageName || request?.current_stage_name || request?.status || '').toUpperCase();
+    if (statusText.includes('REJECT')) return 'REJECTED';
+    if (statusText.includes('COMPLETE') || statusText.includes('APPROVE')) return 'APPROVED';
+
+    return 'UNDER_PROCESS';
+  }
+
+  private resolveCurrentScopedLicenseId(): string {
+    if (typeof window === 'undefined') return '';
+
+    const sources = [
+      sessionStorage.getItem('currentUser'),
+      localStorage.getItem('currentUser'),
+      sessionStorage.getItem('user'),
+      localStorage.getItem('user')
+    ];
+
+    for (const raw of sources) {
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const resolved = this.extractLicenseId(parsed);
+        if (resolved) return resolved;
+      } catch {
+        // Ignore non-JSON payloads
+      }
+    }
+    return '';
+  }
+
+  private extractLicenseId(payload: any): string {
+    if (!payload || typeof payload !== 'object') return '';
+
+    const direct = this.pickFirstNonEmpty(payload, [
+      'license_id', 'licenseId',
+      'licensee_id', 'licenseeId'
+    ]);
+    if (direct) return direct;
+
+    const nestedCandidates = [
+      payload.user,
+      payload.profile,
+      payload.supply_chain_profile,
+      payload.supplyChainProfile,
+      payload.oic_assignment,
+      payload.oicAssignment,
+      payload.assignment
+    ];
+    for (const nested of nestedCandidates) {
+      const nestedId = this.extractLicenseId(nested);
+      if (nestedId) return nestedId;
+    }
+
+    return '';
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    for (const key of keys) {
+      const value = source?.[key];
+      const normalized = String(value ?? '').trim();
+      if (normalized) return normalized;
+    }
+    return '';
+  }
+
+  private expandLicenseAliases(licenseId: string): string[] {
+    const normalized = String(licenseId || '').trim();
+    if (!normalized) return [];
+    const aliases = [normalized];
+    if (normalized.startsWith('NLI/')) aliases.push(`NA/${normalized.slice(4)}`);
+    if (normalized.startsWith('NA/')) aliases.push(`NLI/${normalized.slice(3)}`);
+    return aliases;
+  }
+
+  private filterByCurrentLicense<T = any>(rows: T[]): T[] {
+    const scopedLicense = String(this.currentScopedLicenseId || '').trim();
+    if (!scopedLicense) return rows || [];
+
+    const allowed = new Set(this.expandLicenseAliases(scopedLicense));
+    return (rows || []).filter((row: any) => {
+      const rowLicense = this.pickFirstNonEmpty(row, [
+        'license_id', 'licenseId',
+        'licensee_id', 'licenseeId'
+      ]);
+      if (!rowLicense) return false;
+      return this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
+    });
   }
 
   // Unified action handler
