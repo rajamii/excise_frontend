@@ -4,7 +4,6 @@ import { AccountService } from '../../../../core/services/account.service';
 import { LabelRegistrationLicenseeDetailsComponent } from './steps/licensee-details/licensee-details.component';
 import { LabelRegistrationProductDetailsComponent } from './steps/product-details/product-details.component';
 import { LabelRegistrationPackagingDetailsComponent } from './steps/packaging-details/packaging-details.component';
-import { LabelRegistrationUploadDocumentsComponent } from './steps/upload-documents/upload-documents.component';
 import { LabelRegistrationSubmitApplicationComponent } from './steps/submit-application/submit-application.component';
 
 @Component({
@@ -15,7 +14,6 @@ import { LabelRegistrationSubmitApplicationComponent } from './steps/submit-appl
     LabelRegistrationLicenseeDetailsComponent,
     LabelRegistrationProductDetailsComponent,
     LabelRegistrationPackagingDetailsComponent,
-    LabelRegistrationUploadDocumentsComponent,
     LabelRegistrationSubmitApplicationComponent
   ],
   templateUrl: './prepare-application.component.html',
