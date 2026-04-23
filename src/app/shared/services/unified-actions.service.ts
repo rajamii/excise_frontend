@@ -17,6 +17,10 @@ export interface ActionResult {
   data?: any;
 }
 
+export interface ActionExecutionOptions {
+  workflowContextData?: Record<string, any>;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -38,7 +42,8 @@ export class UnifiedActionsService {
     action: string,
     item: any,
     itemType: ApplicationType,
-    context?: string
+    context?: string,
+    options?: ActionExecutionOptions
   ): Observable<ActionResult> {
 
     const normalizedAction = (action || '').toString().trim().toUpperCase();
@@ -49,13 +54,13 @@ export class UnifiedActionsService {
         return this.handleViewAction(item, itemType, context);
 
       case 'APPROVE':
-        return this.handleApproveAction(item, itemType);
+        return this.handleApproveAction(item, itemType, options);
 
       case 'REJECT':
         return this.handleRejectAction(item, itemType);
 
       case 'FORWARD':
-        return this.handleForwardAction(item, itemType);
+        return this.handleForwardAction(item, itemType, options);
 
       case 'VERIFY':
         return this.handleVerifyAction(item, itemType);
@@ -237,7 +242,7 @@ export class UnifiedActionsService {
     window.location.href = url;
   }
 
-  private handleApproveAction(item: any, itemType: string): Observable<ActionResult> {
+  private handleApproveAction(item: any, itemType: string, options?: ActionExecutionOptions): Observable<ActionResult> {
     if (!item.id) {
       return of({
         success: false,
@@ -280,7 +285,7 @@ export class UnifiedActionsService {
       case 'company-registration':
       case 'company-collaboration':
       case 'salesman-barman-registration':
-        return this.executeWorkflowAdvance(item, 'approve', 'Approved');
+        return this.executeWorkflowAdvance(item, 'approve', 'Approved', options?.workflowContextData);
 
       default:
         return of({
@@ -349,7 +354,7 @@ export class UnifiedActionsService {
     }
   }
 
-  private handleForwardAction(item: any, itemType: string): Observable<ActionResult> {
+  private handleForwardAction(item: any, itemType: string, options?: ActionExecutionOptions): Observable<ActionResult> {
     if (!item.id) {
       return of({ success: false, message: 'Item ID is required for forward' });
     }
@@ -358,7 +363,7 @@ export class UnifiedActionsService {
       return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
     if (['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
-      return this.executeWorkflowAdvance(item, 'forward', 'Forwarded');
+      return this.executeWorkflowAdvance(item, 'forward', 'Forwarded', options?.workflowContextData);
     }
 
     // Forward is typically the same as approve for most workflows
@@ -952,7 +957,8 @@ export class UnifiedActionsService {
   private executeWorkflowAdvance(
     item: any,
     mode: 'approve' | 'reject' | 'forward',
-    remarks: string
+    remarks: string,
+    workflowContextData?: Record<string, any>
   ): Observable<ActionResult> {
     const applicationId = this.getWorkflowApplicationId(item);
     if (!applicationId) {
@@ -971,7 +977,8 @@ export class UnifiedActionsService {
           {
             remarks,
             context_data: {
-              action: mode.toUpperCase()
+              action: mode.toUpperCase(),
+              ...(workflowContextData ?? {})
             }
           },
           { headers: new HttpHeaders({ Accept: 'application/json' }) }

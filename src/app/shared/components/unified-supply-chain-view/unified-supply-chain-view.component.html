@@ -704,7 +704,7 @@
                                     <td>{{ applicationData.site_type || 'Not Available' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light" style="width: 30%;">License Type</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">License Type</td>
                                     <td>{{ applicationData.license_type_name || applicationData.licenseTypeName || applicationData.license_type || 'Not available' }}</td>
                                 </tr>
                                 <tr>
@@ -1174,17 +1174,21 @@
     </div>
     
         </div>
-         <!-- Print Button -->
-                <div class="no-print d-flex justify-content-center mt-2 mb-2" *ngIf="newLicenseUploads.length > 0">
-                    <button type="button" class="btn-view-docs" (click)="openDocsModal()">
-                        <i class="bi bi-folder2-open me-2"></i>View Uploaded Documents
-                        <span class="docs-count-badge">{{ newLicenseUploads.length }}</span>
-                    </button>
-                </div>
-                <div class="no-print d-flex justify-content-center mt-2" *ngIf="!isHologram()">
-                    <button class="btn btn-primary btn-lg" (click)="printApplication()">
-                        <i class="bi bi-printer me-2"></i>Print Application
-                    </button>
+                <div class="no-print application-footer-actions" *ngIf="applicationData">
+                    <div class="application-footer-actions__row">
+                        <button type="button" class="btn-view-docs" *ngIf="newLicenseUploads.length > 0" (click)="openDocsModal()">
+                            <i class="bi bi-folder2-open me-2"></i>View Uploaded Documents
+                            <span class="docs-count-badge">{{ newLicenseUploads.length }}</span>
+                        </button>
+
+                        <button type="button" class="btn-site-enquiry-report" *ngIf="canViewSiteEnquiryReport()" (click)="openSiteEnquiryReportModal()">
+                            <i class="bi bi-clipboard2-data me-2"></i>View Site Enquiry Report
+                        </button>
+
+                        <button class="btn btn-primary btn-lg application-footer-actions__print" type="button" *ngIf="!isHologram()" (click)="printApplication()">
+                            <i class="bi bi-printer me-2"></i>Print Application
+                        </button>
+                    </div>
                 </div>
         <app-unified-action-buttons *ngIf="!isHologram()"
             [item]="applicationData"
@@ -1237,6 +1241,129 @@
 </div>
 
 <!-- ── Uploaded Documents Modal (portal-level, outside all stacking contexts) ── -->
+<div class="license-fee-modal-backdrop" *ngIf="newLicenseFeeApprovalModalOpen" (click)="cancelNewLicenseFeeApproval()"></div>
+<div class="license-fee-modal" *ngIf="newLicenseFeeApprovalModalOpen" role="dialog" aria-modal="true" aria-label="Confirm new license approval" (click)="cancelNewLicenseFeeApproval()">
+    <div class="license-fee-modal-container" (click)="$event.stopPropagation()">
+        <div class="license-fee-modal-header">
+            <div>
+                <div class="license-fee-modal-title">
+                    <i class="bi bi-check2-square me-2"></i>Confirm New License Approval
+                </div>
+                <div class="license-fee-modal-subtitle">{{ newLicenseFeeApprovalApplicationId }}</div>
+            </div>
+            <button type="button" class="license-fee-modal-close" (click)="cancelNewLicenseFeeApproval()" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="license-fee-modal-body">
+            <p class="license-fee-modal-copy">
+                Select the license category, dependent subcategory, and location to fetch the matching fee record before approval.
+            </p>
+
+            <div class="license-fee-state" *ngIf="newLicenseFeeApprovalOptionsLoading">
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <span>Loading approval dropdowns...</span>
+            </div>
+
+            <form *ngIf="!newLicenseFeeApprovalOptionsLoading" [formGroup]="newLicenseFeeApprovalForm" class="license-fee-form">
+                <div class="alert alert-warning mb-3" *ngIf="newLicenseFeeApprovalOptionsError">
+                    {{ newLicenseFeeApprovalOptionsError }}
+                </div>
+
+                <div class="license-fee-form-grid">
+                    <div class="license-fee-field">
+                        <label class="form-label" for="approval-license-category">License Category</label>
+                        <select id="approval-license-category" class="form-select" formControlName="licenseCategoryId">
+                            <option [ngValue]="null">Select license category</option>
+                            <option *ngFor="let category of newLicenseFeeApprovalCategories" [ngValue]="category.id">
+                                {{ category.licenseCategory }}
+                            </option>
+                        </select>
+                        <div class="license-fee-field__error" *ngIf="newLicenseFeeApprovalForm.get('licenseCategoryId')?.touched && newLicenseFeeApprovalForm.get('licenseCategoryId')?.invalid">
+                            License category is required.
+                        </div>
+                    </div>
+
+                    <div class="license-fee-field">
+                        <label class="form-label" for="approval-license-subcategory">License Subcategory</label>
+                        <select id="approval-license-subcategory" class="form-select" formControlName="licenseSubcategoryId">
+                            <option [ngValue]="null">Select license subcategory</option>
+                            <option *ngFor="let subcategory of newLicenseFeeApprovalFilteredSubcategories" [ngValue]="subcategory.id">
+                                {{ subcategory.description }}
+                            </option>
+                        </select>
+                        <div class="license-fee-field__hint" *ngIf="!newLicenseFeeApprovalFilteredSubcategories.length && newLicenseFeeApprovalForm.get('licenseCategoryId')?.value">
+                            No subcategories found for the selected category.
+                        </div>
+                        <div class="license-fee-field__error" *ngIf="newLicenseFeeApprovalForm.get('licenseSubcategoryId')?.touched && newLicenseFeeApprovalForm.get('licenseSubcategoryId')?.invalid">
+                            License subcategory is required.
+                        </div>
+                    </div>
+
+                    <div class="license-fee-field">
+                        <label class="form-label" for="approval-location-code">Location</label>
+                        <select id="approval-location-code" class="form-select" formControlName="locationCode"
+                            [attr.disabled]="!newLicenseFeeApprovalLocations.length ? true : null">
+                            <option [ngValue]="null">
+                                {{ newLicenseFeeApprovalLocations.length ? 'Select location' : 'Select subcategory first' }}
+                            </option>
+                            <option *ngFor="let location of newLicenseFeeApprovalLocations" [ngValue]="location.locationCode">
+                                {{ location.locationDescription }}<ng-container *ngIf="location.locationCode && !location.isSynthetic"> ({{ location.locationCode }})</ng-container>
+                            </option>
+                        </select>
+                        <div class="license-fee-field__error" *ngIf="newLicenseFeeApprovalForm.get('locationCode')?.touched && newLicenseFeeApprovalForm.get('locationCode')?.invalid">
+                            Location is required.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="license-fee-state license-fee-state--compact" *ngIf="newLicenseFeeApprovalFeeLoading">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+                    <span>Fetching fee details...</span>
+                </div>
+
+                <div class="alert alert-warning mb-0" *ngIf="!newLicenseFeeApprovalFeeLoading && newLicenseFeeApprovalFeeError">
+                    {{ newLicenseFeeApprovalFeeError }}
+                </div>
+
+                <div class="license-fee-summary" *ngIf="newLicenseFeeApprovalDetails">
+                    <div class="license-fee-summary__header">
+                        <span>Matched Fee Record</span>
+                        <small>Record ID: {{ newLicenseFeeApprovalDetails.id }}</small>
+                    </div>
+
+                    <div class="license-fee-summary__grid">
+                        <div class="license-fee-summary__item">
+                            <span class="license-fee-summary__label">License Fee</span>
+                            <strong>₹ {{ newLicenseFeeApprovalDetails.licenseFee ?? newLicenseFeeApprovalDetails.license_fee }}</strong>
+                        </div>
+                        <div class="license-fee-summary__item">
+                            <span class="license-fee-summary__label">Security Amount</span>
+                            <strong>₹ {{ newLicenseFeeApprovalDetails.securityAmount ?? newLicenseFeeApprovalDetails.security_amount }}</strong>
+                        </div>
+                        <div class="license-fee-summary__item">
+                            <span class="license-fee-summary__label">Renewal Amount</span>
+                            <strong>₹ {{ newLicenseFeeApprovalDetails.renewalAmount ?? newLicenseFeeApprovalDetails.renewal_amount }}</strong>
+                        </div>
+                        <div class="license-fee-summary__item">
+                            <span class="license-fee-summary__label">Late Fee</span>
+                            <strong>₹ {{ newLicenseFeeApprovalDetails.lateFee ?? newLicenseFeeApprovalDetails.late_fee }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="license-fee-modal-footer">
+            <button type="button" class="btn btn-outline-secondary" (click)="cancelNewLicenseFeeApproval()">Cancel</button>
+            <button type="button" class="btn btn-primary" (click)="confirmNewLicenseFeeApproval()" [disabled]="!canConfirmNewLicenseFeeApproval">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="docs-modal-backdrop" *ngIf="docsModalOpen" (click)="closeDocsModal()"></div>
 <div class="docs-modal" *ngIf="docsModalOpen" role="dialog" aria-modal="true" aria-label="Uploaded Documents" (click)="closeDocsModal()">
     <div class="docs-modal-container" (click)="$event.stopPropagation()">
@@ -1254,7 +1381,7 @@
                 <div class="doc-item" *ngFor="let doc of newLicenseUploads" (click)="openDocViewer(doc)">
                     <div class="doc-item__preview">
                         <ng-container *ngIf="doc.isImage; else pdfThumb">
-                            <img [src]="doc.url" [alt]="doc.label" class="doc-item__img" />
+                            <img [src]="doc.url" [alt]="doc.label" title="{{ doc.label }}" class="doc-item__img" />
                         </ng-container>
                         <ng-template #pdfThumb>
                             <div class="doc-item__pdf-icon">
@@ -1278,6 +1405,60 @@
 </div>
 
 <!-- ── Full Document Viewer ── -->
+<!-- Site Enquiry Report Modal -->
+<div class="site-enquiry-modal-backdrop" *ngIf="siteEnquiryReportModalOpen" (click)="closeSiteEnquiryReportModal()"></div>
+<div class="site-enquiry-modal" *ngIf="siteEnquiryReportModalOpen" role="dialog" aria-modal="true" aria-label="Site Enquiry Report" (click)="closeSiteEnquiryReportModal()">
+    <div class="site-enquiry-modal-container" (click)="$event.stopPropagation()">
+        <div class="site-enquiry-modal-header">
+            <div>
+                <div class="site-enquiry-modal-title">
+                    <i class="bi bi-clipboard2-data me-2"></i>Site Enquiry Report
+                </div>
+                <div class="site-enquiry-modal-subtitle">
+                    {{ applicationData?.referenceNo || applicationData?.['application_id'] || 'Application' }}
+                </div>
+            </div>
+            <button type="button" class="site-enquiry-modal-close" (click)="closeSiteEnquiryReportModal()" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="site-enquiry-modal-body">
+            <div class="site-enquiry-report-state" *ngIf="siteEnquiryReportLoading">
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <span>Loading site enquiry report...</span>
+            </div>
+
+            <div class="alert alert-warning mb-0" *ngIf="!siteEnquiryReportLoading && siteEnquiryReportError">
+                {{ siteEnquiryReportError }}
+            </div>
+
+            <div class="site-enquiry-report-card" *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportEntries.length > 0">
+                <table class="table table-bordered site-enquiry-report-table mb-0">
+                    <tbody>
+                        <tr *ngFor="let field of siteEnquiryReportEntries">
+                            <td class="site-enquiry-report-table__label">{{ field.label }}</td>
+                            <td class="site-enquiry-report-table__value">
+                                <a *ngIf="field.href; else siteEnquiryValueText"
+                                    [href]="field.href"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="site-enquiry-report-link">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>{{ field.displayValue }}
+                                </a>
+                                <ng-template #siteEnquiryValueText>{{ field.displayValue }}</ng-template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mb-0" *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportEntries.length === 0">
+                No site enquiry report data found for this application.
+            </div>
+        </div>
+    </div>
+</div>
+
 <ng-container *ngIf="activeDoc as doc">
     <div class="doc-viewer-backdrop" (click)="closeDocViewer()"></div>
     <div class="doc-viewer" role="dialog" aria-modal="true">
@@ -1296,7 +1477,7 @@
                 </div>
             </div>
             <div class="doc-viewer-body">
-                <img [src]="doc.url" [alt]="doc.label" class="doc-viewer-img" />
+                <img [src]="doc.url" [alt]="doc.label" title="{{ doc.label }}" class="doc-viewer-img" />
             </div>
         </div>
     </div>
