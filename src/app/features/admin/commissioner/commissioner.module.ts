@@ -12,7 +12,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['commissioner'],
+      requiredPermission: 'officer.commissioner.hologram.view',
     },
   },
   {
@@ -23,7 +23,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['commissioner'],
+      requiredPermission: 'officer.commissioner.payments.view',
     },
   },
   {
@@ -34,7 +34,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['commissioner'],
+      requiredPermission: 'officer.commissioner.daily_hologram.view',
     },
   }
 ];

@@ -15,12 +15,23 @@ export const licenseeRoutes: Routes = [
     loadComponent: () => import('./licensee-dashboard/licensee-dashboard.component').then(m => m.LicenseeDashboardComponent)
   },
   {
+    path: 'final-license',
+    loadComponent: () => import('./final-license/final-license.component').then(m => m.FinalLicenseComponent)
+  },
+  {
     path: 'apply-license',
     loadComponent: () => import('./apply-license/apply-license.component').then(m => m.ApplyLicenseComponent)
   },
   {
     path: 'apply-new-license',
     loadComponent: () => import('./apply-new-license/apply-new-license.component').then(m => m.ApplyNewLicenseComponent)
+  },
+  {
+    path: 'payment-integrations',
+    loadComponent: () =>
+      import('./payment-integrations/payment-integrations.component').then(
+        m => m.PaymentIntegrationsComponent
+      )
   },
   {
     path: 'supply-chain',

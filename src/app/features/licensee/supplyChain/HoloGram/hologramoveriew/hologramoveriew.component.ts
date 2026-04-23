@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { Subscription } from 'rxjs';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface HologramRoll {
   id: number;
@@ -17,6 +18,7 @@ interface HologramRoll {
   damagedCount: number;
   status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
   receivedDate: string;
+  receivedBy?: string;
   isNew?: boolean;
   newUntil?: number;
   usageHistory?: any[]; // Add usage history for Rolls tab
@@ -43,6 +45,7 @@ interface SerialRange {
   productionLine?: string;
   damageReason?: string;
   reportedBy?: string;
+  updatedBy?: string;
   brandDetails?: string;
   bottleSize?: string;
 }
@@ -126,10 +129,21 @@ interface HistoryHologram {
   qtyUsed: number; // Quantity used in production
   qtyDamaged: number; // Quantity damaged/wasted
   qtyLeftover: number; // Quantity left over (available - used - damaged)
+  brandDetailsList?: HistoryBrandDetail[];
   status: 'COMPLETED' | 'CANCELLED';
   completionDate: string; // When the daily register was approved
   officer?: string; // Officer who approved
   hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+}
+
+interface HistoryBrandDetail {
+  brandName: string;
+  bottleSize: string;
+  cartonNumber: string;
+  serialRanges: string;
+  qtyUsed: number;
+  qtyDamaged: number;
+  qtyLeftover: number;
 }
 
 interface ChartFilters {
@@ -144,6 +158,12 @@ interface ChartFilters {
   maxQuantity: number | null;
 }
 
+interface TabDateFilters {
+  month: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 
 
 
@@ -156,12 +176,21 @@ interface ChartFilters {
 })
 export class HologramoveriewComponent implements OnInit, OnDestroy {
   activeTab: string = 'rolls';
+  establishmentName: string = '';
+  establishmentLicenseeId: string = '';
+  establishmentDisplay: string = '';
 
   rollsData: HologramRoll[] = [];
   filteredRollsData: HologramRoll[] = []; // Filtered rolls data
   availableData: AvailableHologram[] = [];
+  filteredAvailableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
+  filteredIssuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
+  filteredHistoryData: HistoryHologram[] = [];
+  private savedDailyRegisterEntries: any[] = [];
+  showHistoryBrandsModal: boolean = false;
+  selectedHistoryForBrands: HistoryHologram | null = null;
 
   // Subscription management
   private requestUpdateSubscription?: Subscription;
@@ -180,10 +209,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     brandReferenceNo: string;
     brandName: string;
     qty: number | null;
+    rollRange: string;
   } = {
       brandReferenceNo: '',
       brandName: '',
-      qty: null
+      qty: null,
+      rollRange: ''
     };
 
   // Autocomplete suggestions
@@ -213,16 +244,38 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   rollsFilters: {
     rollStatus: string;
     hologramType: string;
+    month: string;
     dateFrom: string;
     dateTo: string;
     serialSearch: string;
   } = {
       rollStatus: '',
       hologramType: '',
+      month: '',
       dateFrom: '',
       dateTo: '',
       serialSearch: ''
     };
+
+  // Month/Date filters for other overview tabs
+  availableFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
+  issuedFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
+  historyFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
+
+  // Table pagination (Rolls / Available / Issued / History)
+  readonly tablePageSizeOptions: number[] = [5, 10, 15];
+
+  rollsTablePage = 1;
+  rollsTablePageSize = 5;
+
+  availableTablePage = 1;
+  availableTablePageSize = 5;
+
+  issuedTablePage = 1;
+  issuedTablePageSize = 5;
+
+  historyTablePage = 1;
+  historyTablePageSize = 5;
 
 
 
@@ -251,9 +304,95 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     { value: '2022', label: '2022' }
   ];
 
-  constructor(private route: ActivatedRoute, private router: Router, private hologramService: HologramDataService) { }
+  private parseDateInputLocal(value: string): Date | null {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    // HTML date input emits yyyy-mm-dd
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return this.tryParseAnyDate(raw);
+
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const date = new Date(year, monthIndex, day);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private tryParseAnyDate(value: any): Date | null {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    // Common "dd-MMM-yyyy" (e.g. 17-Apr-2026)
+    const dmy = raw.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+    if (dmy) {
+      const day = Number(dmy[1]);
+      const mon = dmy[2].toLowerCase();
+      const year = Number(dmy[3]);
+      const monthMap: Record<string, number> = {
+        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+      };
+      const monthIndex = monthMap[mon];
+      if (monthIndex === undefined) return null;
+      const date = new Date(year, monthIndex, day);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private matchesTabDateFilters(date: Date | null, filters: TabDateFilters): boolean {
+    if (!date) return false;
+
+    if (filters.month) {
+      const monthValue = String(date.getMonth() + 1).padStart(2, '0');
+      if (monthValue !== String(filters.month)) return false;
+    }
+
+    const from = this.parseDateInputLocal(filters.dateFrom);
+    if (from) {
+      const fromStart = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 0, 0, 0, 0);
+      if (date.getTime() < fromStart.getTime()) return false;
+    }
+
+    const to = this.parseDateInputLocal(filters.dateTo);
+    if (to) {
+      const toEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+      if (date.getTime() > toEnd.getTime()) return false;
+    }
+
+    return true;
+  }
+
+  private paginateRows<T>(rows: T[], page: number, pageSize: number): T[] {
+    const safePageSize = Math.max(1, Number(pageSize) || 1);
+    const totalPages = Math.max(1, Math.ceil((rows?.length || 0) / safePageSize));
+    const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    const start = (safePage - 1) * safePageSize;
+    return (rows || []).slice(start, start + safePageSize);
+  }
+
+  private getPaginationLabel(totalRows: number, page: number, pageSize: number): string {
+    const total = Math.max(0, Number(totalRows) || 0);
+    const size = Math.max(1, Number(pageSize) || 1);
+    const totalPages = Math.max(1, Math.ceil(total / size));
+    const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    const start = total === 0 ? 0 : (safePage - 1) * size + 1;
+    const end = total === 0 ? 0 : Math.min(safePage * size, total);
+    return `${start}\u2013${end} of ${total} \u2022 Page ${safePage} of ${totalPages}`;
+  }
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private hologramService: HologramDataService,
+    private profileService: SupplyChainProfileService
+  ) { }
 
   ngOnInit() {
+    this.loadEstablishmentInfo();
     this.loadAllData();
 
     // Subscribe to request updates from other components
@@ -322,6 +461,17 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           damagedCount: roll.damaged || 0,
           status: roll.status as 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED',
           receivedDate: roll.receivedDate || roll.received_date,
+          receivedBy: (() => {
+            const picked = this.pickDisplayOfficer(
+              roll.received_by_name,
+              roll.receivedByName,
+              roll.received_by_display_name,
+              roll.receivedByDisplayName,
+              roll.received_by_username,
+              roll.receivedByUsername
+            );
+            return picked === 'Pending' ? '' : picked;
+          })(),
           isNew: roll.isNew || roll.is_new || false,
           newUntil: roll.newUntil || roll.new_until,
           usageHistory: roll.usageHistory || roll.usage_history || [],
@@ -342,6 +492,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
         // Also sync to localStorage for offline capability
         localStorage.setItem('hologramOverviewRolls', JSON.stringify(this.rollsData));
+        this.resolveEstablishmentFromRolls(this.rollsData);
 
         // Apply filters after loading
         this.applyRollsFilters();
@@ -368,6 +519,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         });
 
         this.applyRollsFilters();
+        this.resolveEstablishmentFromRolls(this.rollsData);
 
         // Generate available data from rolls (even in fallback mode)
         this.loadAvailableData();
@@ -375,6 +527,100 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         console.log('⚠️ Using localStorage fallback:', this.rollsData.length, 'rolls');
       }
     });
+  }
+
+  private loadEstablishmentInfo(): void {
+    this.profileService.getProfile().subscribe({
+      next: (response) => {
+        const data = response?.data;
+        if (!data) {
+          return;
+        }
+
+        this.establishmentName = (data.manufacturingUnitName || '').toString().trim();
+        this.establishmentLicenseeId = (data.licenseeId || '').toString().trim();
+        this.updateEstablishmentDisplay();
+      },
+      error: () => {
+        // Fallback from login payload if profile endpoint is unavailable
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+          return;
+        }
+
+        try {
+          const user = JSON.parse(storedUser);
+          this.establishmentName = (
+            user?.manufacturingUnitName ||
+            user?.manufacturing_unit_name ||
+            user?.establishmentName ||
+            this.establishmentName
+          ).toString().trim();
+          this.establishmentLicenseeId = (
+            user?.licenseeId ||
+            user?.licensee_id ||
+            this.establishmentLicenseeId
+          ).toString().trim();
+          this.updateEstablishmentDisplay();
+        } catch {
+          // no-op
+        }
+      }
+    });
+  }
+
+  private resolveEstablishmentFromRolls(rolls: any[]): void {
+    if (!Array.isArray(rolls) || !rolls.length) {
+      return;
+    }
+
+    const firstRollWithNames = rolls.find((roll: any) =>
+      roll?.manufacturing_unit ||
+      roll?.manufacturingUnit ||
+      roll?.licensee_name ||
+      roll?.licenseeName
+    );
+    const firstRollWithLicense = rolls.find((roll: any) =>
+      roll?.licensee_code || roll?.licenseeCode || roll?.license_id || roll?.licenseId
+    );
+
+    if (!this.establishmentName && firstRollWithNames) {
+      this.establishmentName = (
+        firstRollWithNames.manufacturing_unit ||
+        firstRollWithNames.manufacturingUnit ||
+        firstRollWithNames.licensee_name ||
+        firstRollWithNames.licenseeName ||
+        ''
+      ).toString().trim();
+    }
+
+    if (!this.establishmentLicenseeId && firstRollWithLicense) {
+      this.establishmentLicenseeId = (
+        firstRollWithLicense.licensee_code ||
+        firstRollWithLicense.licenseeCode ||
+        firstRollWithLicense.license_id ||
+        firstRollWithLicense.licenseId ||
+        ''
+      ).toString().trim();
+    }
+
+    this.updateEstablishmentDisplay();
+  }
+
+  private updateEstablishmentDisplay(): void {
+    if (this.establishmentName && this.establishmentLicenseeId) {
+      this.establishmentDisplay = `${this.establishmentName} (${this.establishmentLicenseeId})`;
+      return;
+    }
+    if (this.establishmentName) {
+      this.establishmentDisplay = this.establishmentName;
+      return;
+    }
+    if (this.establishmentLicenseeId) {
+      this.establishmentDisplay = this.establishmentLicenseeId;
+      return;
+    }
+    this.establishmentDisplay = '';
   }
 
   loadAvailableData() {
@@ -456,6 +702,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
     // Also sync to localStorage for offline capability
     localStorage.setItem('hologramOverviewAvailable', JSON.stringify(this.availableData));
+
+    this.applyAvailableFilters();
 
     console.log('📊 Available data generated from rolls:', this.availableData.length, 'available');
   }
@@ -593,6 +841,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
         });
 
+        this.applyIssuedFilters();
+
         console.log('📊 Issued data loaded:', this.issuedData.length, 'entries (grouped by reference)');
         console.log('📋 Final issuedData:', this.issuedData);
       },
@@ -605,6 +855,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           url: error.url
         });
         this.issuedData = [];
+        this.applyIssuedFilters();
       }
     });
   }
@@ -626,6 +877,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         const savedEntries = entries.filter((entry: any) =>
           (entry.is_fixed === true || entry.isFixed === true)
         );
+        this.savedDailyRegisterEntries = savedEntries;
 
         console.log('📊 Saved entries (is_fixed=true):', savedEntries.length);
 
@@ -724,13 +976,58 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             if (!approvedAt) {
               approvalStatus = entry.approval_status || entry.approvalStatus || 'PENDING';
               approvedAt = entry.approved_at || entry.approvedAt || new Date().toISOString();
-              approvedBy = entry.approved_by_name || entry.approvedByName || 'Pending';
+              approvedBy = this.pickDisplayOfficer(
+                entry.approved_by_name,
+                entry.approvedByName,
+                entry.updated_by_name,
+                entry.updatedByName,
+                entry.created_by_name,
+                entry.createdByName,
+                entry.approved_by,
+                entry.updated_by,
+                entry.created_by,
+                this.getCurrentUsername()
+              );
               hologramType = entry.hologram_type || entry.hologramType || 'LOCAL';
             }
           });
 
           // Calculate leftover: total allocated - used - damaged
           const qtyLeftover = totalQty - totalUsed - totalDamaged;
+          const brandDetailsList: HistoryBrandDetail[] = requestEntries.map((entry: any) => {
+            const issuedQty = Number(entry.issued_qty || entry.issuedQty || 0);
+            const damagedQty = Number(entry.wastage_qty || entry.wastageQty || 0);
+            const allocatedQty = Number(entry.hologram_qty || entry.hologramQty || 0);
+
+            const issuedRanges = entry.issued_ranges || entry.issuedRanges || [];
+            const wastageRanges = entry.wastage_ranges || entry.wastageRanges || [];
+
+            const issuedRangeText = Array.isArray(issuedRanges)
+              ? issuedRanges
+                .map((range: any) => `${range.fromSerial || range.from_serial || ''}-${range.toSerial || range.to_serial || ''}`)
+                .filter((txt: string) => txt !== '-')
+                .join(', ')
+              : '';
+
+            const wastageRangeText = Array.isArray(wastageRanges)
+              ? wastageRanges
+                .map((range: any) => `${range.fromSerial || range.from_serial || ''}-${range.toSerial || range.to_serial || ''}`)
+                .filter((txt: string) => txt !== '-')
+                .join(', ')
+              : '';
+
+            const serialRanges = [issuedRangeText, wastageRangeText].filter(Boolean).join(' | ') || 'N/A';
+
+            return {
+              brandName: this.sanitizeBrandName(entry.brand_details || entry.brandDetails || 'Not Used'),
+              bottleSize: entry.bottle_size || entry.bottleSize || 'N/A',
+              cartonNumber: entry.cartoon_number || entry.cartoonNumber || entry.roll_range || entry.rollRange || 'N/A',
+              serialRanges,
+              qtyUsed: issuedQty,
+              qtyDamaged: damagedQty,
+              qtyLeftover: Math.max(0, allocatedQty - issuedQty - damagedQty)
+            };
+          });
 
           // Build comma-separated strings
           const cartoonNumberStr = cartoonNumbers.length > 0 ? cartoonNumbers.join(', ') : 'N/A';
@@ -770,6 +1067,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             qtyUsed: totalUsed,
             qtyDamaged: totalDamaged,
             qtyLeftover: qtyLeftover,
+            brandDetailsList,
             status: status,
             completionDate: approvedAt,
             officer: approvedBy,
@@ -781,6 +1079,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         this.historyData.sort((a, b) => {
           return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
         });
+
+        this.applyHistoryFilters();
 
         console.log('📊 History data loaded:', this.historyData.length, 'entries');
         console.log('📋 Final historyData:', this.historyData);
@@ -794,6 +1094,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           url: error.url
         });
         this.historyData = [];
+        this.savedDailyRegisterEntries = [];
+        this.applyHistoryFilters();
       }
     });
   }
@@ -920,33 +1222,74 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   // Serial Details Modal Methods
   openSerialDetailsModal(availableData: AvailableHologram): void {
-    // Refresh data to ensure we have the latest information
-    console.log('🔍 Opening serial details modal for:', availableData.cartoonNumber);
-    
-    // Generate detailed serial numbers data
-    this.selectedSerialData = this.generateSerialNumbersData(availableData);
-    this.serialViewMode = 'all';
-    this.currentSerialPage = 1;
-    this.clearSerialFilters();
-    this.brandReferenceNoSuggestions = [];
-    this.brandNameSuggestions = [];
-    this.showSerialDetailsModal = true;
+    console.log('Opening serial details modal for:', availableData.cartoonNumber);
 
-    // Log the generated data for debugging
-    console.log('📊 Generated serial data:', this.selectedSerialData);
-    if (this.selectedSerialData?.serialRanges) {
-      console.log('📋 Serial ranges:', this.selectedSerialData.serialRanges.length);
-      this.selectedSerialData.serialRanges.forEach((range, index) => {
-        console.log(`Range ${index + 1}:`, {
-          status: range.status,
-          fromSerial: range.fromSerial,
-          toSerial: range.toSerial,
-          count: range.count,
-          brandDetails: range.brandDetails,
-          referenceNo: range.referenceNo
+    const selectedRoll = this.rollsData.find(roll =>
+      roll.cartoonNumber === availableData.cartoonNumber &&
+      roll.type === availableData.type
+    );
+
+    const openModalWithData = (mappedRanges?: SerialRange[]) => {
+      const generated = this.generateSerialNumbersData(availableData);
+
+      if (mappedRanges && mappedRanges.length > 0) {
+        generated.serialRanges = mappedRanges;
+        generated.availableCount = mappedRanges
+          .filter(r => r.status === 'AVAILABLE')
+          .reduce((sum, r) => sum + (r.count || 0), 0);
+        generated.usedCount = mappedRanges
+          .filter(r => r.status === 'USED')
+          .reduce((sum, r) => sum + (r.count || 0), 0);
+        generated.damagedCount = mappedRanges
+          .filter(r => r.status === 'DAMAGED')
+          .reduce((sum, r) => sum + (r.count || 0), 0);
+      }
+
+      const serialRanges = generated.serialRanges || [];
+      const approvedRefNo =
+        serialRanges.find(range => range.referenceNo && range.referenceNo !== 'N/A')?.referenceNo ||
+        this.getFallbackRequestReferenceForCartoon(availableData.cartoonNumber);
+      const approvedBrandName = approvedRefNo && approvedRefNo !== 'N/A'
+        ? this.getFallbackBrandByReference(approvedRefNo)
+        : '';
+
+      if (approvedRefNo && approvedRefNo !== 'N/A') {
+        serialRanges.forEach((range) => {
+          if (range.status !== 'AVAILABLE' && (!range.referenceNo || range.referenceNo === 'N/A')) {
+            range.referenceNo = approvedRefNo;
+          }
+          if (range.status !== 'AVAILABLE' && (!range.brandDetails || range.brandDetails === 'N/A') && approvedBrandName) {
+            range.brandDetails = approvedBrandName;
+          }
         });
-      });
+      }
+
+      this.selectedSerialData = generated;
+      this.serialViewMode = 'all';
+      this.currentSerialPage = 1;
+      this.clearSerialFilters();
+      this.brandReferenceNoSuggestions = [];
+      this.brandNameSuggestions = [];
+      this.showSerialDetailsModal = true;
+    };
+
+    if (!selectedRoll?.id) {
+      openModalWithData();
+      return;
     }
+
+    this.hologramService.getSerialRanges(selectedRoll.id).subscribe({
+      next: (response: any) => {
+        const responseRanges = Array.isArray(response?.ranges) ? response.ranges : [];
+        const mappedRanges = responseRanges
+          .map((range: any) => this.mapApiSerialRange(range))
+          .filter((range: SerialRange | null): range is SerialRange => !!range);
+        openModalWithData(mappedRanges);
+      },
+      error: () => {
+        openModalWithData();
+      }
+    });
   }
 
   closeSerialDetailsModal(): void {
@@ -961,8 +1304,249 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.serialFilters = {
       brandReferenceNo: '',
       brandName: '',
-      qty: null
+      qty: null,
+      rollRange: ''
     };
+  }
+
+  private mapApiSerialRange(range: any): SerialRange | null {
+    if (!range) return null;
+
+    const statusRaw = (range.status || '').toString().toUpperCase().trim();
+    const status = (['AVAILABLE', 'USED', 'DAMAGED'].includes(statusRaw)
+      ? statusRaw
+      : 'AVAILABLE') as 'AVAILABLE' | 'USED' | 'DAMAGED';
+
+    const fromSerial = (range.fromSerial ?? range.from_serial ?? '').toString();
+    const toSerial = (range.toSerial ?? range.to_serial ?? '').toString();
+    const countRaw = Number(range.count ?? 0);
+    const count = Number.isFinite(countRaw) ? countRaw : 0;
+
+    if (!fromSerial || !toSerial) {
+      return null;
+    }
+
+    const referenceNo = range.referenceNo || range.reference_no || 'N/A';
+    const cartoonNumber = range.cartoonNumber || range.cartoon_number || range.roll_range || range.rollRange || '';
+    const incomingBrand = range.brandDetails || range.brand_details || range.brand_name || '';
+    const resolvedBrand = this.resolveBrandBySerialContext(
+      referenceNo,
+      cartoonNumber,
+      fromSerial,
+      toSerial,
+      incomingBrand
+    );
+
+    return {
+      fromSerial,
+      toSerial,
+      count,
+      status,
+      description: (range.description || (status === 'AVAILABLE' ? 'Available for production use' : '')).toString(),
+      usedDate: range.usedDate || range.used_date,
+      damageDate: range.damageDate || range.damage_date,
+      referenceNo,
+      productionLine: range.productionLine || range.production_line || 'N/A',
+      damageReason: range.damageReason || range.damage_reason,
+      reportedBy: range.reportedBy || range.reported_by,
+      updatedBy: this.pickDisplayOfficer(
+        range.updated_by_name,
+        range.updatedByName,
+        range.updated_by_display_name,
+        range.updatedByDisplayName,
+        range.reportedBy,
+        range.reported_by
+      ),
+      brandDetails: resolvedBrand || '',
+      bottleSize: range.bottleSize || range.bottle_size || ''
+    };
+  }
+
+  getRangeUpdatedBy(range: SerialRange): string {
+    const direct = String(range?.updatedBy || '').trim();
+    if (direct && direct.toLowerCase() !== 'pending') {
+      return direct;
+    }
+
+    const ref = String(range?.referenceNo || '').trim();
+    if (!ref || ref.toUpperCase() === 'N/A') {
+      return '';
+    }
+
+    // Prefer grouped history row (already normalized to display names)
+    const fromHistory = this.historyData?.find((h: any) => String(h?.requestReference || '').trim() === ref)?.officer;
+    const historyName = String(fromHistory || '').trim();
+    if (historyName && historyName.toLowerCase() !== 'pending') {
+      return historyName;
+    }
+
+    // Fallback to raw daily register entries if available
+    const anySavedEntries: any[] = Array.isArray((this as any).savedDailyRegisterEntries)
+      ? (this as any).savedDailyRegisterEntries
+      : [];
+    const entry = anySavedEntries.find((e: any) => String(e?.reference_no || e?.referenceNo || '').trim() === ref);
+    if (!entry) return '';
+
+    const picked = this.pickDisplayOfficer(
+      entry.approved_by_name,
+      entry.approvedByName,
+      entry.updated_by_name,
+      entry.updatedByName,
+      entry.created_by_name,
+      entry.createdByName,
+      entry.approved_by,
+      entry.updated_by,
+      entry.created_by
+    );
+    return picked && picked !== 'Pending' ? picked : '';
+  }
+
+  private normalizeSerialValue(value: any): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    if (!/^\d+$/.test(raw)) return raw.toUpperCase();
+    const parsed = parseInt(raw, 10);
+    return Number.isNaN(parsed) ? raw : String(parsed);
+  }
+
+  private parseRangeArrayField(field: any): any[] {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  private isMatchingCartoonNumber(candidate: string, target: string): boolean {
+    const c = String(candidate || '').trim();
+    const t = String(target || '').trim();
+    if (!c || !t) return true;
+    if (c === t) return true;
+    return c.split('_')[0] === t.split('_')[0];
+  }
+
+  private hasExactRangeMatch(range: any, fromSerial: string, toSerial: string): boolean {
+    const rangeFrom = this.normalizeSerialValue(range?.fromSerial ?? range?.from_serial ?? range?.from ?? '');
+    const rangeTo = this.normalizeSerialValue(range?.toSerial ?? range?.to_serial ?? range?.to ?? '');
+    const fromNorm = this.normalizeSerialValue(fromSerial);
+    const toNorm = this.normalizeSerialValue(toSerial);
+    return !!(rangeFrom && rangeTo && rangeFrom === fromNorm && rangeTo === toNorm);
+  }
+
+  private resolveBrandBySerialContext(
+    referenceNo: string,
+    cartoonNumber: string,
+    fromSerial: string,
+    toSerial: string,
+    currentBrand: string
+  ): string {
+    // Priority 1: exact daily register entry match (reference + cartoon + range)
+    const candidates = this.savedDailyRegisterEntries.filter((entry: any) => {
+      const entryRef = entry.reference_no || entry.referenceNo || '';
+      const entryCartoon = entry.cartoon_number || entry.cartoonNumber || entry.roll_range || entry.rollRange || '';
+      const refMatches = referenceNo && referenceNo !== 'N/A' ? entryRef === referenceNo : true;
+      const cartoonMatches = this.isMatchingCartoonNumber(entryCartoon, cartoonNumber);
+      return refMatches && cartoonMatches;
+    });
+
+    for (const entry of candidates) {
+      const issuedRanges = this.parseRangeArrayField(entry.issued_ranges || entry.issuedRanges);
+      const wastageRanges = this.parseRangeArrayField(entry.wastage_ranges || entry.wastageRanges);
+      const listToCheck = [...issuedRanges, ...wastageRanges];
+      const exactFromRanges = listToCheck.some((r) => this.hasExactRangeMatch(r, fromSerial, toSerial));
+
+      const fromSingle = this.normalizeSerialValue(entry.issued_from || entry.issuedFrom || entry.wastage_from || entry.wastageFrom || '');
+      const toSingle = this.normalizeSerialValue(entry.issued_to || entry.issuedTo || entry.wastage_to || entry.wastageTo || '');
+      const fromNorm = this.normalizeSerialValue(fromSerial);
+      const toNorm = this.normalizeSerialValue(toSerial);
+      const exactFromSingle = !!(fromSingle && toSingle && fromSingle === fromNorm && toSingle === toNorm);
+
+      if (exactFromRanges || exactFromSingle) {
+        const name = this.sanitizeBrandName(entry.brand_details || entry.brandDetails || '');
+        if (name) return name;
+      }
+    }
+
+    // Priority 2: fallback brand by reference (old behavior)
+    let resolved = currentBrand || '';
+    if (!resolved || resolved === 'N/A') {
+      resolved = this.getFallbackBrandByReference(referenceNo);
+    }
+    return this.sanitizeBrandName(resolved);
+  }
+
+  private getFallbackBrandByReference(referenceNo: string): string {
+    if (!referenceNo || referenceNo === 'N/A') return '';
+
+    const issuedEntry = this.issuedData.find(item =>
+      item.referenceNo === referenceNo || item.requestReference === referenceNo
+    );
+    if (issuedEntry?.brandName && issuedEntry.brandName !== 'N/A') {
+      return this.sanitizeBrandName(issuedEntry.brandName);
+    }
+
+    const historyEntry = this.historyData.find(item => item.requestReference === referenceNo);
+    if (historyEntry?.brandName && historyEntry.brandName !== 'N/A') {
+      return this.sanitizeBrandName(historyEntry.brandName);
+    }
+
+    return '';
+  }
+
+  private getFallbackRequestReferenceForCartoon(cartoonNumber: string): string {
+    const issuedEntry = this.issuedData.find((issued) => {
+      const cartons = String(issued.cartoonNumber || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      return cartons.includes(cartoonNumber);
+    });
+
+    if (issuedEntry?.referenceNo && issuedEntry.referenceNo !== 'N/A') {
+      return issuedEntry.referenceNo;
+    }
+
+    const historyEntry = this.historyData.find((history) => String(history.cartoonNumber || '').trim() === cartoonNumber);
+    if (historyEntry?.requestReference && historyEntry.requestReference !== 'N/A') {
+      return historyEntry.requestReference;
+    }
+
+    return 'N/A';
+  }
+
+  private sanitizeBrandName(name: string): string {
+    if (!name) return '';
+    let value = String(name).trim();
+    value = value.replace(/\s*-\s*M\/s\s*Sikkim\s*Distilleries\s*Ltd\.?$/i, '');
+    value = value.replace(/\s*M\/s\s*Sikkim\s*Distilleries\s*Ltd\.?$/i, '');
+    return value.trim();
+  }
+
+  private getCurrentUsername(): string {
+    try {
+      const raw = localStorage.getItem('currentUser');
+      if (!raw) return '';
+      const user = JSON.parse(raw);
+      return user?.username || user?.userName || user?.name || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private pickDisplayOfficer(...candidates: any[]): string {
+    for (const raw of candidates) {
+      const value = (raw ?? '').toString().trim();
+      if (!value) continue;
+      if (value.toLowerCase() === 'pending') continue;
+      return value;
+    }
+    return 'Pending';
   }
 
   applySerialFilters(): void {
@@ -1372,11 +1956,20 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   getFilteredSerialRanges(): SerialRange[] {
+    const filtered = this.getFilteredSerialRangesRaw();
+
+    // Apply pagination
+    const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
+    const endIndex = startIndex + this.serialPageSize;
+
+    return filtered.slice(startIndex, endIndex);
+  }
+
+  private getFilteredSerialRangesRaw(): SerialRange[] {
     if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return [];
 
     let filtered = this.selectedSerialData.serialRanges;
 
-    // Filter by view mode
     if (this.serialViewMode !== 'all') {
       filtered = filtered.filter(range => {
         switch (this.serialViewMode) {
@@ -1392,7 +1985,6 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Filter by brand reference no
     if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
       filtered = filtered.filter(range =>
         range.referenceNo &&
@@ -1400,7 +1992,6 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       );
     }
 
-    // Filter by brand name
     if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
       filtered = filtered.filter(range => {
         const brandMatch = range.brandDetails &&
@@ -1411,16 +2002,69 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Filter by quantity
     if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
       filtered = filtered.filter(range => range.count === this.serialFilters.qty);
     }
 
-    // Apply pagination
-    const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
-    const endIndex = startIndex + this.serialPageSize;
+    if (this.serialFilters.rollRange && this.serialFilters.rollRange.trim() !== '') {
+      filtered = filtered.filter(range => this.matchesRollRangeFilter(range, this.serialFilters.rollRange));
+    }
 
-    return filtered.slice(startIndex, endIndex);
+    return filtered;
+  }
+
+  private matchesRollRangeFilter(range: SerialRange, input: string): boolean {
+    const query = String(input || '').trim();
+    if (!query) return true;
+
+    const rangeFrom = this.extractOptionalSerialNumber(range.fromSerial);
+    const rangeTo = this.extractOptionalSerialNumber(range.toSerial);
+    if (rangeFrom === null || rangeTo === null) {
+      const text = `${range.fromSerial}-${range.toSerial}`.toLowerCase();
+      return text.includes(query.toLowerCase());
+    }
+
+    const serialBounds: [number, number] = rangeFrom <= rangeTo ? [rangeFrom, rangeTo] : [rangeTo, rangeFrom];
+    const normalized = query.toLowerCase().replace(/\s+/g, '');
+
+    const pairMatch = normalized.match(/^(\d+)(?:-|to)(\d+)$/i);
+    if (pairMatch) {
+      const q1 = Number(pairMatch[1]);
+      const q2 = Number(pairMatch[2]);
+      if (Number.isFinite(q1) && Number.isFinite(q2)) {
+        const queryBounds: [number, number] = q1 <= q2 ? [q1, q2] : [q2, q1];
+        // Show ranges that overlap with entered roll range
+        return serialBounds[0] <= queryBounds[1] && queryBounds[0] <= serialBounds[1];
+      }
+    }
+
+    const singleMatch = normalized.match(/^(\d+)$/);
+    if (singleMatch) {
+      const value = Number(singleMatch[1]);
+      return Number.isFinite(value) && value >= serialBounds[0] && value <= serialBounds[1];
+    }
+
+    const queryNumbers = query.match(/\d+/g);
+    if (queryNumbers && queryNumbers.length >= 2) {
+      const q1 = Number(queryNumbers[0]);
+      const q2 = Number(queryNumbers[1]);
+      if (Number.isFinite(q1) && Number.isFinite(q2)) {
+        const queryBounds: [number, number] = q1 <= q2 ? [q1, q2] : [q2, q1];
+        return serialBounds[0] <= queryBounds[1] && queryBounds[0] <= serialBounds[1];
+      }
+    }
+
+    const text = `${range.fromSerial}-${range.toSerial}`.toLowerCase();
+    return text.includes(query.toLowerCase());
+  }
+
+  private extractOptionalSerialNumber(value: string): number | null {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const match = raw.match(/\d+/);
+    if (!match) return null;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   getSerialStatusClass(status: string): string {
@@ -1476,51 +2120,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   getTotalSerialPages(): number {
-    if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return 1;
-
-    let filtered = this.selectedSerialData.serialRanges;
-
-    // Filter by view mode
-    if (this.serialViewMode !== 'all') {
-      filtered = filtered.filter(range => {
-        switch (this.serialViewMode) {
-          case 'available':
-            return range.status === 'AVAILABLE';
-          case 'used':
-            return range.status === 'USED';
-          case 'damaged':
-            return range.status === 'DAMAGED';
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filter by brand reference no
-    if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
-      filtered = filtered.filter(range =>
-        range.referenceNo &&
-        range.referenceNo.toLowerCase().includes(this.serialFilters.brandReferenceNo.toLowerCase())
-      );
-    }
-
-    // Filter by brand name
-    if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
-      filtered = filtered.filter(range => {
-        const brandMatch = range.brandDetails &&
-          range.brandDetails.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        const productionLineMatch = range.productionLine &&
-          range.productionLine.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        return brandMatch || productionLineMatch;
-      });
-    }
-
-    // Filter by quantity
-    if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
-      filtered = filtered.filter(range => range.count === this.serialFilters.qty);
-    }
-
-    return Math.ceil(filtered.length / this.serialPageSize);
+    const filtered = this.getFilteredSerialRangesRaw();
+    return Math.max(1, Math.ceil(filtered.length / this.serialPageSize));
   }
 
   getSerialPageNumbers(): number[] {
@@ -1604,6 +2205,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   // Rolls filter methods (same logic as Serial filters)
   applyRollsFilters(): void {
+    const hasDateFilters = !!(this.rollsFilters.month || this.rollsFilters.dateFrom || this.rollsFilters.dateTo);
+    const dateFilters: TabDateFilters = {
+      month: this.rollsFilters.month,
+      dateFrom: this.rollsFilters.dateFrom,
+      dateTo: this.rollsFilters.dateTo
+    };
+
     this.filteredRollsData = this.rollsData.filter(roll => {
       if (this.rollsFilters.rollStatus && roll.status !== this.rollsFilters.rollStatus) {
         return false;
@@ -1611,20 +2219,14 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       if (this.rollsFilters.hologramType && roll.type !== this.rollsFilters.hologramType) {
         return false;
       }
-      if (this.rollsFilters.dateFrom) {
-        const rollDate = new Date(roll.receivedDate);
-        const filterDate = new Date(this.rollsFilters.dateFrom);
-        if (rollDate < filterDate) {
+
+      if (hasDateFilters) {
+        const rollDate = this.tryParseAnyDate(roll.receivedDate);
+        if (!this.matchesTabDateFilters(rollDate, dateFilters)) {
           return false;
         }
       }
-      if (this.rollsFilters.dateTo) {
-        const rollDate = new Date(roll.receivedDate);
-        const filterDate = new Date(this.rollsFilters.dateTo);
-        if (rollDate > filterDate) {
-          return false;
-        }
-      }
+
       if (this.rollsFilters.serialSearch &&
         !roll.fromSerial.toLowerCase().includes(this.rollsFilters.serialSearch.toLowerCase()) &&
         !roll.toSerial.toLowerCase().includes(this.rollsFilters.serialSearch.toLowerCase())) {
@@ -1632,12 +2234,15 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       }
       return true;
     });
+
+    this.rollsTablePage = 1;
   }
 
   clearRollsFilters(): void {
     this.rollsFilters = {
       rollStatus: '',
       hologramType: '',
+      month: '',
       dateFrom: '',
       dateTo: '',
       serialSearch: ''
@@ -1648,6 +2253,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   hasActiveRollsFilters(): boolean {
     return !!(this.rollsFilters.rollStatus ||
       this.rollsFilters.hologramType ||
+      this.rollsFilters.month ||
       this.rollsFilters.dateFrom ||
       this.rollsFilters.dateTo ||
       this.rollsFilters.serialSearch);
@@ -1657,11 +2263,170 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     const filters = [];
     if (this.rollsFilters.rollStatus) filters.push(`Status: ${this.rollsFilters.rollStatus}`);
     if (this.rollsFilters.hologramType) filters.push(`Type: ${this.rollsFilters.hologramType}`);
+    if (this.rollsFilters.month) {
+      const label = this.months.find((m) => m.value === this.rollsFilters.month)?.label || this.rollsFilters.month;
+      filters.push(`Month: ${label}`);
+    }
     if (this.rollsFilters.serialSearch) filters.push(`Search: ${this.rollsFilters.serialSearch}`);
 
     return filters.length > 0 ?
       `Filtered by: ${filters.join(', ')} | Showing ${this.filteredRollsData.length} of ${this.rollsData.length} rolls` :
       `Showing all ${this.rollsData.length} rolls`;
+  }
+
+  private getAvailableRowDate(available: AvailableHologram): Date | null {
+    const roll = this.rollsData.find((r) =>
+      String(r.cartoonNumber || '').trim() === String(available.cartoonNumber || '').trim() &&
+      r.type === available.type
+    );
+    return this.tryParseAnyDate(roll?.receivedDate || '');
+  }
+
+  applyAvailableFilters(): void {
+    const hasFilters = !!(this.availableFilters.month || this.availableFilters.dateFrom || this.availableFilters.dateTo);
+    if (!hasFilters) {
+      this.filteredAvailableData = [...this.availableData];
+      this.availableTablePage = 1;
+      return;
+    }
+
+    this.filteredAvailableData = this.availableData.filter((row) =>
+      this.matchesTabDateFilters(this.getAvailableRowDate(row), this.availableFilters)
+    );
+    this.availableTablePage = 1;
+  }
+
+  clearAvailableFilters(): void {
+    this.availableFilters = { month: '', dateFrom: '', dateTo: '' };
+    this.applyAvailableFilters();
+  }
+
+  applyIssuedFilters(): void {
+    const hasFilters = !!(this.issuedFilters.month || this.issuedFilters.dateFrom || this.issuedFilters.dateTo);
+    if (!hasFilters) {
+      this.filteredIssuedData = [...this.issuedData];
+      this.issuedTablePage = 1;
+      return;
+    }
+
+    this.filteredIssuedData = this.issuedData.filter((row) =>
+      this.matchesTabDateFilters(this.tryParseAnyDate(row.issueDate), this.issuedFilters)
+    );
+    this.issuedTablePage = 1;
+  }
+
+  clearIssuedFilters(): void {
+    this.issuedFilters = { month: '', dateFrom: '', dateTo: '' };
+    this.applyIssuedFilters();
+  }
+
+  applyHistoryFilters(): void {
+    const hasFilters = !!(this.historyFilters.month || this.historyFilters.dateFrom || this.historyFilters.dateTo);
+    if (!hasFilters) {
+      this.filteredHistoryData = [...this.historyData];
+      this.historyTablePage = 1;
+      return;
+    }
+
+    this.filteredHistoryData = this.historyData.filter((row) =>
+      this.matchesTabDateFilters(this.tryParseAnyDate(row.issueDate), this.historyFilters)
+    );
+    this.historyTablePage = 1;
+  }
+
+  clearHistoryFilters(): void {
+    this.historyFilters = { month: '', dateFrom: '', dateTo: '' };
+    this.applyHistoryFilters();
+  }
+
+  // Pagination helpers for each tab table
+  getRollsTableRows(): HologramRoll[] {
+    const rows = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return this.paginateRows(rows, this.rollsTablePage, this.rollsTablePageSize);
+  }
+
+  getRollsTableTotal(): number {
+    return (this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData).length;
+  }
+
+  getRollsTableTotalPages(): number {
+    return Math.max(1, Math.ceil(this.getRollsTableTotal() / Math.max(1, this.rollsTablePageSize)));
+  }
+
+  setRollsTablePage(page: number): void {
+    const totalPages = this.getRollsTableTotalPages();
+    this.rollsTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onRollsTablePageSizeChange(): void {
+    this.rollsTablePage = 1;
+  }
+
+  getRollsTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.getRollsTableTotal(), this.rollsTablePage, this.rollsTablePageSize);
+  }
+
+  getAvailableTableRows(): AvailableHologram[] {
+    return this.paginateRows(this.filteredAvailableData, this.availableTablePage, this.availableTablePageSize);
+  }
+
+  getAvailableTableTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredAvailableData?.length || 0) / Math.max(1, this.availableTablePageSize)));
+  }
+
+  setAvailableTablePage(page: number): void {
+    const totalPages = this.getAvailableTableTotalPages();
+    this.availableTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onAvailableTablePageSizeChange(): void {
+    this.availableTablePage = 1;
+  }
+
+  getAvailableTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.filteredAvailableData.length, this.availableTablePage, this.availableTablePageSize);
+  }
+
+  getIssuedTableRows(): IssuedHologram[] {
+    return this.paginateRows(this.filteredIssuedData, this.issuedTablePage, this.issuedTablePageSize);
+  }
+
+  getIssuedTableTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredIssuedData?.length || 0) / Math.max(1, this.issuedTablePageSize)));
+  }
+
+  setIssuedTablePage(page: number): void {
+    const totalPages = this.getIssuedTableTotalPages();
+    this.issuedTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onIssuedTablePageSizeChange(): void {
+    this.issuedTablePage = 1;
+  }
+
+  getIssuedTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.filteredIssuedData.length, this.issuedTablePage, this.issuedTablePageSize);
+  }
+
+  getHistoryTableRows(): HistoryHologram[] {
+    return this.paginateRows(this.filteredHistoryData, this.historyTablePage, this.historyTablePageSize);
+  }
+
+  getHistoryTableTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredHistoryData?.length || 0) / Math.max(1, this.historyTablePageSize)));
+  }
+
+  setHistoryTablePage(page: number): void {
+    const totalPages = this.getHistoryTableTotalPages();
+    this.historyTablePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  }
+
+  onHistoryTablePageSizeChange(): void {
+    this.historyTablePage = 1;
+  }
+
+  getHistoryTablePaginationLabel(): string {
+    return this.getPaginationLabel(this.filteredHistoryData.length, this.historyTablePage, this.historyTablePageSize);
   }
 
 
@@ -1943,6 +2708,16 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     return this.issuedData.filter(item => item.status === 'COMPLETED').length;
   }
 
+  openHistoryBrandsModal(history: HistoryHologram): void {
+    this.selectedHistoryForBrands = history;
+    this.showHistoryBrandsModal = true;
+  }
+
+  closeHistoryBrandsModal(): void {
+    this.showHistoryBrandsModal = false;
+    this.selectedHistoryForBrands = null;
+  }
+
   getTotalIssuedQuantity(): number {
     return this.issuedData.reduce((sum, item) => sum + item.quantity, 0);
   }
@@ -1973,6 +2748,71 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
 
     // Use a Set to track unique ranges and prevent duplicates
     const processedRanges = new Set<string>();
+
+    const normalizeSerial = (value: any): string => {
+      const raw = String(value ?? '').trim();
+      if (!raw) return '';
+      const digitsOnly = /^\d+$/.test(raw);
+      if (!digitsOnly) return raw.toUpperCase();
+      const normalized = String(parseInt(raw, 10));
+      return Number.isNaN(Number(normalized)) ? raw : normalized;
+    };
+
+    const parseRangesFromText = (text: string): Array<{ from: string; to: string }> => {
+      if (!text) return [];
+      const matches = text.match(/\d+\s*-\s*\d+/g) || [];
+      return matches
+        .map((segment) => {
+          const parts = segment.split('-').map((p) => normalizeSerial(p));
+          return { from: parts[0] || '', to: parts[1] || '' };
+        })
+        .filter((r) => !!r.from && !!r.to);
+    };
+
+    const isSameCartoon = (candidate: string, target: string): boolean => {
+      const c = String(candidate || '').trim();
+      const t = String(target || '').trim();
+      if (!c || !t) return true;
+      if (c === t) return true;
+      return c.split('_')[0] === t.split('_')[0];
+    };
+
+    const findBrandInfoBySerialRange = (
+      referenceNo: string,
+      fromSerial: string,
+      toSerial: string,
+      currentCartoon: string
+    ): { brandName: string; bottleSize: string } | null => {
+      const fromNorm = normalizeSerial(fromSerial);
+      const toNorm = normalizeSerial(toSerial);
+
+      const candidateHistory = this.historyData.filter((history) =>
+        referenceNo && referenceNo !== 'N/A'
+          ? history.requestReference === referenceNo
+          : String(history.cartoonNumber || '').includes(currentCartoon)
+      );
+
+      for (const historyEntry of candidateHistory) {
+        const details = historyEntry.brandDetailsList || [];
+        for (const brand of details) {
+          if (!isSameCartoon(brand.cartonNumber || '', currentCartoon)) continue;
+          const parsedRanges = parseRangesFromText(brand.serialRanges || '');
+          const hasExactMatch = parsedRanges.some((r) => {
+            const rangeFrom = normalizeSerial(r.from);
+            const rangeTo = normalizeSerial(r.to);
+            return rangeFrom === fromNorm && rangeTo === toNorm;
+          });
+          if (hasExactMatch) {
+            return {
+              brandName: this.sanitizeBrandName(brand.brandName || 'N/A'),
+              bottleSize: brand.bottleSize || ''
+            };
+          }
+        }
+      }
+
+      return null;
+    };
 
     // Helper method to get brand information from issued/history data as fallback
     const getBrandInfoFromIssuedData = (referenceNo: string): { brandName: string, bottleSize: string } => {
@@ -2051,7 +2891,16 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
             let bottleSize = historyEntry.bottleSize || historyEntry.bottle_size || '';
             let referenceNo = historyEntry.referenceNo || historyEntry.refNo || historyEntry.ref_no || 'N/A';
 
-            // If brand details are missing, try to get from issued/history data
+            // First resolve brand from exact serial-range + cartoon mapping (most accurate for multi-brand)
+            const rangeBasedBrandInfo = findBrandInfoBySerialRange(referenceNo, fromSerial, toSerial, cartoonNumber);
+            if (rangeBasedBrandInfo && rangeBasedBrandInfo.brandName !== 'N/A') {
+              brandDetails = rangeBasedBrandInfo.brandName;
+              if (!bottleSize && rangeBasedBrandInfo.bottleSize) {
+                bottleSize = rangeBasedBrandInfo.bottleSize;
+              }
+            }
+
+            // If brand details are still missing, try to get from issued/history data
             if (!brandDetails || brandDetails === 'N/A' || brandDetails.trim() === '') {
               const brandInfo = getBrandInfoFromIssuedData(referenceNo);
               if (brandInfo.brandName !== 'N/A') {

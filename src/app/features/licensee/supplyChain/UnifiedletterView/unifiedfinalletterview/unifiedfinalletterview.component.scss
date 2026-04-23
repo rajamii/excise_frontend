@@ -1,0 +1,465 @@
+/* Cancellation Final Letter View Styles */
+.cancellation-final-letter-view {
+  min-height: 100vh;
+  background: #f8f9fa;
+  padding: 20px;
+}
+
+/* Header Section */
+.header-section {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Letter Container */
+.letter-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  overflow: hidden;
+  padding: 24px 0;
+}
+
+/* Final Letter Content */
+.final-letter-container {
+  background: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-position: top center;
+  background-size: 330px 160px;
+  padding: 60px 80px;
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #000;
+  min-height: 900px;
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  border: 2px solid #4f4f4f;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.print-watermark {
+  display: none;
+  position: absolute;
+  inset: 24px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 22px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.print-watermark span {
+  display: block;
+  font-family: Arial, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(22, 88, 58, 0.05);
+  white-space: nowrap;
+  line-height: 1;
+  width: 100%;
+  text-align: center;
+}
+
+.letter-header,
+.letter-meta,
+.addressee-section,
+.subject-section,
+.letter-body {
+  position: relative;
+  z-index: 1;
+}
+
+/* Letter Header */
+.letter-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 25px;
+  border-bottom: 3px double #000;
+}
+
+.seal-container {
+  margin-bottom: 20px;
+}
+
+.govt-seal {
+  height: 80px;
+  width: auto;
+  filter: invert(1) brightness(0.2);
+}
+
+.dept-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin: 12px 0 8px 0;
+  letter-spacing: 2px;
+  color: #000;
+}
+
+.dept-subtitle {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 8px 0;
+  letter-spacing: 1px;
+  color: #000;
+}
+
+.dept-address {
+  font-size: 14px;
+  margin: 8px 0;
+  font-weight: 500;
+  color: #333;
+}
+
+.dept-contact {
+  font-size: 12px;
+  margin-top: 15px;
+  color: #555;
+}
+
+.dept-contact div {
+  margin: 3px 0;
+}
+
+/* Letter Meta */
+.letter-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 35px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.letter-number {
+  text-align: left;
+  flex: 1;
+}
+
+.letter-date {
+  text-align: right;
+  flex: 1;
+}
+
+/* Addressee Section */
+.addressee-section {
+  margin: 40px 0;
+  text-align: left;
+}
+
+.to-line {
+  font-size: 14px;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.addressee-details {
+  margin-left: 50px;
+  line-height: 2;
+}
+
+.addressee-name, .company-name, .company-address {
+  font-size: 14px;
+  margin: 8px 0;
+  color: #000;
+}
+
+/* Subject Section */
+.subject-section {
+  margin: 40px 0;
+}
+
+.subject-line {
+  font-size: 14px;
+  text-decoration: underline;
+  font-weight: bold;
+  line-height: 1.8;
+  text-align: center;
+  padding: 10px 0;
+}
+
+/* Letter Body */
+.letter-body {
+  margin: 50px 0 100px 0; /* Added bottom margin since no signature section */
+  text-align: justify;
+}
+
+.body-text {
+  font-size: 14px;
+  line-height: 2;
+  margin: 25px 0;
+  text-indent: 60px;
+  text-align: justify;
+}
+
+/* Action Buttons */
+.action-buttons-section {
+  padding: 40px 30px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top: 1px solid #dee2e6;
+}
+
+.btn-lg {
+  padding: 15px 35px;
+  font-size: 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  border: none;
+}
+
+.btn-outline-secondary {
+  border: 2px solid #6c757d;
+  color: #6c757d;
+  background: white;
+}
+
+.btn-outline-secondary:hover {
+  background: #6c757d;
+  color: white;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+  
+  .cancellation-final-letter-view {
+    background: white !important;
+    padding: 0 !important;
+  }
+  
+  .letter-container {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    display: block;
+    background: white !important;
+    overflow: visible !important;
+  }
+  
+  .final-letter-container {
+    width: 198mm;
+    max-width: 198mm;
+    min-height: 285mm;
+    padding: 12mm 14mm;
+    margin: 0;
+    box-shadow: none;
+    border: 1.5px solid #555 !important;
+    background: white !important;
+    background-image: none !important;
+    font-size: 12px;
+    max-width: 190mm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-watermark {
+    display: flex !important;
+    inset: 8mm;
+    gap: 16px;
+  }
+
+  .print-watermark span {
+    display: block !important;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: rgba(22, 88, 58, 0.045) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .letter-header {
+    border-bottom: 3px double #000;
+    margin-bottom: 18mm;
+  }
+  
+  .govt-seal {
+    height: 60px;
+    filter: invert(1) brightness(0.2);
+  }
+  
+  .dept-title {
+    font-size: 18px;
+  }
+  
+  .dept-subtitle {
+    font-size: 16px;
+  }
+  
+  .letter-meta {
+    margin: 16mm 0;
+  }
+  
+  .addressee-section {
+    margin: 18mm 0;
+  }
+  
+  .subject-section {
+    margin: 16mm 0;
+  }
+  
+  .letter-body {
+    margin: 18mm 0 24mm 0;
+  }
+  
+  .body-text {
+    line-height: 1.8;
+    text-indent: 50px;
+  }
+  
+  /* Ensure proper page breaks */
+  .final-letter-container {
+    page-break-inside: avoid;
+  }
+  
+  .letter-header {
+    page-break-after: avoid;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cancellation-final-letter-view {
+    padding: 10px;
+  }
+  
+  .final-letter-container {
+    padding: 30px 20px;
+    font-size: 13px;
+    max-width: 100%;
+    background-size: 280px 130px;
+  }
+
+  .print-watermark {
+    gap: 20px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .letter-meta {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .addressee-details {
+    margin-left: 30px;
+  }
+  
+  .govt-seal {
+    height: 60px;
+    filter: invert(1) brightness(0.2);
+  }
+  
+  .dept-title {
+    font-size: 18px;
+  }
+  
+  .dept-subtitle {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .final-letter-container {
+    padding: 20px 15px;
+    font-size: 12px;
+    background-size: 220px 110px;
+  }
+  
+  .dept-title {
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+  
+  .dept-subtitle {
+    font-size: 14px;
+  }
+  
+  .addressee-details {
+    margin-left: 20px;
+  }
+  
+  .body-text {
+    text-indent: 30px;
+  }
+}
+
+/* Loading and Error States */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+.alert {
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px;
+}
+
+/* Animation for smooth loading */
+.final-letter-container {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

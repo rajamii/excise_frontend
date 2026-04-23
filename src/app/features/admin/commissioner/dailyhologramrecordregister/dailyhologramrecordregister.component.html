@@ -4,11 +4,9 @@
   <div class="register-header">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div class="header-info">
-        <h4 class="register-title">
-          <i class="bi bi-journal-text me-2"></i>
-          Daily Hologram Record Register
-        </h4>
-        <p class="register-subtitle">Monitor daily hologram processing activities and track overdue entries</p>
+        <h2 class="register-title mb-1">Daily Hologram Record Register</h2>
+        <p class="register-subtitle mb-0">Monitor daily hologram processing activities and track overdue entries</p>
+
       </div>
       <div class="header-actions">
         <button class="btn btn-outline-primary btn-sm me-2" (click)="refreshData()" [disabled]="isLoading">
@@ -16,11 +14,11 @@
           <span *ngIf="!isLoading">Refresh</span>
           <span *ngIf="isLoading">Loading...</span>
         </button>
-        <button class="btn btn-success btn-sm me-2" (click)="exportData()">
+        <button class="btn btn-success btn-sm me-2" (click)="exportData()" [disabled]="isLoading">
           <i class="bi bi-download me-1"></i>
           Export
         </button>
-        <button class="btn btn-outline-danger btn-sm" (click)="clearAllData()">
+        <button class="btn btn-outline-danger btn-sm" (click)="clearAllData()" [disabled]="isLoading">
           <i class="bi bi-trash me-1"></i>
           Clear All
         </button>
@@ -30,7 +28,13 @@
     <!-- Summary Cards -->
     <div class="row g-3 mb-4">
       <div class="col-md-2">
-        <div class="summary-card total-entries">
+        <div class="summary-card total-entries"
+             role="button"
+             tabindex="0"
+             [class.active]="activeSummaryFilter === 'all'"
+             (click)="setSummaryFilter('all')"
+             (keydown.enter)="setSummaryFilter('all')"
+             (keydown.space)="setSummaryFilter('all')">
           <div class="card-icon">
             <i class="bi bi-list-ul"></i>
           </div>
@@ -41,7 +45,13 @@
         </div>
       </div>
       <div class="col-md-2">
-        <div class="summary-card applied-entries">
+        <div class="summary-card applied-entries"
+             role="button"
+             tabindex="0"
+             [class.active]="activeSummaryFilter === 'applied'"
+             (click)="setSummaryFilter('applied')"
+             (keydown.enter)="setSummaryFilter('applied')"
+             (keydown.space)="setSummaryFilter('applied')">
           <div class="card-icon">
             <i class="bi bi-file-earmark-text"></i>
           </div>
@@ -52,7 +62,13 @@
         </div>
       </div>
       <div class="col-md-2">
-        <div class="summary-card processing-entries">
+        <div class="summary-card processing-entries"
+             role="button"
+             tabindex="0"
+             [class.active]="activeSummaryFilter === 'underProcess'"
+             (click)="setSummaryFilter('underProcess')"
+             (keydown.enter)="setSummaryFilter('underProcess')"
+             (keydown.space)="setSummaryFilter('underProcess')">
           <div class="card-icon">
             <i class="bi bi-hourglass-split"></i>
           </div>
@@ -63,7 +79,13 @@
         </div>
       </div>
       <div class="col-md-2">
-        <div class="summary-card completed-ontime">
+        <div class="summary-card completed-ontime"
+             role="button"
+             tabindex="0"
+             [class.active]="activeSummaryFilter === 'onTime'"
+             (click)="setSummaryFilter('onTime')"
+             (keydown.enter)="setSummaryFilter('onTime')"
+             (keydown.space)="setSummaryFilter('onTime')">
           <div class="card-icon">
             <i class="bi bi-check-circle"></i>
           </div>
@@ -74,7 +96,13 @@
         </div>
       </div>
       <div class="col-md-2">
-        <div class="summary-card completed-late">
+        <div class="summary-card completed-late"
+             role="button"
+             tabindex="0"
+             [class.active]="activeSummaryFilter === 'late'"
+             (click)="setSummaryFilter('late')"
+             (keydown.enter)="setSummaryFilter('late')"
+             (keydown.space)="setSummaryFilter('late')">
           <div class="card-icon">
             <i class="bi bi-clock"></i>
           </div>
@@ -85,7 +113,13 @@
         </div>
       </div>
       <div class="col-md-2">
-        <div class="summary-card overdue-entries">
+        <div class="summary-card overdue-entries"
+             role="button"
+             tabindex="0"
+             [class.active]="activeSummaryFilter === 'overdue'"
+             (click)="setSummaryFilter('overdue')"
+             (keydown.enter)="setSummaryFilter('overdue')"
+             (keydown.space)="setSummaryFilter('overdue')">
           <div class="card-icon">
             <i class="bi bi-exclamation-triangle"></i>
           </div>
@@ -155,13 +189,13 @@
     <!-- Additional Filters Row -->
     <div class="row g-3 mt-2">
       <div class="col-md-3">
-        <label class="form-label small">Distillery</label>
+        <label class="form-label small">Distillery/Brewery</label>
         <select class="form-select form-select-sm" 
                 [(ngModel)]="filters.distillery" 
                 (change)="applyFilters()">
-          <option value="">All Distilleries</option>
+          <option value="">All Distilleries/Breweries</option>
           <option *ngFor="let distillery of distilleries" [value]="distillery">
-            {{ distillery }}
+            {{ getDistilleryOptionLabel(distillery) }}
           </option>
         </select>
       </div>
@@ -177,6 +211,12 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Deadline Breach Alert -->
+  <div class="alert alert-danger" *ngIf="approvalDeadlineBreaches.length > 0">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    {{ approvalDeadlineBreachMessage }}
   </div>
 
   <!-- Error Message -->
@@ -199,19 +239,21 @@
       <table class="table table-hover register-table">
         <thead>
           <tr>
-            <th>Sl. No.</th>
-            <th>Reference No</th>
-            <th>Distillery</th>
-            <th>Type</th>
-            <th>Quantity</th>
-            <th>Status</th>
-            <th>Time Remaining</th>
-            <th>Actions</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Sl. No.</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Reference No</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Distillery</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Type</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Quantity</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Status</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Time Remaining</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Completed On Time</th>
+            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let entry of paginatedEntries; let i = index" 
-              [class.table-warning]="entry.isOverdue">
+              [class.table-warning]="entry.isOverdue && entry.status !== 'COMPLETED'"
+              [class.table-danger]="isSlaBreached(entry)">
             <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td>
               <span class="ref-number">{{ entry.referenceNo }}</span>
@@ -236,6 +278,11 @@
             <td>
               <span [class]="getTimeRemainingClass(entry)">
                 {{ getTimeRemaining(entry) }}
+              </span>
+            </td>
+            <td>
+              <span class="badge" [class]="getCompletedOnTimeClass(entry)">
+                {{ getCompletedOnTimeLabel(entry) }}
               </span>
             </td>
             <td>
@@ -302,82 +349,193 @@
 </div>
 
 <!-- Entry Details Modal -->
-<div class="modal fade" *ngIf="selectedEntry" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="bi bi-info-circle me-2"></i>
-          Entry Details - {{ selectedEntry.referenceNo }}
-        </h5>
-        <button type="button" class="btn-close" (click)="closeDetailsModal()"></button>
+<div class="modal fade show" *ngIf="selectedEntry" [style.display]="'block'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
+      <!-- Modern Header with Gradient -->
+      <div class="modal-header" style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%); color: white; border: none; padding: 1.5rem;">
+        <div class="d-flex align-items-center">
+          <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+            <i class="bi bi-file-earmark-text" style="font-size: 24px;"></i>
+          </div>
+          <div>
+            <h5 class="modal-title mb-0" style="font-weight: 600;">Entry Details</h5>
+            <small style="opacity: 0.9;">{{ selectedEntry.referenceNo }}</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDetailsModal()"></button>
       </div>
-      <div class="modal-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <strong>Reference Number:</strong> {{ selectedEntry.referenceNo }}
+      <div class="modal-body" style="padding: 1.5rem; background: #f8f9fa;">
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-building" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
+                  <div>
+                    <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Distillery</small>
+                    <strong style="font-size: 14px; color: #2d3748;">{{ selectedEntry.distilleryName }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <strong>Distillery:</strong> {{ selectedEntry.distilleryName }}
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-tag" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
+                  <div>
+                    <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Hologram Type</small>
+                    <strong style="font-size: 14px; color: #2d3748;">{{ selectedEntry.hologramType }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <strong>Hologram Type:</strong> {{ selectedEntry.hologramType }}
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-box-seam" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
+                  <div>
+                    <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Quantity</small>
+                    <strong style="font-size: 14px; color: #2d3748;">{{ selectedEntry.quantity | number:'1.0-0' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <strong>Quantity:</strong> {{ selectedEntry.quantity | number:'1.0-0' }}
-          </div>
-          <div class="col-md-6">
-            <strong>Status:</strong> 
-            <span class="badge" [class]="getStatusClass(selectedEntry.status)">
-              {{ selectedEntry.status }}
-            </span>
-          </div>
-          <div class="col-md-6">
-            <strong>Submission Date:</strong> {{ selectedEntry.submissionDate | date:'dd MMM yyyy' }}
-          </div>
-          <div class="col-md-6" *ngIf="selectedEntry.approvalDate">
-            <strong>Approval Date:</strong> {{ selectedEntry.approvalDate | date:'dd MMM yyyy' }}
-          </div>
-          <div class="col-md-6">
-            <strong>Time Remaining:</strong> 
-            <span [class]="getTimeRemainingClass(selectedEntry)">
-              {{ getTimeRemaining(selectedEntry) }}
-            </span>
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0d5b92 !important;">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-check-circle" style="font-size: 28px; color: #0d5b92; margin-right: 12px;"></i>
+                  <div>
+                    <small class="text-muted d-block" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Status</small>
+                    <span class="badge" [class]="getStatusClass(selectedEntry.status)" style="font-size: 12px;">
+                      {{ selectedEntry.status }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Brand Details if available -->
-        <div class="mt-4" *ngIf="selectedEntry.brandsEntered && selectedEntry.brandsEntered.length > 0">
-          <h6>Brand Details:</h6>
-          <div class="table-responsive">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Brand</th>
-                  <th>Bottle Size</th>
-                  <th>Quantity</th>
-                  <th>Rolls</th>
-                  <th>Serial Ranges</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let brand of selectedEntry.brandsEntered">
-                  <td>{{ brand.brandCode || brand.brand }}</td>
-                  <td>{{ brand.bottleSize }}</td>
-                  <td>{{ brand.quantity | number:'1.0-0' }}</td>
-                  <td>{{ (brand.rollsAssigned || []).length }}</td>
-                  <td>{{ (brand.serialRanges || []).length }}</td>
-                </tr>
-              </tbody>
-            </table>
+        <!-- Detailed Information Card -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h6 class="mb-3" style="color: #667eea; font-weight: 600;">
+              <i class="bi bi-info-circle me-2"></i>Detailed Information
+            </h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                  <small class="text-muted d-block mb-1" style="font-size: 11px;">Reference Number</small>
+                  <strong style="color: #2d3748;">{{ selectedEntry.referenceNo }}</strong>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                  <small class="text-muted d-block mb-1" style="font-size: 11px;">Submission Date</small>
+                  <strong style="color: #2d3748;">{{ selectedEntry.submissionDate | date:'dd MMM yyyy' }}</strong>
+                </div>
+              </div>
+              <div class="col-md-6" *ngIf="selectedEntry.approvalDate">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                  <small class="text-muted d-block mb-1" style="font-size: 11px;">Approval Date</small>
+                  <strong style="color: #2d3748;">{{ selectedEntry.approvalDate | date:'dd MMM yyyy' }}</strong>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                  <small class="text-muted d-block mb-1" style="font-size: 11px;">Time Remaining</small>
+                  <span [class]="getTimeRemainingClass(selectedEntry)" style="font-weight: 600;">
+                    {{ getTimeRemaining(selectedEntry) }}
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                  <small class="text-muted d-block mb-1" style="font-size: 11px;">Completed On Time</small>
+                  <span class="badge" [class]="getCompletedOnTimeClass(selectedEntry)" style="font-size: 12px;">
+                    {{ getCompletedOnTimeLabel(selectedEntry) }}
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-6" *ngIf="getEntrySavedTime(selectedEntry) as savedTime">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                  <small class="text-muted d-block mb-1" style="font-size: 11px;">OIC Saved Time</small>
+                  <strong style="color: #2d3748;">{{ savedTime }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Brand Details -->
+        <div class="card border-0 shadow-sm" *ngIf="selectedEntry.brandsEntered && selectedEntry.brandsEntered.length > 0">
+          <div class="card-body p-4">
+            <h6 class="mb-3" style="color: #667eea; font-weight: 600;">
+              <i class="bi bi-list-ul me-2"></i>Brand Details
+            </h6>
+            <div class="table-responsive">
+              <table class="table table-hover mb-0" style="border-radius: 8px; overflow: hidden;">
+                <thead>
+                  <tr>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">#</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Brand</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Bottle Size</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Assigned</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Used</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Damaged</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Rolls</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Serial Ranges</th>
+                    <th style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%) !important; color: white !important; border: none; padding: 12px; font-weight: 600; font-size: 13px;">Saved At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let brand of selectedEntry.brandsEntered; let i = index" style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px; vertical-align: middle;">
+                      <span class="badge bg-light text-dark" style="font-size: 12px; font-weight: 600;">{{ i + 1 }}</span>
+                    </td>
+                    <td style="padding: 12px; vertical-align: middle; font-weight: 500; color: #2d3748;">{{ brand.brandCode || brand.brand }}</td>
+                    <td style="padding: 12px; vertical-align: middle;">{{ brand.bottleSize }}</td>
+                    <td style="padding: 12px; vertical-align: middle;">
+                      <span class="badge bg-primary" style="font-size: 12px;">{{ getBrandAllocatedQty(brand) | number:'1.0-0' }}</span>
+                    </td>
+                    <td style="padding: 12px; vertical-align: middle;">
+                      <span class="badge bg-success" style="font-size: 12px;">{{ getBrandIssuedQty(brand) | number:'1.0-0' }}</span>
+                    </td>
+                    <td style="padding: 12px; vertical-align: middle;">
+                      <span class="badge bg-danger" style="font-size: 12px;">{{ getBrandWastageQty(brand) | number:'1.0-0' }}</span>
+                    </td>
+                    <td style="padding: 12px; vertical-align: middle;">{{ getBrandRollsCount(brand) }}</td>
+                    <td style="padding: 12px; vertical-align: middle;">{{ getBrandSerialRangesCount(brand) }}</td>
+                    <td style="padding: 12px; vertical-align: middle; font-size: 12px;">{{ getBrandSavedAt(brand) ? (getBrandSavedAt(brand) | date:'dd MMM yyyy HH:mm:ss') : '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Brand Details Message -->
+        <div class="card border-0 shadow-sm" *ngIf="!selectedEntry.brandsEntered || selectedEntry.brandsEntered.length === 0">
+          <div class="card-body text-center p-4">
+            <i class="bi bi-inbox" style="font-size: 48px; color: #cbd5e0; margin-bottom: 12px;"></i>
+            <p class="text-muted mb-0">No brand-level production save details found for this reference yet.</p>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeDetailsModal()">
-          Close
+      <div class="modal-footer" style="background: #f8f9fa; border-top: 1px solid #e5e7eb; padding: 1rem 1.5rem;">
+        <button type="button" class="btn btn-secondary" (click)="closeDetailsModal()" style="padding: 8px 24px; border-radius: 6px;">
+          <i class="bi bi-x-circle me-2"></i>Close
         </button>
       </div>
     </div>
   </div>
 </div>
+<div class="modal-backdrop fade show" *ngIf="selectedEntry" (click)="closeDetailsModal()"></div>

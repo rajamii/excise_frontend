@@ -1,15 +1,18 @@
 import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
-import { forkJoin, Observable } from 'rxjs';
+import { forkJoin, Observable, firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramDataService, HologramRequest as ApiHologramRequest } from '../../services/hologram-data.service';
+import Swal from 'sweetalert2';
 
 interface HologramRequest {
   id: string;
   referenceNo: string;
+  licenseId?: string;
   submissionDate: string;
   usageDate: string; // Date when holograms will be used in factory
   submittedBy: string;
+  updatedBy?: string;
   requestType: 'NEW_ALLOCATION' | 'ADDITIONAL_STOCK' | 'REPLACEMENT';
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
   requestedQuantity: number;
@@ -23,13 +26,17 @@ interface HologramRequest {
   };
   justification: string;
   urgencyLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'COMPLETED' | 'REJECTED' | 'IN_USE';
+  status: string;
   officerComments?: string;
   approvedQuantity?: number;
   approvalDate?: string;
   rejectionReason?: string;
   allocations?: HologramAllocation[]; // Allocation details saved when approved
-  allowedActions?: string[]; // Added from API
+  allowedActions?: string[]; // Dynamic actions from DB workflow transitions
+  currentStageName?: string;
+  currentStageIsInitial?: boolean;
+  currentStageIsFinal?: boolean;
+  currentStageEntryActions?: string[];
   originalId?: number; // Backend ID
 }
 
@@ -39,6 +46,7 @@ interface FilterOptions {
   requestType: string;
   hologramType: string;
   urgencyLevel: string;
+  month: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -88,6 +96,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   private hologramService = inject(HologramDataService);
 
   Math = Math;
+  private initialSummaryAutoSelected = false;
 
   // Officer information - same as officer-in-charge component
   currentOfficer = {
@@ -109,6 +118,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     requestType: '',
     hologramType: '',
     urgencyLevel: '',
+    month: '',
     dateFrom: '',
     dateTo: ''
   };
@@ -133,8 +143,14 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   // Rolls Assigned Modal
   showRollsModal = false;
   selectedRequestForRolls: HologramRequest | null = null;
+  private currentScopedLicenseId = '';
+
+  // Holograms Available sidebar
+  isHologramAvailableSidebarExpanded = false;
 
   ngOnInit() {
+    this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
+    console.log('Resolved OIC license scope for request list:', this.currentScopedLicenseId || '(not found)');
     this.loadHologramRequests();
   }
 
@@ -146,18 +162,21 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('Loading hologram requests from API...');
     this.hologramService.getRequests().subscribe({
       next: (data) => {
-        this.hologramRequests = data.map((req: any) => {
+        const scopedData = this.filterByCurrentLicense(data);
+        this.hologramRequests = scopedData.map((req: any) => {
           // Use RAW status from backend - NO MAPPING
-          const rawStatus = req.status || 'PENDING';
+          const rawStatus = req.current_stage_name || req.currentStageName || req.status || 'Unknown';
           console.log(`Ref: ${req.refNo}, Status: ${rawStatus}, Actions: ${req.allowed_actions}`);
 
           return {
             id: `HR${req.id}`,
             originalId: req.id,
             referenceNo: req.refNo || 'N/A',
+            licenseId: String(req.license_id || req.licenseId || '').trim(),
             submissionDate: req.submissionDate || new Date().toISOString(),
             usageDate: req.usageDate || new Date().toISOString(),
             submittedBy: req.licenseeName || 'Unknown',
+            updatedBy: req.production_updated_by || req.productionUpdatedBy || '',
             requestType: 'NEW_ALLOCATION',
             hologramType: this.normalizeHologramType(req.hologramType || req.type),
             requestedQuantity: req.quantity || 0,
@@ -169,8 +188,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
             },
             justification: req.remarks || '',
             urgencyLevel: 'MEDIUM',
-            status: rawStatus, // DISPLAY RAW STATUS
-            allowedActions: req.allowed_actions || [], // Dynamic Actions
+            status: rawStatus, // DB stage name
+            allowedActions: this.toUpperActions(req.allowed_actions || req.allowedActions || []),
+            currentStageName: req.current_stage_name || req.currentStageName || rawStatus,
+            currentStageIsInitial: Boolean(req.current_stage_is_initial ?? req.currentStageIsInitial ?? false),
+            currentStageIsFinal: Boolean(req.current_stage_is_final ?? req.currentStageIsFinal ?? false),
+            currentStageEntryActions: this.toUpperActions(req.current_stage_entry_actions || req.currentStageEntryActions || []),
             officerComments: req.remarks,
             approvedQuantity: req.quantity,
             // CRITICAL: Include rolls_assigned data from API
@@ -183,6 +206,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         this.hologramRequests.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
 
         this.applyFilters();
+        this.maybeAutoSelectPendingStatus();
       },
       error: (err) => {
         console.error('Error loading hologram requests:', err);
@@ -190,29 +214,115 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     });
   }
 
+  toggleHologramAvailableSidebar(): void {
+    this.isHologramAvailableSidebarExpanded = !this.isHologramAvailableSidebarExpanded;
+  }
+
+  private maybeAutoSelectPendingStatus(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    // Don't override if user already selected a filter.
+    if (this.filters.status) return;
+
+    if (this.getRequestCount('PENDING') > 0) {
+      this.filters.status = 'PENDING';
+      this.applyFilters();
+    }
+  }
+
+  getDisplayReferenceNo(referenceNo: string): string {
+    return String(referenceNo || '').replace(/^NHP(?=\/)/i, 'HQR');
+  }
+
+  getDisplayNameLine1(fullName: string): string {
+    const cleaned = String(fullName || '').trim().replace(/\s+/g, ' ');
+    if (!cleaned) return '';
+    const parts = cleaned.split(' ');
+    return parts[0] || cleaned;
+  }
+
+  getDisplayNameLine2(fullName: string): string {
+    const cleaned = String(fullName || '').trim().replace(/\s+/g, ' ');
+    if (!cleaned) return '';
+    const parts = cleaned.split(' ');
+    if (parts.length <= 1) return '';
+    return parts.slice(1).join(' ');
+  }
+
   // Helper Methods for Dynamic Workflow
   canIssue(request: any): boolean {
+    // Never show action buttons once request moves past pending-review stage.
+    if (this.mapStatusToCategory(request) !== 'PENDING') {
+      return false;
+    }
+
+    if (!this.isUsageDateToday(request)) {
+      return false;
+    }
+
     // 1. Check Dynamic Actions (Backend)
-    const actions = request.allowedActions || [];
-    if (actions.includes('issue') || actions.includes('approve')) return true;
+    const actions = this.toUpperActions(request.allowedActions || request.allowed_actions || []);
+    return actions.includes('ISSUE') || actions.includes('APPROVE');
+  }
 
-    // 2. Fallback: Explicitly allow for 'APPROVED BY PERMIT SECTION' and 'SUBMITTED'
-    // This handles cases where role-mapping might fail but status is correct
-    const s = (request.status || '').toUpperCase();
-    if (s === 'APPROVED BY PERMIT SECTION' || s === 'SUBMITTED' || s === 'PENDING') return true;
+  isUsageDateToday(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) {
+      return false;
+    }
 
-    return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey === todayKey;
+  }
+
+  isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) {
+      return false;
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
+  }
+
+  shouldShowUsageDateApprovalNotice(request: any): boolean {
+    return this.mapWorkflowToCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
+  }
+
+  shouldShowUsageDateMissedNotice(request: any): boolean {
+    // If usage date has passed and the request is still in the pending-review bucket, treat it as rejected-by-timeout.
+    return this.mapWorkflowToCategory(request) === 'PENDING' && this.isUsageDatePast(request);
   }
 
   canReject(request: any): boolean {
-    const actions = request.allowedActions || [];
-    if (actions.includes('reject')) return true;
+    // Never show action buttons once request moves past pending-review stage.
+    if (this.mapStatusToCategory(request) !== 'PENDING') {
+      return false;
+    }
 
-    // Fallback for SUBMITTED/PENDING
-    const s = (request.status || '').toUpperCase();
-    if (s === 'APPROVED BY PERMIT SECTION' || s === 'SUBMITTED' || s === 'PENDING') return true;
+    if (!this.isUsageDateToday(request)) {
+      return false;
+    }
 
-    return false;
+    const actions = this.toUpperActions(request.allowedActions || request.allowed_actions || []);
+
+    // Prefer backend-driven actions when present, but be resilient:
+    // some payloads only send ISSUE/APPROVE while still allowing reject in workflow.
+    if (actions.length === 0) {
+      return true;
+    }
+
+    if (actions.includes('REJECT') || actions.includes('REJECT_REQUEST') || actions.includes('DECLINE')) {
+      return true;
+    }
+
+    // If OIC can approve/issue at this stage, allow showing reject as well.
+    return actions.includes('ISSUE') || actions.includes('APPROVE');
   }
 
   private normalizeHologramType(type: string): 'LOCAL' | 'EXPORT' | 'DEFENCE' {
@@ -221,27 +331,32 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     return 'LOCAL';
   }
 
+  private toUpperActions(actions: any): string[] {
+    if (!Array.isArray(actions)) return [];
+    return actions.map(a => String(a).trim().toUpperCase()).filter(Boolean);
+  }
+
   // REMOVED mapStatus() - using raw status directly
 
-  getStatusClass(status: string): string {
-    const category = this.mapStatusToCategory(status);
+  getStatusClass(request: any): string {
+    const category = this.mapStatusToCategory(request);
 
     switch (category) {
       case 'APPROVED':
-        return 'bg-success';
+        return 'bg-success text-white';
       case 'UNDER_PROCESS':
         return 'bg-warning text-dark';
       case 'PENDING':
-        return 'bg-info';
+        return 'bg-info text-white';
       case 'REJECTED':
-        return 'bg-danger';
+        return 'bg-danger text-white';
       default:
-        return 'bg-secondary';
+        return 'bg-secondary text-white';
     }
   }
 
-  getStatusIcon(status: string): string {
-    const category = this.mapStatusToCategory(status);
+  getStatusIcon(request: any): string {
+    const category = this.mapStatusToCategory(request);
 
     switch (category) {
       case 'APPROVED':
@@ -279,10 +394,13 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const matchesReference = !this.filters.referenceNumber ||
         request.referenceNo.toLowerCase().includes(this.filters.referenceNumber.toLowerCase());
 
-      const matchesStatus = !this.filters.status || this.mapStatusToCategory(request.status) === this.filters.status;
+      const matchesStatus = !this.filters.status || this.mapStatusToCategory(request) === this.filters.status;
       const matchesRequestType = !this.filters.requestType || request.requestType === this.filters.requestType;
       const matchesHologramType = !this.filters.hologramType || request.hologramType === this.filters.hologramType;
       const matchesUrgencyLevel = !this.filters.urgencyLevel || request.urgencyLevel === this.filters.urgencyLevel;
+
+      const matchesMonth = !this.filters.month ||
+        (new Date(request.submissionDate).getMonth() + 1) === Number(this.filters.month);
 
       const matchesDateFrom = !this.filters.dateFrom ||
         new Date(request.submissionDate) >= new Date(this.filters.dateFrom);
@@ -291,7 +409,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         new Date(request.submissionDate) <= new Date(this.filters.dateTo);
 
       return matchesReference && matchesStatus && matchesRequestType &&
-        matchesHologramType && matchesUrgencyLevel && matchesDateFrom && matchesDateTo;
+        matchesHologramType && matchesUrgencyLevel && matchesMonth && matchesDateFrom && matchesDateTo;
     });
 
     // Sort filtered results by submission date and reference number - newest first (descending order)
@@ -315,6 +433,24 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.updatePagination();
   }
 
+  onStatusCardClick(status: '' | 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): void {
+    this.filters.status = this.filters.status === status ? '' : status;
+    this.applyFilters();
+  }
+
+  isStatusCardActive(status: '' | 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): boolean {
+    return this.filters.status === status;
+  }
+
+  onHologramTypeCardClick(type: '' | 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
+    this.filters.hologramType = this.filters.hologramType === type ? '' : type;
+    this.applyFilters();
+  }
+
+  isHologramTypeCardActive(type: '' | 'LOCAL' | 'EXPORT' | 'DEFENCE'): boolean {
+    return this.filters.hologramType === type;
+  }
+
   clearFilters() {
     this.filters = {
       referenceNumber: '',
@@ -322,10 +458,17 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       requestType: '',
       hologramType: '',
       urgencyLevel: '',
+      month: '',
       dateFrom: '',
       dateTo: ''
     };
     this.applyFilters();
+  }
+
+  getMonthLabel(monthValue: string): string {
+    const month = Number(monthValue);
+    if (!month || month < 1 || month > 12) return '';
+    return new Date(2000, month - 1, 1).toLocaleString('en-US', { month: 'long' });
   }
 
   updatePagination() {
@@ -390,6 +533,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   approveRequest(request: HologramRequest) {
+    if (!this.isUsageDateToday(request)) {
+      alert('Allocation will be approved on the usage date only. This action becomes active automatically on that day.');
+      return;
+    }
+
     this.selectedRequest = request;
     this.approvalComments = '';
     this.approvedQuantity = request.requestedQuantity;
@@ -399,15 +547,52 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   rejectRequest(request: HologramRequest) {
-    this.selectedRequest = request;
-    this.rejectionReason = '';
-    // In real app, open rejection modal
-    const reason = prompt('Enter rejection reason (required):');
-
-    if (reason && reason.trim()) {
-      this.rejectionReason = reason;
-      this.confirmRejection();
+    if (!request?.originalId) {
+      Swal.fire('Error', 'Invalid request data.', 'error');
+      return;
     }
+
+    void Swal.fire({
+      title: 'Reject Hologram Request',
+      input: 'textarea',
+      inputLabel: 'Reason (required)',
+      inputPlaceholder: 'Type the rejection reason...',
+      inputAttributes: {
+        'aria-label': 'Rejection reason'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Reject',
+      confirmButtonColor: '#dc3545',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      preConfirm: async (value) => {
+        const reason = String(value || '').trim();
+        if (!reason) {
+          Swal.showValidationMessage('Rejection reason is required.');
+          return;
+        }
+
+        try {
+          await firstValueFrom(
+            this.hologramService.performAction('request', request.originalId!, 'reject', reason)
+          );
+        } catch (err: any) {
+          const msg =
+            err?.error?.error ||
+            err?.error?.detail ||
+            err?.message ||
+            'Failed to reject request.';
+          Swal.showValidationMessage(String(msg));
+          return;
+        }
+
+        return reason;
+      }
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      void Swal.fire('Rejected', 'Request rejected successfully.', 'success');
+      this.loadHologramRequests();
+    });
   }
 
   confirmApproval() {
@@ -419,9 +604,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Determine action based on allowedActions or default to 'issue' (OIC standard)
     let action = 'issue';
     if (this.selectedRequest.allowedActions && this.selectedRequest.allowedActions.length > 0) {
-      if (this.selectedRequest.allowedActions.includes('issue')) action = 'issue';
-      else if (this.selectedRequest.allowedActions.includes('approve')) action = 'approve';
-      else action = this.selectedRequest.allowedActions[0];
+      const actions = this.toUpperActions(this.selectedRequest.allowedActions);
+      if (actions.includes('ISSUE')) action = 'issue';
+      else if (actions.includes('APPROVE')) action = 'approve';
+      else action = String(this.selectedRequest.allowedActions[0] || 'issue').toLowerCase();
     }
 
     // Use existing allocations from modal if available, otherwise auto-allocate
@@ -618,67 +804,55 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   getRequestCount(status?: string): number {
     if (status) {
-      return this.filteredRequests.filter(req => this.mapStatusToCategory(req.status) === status).length;
+      return this.hologramRequests.filter(req => this.mapStatusToCategory(req) === status).length;
     }
-    return this.filteredRequests.length;
+    return this.hologramRequests.length;
   }
 
-  // Map backend workflow stage names to frontend status categories
-  mapStatusToCategory(backendStatus: string): string {
-    const status = (backendStatus || '').toUpperCase();
-    
-    // PENDING REVIEW - Initial submission states
-    if (status === 'SUBMITTED' || 
-        status === 'PENDING' || 
-        status.includes('FORWARDED TO COMMISSIONER')) {
-      return 'PENDING';
+  // Categorize using DB workflow metadata; avoid hardcoded stage names.
+  mapStatusToCategory(requestOrStatus: any): string {
+    const workflowCategory = this.mapWorkflowToCategory(requestOrStatus);
+
+    // Special rule: if the usage date is in the past and the request is still pending review,
+    // consider it rejected due to no action taken on usage date.
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      if (workflowCategory === 'PENDING' && this.isUsageDatePast(requestOrStatus)) {
+        return 'REJECTED';
+      }
     }
-    
-    // UNDER PROCESS - Being reviewed/processed
-    if (status === 'APPROVED BY PERMIT SECTION' || 
-        status === 'UNDER IT CELL REVIEW' ||
-        status === 'IN USE' ||
-        status.includes('UNDER PROCESS') ||
-        status.includes('UNDER_PROCESS')) {
+
+    return workflowCategory;
+  }
+
+  private mapWorkflowToCategory(requestOrStatus: any): string {
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      const isInitial = Boolean(requestOrStatus.currentStageIsInitial ?? requestOrStatus.current_stage_is_initial ?? false);
+      const isFinal = Boolean(requestOrStatus.currentStageIsFinal ?? requestOrStatus.current_stage_is_final ?? false);
+      const allowedActions = this.toUpperActions(requestOrStatus.allowedActions || requestOrStatus.allowed_actions || []);
+      const entryActions = this.toUpperActions(requestOrStatus.currentStageEntryActions || requestOrStatus.current_stage_entry_actions || []);
+
+      if (isFinal && entryActions.includes('REJECT')) return 'REJECTED';
+      if (isFinal) return 'APPROVED';
+      if (allowedActions.includes('ISSUE') || allowedActions.includes('APPROVE') || allowedActions.includes('REJECT')) return 'PENDING';
+      if (isInitial) return 'PENDING';
       return 'UNDER_PROCESS';
     }
-    
-    // APPROVED/COMPLETED - Final approved states
-    if (status === 'APPROVED BY COMMISSIONER' ||
-        status === 'APPROVED' ||
-        status === 'PRODUCTION COMPLETED' ||
-        status === 'COMPLETED' ||
-        status === 'PAYMENT COMPLETED' ||
-        status === 'CARTOON ASSIGNED' ||
-        status === 'ARRIVED') {
-      return 'APPROVED';
-    }
-    
-    // REJECTED
-    if (status.includes('REJECTED')) {
-      return 'REJECTED';
-    }
-    
-    // Default fallback
+
+    // Fallback if only status text is available (legacy payloads).
+    const status = String(requestOrStatus || '').toUpperCase();
+    if (status.includes('REJECT')) return 'REJECTED';
+    if (status.includes('COMPLETE') || status.includes('APPROVE')) return 'APPROVED';
     return 'PENDING';
   }
 
-  // Get user-friendly status display text
-  getDisplayStatus(backendStatus: string): string {
-    const category = this.mapStatusToCategory(backendStatus);
-    
-    switch (category) {
-      case 'PENDING':
-        return 'Pending Review';
-      case 'UNDER_PROCESS':
-        return 'Under Process';
-      case 'APPROVED':
-        return 'Completed';
-      case 'REJECTED':
-        return 'Rejected';
-      default:
-        return backendStatus || 'Unknown';
-    }
+  // Show DB stage name directly so stage-name edits reflect without code changes.
+  getDisplayStatus(request: any): string {
+    return String(
+      request?.currentStageName ||
+      request?.current_stage_name ||
+      request?.status ||
+      'Unknown'
+    );
   }
 
   getTotalRequestedHolograms(): number {
@@ -725,11 +899,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     this.hologramService.getRollsDetails().subscribe({
       next: (rolls: any[]) => {
-        console.log(`Fetched ${rolls.length} rolls details`);
+        const scopedRolls = this.filterByCurrentLicense(rolls);
+        console.log(`Fetched ${rolls.length} rolls details, scoped to ${scopedRolls.length}`);
 
         const inventoryItems: HologramInventory[] = [];
 
-        for (const roll of rolls) {
+        for (const roll of scopedRolls) {
           // Basic validation
           if (!roll.carton_number && !roll.cartonNumber) continue;
 
@@ -850,9 +1025,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         requests: this.hologramService.getRequests()
       }).subscribe({
         next: ({ rolls, requests }) => {
+          const scopedRolls = this.filterByCurrentLicense(rolls);
           const inventoryItems: HologramInventory[] = [];
           
-          for (const roll of rolls) {
+          for (const roll of scopedRolls) {
             if (!roll.carton_number && !roll.cartonNumber) continue;
             
             const uniqueId = roll.id || Math.random();
@@ -951,6 +1127,88 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           observer.error(err);
         }
       });
+    });
+  }
+
+  private resolveCurrentScopedLicenseId(): string {
+    if (typeof window === 'undefined') return '';
+
+    const sources = [
+      sessionStorage.getItem('currentUser'),
+      localStorage.getItem('currentUser'),
+      sessionStorage.getItem('user'),
+      localStorage.getItem('user')
+    ];
+
+    for (const raw of sources) {
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const resolved = this.extractLicenseId(parsed);
+        if (resolved) return resolved;
+      } catch {
+        // Ignore non-JSON payloads
+      }
+    }
+    return '';
+  }
+
+  private extractLicenseId(payload: any): string {
+    if (!payload || typeof payload !== 'object') return '';
+
+    const direct = this.pickFirstNonEmpty(payload, [
+      'license_id', 'licenseId',
+      'licensee_id', 'licenseeId'
+    ]);
+    if (direct) return direct;
+
+    const nestedCandidates = [
+      payload.user,
+      payload.profile,
+      payload.supply_chain_profile,
+      payload.supplyChainProfile,
+      payload.oic_assignment,
+      payload.oicAssignment,
+      payload.assignment
+    ];
+    for (const nested of nestedCandidates) {
+      const nestedId = this.extractLicenseId(nested);
+      if (nestedId) return nestedId;
+    }
+
+    return '';
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    for (const key of keys) {
+      const value = source?.[key];
+      const normalized = String(value ?? '').trim();
+      if (normalized) return normalized;
+    }
+    return '';
+  }
+
+  private expandLicenseAliases(licenseId: string): string[] {
+    const normalized = String(licenseId || '').trim();
+    if (!normalized) return [];
+    const aliases = [normalized];
+    if (normalized.startsWith('NLI/')) aliases.push(`NA/${normalized.slice(4)}`);
+    if (normalized.startsWith('NA/')) aliases.push(`NLI/${normalized.slice(3)}`);
+    return aliases;
+  }
+
+  private filterByCurrentLicense<T = any>(rows: T[]): T[] {
+    const scopedLicense = String(this.currentScopedLicenseId || '').trim();
+    if (!scopedLicense) return rows || [];
+
+    const allowed = new Set(this.expandLicenseAliases(scopedLicense));
+    return (rows || []).filter((row: any) => {
+      const rowLicense = this.pickFirstNonEmpty(row, [
+        'license_id', 'licenseId',
+        'licensee_id', 'licenseeId'
+      ]);
+      if (!rowLicense) return false;
+      return this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
     });
   }
 
@@ -1157,11 +1415,27 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       return typeMatch && statusMatch && hasAvailable;
     });
     
-    // CRITICAL: Sort by receivedDate for FIFO (First In, First Out) - oldest first
+    // CRITICAL: Sort for FIFO (First In, First Out) - oldest stock first.
+    // NOTE: Multiple cartons can share the same receivedDate (e.g. all entered on the same day).
+    // In that case, fall back to the earliest serial range (fromSerial) so that "a1(a) 1-200"
+    // is consumed before "a1(d) 701-1000".
+    const getNumeric = (value: string | undefined): number => {
+      if (!value) return Number.POSITIVE_INFINITY;
+      const digits = value.replace(/\D/g, '');
+      return digits ? Number(digits) : Number.POSITIVE_INFINITY;
+    };
+
     availableInventory.sort((a, b) => {
       const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
       const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
-      return dateA - dateB; // Ascending order - oldest first
+      if (dateA !== dateB) return dateA - dateB; // Ascending - oldest first
+
+      const fromA = getNumeric(a.fromSerial);
+      const fromB = getNumeric(b.fromSerial);
+      if (fromA !== fromB) return fromA - fromB; // Ascending - earliest serial first
+
+      // Final deterministic tie-breaker
+      return String(a.cartoonNumber).localeCompare(String(b.cartoonNumber));
     });
 
     console.log('Available Inventory After Filter (FIFO sorted):', availableInventory.map(i => ({
@@ -1382,9 +1656,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       // CALL REAL BACKEND API
       // Use 'issue' as default for OIC, or fallback to dynamic action
       let action = 'issue';
-      const actions = this.selectedRequest.allowedActions || [];
-      if (actions.includes('issue')) action = 'issue';
-      else if (actions.includes('approve')) action = 'approve';
+      const actions = this.toUpperActions(this.selectedRequest.allowedActions || []);
+      if (actions.includes('ISSUE')) action = 'issue';
+      else if (actions.includes('APPROVE')) action = 'approve';
 
       console.log(`Performing backend action: ${action} on ID: ${this.selectedRequest.originalId}`);
 
@@ -1757,29 +2031,6 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.approvedQuantity = 0;
   }
 
-  forceApproveWithoutInventory(): void {
-    if (!this.selectedRequest) return;
-
-    // Create a mock allocation result for testing
-    this.allocationResult = {
-      canAllocate: true,
-      totalAvailable: this.selectedRequest.requestedQuantity,
-      allocations: [{
-        cartoonNumber: 'TEST_CTN001',
-        fromSerial: 'HG1001',
-        toSerial: `HG${1001 + this.selectedRequest.requestedQuantity - 1}`,
-        quantity: this.selectedRequest.requestedQuantity,
-        remainingInCartoon: 0
-      }],
-      message: `Force approved ${this.selectedRequest.requestedQuantity} holograms for testing`
-    };
-
-    console.log('Force approving with mock allocation:', this.allocationResult);
-
-    // Now proceed with normal approval
-    this.confirmHologramAllocation();
-  }
-
   editAllocationQuantity(allocation: HologramAllocation, newQuantity: number): void {
     if (newQuantity <= 0 || !this.allocationResult) return;
 
@@ -1892,17 +2143,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const rolls = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
     const hasRolls = Array.isArray(rolls) && rolls.length > 0;
     
-    // Also check status - if approved/in_use/completed, it should have rolls
-    const status = (request.status || '').toUpperCase();
-    const isApprovedStatus = status.includes('APPROVED') || 
-                            status === 'IN_USE' || 
-                            status === 'COMPLETED' ||
-                            status === 'IN USE';
+    // Also check workflow category from metadata/actions.
+    const statusCategory = this.mapStatusToCategory(request);
+    const isApprovedStatus = statusCategory === 'APPROVED' || statusCategory === 'UNDER_PROCESS';
     
     // Debug logging
     console.log('hasRollsAssigned check:', {
       refNo: request.referenceNo,
       status: request.status,
+      statusCategory,
       hasRolls,
       isApprovedStatus,
       rollsData: rolls

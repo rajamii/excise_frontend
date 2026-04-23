@@ -3,26 +3,35 @@
 
 <!-- Hologram Register Header -->
 <div class="hologram-register-header">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-
-
-  </div>
-
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
+  <div class="row g-3 mb-4 justify-content-center">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('ALL')" [class.active]="!hologramStatusFilter">
         <div class="card-icon">
           <i class="bi bi-list-ul"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ filteredHologramData.length }}</h3>
+          <h3 class="card-value">{{ summaryHologramData.length }}</h3>
           <p class="card-label">Total Holograms</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card submitted-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+        <div class="card-icon">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getHologramStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card submitted-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('SUBMITTED')" [class.active]="activeSummaryFilter === 'SUBMITTED'">
         <div class="card-icon">
           <i class="bi bi-check-circle"></i>
         </div>
@@ -32,25 +41,39 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card draft-requests">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
         <div class="card-icon">
-          <i class="bi bi-file-earmark"></i>
+          <i class="bi bi-check-circle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getHologramStatusCount('DRAFT') }}</h3>
-          <p class="card-label">Draft</p>
+          <h3 class="card-value">{{ getHologramStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="summary-card total-quantity">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
         <div class="card-icon">
-          <i class="bi bi-boxes"></i>
+          <i class="bi bi-gear"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getTotalHologramQuantity() | number:'1.0-0' }}</h3>
-          <p class="card-label">Total Quantity</p>
+          <h3 class="card-value">{{ getHologramStatusCount('UNDER_PROCESS') }}</h3>
+          <p class="card-label">Under Process</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+      <div class="summary-card edited-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('EDITED')" [class.active]="activeSummaryFilter === 'EDITED'">
+        <div class="card-icon">
+          <i class="bi bi-pencil-square"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getHologramStatusCount('EDITED') }}</h3>
+          <p class="card-label">Edited</p>
         </div>
       </div>
     </div>
@@ -74,7 +97,7 @@
     <!-- Month Filter -->
     <div class="compact-filter">
       <input type="month" class="form-control form-control-sm" [(ngModel)]="hologramMonthFilter"
-        (change)="onHologramMonthFilterChange()" placeholder="Month" title="Filter by month">
+        (ngModelChange)="onHologramMonthFilterChange()" placeholder="Month" title="Filter by month">
     </div>
 
     <!-- Year Filter -->
@@ -88,21 +111,18 @@
       </select>
     </div>
 
-    <!-- Status Filter -->
+    <!-- Company Filter -->
     <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="hologramStatusFilter"
-        (change)="onHologramStatusFilterChange()" title="Filter by status">
-        <option value="">All Status</option>
-        <option value="SUBMITTED">Submitted</option>
-        <option value="DRAFT">Draft</option>
-        <option value="APPROVED">Approved</option>
-        <option value="PROCESSING">Processing</option>
+      <select class="form-select form-select-sm" [(ngModel)]="hologramCompanyFilter"
+        (change)="onHologramCompanyFilterChange()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of hologramCompanyOptions" [value]="company">{{ company }}</option>
       </select>
     </div>
 
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearHologramFilters()"
-      *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter"
+      *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter || hologramCompanyFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -111,13 +131,14 @@
 
   <!-- Filter Results Summary -->
   <div class="filter-results-compact mt-2"
-    *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter">
+    *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter || hologramCompanyFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredHologramData.length }}</strong> of <strong>{{ hologramList.length }}</strong> holograms
       <span *ngIf="hologramDateFilter" class="filter-tag">Date: {{ hologramDateFilter | date:'dd MMM yyyy' }}</span>
       <span *ngIf="hologramMonthFilter" class="filter-tag">Month: {{ hologramMonthFilter | date:'MMM yyyy' }}</span>
       <span *ngIf="hologramYearFilter" class="filter-tag">Year: {{ hologramYearFilter }}</span>
+      <span *ngIf="hologramCompanyFilter" class="filter-tag">Company: {{ hologramCompanyFilter }}</span>
       <span *ngIf="hologramStatusFilter" class="filter-tag">Status: {{ hologramStatusFilter }}</span>
     </small>
   </div>
@@ -225,18 +246,11 @@
                   <i class="bi bi-eye me-1"></i>
                   <span class="d-none d-md-inline">View</span>
                 </button>
-
-                <!-- Make Payment button -->
-                <button *ngIf="!item.paymentCompleted && isPaymentEnabled(item)" class="btn btn-warning btn-sm"
-                  (click)="navigateToPaymentPage(item)" title="Make Wallet Payment (₹0.15 per hologram)">
+                <button *ngIf="shouldShowMakePayment(item) && !item.paymentCompleted" class="btn btn-warning btn-sm"
+                  type="button" (click)="navigateToWalletRecharge(item, $event)" title="Make Payment"
+                  >
                   <i class="bi bi-wallet2 me-1"></i>
                   <span class="d-none d-md-inline">Make Payment</span>
-                </button>
-                <!-- Mark as Paid button (for testing) -->
-                <button *ngIf="isPaymentEnabled(item) && !item.paymentCompleted" class="btn btn-info btn-sm"
-                  (click)="markPaymentCompleted(item.refNo)" title="Test: Mark payment as completed (for testing only)">
-                  <i class="bi bi-check-circle me-1"></i>
-                  <span class="d-none d-md-inline">Mark Paid (Test)</span>
                 </button>
                 <!-- View Payment Receipt button -->
                 <button *ngIf="item.paymentCompleted" class="btn btn-success btn-sm" (click)="viewPaymentSlip(item)"
@@ -244,11 +258,6 @@
                   <i class="bi bi-receipt me-1"></i>
                   <span class="d-none d-md-inline">Payment Slip</span>
                 </button>
-                <!-- Payment Completed badge -->
-                <span *ngIf="item.paymentCompleted" class="badge bg-success align-self-center"
-                  title="Payment Completed">
-                  <i class="bi bi-check-circle me-1"></i>Paid
-                </span>
               </div>
             </td>
           </tr>
@@ -426,7 +435,7 @@
         <!-- Edit History Section (if edited by Commissioner) -->
         <div class="card border-warning shadow-sm mb-4"
           style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);"
-          *ngIf="selectedHologram.editedByCommissioner && selectedHologram.editHistory">
+          *ngIf="getEditHistory(selectedHologram)">
           <div class="card-header bg-warning text-dark border-0">
             <h6 class="mb-0 fw-bold">
               <i class="bi bi-pencil-square me-2"></i>
@@ -456,33 +465,25 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.local || 0) > 0">
+                  <tr *ngIf="(getEditHistory(selectedHologram)?.originalQuantities?.local || 0) > 0">
                     <td><strong>Local</strong></td>
-                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.local | number:'1.0-0' }}
-                      pieces</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{
-                      selectedHologram.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td>
+                    <td class="text-end">{{ getEditHistory(selectedHologram)?.originalQuantities?.local | number:'1.0-0' }} pieces</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{ getEditHistory(selectedHologram)?.updatedQuantities?.local | number:'1.0-0' }} pieces</td>
                   </tr>
-                  <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.export || 0) > 0">
+                  <tr *ngIf="(getEditHistory(selectedHologram)?.originalQuantities?.export || 0) > 0">
                     <td><strong>Export</strong></td>
-                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.export | number:'1.0-0' }}
-                      pieces</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{
-                      selectedHologram.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td>
+                    <td class="text-end">{{ getEditHistory(selectedHologram)?.originalQuantities?.export | number:'1.0-0' }} pieces</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{ getEditHistory(selectedHologram)?.updatedQuantities?.export | number:'1.0-0' }} pieces</td>
                   </tr>
-                  <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.defence || 0) > 0">
+                  <tr *ngIf="(getEditHistory(selectedHologram)?.originalQuantities?.defence || 0) > 0">
                     <td><strong>Defence</strong></td>
-                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.defence | number:'1.0-0' }}
-                      pieces</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{
-                      selectedHologram.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td>
+                    <td class="text-end">{{ getEditHistory(selectedHologram)?.originalQuantities?.defence | number:'1.0-0' }} pieces</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{ getEditHistory(selectedHologram)?.updatedQuantities?.defence | number:'1.0-0' }} pieces</td>
                   </tr>
                   <tr class="table-active">
                     <td><strong>Total:</strong></td>
-                    <td class="text-end fw-bold">{{ selectedHologram.editHistory.originalQuantities.total |
-                      number:'1.0-0' }} pieces</td>
-                    <td class="text-end fw-bold text-success" style="background: #d4edda;">{{
-                      selectedHologram.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</td>
+                    <td class="text-end fw-bold">{{ getEditHistory(selectedHologram)?.originalQuantities?.total | number:'1.0-0' }} pieces</td>
+                    <td class="text-end fw-bold text-success" style="background: #d4edda;">{{ getEditHistory(selectedHologram)?.updatedQuantities?.total | number:'1.0-0' }} pieces</td>
                   </tr>
                 </tbody>
               </table>
@@ -505,33 +506,25 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.local || 0) > 0">
+                  <tr *ngIf="(getEditHistory(selectedHologram)?.originalQuantities?.local || 0) > 0">
                     <td><strong>Local</strong></td>
-                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.local || 0) * 0.15) |
-                      number:'1.2-2' }}</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{
-                      ((selectedHologram.editHistory.updatedQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end">₹{{ ((getEditHistory(selectedHologram)?.originalQuantities?.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{ ((getEditHistory(selectedHologram)?.updatedQuantities?.local || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
-                  <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.export || 0) > 0">
+                  <tr *ngIf="(getEditHistory(selectedHologram)?.originalQuantities?.export || 0) > 0">
                     <td><strong>Export</strong></td>
-                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.export || 0) * 0.15) |
-                      number:'1.2-2' }}</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{
-                      ((selectedHologram.editHistory.updatedQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end">₹{{ ((getEditHistory(selectedHologram)?.originalQuantities?.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{ ((getEditHistory(selectedHologram)?.updatedQuantities?.export || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
-                  <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.defence || 0) > 0">
+                  <tr *ngIf="(getEditHistory(selectedHologram)?.originalQuantities?.defence || 0) > 0">
                     <td><strong>Defence</strong></td>
-                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.defence || 0) * 0.15) |
-                      number:'1.2-2' }}</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{
-                      ((selectedHologram.editHistory.updatedQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end">₹{{ ((getEditHistory(selectedHologram)?.originalQuantities?.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{ ((getEditHistory(selectedHologram)?.updatedQuantities?.defence || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
                   <tr class="table-active">
                     <td><strong>Total:</strong></td>
-                    <td class="text-end fw-bold">₹{{ ((selectedHologram.editHistory.originalQuantities.total || 0) *
-                      0.15) | number:'1.2-2' }}</td>
-                    <td class="text-end fw-bold text-success" style="background: #d4edda;">₹{{
-                      ((selectedHologram.editHistory.updatedQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end fw-bold">₹{{ ((getEditHistory(selectedHologram)?.originalQuantities?.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end fw-bold text-success" style="background: #d4edda;">₹{{ ((getEditHistory(selectedHologram)?.updatedQuantities?.total || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -540,8 +533,7 @@
             <div class="mt-3 pt-3 border-top">
               <small class="text-muted">
                 <i class="bi bi-person-badge me-1"></i>
-                <strong>Edited by:</strong> {{ selectedHologram.editHistory.editedBy }} on {{
-                selectedHologram.editHistory.editedDate | date:'dd-MMM-yyyy' }}
+                <strong>Edited by:</strong> {{ getEditHistory(selectedHologram)?.editedBy || 'Commissioner' }} on {{ getEditHistory(selectedHologram)?.editedDate | date:'dd-MMM-yyyy' }}
               </small>
             </div>
           </div>
@@ -664,3 +656,4 @@
     </div>
   </div>
 </div>
+

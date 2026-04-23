@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900">
+  <defs>
+    <style>
+      .stroke{fill:none;stroke:#6b7280;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
+      .fill{fill:#6b7280;opacity:.16}
+    </style>
+  </defs>
+
+  <!-- Outer crest rings -->
+  <circle class="stroke" cx="450" cy="450" r="350"/>
+  <circle class="stroke" cx="450" cy="450" r="300"/>
+
+  <!-- Laurel-ish sides -->
+  <path class="stroke" d="M270 265c-88 100-120 215-103 310 22 123 110 202 160 245"/>
+  <path class="stroke" d="M630 265c88 100 120 215 103 310-22 123-110 202-160 245"/>
+  <path class="stroke" d="M300 330c-55 78-73 167-60 243 16 92 76 154 112 182"/>
+  <path class="stroke" d="M600 330c55 78 73 167 60 243-16 92-76 154-112 182"/>
+
+  <!-- Center emblem-ish shield -->
+  <path class="stroke" d="M450 200l48 84-48 32-48-32z"/>
+  <path class="stroke" d="M340 350c38-54 86-80 110-80s72 26 110 80"/>
+  <path class="stroke" d="M370 360c-24 116 12 218 80 302 68-84 104-186 80-302"/>
+
+  <!-- Center wheel/star -->
+  <circle class="stroke" cx="450" cy="480" r="85"/>
+  <circle class="stroke" cx="450" cy="480" r="45"/>
+  <path class="stroke" d="M450 395v170M365 480h170"/>
+  <path class="stroke" d="M395 425l110 110M505 425L395 535"/>
+
+  <!-- Ribbon -->
+  <path class="stroke" d="M300 700c70 40 140 60 150 60s80-20 150-60"/>
+  <path class="stroke" d="M290 730c40 35 95 64 140 82"/>
+  <path class="stroke" d="M610 730c-40 35-95 64-140 82"/>
+
+  <!-- Soft fill so it reads like a watermark -->
+  <circle class="fill" cx="450" cy="480" r="200"/>
+</svg>
+

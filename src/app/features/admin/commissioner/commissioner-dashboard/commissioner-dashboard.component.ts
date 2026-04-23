@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
+import { Component, Inject, Input, PLATFORM_ID, OnInit } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { SupplyChainService } from '../../../licensee/supplyChain/services/supplychain.service';
 import { environment } from '../../../../../environments/environment';
 import { AccountService } from '../../../../core/services/account.service';
+import { HologramService, DailyRegisterEntry } from '../../../../core/services/hologram.service';
 import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
 import { RequisitionComponent } from "../../../licensee/supplyChain/supplychaincomponents/requisition/requisition.component";
 import { CancellationComponent } from "../../../licensee/supplyChain/supplychaincomponents/cancellation/cancellation.component";
@@ -21,6 +22,7 @@ export interface CommissionerTableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
+  factoryName?: string;
   status: string;
   amount: string;
   priority?: string;
@@ -49,6 +51,8 @@ export interface CommissionerTableData {
   uploadedTypes?: string[];
   requiredTypes?: string[];
   slipDetails?: { [key: string]: any };
+  paymentStatus?: string;
+  paymentDetails?: any;
   // Edit tracking fields
   editedByCommissioner?: boolean;
   editHistory?: {
@@ -72,16 +76,18 @@ export interface CommissionerTableData {
   // Commissioner status tracking
   commissionerStatus?: string;
   allowedActions?: string[]; // stored from backend
+  canEditQuantity?: boolean;
 }
 
 @Component({
-  selector: "app-commissioner-dashboard",
+  selector: "app-commissioner-dashboard-tabs",
   standalone: true,
   imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, TransitComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
 export class CommissionerDashboardComponent implements OnInit {
+  @Input() embeddedHologramOnly = false;
   Math = Math;
   activeTab = "requisition"; // Start with requisition tab as default
   private isBrowser = false;
@@ -115,6 +121,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Overdue hologram entries
   overdueHologramEntries: any[] = [];
   showOverdueAlert = false;
+  approvalDeadlineLabel = '';
 
   // Sample data for revalidation applications (from commissioner's perspective)
   revalidationData: CommissionerTableData[] = [
@@ -202,6 +209,7 @@ export class CommissionerDashboardComponent implements OnInit {
     private http: HttpClient,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService,
+    private commissionerDailyRegisterService: HologramService,
     @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -218,15 +226,24 @@ export class CommissionerDashboardComponent implements OnInit {
     this.filteredRevalidationData = []; // Will be populated by fetchRevalidationData
     this.filteredHologramData = [];
 
+    if (this.embeddedHologramOnly) {
+      this.setActiveTab('hologram');
+    }
+
     // Check for tab query parameter
-    if (this.isBrowser) {
+    if (this.isBrowser && !this.embeddedHologramOnly) {
       const tab = this.route.snapshot.queryParamMap.get('tab');
       if (tab) {
         this.setActiveTab(tab);
+      } else {
+        const section = this.route.snapshot.queryParamMap.get('section');
+        if (section === 'hologram') {
+          this.setActiveTab('hologram');
+        }
       }
 
       // Load overdue hologram entries
-      this.loadOverdueEntries();
+      this.refreshOverdueEntries();
 
       // Listen for overdue alerts from daily register
       window.addEventListener('overdueHologramAlert', (event: any) => {
@@ -236,7 +253,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
       // Check for overdue entries every minute
       setInterval(() => {
-        this.loadOverdueEntries();
+        this.refreshOverdueEntries();
       }, 60000);
 
       // Refresh hologram data every 30 seconds when on hologram tab
@@ -275,6 +292,9 @@ export class CommissionerDashboardComponent implements OnInit {
             totalQtyLakh: Number(item.localQty) + Number(item.exportQty) + Number(item.defenceQty),
             hologramType: 'Security Hologram',
             allowedActions: item.allowedActions || item.allowed_actions || [],
+            canEditQuantity: this.canCommissionerEditHologram(item),
+            paymentStatus: item.paymentStatus || item.payment_status || item?.paymentDetails?.payment_status || item?.payment_details?.payment_status || '',
+            paymentDetails: item.paymentDetails || item.payment_details || null,
             editHistory: item.editHistory || item.edit_history || null
           };
         });
@@ -304,6 +324,63 @@ export class CommissionerDashboardComponent implements OnInit {
       this.overdueHologramEntries = [];
       this.showOverdueAlert = false;
     }
+    // Label is best-effort here; refreshOverdueEntries() will set it from API.
+    this.approvalDeadlineLabel = '';
+  }
+
+  private refreshOverdueEntries(): void {
+    // Prefer live data from API so warning is always up-to-date even if daily register tab isn't opened.
+    this.commissionerDailyRegisterService.getDailyRegisterOverview().subscribe({
+      next: (response) => {
+        const now = new Date();
+        const entries = (response?.entries || []) as DailyRegisterEntry[];
+        const overdue = entries.filter((e) => this.isApprovalUpdateOverdue(e, now));
+
+        this.approvalDeadlineLabel = this.getDeadlineLabel(
+          (overdue[0] as any)?.deadline || (entries || []).find((e) => !!(e as any)?.deadline)?.deadline
+        );
+
+        // Store simplified shape for UI
+        this.overdueHologramEntries = overdue.map((e) => ({
+          referenceNo: e.referenceNo,
+          distilleryName: e.distilleryName,
+          approvalDate: e.approvalDate,
+          approvalTime: e.approvalTime,
+          status: e.status,
+          deadline: (e as any).deadline,
+        }));
+        this.showOverdueAlert = this.overdueHologramEntries.length > 0;
+
+        try {
+          localStorage.setItem('overdueHologramEntries', JSON.stringify(this.overdueHologramEntries));
+        } catch {
+          // ignore storage errors
+        }
+      },
+      error: () => {
+        // Fallback to any previously cached values
+        this.loadOverdueEntries();
+      }
+    });
+  }
+
+  private isApprovalUpdateOverdue(entry: DailyRegisterEntry, now: Date): boolean {
+    if (!entry?.approvalDate) return false;
+    if (entry.status === 'COMPLETED') return false;
+
+    const deadlineIso = String((entry as any)?.deadline || '').trim();
+    if (!deadlineIso) return false;
+    const deadline = new Date(deadlineIso);
+    if (Number.isNaN(deadline.getTime())) return false;
+    return now.getTime() > deadline.getTime();
+  }
+
+  private getDeadlineLabel(deadlineIso?: string | null): string {
+    const iso = String(deadlineIso || '').trim();
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
   }
 
   dismissOverdueAlert(): void {
@@ -549,6 +626,7 @@ export class CommissionerDashboardComponent implements OnInit {
           referenceNo: item.ourRefNo || item.our_ref_no,
           submissionDate: subDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
           expiryDate: expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+          factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || item.distilleryName || item.distillery_name || 'Unknown Factory',
           distilleryName: item.distilleryName || item.distillery_name || 'Unknown Distillery',
           status: status,
           amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
@@ -572,7 +650,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Action methods
   viewPermitSlip(item: any): void {
     console.log('viewPermitSlip called with item:', item);
-    this.router.navigate(["/dev-revalidation-permit-slip"], {
+    this.router.navigate(["/unified-letter-view/revalidation"], {
       queryParams: {
         id: item.id,
         ref: item.referenceNo,
@@ -758,7 +836,8 @@ export class CommissionerDashboardComponent implements OnInit {
           referenceNo: item.referenceNo,
           submissionDate: item.submissionDate,
           distilleryName: item.distilleryName,
-          commissionerStatus: fullDetails.commissionerStatus
+          commissionerStatus: fullDetails.commissionerStatus,
+          canEditQuantity: item.canEditQuantity
         };
       } else {
         this.selectedHologramApplication = item;
@@ -790,6 +869,24 @@ export class CommissionerDashboardComponent implements OnInit {
   onHologramDataUpdated(): void {
     this.loadHologramApplications();
     this.applyHologramFilters();
+  }
+
+  private canCommissionerEditHologram(item: any): boolean {
+    const status = String(item?.status || '')
+      .toLowerCase()
+      .replace(/[_\s-]+/g, '');
+    const allowedActions = Array.isArray(item?.allowedActions || item?.allowed_actions)
+      ? (item.allowedActions || item.allowed_actions).map((action: string) => String(action || '').toLowerCase())
+      : [];
+
+    const hasCommissionerApprovalAction = allowedActions.includes('approve');
+    const reachedCommissionerAfterItCell =
+      status.includes('verified') ||
+      status.includes('approvedbyitcell') ||
+      status.includes('forwardedtocommissioner') ||
+      status.includes('forwardedbyitcelltocommissioner');
+
+    return hasCommissionerApprovalAction && reachedCommissionerAfterItCell;
   }
 
 
@@ -834,24 +931,27 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Check if payment is completed for hologram (ALL types with same ref must be paid)
   isPaymentCompleted(item: CommissionerTableData): boolean {
-    if (!this.isBrowser) return false;
-
-    // Check if ALL applications with the same reference number have payment completed
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const sameRefApplications = applications.filter((app: any) => app.refNo === item.referenceNo);
-
-    if (sameRefApplications.length === 0) return false;
-
-    // All applications with this ref must have paymentCompleted = true
-    return sameRefApplications.every((app: any) => app.paymentCompleted === true);
+    const paymentStatus = String((item as any).paymentStatus || '').toLowerCase();
+    const stageStatus = String(item.status || '').toLowerCase();
+    return (
+      paymentStatus.includes('completed') ||
+      paymentStatus.includes('paid') ||
+      paymentStatus.includes('success') ||
+      stageStatus.includes('payment completed') ||
+      stageStatus.includes('carton assigned') ||
+      stageStatus.includes('forwarded to commissioner')
+    );
   }
 
   // View payment slip for completed payments
   viewPaymentSlip(item: CommissionerTableData): void {
-    this.router.navigate(['/dev-payslip'], {
+    this.router.navigate(['/payment-slip-view'], {
       queryParams: {
+        id: item.id,
+        type: 'hologram',
+        refNo: item.referenceNo,
         ref: item.referenceNo,
-        type: 'HOLOGRAM',
+        referenceNo: item.referenceNo,
         source: 'commissioner-dashboard'
       }
     });

@@ -4,20 +4,30 @@
   <!-- Dashboard Content Wrapper -->
   <div class="dashboard-content">
 
-    <!-- Filter Container: Application Type Filter (for roles that need it) -->
-    <div class="filter-container"
-      *ngIf="currentUser?.roleId === 2 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
-      <mat-form-field appearance="outline" class="application-type-filter">
-        <mat-label>Filter by Application Type</mat-label>
-        <mat-icon matPrefix>filter_list</mat-icon>
-        <mat-select [(value)]="selectedApplicationType" (selectionChange)="onApplicationTypeChange()">
-          <mat-option value="all">All Applications</mat-option>
-          <mat-option value="license-renewal">License Application</mat-option>
-          <mat-option value="new-license">New License</mat-option>
-          <mat-option value="salesman-barman">Salesman/Barman</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </div>
+    <!-- Welcome Banner (shown on dashboard landing) -->
+    <section
+      class="welcome-banner"
+      *ngIf="currentUser && !selectedSupplyChainSection"
+      aria-label="Welcome">
+      <div class="welcome-banner__inner">
+        <div class="welcome-banner__left">
+          <div class="welcome-banner__kicker">{{ greetingText }}</div>
+          <div class="welcome-banner__title">
+            Welcome, <span class="welcome-banner__name">{{ userDisplayName }}</span>
+          </div>
+          <div class="welcome-banner__subtitle">
+            Signed in as <span class="welcome-banner__role">{{ userRoleDisplayName }}</span>
+          </div>
+        </div>
+
+        <div class="welcome-banner__right">
+          <div class="welcome-banner__date" aria-label="Today">
+            <mat-icon aria-hidden="true">event</mat-icon>
+            <span>{{ now | date:'fullDate' }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Role-Specific Full Dashboards (when no specific section is selected) -->
     <div *ngIf="shouldShowRoleSpecificDashboard()" class="role-specific-dashboard">
@@ -39,16 +49,6 @@
       *ngIf="selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()"
       class="supply-chain-content"
       [class.hologram-overview-wrapper]="selectedSupplyChainSection === 'hologram-overview'">
-      <!-- Top Action Bar for Payment & Wallet Button -->
-      <div class="top-action-bar" *ngIf="isLicenseeUser() && selectedSupplyChainSection === 'requisition'">
-        <div class="action-bar-content">
-          <button mat-raised-button color="primary" (click)="openWallet()" class="wallet-button">
-            <mat-icon>account_balance_wallet</mat-icon>
-            Payment & Wallet
-          </button>
-        </div>
-      </div>
-
       <!-- Section Header -->
       <div class="section-header">
         <div class="header-left">
@@ -58,9 +58,33 @@
           <h2>{{ getSupplyChainSectionTitle() }}</h2>
         </div>
 
-        <!-- Header Right: Action Button -->
-        <div class="header-right" *ngIf="showHeaderAction()">
-          <button mat-raised-button color="accent" (click)="onHeaderAction()" class="header-action-btn">
+        <!-- Header Right: Wallet Toggle + Action Button -->
+        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle()">
+          <div class="wallet-view-toggle" *ngIf="shouldShowWalletViewToggle()">
+            <button
+              mat-button
+              type="button"
+              class="wallet-view-btn"
+              [class.active]="walletViewMode === 'wallets'"
+              (click)="setWalletViewMode('wallets')">
+              Wallets
+            </button>
+            <button
+              mat-button
+              type="button"
+              class="wallet-view-btn"
+              [class.active]="walletViewMode === 'others'"
+              (click)="setWalletViewMode('others')">
+              License
+            </button>
+          </div>
+
+          <button
+            *ngIf="showHeaderAction()"
+            mat-raised-button
+            color="accent"
+            (click)="onHeaderAction()"
+            class="header-action-btn">
             <mat-icon>{{ getHeaderActionIcon() }}</mat-icon>
             {{ getHeaderActionLabel() }}
           </button>
@@ -73,17 +97,29 @@
         <app-revalidation *ngIf="selectedSupplyChainSection === 'revalidation'"></app-revalidation>
         <app-cancellation *ngIf="selectedSupplyChainSection === 'cancellation'"></app-cancellation>
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
-        <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
+        <app-commissioner-dashboard
+          *ngIf="selectedSupplyChainSection === 'hologram' && isCommissionerUser()"
+          [embeddedHologramOnly]="true"></app-commissioner-dashboard>
+        <app-dailyhologramrecordregister
+          *ngIf="selectedSupplyChainSection === 'commissioner-hologram-working-records' && isCommissionerUser()">
+        </app-dailyhologramrecordregister>
+        <app-hologram-monthly-report
+          *ngIf="selectedSupplyChainSection === 'commissioner-monthly-view-details' && isCommissionerUser()">
+        </app-hologram-monthly-report>
+        <app-hologramprocurement
+          *ngIf="selectedSupplyChainSection === 'hologram' && !isCommissionerUser()"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
+        <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'"></app-payment-confirmation>
+        <app-registration-management
+          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-collaboration' || selectedSupplyChainSection === 'salesman-barman-registration'">
+        </app-registration-management>
         <app-prepare-application
-          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-registration-apply'">
-        </app-prepare-application>
+          *ngIf="selectedSupplyChainSection === 'company-registration-apply'"></app-prepare-application>
         <app-company-collaboration-prepare-application
-          *ngIf="selectedSupplyChainSection === 'company-collaboration'">
+          *ngIf="selectedSupplyChainSection === 'company-collaboration-apply'">
         </app-company-collaboration-prepare-application>
         <app-salesman-registration
-          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration' || selectedSupplyChainSection === 'salesman-barman-registration-apply'">
-        </app-salesman-registration>
+          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration-apply'"></app-salesman-registration>
         <app-label-registration-prepare-application
           *ngIf="selectedSupplyChainSection === 'label-registration'">
         </app-label-registration-prepare-application>
@@ -95,20 +131,22 @@
         <app-itcell *ngIf="selectedSupplyChainSection === 'process-flow'"></app-itcell>
 
         <!-- Officer in Charge specific sections -->
-        <app-transit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-transit>
+        <app-oic-transit-permit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-oic-transit-permit>
 
         <!-- Import the actual components for officer sections -->
-        <app-brands-details *ngIf="selectedSupplyChainSection === 'brands'"></app-brands-details>
-        <app-hologram-monthly-report
+                <app-hologram-monthly-report
           *ngIf="selectedSupplyChainSection === 'monthly-hologram-statement'"></app-hologram-monthly-report>
         <app-hologramdetails
           *ngIf="selectedSupplyChainSection === 'hologram-register'"
-          (hologramRequestsClicked)="openDashboardSection('hologram-request')"
+          (hologramRequestsClicked)="openDashboardSection('oic-hologram-requests')"
           (hologramOverviewClicked)="openDashboardSection('hologram-overview')">
         </app-hologramdetails>
+        <app-officerinchargehologramreq
+          *ngIf="selectedSupplyChainSection === 'oic-hologram-requests'"></app-officerinchargehologramreq>
         <app-oicdailyhologramregister
           *ngIf="selectedSupplyChainSection === 'hologram-daily-entry'"></app-oicdailyhologramregister>
         <app-brandwarehouse *ngIf="selectedSupplyChainSection === 'stock-inventory'"></app-brandwarehouse>
+        <app-oic-bl-details *ngIf="selectedSupplyChainSection === 'bl-details'"></app-oic-bl-details>
 
 
         <!-- Additional Hologram Components -->
@@ -129,35 +167,16 @@
 
         <!-- Officer Activity section -->
         <div *ngIf="selectedSupplyChainSection === 'officer-activity'" class="officer-activity-section">
-          <div class="section-header">
-            <h3>
-              <mat-icon>assignment</mat-icon>
-              Officer Activity Register
-            </h3>
-          </div>
-          <div class="activity-content">
-            <p>Officer activity tracking and register functionality.</p>
-            <div class="placeholder-content">
-              <div class="activity-item">
-                <div class="activity-icon">
-                  <mat-icon>check_circle</mat-icon>
-                </div>
-                <div class="activity-details">
-                  <h4>Application Approved</h4>
-                  <p>Transit permit application TP001/2024 approved</p>
-                  <small>2 hours ago</small>
-                </div>
+          <div class="officer-activity-placeholder">
+            <div class="placeholder-card">
+              <div class="placeholder-icon-wrap">
+                <mat-icon>construction</mat-icon>
               </div>
-              <div class="activity-item">
-                <div class="activity-icon">
-                  <mat-icon>cancel</mat-icon>
-                </div>
-                <div class="activity-details">
-                  <h4>Application Rejected</h4>
-                  <p>Requisition REQ002/2024 rejected due to incomplete documentation</p>
-                  <small>4 hours ago</small>
-                </div>
-              </div>
+              <h3>Under Development</h3>
+              <p>
+                The Officer Activity module is currently under development and will be available very soon.
+              </p>
+              <span class="placeholder-note">Thank you for your patience.</span>
             </div>
           </div>
         </div>
@@ -183,7 +202,7 @@
       <!-- Dynamic Stats Cards based on role -->
       <div class="stats-grid">
         <!-- Applied Stat Card -->
-        <mat-card class="stat-card applied" (click)="showTable('applied')" *ngIf="shouldShowStatCard('applied')">
+        <mat-card class="stat-card applied" *ngIf="shouldShowStatCard('applied')">
           <div class="card-header">
             <div class="circle-icon blue-bg">
               <mat-icon>send</mat-icon>
@@ -206,7 +225,7 @@
         </mat-card>
 
         <!-- Pending Stat Card - Includes awaiting payment -->
-        <mat-card class="stat-card pending" (click)="showTable('pending')" *ngIf="shouldShowStatCard('pending')">
+        <mat-card class="stat-card pending" *ngIf="shouldShowStatCard('pending')">
           <div class="card-header">
             <div class="circle-icon yellow-bg">
               <mat-icon>schedule</mat-icon>
@@ -234,7 +253,7 @@
         </mat-card>
 
         <!-- Approved Stat Card -->
-        <mat-card class="stat-card approved" (click)="showTable('approved')" *ngIf="shouldShowStatCard('approved')">
+        <mat-card class="stat-card approved" *ngIf="shouldShowStatCard('approved')">
           <div class="card-header">
             <div class="circle-icon green-bg">
               <mat-icon>check_circle</mat-icon>
@@ -255,7 +274,7 @@
         </mat-card>
 
         <!-- Rejected Stat Card -->
-        <mat-card class="stat-card rejected" (click)="showTable('rejected')" *ngIf="shouldShowStatCard('rejected')">
+        <mat-card class="stat-card rejected" *ngIf="shouldShowStatCard('rejected')">
           <div class="card-header">
             <div class="circle-icon red-bg">
               <mat-icon>cancel</mat-icon>
@@ -278,8 +297,7 @@
         </mat-card>
 
         <!-- Role-specific additional cards -->
-        <mat-card class="stat-card custom" *ngFor="let customStat of getCustomStats()"
-          (click)="handleCustomStatClick(customStat)">
+        <mat-card class="stat-card custom" *ngFor="let customStat of getCustomStats()">
           <div class="card-header">
             <div class="circle-icon" [ngClass]="customStat.colorClass">
               <mat-icon>{{ customStat.icon }}</mat-icon>
@@ -304,7 +322,7 @@
 
     <!-- Performance Metrics Section (for admin roles) -->
     <div class="performance-metrics"
-      *ngIf="shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      *ngIf="false && shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
       <div class="metrics-header">
         <h3>
           <mat-icon>analytics</mat-icon>
@@ -342,7 +360,7 @@
 
     <!-- Recent Activity Feed (for all roles) -->
     <div class="recent-activity"
-      *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
+      *ngIf="false && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
       <div class="activity-header">
         <h3>
           <mat-icon>history</mat-icon>
@@ -386,16 +404,6 @@
 
     <!-- Dashboard Tables Section - Show when no supply chain section selected and not role-specific dashboard -->
     <ng-container *ngIf="!error && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
-      <!-- Default Table Card -->
-      <mat-card *ngIf="activeTable === 'default'">
-        <mat-card-header>
-          <mat-card-title>Statistics</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="text-center text-muted p-4">Select a category above to view applications</p>
-        </mat-card-content>
-      </mat-card>
-
       <!-- Applied Table Card -->
       <mat-card *ngIf="activeTable === 'applied'">
         <mat-card-header>
@@ -406,7 +414,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="appliedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'applied'">
+            [tableType]="'applied'" (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -421,22 +429,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="pendingDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'pending'" (payment)="onPaymentConfirmed($event)">
-          </app-application-table>
-        </mat-card-content>
-      </mat-card>
-
-      <!-- Approved Table Card -->
-      <mat-card *ngIf="activeTable === 'approved'">
-        <mat-card-header>
-          <button mat-icon-button (click)="goBack()">
-            <mat-icon>arrow_back</mat-icon>
-          </button>
-          <mat-card-title>Approved Applications</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <app-application-table [dataSource]="approvedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'approved'">
+            [tableType]="'pending'" (view)="viewApplication($event)" (payment)="onPaymentConfirmed($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -451,7 +444,7 @@
         </mat-card-header>
         <mat-card-content>
           <app-application-table [dataSource]="rejectedDataSource" [displayedColumns]="displayedColumns"
-            [tableType]="'rejected'">
+            [tableType]="'rejected'" (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>

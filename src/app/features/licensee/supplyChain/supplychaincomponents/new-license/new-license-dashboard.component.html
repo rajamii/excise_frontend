@@ -1,7 +1,8 @@
 <div class="new-license-register-header">
   <div class="row g-3 mb-4 stats-row">
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card approved-requests">
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('approved')" [class.active]="activeSummaryFilter === 'approved'">
         <div class="card-icon"><i class="bi bi-check-circle"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.approved }}</h3>
@@ -10,7 +11,8 @@
       </div>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card pending-requests">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('pending')" [class.active]="activeSummaryFilter === 'pending'">
         <div class="card-icon"><i class="bi bi-clock-history"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.pending }}</h3>
@@ -19,7 +21,8 @@
       </div>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card objection-requests">
+      <div class="summary-card objection-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('objection')" [class.active]="activeSummaryFilter === 'objection'">
         <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.objection }}</h3>
@@ -28,7 +31,8 @@
       </div>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card rejected-requests">
+      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('rejected')" [class.active]="activeSummaryFilter === 'rejected'">
         <div class="card-icon"><i class="bi bi-x-circle"></i></div>
         <div class="card-content">
           <h3 class="card-value">{{ counts.rejected }}</h3>
@@ -104,21 +108,57 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of filteredRows; let i = index">
-            <td>{{ i + 1 }}</td>
+          <tr *ngFor="let row of pagedRows; let i = index">
+            <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
             <td class="fw-semibold">{{ row.applicationId }}</td>
             <td>{{ row.submittedOn }}</td>
             <td>{{ row.applicantName }}</td>
             <td>{{ row.establishmentName }}</td>
             <td>{{ row.currentStage }}</td>
             <td>
-              <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
+              <button class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                 <i class="bi bi-eye-fill"></i>
+              </button>
+              <button *ngIf="!isLicenseeUser()" class="btn btn-link p-0 action-eye" title="View Timeline" (click)="viewTimeline(row)">
+                <i class="bi bi-clock-history"></i>
               </button>
             </td>
           </tr>
         </tbody>
       </table>
+
+      <div class="pagination-bar" *ngIf="filteredRows.length > 0">
+        <div class="page-summary">
+          Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }}
+        </div>
+
+        <div class="page-controls">
+          <div class="page-size">
+            <span class="page-size-label">Page size</span>
+            <select
+              class="form-select form-select-sm page-size-select"
+              [(ngModel)]="pageSize"
+              (ngModelChange)="onPageSizeChange()"
+            >
+              <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+            </select>
+          </div>
+
+          <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0">
+            Prev
+          </button>
+          <span class="page-indicator" *ngIf="totalPages > 0">
+            Page {{ pageIndex + 1 }} / {{ totalPages }}
+          </span>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            (click)="nextPage()"
+            [disabled]="totalPages === 0 || pageIndex >= totalPages - 1"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="loading-state" *ngIf="isLoading">Loading applications...</div>

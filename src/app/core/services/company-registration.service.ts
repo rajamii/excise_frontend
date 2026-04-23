@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CompanyDocuments } from '../models/company.model';
 
@@ -24,6 +25,16 @@ export class CompanyRegistrationService {
     return this.http.get(`${this.baseUrl}/list/`);
   }
 
+  // Backward-compatible list endpoint
+  getCompanyList(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/`);
+  }
+
+  // Get company record by numeric id (admin/master style endpoint)
+  getCompanyById(id: number): Observable<any> {
+    return this.http.get(`${this.baseUrl}/${id}/`);
+  }
+
   // Get company registration details by application ID
   getCompanyDetail(applicationId: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/detail/${applicationId}/`);
@@ -31,12 +42,38 @@ export class CompanyRegistrationService {
 
   // Get dashboard counts
   getDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/dashboard-counts/`);
+    const url = `${this.baseUrl}/dashboard-counts/`;
+    console.log(' Company Registration API Call:', url);
+    return this.http.get(url).pipe(
+      tap(response => {
+        console.log(' Company Registration Response:', response);
+      }),
+      catchError(error => {
+        console.error(' Company Registration Error:', error);
+        console.error(' Error Status:', error.status);
+        console.error(' Error Details:', error.error);
+        console.error(' Error URL:', url);
+        throw error;
+      })
+    );
   }
 
   // Get applications grouped by status
   getApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/list-by-status/`);
+    const url = `${this.baseUrl}/list-by-status/`;
+    console.log(' Company Registration API Call:', url);
+    return this.http.get(url).pipe(
+      tap(response => {
+        console.log(' Company Registration Response:', response);
+      }),
+      catchError(error => {
+        console.error(' Company Registration Error:', error);
+        console.error(' Error Status:', error.status);
+        console.error(' Error Details:', error.error);
+        console.error(' Error URL:', url);
+        throw error;
+      })
+    );
   }
 
   // Document management methods

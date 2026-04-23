@@ -13,15 +13,22 @@
         {{ getPrintCount() }}
       </strong>
     </p>
+
+    <p class="print-count" *ngIf="getPrintCount() >= 5">
+      Duplicate print fee status:
+      <strong [ngClass]="{ 'over-limit': !getIsPrintFeePaid() }">
+        {{ getIsPrintFeePaid() ? 'Paid (1 copy)' : 'Not paid' }}
+      </strong>
+    </p>
   </mat-dialog-content>
 
   <mat-dialog-actions align="center">
     <!-- ✅ SIMPLIFIED: Only check print count, not approval status -->
-    <button matButton="filled" color="primary" [disabled]="getPrintCount() >= 5" (click)="onPrint()">
+    <button matButton="filled" color="primary" [disabled]="!canPrint() || printing" (click)="onPrint()">
       Print License
     </button>
 
-    <button matButton="outlined" (click)="onPay()" *ngIf="getPrintCount() >= 5">
+    <button matButton="outlined" (click)="onPay()" *ngIf="needsPayment()" [disabled]="paying">
       Pay
     </button>
 

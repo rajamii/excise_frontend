@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
+import { environment } from '../../../environments/environment';
 /**
  * Master Service - Complete Version with All Endpoints
  * 
@@ -15,14 +15,13 @@ import { Observable } from 'rxjs';
 })
 export class MasterService {
   
-  // Django backend base URL
-  private readonly DJANGO_BASE = 'http://localhost:8000';
-  
+ 
+ 
   // Base URL for all master data endpoints
-  private readonly BASE_URL = `${this.DJANGO_BASE}/masters/core`;
+  private readonly BASE_URL = `${environment.apiBaseUrl}/masters/core`;
 
   // User endpoints (licensee profiles live here)
-  private readonly USER_BASE_URL = `${this.DJANGO_BASE}/auth/users`;
+  private readonly USER_BASE_URL = `${environment.apiBaseUrl}/auth/users`;
   
   // =========================================================================
   // ENDPOINT URLs
@@ -46,9 +45,7 @@ export class MasterService {
   private readonly WARD_URL = `${this.BASE_URL}/wards`;
 
   constructor(private http: HttpClient) {
-    console.log('🔧 MasterService initialized');
-    console.log('📍 Django Base:', this.DJANGO_BASE);
-    console.log('📍 Base URL:', this.BASE_URL);
+  
   }
 
   // =========================================================================

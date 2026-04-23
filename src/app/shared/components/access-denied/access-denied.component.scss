@@ -1,0 +1,77 @@
+.access-denied-container {
+  min-height: 85vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #edf2fb 0%, #d7e3fc 100%);
+}
+
+.access-card {
+  width: min(680px, 100%);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 36px 30px;
+  box-shadow: 0 14px 36px rgba(17, 24, 39, 0.12);
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+.status-code {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 22px;
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+h1 {
+  margin: 0 0 10px;
+  font-size: 34px;
+  line-height: 1.2;
+  color: #111827;
+}
+
+p {
+  margin: 0 auto;
+  max-width: 540px;
+  color: #4b5563;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 11px 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  color: #fff;
+  background: #1e3a8a;
+  box-shadow: 0 8px 18px rgba(30, 58, 138, 0.3);
+}
+
+.btn.secondary {
+  color: #1f2937;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}

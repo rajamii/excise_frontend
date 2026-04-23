@@ -3,6 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupplyChainService } from '../services/supplychain.service';
+import { SupplyChainProfileService } from '../../../../core/services/supply-chain-profile.service';
+import { PaymentIntegrationService } from '../../../../core/services/payment-integration.service';
 
 interface DisplayData {
   refNo: string;
@@ -12,7 +14,17 @@ interface DisplayData {
   permitNumbers: string;
   permitDate: Date;
   expiryDate: Date;
-  // Add other fields as needed based on backend response
+}
+
+interface WalletSummaryRowLike {
+  wallet_type?: string;
+  walletType?: string;
+  module_type?: string;
+  moduleType?: string;
+  head_of_account?: string;
+  headOfAccount?: string;
+  current_balance?: string | number;
+  currentBalance?: string | number;
 }
 
 @Component({
@@ -23,8 +35,24 @@ interface DisplayData {
   imports: [CommonModule, FormsModule],
 })
 export class RevalidationRequestComponent implements OnInit {
-  message: string = '';
-  messageType: string = 'danger';
+  readonly revalidationCharge = 1000;
+
+  message = '';
+  messageType = 'danger';
+  isViewMode = false;
+  currentLicenseeId = '';
+  availableWalletBalance = 0;
+  walletSourceLabel = 'Excise / Additional Wallet Balance';
+  walletErrorMessage = '';
+  isWalletLoading = false;
+  isSubmittingRevalidation = false;
+  isRevalidationReady = false;
+  showDeclaration = false;
+  showWalletConfirmation = false;
+  walletDeclarationAccepted = false;
+  currentStatus = '';
+  currentAllowedActions: string[] = [];
+  currentRevalidationId = '';
 
   displayData: DisplayData = {
     refNo: '',
@@ -36,15 +64,16 @@ export class RevalidationRequestComponent implements OnInit {
     expiryDate: new Date(),
   };
 
-  isViewMode: boolean = false;
-
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private supplyChainService: SupplyChainService
-  ) { }
+    private supplyChainService: SupplyChainService,
+    private profileService: SupplyChainProfileService,
+    private paymentIntegrationService: PaymentIntegrationService
+  ) {}
 
   ngOnInit() {
+    this.fetchProfile();
     this.route.queryParams.subscribe((params) => {
       const id = params['id'];
       this.isViewMode = params['mode'] === 'view';
@@ -52,9 +81,6 @@ export class RevalidationRequestComponent implements OnInit {
       if (id) {
         this.loadRevalidationData(id);
       } else {
-        // Only if NOT viewing (creating new) do we care about missing ID differently?
-        // Actually for request we usually need ID unless it's a completely new blank form?
-        // Let's keep existing logic.
         this.showMessage('No Revalidation ID provided.', 'danger');
         setTimeout(() => this.goBack(), 2000);
       }
@@ -64,89 +90,363 @@ export class RevalidationRequestComponent implements OnInit {
   private loadRevalidationData(id: string) {
     this.supplyChainService.getRevalidationDetail(id).subscribe({
       next: (data) => {
-        console.log('Detail Data:', data); // Debug log
-        this.displayData = {
-          refNo: data.ourRefNo || data.our_ref_no,
-          date: new Date(data.revalidationDate || data.revalidationDate),
-          totalENA: data.totalBl || data.total_bl,
-          bulk_spirit_type: data.strength || data.bulk_spirit_type || '',
-          permitNumbers: (data.requisitonNumberOfPermits || data.requisiton_number_of_permits || '0').toString(),
-          permitDate: new Date(data.requisitionDate || data.requisition_date),
-          expiryDate: new Date(data.revalidationDate || data.revalidation_date),
-        };
+        this.applyRevalidationData(data);
       },
-      error: (error) => {
-        this.showMessage('Error loading data: ' + error.message, 'danger');
+      error: () => {
+        const ref = this.route.snapshot.queryParams['ref'];
+        this.supplyChainService.createRevalidationFromRequisition(id, ref).subscribe({
+          next: (response) => {
+            const data = response?.data || response;
+            this.applyRevalidationData(data);
+          },
+          error: (error) => {
+            this.showMessage('Error loading data: ' + (error?.message || 'Unable to load revalidation.'), 'danger');
+          }
+        });
       },
+    });
+  }
+
+  private applyRevalidationData(data: any) {
+    if (!data) {
+      this.showMessage('Revalidation data not available.', 'danger');
+      return;
+    }
+
+    this.currentRevalidationId = String(data.id || data.pk || '').trim();
+    this.currentStatus = data.status || '';
+    this.currentAllowedActions = data.allowedActions || data.allowed_actions || [];
+    this.isRevalidationReady = !!this.currentRevalidationId;
+    this.displayData = {
+      refNo: data.ourRefNo || data.our_ref_no || this.displayData.refNo,
+      date: new Date(data.revalidationDate || data.revalidation_date || Date.now()),
+      totalENA: data.totalBl || data.total_bl || '0',
+      bulk_spirit_type: data.strength || data.bulk_spirit_type || '',
+      permitNumbers: (data.requisitonNumberOfPermits || data.requisiton_number_of_permits || '0').toString(),
+      permitDate: new Date(data.requisitionDate || data.requisition_date || Date.now()),
+      expiryDate: new Date(data.revalidationDate || data.revalidation_date || Date.now()),
+    };
+  }
+
+  private fetchProfile() {
+    this.profileService.getProfile().subscribe({
+      next: (res: any) => {
+        this.currentLicenseeId = this.resolveLicenseeId(res?.data);
+        if (!this.currentLicenseeId) {
+          this.walletErrorMessage = 'Active licensee id not found for the logged-in user.';
+          return;
+        }
+        this.loadWalletBalance();
+      },
+      error: () => {
+        this.currentLicenseeId = this.resolveLicenseeId();
+        if (this.currentLicenseeId) {
+          this.loadWalletBalance();
+        } else {
+          this.walletErrorMessage = 'Active licensee id not found for the logged-in user.';
+        }
+      }
     });
   }
 
   showDeclarationModal() {
-    // Using Bootstrap modal via JavaScript
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
+    if (this.isSubmittingRevalidation) {
+      return;
     }
+    if (!this.canSubmitRevalidation()) {
+      return;
+    }
+    this.showDeclaration = true;
   }
 
-  submitRevalidation() {
-    // Hide the modal first
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      // Use Bootstrap's instance to hide it properly
-      const bootstrap = (window as any).bootstrap;
-      if (bootstrap) {
-        const modalInstance = bootstrap.Modal.getInstance(modalElement);
-        if (modalInstance) {
-          modalInstance.hide();
-        }
-      } else {
-        // Fallback for direct DOM manipulation if bootstrap global not found (though it should be)
-        modalElement.classList.remove('show');
-        document.body.classList.remove('modal-open');
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) backdrop.remove();
-      }
+  closeDeclarationModal() {
+    if (this.isSubmittingRevalidation) {
+      return;
     }
+    this.showDeclaration = false;
+  }
 
-    const id = this.route.snapshot.queryParams['id'];
-    if (!id) {
-      this.showMessage('No Revalidation ID found to submit.', 'danger');
+  openWalletConfirmation() {
+    if (this.isSubmittingRevalidation) {
+      return;
+    }
+    this.showDeclaration = false;
+
+    if (!this.currentLicenseeId) {
+      this.showMessage('Licensee profile not loaded. Cannot submit revalidation.', 'danger');
       return;
     }
 
-    this.supplyChainService.submitRevalidation(id).subscribe({
-      next: (response) => {
-        // Success
-        this.showMessage('Revalidation request submitted successfully!', 'success');
+    this.walletDeclarationAccepted = false;
+    this.showWalletConfirmation = true;
+    this.loadWalletBalance();
+  }
 
-        // Navigate back to the list after a short delay
-        setTimeout(() => {
-          this.router.navigate(['/licensee/supply-chain'], { queryParams: { tab: 'revalidation' } });
-        }, 1500);
+  closeWalletConfirmation() {
+    if (this.isSubmittingRevalidation) {
+      return;
+    }
+    this.showWalletConfirmation = false;
+    this.walletDeclarationAccepted = false;
+  }
+
+  private loadWalletBalance() {
+    if (!this.currentLicenseeId) {
+      this.walletErrorMessage = 'Active licensee id not found for the logged-in user.';
+      return;
+    }
+
+    this.isWalletLoading = true;
+    this.walletErrorMessage = '';
+
+    this.paymentIntegrationService.getWalletSummary(this.currentLicenseeId).subscribe({
+      next: (response) => {
+        const rows = Array.isArray(response?.results) ? response.results : [];
+        this.availableWalletBalance = this.extractRevalidationWalletBalance(rows);
+        if (!rows.length) {
+          this.walletErrorMessage = 'Wallet summary rows are unavailable for the active licensee.';
+        }
+        this.isWalletLoading = false;
       },
-      error: (error) => {
-        console.error('Submission error:', error);
-        const errMsg = error.error?.message || error.error?.error || error.message || 'Unknown error';
-        this.showMessage('Failed to submit revalidation: ' + errMsg, 'danger');
+      error: () => {
+        this.availableWalletBalance = 0;
+        this.walletErrorMessage = 'Unable to load Excise / Additional wallet balance right now.';
+        this.isWalletLoading = false;
       }
     });
   }
 
-  goBack() {
-    this.router.navigate(['/dev-supply-chain'], { queryParams: { tab: 'revalidation' } });
+  submitRevalidation(event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (this.isSubmittingRevalidation) {
+      return;
+    }
+    if (!this.canProceedWithWalletConfirmation()) {
+      return;
+    }
+
+    const routeId = this.route.snapshot.queryParams['id'];
+    const routeRef = this.route.snapshot.queryParams['ref'];
+    const id = this.currentRevalidationId;
+    if (!id && !routeId) {
+      this.showMessage('No Revalidation ID found to submit.', 'danger');
+      return;
+    }
+
+    this.isSubmittingRevalidation = true;
+
+    const submitWithId = (revalidationId: string) => {
+      this.supplyChainService.submitRevalidation(revalidationId).subscribe({
+        next: (response) => {
+          this.showWalletConfirmation = false;
+          this.walletDeclarationAccepted = false;
+          const walletDeduction = response?.wallet_deduction || response?.walletDeduction;
+          const debited = walletDeduction?.debited !== false;
+          if (debited) {
+            const balanceAfter = Number(walletDeduction?.balance_after ?? walletDeduction?.balanceAfter);
+            this.availableWalletBalance = Number.isFinite(balanceAfter)
+              ? balanceAfter
+              : this.getBalanceAfterDeduction();
+            this.showMessage('Revalidation request submitted successfully!', 'success');
+          } else {
+            const reason = walletDeduction?.reason || 'Wallet was not debited';
+            this.showMessage(`Revalidation submitted. ${reason}.`, 'success');
+          }
+
+          setTimeout(() => {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });
+          }, 1500);
+        },
+        error: (error) => {
+          console.error('Submission error:', error);
+          const errMsg = error.error?.message || error.error?.error || error.message || 'Unknown error';
+          this.showMessage('Failed to submit revalidation: ' + errMsg, 'danger');
+          this.isSubmittingRevalidation = false;
+        }
+      });
+    };
+
+    if (id) {
+      submitWithId(id);
+      return;
+    }
+
+    this.supplyChainService.createRevalidationFromRequisition(routeId, routeRef).subscribe({
+      next: (response) => {
+        const data = response?.data || response;
+        this.applyRevalidationData(data);
+        if (!this.currentRevalidationId) {
+          this.showMessage('Unable to resolve revalidation id for submission.', 'danger');
+          this.isSubmittingRevalidation = false;
+          return;
+        }
+        submitWithId(this.currentRevalidationId);
+      },
+      error: (error) => {
+        const errMsg = error.error?.message || error.error?.error || error.message || 'Unknown error';
+        this.showMessage('Failed to prepare revalidation submission: ' + errMsg, 'danger');
+        this.isSubmittingRevalidation = false;
+      }
+    });
   }
 
+  getBalanceAfterDeduction(): number {
+    return this.availableWalletBalance - this.revalidationCharge;
+  }
+
+  hasSufficientWalletBalance(): boolean {
+    return this.getBalanceAfterDeduction() >= 0;
+  }
+
+  canProceedWithWalletConfirmation(): boolean {
+    return (
+      !this.isWalletLoading &&
+      !this.isSubmittingRevalidation &&
+      !this.walletErrorMessage &&
+      this.walletDeclarationAccepted &&
+      this.hasSufficientWalletBalance()
+    );
+  }
+
+  canSubmitRevalidation(): boolean {
+    const normalizedStatus = String(this.currentStatus || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return this.isRevalidationReady && (
+      this.currentAllowedActions.includes('REQUEST_REVALIDATION') ||
+      normalizedStatus === 'importpermitextends45daysinvalid'
+    );
+  }
+
+  formatCurrency(amount: number): string {
+    return `Rs ${this.toNumber(amount).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  }
+
+  goBack() {
+    const sourceParam = String(this.route.snapshot.queryParams['source'] || '').trim().toLowerCase();
+    let normalizedSource = 'licensee-dashboard';
+
+    if (sourceParam.includes('commissioner')) {
+      normalizedSource = 'commissioner-dashboard';
+    } else if (sourceParam.includes('permit-section')) {
+      normalizedSource = 'permit-section';
+    } else if (sourceParam.includes('licensee')) {
+      normalizedSource = 'licensee-dashboard';
+    }
+
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'revalidation',
+        source: normalizedSource
+      }
+    });
+  }
 
   private showMessage(msg: string, type: string) {
     this.message = msg;
     this.messageType = type;
 
-    // Auto hide after 5 seconds
     setTimeout(() => {
       this.message = '';
+      if (type === 'success') {
+        this.isSubmittingRevalidation = false;
+      }
     }, 5000);
   }
-}
 
+  private extractRevalidationWalletBalance(rows: WalletSummaryRowLike[]): number {
+    return rows.reduce((sum, row) => {
+      const walletType = String(row.wallet_type ?? row.walletType ?? '').toLowerCase();
+      const moduleType = String(row.module_type ?? row.moduleType ?? '').toLowerCase();
+      const hoa = String(row.head_of_account ?? row.headOfAccount ?? '').trim();
+      const inferredWalletType = walletType || this.inferWalletTypeFromHoa(hoa);
+
+      if (inferredWalletType === 'education_cess' || inferredWalletType === 'hologram') {
+        return sum;
+      }
+
+      if (inferredWalletType === 'excise' || inferredWalletType === 'brewery' || moduleType === 'brewery') {
+        return sum + this.toNumber(row.current_balance ?? row.currentBalance ?? 0);
+      }
+
+      return sum;
+    }, 0);
+  }
+
+  private inferWalletTypeFromHoa(hoa: string): string {
+    if (hoa === '0045-00-112-45-03') {
+      return 'education_cess';
+    }
+    if (
+      hoa === '0039-00-800-45-01' ||
+      hoa === '0039-00-105-45-04' ||
+      hoa === '0039-80-800-45-01'
+    ) {
+      return 'hologram';
+    }
+    if (hoa === '0038-00-102-45-00') {
+      return 'brewery';
+    }
+    return 'excise';
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private resolveLicenseeId(profileData?: any): string {
+    const fromProfile = this.pickFirstNonEmpty(profileData, [
+      'licenseeId',
+      'licensee_id',
+      'licenseId',
+      'license_id',
+      'licenseeIdNo',
+      'licensee_id_no'
+    ]);
+
+    if (fromProfile) {
+      return fromProfile;
+    }
+
+    const fromSession = sessionStorage.getItem('currentUser');
+    if (fromSession) {
+      try {
+        const parsed = JSON.parse(fromSession);
+        return this.pickFirstNonEmpty(parsed, [
+          'licensee_id',
+          'licenseeId',
+          'license_id',
+          'licenseId',
+          'licensee_id_no',
+          'licenseeIdNo',
+          'username',
+          'userName'
+        ]);
+      } catch (error) {
+        console.error('Invalid currentUser session payload:', error);
+      }
+    }
+
+    return '';
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    if (!source || typeof source !== 'object') {
+      return '';
+    }
+
+    for (const key of keys) {
+      const value = String(source?.[key] ?? '').trim();
+      if (value) {
+        return value;
+      }
+    }
+
+    return '';
+  }
+}

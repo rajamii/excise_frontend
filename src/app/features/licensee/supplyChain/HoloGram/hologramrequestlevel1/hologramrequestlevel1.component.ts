@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface HologramRequest {
   totalHolograms: number;
@@ -17,6 +18,8 @@ interface HologramRequest {
   styleUrl: './hologramrequestlevel1.component.scss'
 })
 export class Hologramrequestlevel1Component implements OnInit {
+  minUsageDate = '';
+  maxUsageDate = '';
 
   requestData: HologramRequest = {
     totalHolograms: 0,
@@ -27,14 +30,40 @@ export class Hologramrequestlevel1Component implements OnInit {
   isSubmitting: boolean = false;
   showSuccessModal: boolean = false;
   generatedRefNumber: string = '';
+  establishmentName = 'N/A';
 
   private hologramService = inject(HologramDataService);
+  private supplyChainProfileService = inject(SupplyChainProfileService);
 
   constructor(private router: Router) { }
 
   ngOnInit(): void {
-    // No initialization needed for simplified form
-    // Trigger rebuild
+    this.initializeUsageDateWindow();
+    this.loadEstablishmentName();
+  }
+
+  private initializeUsageDateWindow(): void {
+    const today = new Date();
+    const dayAfterTomorrow = new Date(today);
+    dayAfterTomorrow.setDate(today.getDate() + 2);
+
+    this.minUsageDate = this.toDateInputValue(today);
+    this.maxUsageDate = this.toDateInputValue(dayAfterTomorrow);
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private isUsageDateAllowed(): boolean {
+    const usageDate = String(this.requestData.usageDate || '').trim();
+    if (!usageDate || !this.minUsageDate || !this.maxUsageDate) {
+      return false;
+    }
+    return usageDate >= this.minUsageDate && usageDate <= this.maxUsageDate;
   }
 
 
@@ -51,7 +80,7 @@ export class Hologramrequestlevel1Component implements OnInit {
 
       this.hologramService.createRequest(payload).subscribe({
         next: (res) => {
-          this.generatedRefNumber = res.refNo || this.generateReferenceNumber(); // Fallback if backend doesn't return refNo
+          this.generatedRefNumber = this.resolveReferenceNumber(res);
           this.isSubmitting = false;
           this.showSuccessModal = true;
           console.log('✅ Request submitted successfully:', res);
@@ -68,6 +97,13 @@ export class Hologramrequestlevel1Component implements OnInit {
   // ... (keeping isValidForm and generateReferenceNumber as helpers if needed, though ref no comes from backend)
 
   private isValidForm(): boolean {
+    if (!this.isUsageDateAllowed()) {
+      alert(
+        `Usage date must be between ${new Date(this.minUsageDate).toLocaleDateString('en-GB')} and ${new Date(this.maxUsageDate).toLocaleDateString('en-GB')}.`
+      );
+      return false;
+    }
+
     return !!(
       this.requestData.totalHolograms > 0 &&
       this.requestData.hologramType &&
@@ -75,14 +111,43 @@ export class Hologramrequestlevel1Component implements OnInit {
     );
   }
 
-  private generateReferenceNumber(): string {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  private resolveReferenceNumber(response: any): string {
+    const value = String(response?.refNo || response?.ref_no || '').trim();
+    if (value) {
+      return value.replace(/^NHP(?=\/)/i, 'HQR');
+    }
+    return this.generateReferenceNumber();
+  }
 
-    return `HRQ/${year}${month}${day}/${random}`;
+  private getFinancialYear(referenceDate: Date = new Date()): string {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth() + 1;
+    return month >= 4
+      ? `${year}-${String(year + 1).slice(-2)}`
+      : `${year - 1}-${String(year).slice(-2)}`;
+  }
+
+  private generateReferenceNumber(): string {
+    const financialYear = this.getFinancialYear();
+    const random = Math.floor(Math.random() * 9999) + 1;
+    return `HQR/1101/${financialYear}/${String(random).padStart(4, '0')}`;
+  }
+
+  private loadEstablishmentName(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (response) => {
+        const profile = response?.data as any;
+        const name = String(
+          profile?.manufacturingUnitName ||
+          profile?.manufacturing_unit_name ||
+          ''
+        ).trim();
+        this.establishmentName = name || 'N/A';
+      },
+      error: () => {
+        this.establishmentName = 'N/A';
+      }
+    });
   }
 
   private saveRequest(): void {
@@ -106,11 +171,11 @@ Application Date: ${currentDate}
 
 APPLICANT DETAILS:
 ------------------
-Company Name: Sikkim Distilleries Ltd
-License Number: SDL/2024/001
-Address: Industrial Area, Rangpo, East Sikkim - 737132
-Contact: +91-3592-252001
-Email: info@sikkimdistilleries.com
+Company Name: ${this.establishmentName}
+License Number: N/A
+Address: N/A
+Contact: N/A
+Email: N/A
 
 REQUEST DETAILS:
 ----------------
@@ -179,6 +244,7 @@ End of Application
       hologramType: 'LOCAL',
       usageDate: ''
     };
+    this.initializeUsageDateWindow();
   }
 
   closeModal(): void {

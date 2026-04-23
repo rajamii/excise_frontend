@@ -9,6 +9,12 @@
             Hologram Inventory
           </h2>
           <p class="page-subtitle">Comprehensive hologram inventory and usage analytics</p>
+          @if (establishmentDisplay) {
+          <div class="establishment-chip">
+            <i class="bi bi-buildings me-2"></i>
+            <span>Establishment: {{ establishmentDisplay }}</span>
+          </div>
+          }
         </div>
         <div class="col-auto">
           <div class="header-actions">
@@ -40,7 +46,7 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalHolograms() | number }}</h3>
               <p class="card-label">Total Holograms</p>
-              <small class="card-change neutral">Sum of Total Count from Serial Numbers Data</small>
+             
             </div>
           </div>
         </div>
@@ -54,7 +60,7 @@
               <h3 class="card-value">{{ getTotalAvailable() | number }}</h3>
               <p class="card-label">Available</p>
               <small class="card-change neutral">{{ getPercentage(getTotalAvailable(), getTotalHolograms()) |
-                number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
+                number:'1.1-1' }}% of total</small>
             </div>
           </div>
         </div>
@@ -68,7 +74,7 @@
               <h3 class="card-value">{{ getTotalUsedInProduction() | number }}</h3>
               <p class="card-label">Used in Production</p>
               <small class="card-change neutral">{{ getPercentage(getTotalUsedInProduction(), getTotalHolograms()) |
-                number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
+                number:'1.1-1' }}% of total</small>
             </div>
           </div>
         </div>
@@ -82,7 +88,7 @@
               <h3 class="card-value">{{ getTotalDamagedWastage() | number }}</h3>
               <p class="card-label">Damaged/Wastage</p>
               <small class="card-change negative">{{ getPercentage(getTotalDamagedWastage(), getTotalHolograms()) |
-                number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
+                number:'1.1-1' }}% of total</small>
             </div>
           </div>
         </div>
@@ -472,6 +478,14 @@
                             </select>
                           </div>
                           <div class="col-md-2">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="rollsFilters.month"
+                              (change)="applyRollsFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-2">
                             <label class="form-label small fw-bold">Date From</label>
                             <input type="date" class="form-control form-control-sm" [(ngModel)]="rollsFilters.dateFrom"
                               (change)="applyRollsFilters()">
@@ -483,17 +497,17 @@
                           </div>
                           <div class="col-md-2">
                             <label class="form-label small fw-bold">Serial Range</label>
-                            <input type="text" class="form-control form-control-sm"
-                              [(ngModel)]="rollsFilters.serialSearch" (input)="applyRollsFilters()"
-                              placeholder="e.g. HG001001">
-                          </div>
-                          <div class="col-md-2">
-                            <button class="btn btn-outline-secondary btn-sm me-2" (click)="clearRollsFilters()">
-                              <i class="bi bi-x-circle me-1"></i>Clear
-                            </button>
-                            <button class="btn btn-success btn-sm" (click)="exportRollsData()">
-                              <i class="bi bi-download me-1"></i>Export
-                            </button>
+                            <div class="input-group input-group-sm flex-nowrap">
+                              <input type="text" class="form-control"
+                                [(ngModel)]="rollsFilters.serialSearch" (input)="applyRollsFilters()"
+                                placeholder="e.g. HG001001">
+                              <button class="btn btn-outline-secondary" type="button" (click)="clearRollsFilters()">
+                                <i class="bi bi-x-circle me-1"></i>Clear
+                              </button>
+                              <button class="btn btn-success" type="button" (click)="exportRollsData()">
+                                <i class="bi bi-download me-1"></i>Export
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -507,11 +521,34 @@
                     {{ getRollsFilterSummary() }}
                   </small>
                 </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="rollsTablePageSize"
+                      (change)="onRollsTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getRollsTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(1)"
+                      [disabled]="rollsTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(rollsTablePage - 1)"
+                      [disabled]="rollsTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(rollsTablePage + 1)"
+                      [disabled]="rollsTablePage >= getRollsTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setRollsTablePage(getRollsTableTotalPages())"
+                      [disabled]="rollsTablePage >= getRollsTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
                       <tr>
                         <th>Received Date</th>
+                        <th>Received By</th>
                         <th>Carton Number</th>
                         <th>Type</th>
                         <th>From Serial</th>
@@ -525,9 +562,10 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @for (roll of (hasActiveRollsFilters() ? filteredRollsData : rollsData); track roll.id) {
+                      @for (roll of getRollsTableRows(); track roll.id) {
                       <tr [class.table-success]="isNewRoll(roll)" [class.new-roll-highlight]="isNewRoll(roll)">
                         <td>{{ roll.receivedDate | date:'dd-MMM-yyyy' }}</td>
+                        <td>{{ roll.receivedBy || '—' }}</td>
                         <td>
                           <div class="d-flex align-items-center">
                             <span class="fw-bold text-primary">{{ roll.cartoonNumber }}</span>
@@ -564,7 +602,7 @@
                       </tr>
                       } @empty {
                       <tr>
-                        <td colspan="11" class="text-center text-muted">No data available - rollsData is empty</td>
+                        <td colspan="12" class="text-center text-muted">No rolls found for the selected filters.</td>
                       </tr>
                       }
                     </tbody>
@@ -619,6 +657,61 @@
                   </div>
                 </div>
 
+                <div class="row g-3 mb-3">
+                  <div class="col-12">
+                    <div class="filter-card">
+                      <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="availableFilters.month"
+                              (change)="applyAvailableFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date From</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="availableFilters.dateFrom"
+                              (change)="applyAvailableFilters()">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date To</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="availableFilters.dateTo"
+                              (change)="applyAvailableFilters()">
+                          </div>
+                          <div class="col-md-3 d-flex justify-content-end">
+                            <button class="btn btn-outline-secondary btn-sm" (click)="clearAvailableFilters()">
+                              <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="availableTablePageSize"
+                      (change)="onAvailableTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getAvailableTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(1)"
+                      [disabled]="availableTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(availableTablePage - 1)"
+                      [disabled]="availableTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(availableTablePage + 1)"
+                      [disabled]="availableTablePage >= getAvailableTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setAvailableTablePage(getAvailableTableTotalPages())"
+                      [disabled]="availableTablePage >= getAvailableTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -631,11 +724,11 @@
                         <th>Percentage Available</th>
                         <th>Status</th>
                       </tr>
-                    </thead>
-                    <tbody>
-                      @for (available of availableData; track available.id) {
-                      <tr [class.table-success]="isNewAvailable(available)"
-                        [class.new-roll-highlight]="isNewAvailable(available)">
+                      </thead>
+                      <tbody>
+                        @for (available of getAvailableTableRows(); track available.id) {
+                        <tr [class.table-success]="isNewAvailable(available)"
+                          [class.new-roll-highlight]="isNewAvailable(available)">
                         <td>
                           <div class="d-flex align-items-center">
                             <span class="fw-bold text-primary">{{ available.cartoonNumber }}</span>
@@ -675,12 +768,16 @@
                             }
                           </div>
                         </td>
-                      </tr>
-                      }
-                    </tbody>
-                  </table>
+                        </tr>
+                        } @empty {
+                        <tr>
+                          <td colspan="7" class="text-center text-muted">No available rows found for the selected filters.</td>
+                        </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
             </div>
             }
 
@@ -723,6 +820,61 @@
                   </div>
                 </div>
 
+                <div class="row g-3 mb-3">
+                  <div class="col-12">
+                    <div class="filter-card">
+                      <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="issuedFilters.month"
+                              (change)="applyIssuedFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date From</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="issuedFilters.dateFrom"
+                              (change)="applyIssuedFilters()">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date To</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="issuedFilters.dateTo"
+                              (change)="applyIssuedFilters()">
+                          </div>
+                          <div class="col-md-3 d-flex justify-content-end">
+                            <button class="btn btn-outline-secondary btn-sm" (click)="clearIssuedFilters()">
+                              <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="issuedTablePageSize"
+                      (change)="onIssuedTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getIssuedTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(1)"
+                      [disabled]="issuedTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(issuedTablePage - 1)"
+                      [disabled]="issuedTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(issuedTablePage + 1)"
+                      [disabled]="issuedTablePage >= getIssuedTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setIssuedTablePage(getIssuedTableTotalPages())"
+                      [disabled]="issuedTablePage >= getIssuedTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -736,7 +888,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @for (issued of issuedData; track issued.id) {
+                      @for (issued of getIssuedTableRows(); track issued.id) {
                       <tr [class.table-warning]="issued.status === 'IN_PROGRESS'"
                         [class.table-success]="issued.status === 'COMPLETED'">
                         <td>
@@ -807,6 +959,62 @@
                 <small class="text-muted">Completed daily register entries (approved by officer)</small>
               </div>
               <div class="card-body">
+
+                <div class="row g-3 mb-3">
+                  <div class="col-12">
+                    <div class="filter-card">
+                      <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Month</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="historyFilters.month"
+                              (change)="applyHistoryFilters()">
+                              <option value="">All Months</option>
+                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                            </select>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date From</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="historyFilters.dateFrom"
+                              (change)="applyHistoryFilters()">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label small fw-bold">Date To</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="historyFilters.dateTo"
+                              (change)="applyHistoryFilters()">
+                          </div>
+                          <div class="col-md-3 d-flex justify-content-end">
+                            <button class="btn btn-outline-secondary btn-sm" (click)="clearHistoryFilters()">
+                              <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="historyTablePageSize"
+                      (change)="onHistoryTablePageSizeChange()">
+                      <option *ngFor="let size of tablePageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getHistoryTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(1)"
+                      [disabled]="historyTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(historyTablePage - 1)"
+                      [disabled]="historyTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(historyTablePage + 1)"
+                      [disabled]="historyTablePage >= getHistoryTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setHistoryTablePage(getHistoryTableTotalPages())"
+                      [disabled]="historyTablePage >= getHistoryTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -816,17 +1024,13 @@
                         <th>Carton Number</th>
                         <th>Total Rolls Assigned</th>
                         <th>Serial Range</th>
-                        <th>Brand Name</th>
-                        <th>Qty in ML</th>
-                        <th>Qty Used</th>
-                        <th>Qty Damaged</th>
-                        <th>Qty Leftover</th>
+                        <th>Brands & Qty</th>
                         <th>Status</th>
                         <th>Completion Date</th>
                       </tr>
                     </thead>
                     <tbody>
-                      @for (history of historyData; track history.id) {
+                      @for (history of getHistoryTableRows(); track history.id) {
                       <tr>
                         <td>
                           {{ history.issueDate | date:'dd-MMM-yyyy' }}
@@ -851,18 +1055,13 @@
                         <td>
                           <span class="font-monospace small">{{ history.serialRange }}</span>
                         </td>
-                        <td>{{ history.brandName }}</td>
-                        <td class="text-center">
-                          <span class="badge bg-info">{{ history.bottleSize }}</span>
-                        </td>
-                        <td class="text-end">
-                          <span class="text-success fw-bold">{{ history.qtyUsed | number }}</span>
-                        </td>
-                        <td class="text-end">
-                          <span class="text-danger fw-bold">{{ history.qtyDamaged | number }}</span>
-                        </td>
-                        <td class="text-end">
-                          <span class="text-info fw-bold">{{ history.qtyLeftover | number }}</span>
+                        <td>
+                          <button class="btn btn-sm btn-outline-primary" 
+                                  (click)="openHistoryBrandsModal(history)"
+                                  [disabled]="!history.brandDetailsList || history.brandDetailsList.length === 0">
+                            <i class="bi bi-tags me-1"></i>
+                            View Brands ({{ history.brandDetailsList?.length || 0 }})
+                          </button>
                         </td>
                         <td>
                           <span class="badge bg-success">
@@ -881,7 +1080,7 @@
                       </tr>
                       } @empty {
                       <tr>
-                        <td colspan="12" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                           <i class="bi bi-inbox display-4"></i>
                           <br>
                           No completed entries yet.
@@ -892,6 +1091,67 @@
                       }
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+            }
+
+            @if (showHistoryBrandsModal && selectedHistoryForBrands) {
+            <div class="modal fade show history-brands-modal" style="display: block; background-color: rgba(0,0,0,0.5);">
+              <div class="modal-dialog modal-xl modal-dialog-centered history-brands-dialog">
+                <div class="modal-content history-brands-content">
+                  <div class="modal-header text-white history-brands-header">
+                    <h5 class="modal-title">
+                      <i class="bi bi-tags me-2"></i>
+                      Brands & Qty Details - {{ selectedHistoryForBrands.requestReference }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" (click)="closeHistoryBrandsModal()"></button>
+                  </div>
+                  <div class="modal-body history-brands-body">
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-hover history-brands-table">
+                        <thead class="table-light">
+                          <tr>
+                            <th>Brand Name</th>
+                            <th>Bottle Size</th>
+                            <th>Carton</th>
+                            <th>Serial Ranges</th>
+                            <th class="text-end">Qty Used</th>
+                            <th class="text-end">Qty Damaged</th>
+                            <th class="text-end">Qty Leftover</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (brand of selectedHistoryForBrands.brandDetailsList || []; track $index) {
+                          <tr>
+                            <td><strong>{{ brand.brandName }}</strong></td>
+                            <td>{{ brand.bottleSize }}</td>
+                            <td><span class="font-monospace">{{ brand.cartonNumber }}</span></td>
+                            <td><small class="font-monospace">{{ brand.serialRanges }}</small></td>
+                            <td class="text-end text-success fw-bold">{{ brand.qtyUsed | number }}</td>
+                            <td class="text-end text-danger fw-bold">{{ brand.qtyDamaged | number }}</td>
+                            <td class="text-end text-info fw-bold">{{ brand.qtyLeftover | number }}</td>
+                          </tr>
+                          } @empty {
+                          <tr>
+                            <td colspan="7" class="text-center text-muted py-3">No brand details found.</td>
+                          </tr>
+                          }
+                        </tbody>
+                        <tfoot class="table-light history-brands-tfoot">
+                          <tr>
+                            <th colspan="4" class="text-end">Total</th>
+                            <th class="text-end text-success">{{ selectedHistoryForBrands.qtyUsed | number }}</th>
+                            <th class="text-end text-danger">{{ selectedHistoryForBrands.qtyDamaged | number }}</th>
+                            <th class="text-end text-info">{{ selectedHistoryForBrands.qtyLeftover | number }}</th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="modal-footer history-brands-footer">
+                    <button type="button" class="btn btn-secondary" (click)="closeHistoryBrandsModal()">Close</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1347,7 +1607,14 @@
                       <input type="number" class="form-control form-control-sm" [(ngModel)]="serialFilters.qty"
                         (input)="applySerialFilters()" placeholder="Enter qty..." min="1">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                      <label class="form-label small fw-bold mb-1">
+                        <i class="bi bi-arrow-left-right me-1"></i>Roll Range
+                      </label>
+                      <input type="text" class="form-control form-control-sm" [(ngModel)]="serialFilters.rollRange"
+                        (input)="applySerialFilters()" placeholder="e.g. 120-300 or 250" autocomplete="off">
+                    </div>
+                    <div class="col-md-2">
                       <button class="btn btn-outline-secondary btn-sm me-2"
                         (click)="clearSerialFilters(); applySerialFilters()">
                         <i class="bi bi-x-circle me-1"></i>Clear Filters
@@ -1357,7 +1624,7 @@
                       </button>
                     </div>
                   </div>
-                  @if (serialFilters.brandReferenceNo || serialFilters.brandName || serialFilters.qty) {
+                  @if (serialFilters.brandReferenceNo || serialFilters.brandName || serialFilters.qty || serialFilters.rollRange) {
                   <div class="mt-2 p-2 bg-light rounded">
                     <small class="text-muted">
                       <i class="bi bi-info-circle me-1"></i>
@@ -1370,6 +1637,9 @@
                       }
                       @if (serialFilters.qty) {
                       <span class="badge bg-primary ms-1">Qty: {{ serialFilters.qty }}</span>
+                      }
+                      @if (serialFilters.rollRange) {
+                      <span class="badge bg-secondary ms-1">Roll: {{ serialFilters.rollRange }}</span>
                       }
                     </small>
                   </div>
@@ -1414,59 +1684,59 @@
                         </div>
                         <div class="col-md-4">
                           <div class="range-details">
-                            @if (range.usedDate) {
+                            @if (range.status !== 'AVAILABLE' && range.usedDate) {
                             <div class="detail-item">
                               <i class="bi bi-calendar-check text-primary me-1"></i>
                               <small>Used: {{ range.usedDate | date:'dd-MMM-yyyy' }}</small>
                             </div>
                             }
-                            @if (range.damageDate) {
+                            @if (range.status !== 'AVAILABLE' && range.damageDate) {
                             <div class="detail-item">
                               <i class="bi bi-exclamation-triangle text-danger me-1"></i>
                               <small>Damaged: {{ range.damageDate | date:'dd-MMM-yyyy' }}</small>
                             </div>
                             }
-                            @if (range.referenceNo) {
+                            @if (range.status !== 'AVAILABLE' && range.referenceNo) {
                             <div class="detail-item">
                               <i class="bi bi-file-text text-info me-1"></i>
                               <small>Request Ref: {{ range.referenceNo }}</small>
                             </div>
                             }
-                            @if (range.brandDetails && range.brandDetails !== 'N/A') {
+                            @if (range.status !== 'AVAILABLE' && range.brandDetails && range.brandDetails !== 'N/A') {
                             <div class="detail-item">
                               <i class="bi bi-tag text-success me-1"></i>
                               <small><span class="fw-bold text-success">Brand: {{ range.brandDetails }}</span></small>
                             </div>
-                            } @else if (range.productionLine && range.productionLine !== 'N/A' &&
+                            } @else if (range.status !== 'AVAILABLE' && range.productionLine && range.productionLine !== 'N/A' &&
                             !range.productionLine.startsWith('LINE-')) {
                             <div class="detail-item">
                               <i class="bi bi-tag text-success me-1"></i>
                               <small><span class="fw-bold text-success">Brand: {{ range.productionLine }}</span></small>
                             </div>
-                            } @else if (range.referenceNo && range.referenceNo !== 'N/A') {
-                            <div class="detail-item">
-                              <i class="bi bi-tag text-warning me-1"></i>
-                              <small><span class="fw-bold text-warning">Brand: Check Request {{ range.referenceNo
-                                  }}</span></small>
-                            </div>
                             }
-                            @if (range.bottleSize) {
+                            @if (range.status !== 'AVAILABLE' && range.bottleSize) {
                             <div class="detail-item">
                               <i class="bi bi-cup text-primary me-1"></i>
                               <small>Bottle Size: {{ range.bottleSize }}</small>
                             </div>
                             }
-                            @if (range.productionLine && range.productionLine !== 'N/A' &&
-                            !range.productionLine.startsWith('LINE-')) {
+                            @if (range.status !== 'AVAILABLE' && range.productionLine && range.productionLine !== 'N/A' &&
+                            range.productionLine.startsWith('LINE-')) {
                             <div class="detail-item">
                               <i class="bi bi-gear text-secondary me-1"></i>
                               <small>{{ range.productionLine }}</small>
                             </div>
                             }
-                            @if (range.damageReason) {
+                            @if (range.status === 'DAMAGED' && range.damageReason) {
                             <div class="detail-item">
                               <i class="bi bi-info-circle text-warning me-1"></i>
                               <small>{{ range.damageReason }}</small>
+                            </div>
+                            }
+                            @if (range.status !== 'AVAILABLE' && getRangeUpdatedBy(range)) {
+                            <div class="detail-item">
+                              <i class="bi bi-person-check text-secondary me-1"></i>
+                              <small>Updated By - <span class="fw-bold">{{ getRangeUpdatedBy(range) }}</span></small>
                             </div>
                             }
 

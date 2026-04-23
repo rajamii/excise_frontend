@@ -1,11 +1,9 @@
-// cancellation-request.component.scss
 :host {
   display: block;
   font-family: Arial, sans-serif;
 }
 
 .main-container {
-  /* Removed page specific margins for modal usage */
   width: 100%;
   padding: 0;
 }
@@ -54,12 +52,147 @@
   width: 100%;
 }
 
-// Modal backdrop
 .modal-backdrop {
   opacity: 0.5;
 }
 
-// Responsive design
+.wallet-confirmation-modal {
+  border: 0;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.wallet-confirmation-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  color: #fff;
+  background: linear-gradient(135deg, #0f8f83 0%, #1ca39a 100%);
+}
+
+.wallet-confirmation-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.wallet-confirmation-subtitle {
+  opacity: 0.92;
+  font-size: 0.95rem;
+}
+
+.wallet-confirmation-body {
+  padding: 1.5rem;
+  background: #f8fbff;
+}
+
+.wallet-summary-grid,
+.wallet-balance-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.wallet-balance-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.wallet-summary-tile,
+.wallet-balance-card {
+  border-radius: 18px;
+  padding: 1.1rem 1rem;
+  border: 1px solid #dbe5f0;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.wallet-summary-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #6b7a90;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wallet-balance-card strong,
+.wallet-summary-tile strong {
+  display: block;
+  font-size: 1.15rem;
+  color: #1d2a3a;
+}
+
+.wallet-balance-card.current {
+  background: #eef5ff;
+  border-color: #cfe0ff;
+}
+
+.wallet-balance-card.refund {
+  background: #effcf6;
+  border-color: #bce8cf;
+}
+
+.wallet-balance-card.deduct {
+  background: #fff3f2;
+  border-color: #ffd0cb;
+}
+
+.wallet-balance-card.after {
+  background: #effcf6;
+  border-color: #bce8cf;
+}
+
+.wallet-balance-card.after.insufficient {
+  background: #fff4f4;
+  border-color: #f3b7b7;
+}
+
+.wallet-info-banner {
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  color: #1f4ea3;
+  border: 1px solid #bfd8ff;
+  background: #eaf3ff;
+  font-weight: 600;
+}
+
+.wallet-declaration-box {
+  border-radius: 14px;
+  padding: 1rem;
+  border: 1px solid #dbe5f0;
+  background: #fff;
+}
+
+.wallet-declaration-box .form-check-input {
+  margin-top: 0.2rem;
+}
+
+.wallet-declaration-box .form-check-label {
+  font-weight: 600;
+  color: #243447;
+}
+
+.wallet-submit-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem 0 1.5rem;
+  color: #1f3b2f;
+  font-weight: 600;
+}
+
+.wallet-confirmation-content.is-submitting {
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
 @media (max-width: 600px) {
   .letter-card {
     padding: 1rem 0.5rem;
@@ -70,7 +203,20 @@
   }
 }
 
-// File upload styles
+@media (max-width: 767px) {
+  .wallet-summary-grid,
+  .wallet-balance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-confirmation-header,
+  .wallet-confirmation-body,
+  .modal-footer {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
 .file-upload-section {
   margin-bottom: 1.5rem;
 }
@@ -80,7 +226,6 @@
   margin-bottom: 0.5rem;
 }
 
-// Bootstrap icons
 .bi {
   display: inline-block;
 }

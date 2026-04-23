@@ -1,0 +1,28 @@
+<section class="callback-page">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Payment Callback</mat-card-title>
+      <mat-card-subtitle>Use this page during testing to reconcile callback result</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="details">
+        <div><strong>UTR:</strong> {{ utr || 'Not provided' }}</div>
+        <div><strong>Status:</strong> {{ billdeskStatus || 'Not provided' }}</div>
+        <div><strong>Message:</strong> {{ rawMsg || 'Not provided' }}</div>
+      </div>
+
+      <div class="actions">
+        <button mat-flat-button color="primary" (click)="markSuccessForTesting()" [disabled]="isUpdating">
+          Mark Success
+        </button>
+        <button mat-stroked-button color="warn" (click)="markFailedForTesting()" [disabled]="isUpdating">
+          Mark Failed
+        </button>
+        <a mat-button routerLink="/licensee/payment-integrations">Back to Payment Integrations</a>
+      </div>
+
+      <div class="message success" *ngIf="successMessage">{{ successMessage }}</div>
+      <div class="message error" *ngIf="errorMessage">{{ errorMessage }}</div>
+    </mat-card-content>
+  </mat-card>
+</section>

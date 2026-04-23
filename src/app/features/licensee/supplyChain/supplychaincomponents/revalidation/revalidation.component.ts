@@ -14,14 +14,24 @@ interface TableData {
   id: string;
   referenceNo: string;
   submissionDate: string;
+  submissionDateRaw?: string;
+  revalidationDateRaw?: string;
+  requisitionDateRaw?: string;
+  approvalDateRaw?: string;
+  updatedAtRaw?: string;
+  expiryDateRaw?: string;
+  validityPeriodDays?: number;
   distilleryName: string;
+  factoryName?: string;
   status: string;
+  statusCode?: string;
   amount: string;
   isLive?: boolean;
   isInvalid?: boolean;
   allowedActions?: string[]; // Dynamic actions from backend
   workflowId?: number;
   currentStage?: number;
+  currentStageIsFinal?: boolean | string; // Indicates if current stage is final approval
   allowedActionConfigs?: any[];
 }
 
@@ -35,14 +45,27 @@ interface TableData {
 export class RevalidationComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
 
   // Filter properties for revalidation
   revalidationDateFilter: string = '';
   revalidationMonthFilter: string = '';
   revalidationYearFilter: string = '';
   revalidationStatusFilter: string = '';
+  revalidationCompanyFilter: string = '';
+  revalidationCompanyOptions: string[] = [];
+  activeSummaryFilter: string = '';
+
+  private getCompanyNameForFilter(item: TableData): string {
+    const factory = String(item?.factoryName || '').trim();
+    if (factory && factory.toLowerCase() !== 'n/a' && factory !== '-') {
+      return factory;
+    }
+    return String(item?.distilleryName || '').trim();
+  }
 
   filteredRevalidationData: TableData[] = [];
+  summaryRevalidationData: TableData[] = [];
 
   revlidationData: TableData[] = [];
 
@@ -105,8 +128,17 @@ export class RevalidationComponent implements OnInit {
           id: item.id, // Map ID
           referenceNo: item.ourRefNo || item.our_ref_no,
           submissionDate: formattedDate,
+          submissionDateRaw: dateVal || '',
+          revalidationDateRaw: item.revalidationDate || item.revalidation_date || '',
+          requisitionDateRaw: item.requisitionDate || item.requisition_date || '',
+          approvalDateRaw: item.approvalDate || item.approval_date || '',
+          updatedAtRaw: item.updatedAt || item.updated_at || '',
+          expiryDateRaw: item.expiryDate || item.expiry_date || '',
+          validityPeriodDays: Number(item.validityPeriodDays || item.validity_period_days || 45),
+          factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || '',
           distilleryName: item.distilleryName || item.distillery_name,
           status: item.status,
+          statusCode: item.statusCode || item.status_code || '',
           amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
           isLive: !item.status?.includes('INVALID') && !item.status?.includes('EXPIRED'),
           isInvalid: item.status?.includes('INVALID') || item.status?.includes('EXPIRED'),
@@ -122,7 +154,8 @@ export class RevalidationComponent implements OnInit {
         Object.freeze(item.allowedActions);
       });
 
-      this.filteredRevalidationData = [...this.revlidationData];
+      this.applyRevalidationFilters();
+      this.maybeAutoSelectPendingSummary();
       console.log('DEBUG: Processed Data length:', this.filteredRevalidationData.length);
       console.log('DEBUG: Each item allowedActions:');
       this.filteredRevalidationData.forEach(item => {
@@ -136,6 +169,20 @@ export class RevalidationComponent implements OnInit {
 
     } catch (error) {
       console.error('Error fetching revalidation data:', error);
+    }
+  }
+
+  private maybeAutoSelectPendingSummary(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    if (this.revalidationStatusFilter || this.activeSummaryFilter) return;
+
+    const pendingCount = this.getRevalidationStatusCount('PENDING');
+    if (pendingCount > 0) {
+      this.activeSummaryFilter = 'PENDING';
+      this.revalidationStatusFilter = 'PENDING';
+      this.applyRevalidationFilters();
     }
   }
 
@@ -154,52 +201,64 @@ export class RevalidationComponent implements OnInit {
       statusFilter: this.revalidationStatusFilter
     });
 
-    this.filteredRevalidationData = this.revlidationData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
+    this.summaryRevalidationData = this.revlidationData.filter(item => {
+      const submissionDate =
+        this.parseDate(item.submissionDateRaw) ||
+        this.parseDate(item.submissionDate);
 
-      const dateParts = item.submissionDate.split('-');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const monthName = dateParts[1];
-        const year = parseInt(dateParts[2]);
+      if (!submissionDate) {
+        return !this.revalidationDateFilter && !this.revalidationMonthFilter && !this.revalidationYearFilter;
+      }
 
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames.indexOf(monthName) + 1;
+      if (this.revalidationDateFilter && this.toIsoDay(submissionDate) !== this.revalidationDateFilter) {
+        return false;
+      }
 
-        if (month > 0) {
-          const itemDate = new Date(year, month - 1, day);
+      if (this.revalidationMonthFilter && this.toIsoMonth(submissionDate) !== this.revalidationMonthFilter) {
+        return false;
+      }
 
-          if (this.revalidationDateFilter) {
-            const filterDate = new Date(this.revalidationDateFilter);
-            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth() &&
-              itemDate.getDate() === filterDate.getDate();
-          }
+      if (this.revalidationYearFilter && String(submissionDate.getFullYear()) !== String(this.revalidationYearFilter)) {
+        return false;
+      }
 
-          if (this.revalidationMonthFilter) {
-            const filterDate = new Date(this.revalidationMonthFilter + '-01');
-            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth();
-          }
+      return true;
+    });
 
-          if (this.revalidationYearFilter) {
-            const filterYear = parseInt(this.revalidationYearFilter);
-            matchesYear = itemDate.getFullYear() === filterYear;
-          }
+    this.revalidationCompanyOptions = Array.from(
+      new Set(
+        this.summaryRevalidationData
+          .map(item => this.getCompanyNameForFilter(item))
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    this.filteredRevalidationData = this.summaryRevalidationData.filter(item => {
+      if (this.revalidationCompanyFilter) {
+        const company = this.getCompanyNameForFilter(item);
+        if (company !== this.revalidationCompanyFilter) {
+          return false;
         }
       }
 
-      if (this.revalidationStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.revalidationStatusFilter.toLowerCase());
+      if (!this.revalidationStatusFilter) {
+        return true;
       }
 
-      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
-
-      return finalMatch;
+      const filter = this.normalizeStageToken(this.revalidationStatusFilter);
+      if (filter === 'actionrequired') {
+        return this.isActionRequiredLikeStatus(item);
+      }
+      if (filter === 'approved') {
+        return this.isApprovedLikeStatus(item);
+      }
+      if (filter === 'pending') {
+        return this.isPendingLikeStatus(item);
+      }
+      if (filter === 'underprocess') {
+        return this.isUnderProcessLikeStatus(item);
+      }
+      return this.normalizeStageToken(item.status).includes(filter);
     });
 
     console.log('Filtered data after filter:');
@@ -215,6 +274,9 @@ export class RevalidationComponent implements OnInit {
     this.revalidationMonthFilter = '';
     this.revalidationYearFilter = '';
     this.revalidationStatusFilter = '';
+    this.revalidationCompanyFilter = '';
+    this.activeSummaryFilter = '';
+    this.summaryRevalidationData = [...this.revlidationData];
     this.filteredRevalidationData = [...this.revlidationData];
     this.resetPagination();
   }
@@ -232,13 +294,125 @@ export class RevalidationComponent implements OnInit {
   }
 
   onRevalidationStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyRevalidationFilters();
   }
 
+  onRevalidationCompanyFilterChange(): void {
+    this.applyRevalidationFilters();
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStageToken(filter);
+    const current = this.normalizeStageToken(this.revalidationStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.revalidationStatusFilter = '';
+      this.applyRevalidationFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.revalidationStatusFilter = '';
+      this.applyRevalidationFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.revalidationStatusFilter = filter;
+    this.applyRevalidationFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStageToken(this.revalidationStatusFilter);
+    if (['pending', 'approved', 'underprocess', 'actionrequired'].includes(normalized)) {
+      this.activeSummaryFilter = this.revalidationStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private parseDate(value: string | undefined): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private toIsoDay(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private toIsoMonth(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }
+
+  private isInvalidLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    return status.includes('invalid') || status.includes('expire');
+  }
+
+  private isActionRequiredLikeStatus(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    return status.includes('importpermitextends45days');
+  }
+
+  private isApprovedLikeStatus(item: TableData): boolean {
+    if (this.isActionRequiredLikeStatus(item)) {
+      return false;
+    }
+    const status = this.normalizeStageToken(item?.status);
+    const code = this.normalizeStageToken(item?.statusCode);
+    return (
+      status.includes('approv') ||
+      status.includes('issued') ||
+      code === 'rv09'
+    );
+  }
+
+  private isPendingLikeStatus(item: TableData): boolean {
+    if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
+      return false;
+    }
+    const status = this.normalizeStageToken(item?.status);
+    return status.includes('pending');
+  }
+
+  private isUnderProcessLikeStatus(item: TableData): boolean {
+    if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
+      return false;
+    }
+    if (this.isPendingLikeStatus(item)) {
+      return false;
+    }
+    return true;
+  }
+
   getRevalidationStatusCount(status: string): number {
-    return this.revlidationData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
-    ).length;
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'actionrequired') {
+      return this.summaryRevalidationData.filter(item => this.isActionRequiredLikeStatus(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.summaryRevalidationData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    if (filter === 'pending') {
+      return this.summaryRevalidationData.filter(item => this.isPendingLikeStatus(item)).length;
+    }
+    if (filter === 'underprocess') {
+      return this.summaryRevalidationData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+    }
+    return this.summaryRevalidationData.filter(item => this.normalizeStageToken(item.status).includes(filter)).length;
   }
 
   getLiveRevalidationCount(): number {
@@ -267,8 +441,8 @@ export class RevalidationComponent implements OnInit {
 
     const refNo = item.referenceNo;
 
-    if (item.status && item.status.toLowerCase() === 'approvedrevalidationbycommissioner') {
-      this.router.navigate(["/dev-revalidation-permit-slip"], {
+    if (this.isCommissionerApprovedRevalidation(item)) {
+      this.router.navigate(["/unified-letter-view/revalidation"], {
         queryParams: {
           id: item.id,
           ref: refNo,
@@ -381,7 +555,17 @@ export class RevalidationComponent implements OnInit {
 
   // Role detection methods
   isCommissioner(): boolean {
-    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    const hasRole = this.accountService.hasAnyRole([
+      10,
+      'commissioner',
+      'joint_commissioner',
+      'level_1',
+      'level_2',
+      'level_3',
+      'level_4',
+      'level_5',
+      'site_admin'
+    ]);
     const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
     return hasRole || isCommissionerRoute;
   }
@@ -394,6 +578,17 @@ export class RevalidationComponent implements OnInit {
     if (this.isCommissioner()) return 'commissioner';
     if (this.isPermitSection()) return 'permit-section';
     return 'licensee';
+  }
+
+  getCompanyColumnLabel(): string {
+    return this.isCommissioner() ? 'Factory Name' : 'Distillery Name';
+  }
+
+  getCompanyDisplayName(item: TableData): string {
+    if (this.isCommissioner()) {
+      return item.factoryName || '-';
+    }
+    return item.distilleryName || '-';
   }
 
   // Workflow actions
@@ -454,6 +649,136 @@ export class RevalidationComponent implements OnInit {
     }
     console.log(`[ID: ${item.id}] ✗ REJECT button HIDDEN`);
     return false;
+  }
+
+  getActionIncludeList(item: TableData): string[] {
+    const actions = ['VIEW', ...(item.allowedActions || [])];
+    
+    // For revalidation, show payment slip after submission (₹1000 deduction)
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getActionIncludeList (revalidation):', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      hasPayment,
+      allowedActions: item.allowedActions,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    // Show "View Payment Slip" after payment is made (₹1000 deducted)
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    // Trust backend for VIEW_PERMIT_SLIP action
+    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
+      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+      actions.push('VIEW_PERMIT_SLIP');
+    }
+    
+    console.log('🔍 Final actions array:', actions);
+    return Array.from(new Set(actions));
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed (₹1000 deducted from wallet)
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Payment indicators for revalidation
+    // After submission, ₹1000 is deducted, so any status after submission indicates payment
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('revalidation') ||
+                                   status.includes('submitted') ||
+                                   status.includes('pending');
+    
+    console.log('🔍 hasPaymentBeenMade check (revalidation):', {
+      status,
+      statusIndicatesPayment,
+      result: statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
+  }
+
+  canViewPermitSlip(item: TableData): boolean {
+    // Only commissioner can view permit slip at final approved stage
+    if (!this.isCommissioner()) {
+      return false;
+    }
+    
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const currentStageIsFinal = item.currentStageIsFinal === true || item.currentStageIsFinal === 'true';
+    
+    // Check if it's at final approved stage
+    // For revalidation, show permit slip when forwarded to commissioner OR approved by commissioner
+    const isApprovedByCommissioner =
+      status.includes('approv') && status.includes('commissioner') && !status.includes('reject');
+    const isForwardedToCommissioner =
+      status.includes('forward') && status.includes('commissioner') && !status.includes('reject');
+    const isFinalApproved = (status.includes('approved') && currentStageIsFinal) ||
+                           isApprovedByCommissioner ||
+                           isForwardedToCommissioner ||
+                           status.includes('finalapproved');
+    
+    console.log('🔍 canViewPermitSlip (revalidation):', {
+      status: item.status,
+      normalizedStatus: status,
+      currentStageIsFinal,
+      isFinalApproved,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    return isFinalApproved;
+  }
+
+  getRevalidationExtensionRange(item: TableData): string {
+    if (!this.isCommissionerApprovedRevalidation(item)) {
+      return '-';
+    }
+
+    const fromDate =
+      this.parseDate(item.approvalDateRaw) ||
+      this.parseDate(item.requisitionDateRaw) ||
+      this.parseDate(item.revalidationDateRaw) ||
+      this.parseDate(item.updatedAtRaw) ||
+      this.parseDate(item.submissionDateRaw) ||
+      this.parseDate(item.submissionDate);
+
+    if (!fromDate) {
+      return '-';
+    }
+
+    const toDateFromApi = this.parseDate(item.expiryDateRaw);
+    if (toDateFromApi) {
+      return `${this.formatDisplayDate(fromDate)} to ${this.formatDisplayDate(toDateFromApi)}`;
+    }
+
+    const validityDays = Number.isFinite(item.validityPeriodDays) ? Number(item.validityPeriodDays) : 45;
+    const toDate = new Date(fromDate);
+    toDate.setDate(toDate.getDate() + Math.max(validityDays, 0));
+    return `${this.formatDisplayDate(fromDate)} to ${this.formatDisplayDate(toDate)}`;
+  }
+
+  private isCommissionerApprovedRevalidation(item: TableData): boolean {
+    const status = this.normalizeToken(item.status);
+    const statusCode = this.normalizeToken(item.statusCode);
+    const looksApprovedByCommissioner =
+      status.includes('approv') &&
+      status.includes('commissioner') &&
+      !status.includes('reject');
+    return looksApprovedByCommissioner || statusCode === 'rv09';
+  }
+
+  private formatDisplayDate(date: Date): string {
+    return date
+      .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      .replace(/ /g, '-');
+  }
+
+  private normalizeToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
 }

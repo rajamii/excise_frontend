@@ -19,9 +19,11 @@ import { UnifiedActionsService } from '../../../shared/services/unified-actions.
 export class ITCELLComponent implements OnInit {
   selectedTabIndex = 0;
   showFullInterface = true; // Control whether to show full interface or clean view
+  private initialSummaryAutoSelected = false;
 
   // Hologram Management
   hologramData: any[] = [];
+  summaryHologramData: any[] = [];
   filteredHologramData: any[] = [];
 
   // Modal state
@@ -32,8 +34,10 @@ export class ITCELLComponent implements OnInit {
   selectedMonth: string = '';
   selectedYear: string = '';
   selectedDate: string = '';
-  statusFilter: string = '';
+  statusFilter: string = 'All';
   companyFilter: string = '';
+  activeSummaryFilter: string = '';
+  companyOptions: string[] = [];
 
   // Available options
   months = [
@@ -46,7 +50,6 @@ export class ITCELLComponent implements OnInit {
   ];
 
   years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-  statusOptions = ['All', 'Submitted', 'Under IT Cell Review', 'Forwarded to Commissioner', 'Approved'];
 
   private isBrowser = false;
 
@@ -109,6 +112,8 @@ export class ITCELLComponent implements OnInit {
           exportQtyLakh: Number(item.exportQty),
           defenceQtyLakh: Number(item.defenceQty),
           status: item.status, // Uses status name from backend
+          paymentStatus: item.paymentStatus || item.payment_status || item?.paymentDetails?.payment_status || item?.payment_details?.payment_status || '',
+          paymentDetails: item.paymentDetails || item.payment_details || null,
           allowedActions: item.allowedActions || [],
           // Include edit history
           editedByCommissioner: !!(item.editHistory || item.edit_history),
@@ -116,6 +121,7 @@ export class ITCELLComponent implements OnInit {
         }));
         console.log('📊 Processed hologram data:', this.hologramData);
         this.applyFilters();
+        this.maybeAutoSelectPendingBucket();
       },
       error: (err) => {
         console.error('❌ Error loading holograms:', err);
@@ -125,46 +131,110 @@ export class ITCELLComponent implements OnInit {
     });
   }
 
+  private maybeAutoSelectPendingBucket(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    // Don't override if user already selected a status.
+    const selected = String(this.statusFilter || '').trim();
+    if (selected && selected.toLowerCase() !== 'all') return;
+
+    // This screen uses "Submitted" / "Under IT Cell Review" as the pending-like buckets.
+    const preferred =
+      (this.getStatusCount('Submitted') > 0 && 'Submitted') ||
+      (this.getStatusCount('Under IT Cell Review') > 0 && 'Under IT Cell Review') ||
+      '';
+
+    if (preferred) {
+      this.statusFilter = preferred;
+      this.activeSummaryFilter = preferred;
+      this.applyFilters();
+    }
+  }
+
   applyFilters(): void {
-    let filtered = [...this.hologramData];
+    let summary = [...this.hologramData];
 
     if (this.selectedMonth) {
-      filtered = filtered.filter(item => {
+      summary = summary.filter(item => {
         const itemMonth = new Date(item.date).getMonth() + 1;
         return itemMonth.toString().padStart(2, '0') === this.selectedMonth;
       });
     }
 
     if (this.selectedYear) {
-      filtered = filtered.filter(item => {
+      summary = summary.filter(item => {
         const itemYear = new Date(item.date).getFullYear();
         return itemYear.toString() === this.selectedYear;
       });
     }
 
     if (this.selectedDate) {
-      filtered = filtered.filter(item => item.date.startsWith(this.selectedDate));
+      summary = summary.filter(item => item.date.startsWith(this.selectedDate));
+    }
+
+    // Update company dropdown based on current date/month/year filters
+    this.companyOptions = Array.from(
+      new Set(
+        summary
+          .map(item => String(item?.companyName || '').trim())
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    this.summaryHologramData = summary;
+
+    let filtered = [...summary];
+
+    if (this.companyFilter) {
+      filtered = filtered.filter(item => String(item?.companyName || '').trim() === this.companyFilter);
     }
 
     if (this.statusFilter && this.statusFilter !== 'All') {
-      filtered = filtered.filter(item => item.status === this.statusFilter);
-    }
-
-    if (this.companyFilter) {
-      filtered = filtered.filter(item =>
-        (item.companyName || '').toLowerCase().includes(this.companyFilter.toLowerCase())
-      );
+      const filter = this.normalizeStageToken(this.statusFilter);
+      if (filter === 'approved') {
+        filtered = filtered.filter(item => this.isApprovedLikeStatus(item));
+      } else if (filter === 'edited') {
+        filtered = filtered.filter(item => Boolean(item?.editedByCommissioner));
+      } else {
+        filtered = filtered.filter(item => item.status === this.statusFilter);
+      }
     }
 
     this.filteredHologramData = filtered;
+    this.syncActiveSummaryFilter();
   }
 
   clearFilters(): void {
     this.selectedMonth = '';
     this.selectedYear = '';
     this.selectedDate = '';
-    this.statusFilter = '';
+    this.statusFilter = 'All';
     this.companyFilter = '';
+    this.activeSummaryFilter = '';
+    this.applyFilters();
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = String(filter || '').trim().toLowerCase();
+    const current = String(this.statusFilter || '').trim().toLowerCase();
+
+    if (!normalized || normalized === 'all') {
+      this.statusFilter = 'All';
+      this.activeSummaryFilter = '';
+      this.applyFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.statusFilter = 'All';
+      this.activeSummaryFilter = '';
+      this.applyFilters();
+      return;
+    }
+
+    this.statusFilter = filter;
+    this.activeSummaryFilter = filter;
     this.applyFilters();
   }
 
@@ -294,10 +364,21 @@ export class ITCELLComponent implements OnInit {
   }
 
   getStatusCount(status: string): number {
-    return this.filteredHologramData.filter(h => h.status === status).length;
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'edited') {
+      return this.summaryHologramData.filter(h => Boolean(h?.editedByCommissioner)).length;
+    }
+    if (filter === 'approved') {
+      return this.summaryHologramData.filter(h => this.isApprovedLikeStatus(h)).length;
+    }
+    return this.summaryHologramData.filter(h => h.status === status).length;
   }
 
   getTotalQuantity(): number {
+    return this.summaryHologramData.reduce((sum, h) => sum + this.getTotalHolograms(h), 0);
+  }
+
+  getFilteredTotalQuantity(): number {
     return this.filteredHologramData.reduce((sum, h) => sum + this.getTotalHolograms(h), 0);
   }
 
@@ -324,13 +405,30 @@ export class ITCELLComponent implements OnInit {
   }
 
   isPaymentCompleted(hologram: any): boolean {
-    return hologram.paymentStatus === 'Verify' || hologram.status === 'Payment Completed';
+    const paymentStatus = String(hologram?.paymentStatus || '').toLowerCase();
+    const stageStatus = String(hologram?.status || '').toLowerCase();
+    return (
+      paymentStatus.includes('completed') ||
+      paymentStatus.includes('paid') ||
+      paymentStatus.includes('success') ||
+      stageStatus.includes('payment completed') ||
+      stageStatus.includes('carton assigned') ||
+      stageStatus.includes('forwarded to commissioner')
+    );
   }
 
   viewPaymentSlip(hologram: any): void {
-    console.log('View payment slip for:', hologram.refNo);
-    // TODO: Implement actual slip viewing logic (e.g., open a modal or download PDF)
-    alert(`Payment slip for ${hologram.refNo} would open here.`);
+    this.router.navigate(['/payment-slip-view'], {
+      queryParams: {
+        id: hologram.id,
+        type: 'hologram',
+        refNo: hologram.refNo,
+        ref: hologram.refNo,
+        referenceNo: hologram.refNo,
+        source: 'itcell',
+        section: 'itcell-hologram'
+      }
+    });
   }
 
   calculateWalletPayment(hologram: any): number {
@@ -341,6 +439,25 @@ export class ITCELLComponent implements OnInit {
 
     // Calculate payment at ₹0.15 per hologram
     return totalHolograms * 0.15;
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const selected = String(this.statusFilter || '').trim();
+    if (!selected || selected.toLowerCase() === 'all') {
+      this.activeSummaryFilter = '';
+      return;
+    }
+    this.activeSummaryFilter = selected;
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private isApprovedLikeStatus(item: any): boolean {
+    const token = this.normalizeStageToken(item?.status);
+    const isCartoonAssigned = token.includes('cartoonassigned') || token.includes('cartonassigned');
+    return token.includes('approved') || isCartoonAssigned;
   }
 
   closeModal(): void {

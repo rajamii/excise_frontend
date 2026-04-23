@@ -31,8 +31,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
-  // ✅ FIXED: Added 'company-registration' option
-  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' | 'company-registration' = 'all';
   isLoading = false;
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -41,7 +39,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
+  activeTable: 'default' | 'applied' | 'pending' | 'rejected' = 'default';
 
   private routerSubscription?: Subscription;
 
@@ -51,12 +49,49 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private router: Router
   ) { }
 
-  showTable(table: 'applied' | 'pending' | 'approved' | 'rejected') {
+  showTable(table: 'applied' | 'pending' | 'rejected') {
     this.activeTable = table;
   }
 
   goBack() {
     this.activeTable = 'default';
+  }
+
+  openFinalLicense(application: UnifiedApplication): void {
+    const applicationId =
+      application?.applicationId ||
+      (application as any)?.raw?.application_id ||
+      (application as any)?.raw?.applicationId ||
+      '';
+
+    this.router.navigate(['/licensee/final-license'], {
+      queryParams: {
+        applicationId,
+        type: application?.type || '',
+        returnUrl: this.router.url
+      }
+    });
+  }
+
+  viewApplication(application: UnifiedApplication): void {
+    const applicationId =
+      application?.applicationId ||
+      (application as any)?.raw?.application_id ||
+      (application as any)?.raw?.applicationId ||
+      '';
+
+    if (!applicationId) return;
+
+    const type = (application as any)?.type || (application as any)?.raw?.type || '';
+
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id: applicationId,
+        ref: applicationId,
+        type,
+        source: 'licensee'
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -66,7 +101,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
       if (event.url.includes('/dashboard')) {
-        console.log('🔄 Dashboard: Auto-refreshing after navigation');
+        this.activeTable = 'default';
         this.loadDashboardData();
       }
     });
@@ -76,11 +111,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
-  }
-
-  onApplicationTypeChange(): void {
-    this.activeTable = 'default';
-    this.loadDashboardData();
   }
 
   loadDashboardData(): void {
@@ -101,16 +131,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             approved: this.deduplicateApplications(result.applications.approved || []),
             rejected: this.deduplicateApplications(result.applications.rejected || [])
           };
-
-          if (this.selectedApplicationType !== 'all') {
-            filteredApplications = {
-              applied: filteredApplications.applied.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              pending: filteredApplications.pending.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              awaitingPayment: filteredApplications.awaitingPayment.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              approved: filteredApplications.approved.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
-              rejected: filteredApplications.rejected.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType)
-            };
-          }
 
           // ✅ MOVE APPROVED LICENSES WITH ACTIVE RENEWALS TO APPLIED
           const renewedLicenseIds = this.getRenewedLicenseIds(

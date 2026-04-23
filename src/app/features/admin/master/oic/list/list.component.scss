@@ -1,0 +1,140 @@
+.oic-page {
+  padding: 12px 14px;
+}
+
+.oic-card {
+  border: 1px solid #d8deef;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 14px rgba(23, 42, 105, 0.08);
+}
+
+.oic-card .oic-card-header,
+mat-card.oic-card mat-card-header.oic-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #1f2b78;
+  background: #28358a !important;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 31px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.add-officer-btn {
+  min-width: 156px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  color: #12396d;
+  background: #ffffff !important;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  box-shadow: 0 8px 18px rgba(10, 37, 84, 0.18);
+}
+
+.oic-card-content {
+  padding: 14px 16px 18px;
+}
+
+.loading-state {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #45557f;
+  font-weight: 500;
+}
+
+.table-shell {
+  overflow-x: auto;
+}
+
+.oic-table {
+  width: 100%;
+  min-width: 1120px;
+  border-radius: 8px;
+  overflow: hidden;
+
+  mat-header-cell {
+    font-size: 13px;
+    font-weight: 700;
+    color: #223561;
+    background: #f4f7ff;
+    border-bottom: 1px solid #d9e2f5;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  mat-cell {
+    color: #1f2f56;
+    border-bottom: 1px solid #ebf0fb;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  mat-row:hover {
+    background: #f9fbff;
+  }
+
+  .email-cell {
+    word-break: break-word;
+  }
+
+  .mat-mdc-slide-toggle {
+    margin-left: 0;
+  }
+}
+
+.empty-state {
+  padding: 18px 6px 8px;
+  color: #5f6d8e;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .oic-page {
+    padding: 8px;
+  }
+
+  .oic-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
+
+  .add-officer-btn {
+    width: 100%;
+  }
+
+  .oic-card-content {
+    padding: 10px 10px 14px;
+  }
+
+  .oic-table {
+    min-width: 860px;
+  }
+}

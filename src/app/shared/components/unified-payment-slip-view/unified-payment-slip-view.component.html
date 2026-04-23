@@ -1,0 +1,394 @@
+<div class="slip-wrap">
+  <div class="a4-sheet">
+    <div class="slip-card">
+    <!-- Watermark -->
+    <div class="watermark">SIKKIM EXCISE</div>
+    
+    <!-- Official Header with Logo -->
+    <header class="official-header">
+      <div class="header-content">
+        <div class="logo-section">
+          <img src="assets/icons/fav-icon.png" alt="Sikkim Excise Seal" class="govt-seal" />
+        </div>
+        <div class="title-section">
+          <div class="govt-name">GOVERNMENT OF SIKKIM</div>
+          <div class="dept-name">SIKKIM EXCISE DEPARTMENT</div>
+          <div class="dept-address">MG MARG, GANGTOK-737101</div>
+          <div class="dept-contact">
+            <span>Website: www.excise.sikkim.gov.in</span>
+            <span class="separator">|</span>
+            <span>E-mail: excise.dept&#64;sikkim.gov.in</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-divider"></div>
+    </header>
+
+    <!-- Payment Slip Title -->
+    <div class="slip-title-section">
+      <h1 class="slip-title">{{ pageTitle }}</h1>
+      <div class="slip-meta">
+        <span class="status-badge" [ngClass]="statusClass">{{ currentStatus }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="isLoading" class="state">
+      <div class="loading-spinner"></div>
+      <p>Loading payment slip...</p>
+    </div>
+    <div *ngIf="!isLoading && errorMessage" class="state error">
+      <i class="bi bi-exclamation-triangle"></i>
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="!isLoading && !errorMessage">
+      <!-- Summary Cards -->
+      <section class="summary-section">
+        <div class="summary-card primary-card">
+          <div class="card-icon">₹</div>
+          <div class="card-content">
+            <p class="card-label">{{ primarySummaryLabel }}</p>
+            <h3 class="card-value">₹{{ transitSummary.total | number:'1.2-2' }}</h3>
+          </div>
+        </div>
+        
+        <div class="summary-card success-card" *ngIf="showRefundSummaryCard">
+          <div class="card-icon">✓</div>
+          <div class="card-content">
+            <p class="card-label">{{ secondarySummaryLabel }}</p>
+            <h3 class="card-value">₹{{ refundAmountTotal | number:'1.2-2' }}</h3>
+          </div>
+        </div>
+        
+        <div class="summary-card info-card" *ngIf="showCountSummaryCard">
+          <div class="card-icon">#</div>
+          <div class="card-content">
+            <p class="card-label">{{ tertiarySummaryLabel }}</p>
+            <h3 class="card-value">{{ totalCases }}</h3>
+          </div>
+        </div>
+      </section>
+
+      <!-- Payment Information -->
+      <section class="info-section">
+        <h2 class="section-title">Payment Information</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Reference No</span>
+            <span class="info-value">{{ referenceNo }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Module</span>
+            <span class="info-value module-badge">{{ moduleType || 'transit' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Distillery</span>
+            <span class="info-value">{{ requisitionRow?.distillery_name || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Purpose</span>
+            <span class="info-value">{{ requisitionRow?.purpose || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Transaction ID</span>
+            <span class="info-value">{{ requisitionRow?.transaction_id || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'revalidation'">
+            <span class="info-label">Factory</span>
+            <span class="info-value">{{ revalidationDisplayName }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'revalidation'">
+            <span class="info-label">Original Permit Date</span>
+            <span class="info-value">{{ revalidationRow?.original_permit_date ? (revalidationRow?.original_permit_date | date:'dd-MM-yyyy') : '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'revalidation'">
+            <span class="info-label">Expiry Date</span>
+            <span class="info-value">{{ revalidationRow?.expiry_date ? (revalidationRow?.expiry_date | date:'dd-MM-yyyy') : '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'revalidation'">
+            <span class="info-label">Revalidation Fee</span>
+            <span class="info-value amount">₹{{ revalidationRow?.revalidation_fee | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'cancellation'">
+            <span class="info-label">Distillery</span>
+            <span class="info-value">{{ cancellationRow?.distillery_name || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'cancellation'">
+            <span class="info-label">Original Requisition</span>
+            <span class="info-value">{{ cancellationRow?.original_requisition_ref || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'cancellation'">
+            <span class="info-label">Cancelled Permits</span>
+            <span class="info-value">{{ cancellationRow?.cancelled_permit_numbers || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'cancellation'">
+            <span class="info-label">Cancellation Reason</span>
+            <span class="info-value">{{ cancellationRow?.reason || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'hologram'">
+            <span class="info-label">Distillery</span>
+            <span class="info-value">{{ hologramRow?.distillery_name || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'hologram'">
+            <span class="info-label">Local Qty</span>
+            <span class="info-value">{{ hologramRow?.local_qty || 0 }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'hologram' && (hologramRow?.export_qty || 0) > 0">
+            <span class="info-label">Export Qty</span>
+            <span class="info-value">{{ hologramRow?.export_qty || 0 }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'hologram' && (hologramRow?.defence_qty || 0) > 0">
+            <span class="info-label">Defence Qty</span>
+            <span class="info-value">{{ hologramRow?.defence_qty || 0 }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'hologram'">
+            <span class="info-label">Payment Status</span>
+            <span class="info-value">{{ hologramRow?.payment_status || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'hologram'">
+            <span class="info-label">Transaction ID</span>
+            <span class="info-value">{{ hologramRow?.payment_details?.wallet_history?.[0]?.transaction_id || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram'">
+            <span class="info-label">Excise Duty</span>
+            <span class="info-value amount">₹{{ transitSummary.excise | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram'">
+            <span class="info-label">Education Cess</span>
+            <span class="info-value amount">₹{{ transitSummary.cess | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram'">
+            <span class="info-label">Additional Excise</span>
+            <span class="info-value amount">₹{{ transitSummary.addl | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Hologram Details Table -->
+    <div *ngIf="!isLoading && moduleType === 'hologram' && hologramRow" class="details-section">
+      <h2 class="section-title">Hologram Payment Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Date</th>
+              <th>Factory</th>
+              <th>Status</th>
+              <th>Local</th>
+              <th>Export</th>
+              <th>Defence</th>
+              <th>Total Qty</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ hologramRow.reference_no }}</td>
+              <td>{{ hologramRow.submission_date ? (hologramRow.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ hologramRow.distillery_name }}</td>
+              <td><span class="table-status">{{ hologramRow.status }}</span></td>
+              <td>{{ hologramRow.local_qty }}</td>
+              <td>{{ hologramRow.export_qty }}</td>
+              <td>{{ hologramRow.defence_qty }}</td>
+              <td><strong>{{ hologramRow.total_qty }}</strong></td>
+              <td class="amount-cell">₹{{ hologramRow.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Requisition Details Table -->
+    <div *ngIf="!isLoading && moduleType === 'requisition' && requisitionRow" class="details-section">
+      <h2 class="section-title">Requisition Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Submission Date</th>
+              <th>Factory</th>
+              <th>Status</th>
+              <th>Quantity (BL)</th>
+              <th>No. of Permits</th>
+              <th>Purpose</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ requisitionRow.reference_no }}</td>
+              <td>{{ requisitionRow.submission_date ? (requisitionRow.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ requisitionRow.distillery_name }}</td>
+              <td><span class="table-status">{{ requisitionRow.status }}</span></td>
+              <td>{{ requisitionRow.quantity_bl }}</td>
+              <td>{{ requisitionRow.number_of_permits }}</td>
+              <td>{{ requisitionRow.purpose }}</td>
+              <td class="amount-cell">₹{{ requisitionRow.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revalidation Details Table -->
+    <div *ngIf="!isLoading && moduleType === 'revalidation' && revalidationRow" class="details-section">
+      <h2 class="section-title">Revalidation Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Submission Date</th>
+              <th>Factory</th>
+              <th>Status</th>
+              <th>Quantity (BL)</th>
+              <th>Permit Numbers</th>
+              <th>Original Permit Date</th>
+              <th>Expiry Date</th>
+              <th>Revalidation Fee</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ revalidationRow.reference_no }}</td>
+              <td>{{ revalidationRow.submission_date ? (revalidationRow.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ revalidationDisplayName }}</td>
+              <td><span class="table-status">{{ revalidationRow.status }}</span></td>
+              <td>{{ revalidationRow.quantity_bl }}</td>
+              <td>{{ revalidationRow.permit_numbers }}</td>
+              <td>{{ revalidationRow.original_permit_date ? (revalidationRow.original_permit_date | date:'dd-MM-yyyy') : '-' }}</td>
+              <td>{{ revalidationRow.expiry_date ? (revalidationRow.expiry_date | date:'dd-MM-yyyy') : '-' }}</td>
+              <td class="amount-cell">₹{{ revalidationRow.revalidation_fee | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Cancellation Details Table -->
+    <div *ngIf="!isLoading && moduleType === 'cancellation' && cancellationRow" class="details-section">
+      <h2 class="section-title">Cancellation Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Cancellation Date</th>
+              <th>Factory</th>
+              <th>Status</th>
+              <th>Original Requisition</th>
+              <th>Cancelled Permits</th>
+              <th>Total Permits Cancelled</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ cancellationRow.reference_no }}</td>
+              <td>{{ cancellationRow.cancellation_date ? (cancellationRow.cancellation_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ cancellationRow.distillery_name }}</td>
+              <td><span class="table-status">{{ cancellationRow.status }}</span></td>
+              <td>{{ cancellationRow.original_requisition_ref }}</td>
+              <td>{{ cancellationRow.cancelled_permit_numbers }}</td>
+              <td>{{ cancellationRow.total_permits_cancelled }}</td>
+              <td>{{ cancellationRow.reason }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Transit Details Table -->
+    <div *ngIf="!isLoading && transitRows.length" class="details-section">
+      <h2 class="section-title">Transit Permit Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Bill No</th>
+              <th>Date</th>
+              <th>Licensee</th>
+              <th>Status</th>
+              <th>Brand</th>
+              <th>Size</th>
+              <th>Cases</th>
+              <th>Vehicle</th>
+              <th>Depot</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of transitRows">
+              <td>{{ row.bill_no }}</td>
+              <td>{{ row.date }}</td>
+              <td>{{ row.sole_distributor_name }}</td>
+              <td><span class="table-status">{{ row.status }}</span></td>
+              <td>{{ row.brand }}</td>
+              <td>{{ row.size_ml }}ml</td>
+              <td>{{ row.cases }}</td>
+              <td>{{ row.vehicle_number }}</td>
+              <td>{{ row.depot_address }}</td>
+              <td class="amount-cell">₹{{ row.total_amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Cancellation Rows Table -->
+    <div *ngIf="!isLoading && cancellationRows.length" class="details-section">
+      <h2 class="section-title">Cancellation & Refund Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Cancellation Date</th>
+              <th>Cancelled By</th>
+              <th>Brand</th>
+              <th>Cases</th>
+              <th>Bottles</th>
+              <th>Refunded</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of cancellationRows">
+              <td>{{ row.reference_no || referenceNo }}</td>
+              <td>{{ row.cancellation_date ? (row.cancellation_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td>{{ row.cancelled_by || 'Officer In-Charge' }}</td>
+              <td>{{ row.brand_name || '-' }}</td>
+              <td>{{ row.quantity_cases }}</td>
+              <td>{{ row.quantity_bottles }}</td>
+              <td class="amount-cell">₹{{ row.amount_refunded | number:'1.2-2' }}</td>
+              <td>{{ row.reason || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Official Footer -->
+    <div class="official-footer no-print">
+      <p class="footer-text">This is a computer-generated document. No signature is required.</p>
+      <p class="footer-text">For any queries, please contact Sikkim Excise Department</p>
+    </div>
+  </div>
+  </div>
+  
+  <!-- Action Buttons - Outside the page layout -->
+  <div class="action-buttons no-print">
+    <button type="button" class="btn btn-print" (click)="printSlip()">
+      <i class="bi bi-printer"></i>
+      Print Slip
+    </button>
+    <button type="button" class="btn btn-back" (click)="goBack()">
+      <i class="bi bi-arrow-left"></i>
+      Back to Dashboard
+    </button>
+  </div>
+</div>
+

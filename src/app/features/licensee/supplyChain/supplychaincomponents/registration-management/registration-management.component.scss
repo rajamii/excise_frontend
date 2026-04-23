@@ -1,0 +1,123 @@
+.registration-management-container {
+  width: 100%;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e3e7ef;
+  padding: 14px 16px;
+}
+
+.card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 1.3rem;
+}
+
+.approved-requests .card-icon {
+  background: linear-gradient(135deg, #15a34a, #16c47a);
+}
+
+.pending-requests .card-icon {
+  background: linear-gradient(135deg, #e39b12, #f0b429);
+}
+
+.objection-requests .card-icon {
+  background: linear-gradient(135deg, #e76e1f, #f08b3e);
+}
+
+.rejected-requests .card-icon {
+  background: linear-gradient(135deg, #d12222, #ef4444);
+}
+
+.card-value {
+  font-size: 2rem;
+  margin: 0;
+  line-height: 1;
+}
+
+.card-label {
+  margin: 2px 0 0;
+  color: #516078;
+}
+
+.compact-filter-section {
+  border: 1px solid #e3e7ef;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.compact-filter {
+  flex: 1;
+  min-width: 280px;
+}
+
+.register-container {
+  margin-top: 14px;
+  border: 1px solid #e3e7ef;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.register-header-bar {
+  background: #0d1730;
+  color: #fff;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.register-table-title {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+
+.entries-count {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.table-wrapper {
+  padding: 0;
+}
+
+.table {
+  margin: 0;
+}
+
+.table thead th {
+  background: #f7f9fc;
+  color: #2d3954;
+  border-bottom: 1px solid #e3e7ef;
+}
+
+.action-eye i {
+  font-size: 1.1rem;
+  color: #2c64e8;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  padding: 22px;
+  text-align: center;
+  color: #556277;
+}
+
+.error-state {
+  color: #dc2626;
+}

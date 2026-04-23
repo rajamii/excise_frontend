@@ -2,6 +2,8 @@
 
 // Summary Cards
 .summary-card {
+  --summary-accent-start: #1C2B78;
+  --summary-accent-end: #2d4aa7;
   background: white;
   border-radius: 12px;
   padding: 1.5rem;
@@ -11,10 +13,51 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative;
+  overflow: hidden;
+
+  &.summary-card-clickable {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  &.summary-card-clickable:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25), 0 8px 25px rgba(0, 0, 0, 0.12);
+  }
+
+  &.active {
+    border-color: rgba(13, 110, 253, 0.45);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.22), 0 8px 25px rgba(0, 0, 0, 0.12);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--summary-accent-start), var(--summary-accent-end));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
 
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+
+  &.active::after {
+    transform: scaleX(1);
   }
 
   .card-icon {
@@ -26,10 +69,14 @@
     justify-content: center;
     font-size: 1.25rem;
     color: white;
+    position: relative;
+    z-index: 2;
   }
 
   .card-content {
     flex: 1;
+    position: relative;
+    z-index: 2;
 
     .card-value {
       font-size: 1.75rem;
@@ -47,6 +94,8 @@
   }
 
   &.total-requests {
+    --summary-accent-start: #3b82f6;
+    --summary-accent-end: #1d4ed8;
     .card-icon {
       background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     }
@@ -57,6 +106,8 @@
   }
 
   &.pending-requests {
+    --summary-accent-start: #f59e0b;
+    --summary-accent-end: #d97706;
     .card-icon {
       background: linear-gradient(135deg, #f59e0b, #d97706);
     }
@@ -67,6 +118,8 @@
   }
 
   &.approved-requests {
+    --summary-accent-start: #10b981;
+    --summary-accent-end: #059669;
     .card-icon {
       background: linear-gradient(135deg, #10b981, #059669);
     }
@@ -77,12 +130,62 @@
   }
 
   &.total-quantity {
+    --summary-accent-start: #8b5cf6;
+    --summary-accent-end: #7c3aed;
     .card-icon {
       background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     }
 
     .card-value {
       color: #8b5cf6;
+    }
+  }
+
+  &.submitted-requests {
+    --summary-accent-start: #10b981;
+    --summary-accent-end: #059669;
+    .card-icon {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .card-value {
+      color: #10b981;
+    }
+  }
+
+  &.under-review-requests {
+    --summary-accent-start: #f59e0b;
+    --summary-accent-end: #d97706;
+    .card-icon {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .card-value {
+      color: #f59e0b;
+    }
+  }
+
+  &.forwarded-requests {
+    --summary-accent-start: #0ea5e9;
+    --summary-accent-end: #0284c7;
+    .card-icon {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    }
+
+    .card-value {
+      color: #0ea5e9;
+    }
+  }
+
+  &.edited-requests {
+    --summary-accent-start: #ef5350;
+    --summary-accent-end: #e53935;
+    .card-icon {
+      background: linear-gradient(135deg, #ef5350, #e53935);
+    }
+
+    .card-value {
+      color: #ef5350;
     }
   }
 }
@@ -96,9 +199,9 @@
     overflow: hidden;
 
     .register-header-bar {
-      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      background: #000;
       padding: 1.5rem;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #000;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -106,18 +209,18 @@
       .register-table-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #111827;
+        color: #fff;
         margin: 0;
 
         i {
-          color: #3b82f6;
+          color: #fff;
         }
       }
 
       .register-info {
         .entries-count {
-          background: #dbeafe;
-          color: #1e40af;
+          background: rgba(255, 255, 255, 0.14);
+          color: #fff;
           padding: 0.5rem 1rem;
           border-radius: 20px;
           font-size: 0.875rem;

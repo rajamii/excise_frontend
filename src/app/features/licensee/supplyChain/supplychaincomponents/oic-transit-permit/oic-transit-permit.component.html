@@ -8,8 +8,63 @@
       <mat-icon class="header-icon">description</mat-icon>
       <div class="header-text">
         <h2>Transit Permit Applications - Officer In-Charge</h2>
-        <p><strong>Purpose:</strong> Review and manage transit permit applications submitted by distilleries. Approve or
-          reject applications based on verification and compliance requirements.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-section">
+    <div class="stats-cards">
+      <div class="stat-card total stat-card-clickable" role="button" tabindex="0" aria-label="Show all applications"
+        (click)="onStatCardClick('All Status')" (keydown.enter)="onStatCardClick('All Status')"
+        (keydown.space)="onStatCardClick('All Status'); $event.preventDefault()"
+        [class.active]="isStatCardActive('All Status')">
+        <div class="stat-icon">
+          <mat-icon>list_alt</mat-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ totalApplications }}</div>
+          <div class="stat-label">Total Applications</div>
+        </div>
+      </div>
+
+      <div class="stat-card pending stat-card-clickable" role="button" tabindex="0" aria-label="Show pending applications"
+        (click)="onStatCardClick('PENDING')" (keydown.enter)="onStatCardClick('PENDING')"
+        (keydown.space)="onStatCardClick('PENDING'); $event.preventDefault()"
+        [class.active]="isStatCardActive('PENDING')">
+        <div class="stat-icon">
+          <mat-icon>schedule</mat-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ pendingApplications }}</div>
+          <div class="stat-label">Pending Applications</div>
+        </div>
+      </div>
+
+      <div class="stat-card approved stat-card-clickable" role="button" tabindex="0" aria-label="Show approved applications"
+        (click)="onStatCardClick('APPROVED')" (keydown.enter)="onStatCardClick('APPROVED')"
+        (keydown.space)="onStatCardClick('APPROVED'); $event.preventDefault()"
+        [class.active]="isStatCardActive('APPROVED')">
+        <div class="stat-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ approvedApplications }}</div>
+          <div class="stat-label">Approved Applications</div>
+        </div>
+      </div>
+
+      <div class="stat-card rejected stat-card-clickable" role="button" tabindex="0" aria-label="Show rejected applications"
+        (click)="onStatCardClick('REJECTED')" (keydown.enter)="onStatCardClick('REJECTED')"
+        (keydown.space)="onStatCardClick('REJECTED'); $event.preventDefault()"
+        [class.active]="isStatCardActive('REJECTED')">
+        <div class="stat-icon">
+          <mat-icon>cancel</mat-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">{{ rejectedApplications }}</div>
+          <div class="stat-label">Rejected Applications</div>
+        </div>
       </div>
     </div>
   </div>
@@ -21,16 +76,6 @@
         <mat-form-field appearance="outline" class="filter-field">
           <mat-label>Reference Number</mat-label>
           <input matInput placeholder="Search by reference number" formControlName="referenceNumber">
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Status</mat-label>
-          <mat-select formControlName="status">
-            <mat-option value="All Status">All Status</mat-option>
-            <mat-option value="PENDING">Pending</mat-option>
-            <mat-option value="APPROVED">Approved</mat-option>
-            <mat-option value="REJECTED">Rejected</mat-option>
-          </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="filter-field">
@@ -59,28 +104,6 @@
         </div>
       </div>
     </form>
-  </div>
-
-  <!-- Statistics Cards -->
-  <div class="stats-section">
-    <div class="stats-cards">
-      <div class="stat-card pending">
-        <div class="stat-number">{{ pendingApplications }}</div>
-        <div class="stat-label">Pending Applications</div>
-      </div>
-      <div class="stat-card approved">
-        <div class="stat-number">{{ approvedApplications }}</div>
-        <div class="stat-label">Approved Applications</div>
-      </div>
-      <div class="stat-card rejected">
-        <div class="stat-number">{{ rejectedApplications }}</div>
-        <div class="stat-label">Rejected Applications</div>
-      </div>
-      <div class="stat-card total">
-        <div class="stat-number">{{ totalApplications }}</div>
-        <div class="stat-label">Total Applications</div>
-      </div>
-    </div>
   </div>
 
   <!-- Dashboard Info -->
@@ -182,13 +205,9 @@
       <ng-container matColumnDef="status">
         <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
         <mat-cell *matCellDef="let element">
-          <span class="status-badge" [ngClass]="getStatusClass(element.status_code || element.status)">
-            <mat-icon>{{
-              (element.status_code === 'TRP_02' || element.status.toLowerCase().includes('payment')) ? 'schedule' :
-              (element.status_code === 'TRP_03' || element.status.toLowerCase().includes('approved')) ? 'check_circle' :
-              'cancel'
-              }}</mat-icon>
-            {{ getStatusLabel(element.status_code || element.status) }}
+          <span class="status-badge" [ngClass]="getStatusClass(element)">
+            <mat-icon>{{ getStatusIcon(element) }}</mat-icon>
+            {{ getStatusLabel(element) }}
           </span>
         </mat-cell>
       </ng-container>
@@ -202,16 +221,8 @@
               <mat-icon>visibility</mat-icon>
             </button>
             <button mat-icon-button color="primary" (click)="onViewFinalPermit(element)" matTooltip="View Permit"
-              *ngIf="element.status_code === 'TRP_03' || element.status.toLowerCase().includes('approved')">
+              *ngIf="canViewFinalPermit(element)">
               <mat-icon>assignment</mat-icon>
-            </button>
-            <button mat-icon-button color="accent" (click)="onApprove(element)" matTooltip="Approve"
-              *ngIf="element.status_code === 'TRP_02' || element.status.toLowerCase().includes('payment')">
-              <mat-icon>check_circle</mat-icon>
-            </button>
-            <button mat-icon-button color="warn" (click)="onReject(element)" matTooltip="Reject"
-              *ngIf="element.status_code === 'TRP_02' || element.status.toLowerCase().includes('payment')">
-              <mat-icon>cancel</mat-icon>
             </button>
           </div>
         </mat-cell>

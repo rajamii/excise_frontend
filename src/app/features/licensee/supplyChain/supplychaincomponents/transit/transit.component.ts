@@ -14,17 +14,20 @@ interface TableData {
   submissionDate: string;
   distilleryName: string;
   status: string;
-  backendStatus?: string; // Original backend status for role-based logic
+  statusCode?: string;
+  backendStatus?: string;
   amount: string;
   workflowId?: number;
   currentStage?: number;
   destination?: string;
-  depotAddress?: string; // Add separate depot address field
+  depotAddress?: string;
   transportMode?: string;
   vehicleNumber?: string;
   permitValidUntil?: string;
-  allowedActions?: string[]; // Dynamic actions from backend
+  allowedActions?: string[];
   allowedActionConfigs?: any[];
+  approvedByDisplay?: string;
+  cancelledByDisplay?: string;
 }
 
 interface ProductDetail {
@@ -59,8 +62,9 @@ export class TransitComponent implements OnInit {
 
   // Filter properties for transit
   transitDateFilter: string = '';
+  transitMonthFilter: string = '';
   transitStatusFilter: string = '';
-  transitDestinationFilter: string = '';
+  activeSummaryFilter: string = '';
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15, 20, 50];
@@ -68,6 +72,7 @@ export class TransitComponent implements OnInit {
   pageSize: number = 5;
 
   filteredTransitData: TableData[] = [];
+  summaryTransitData: TableData[] = [];
 
   // Store raw backend data for brand details
   rawTransitData: any[] = [];
@@ -108,9 +113,12 @@ export class TransitComponent implements OnInit {
    * Returns the backend status directly for display
    * No mapping - just like requisition/revalidation components
    */
-  private mapBackendStatusToDisplayStatus(backendStatus: string): string {
-    // Return backend status directly, just like requisition component
-    return backendStatus || 'Pending';
+  private mapBackendStatusToDisplayStatus(backendStatus: string, currentStageDescription?: string): string {
+    const stageDescription = String(currentStageDescription || '').trim();
+    if (stageDescription) return stageDescription;
+    const value = String(backendStatus || '').trim();
+    if (!value) return 'Pending';
+    return value;
   }
 
   loadTransitData(): void {
@@ -137,7 +145,10 @@ export class TransitComponent implements OnInit {
 
           // Get the status from backend - support both camelCase and snake_case
           const backendStatus = item.status || '';
-          const displayStatus = this.mapBackendStatusToDisplayStatus(backendStatus);
+          const displayStatus = this.mapBackendStatusToDisplayStatus(
+            backendStatus,
+            item.current_stage_description || item.currentStageDescription
+          );
 
           // Calculate duties for this row (supporting both casings)
           const excise = parseFloat(item.exciseDutyRsPerCase || item.excise_duty_rs_per_case || '0');
@@ -155,22 +166,25 @@ export class TransitComponent implements OnInit {
 
           if (billNo && !grouped.has(billNo)) {
             grouped.set(billNo, {
-              id: item.id, // Add ID for actions
+              id: item.id,
               referenceNo: billNo,
               submissionDate: date,
               distilleryName: distributorName,
-              status: displayStatus, // Use status from database with proper mapping
-              backendStatus: backendStatus, // Store original backend status for role-based logic
+              status: displayStatus,
+              statusCode: item.statusCode || item.status_code || '',
+              backendStatus: backendStatus,
               amount: rowTotal,
               workflowId: item.workflow || item.workflow_id || item.workflowId,
               currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-              destination: destination, // This should be the actual destination
-              depotAddress: destination, // Store depot address separately
+              destination: destination,
+              depotAddress: destination,
               transportMode: 'Road',
               vehicleNumber: vehicleNumber,
               permitValidUntil: '',
-              allowedActions: item.allowedActions || item.allowed_actions || [], // Add allowed actions
-              allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || []
+              allowedActions: item.allowedActions || item.allowed_actions || [],
+              allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+              approvedByDisplay: item.approvedByDisplay || item.approved_by_display || '',
+              cancelledByDisplay: item.cancelledByDisplay || item.cancelled_by_display || '',
             });
           } else if (billNo) {
             // Accumulate amount for existing bill
@@ -198,9 +212,10 @@ export class TransitComponent implements OnInit {
   // Unified action handler
   onUnifiedAction(event: { action: string, item: any }): void {
     const context = this.getUserContext();
+    const action = String(event.action || '').toUpperCase();
 
     this.unifiedActionsService.executeAction(
-      event.action,
+      action,
       event.item,
       'transit',
       context
@@ -211,7 +226,7 @@ export class TransitComponent implements OnInit {
             alert(result.message);
           }
           // Reload data if it was a backend action
-          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE'].includes(event.action)) {
+          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE'].includes(action)) {
             this.loadTransitData();
           }
         } else {
@@ -248,22 +263,49 @@ export class TransitComponent implements OnInit {
 
   // Filter methods
   applyTransitFilters(): void {
-    let filtered = [...this.transitData];
+    let summary = [...this.transitData];
 
     if (this.transitDateFilter) {
-      filtered = filtered.filter(item => {
+      summary = summary.filter(item => {
         const itemDate = this.parseDate(item.submissionDate);
         const filterDate = new Date(this.transitDateFilter);
         return itemDate.toDateString() === filterDate.toDateString();
       });
     }
 
-    if (this.transitStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.transitStatusFilter);
+    if (this.transitMonthFilter) {
+      const monthNum = parseInt(this.transitMonthFilter, 10);
+      summary = summary.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.getMonth() + 1 === monthNum;
+      });
     }
 
-    if (this.transitDestinationFilter) {
-      filtered = filtered.filter(item => item.destination === this.transitDestinationFilter);
+    this.summaryTransitData = summary;
+
+    let filtered = [...summary];
+
+    if (this.transitStatusFilter) {
+      const filter = this.normalizeStageToken(this.transitStatusFilter);
+      filtered = filtered.filter(item => {
+        if (filter === 'pending' || filter === 'underreview') {
+          return this.isPendingSummaryStatus(item);
+        }
+        if (filter === 'issued') {
+          return this.isIssuedLikeStatus(item);
+        }
+        if (filter === 'approved') {
+          return this.isApprovedLikeStatus(item);
+        }
+        if (filter === 'rejected') {
+          return this.isRejectedLikeStatus(item);
+        }
+        if (filter === 'underprocess') {
+          return this.isUnderProcessLikeStatus(item);
+        }
+        const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+        return token.includes(filter);
+      });
     }
 
     this.filteredTransitData = filtered;
@@ -272,8 +314,9 @@ export class TransitComponent implements OnInit {
 
   clearTransitFilters(): void {
     this.transitDateFilter = '';
+    this.transitMonthFilter = '';
     this.transitStatusFilter = '';
-    this.transitDestinationFilter = '';
+    this.activeSummaryFilter = '';
     this.applyTransitFilters();
   }
 
@@ -281,29 +324,156 @@ export class TransitComponent implements OnInit {
     this.applyTransitFilters();
   }
 
-  onTransitStatusFilterChange(): void {
+  onTransitMonthFilterChange(): void {
     this.applyTransitFilters();
   }
 
-  onTransitDestinationFilterChange(): void {
+  onTransitStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyTransitFilters();
   }
 
   // Summary methods
   getTransitStatusCount(status: string): number {
-    return this.filteredTransitData.filter(item => item.status === status).length;
+    const filter = this.normalizeStageToken(status);
+    if (filter === 'pending' || filter === 'underreview') {
+      return this.summaryTransitData.filter(item => this.isPendingSummaryStatus(item)).length;
+    }
+    if (filter === 'issued') {
+      return this.summaryTransitData.filter(item => this.isIssuedLikeStatus(item)).length;
+    }
+    if (filter === 'approved') {
+      return this.summaryTransitData.filter(item => this.isApprovedLikeStatus(item)).length;
+    }
+    if (filter === 'rejected') {
+      return this.summaryTransitData.filter(item => this.isRejectedLikeStatus(item)).length;
+    }
+    if (filter === 'underprocess') {
+      return this.summaryTransitData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+    }
+    return this.summaryTransitData.filter(
+      item => `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`.includes(filter)
+    ).length;
   }
 
   getUrgentTransitCount(): number {
     // Since we removed priority, we can base urgency on status or other criteria
     // For now, let's count items that need immediate attention (PENDING status)
-    return this.filteredTransitData.filter(item =>
-      item.status === 'PENDING' || item.status === 'Ready for Payment'
-    ).length;
+    return this.summaryTransitData.filter(item => this.isPendingSummaryStatus(item)).length;
   }
 
   getTotalTransitAmount(): number {
-    return this.filteredTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+    return this.summaryTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStageToken(filter);
+    const current = this.normalizeStageToken(this.transitStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.transitStatusFilter = '';
+      this.applyTransitFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.transitStatusFilter = '';
+      this.applyTransitFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.transitStatusFilter = filter;
+    this.applyTransitFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStageToken(this.transitStatusFilter);
+    if (['pending', 'approved', 'rejected', 'underprocess'].includes(normalized)) {
+      this.activeSummaryFilter = this.transitStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
+  }
+
+  private normalizeStageToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private isRejectedLikeStatus(item: TableData): boolean {
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    return token.includes('reject');
+  }
+
+  private isPendingLikeToken(token: string): boolean {
+    // Used to avoid misclassifying "approval pending" as approved.
+    return (
+      token.includes('pending') ||
+      token.includes('review') ||
+      token.includes('forward') ||
+      token.includes('underprocess') ||
+      token.includes('underreview') ||
+      token.includes('submit') ||
+      token.includes('applied')
+    );
+  }
+
+  private isApprovedLikeStatus(item: TableData): boolean {
+    if (this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    if (this.isPendingLikeToken(token)) {
+      return false;
+    }
+    return (
+      token.includes('approved') ||
+      token.includes('issued') ||
+      token.includes('complete') ||
+      token.includes('completed')
+    );
+  }
+
+  private isIssuedLikeStatus(item: TableData): boolean {
+    if (this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    if (this.isPendingLikeToken(token)) {
+      return false;
+    }
+    return token.includes('issued');
+  }
+
+  private isPendingSummaryStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.backendStatus)}`;
+    const isPendingLike =
+      token.includes('pending') ||
+      token.includes('review') ||
+      token.includes('submit') ||
+      token.includes('applied');
+
+    const isPaymentForwardedToOfficer =
+      token.includes('paymentsuccess') &&
+      token.includes('forward') &&
+      (token.includes('officer') || token.includes('oic'));
+
+    return isPendingLike || isPaymentForwardedToOfficer;
+  }
+
+  private isUnderProcessLikeStatus(item: TableData): boolean {
+    if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
+      return false;
+    }
+    if (this.isPendingSummaryStatus(item)) {
+      return false;
+    }
+    return true;
   }
 
   // Action methods
@@ -334,6 +504,100 @@ export class TransitComponent implements OnInit {
     return item.status === 'Ready for Payment' || item.backendStatus === 'Ready for Payment';
   }
 
+  getTransitIncludeActions(item: TableData): string[] {
+    const actions = ['VIEW'];
+    
+    // Show payment slip after payment is made
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getTransitIncludeActions:', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      statusCode: item.statusCode,
+      hasPayment
+    });
+    
+    // Show "View Payment Slip" after payment is made
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    console.log('🔍 Final transit actions array:', actions);
+    return actions;
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed for transit
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
+    
+    // Payment indicators for transit
+    // After payment, status changes to forwarded, approved, or specific status codes
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('paymentsuccessful') ||
+                                   status.includes('pending') ||
+                                   status.includes('paid') ||
+                                   statusCode === 'TRP_02' ||
+                                   statusCode === 'TRP_03' ||
+                                   statusCode === 'TRP_04';
+    
+    console.log('🔍 hasPaymentBeenMade (transit):', {
+      status: item.status,
+      statusCode: item.statusCode,
+      normalizedStatus: status,
+      statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
+  }
+
+  canShowPaymentSlip(item: TableData): boolean {
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
+    const text = `${item?.status || ''} ${item?.backendStatus || ''}`.toLowerCase();
+    if (statusCode === 'TRP_03' || statusCode === 'TRP_04') return true;
+    return (
+      text.includes('approved') ||
+      text.includes('rejected') ||
+      text.includes('cancelled') ||
+      text.includes('refund initiated')
+    );
+  }
+
+  openTransitSlip(item: TableData): void {
+    const billNo = String(item?.referenceNo || '').trim();
+    const queryParams = {
+      type: 'transit',
+      refNo: billNo || undefined,
+      billNo: billNo || undefined,
+      source: this.getUserContext()
+    };
+
+    this.router.navigate(['/payment-slip-view'], { queryParams })
+      .then((ok) => {
+        if (ok) return;
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams();
+        if (queryParams.type) params.set('type', String(queryParams.type));
+        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+        if (queryParams.billNo) params.set('billNo', String(queryParams.billNo));
+        if (queryParams.source) params.set('source', String(queryParams.source));
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      })
+      .catch(() => {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams();
+        if (queryParams.type) params.set('type', String(queryParams.type));
+        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+        if (queryParams.billNo) params.set('billNo', String(queryParams.billNo));
+        if (queryParams.source) params.set('source', String(queryParams.source));
+        const query = params.toString();
+        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+      });
+  }
+
   /**
    * Determines if Approve/Reject buttons should be shown for an item
    * Only for officers when the application is forwarded to their specific stage
@@ -342,19 +606,26 @@ export class TransitComponent implements OnInit {
     if (this.userRole === 'licensee') return false;
 
     const backendStatus = item.backendStatus || '';
+    const normalized = String(backendStatus || '').trim();
+    const token = normalized.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const statusCode = String(item?.statusCode || '').trim().toUpperCase();
 
     switch (this.userRole) {
       case 'oic':
         // OIC can approve/reject when payment is done and forwarded to them
-        return backendStatus === 'PaymentSuccessfulandForwardedToOfficerincharge';
+        return (
+          statusCode === 'TRP_02' ||
+          token.includes('pending') ||
+          normalized === 'PaymentSuccessfulandForwardedToOfficerincharge'
+        );
       case 'permit':
         // Permit section can approve/reject when forwarded to them
-        return backendStatus.toLowerCase().includes('permit section') ||
-          backendStatus.toLowerCase().includes('forwarded to permit');
+        return normalized.toLowerCase().includes('permit section') ||
+          normalized.toLowerCase().includes('forwarded to permit');
       case 'commissioner':
         // Commissioner can approve/reject when forwarded to them
-        return backendStatus.toLowerCase().includes('commissioner') ||
-          backendStatus.toLowerCase().includes('forwarded to commissioner');
+        return normalized.toLowerCase().includes('commissioner') ||
+          normalized.toLowerCase().includes('forwarded to commissioner');
       default:
         return false;
     }
@@ -388,7 +659,7 @@ export class TransitComponent implements OnInit {
     }
 
     // Ready for Payment / Pending states
-    if (statusLower.includes('ready for payment') || statusLower === 'pending' || statusLower.includes('waiting')) {
+    if (statusLower.includes('ready for payment') || statusLower.includes('pending') || statusLower.includes('waiting')) {
       return 'pending';
     }
 
@@ -422,7 +693,7 @@ export class TransitComponent implements OnInit {
     }
 
     // Ready for Payment / Pending states
-    if (statusLower.includes('ready for payment') || statusLower === 'pending' || statusLower.includes('waiting')) {
+    if (statusLower.includes('ready for payment') || statusLower.includes('pending') || statusLower.includes('waiting')) {
       return 'bi-clock-fill';
     }
 
@@ -445,11 +716,37 @@ export class TransitComponent implements OnInit {
   }
 
   private parseDate(dateString: string): Date {
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const s = String(dateString || '').trim();
+    if (!s) return new Date(NaN);
+
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const year = parseInt(iso[1], 10);
+      const month = parseInt(iso[2], 10) - 1;
+      const day = parseInt(iso[3], 10);
+      return new Date(year, month, day);
     }
-    return new Date(dateString);
+
+    // DD-MM-YYYY
+    const dmyDash = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmyDash) {
+      const day = parseInt(dmyDash[1], 10);
+      const month = parseInt(dmyDash[2], 10) - 1;
+      const year = parseInt(dmyDash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    // DD/MM/YYYY
+    const dmySlash = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (dmySlash) {
+      const day = parseInt(dmySlash[1], 10);
+      const month = parseInt(dmySlash[2], 10) - 1;
+      const year = parseInt(dmySlash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    return new Date(s);
   }
 
   navigateTo(route: string) {
@@ -588,10 +885,12 @@ export class TransitComponent implements OnInit {
 
   // Brand Details Panel
   showBrandDetailsPanel: boolean = false;
+  selectedPermitItem: TableData | null = null;
 
   // Brand Details Methods
-  openBrandDetailsModal(referenceNo: string): void {
+  openBrandDetailsModal(referenceNo: string, item?: TableData): void {
     this.selectedPermitRef = referenceNo;
+    this.selectedPermitItem = item || this.filteredTransitData.find(d => d.referenceNo === referenceNo) || null;
     this.selectedBrandDetails = this.getBrandDetailsForPermit(referenceNo);
     this.showBrandDetailsPanel = true;
   }

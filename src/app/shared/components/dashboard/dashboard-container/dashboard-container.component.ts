@@ -51,15 +51,6 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
   widgetData: { [widgetId: string]: any } = {};
   widgetLoading: { [widgetId: string]: boolean } = {};
   
-  // Application type filter (for backward compatibility)
-  selectedApplicationType = 'all';
-  applicationTypes = [
-    { value: 'all', label: 'All Applications' },
-    { value: 'new_license', label: 'New License' },
-    { value: 'renewal', label: 'Renewal' },
-    { value: 'modification', label: 'Modification' }
-  ];
-
   constructor(
     public roleService: RoleService,
     private router: Router,
@@ -132,11 +123,6 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
 
   private loadWidgetDataObservable(widget: DashboardWidget) {
     const params: any = {};
-    
-    // Add application type filter if applicable
-    if (this.selectedApplicationType !== 'all') {
-      params.applicationType = this.selectedApplicationType;
-    }
 
     return this.http.get(widget.data.endpoint!, { params });
   }
@@ -213,11 +199,6 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
     }
   }
 
-  onApplicationTypeChange() {
-    // Reload all widgets when filter changes
-    this.loadAllWidgetData();
-  }
-
   // Helper methods
   hasPermission(permissions: string[]): boolean {
     return this.roleService.hasAnyPermission(permissions);
@@ -228,11 +209,6 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
       this.hasPermission(widget.permissions) && 
       (widget.isVisible !== false)
     );
-  }
-
-  getApplicationTypeLabel(): string {
-    const type = this.applicationTypes.find(t => t.value === this.selectedApplicationType);
-    return type?.label || 'All Applications';
   }
 
   // Widget type checks

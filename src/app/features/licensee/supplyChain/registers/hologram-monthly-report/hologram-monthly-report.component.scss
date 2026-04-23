@@ -255,8 +255,53 @@
   }
 }
 
+/* Left metadata block (Arrival / Utilization label, datetime, ref, notes) */
+.monthly-entry-meta-cell {
+  min-width: 230px;
+}
+
+.monthly-entry-meta {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+}
+
+.monthly-entry-title {
+  font-size: 1.35rem;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #111827;
+}
+
+.monthly-entry-time {
+  margin-top: 0.2rem;
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+.monthly-entry-ref {
+  margin-top: 0.2rem;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.monthly-entry-note {
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .monthly-entry-title {
+    font-size: 1.1rem;
+  }
+
+  .monthly-entry-ref {
+    font-size: 0.88rem;
+  }
+
   .roll-utilization-box,
   .roll-wastage-box {
     .roll-header .d-flex {

@@ -38,14 +38,11 @@ interface ITCellData {
     <div class="itcell-dashboard">
       <!-- Dashboard Statistics -->
       <app-dashboard-statistics
-        [statistics]="getDashboardStatistics()"
-        [filterOptions]="getFilterOptions()"
-        [showSelectionMessage]="!selectedApplicationType || selectedApplicationType === 'all'"
-        (filterChange)="onDashboardFilterChange($event)">
+        [statistics]="getDashboardStatistics()">
       </app-dashboard-statistics>
 
-      <!-- Data Table - Only show when a specific type is selected -->
-      <div class="data-table-section" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length > 0">
+      <!-- Data Table -->
+      <div class="data-table-section" *ngIf="false">
         <div class="table-container">
           <table class="table table-striped table-hover">
             <thead class="table-dark">
@@ -105,14 +102,7 @@ interface ITCellData {
         </div>
       </div>
 
-      <!-- Empty State for specific type with no data -->
-      <div class="empty-state" *ngIf="selectedApplicationType && selectedApplicationType !== 'all' && filteredApplications.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-inbox"></i>
-        </div>
-        <h5>No {{ selectedApplicationType | titlecase }} Applications Found</h5>
-        <p>There are no {{ selectedApplicationType }} applications requiring IT Cell verification at this time.</p>
-      </div>
+      <!-- Empty State removed (hide message) -->
     </div>
   `,
   styles: [`
@@ -250,9 +240,13 @@ export class ITCellDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
+    const actionablePending = this.getActionablePendingCount();
+    const legacyPending =
+      this.getStatusCount('UNDER_IT_CELL_REVIEW') + this.getStatusCount('PENDING_VERIFICATION');
+
     return {
       applied: this.getStatusCount('SUBMITTED'),
-      pending: this.getStatusCount('UNDER_IT_CELL_REVIEW') + this.getStatusCount('PENDING_VERIFICATION'),
+      pending: actionablePending || legacyPending,
       approved: this.getStatusCount('VERIFIED') + this.getStatusCount('FORWARDED_TO_COMMISSIONER'),
       rejected: this.getStatusCount('REJECTED')
     };
@@ -283,6 +277,15 @@ export class ITCellDashboardComponent implements OnInit {
     return this.allApplications.filter(app => 
       app.status.toLowerCase().includes(status.toLowerCase())
     ).length;
+  }
+
+  private getActionablePendingCount(): number {
+    // Prefer DB workflow metadata (allowed actions) so pending count stays correct even when stage names change.
+    return this.allApplications.filter((app) => {
+      const actions = Array.isArray(app?.allowedActions) ? app.allowedActions : [];
+      const upper = actions.map((a) => String(a || '').toUpperCase());
+      return upper.includes('VERIFY') || upper.includes('FORWARD') || upper.includes('REJECT');
+    }).length;
   }
 
   // Unified action handler

@@ -1,6 +1,9 @@
 ﻿<mat-card>
   <mat-card-header>
     <div class="heading">Submit Application</div>
+    @if (!applicationId) {
+      <div class="validation">Review all details before final submission</div>
+    }
   </mat-card-header>
 
   <mat-card-content>
@@ -131,12 +134,6 @@
                     <span>{{ brand.brand_code }}</span> |
                     <span>{{ brand.category }}</span> |
                     <span>{{ brand.type }}</span>
-                    @if (brand.strength !== null) {
-                      | <span>{{ brand.strength }}% ABV</span>
-                    }
-                  </div>
-                  <div class="brand-sizes">
-                    Pack Sizes: {{ (brand.selectedSizes || brand.sizes).join(', ') }}
                   </div>
                 </div>
               </div>
@@ -229,3 +226,4 @@
     }
   </mat-card-actions>
 </mat-card>
+

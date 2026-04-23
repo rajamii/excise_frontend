@@ -32,6 +32,10 @@ export interface TransitPermitDetail {
   status_code: string;
   current_stage: number | null;
   current_stage_name?: string;
+  current_stage_description?: string;
+  current_stage_is_initial?: boolean;
+  current_stage_is_final?: boolean;
+  current_stage_entry_actions?: string[];
   workflow_name?: string;
   allowed_actions?: string[];
   created_at: string;
@@ -46,7 +50,12 @@ export interface GroupedTransitPermit {
   vehicle_number: string;
   licensee_id: string;
   status: string;
+  status_label?: string;
   status_code: string;
+  current_stage_name?: string;
+  current_stage_is_initial?: boolean;
+  current_stage_is_final?: boolean;
+  current_stage_entry_actions?: string[];
   total_amount: number;
   total_cases: number;
   total_products: number;
@@ -94,16 +103,7 @@ export class OicTransitPermitService {
    */
   getOICTransitPermits(): Observable<GroupedTransitPermit[]> {
     return this.getGroupedTransitPermits().pipe(
-      map(permits => {
-        // Filter permits that are not in "Ready for Payment" status
-        // OIC should see permits that have been paid (TRP_02) or already processed (TRP_03, TRP_04)
-        const filtered = permits.filter(permit => {
-          const shouldShow = permit.status_code !== 'TRP_01'; // Exclude "Ready for Payment"
-          return shouldShow;
-        });
-
-        return filtered;
-      })
+      map(permits => permits.filter(permit => !permit.current_stage_is_initial))
     );
   }
 
@@ -134,7 +134,12 @@ export class OicTransitPermitService {
           vehicle_number: permit.vehicle_number || permit.vehicleNumber,
           licensee_id: permit.licensee_id || permit.licenseeId,
           status: permit.status,
+          status_label: permit.current_stage_description || permit.current_stage_name || permit.status,
           status_code: permit.status_code || permit.statusCode,
+          current_stage_name: permit.current_stage_name || permit.currentStageName,
+          current_stage_is_initial: permit.current_stage_is_initial ?? permit.currentStageIsInitial ?? false,
+          current_stage_is_final: permit.current_stage_is_final ?? permit.currentStageIsFinal ?? false,
+          current_stage_entry_actions: permit.current_stage_entry_actions || permit.currentStageEntryActions || [],
           total_amount: 0,
           total_cases: 0,
           total_products: 0,
@@ -154,6 +159,20 @@ export class OicTransitPermitService {
       group.total_amount += amount;
       group.total_cases += cases;
       group.total_products += 1;
+      group.current_stage_is_initial = permit.current_stage_is_initial ?? group.current_stage_is_initial ?? false;
+      group.current_stage_is_final = permit.current_stage_is_final ?? group.current_stage_is_final ?? false;
+      const entryActions = permit.current_stage_entry_actions || [];
+      if (Array.isArray(entryActions) && entryActions.length > 0) {
+        group.current_stage_entry_actions = Array.from(
+          new Set([...(group.current_stage_entry_actions || []), ...entryActions.map((a: any) => String(a).toUpperCase())])
+        );
+      }
+      const allowed = permit.allowed_actions || [];
+      if (Array.isArray(allowed) && allowed.length > 0) {
+        group.allowed_actions = Array.from(
+          new Set([...(group.allowed_actions || []), ...allowed.map((a: any) => String(a).toUpperCase())])
+        );
+      }
     });
 
     return Array.from(grouped.values());
@@ -170,20 +189,16 @@ export class OicTransitPermitService {
   }> {
     return this.getOICTransitPermits().pipe(
       map(permits => {
+        const toActions = (actions: any) =>
+          Array.isArray(actions) ? actions.map((a: any) => String(a).toUpperCase()) : [];
+        const isPending = (p: GroupedTransitPermit) => toActions(p.allowed_actions).includes('APPROVE') || toActions(p.allowed_actions).includes('REJECT');
+        const isApproved = (p: GroupedTransitPermit) => !!p.current_stage_is_final && toActions(p.current_stage_entry_actions).includes('APPROVE');
+        const isRejected = (p: GroupedTransitPermit) => !!p.current_stage_is_final && toActions(p.current_stage_entry_actions).includes('REJECT');
+
         const stats = {
-          pending: permits.filter(p =>
-            p.status_code === 'TRP_02' ||
-            p.status.toLowerCase().includes('payment') && p.status.toLowerCase().includes('successful')
-          ).length,
-          approved: permits.filter(p =>
-            p.status_code === 'TRP_03' ||
-            p.status.toLowerCase().includes('approved')
-          ).length,
-          rejected: permits.filter(p =>
-            p.status_code === 'TRP_04' ||
-            p.status.toLowerCase().includes('cancelled') ||
-            p.status.toLowerCase().includes('rejected')
-          ).length,
+          pending: permits.filter(isPending).length,
+          approved: permits.filter(isApproved).length,
+          rejected: permits.filter(isRejected).length,
           total: permits.length
         };
         return stats;

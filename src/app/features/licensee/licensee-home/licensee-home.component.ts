@@ -120,10 +120,7 @@ export class LicenseeHomeComponent extends BaseComponent {
       case 'daily-production-register':
         this.router.navigate(['/dev-daily-production-register']);
         break;
-      case 'brands-details':
-        this.router.navigate(['/dev-brands-details']);
-        break;
-      case 'yuksom-local-sales-register':
+            case 'yuksom-local-sales-register':
         this.router.navigate(['/dev-local-sales-register']);
         break;
       case 'beer-production-register':

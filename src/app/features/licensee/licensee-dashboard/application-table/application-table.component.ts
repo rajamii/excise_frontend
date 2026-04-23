@@ -8,6 +8,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { UnifiedApplication } from '../../../../core/models/unified-application.model';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
+import { RoleService } from '../../../../core/services/role.service';
 
 @Component({
     selector: 'app-application-table',
@@ -58,7 +59,8 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
 
     constructor(
         private router: Router,
-        private dialog: MatDialog
+        private dialog: MatDialog,
+        private roleService: RoleService
     ) { }
 
     ngOnInit(): void {
@@ -85,6 +87,20 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
             return lastTransaction?.stage || lastTransaction?.current_stage || element?.currentStage || 'pending';
         }
         return element?.currentStage || 'pending';
+    }
+
+    getCurrentStageDisplay(element: UnifiedApplication): string {
+        const raw = String(this.getCurrentStage(element) || '').trim();
+        const normalized = raw.toLowerCase().replace(/\s+/g, '_');
+
+        if (this.isLicenseeUser()) {
+            if (normalized.includes('awaiting_payment') || normalized.includes('payment')) return 'Awaiting Payment';
+            if (normalized.includes('approved')) return 'Approved';
+            if (normalized.includes('reject')) return 'Rejected';
+            return 'Pending';
+        }
+
+        return this.stageDisplayMapping[normalized] || this.stageDisplayMapping[raw] || raw || 'N/A';
     }
 
     getLatestRemarks(element: UnifiedApplication): string {
@@ -142,5 +158,16 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
             maxHeight: '80vh',
             data: { application: element }
         });
+    }
+
+    // Method to check if current user is licensee
+    isLicenseeUser(): boolean {
+        return this.roleService.isLicenseeRole();
+    }
+
+    // Method to check if View Timeline button should be shown
+    shouldShowTimelineButton(): boolean {
+        // Hide timeline button for licensee users in approved applications
+        return !(this.tableType === 'approved' && this.isLicenseeUser());
     }
 }

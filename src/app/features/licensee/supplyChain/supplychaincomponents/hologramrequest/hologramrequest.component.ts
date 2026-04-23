@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
 
+const normalizeActionTokens = (actions: any): string[] => {
+  if (!Array.isArray(actions)) return [];
+  return actions.map(a => String(a).trim().toUpperCase()).filter(Boolean);
+};
+
 @Component({
   selector: 'app-hologramrequest',
   standalone: true,
@@ -14,8 +19,11 @@ import { HologramDataService } from '../../services/hologram-data.service';
 export class HologramrequestComponent implements OnInit {
   Math = Math;
   hologramRequestList: any[] = [];
+  summaryHologramRequestList: any[] = [];
   filteredHologramRequestList: any[] = [];
+  activeSummaryFilter: string = '';
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
 
   // Filter properties
   dateFilter: string = '';
@@ -53,12 +61,19 @@ export class HologramrequestComponent implements OnInit {
         console.log('📦 Loading hologram requests from API:', data.length, 'items');
 
         let mapped = data.map((item: any) => {
+          const stageName = item.current_stage_name || item.currentStageName || item.status || 'Unknown';
           return {
             ...item,
             // UI compatibility mapping
             refNumber: item.refNo, // Template uses refNumber
             totalHolograms: item.quantity, // Template uses totalHolograms
             hologramType: item.hologram_type || item.hologramType || 'LOCAL', // Use backend type
+            status: stageName, // Keep DB stage name for display
+            currentStageName: stageName,
+            currentStageIsInitial: Boolean(item.current_stage_is_initial ?? item.currentStageIsInitial ?? false),
+            currentStageIsFinal: Boolean(item.current_stage_is_final ?? item.currentStageIsFinal ?? false),
+            currentStageEntryActions: normalizeActionTokens(item.current_stage_entry_actions || item.currentStageEntryActions || []),
+            allowedActions: normalizeActionTokens(item.allowed_actions || item.allowedActions || [])
           };
         });
 
@@ -70,7 +85,8 @@ export class HologramrequestComponent implements OnInit {
         });
 
         this.hologramRequestList = mapped;
-        this.filteredHologramRequestList = [...this.hologramRequestList];
+        this.applyFilters();
+        this.maybeAutoSelectUnderProcessSummary();
       },
       error: (err) => {
         console.error('Error loading hologram requests', err);
@@ -78,29 +94,136 @@ export class HologramrequestComponent implements OnInit {
     });
   }
 
+  private maybeAutoSelectUnderProcessSummary(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    if (this.statusFilter || this.activeSummaryFilter) return;
+
+    // This screen doesn't have a "Pending" card; "UNDER_PROCESS" includes pending-like work.
+    if (this.getSummaryRequestStatusCount('UNDER_PROCESS') > 0) {
+      this.activeSummaryFilter = 'UNDER_PROCESS';
+      this.statusFilter = 'UNDER_PROCESS';
+      this.applyFilters();
+    }
+  }
+
+  private isUsageDateToday(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey === todayKey;
+  }
+
+  private isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usageDate || '').trim();
+    if (!usageDate) return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
+  }
+
+  shouldShowUsageDateApprovalNotice(request: any): boolean {
+    return this.getWorkflowCategory(request) === 'PENDING' && !this.isUsageDateToday(request) && !this.isUsageDatePast(request);
+  }
+
+  shouldShowUsageDateMissedNotice(request: any): boolean {
+    // If usage date has passed and the request is still in pending-review bucket, treat it as rejected-by-timeout.
+    return this.getWorkflowCategory(request) === 'PENDING' && this.isUsageDatePast(request);
+  }
+
   navigateToHologramRequest(): void {
     this.router.navigate(['/dev-hologramrequestlevel1']);
   }
+  private getRequestStatusCategory(requestOrStatus: any): string {
+    const workflow = this.getWorkflowCategory(requestOrStatus);
 
+    // Special rule: if the usage date is in the past and the request is still pending review,
+    // consider it rejected due to no action taken on usage date.
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      if (workflow === 'PENDING' && this.isUsageDatePast(requestOrStatus)) {
+        return 'REJECTED';
+      }
+    }
 
+    return workflow;
+  }
 
-  getRequestStatusClass(status: string): string {
-    // Basic mapping, assuming backend returns standard statuses
-    // Backend statuses: Submitted, Approved by Permit Section, etc.
-    // Frontend expects: PENDING, APPROVED, REJECTED, PROCESSING
+  private getWorkflowCategory(requestOrStatus: any): string {
+    if (requestOrStatus && typeof requestOrStatus === 'object') {
+      const isInitial = Boolean(requestOrStatus.currentStageIsInitial ?? requestOrStatus.current_stage_is_initial ?? false);
+      const isFinal = Boolean(requestOrStatus.currentStageIsFinal ?? requestOrStatus.current_stage_is_final ?? false);
+      const entryActions = normalizeActionTokens(requestOrStatus.currentStageEntryActions || requestOrStatus.current_stage_entry_actions || []);
+      const allowedActions = normalizeActionTokens(requestOrStatus.allowedActions || requestOrStatus.allowed_actions || []);
 
-    const s = (status || '').toUpperCase();
-    if (s.includes('APPROVED')) return 'bg-success-subtle text-success';
-    if (s.includes('REJECTED')) return 'bg-danger-subtle text-danger';
-    if (s.includes('SUBMITTED') || s.includes('PENDING')) return 'bg-warning-subtle text-warning';
+      if (isFinal && entryActions.includes('REJECT')) return 'REJECTED';
+      if (isFinal) return 'APPROVED';
+      if (allowedActions.includes('ISSUE') || allowedActions.includes('APPROVE') || allowedActions.includes('REJECT')) return 'PENDING';
+      if (isInitial) return 'PENDING';
+      return 'PROCESSING';
+    }
+
+    // Fallback for legacy data with only status text.
+    const s = String(requestOrStatus || '').toUpperCase();
+    if (s.includes('REJECT')) return 'REJECTED';
+    if (s.includes('COMPLETE') || s.includes('APPROVE')) return 'APPROVED';
+    if (s.includes('SUBMIT') || s.includes('PENDING')) return 'PENDING';
+    return 'PROCESSING';
+  }
+
+  private isUnderProcessLikeRequest(request: any): boolean {
+    const category = this.getRequestStatusCategory(request);
+    return category === 'PENDING' || category === 'PROCESSING';
+  }
+
+  getSummaryRequestStatusCount(status: string): number {
+    const s = String(status || '').toUpperCase();
+    if (s === 'UNDER_PROCESS') {
+      return this.summaryHologramRequestList.filter(r => this.isUnderProcessLikeRequest(r)).length;
+    }
+    return this.summaryHologramRequestList.filter(r => this.getRequestStatusCategory(r) === s).length;
+  }
+
+  getFilteredRequestStatusCount(status: string): number {
+    const s = String(status || '').toUpperCase();
+    if (s === 'UNDER_PROCESS') {
+      return this.filteredHologramRequestList.filter(r => this.isUnderProcessLikeRequest(r)).length;
+    }
+    return this.filteredHologramRequestList.filter(r => this.getRequestStatusCategory(r) === s).length;
+  }
+
+  // Backward-compatible alias (some templates/build caches may still reference it)
+  getRequestStatusCount(status: string): number {
+    return this.getSummaryRequestStatusCount(status);
+  }
+
+  getStatusFilterLabel(value: string): string {
+    const v = String(value || '').toUpperCase();
+    if (!v) return 'All';
+    if (v === 'UNDER_PROCESS') return 'Under Process';
+    if (v === 'APPROVED') return 'Approved';
+    if (v === 'REJECTED') return 'Rejected';
+    if (v === 'PENDING') return 'Pending';
+    if (v === 'PROCESSING') return 'Processing';
+    return value;
+  }
+
+  getRequestStatusClass(request: any): string {
+    const category = this.getRequestStatusCategory(request);
+    if (category === 'APPROVED') return 'bg-success-subtle text-success';
+    if (category === 'REJECTED') return 'bg-danger-subtle text-danger';
+    if (category === 'PENDING') return 'bg-warning-subtle text-warning';
     return 'bg-secondary-subtle text-secondary';
   }
 
-  getStatusIcon(status: string): string {
-    const s = (status || '').toUpperCase();
-    if (s.includes('APPROVED')) return 'bi-check-circle-fill';
-    if (s.includes('REJECTED')) return 'bi-x-circle-fill';
-    if (s.includes('SUBMITTED') || s.includes('PENDING')) return 'bi-clock-fill';
+  getStatusIcon(request: any): string {
+    const category = this.getRequestStatusCategory(request);
+    if (category === 'APPROVED') return 'bi-check-circle-fill';
+    if (category === 'REJECTED') return 'bi-x-circle-fill';
+    if (category === 'PENDING') return 'bi-clock-fill';
     return 'bi-info-circle-fill';
   }
 
@@ -203,20 +326,15 @@ End of Application
     window.URL.revokeObjectURL(url);
   }
 
-  getRequestStatusCount(status: string): number {
-    return this.hologramRequestList.filter(request => request.status === status).length;
-  }
-
   getTotalRequestedHolograms(): number {
-    return this.hologramRequestList.reduce((total, request) => total + (request.totalHolograms || 0), 0);
+    return this.filteredHologramRequestList.reduce((total, request) => total + (request.totalHolograms || 0), 0);
   }
 
   // Filter methods
   applyFilters(): void {
-    this.filteredHologramRequestList = this.hologramRequestList.filter(request => {
+    this.summaryHologramRequestList = this.hologramRequestList.filter(request => {
       let matchesDate = true;
       let matchesMonth = true;
-      let matchesStatus = true;
 
       // Date filter (exact date match)
       if (this.dateFilter) {
@@ -235,12 +353,19 @@ End of Application
           requestDate.getMonth() === filterDate.getMonth();
       }
 
-      // Status filter
-      if (this.statusFilter) {
-        matchesStatus = request.status === this.statusFilter;
+      return matchesDate && matchesMonth;
+    });
+
+    this.filteredHologramRequestList = this.summaryHologramRequestList.filter(request => {
+      if (!this.statusFilter) {
+        return true;
       }
 
-      return matchesDate && matchesMonth && matchesStatus;
+      const filter = String(this.statusFilter || '').toUpperCase();
+      if (filter === 'UNDER_PROCESS') {
+        return this.isUnderProcessLikeRequest(request);
+      }
+      return this.getRequestStatusCategory(request) === filter;
     });
 
     // Reset pagination to first page when filters are applied
@@ -251,6 +376,8 @@ End of Application
     this.dateFilter = '';
     this.monthFilter = '';
     this.statusFilter = '';
+    this.activeSummaryFilter = '';
+    this.summaryHologramRequestList = [...this.hologramRequestList];
     this.filteredHologramRequestList = [...this.hologramRequestList];
     this.currentPage = 1;
   }
@@ -264,7 +391,40 @@ End of Application
   }
 
   onStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyFilters();
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = String(filter || '').toUpperCase();
+    const current = String(this.statusFilter || '').toUpperCase();
+
+    if (!normalized || normalized === 'ALL') {
+      this.activeSummaryFilter = '';
+      this.statusFilter = '';
+      this.applyFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.statusFilter = '';
+      this.applyFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = normalized;
+    this.statusFilter = normalized;
+    this.applyFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = String(this.statusFilter || '').toUpperCase();
+    if (['APPROVED', 'REJECTED', 'UNDER_PROCESS'].includes(normalized)) {
+      this.activeSummaryFilter = normalized;
+      return;
+    }
+    this.activeSummaryFilter = '';
   }
 
 

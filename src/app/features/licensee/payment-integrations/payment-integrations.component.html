@@ -1,0 +1,278 @@
+<section class="payment-integrations-page">
+  <mat-card class="info-card">
+    <mat-card-header>
+      <mat-card-title>Payment Integrations</mat-card-title>
+      <mat-card-subtitle>BillDesk test flow mapped to backend payment APIs</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="info-grid">
+        <div><strong>Gateway URL:</strong> {{ paymentGatewayUrl }}</div>
+        <div><strong>Callback URL:</strong> {{ callbackUrl }}</div>
+        <div><strong>Cancel URL:</strong> {{ cancelUrl }}</div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title>1) Initiate Payment</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="paymentForm" class="payment-form">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Module</mat-label>
+            <mat-select formControlName="paymentModuleCode">
+              <mat-option *ngFor="let module of modules" [value]="module.moduleCode">
+                {{ module.moduleCode }} - {{ module.moduleDesc }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Payer ID</mat-label>
+            <input matInput formControlName="payerId" placeholder="LIC/2026/001" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Licensee ID (Wallet Check)</mat-label>
+            <input matInput formControlName="licenseeId" placeholder="Optional" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Gateway</mat-label>
+            <mat-select formControlName="gatewaySlNo">
+              <mat-option [value]="null">Default Active Gateway</mat-option>
+              <mat-option *ngFor="let gateway of gateways" [value]="gateway.slNo">
+                {{ gateway.slNo }} - {{ gateway.paymentGatewayName }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="wide-field">
+            <mat-label>Requisition ID</mat-label>
+            <input matInput formControlName="requisitionIdNo" placeholder="Optional" />
+          </mat-form-field>
+        </div>
+
+        <div class="gateway-summary">
+          <strong>Selected Gateway:</strong> {{ getGatewaySummary() }}
+        </div>
+
+        <div formArrayName="items" class="hoa-items">
+          <div
+            *ngFor="let item of itemRows.controls; let i = index"
+            [formGroupName]="i"
+            class="hoa-row"
+          >
+            <mat-form-field appearance="outline">
+              <mat-label>Head of Account</mat-label>
+              <mat-select formControlName="headOfAccount">
+                <mat-option *ngFor="let hoa of moduleHoaOptions" [value]="hoa.headOfAccount">
+                  {{ hoa.headOfAccount }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Amount</mat-label>
+              <input matInput type="number" min="0.01" step="0.01" formControlName="amount" />
+            </mat-form-field>
+
+            <button mat-stroked-button type="button" color="warn" (click)="removeItemRow(i)">
+              Remove
+            </button>
+
+            <div class="hoa-description" *ngIf="item.get('headOfAccount')?.value">
+              {{ getHoaDescription(item.get('headOfAccount')?.value) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <button mat-stroked-button type="button" (click)="addItemRow()">Add HOA Row</button>
+          <button mat-stroked-button type="button" (click)="loadWalletBalance()" [disabled]="isWalletLoading">
+            {{ isWalletLoading ? 'Loading Wallet...' : 'Fetch Wallet Balance' }}
+          </button>
+          <button mat-flat-button color="primary" type="button" (click)="initiatePayment()" [disabled]="isInitiating">
+            {{ isInitiating ? 'Initiating...' : 'Initiate Transaction' }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="messages" *ngIf="successMessage || errorMessage">
+    <div class="success" *ngIf="successMessage">{{ successMessage }}</div>
+    <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  </div>
+
+  <mat-card class="wallet-card" *ngIf="walletRows.length > 0">
+    <mat-card-header>
+      <mat-card-title>Wallet Balances</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Licensee</th>
+            <th>Head of Account</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of walletRows">
+            <td>{{ row.licenseeIdNo }}</td>
+            <td>{{ row.headOfAccount }}</td>
+            <td>{{ row.walletAmount }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="result-card" *ngIf="latestInitiation">
+    <mat-card-header>
+      <mat-card-title>Transaction Initiated</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="result-grid">
+        <div><strong>Status:</strong> {{ latestInitiation.status }}</div>
+        <div><strong>UTR:</strong> {{ latestInitiation.utr }}</div>
+        <div><strong>Transaction ID:</strong> {{ latestInitiation.transactionId }}</div>
+        <div><strong>Amount:</strong> {{ latestInitiation.transactionAmount }}</div>
+        <div><strong>Gateway:</strong> {{ latestInitiation.gateway.name }}</div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="status-card">
+    <mat-card-header>
+      <mat-card-title>2) Reconcile / Update Transaction Status</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="statusForm">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>UTR</mat-label>
+            <input matInput formControlName="utr" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Payment Status</mat-label>
+            <mat-select formControlName="paymentStatus">
+              <mat-option value="P">Pending</mat-option>
+              <mat-option value="S">Success</mat-option>
+              <mat-option value="F">Failed</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Auth Status</mat-label>
+            <input matInput formControlName="responseAuthstatus" placeholder="0300" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Txn Ref No</mat-label>
+            <input matInput formControlName="responseTxnreferenceno" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Bank Ref No</mat-label>
+            <input matInput formControlName="responseBankreferenceno" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Response Amount</mat-label>
+            <input matInput type="number" min="0.01" step="0.01" formControlName="responseTxnamount" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="wide-field">
+            <mat-label>Error Description</mat-label>
+            <input matInput formControlName="responseErrordescription" />
+          </mat-form-field>
+        </div>
+
+        <div class="actions-row">
+          <button mat-flat-button color="primary" type="button" (click)="updateTransactionStatus()" [disabled]="isStatusUpdating">
+            {{ isStatusUpdating ? 'Updating...' : 'Update Status' }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="list-card">
+    <mat-card-header>
+      <mat-card-title>3) Transactions</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="filterForm">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Filter Payer ID</mat-label>
+            <input matInput formControlName="payerId" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Filter Module</mat-label>
+            <input matInput formControlName="paymentModuleCode" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Filter Status</mat-label>
+            <mat-select formControlName="paymentStatus">
+              <mat-option value="">All</mat-option>
+              <mat-option value="P">Pending</mat-option>
+              <mat-option value="S">Success</mat-option>
+              <mat-option value="F">Failed</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Filter UTR</mat-label>
+            <input matInput formControlName="utr" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Limit</mat-label>
+            <input matInput type="number" min="1" max="500" formControlName="limit" />
+          </mat-form-field>
+        </div>
+      </form>
+
+      <div class="actions-row">
+        <button mat-stroked-button type="button" (click)="loadTransactions()" [disabled]="isTransactionsLoading">
+          {{ isTransactionsLoading ? 'Loading...' : 'Refresh Transactions' }}
+        </button>
+      </div>
+
+      <table class="data-table" *ngIf="transactions.length > 0">
+        <thead>
+          <tr>
+            <th>UTR</th>
+            <th>Module</th>
+            <th>Payer</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let txn of transactions">
+            <td>{{ txn.utr }}</td>
+            <td>{{ txn.paymentModuleCode }}</td>
+            <td>{{ txn.payerId }}</td>
+            <td>{{ txn.transactionAmount }}</td>
+            <td>{{ txn.paymentStatus }}</td>
+            <td>
+              <button mat-button type="button" (click)="selectTransaction(txn)">Use for Status Update</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="empty-state" *ngIf="transactions.length === 0">No transactions found.</div>
+    </mat-card-content>
+  </mat-card>
+</section>

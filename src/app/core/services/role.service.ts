@@ -25,15 +25,48 @@ export class RoleService {
   };
 
   constructor() {
-    // Try to restore user from session storage first
+    // Try to restore user from session storage first.
     this.restoreUserFromStorage();
+  }
+
+  private hasAuthTokens(): boolean {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      const access = localStorage.getItem('access');
+      const refresh = localStorage.getItem('refresh');
+      return !!access && !!refresh;
+    } catch {
+      return false;
+    }
   }
 
   private restoreUserFromStorage(): void {
     try {
+      // Never restore a role-context user when we don't have auth tokens.
+      // This prevents stale sidebars/menus showing up after a fresh login.
+      if (!this.hasAuthTokens()) {
+        try {
+          sessionStorage.removeItem('currentUser');
+        } catch {
+          // ignore
+        }
+        this.currentUserSubject.next(null);
+        return;
+      }
+
       const storedUser = sessionStorage.getItem('currentUser');
       if (storedUser) {
         const user = JSON.parse(storedUser);
+
+        // If we know the authenticated username, ensure it matches what we're restoring.
+        // If it doesn't, drop the sessionStorage user so the dashboard can hydrate from `/me/`.
+        const authUsername = String(localStorage.getItem('username') || '').trim();
+        const storedUsername = String(user?.username || '').trim();
+        if (authUsername && storedUsername && authUsername !== storedUsername) {
+          sessionStorage.removeItem('currentUser');
+          this.currentUserSubject.next(null);
+          return;
+        }
         console.log('✅ Restored user from session storage:', user);
         this.currentUserSubject.next(user);
       }
@@ -79,9 +112,32 @@ export class RoleService {
     this.saveUserToStorage(user);
   }
 
+  clearCurrentUser(): void {
+    this.currentUserSubject.next(null);
+    try {
+      sessionStorage.removeItem('currentUser');
+    } catch {
+      // ignore
+    }
+  }
+
   getRoleById(roleId: number): Role | null {
     const roleMapping = this.ROLE_MAPPINGS[roleId as keyof typeof this.ROLE_MAPPINGS];
-    if (!roleMapping) return null;
+    if (!roleMapping) {
+      const currentUser = this.getCurrentUser();
+      const inferredPermissions =
+        currentUser?.roleId === roleId && Array.isArray(currentUser.permissions)
+          ? currentUser.permissions
+          : [];
+
+      return {
+        id: roleId,
+        name: `role_${roleId}`,
+        displayName: `Role ${roleId}`,
+        permissions: inferredPermissions,
+        hierarchy: 999
+      };
+    }
 
     return {
       id: roleId,

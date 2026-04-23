@@ -1,10 +1,10 @@
-<div class="d-flex min-vh-100">
+<div class="d-flex" [class.min-vh-100]="!embeddedHologramOnly">
 
   <!-- Main Content Area -->
-  <main class="flex-grow-1 bg-light">
+  <main class="flex-grow-1" [class.bg-light]="!embeddedHologramOnly">
     <div class="container-fluid p-0">
       <!-- Header Section -->
-      <div class="header-section text-black">
+      <div class="header-section text-black" *ngIf="!embeddedHologramOnly">
         <div class="container-fluid">
           <div class="row align-items-center py-3">
             <div class="col">
@@ -31,7 +31,7 @@
       </div>
 
       <!-- Overdue Alert -->
-      <div *ngIf="showOverdueAlert && overdueHologramEntries.length > 0" class="container-fluid mt-3">
+      <div *ngIf="!embeddedHologramOnly && showOverdueAlert && overdueHologramEntries.length > 0" class="container-fluid mt-3">
         <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
           <i class="bi bi-exclamation-triangle-fill me-3 fs-3"></i>
           <div class="flex-grow-1">
@@ -39,7 +39,8 @@
               <strong>Overdue Hologram Processing Alert!</strong>
             </h5>
             <p class="mb-2">
-              {{ overdueHologramEntries.length }} hologram request(s) have exceeded the 5 PM deadline and are still
+              {{ overdueHologramEntries.length }} hologram request(s) have exceeded the
+              {{ approvalDeadlineLabel || 'configured' }} deadline and are still
               under process.
               Immediate action required to complete the workflow.
             </p>
@@ -53,7 +54,7 @@
       </div>
 
       <!-- Tabs Section -->
-      <div class="bg-white border-bottom">
+      <div class="bg-white border-bottom" *ngIf="!embeddedHologramOnly">
         <div class="container-fluid">
           <ul class="nav nav-tabs border-0">
             <li class="nav-item">
@@ -242,7 +243,7 @@
                         <th class="ref-number">Reference No</th>
                         <th class="submission-date">Submission Date</th>
                         <th class="expiry-date">Expiry Date</th>
-                        <th class="licensee-name">Licensee Name</th>
+                        <th class="licensee-name">Factory Name</th>
                         <th class="status">Status</th>
                         <th class="priority">Priority</th>
                         <th class="days-left">Days Left</th>
@@ -273,7 +274,7 @@
                           <span class="date-text" [class.text-danger]="item.isExpired">{{ item.expiryDate }}</span>
                         </td>
                         <td class="licensee-name">
-                          <span class="company-name">{{ item.distilleryName }}</span>
+                          <span class="company-name">{{ item.factoryName || item.distilleryName }}</span>
                         </td>
                         <td class="status">
                           <span class="status-badge status-{{ getStatusClass(item.status) }}">
@@ -457,25 +458,7 @@
                         </td>
                         <td class="actions">
                           <div class="action-buttons">
-                            <!-- View Payment Receipt - Show for APPROVED/COMPLETED applications -->
-                            <button class="btn btn-outline-success btn-sm" (click)="viewPaymentSlip(item)"
-                              title="View Payment Receipt"
-                              *ngIf="item.status === 'APPROVED' || item.status === 'PAYMENT COMPLETED'">
-                              <i class="bi bi-receipt"></i>
-                            </button>
-
-                            <button class="btn btn-outline-primary btn-sm" (click)="reviewHologram(item)"
-                              title="Review Application">
-                              <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn btn-outline-success btn-sm" (click)="approveHologram(item)"
-                              title="Approve" *ngIf="item.allowedActions?.includes('approve')">
-                              <i class="bi bi-check"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" (click)="rejectHologram(item)" title="Reject"
-                              *ngIf="item.allowedActions?.includes('reject')">
-                              <i class="bi bi-x"></i>
-                            </button>
+                            <span class="text-muted small">Use Details</span>
                           </div>
                         </td>
                       </tr>

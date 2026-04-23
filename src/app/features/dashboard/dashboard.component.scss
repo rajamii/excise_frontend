@@ -196,6 +196,244 @@
 }
 
 // ========================================
+// WELCOME BANNER
+// ========================================
+.welcome-banner {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 22px 26px;
+    margin-bottom: 28px;
+    color: #fff;
+    background:
+        radial-gradient(1200px 600px at 10% 10%, rgba(0, 229, 255, 0.25) 0%, rgba(0, 229, 255, 0) 55%),
+        radial-gradient(900px 520px at 90% 20%, rgba(255, 214, 0, 0.16) 0%, rgba(255, 214, 0, 0) 55%),
+        linear-gradient(135deg, rgba(11, 18, 55, 0.98) 0%, rgba(28, 43, 120, 0.92) 40%, rgba(92, 58, 204, 0.86) 72%, rgba(0, 187, 212, 0.78) 110%);
+    background-size: 160% 160%;
+    background-position: 0% 50%;
+    animation: welcomeFadeIn 420ms ease-out, welcomeGradientShift 14s ease-in-out infinite;
+    box-shadow: 0 18px 50px rgba(28, 43, 120, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(10px);
+    isolation: isolate;
+    animation: welcomeFadeIn 420ms ease-out;
+
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        inset: -40%;
+        z-index: 0;
+        opacity: 0.55;
+        filter: blur(0px);
+        pointer-events: none;
+        transform: translate3d(0, 0, 0);
+    }
+
+    &::before {
+        /* Soft animated blobs */
+        background:
+            radial-gradient(closest-side at 22% 35%, rgba(0, 229, 255, 0.46) 0%, rgba(0, 229, 255, 0) 62%),
+            radial-gradient(closest-side at 78% 28%, rgba(255, 214, 0, 0.34) 0%, rgba(255, 214, 0, 0) 60%),
+            radial-gradient(closest-side at 55% 78%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 62%);
+        animation: welcomeFloat1 10s ease-in-out infinite;
+    }
+
+    &::after {
+        /* Subtle moving diagonal sheen */
+        background:
+            linear-gradient(115deg, rgba(255, 255, 255, 0) 15%, rgba(255, 255, 255, 0.15) 40%, rgba(255, 255, 255, 0) 70%),
+            repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0 2px, rgba(255, 255, 255, 0) 2px 10px);
+        opacity: 0.22;
+        animation: welcomeSheen 9s ease-in-out infinite;
+    }
+
+    .welcome-banner__inner {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+    }
+
+    .welcome-banner__left {
+        min-width: 0;
+    }
+
+    .welcome-banner__kicker {
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.92;
+    }
+
+    .welcome-banner__title {
+        margin-top: 6px;
+        font-size: 28px;
+        font-weight: 800;
+        line-height: 1.15;
+        text-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .welcome-banner__name {
+        color: #ffe082;
+        white-space: nowrap;
+    }
+
+    .welcome-banner__subtitle {
+        margin-top: 10px;
+        font-size: 14px;
+        opacity: 0.95;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .welcome-banner__role {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        font-weight: 700;
+        backdrop-filter: blur(10px);
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .welcome-banner__right {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .welcome-banner__date {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+
+        mat-icon {
+            width: 20px;
+            height: 20px;
+            font-size: 20px;
+        }
+    }
+}
+
+@keyframes welcomeFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes welcomeGradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes welcomeFloat1 {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate3d(2.5%, -2%, 0) scale(1.02);
+    }
+}
+
+@keyframes welcomeFloat2 {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate3d(-2%, 2.5%, 0) scale(1.03);
+    }
+}
+
+@keyframes welcomeSheen {
+    0%,
+    100% {
+        transform: translate3d(-2%, 0, 0) rotate(0.001deg);
+        opacity: 0.18;
+    }
+
+    50% {
+        transform: translate3d(2%, 0, 0) rotate(0.001deg);
+        opacity: 0.28;
+    }
+}
+
+@media (max-width: 900px) {
+    .welcome-banner {
+        padding: 18px 18px;
+
+        .welcome-banner__inner {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .welcome-banner__title {
+            font-size: 24px;
+        }
+
+        .welcome-banner__name {
+            white-space: normal;
+        }
+
+        .welcome-banner__right {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .welcome-banner__date {
+            width: fit-content;
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-banner {
+        animation: none;
+
+        &::before,
+        &::after {
+            animation: none;
+        }
+    }
+}
+
+// ========================================
 // DASHBOARD HEADER STYLES
 // ========================================
 .dashboard-header {
@@ -1200,6 +1438,27 @@ mat-card,
     animation-delay: 0.4s;
 }
 
+// Simple dashboard mode (restore old simple look)
+.stats-container .stat-card.custom {
+    display: none !important;
+}
+
+.stats-container .stat-card .card-trend,
+.stats-container .stat-card .sub-info,
+.stats-container .stat-card .card-footer {
+    display: none !important;
+}
+
+.stats-container .stat-card .card-header {
+    justify-content: center !important;
+    padding: 1.5rem 1.5rem 0.5rem !important;
+}
+
+.stats-container .stat-card .card-content {
+    text-align: center;
+    padding-bottom: 1.5rem !important;
+}
+
 // ========================================
 // TABLE STYLES
 // ========================================
@@ -1328,12 +1587,40 @@ mat-card-content {
                 color: #1f2937;
             }
         }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wallet-view-toggle {
+            display: inline-flex;
+            border: 1px solid #c7d2fe;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .wallet-view-btn {
+            border-radius: 0;
+            padding: 6px 14px;
+            font-weight: 600;
+            color: #1f2937;
+
+            &.active {
+                background: #2563eb;
+                color: #ffffff;
+            }
+        }
     }
 
     .section-content {
         background: white;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         overflow: hidden;
+        // Small visual separation between the white header bar and the first content card/grid
+        padding-top: 16px;
     }
 
     &.hologram-overview-wrapper {
@@ -1342,9 +1629,10 @@ mat-card-content {
 
     // Hologram overview should follow normal page scroll like stock inventory (no nested scroll region).
     .section-content.hologram-overview-content {
-        overflow-y: auto;
-        overflow-x: visible;
-        max-height: calc(100vh - 140px);
+        // Let the main layout's `.content-wrapper` own the scrollbar.
+        // Avoid nested scrolling here so the user can reach tabs like "Rolls".
+        overflow: visible;
+        max-height: none;
         height: auto;
         min-height: auto;
     }
@@ -1495,6 +1783,73 @@ mat-card-content {
             margin: 0;
         }
     }
+}
+
+.officer-activity-section {
+    padding: 32px;
+    background: #ffffff;
+}
+
+.officer-activity-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 360px;
+}
+
+.placeholder-card {
+    width: min(640px, 100%);
+    text-align: center;
+    padding: 40px 32px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #f8faff 0%, #eef3ff 100%);
+    border: 1px solid #d9e4ff;
+    box-shadow: 0 16px 36px rgba(28, 43, 120, 0.08);
+
+    h3 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1c2b78;
+    }
+
+    p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #4b5b7c;
+    }
+}
+
+.placeholder-icon-wrap {
+    width: 78px;
+    height: 78px;
+    margin: 0 auto 20px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1c2b78 0%, #3554bf 100%);
+    box-shadow: 0 12px 24px rgba(28, 43, 120, 0.18);
+
+    mat-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 36px;
+        color: #ffffff;
+    }
+}
+
+.placeholder-note {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #d5e0fb;
+    color: #5a6787;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 // ========================================

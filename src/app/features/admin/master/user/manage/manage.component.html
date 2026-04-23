@@ -144,13 +144,22 @@
           #roleModel="ngModel"
         >
           <mat-option *ngFor="let role  of roles" [value]="role ">
-            {{ role.id }}
+            {{ toTitleCase(role.name || '-') }}
           </mat-option>
         </mat-select>
         <mat-error *ngIf="roleModel.errors?.['required']">
           Role is required
         </mat-error>
       </mat-form-field>
+
+      <div class="user-active-toggle">
+        <mat-checkbox
+          name="isActive"
+          [(ngModel)]="user.isActive"
+        >
+          Is Active
+        </mat-checkbox>
+      </div>
 
       <!-- Password Fields (Only in Add Mode) -->
       <ng-container *ngIf="!isEditMode">

@@ -12,19 +12,57 @@ import { Role } from '../../core/models/role.model';
 import { LicenseSubcategory } from '../../core/models/license-subcategory.model';
 import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
+import { LicenseFormTermsResponse } from './master/license-terms/license-terms.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
   subdivision?: number;
   role?: number;
+  isActive?: boolean;
   confirmPassword?: string;
 };
+
+export interface OICApprovedEstablishment {
+  applicationId: string;
+  establishmentName: string;
+  licenseId: string;
+  licenseeId: string;
+  districtCode: string;
+  subdivisionCode: string;
+}
+
+export interface OICOfficerRecord {
+  id: number;
+  officerId: number;
+  username: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  applicationId: string;
+  licenseId: string;
+  licensee_id: string;
+  establishment_name: string;
+  establishmentName?: string;
+  created_at: string;
+  createdAt?: string;
+  officer_created_at?: string;
+  officerCreatedAt?: string;
+  isActive?: boolean;
+}
+
+export interface CreateOICOfficerPayload {
+  approvedApplicationId: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+}
 
 @Injectable({ providedIn: 'root' })
 
 export class AdminService {
   private readonly baseUrl = environment.apiBaseUrl;
   private readonly mastersUrl = `${this.baseUrl}/masters/core`;
+  private readonly licenseMastersUrl = `${this.baseUrl}/masters/license`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
 
   constructor(private http: HttpClient) { }
@@ -53,6 +91,46 @@ export class AdminService {
   // Delete user by username
   deleteUser(id: number): Observable<any> {
     return this.http.delete(`${this.usersUrl}/users/${id}/delete/`);
+  }
+
+  // OIC officer management for Site Admin
+  getOICApprovedEstablishments(): Observable<OICApprovedEstablishment[]> {
+    return this.http.get<OICApprovedEstablishment[]>(
+      `${this.usersUrl}/users/oic/approved-establishments/`
+    );
+  }
+
+  getOICOfficers(): Observable<OICOfficerRecord[]> {
+    return this.http.get<OICOfficerRecord[]>(
+      `${this.usersUrl}/users/oic/officers/`
+    );
+  }
+
+  createOICOfficer(payload: CreateOICOfficerPayload): Observable<any> {
+    return this.http.post(
+      `${this.usersUrl}/users/oic/officers/create/`,
+      payload
+    );
+  }
+
+  updateOICOfficer(assignmentId: number, payload: CreateOICOfficerPayload): Observable<any> {
+    return this.http.put(
+      `${this.usersUrl}/users/oic/officers/${assignmentId}/update/`,
+      payload
+    );
+  }
+
+  setOICOfficerActive(assignmentId: number, isActive: boolean): Observable<any> {
+    return this.http.patch(
+      `${this.usersUrl}/users/oic/officers/${assignmentId}/set-active/`,
+      { isActive }
+    );
+  }
+
+  deleteOICOfficer(assignmentId: number): Observable<any> {
+    return this.http.delete(
+      `${this.usersUrl}/users/oic/officers/${assignmentId}/delete/`
+    );
   }
 
 
@@ -230,5 +308,24 @@ export class AdminService {
   // Deletes a road by ID
   deleteRoad(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/roads/${id}/delete/`);
+  }
+
+  // ========================== LICENSE TERMS (LEGACY CODES) ==========================
+
+  getLicenseFormTerms(licenseeCatCode: number, licenseeScatCode: number): Observable<LicenseFormTermsResponse> {
+    return this.http.get<LicenseFormTermsResponse>(
+      `${this.licenseMastersUrl}/form-terms/?licensee_cat_code=${licenseeCatCode}&licensee_scat_code=${licenseeScatCode}`
+    );
+  }
+
+  updateLicenseFormTerms(licenseeCatCode: number, licenseeScatCode: number, terms: string[]): Observable<LicenseFormTermsResponse> {
+    return this.http.put<LicenseFormTermsResponse>(
+      `${this.licenseMastersUrl}/form-terms/update/`,
+      {
+        licensee_cat_code: licenseeCatCode,
+        licensee_scat_code: licenseeScatCode,
+        terms,
+      }
+    );
   }
 }

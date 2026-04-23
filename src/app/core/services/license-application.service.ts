@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -10,6 +10,7 @@ export class LicenseApplicationService {
 
   private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocumentsSubject = new BehaviorSubject<Map<string, File>>(new Map());
@@ -575,7 +576,10 @@ export class LicenseApplicationService {
   // Other methods remain the same...
   advanceApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/advance/${stageId}/`, { context: context || {} });
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/advance/${stageId}/`, {
+      context_data: context || {},
+      remarks: context?.remarks || ''
+    });
   }
 
   raiseObjection(applicationId: string, objections: { field: string; remarks: string }[], generalRemarks?: string): Observable<any> {
@@ -624,12 +628,20 @@ export class LicenseApplicationService {
 
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   updateSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.put(`${this.oldLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   searchApplications(filters: any): Observable<any> {
@@ -678,7 +690,10 @@ export class LicenseApplicationService {
 
   advanceNewLicenseApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/advance/${stageId}/`, { context: context || {} });
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/advance/${stageId}/`, {
+      context_data: context || {},
+      remarks: context?.remarks || ''
+    });
   }
 
   raiseNewLicenseObjection(applicationId: string, objections: { field: string; remarks: string }[], generalRemarks?: string): Observable<any> {
@@ -691,6 +706,36 @@ export class LicenseApplicationService {
   getNewLicenseApplicationById(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.newLicenseUrl}/detail/${encodedId}/`);
+  }
+
+  getNewFinalLicenseData(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/`);
+  }
+
+  getOldFinalLicenseData(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/`);
+  }
+
+  getNewFinalLicensePassportPhoto(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
+  }
+
+  getOldFinalLicensePassportPhoto(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
+  }
+
+  getNewFinalLicenseQrCode(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
+  }
+
+  getOldFinalLicenseQrCode(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
   }
 
   getNewLicenseObjections(applicationId: string): Observable<any> {
@@ -742,12 +787,20 @@ export class LicenseApplicationService {
 
   submitNewLicenseSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   updateNewLicenseSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.put(`${this.newLicenseUrl}/${encodedId}/site-enquiry/`, formData);
+    return this.http.post(
+      `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
+      formData,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    );
   }
 
   searchNewLicenseApplications(filters: any): Observable<any> {

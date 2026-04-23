@@ -3,4 +3,10 @@ import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
 
 bootstrapApplication(AppComponent, appConfig)
-  .catch((err) => console.error(err));
+  .then(() => {
+    document.getElementById('app-preloader')?.remove();
+  })
+  .catch((err) => {
+    document.getElementById('app-preloader')?.remove();
+    console.error(err);
+  });

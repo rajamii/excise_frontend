@@ -8,7 +8,7 @@
         <!-- Bill No -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Bill No:</label>
-          <input type="text" class="form-control" [(ngModel)]="formData.billNo" readonly placeholder="TRP/2/EXCISE">
+          <input type="text" class="form-control" [(ngModel)]="formData.billNo" readonly placeholder="TRP/01/EXCISE">
         </div>
 
         <!-- Sole Distributor Name -->
@@ -17,8 +17,8 @@
           <select class="form-control input-field" [(ngModel)]="formData.soleDistributor"
             (change)="onDistributorChange()" [disabled]="isCommonFieldsLocked">
             <option value="" disabled>-- Select Distributor --</option>
-            <option *ngFor="let distributor of distributors" [value]="distributor.distributorName">
-              {{ distributor.distributorName }}
+            <option *ngFor="let distributorName of uniqueDistributorNames" [value]="distributorName">
+              {{ distributorName }}
             </option>
           </select>
           <small class="text-muted" *ngIf="isCommonFieldsLocked">
@@ -122,8 +122,8 @@
           <select class="form-control input-field" [(ngModel)]="formData.brand" (change)="onBrandChange()"
             [disabled]="isLocked">
             <option value="">-- Select Brand --</option>
-            <option *ngFor="let brand of brandOptions" [value]="brand">
-              {{ brand }}
+            <option *ngFor="let brand of brandOptions" [value]="brand.brandName">
+              {{ brand.label }}
             </option>
           </select>
         </div>
@@ -199,25 +199,27 @@
               <span>Common fields are locked. Click "Unlock & Reset" to modify distributor/date/address (will clear
                 current product selection)</span>
             </div>
-            <button class="btn btn-outline-warning btn-sm" (click)="confirmUnlockFields()"
-              title="Unlock common fields and reset product selection">
-              <i class="bi bi-unlock me-1"></i>Unlock & Reset
-            </button>
+            <span class="d-inline-block"></span>
           </div>
         </div>
 
         <button class="btn btn-primary me-3" (click)="addProduct()">
           Add Product
         </button>
-        <button class="btn btn-success me-3" (click)="onPreSubmit()" [disabled]="products.length === 0">
+        <button class="btn btn-success me-3" (click)="onPreSubmit()" [disabled]="!canSubmitApplication()"
+          [title]="hasPendingProductEntry() ? 'Click Add Product to save current entry before submitting' : ''">
           Submit Application
         </button>
         <!-- Hidden button to trigger modal programmatically -->
         <button id="openModalBtn" class="d-none" data-bs-toggle="modal" data-bs-target="#declarationModal">
         </button>
+        <button id="openPaymentConfirmModalBtn" class="d-none" data-bs-toggle="modal"
+          data-bs-target="#paymentDeductionModal">
+        </button>
 
-        <button class="btn btn-outline-secondary me-3" (click)="clearForm()">
-          Clear Form
+        <button class="btn btn-outline-warning me-3" (click)="confirmUnlockFields()"
+          title="Unlock common fields and reset product selection">
+          <i class="bi bi-unlock me-1"></i>Unlock & Reset
         </button>
       </div>
 
@@ -689,9 +691,9 @@
                       <li class="d-flex mt-3 p-2 bg-light border rounded">
                         <i class="bi bi-info-circle-fill text-primary mt-1 me-3 flex-shrink-0"></i>
                         <span class="small text-dark fw-bold">
-                          Inventory Update: Stock (pieces) for the {{ products.length }} item(s) in this application
-                          will be actively deducted from the Brand Warehouse ONLY upon successful payment of this
-                          permit.
+                          Inventory Update: Wallet deduction will happen on final submit confirmation.
+                          Stock deduction preview is shown in the next step and actual stock is deducted as per transit
+                          permit processing flow.
                         </span>
                       </li>
                     </ul>
@@ -745,6 +747,11 @@
 
       <!-- Footer -->
       <div class="modal-footer bg-light border-top-0 p-4 rounded-bottom">
+        <div class="w-100 mb-2" *ngIf="paymentPreviewError">
+          <div class="alert alert-danger mb-2 py-2">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ paymentPreviewError }}
+          </div>
+        </div>
         <div class="d-flex justify-content-between w-100">
           <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal"
             (click)="cancelDeclaration()">
@@ -752,8 +759,9 @@
           </button>
 
           <button type="button" class="btn btn-success btn-lg px-5 fw-bold" style="background-color: #198754;"
-            (click)="acceptDeclaration()">
-            I ACCEPT
+            [disabled]="loadingPaymentPreview" (click)="acceptDeclaration()">
+            <span *ngIf="!loadingPaymentPreview">I ACCEPT</span>
+            <span *ngIf="loadingPaymentPreview">Preparing...</span>
           </button>
         </div>
 
@@ -763,6 +771,102 @@
 
 
 
+    </div>
+  </div>
+</div>
+
+<!-- Payment Deduction Confirmation Modal -->
+<div class="custom-modal-overlay" *ngIf="paymentDeductionPopupVisible"
+  style="display: flex; z-index: 11000; animation: none;">
+  <div class="custom-modal" style="max-width: 1100px; width: 95%; animation: none;">
+    <div class="modal-header bg-success text-white">
+      <h5 class="modal-title fw-bold mb-0">
+        <i class="bi bi-wallet2 me-2"></i>Payment Deduction Confirmation
+      </h5>
+      <button type="button" class="btn-close btn-close-white" aria-label="Close"
+        (click)="closePaymentDeductionPopup()"></button>
+    </div>
+
+    <div class="modal-body p-4 bg-light">
+        <div class="alert alert-info mb-4" *ngIf="!paymentPreviewError">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          Additional Excise Duty is deducted from the <strong>Excise Wallet</strong>.
+        </div>
+
+        <div class="alert alert-danger mb-4" *ngIf="paymentPreviewError">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ paymentPreviewError }}
+        </div>
+
+        <h6 class="fw-bold text-primary mb-3">Wallet Deduction Preview</h6>
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered table-sm align-middle">
+            <thead class="table-primary">
+              <tr>
+                <th>Wallet</th>
+                <th class="text-end">Current Balance</th>
+                <th class="text-end">Deduction</th>
+                <th class="text-end">Balance After Proceed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let w of walletPreviews">
+                <td>{{ w.label }}</td>
+                <td class="text-end">₹{{ w.before | number:'1.2-2' }}</td>
+                <td class="text-end text-danger">- ₹{{ w.deduction | number:'1.2-2' }}</td>
+                <td class="text-end" [class.text-danger]="w.after < 0" [class.text-success]="w.after >= 0">
+                  ₹{{ w.after | number:'1.2-2' }}
+                </td>
+              </tr>
+              <tr *ngIf="walletPreviews.length === 0">
+                <td colspan="4" class="text-center text-muted">No wallet preview available.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h6 class="fw-bold text-primary mb-3">Brand Stock Deduction Preview</h6>
+        <div class="table-responsive mb-3">
+          <table class="table table-bordered table-sm align-middle">
+            <thead class="table-info">
+              <tr>
+                <th>Brand</th>
+                <th>Size (ml)</th>
+                <th class="text-end">Current Stock (pieces)</th>
+                <th class="text-end">Deduction (pieces)</th>
+                <th class="text-end">Stock After Proceed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of stockPreviews">
+                <td>{{ s.brand }}</td>
+                <td>{{ s.size }}</td>
+                <td class="text-end">{{ s.currentPieces }}</td>
+                <td class="text-end text-danger">- {{ s.deductionPieces }}</td>
+                <td class="text-end" [class.text-danger]="s.remainingPieces < 0" [class.text-success]="s.remainingPieces >= 0">
+                  {{ s.remainingPieces }}
+                </td>
+              </tr>
+              <tr *ngIf="stockPreviews.length === 0">
+                <td colspan="5" class="text-center text-muted">No stock preview available.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="paymentConfirmAgree" [(ngModel)]="paymentConfirmAgreed">
+          <label class="form-check-label fw-semibold" for="paymentConfirmAgree">
+            I agree to wallet deduction and stock deduction for this transit permit.
+          </label>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-white">
+        <button type="button" class="btn btn-outline-secondary" (click)="closePaymentDeductionPopup()">Back</button>
+        <button type="button" class="btn btn-success fw-bold" (click)="proceedWithWalletAndStockDeduction()"
+          [disabled]="!canProceedWithDeduction()">
+          Proceed & Submit
+        </button>
     </div>
   </div>
 </div>

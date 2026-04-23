@@ -1,6 +1,6 @@
-import { catchError, map, Observable, of } from "rxjs";
+import { catchError, map, Observable, of, throwError } from "rxjs";
 import { environment } from "../../../../../environments/environment";
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 
 import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } from "../models/supply-chain.models";
@@ -11,18 +11,50 @@ import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } 
 export class SupplyChainService {
   constructor(private http: HttpClient) { }
 
-  getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
+  getBulkSpiritTypes(licenseSubCategoryId?: number): Observable<BulkSpiritType[]> {
+    let params = new HttpParams();
+    if (typeof licenseSubCategoryId === 'number') {
+      params = params.set('license_sub_category_id', String(licenseSubCategoryId));
+    }
+
     return this.http
       .get<{ success: boolean; data: BulkSpiritType[] }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit/bulk-spirit-types/`
+        `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit/bulk-spirit-types/`,
+        { params }
       )
       .pipe(map((response) => response.data || []));
   }
 
-  getDistilleries(): Observable<Distillery[]> {
+  getDistilleries(
+    licenseeIds: string[] = [],
+    establishmentNames: string[] = [],
+    licenseIds: string[] = []
+  ): Observable<Distillery[]> {
+    let params = new HttpParams();
+    const normalizedIds = (licenseeIds || [])
+      .map((id) => String(id).trim())
+      .filter((id) => !!id);
+    const normalizedNames = (establishmentNames || [])
+      .map((name) => String(name).trim())
+      .filter((name) => !!name);
+    const normalizedLicenseIds = (licenseIds || [])
+      .map((id) => String(id).trim())
+      .filter((id) => !!id);
+
+    if (normalizedIds.length > 0) {
+      params = params.set('licensee_id', normalizedIds.join(','));
+    }
+    if (normalizedNames.length > 0) {
+      params = params.set('establishment_name', normalizedNames.join(','));
+    }
+    if (normalizedLicenseIds.length > 0) {
+      params = params.set('license_id', normalizedLicenseIds.join(','));
+    }
+
     return this.http
       .get<{ success?: boolean; data?: Distillery[] }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`
+        `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`,
+        { params }
       )
       .pipe(map((response: any) => response.data || []));
   }
@@ -54,31 +86,47 @@ export class SupplyChainService {
       .pipe(map((response: any) => response.data || []));
   }
 
-  getLiquorBrands(): Observable<{ brandName: string; sizes: number[] }[]> {
-    return this.http
-      .get<{
-        success?: boolean;
-        data?: { brandName: string; sizes: number[] }[];
-      }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`
-      )
-      .pipe(map((response: any) => response.data || []));
-  }
+  getLiquorBrands(distilleryName?: string): Observable<{ brandName: string; sizes: number[] }[]> { 
+    let params = new HttpParams(); 
+    if (distilleryName) params = params.set('distillery', distilleryName); 
+ 
+    const parse = (response: any) => response?.data || response?.results || response || []; 
+ 
+    // Some deployments expose this endpoint via short route `/brands/`, others only via masters route.
+    return this.http 
+      .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>( 
+        `${environment.apiBaseUrl}/brands/`, 
+        { params } 
+      ) 
+      .pipe( 
+        map(parse), 
+        catchError(() => 
+          this.http 
+            .get<{ success?: boolean; data?: { brandName: string; sizes: number[] }[] }>( 
+              `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`, 
+              { params } 
+            ) 
+            .pipe(map(parse)) 
+        ) 
+      ); 
+  } 
 
   public getLiquorRates(
     brandName: string,
     size: string
   ): Observable<LiquorRates> {
+    const rawSize = String(size || '').trim();
+    const packSizeMl = rawSize.replace(/[^0-9]/g, '');
     return this.http
       .get<{
         success: boolean;
         data: LiquorRates;
       }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/rates/`,
+        `${environment.apiBaseUrl}/rates/`,
         {
           params: {
             brand_name: brandName,
-            pack_size_ml: size.replace('ml', ''),
+            pack_size_ml: packSizeMl,
           },
         }
       )
@@ -91,20 +139,7 @@ export class SupplyChainService {
         }),
         catchError((error) => {
           console.error('Error fetching liquor rates:', error);
-          // Return default values on error
-          return of({
-            brand: brandName,
-            size: `${size}ml`,
-            exFactoryPrice: 0,
-            educationCess: 0,
-            exciseDuty: 0,
-            additionalExcise: 0,
-            additionalExcise12_5: 0,
-            bottlingFee: 0,
-            exportFee: 0,
-            mrpPerBottle: 0,
-            totalPricePerCase: 0,
-          });
+          return throwError(() => error);
         })
       );
   }
@@ -174,6 +209,22 @@ export class SupplyChainService {
     return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/`).pipe(
       catchError((error) => {
         console.error('getRevalidationDetail error', error);
+        throw error;
+      })
+    );
+  }
+
+  createRevalidationFromRequisition(requisitionId?: string, requisitionRef?: string): Observable<any> {
+    const payload: any = {};
+    if (requisitionId) payload.requisition_id = requisitionId;
+    if (requisitionRef) payload.requisition_ref_no = requisitionRef;
+
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/from-requisition/`,
+      payload
+    ).pipe(
+      catchError((error) => {
+        console.error('createRevalidationFromRequisition error', error);
         throw error;
       })
     );
@@ -267,6 +318,18 @@ export class SupplyChainService {
     );
   }
 
+  syncCancellationWalletDebit(id: number | string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/sync_wallet_debit/`,
+      {}
+    ).pipe(
+      catchError((error) => {
+        console.error('syncCancellationWalletDebit error', error);
+        throw error;
+      })
+    );
+  }
+
 
 
   getTransitPermitById(id: string): Observable<any> {
@@ -351,35 +414,50 @@ export class SupplyChainService {
     );
   }
 
-  getBrandWarehouseStock(distilleryName: string, brandName?: string): Observable<any[]> {
-    const params: any = {};
-    if (distilleryName) params.distillery_name = distilleryName;
-    if (brandName) params.brand_name = brandName;
-
-    console.log('getBrandWarehouseStock called with params:', params);
-
-    return this.http.get<any[]>(
-      `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/`,
-      { params }
-    ).pipe(
-      map((response: any) => {
-        console.log('getBrandWarehouseStock raw response:', response);
-        if (Array.isArray(response)) {
-          console.log('Response is array, length:', response.length);
-          return response;
-        }
-        if (response?.results) {
-          console.log('Response has results, length:', response.results.length);
-          return response.results;
-        }
-        console.log('Response format not recognized, returning empty array');
-        return [];
-      }),
-      catchError((error) => {
-        console.error('getBrandWarehouseStock error', error);
-        return of([]);
-      })
-    );
-  }
-}
+  getBrandWarehouseStock(distilleryName?: string, brandName?: string, licenseId?: string): Observable<any[]> { 
+    const params: any = {}; 
+    if (distilleryName) params.distillery_name = distilleryName; 
+    if (brandName) params.brand_name = brandName; 
+    const normalizedLicenseId = String(licenseId || '').trim(); 
+    if (normalizedLicenseId) { 
+      // Backend accepts plain license ids too (not only NA/NLI prefixed ones). 
+      params.license_id = normalizedLicenseId; 
+    } 
+ 
+    console.log('getBrandWarehouseStock called with params:', params); 
+ 
+    const parse = (response: any) => { 
+      console.log('getBrandWarehouseStock raw response:', response); 
+      if (Array.isArray(response)) { 
+        console.log('Response is array, length:', response.length); 
+        return response; 
+      } 
+      if (response?.results) { 
+        console.log('Response has results, length:', response.results.length); 
+        return response.results; 
+      } 
+      console.log('Response format not recognized, returning empty array'); 
+      return []; 
+    }; 
+ 
+    // NOTE: On some servers (nginx), only `/transactional/...` routes are proxied to Django,
+    // while the short alias `/brand-warehouse/` is served by the frontend (HTML) causing JSON parse errors.
+    const transactionalUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/`; 
+    const shortUrl = `${environment.apiBaseUrl}/brand-warehouse/`; 
+ 
+    return this.http.get<any[]>(transactionalUrl, { params }).pipe( 
+      map(parse), 
+      catchError((error) => { 
+        console.error('getBrandWarehouseStock error (transactional route)', error); 
+        return this.http.get<any[]>(shortUrl, { params }).pipe( 
+          map(parse), 
+          catchError((error2) => { 
+            console.error('getBrandWarehouseStock error (short route)', error2); 
+            return of([]); 
+          }) 
+        ); 
+      }) 
+    ); 
+  } 
+} 
 

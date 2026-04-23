@@ -1,0 +1,591 @@
+// Forwarding Letter Component Styles
+$requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E");
+
+.forwarding-letter-container {
+  background: #f8f9fa;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.header-actions {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  @media print {
+    display: none;
+  }
+}
+
+.main {
+  border: 2px solid black;
+  padding: 15px;
+  background: white;
+  background-image: $requisition-watermark;
+  background-repeat: repeat;
+  background-position: top center;
+  background-size: 330px 160px;
+  width: 100%;
+  max-width: 198mm;
+  margin: 0 auto 30px auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  @media print {
+    border: 2px solid black !important;
+    box-shadow: none;
+    width: calc(100% - 8mm);
+    max-width: calc(100% - 8mm);
+    margin: 0 auto 5mm auto;
+    padding: 15px 11px 16px;
+    page-break-inside: avoid;
+    background-image: $requisition-watermark !important;
+    background-repeat: repeat !important;
+    background-position: top center !important;
+    background-size: 330px 160px !important;
+    overflow: hidden;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &:not(:last-child) {
+      page-break-after: always;
+    }
+  }
+}
+
+.letter-separator {
+  display: flex;
+  align-items: center;
+  margin: 40px 0;
+  text-align: center;
+
+  @media print {
+    display: none;
+  }
+}
+
+.separator-line {
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+  border: none;
+  margin: 0 10px;
+}
+
+.separator-text {
+  padding: 0 20px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  background: #f8f9fa;
+}
+
+.letter-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: bold;
+  width: 90%;
+  margin: 0 auto;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 10px;
+
+  img {
+    height: 80px;
+    width: auto;
+    display: block;
+    margin: 0 auto;
+
+    @media print {
+      height: 80px !important;
+      display: block !important;
+      margin: 0 auto !important;
+    }
+  }
+}
+
+.sub-header {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 10px;
+  margin-bottom: 15px;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.flex {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-top: 15px;
+  margin-bottom: 10px;
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+    gap: 5px;
+    text-align: left;
+  }
+}
+
+.letter-content {
+  margin-top: 20px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.6;
+
+  p {
+    margin-bottom: 15px;
+    text-align: justify;
+
+    &:last-child {
+      margin-bottom: 20px;
+    }
+  }
+
+  @media print {
+    text-align: left !important;
+  }
+}
+
+.signature-section {
+  margin-top: 50px;
+  text-align: right;
+  margin-right: 20px;
+  font-size: 14px;
+
+  p {
+    margin-bottom: 5px;
+    line-height: 1.4;
+  }
+}
+
+.bold-text {
+  font-weight: bold;
+}
+
+.underline {
+  text-decoration: underline;
+}
+
+// Button styles
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  i {
+    font-size: 14px;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+
+  &:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+  }
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  border-color: #6c757d;
+  color: #6c757d;
+
+  &:hover {
+    background-color: #6c757d;
+    color: white;
+  }
+}
+
+// Print-specific styles
+@media print {
+  .forwarding-letter-container {
+    background: white;
+    padding: 0;
+    min-height: auto;
+  }
+
+  .main {
+    border: 2px solid black !important;
+    padding: 15px 11px 16px;
+    page-break-inside: avoid;
+    margin: 0 auto 5mm auto;
+    width: calc(100% - 8mm);
+    max-width: calc(100% - 8mm);
+    overflow: hidden;
+
+    &:not(:last-child) {
+      page-break-after: always;
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .letter-header {
+    text-align: center !important;
+  }
+
+  .logo img {
+    display: block !important;
+    margin: 0 auto !important;
+    height: 80px !important;
+  }
+
+  .letter-content {
+    text-align: left !important;
+  }
+
+  // Hide non-printable elements
+  .header-actions {
+    display: none !important;
+  }
+
+  // Ensure page setup for multiple letters
+  @page {
+    size: A4;
+    margin: 5mm 4mm;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .forwarding-letter-container {
+    padding: 10px;
+  }
+
+  .main {
+    padding: 10px;
+    border-width: 1px;
+    background-size: 280px 130px;
+  }
+
+  .letter-header {
+    font-size: 14px;
+  }
+
+  .signature-section {
+    margin-top: 30px;
+    margin-right: 10px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .main,
+  .permit-copy {
+  background-size: 220px 110px;
+  }
+
+  .letter-content {
+    font-size: 13px;
+  }
+
+  .sub-header {
+    font-size: 11px;
+  }
+
+  .flex {
+    font-size: 11px;
+  }
+}
+
+// Permit Copies Styles
+.permit-separator {
+  background: #e3f2fd;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 40px 0;
+
+  .separator-text {
+    background: #e3f2fd;
+    color: #1976d2;
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  @media print {
+    display: none;
+  }
+}
+
+.permit-copies-container {
+  margin-top: 30px;
+  width: 100%;
+}
+
+.permit-copy {
+  border: 2.5px solid #222;
+  margin: 16px auto;
+  padding: 16px 10px 12px;
+  background: white;
+  background-image: $requisition-watermark;
+  background-repeat: repeat;
+  background-position: top center;
+  background-size: 330px 160px;
+  width: 100%;
+  max-width: 200mm;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  overflow: hidden;
+
+  &.main-permit {
+    border-color: #1976d2;
+    border-width: 3px;
+  }
+
+  @media print {
+    border: 2.5px solid #222 !important;
+    box-shadow: none;
+    width: calc(100% - 8mm);
+    max-width: calc(100% - 8mm);
+    margin: 0 auto;
+    page-break-inside: avoid;
+    page-break-before: always;
+    background-image: $requisition-watermark !important;
+    background-repeat: repeat !important;
+    background-position: top center !important;
+    background-size: 330px 160px !important;
+    padding: 10px 6px 8px;
+
+    &.last-copy {
+      page-break-after: auto;
+    }
+
+    &:not(.last-copy) {
+      page-break-after: always;
+    }
+  }
+}
+
+.copy-number {
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #222;
+  padding-bottom: 6px;
+  font-weight: bold;
+  color: #1976d2;
+
+  @media print {
+    color: black !important;
+    border-bottom: 2px solid black !important;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+.permit-content {
+  .letter-header {
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .permit-section {
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: justify;
+    word-break: break-word;
+
+    p {
+      margin-bottom: 15px;
+    }
+
+    ol {
+      padding-left: 20px;
+      
+      li {
+        margin-bottom: 8px;
+        text-align: justify;
+      }
+    }
+  }
+
+  .permit-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin: 12px 0;
+    font-size: 12px;
+
+    td {
+      border: 1px solid black;
+      text-align: center;
+      padding: 8px 5px;
+      vertical-align: middle;
+      word-break: break-word;
+
+      &:first-child {
+        text-align: left;
+        width: 20%;
+      }
+
+      p {
+        margin: 0;
+        font-weight: bold;
+      }
+    }
+
+    tr:first-child td {
+      font-weight: bold;
+      background-color: #f5f5f5;
+      text-align: center;
+      font-size: 11px;
+      padding: 10px 5px;
+
+      @media print {
+        background-color: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+      }
+    }
+  }
+
+  .signature-section {
+    margin-top: 24px;
+    text-align: right;
+    margin-right: 4px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .bold-text {
+    font-weight: bold;
+    color: black;
+  }
+}
+
+// Print adjustments for permits
+@media print {
+  .permit-copy {
+    border: 2.5px solid #222 !important;
+    padding: 10px 6px 8px;
+    page-break-inside: avoid;
+    margin: 0 auto;
+    background-image: $requisition-watermark !important;
+    background-repeat: repeat !important;
+    background-position: top center !important;
+    background-size: 330px 160px !important;
+    width: calc(100% - 8mm);
+    max-width: calc(100% - 8mm);
+    min-height: 180mm;
+    overflow: hidden;
+
+    &:not(.last-copy) {
+      page-break-after: always;
+    }
+
+    &.last-copy {
+      margin-bottom: 0;
+      page-break-after: auto;
+    }
+  }
+
+  .copy-number {
+    color: black !important;
+    border-bottom: 2px solid #222 !important;
+  }
+
+  .permit-content {
+    min-height: 158mm;
+    display: flex;
+    flex-direction: column;
+
+    .letter-header {
+      width: 100%;
+      font-size: 15px;
+      line-height: 1.34;
+      margin-bottom: 10px;
+    }
+
+    .flex {
+      gap: 6px;
+      font-size: 10.75px;
+      margin-top: 5px;
+      margin-bottom: 6px;
+    }
+
+    .permit-section {
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 10px;
+    }
+
+    .permit-table {
+      margin: 10px 0;
+      font-size: 9.75px;
+
+      tr:first-child td {
+        background-color: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        font-size: 8.5px;
+        padding: 5px 3px;
+      }
+
+      td {
+        padding: 5px 3px;
+      }
+    }
+  }
+
+  .permit-content .signature-section {
+    margin-top: auto;
+    padding-top: 18px;
+    margin-right: 0;
+    font-size: 11.5px;
+  }
+}

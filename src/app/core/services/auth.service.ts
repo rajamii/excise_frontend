@@ -9,11 +9,52 @@ import { AccountService } from './account.service';
 @Injectable({
   providedIn: 'root'
 })
+
 export class AuthService {
+  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
 
   private baseUrl = `${environment.apiBaseUrl}/auth/users`;
 
   constructor(private http: HttpClient, private accountService: AccountService) { }
+
+  private getBlockedUsers(): Array<{ username?: string; phoneNumber?: string }> {
+    try {
+      const raw = localStorage.getItem(this.blockedUsersStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private isBlockedByUsername(username: string): boolean {
+    const normalized = String(username || '').trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(
+      entry => String(entry?.username || '').trim().toLowerCase() === normalized
+    );
+  }
+
+  private isBlockedByPhone(phoneNumber: string): boolean {
+    const normalized = String(phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(
+      entry => String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10) === normalized
+    );
+  }
+
+  private blockedUserError(): Observable<never> {
+    return throwError(() => ({
+      status: 403,
+      error: {
+        detail: 'This user has been deleted and is not allowed to log in from this system.'
+      }
+    }));
+  }
 
   sendRegistrationOtp(request: { phoneNumber: string; purpose?: 'register' }): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/`, request);
@@ -58,6 +99,9 @@ export class AuthService {
    * ✅ Login and load user profile
    */
   login(data: any): Observable<any> {
+    if (this.isBlockedByUsername(String(data?.username || ''))) {
+      return this.blockedUserError();
+    }
     return this.http.post(`${this.baseUrl}/login/`, data, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
@@ -123,6 +167,10 @@ export class AuthService {
   }
 
   sendOtp(formData: FormData): Observable<any> {
+    const phoneNumber = String(formData.get('phoneNumber') || '');
+    if (this.isBlockedByPhone(phoneNumber)) {
+      return this.blockedUserError();
+    }
     return this.http.post(`${this.baseUrl}/otp/`, formData).pipe(
       catchError(error => throwError(() => error))
     );
@@ -132,6 +180,9 @@ export class AuthService {
    * ✅ Verify OTP and load user profile
    */
   verifyOtp(data: { phoneNumber: string; otp: string; otpId: string }): Observable<any> {
+    if (this.isBlockedByPhone(String(data?.phoneNumber || ''))) {
+      return this.blockedUserError();
+    }
     const formData = FormDataUtil.buildFormData(data);
     return this.http.post(`${this.baseUrl}/otp/login/`, formData).pipe(
       tap((response: any) => {
@@ -155,5 +206,15 @@ export class AuthService {
       }),
       catchError(error => throwError(() => error))
     );
+  }
+
+  // Step 1: Send email with the reset link
+  requestPasswordReset(email: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/password-reset/`, { email });
+  }
+
+  // Step 2: Confirm the new password using the token from the email
+  confirmPasswordReset(payload: { uidb64: string, token: string, new_password: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}/password-reset-confirm/`, payload);
   }
 }

@@ -25,9 +25,13 @@ export interface BrandWarehouseUtilization {
 
 export interface BrandWarehouse {
     id?: number;
+    license_id?: string;
+    factory_id?: number | null;
+    factory_name?: string;
     distillery_name: string;
     brand_type: string;
-    brand_details?: string;
+    brand_id?: number | null;
+    brand_name?: string;
     current_stock: number;
     capacity_size: number;
     total_capacity?: number;
@@ -65,16 +69,32 @@ export interface StockAdjustment {
 @Injectable({
     providedIn: 'root'
 })
-export class BrandWarehouseService {
-    private baseUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse`;
-    private utilizationUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse-utilization`;
+export class BrandWarehouseService { 
+    // Prefer transactional routes: many production reverse proxies only forward `/transactional/...` to Django.
+    private baseUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse`; 
+    private utilizationUrl = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse-utilization`; 
 
-    constructor(private http: HttpClient) { }
+    constructor(private http: HttpClient) { } 
+ 
+    private normalizeValidLicenseId(value?: string): string { 
+        // Guardrail: only send `license_id` when it matches an issued/app id format.
+        // Sending numeric/plain ids can accidentally over-restrict scoped queries on the server.
+        const normalized = String(value || '').trim(); 
+        if ( 
+            normalized.startsWith('NA/') || 
+            normalized.startsWith('NLI/') || 
+            normalized.startsWith('LA/') 
+        ) { 
+            return normalized; 
+        } 
+        return ''; 
+    } 
 
     /**
      * Get brands grouped by brand name with all pack sizes
      */
     getGroupedBrandWarehouses(filters?: {
+        license_id?: string;
         distillery_name?: string;
         brand_type?: string;
         status?: string;
@@ -83,6 +103,8 @@ export class BrandWarehouseService {
         let params = new HttpParams();
 
         if (filters) {
+            const normalizedLicenseId = this.normalizeValidLicenseId(filters.license_id);
+            if (normalizedLicenseId) params = params.set('license_id', normalizedLicenseId);
             if (filters.distillery_name) params = params.set('distillery_name', filters.distillery_name);
             if (filters.brand_type) params = params.set('brand_type', filters.brand_type);
             if (filters.status) params = params.set('status', filters.status);
@@ -107,8 +129,12 @@ export class BrandWarehouseService {
                 console.log('🔍 Processing brands for grouping:', brands.length);
 
                 brands.forEach((brand: any) => {
-                    const brandName = brand.brandDetails || brand.brand_details || 'Unknown Brand';
-                    const distilleryName = brand.distilleryName || brand.distillery_name || '';
+                    const brandId = brand.brandId ?? brand.brand_id ?? null;
+                    const brandName = brand.brandName || brand.brand_name || 'Unknown Brand';
+                    const licenseId = String(brand.licenseId || brand.license_id || '').trim();
+                    const factoryId = brand.factoryId ?? brand.factory_id ?? null;
+                    const factoryName = brand.factoryName || brand.factory_name || '';
+                    const distilleryName = brand.distilleryName || brand.distillery_name || factoryName || '';
                     const brandType = brand.brandType || brand.brand_type || '';
                     const capacitySize = brand.capacitySize || brand.capacity_size || 0;
                     const currentStock = brand.currentStock || brand.current_stock || 0;
@@ -119,18 +145,22 @@ export class BrandWarehouseService {
                     const isNew = brand.isNew || brand.is_new || false;
 
                     // Create a unique key for grouping (brand name + distillery)
-                    const groupKey = `${brandName}_${distilleryName}`;
+                    const groupKey = `${brandId ?? brandName}_${licenseId || distilleryName}`;
 
                     if (!groupedBrands.has(groupKey)) {
                         groupedBrands.set(groupKey, {
+                            factoryId: factoryId,
+                            factoryName: factoryName || distilleryName,
+                            brandId: brandId,
                             brandName: brandName,
+                            licenseId: licenseId || '',
                             distilleryName: distilleryName,
                             brandType: brandType,
                             packSizes: {},
                             totalStock: 0,
                             totalCapacity: 0,
                             totalUtilized: 0,
-                            lastUpdated: new Date().toISOString(),
+                            lastUpdated: brand.updatedAt || brand.updated_at || brand.createdAt || brand.created_at || '',
                             overallStatus: 'OUT_OF_STOCK',
                             isNew: false
                         });
@@ -168,6 +198,16 @@ export class BrandWarehouseService {
                     if (isNew) {
                         groupedBrand.isNew = true;
                     }
+
+                    // Keep most recent update timestamp in grouped row
+                    const incomingUpdatedAt = brand.updatedAt || brand.updated_at || brand.createdAt || brand.created_at;
+                    if (incomingUpdatedAt) {
+                        const currentTs = new Date(groupedBrand.lastUpdated).getTime() || 0;
+                        const incomingTs = new Date(incomingUpdatedAt).getTime() || 0;
+                        if (incomingTs > currentTs) {
+                            groupedBrand.lastUpdated = incomingUpdatedAt;
+                        }
+                    }
                 });
 
                 const result = Array.from(groupedBrands.values());
@@ -187,6 +227,7 @@ export class BrandWarehouseService {
      * Get all brand warehouse entries with optional filters
      */
     getBrandWarehouses(filters?: {
+        license_id?: string;
         distillery_name?: string;
         brand_type?: string;
         status?: string;
@@ -195,6 +236,8 @@ export class BrandWarehouseService {
         let params = new HttpParams();
 
         if (filters) {
+            const normalizedLicenseId = this.normalizeValidLicenseId(filters.license_id);
+            if (normalizedLicenseId) params = params.set('license_id', normalizedLicenseId);
             if (filters.distillery_name) params = params.set('distillery_name', filters.distillery_name);
             if (filters.brand_type) params = params.set('brand_type', filters.brand_type);
             if (filters.status) params = params.set('status', filters.status);
@@ -215,9 +258,13 @@ export class BrandWarehouseService {
                 // Transform backend response to match frontend expectations
                 return brands.map((brand: any) => ({
                     id: brand.id,
-                    distillery_name: brand.distilleryName || brand.distillery_name || '',
+                    license_id: String(brand.licenseId || brand.license_id || '').trim(),
+                    factory_id: brand.factoryId ?? brand.factory_id ?? null,
+                    factory_name: brand.factoryName || brand.factory_name || '',
+                    distillery_name: brand.distilleryName || brand.distillery_name || brand.factoryName || brand.factory_name || '',
                     brand_type: brand.brandType || brand.brand_type || '',
-                    brand_details: brand.brandDetails || brand.brand_details || '',
+                    brand_id: brand.brandId ?? brand.brand_id ?? null,
+                    brand_name: brand.brandName || brand.brand_name || '',
                     current_stock: brand.currentStock || brand.current_stock || 0,
                     capacity_size: brand.capacitySize || brand.capacity_size || 0,
                     total_capacity: brand.totalCapacity || brand.total_capacity || 0,
@@ -347,9 +394,15 @@ export class BrandWarehouseService {
     /**
      * Get warehouse overview statistics
      */
-    getWarehouseOverview(): Observable<WarehouseOverview> {
+    getWarehouseOverview(filters?: {
+        license_id?: string;
+        distillery_name?: string;
+        brand_type?: string;
+        status?: string;
+        stock_level?: string;
+    }): Observable<WarehouseOverview> {
         // Since /overview/ doesn't exist, calculate from main data
-        return this.getBrandWarehouses().pipe(
+        return this.getBrandWarehouses(filters).pipe(
             map((brands: BrandWarehouse[]) => {
                 const overview: WarehouseOverview = {
                     totalBrands: brands.length,
@@ -407,6 +460,7 @@ export class BrandWarehouseService {
         if (typeof brandWarehouseIdOrFilters === 'number') {
             // Called with brandWarehouseId as first parameter
             brandWarehouseId = brandWarehouseIdOrFilters;
+            params = params.set('brand_warehouse', brandWarehouseId.toString());
             if (additionalFilters) {
                 if (additionalFilters.limit) params = params.set('limit', additionalFilters.limit.toString());
                 if (additionalFilters.status) params = params.set('status', additionalFilters.status);

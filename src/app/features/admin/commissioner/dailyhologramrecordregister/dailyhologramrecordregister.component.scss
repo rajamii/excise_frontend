@@ -40,10 +40,30 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  cursor: pointer;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-color: rgba(13, 110, 253, 0.3);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 2px;
+      background: rgba(13, 110, 253, 0.4);
+      border-radius: 1px;
+    }
+  }
+
+  &.active {
+    border-color: rgba(13, 110, 253, 0.55);
+    box-shadow: 0 10px 30px rgba(13, 110, 253, 0.18);
+    transform: translateY(-2px);
   }
 
   .card-icon {
@@ -338,4 +358,15 @@
       }
     }
   }
+}
+
+// Force details modal above dashboard containers/sidenav stacking contexts
+.modal.show {
+  display: block;
+  position: fixed;
+  z-index: 1060;
+}
+
+.modal-backdrop.show {
+  z-index: 1055;
 }

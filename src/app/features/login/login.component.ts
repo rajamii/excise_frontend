@@ -14,21 +14,24 @@ import { NgOtpInputModule } from 'ng-otp-input';
 import { AuthService } from '../../core/services/auth.service';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
 import Swal from 'sweetalert2';
-import { ADMIN_ROLES } from '../../shared/constants/role.constants';
-import { Authority } from '../../shared/constants/authority.enum';
 import { PatternConstants } from '../../shared/constants/pattern.constants';
 import { District } from '../../core/models/district.model';
 import { Subdivision } from '../../core/models/subdivision.model';
 import { MasterService } from '../../core/services/master.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule, MatProgressSpinnerModule],
+  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule, MatProgressSpinnerModule, RouterLink, CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
 export class LoginComponent extends BaseComponent {
+  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
   loginForm: FormGroup;
   registrationForm: FormGroup;
   isPasswordMode = true;
@@ -37,6 +40,7 @@ export class LoginComponent extends BaseComponent {
   hideConfirmPassword = true;
   otpSent = false;
   otpIndex: string | null = null;
+  loginOtpPreview: string | null = null;
   otpAutoSubmitted = false;
   isSendingOtp = false;
 
@@ -108,10 +112,152 @@ export class LoginComponent extends BaseComponent {
             title: 'Session Expired',
             text: 'Your session has expired. Please log in again.',
             confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
           });
 
           this.router.navigate([], {
             queryParams: { sessionExpired: null },
+            queryParamsHandling: 'merge',
+          });
+        }, 100);
+      }
+
+      if (params['inactive']) {
+        setTimeout(() => {
+          Swal.fire({
+            title: 'Session timed out',
+            html: `
+              <div class="inactive-logout-content">
+                <div class="inactive-logout-illustration" aria-hidden="true">
+                  <svg class="inactive-logout-icon" viewBox="0 0 96 96" role="presentation" focusable="false">
+                    <defs>
+                      <linearGradient id="inactiveAmber" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffcf5e" />
+                        <stop offset="1" stop-color="#f59e0b" />
+                      </linearGradient>
+                      <linearGradient id="inactiveGlassStroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#1f2e53" />
+                        <stop offset="1" stop-color="#142243" />
+                      </linearGradient>
+                      <linearGradient id="inactiveGlassFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#f4f8ff" />
+                        <stop offset="1" stop-color="#d7e5ff" />
+                      </linearGradient>
+                      <linearGradient id="inactiveFoam" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffffff" />
+                        <stop offset="1" stop-color="#f0f4ff" />
+                      </linearGradient>
+                      <clipPath id="inactiveBeerClip">
+                        <path d="M30 22h28l-4 56H34l-4-56z" />
+                      </clipPath>
+                    </defs>
+
+                    <!-- Beer glass (broken + spill) -->
+                    <g class="inactive-logout-glass" transform="translate(0,0)">
+                      <!-- Ground shadow (stays on ground while glass falls) -->
+                      <ellipse class="inactive-logout-shadow" cx="46" cy="90" rx="22" ry="6" fill="#0b1b3a" opacity="0.12" />
+
+                      <!-- Glass body -->
+                      <path
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="url(#inactiveGlassFill)"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M28 20h32l-4.6 60.5c-0.2 2.8-2.5 5-5.3 5H37.9c-2.8 0-5.1-2.2-5.3-5L28 20z"
+                        fill="none"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="2.6"
+                        stroke-linejoin="round"
+                        opacity="0.92"
+                      />
+
+                      <!-- Handle -->
+                      <path
+                        d="M60 34c9 0 14 7 14 14s-5 14-14 14"
+                        fill="none"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="3.6"
+                        stroke-linecap="round"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M60 40c5 0 8 4 8 8s-3 8-8 8"
+                        fill="none"
+                        stroke="url(#inactiveGlassFill)"
+                        stroke-width="5.2"
+                        stroke-linecap="round"
+                        opacity="0.88"
+                      />
+
+                      <!-- Beer inside (clipped) -->
+                      <g clip-path="url(#inactiveBeerClip)">
+                        <path
+                          class="inactive-logout-beer"
+                          d="M28 48c6-4 11 2 16-1s11-8 16-3v44H28V48z"
+                          fill="url(#inactiveAmber)"
+                          opacity="0.96"
+                        />
+                      </g>
+
+                      <!-- Crack + broken rim -->
+                      <path
+                        class="inactive-logout-crack"
+                        d="M46 30l-6 10 8 7-9 10 10 10-4 10"
+                        fill="none"
+                        stroke="#1f2e53"
+                        stroke-width="3.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        opacity="0.72"
+                      />
+                      <path
+                        d="M46 18l7 2-6 6-8-2z"
+                        fill="url(#inactiveGlassFill)"
+                        stroke="url(#inactiveGlassStroke)"
+                        stroke-width="2"
+                        opacity="0.9"
+                      />
+
+                      <!-- Spill drops -->
+                      <g class="inactive-logout-spill" opacity="0.98">
+                        <path class="inactive-logout-drop inactive-logout-drop-1" d="M52 56c4 6 2 10-2 12-4-2-6-6-2-12 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" />
+                        <path class="inactive-logout-drop inactive-logout-drop-2" d="M58 60c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.92" />
+                        <path class="inactive-logout-drop inactive-logout-drop-3" d="M48 62c3 5 1 9-2 10-3-2-5-5-2-10 1-2 2-3 2-3s1 1 2 3z" fill="url(#inactiveAmber)" opacity="0.88" />
+                      </g>
+
+                      <!-- Shards -->
+                      <path class="inactive-logout-shard inactive-logout-shard-1" d="M72 26l10 4-8 10-10-4z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.85" />
+                      <path class="inactive-logout-shard inactive-logout-shard-2" d="M18 48l10-3 3 10-10 3z" fill="url(#inactiveGlassFill)" stroke="url(#inactiveGlassStroke)" stroke-width="1.4" opacity="0.82" />
+
+                      <!-- Impact marks near ground -->
+                      <g class="inactive-logout-impact" opacity="0">
+                        <path d="M30 86l-6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M62 86l6 3" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.7" />
+                        <path d="M46 84v6" stroke="#1f2e53" stroke-width="2.2" stroke-linecap="round" opacity="0.55" />
+                      </g>
+                    </g>
+                  </svg>
+                </div>
+                <p class="inactive-logout-message">
+                  Your session ended due to inactivity. Please sign in again to continue.
+                </p>
+              </div>
+            `,
+            confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            buttonsStyling: false,
+            customClass: {
+              popup: 'inactive-logout-popup',
+              title: 'inactive-logout-title',
+              confirmButton: 'inactive-logout-confirm'
+            }
+          });
+
+          this.router.navigate([], {
+            queryParams: { inactive: null },
             queryParamsHandling: 'merge',
           });
         }, 100);
@@ -126,6 +272,10 @@ export class LoginComponent extends BaseComponent {
 
   switchToSignIn() {
     this.isRightPanelActive = false;
+  }
+
+  goToHome(): void {
+    this.router.navigate(['/']);
   }
 
   private passwordMatchValidator(formGroup: FormGroup) {
@@ -145,8 +295,10 @@ export class LoginComponent extends BaseComponent {
     this.isPasswordMode = isPassword;
     this.otpSent = false;
     this.otpIndex = null;
+    this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
     this.loginForm.reset();
+    this.clearLoginErrors();
     this.setValidators();
   }
 
@@ -173,6 +325,66 @@ export class LoginComponent extends BaseComponent {
 
   togglePasswordVisibility(): void {
     this.hidePassword = !this.hidePassword;
+  }
+
+  sanitizePhoneNumberInput(form: 'login' | 'registration', event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    const sanitizedValue = input.value.replace(/\D/g, '').slice(0, 10);
+    if (input.value !== sanitizedValue) {
+      input.value = sanitizedValue;
+    }
+
+    const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
+    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: false });
+    targetForm.get('phoneNumber')?.markAsDirty();
+    targetForm.get('phoneNumber')?.updateValueAndValidity();
+  }
+
+  onOtpPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.isPasswordMode && !this.otpSent) {
+      this.sendOtp();
+    }
+  }
+
+  private getBlockedUsers(): Array<{ id?: number; username?: string; phoneNumber?: string; email?: string }> {
+    try {
+      const raw = localStorage.getItem(this.blockedUsersStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private isLocallyBlockedByUsername(username: string): boolean {
+    const normalized = String(username || '').trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.username || '').trim().toLowerCase() === normalized);
+  }
+
+  private isLocallyBlockedByPhone(phoneNumber: string): boolean {
+    const normalized = String(phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+    if (!normalized) {
+      return false;
+    }
+    return this.getBlockedUsers().some(entry => String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10) === normalized);
+  }
+
+  private isLocallyBlockedUser(user: any): boolean {
+    const username = String(user?.username || user?.login || '').trim().toLowerCase();
+    const phone = String(user?.phoneNumber || user?.phone_number || '').replace(/\D/g, '').slice(0, 10);
+    return this.getBlockedUsers().some(entry => {
+      const blockedUsername = String(entry?.username || '').trim().toLowerCase();
+      const blockedPhone = String(entry?.phoneNumber || '').replace(/\D/g, '').slice(0, 10);
+      return (!!username && blockedUsername === username) || (!!phone && blockedPhone === phone);
+    });
   }
 
   // Fetch districts
@@ -214,24 +426,43 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendOtp(): void {
-    if (this.loginForm.controls['phoneNumber'].invalid || this.isSendingOtp) {
+    if (this.isSendingOtp) {
+      return;
+    }
+
+    const phoneControl = this.loginForm.controls['phoneNumber'];
+    const sanitizedPhoneNumber = String(phoneControl.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl.value !== sanitizedPhoneNumber) {
+      phoneControl.setValue(sanitizedPhoneNumber);
+    }
+
+    if (phoneControl.invalid) {
+      this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
+      return;
+    }
+
+    if (this.isLocallyBlockedByPhone(sanitizedPhoneNumber)) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
       return;
     }
 
     this.isSendingOtp = true;
-    const phoneNumber = this.loginForm.value.phoneNumber;
+    this.clearLoginErrors();
+    const phoneNumber = sanitizedPhoneNumber;
     const formData = FormDataUtil.buildFormData({ phoneNumber });
 
     this.authService.sendOtp(formData).subscribe({
       next: (response) => {
         this.otpSent = true;
         this.otpIndex = response.otpId;
+        this.loginOtpPreview = response.otp ? String(response.otp) : null;
         console.log('OTP:', response.otp);
         this.isSendingOtp = false;
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
-        alert('Failed to send OTP. Please try again.');
+        this.setLoginErrors(this.mapLoginErrors(err, 'sendOtp'));
+        this.loginOtpPreview = null;
         this.isSendingOtp = false;
       },
     });
@@ -242,8 +473,18 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendRegistrationOtp() {
-    if (this.registrationForm.invalid) { console.log('Invalid registration form'); return }
-    const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
+    const phoneControl = this.registrationForm.get('phoneNumber');
+    const sanitizedPhoneNumber = String(phoneControl?.value || '').replace(/\D/g, '').slice(0, 10);
+    if (phoneControl?.value !== sanitizedPhoneNumber) {
+      phoneControl?.setValue(sanitizedPhoneNumber);
+    }
+
+    if (this.registrationForm.invalid) {
+      this.registrationError = true;
+      this.registrationErrorMessages = this.getRegistrationValidationErrors();
+      return;
+    }
+    const phoneNumber = sanitizedPhoneNumber;
     this.isSendingOtp = true;
     this.registrationError = false;
     this.authService.sendRegistrationOtp({
@@ -260,7 +501,7 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         this.isSendingOtp = false;
         this.registrationError = true;
-        this.registrationErrorMessages = this.extractErrorMessages(err.error);
+        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'sendOtp');
       }
     });
   }
@@ -273,7 +514,11 @@ export class LoginComponent extends BaseComponent {
     const otp = this.registrationOtpControl.value;
     const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
 
-    if (!otp || otp.length !== 4 || !this.registrationOtpId) return;
+    if (!otp || otp.length !== 4 || !this.registrationOtpId) {
+      this.registrationError = true;
+      this.registrationErrorMessages = ['Enter a valid 4-digit OTP.'];
+      return;
+    }
 
     this.authService.verifyRegistrationOtp({
       phoneNumber: phoneNumber,
@@ -303,13 +548,23 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         this.registrationError = true;
-        this.registrationErrorMessages = this.extractErrorMessages(err.error || { detail: ['Invalid OTP'] });
+        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'verifyOtp');
       }
     });
   }
 
   onRegister() {
-    if (this.registrationForm.invalid || !this.otpVerified) return;
+    if (!this.otpVerified) {
+      this.registrationError = true;
+      this.registrationErrorMessages = ['Verify OTP before completing registration.'];
+      return;
+    }
+
+    if (this.registrationForm.invalid) {
+      this.registrationError = true;
+      this.registrationErrorMessages = this.getRegistrationValidationErrors();
+      return;
+    }
 
     this.isRegistering = true;
     this.registrationError = false;
@@ -346,7 +601,7 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         this.isRegistering = false;
         this.registrationError = true;
-        this.registrationErrorMessages = this.extractErrorMessages(err.error);
+        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'register');
         console.error('Registration error response:', err.error); // ← Check this in console
       }
     });
@@ -385,32 +640,53 @@ export class LoginComponent extends BaseComponent {
 
   private loginWithPassword(): void {
     if (this.loginForm.invalid) {
-      alert('Please fill in all fields correctly.');
+      this.setLoginErrors(['Enter valid user ID, password, and captcha to continue.']);
       return;
     }
 
+    if (this.isLocallyBlockedByUsername(String(this.loginForm.value.username || ''))) {
+      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+      return;
+    }
+
+    this.clearLoginErrors();
     this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
-        this.loginError = false;
-        this.loginErrorMessages = [];
+        this.clearLoginErrors();
         this.handleAuthResponse(res);
       },
       error: (err) => {
         console.error('Login error:', err);
-        this.loginError = true;
-        this.loginErrorMessages = this.extractErrorMessages(err.error);
+        this.setLoginErrors(this.mapLoginErrors(err, 'password'));
       },
     });
   }
 
   private extractErrorMessages(errorObj: any): string[] {
-    if (!errorObj || typeof errorObj !== 'object') return ['Unknown error'];
+    if (!errorObj) return [];
 
-    return Object.values(errorObj).flatMap((val) => {
-      if (Array.isArray(val)) {
-        return val.map((v) => String(v));
+    if (typeof errorObj === 'string') {
+      return [errorObj];
+    }
+
+    if (Array.isArray(errorObj)) {
+      return errorObj.map((entry) => String(entry));
+    }
+
+    if (typeof errorObj !== 'object') return [];
+
+    return Object.entries(errorObj).flatMap(([key, val]) => {
+      if (key === 'detail' || key === 'message' || key === 'non_field_errors') {
+        if (Array.isArray(val)) {
+          return val.map((v) => String(v));
+        }
+        return [String(val)];
       }
-      return [String(val)];
+
+      if (Array.isArray(val)) {
+        return val.map((v) => `${this.prettyFieldName(key)}: ${String(v)}`);
+      }
+      return [`${this.prettyFieldName(key)}: ${String(val)}`];
     });
   }
 
@@ -425,11 +701,12 @@ export class LoginComponent extends BaseComponent {
 
   private verifyOtp(): void {
     if (!this.loginForm.value.otp || !this.otpIndex) {
-      alert('Please enter a valid OTP.');
+      this.setLoginErrors(['Enter a valid 4-digit OTP.']);
       this.otpAutoSubmitted = false;
       return;
     }
 
+    this.clearLoginErrors();
     const requestData = {
       phoneNumber: this.loginForm.value.phoneNumber,
       otp: this.loginForm.value.otp,
@@ -438,11 +715,12 @@ export class LoginComponent extends BaseComponent {
 
     this.authService.verifyOtp(requestData).subscribe({
       next: (res: any) => {
+        this.clearLoginErrors();
         this.handleAuthResponse(res);
       },
       error: (err) => {
         console.error('OTP verification error:', err);
-        alert('Invalid OTP. Please try again.');
+        this.setLoginErrors(this.mapLoginErrors(err, 'verifyOtp'));
         this.otpAutoSubmitted = false;
       },
     });
@@ -468,46 +746,243 @@ export class LoginComponent extends BaseComponent {
       localStorage.setItem('access', accessToken);
       localStorage.setItem('refresh', refreshToken);
 
-      this.accountService.identity(true).subscribe({
+      const currentUser = this.accountService.getUserProfileSync();
+      if (currentUser) {
+        const previousUrl = this.stateStorgeService.getUrl();
+        const safePreviousUrl = typeof previousUrl === 'string' ? previousUrl.trim() : '';
+        if (safePreviousUrl && safePreviousUrl !== '/login' && safePreviousUrl.startsWith('/dashboard')) {
+          this.stateStorgeService.clearUrl();
+          this.router.navigateByUrl(safePreviousUrl);
+          return;
+        }
+        if (safePreviousUrl) {
+          // Prevent cross-dashboard redirects (e.g. officer dashboard URL from a prior session)
+          this.stateStorgeService.clearUrl();
+        }
+        this.redirectBasedOnRole(currentUser.role?.id);
+        return;
+      }
+
+      this.accountService.identity().subscribe({
         next: (user) => {
           if (user) {
+            if (this.isLocallyBlockedUser(user)) {
+              this.accountService.clearAppData();
+              this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+              return;
+            }
+            const previousUrl = this.stateStorgeService.getUrl();
+            const safePreviousUrl = typeof previousUrl === 'string' ? previousUrl.trim() : '';
+            if (safePreviousUrl && safePreviousUrl !== '/login' && safePreviousUrl.startsWith('/dashboard')) {
+              this.stateStorgeService.clearUrl();
+              this.router.navigateByUrl(safePreviousUrl);
+              return;
+            }
+            if (safePreviousUrl) {
+              this.stateStorgeService.clearUrl();
+            }
             this.redirectBasedOnRole(user.role?.id);
           } else {
-            alert('Failed to fetch user details. Please log in again.');
+            this.setLoginErrors(['Login succeeded, but profile loading failed. Please sign in again.']);
           }
         },
         error: (err) => {
           console.error('Error fetching user details:', err);
-          alert('Failed to fetch user details. Please log in again.');
+          this.setLoginErrors(['Failed to load user details after login. Please sign in again.']);
         }
       });
     } else {
       console.error('Invalid login response structure:', res);
-      alert('Authentication failed. Invalid response from server.');
+      this.setLoginErrors(['Authentication failed due to an invalid server response.']);
     }
   }
 
   private redirectBasedOnRole(roleId?: number): void {
-    // ID-based role routing only
-    if (!roleId) {
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
-    if (ADMIN_ROLES.includes(roleId) || roleId === Authority.LICENSEE) {
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
-    console.warn('Unknown role id:', roleId);
+    // DB-driven route access is enforced by guards/permissions.
+    // Post-login always enter unified dashboard and let permission checks handle access.
     this.router.navigate(['/dashboard']);
   }
 
   resetPhoneNumber(): void {
     this.otpSent = false;
     this.otpIndex = null;
+    this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
     this.loginForm.reset();
+    this.clearLoginErrors();
     this.setValidators();
+  }
+
+  private clearLoginErrors(): void {
+    this.loginError = false;
+    this.loginErrorMessages = [];
+  }
+
+  private setLoginErrors(messages: string[]): void {
+    const normalized = messages?.length ? messages : ['Something went wrong. Please try again.'];
+    this.loginError = true;
+    this.loginErrorMessages = normalized;
+    this.showErrorPopup(normalized);
+  }
+
+  private showErrorPopup(messages: string[]): void {
+    Swal.fire({
+      icon: 'error',
+      title: 'Login Error',
+      text: messages.join('\n'),
+      confirmButtonText: 'OK',
+      allowOutsideClick: true,
+      allowEscapeKey: true
+    });
+  }
+
+  private mapLoginErrors(err: HttpErrorResponse | any, flow: 'password' | 'sendOtp' | 'verifyOtp'): string[] {
+    const backendMessages = this.extractErrorMessages(err?.error);
+    const status = err?.status;
+    const normalizedText = backendMessages.join(' ').toLowerCase();
+
+    const hasAny = (terms: string[]) => terms.some((term) => normalizedText.includes(term));
+
+    if (flow === 'password') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
+      if (status === 401 || hasAny(['invalid credentials', 'incorrect password', 'invalid password', 'wrong password'])) {
+        return ['Incorrect user ID or password. Please try again.'];
+      }
+      if (status === 404 || hasAny(['user not found', 'does not exist', 'not registered', 'unregistered'])) {
+        return ['User ID is not registered. Please sign up first.'];
+      }
+      if (hasAny(['captcha', 'invalid response'])) {
+        return ['Captcha verification failed. Please solve captcha again.'];
+      }
+    }
+
+    if (flow === 'sendOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
+      if (hasAny(['invalid phone', 'invalid mobile', 'phone number', 'mobile number', 'format'])) {
+        return ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
+      }
+      if (status === 404 || hasAny(['user not found', 'not registered', 'does not exist'])) {
+        return ['This mobile number is not registered. Please sign up first.'];
+      }
+      if (status === 429 || hasAny(['too many', 'rate limit'])) {
+        return ['Too many OTP requests. Please wait and try again.'];
+      }
+    }
+
+    if (flow === 'verifyOtp') {
+      if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
+        return ['Your account is inactive. Contact administrator for login.'];
+      }
+      if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp'])) {
+        return ['Invalid OTP. Enter the correct OTP and try again.'];
+      }
+      if (hasAny(['expired otp', 'otp expired', 'expired'])) {
+        return ['OTP has expired. Please request a new OTP.'];
+      }
+      if (status === 404 || hasAny(['not registered', 'user not found'])) {
+        return ['This mobile number is not registered. Please sign up first.'];
+      }
+    }
+
+    if (backendMessages.length > 0) {
+      return backendMessages;
+    }
+
+    return ['Something went wrong. Please try again.'];
+  }
+
+  private prettyFieldName(field: string): string {
+    switch (field) {
+      case 'phoneNumber': return 'Phone number';
+      case 'firstName': return 'First name';
+      case 'lastName': return 'Last name';
+      case 'middleName': return 'Middle name';
+      case 'panNumber': return 'PAN number';
+      case 'hashkey': return 'Captcha';
+      case 'response': return 'Captcha';
+      case 'non_field_errors': return 'Error';
+      default:
+        return field.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+    }
+  }
+
+  private getRegistrationValidationErrors(): string[] {
+    const messages: string[] = [];
+    const firstName = this.registrationForm.get('firstName');
+    const lastName = this.registrationForm.get('lastName');
+    const phoneNumber = this.registrationForm.get('phoneNumber');
+    const email = this.registrationForm.get('email');
+    const password = this.registrationForm.get('password');
+    const confirmPassword = this.registrationForm.get('confirmPassword');
+    const hashkey = this.registrationForm.get('hashkey');
+    const response = this.registrationForm.get('response');
+
+    if (firstName?.invalid) messages.push('First name is required.');
+    if (lastName?.invalid) messages.push('Last name is required.');
+    if (phoneNumber?.hasError('required')) messages.push('Mobile number is required.');
+    if (phoneNumber?.hasError('pattern')) messages.push('Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.');
+    if (email?.hasError('required')) messages.push('Email address is required.');
+    if (email?.hasError('email')) messages.push('Enter a valid email address.');
+    if (password?.hasError('required')) messages.push('Password is required.');
+    if (password?.hasError('minlength')) messages.push('Password must be at least 8 characters long.');
+    if (confirmPassword?.hasError('required')) messages.push('Confirm password is required.');
+    if (confirmPassword?.hasError('mismatch') || this.registrationForm.hasError('mismatch')) {
+      messages.push('Password and confirm password must match.');
+    }
+    if (this.registrationForm.get('district')?.invalid) messages.push('District is required.');
+    if (this.registrationForm.get('subdivision')?.invalid) messages.push('Subdivision is required.');
+    if (this.registrationForm.get('panNumber')?.invalid) messages.push('PAN number is required.');
+    if (this.registrationForm.get('address')?.invalid) messages.push('Address is required.');
+    if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
+
+    return messages.length > 0 ? Array.from(new Set(messages)) : ['Please check the form and try again.'];
+  }
+
+  private mapRegistrationErrors(err: HttpErrorResponse | any, flow: 'sendOtp' | 'verifyOtp' | 'register'): string[] {
+    const backendMessages = this.extractErrorMessages(err?.error);
+    const status = err?.status;
+    const normalizedText = backendMessages.join(' ').toLowerCase();
+
+    const hasAny = (terms: string[]) => terms.some((term) => normalizedText.includes(term));
+
+    if (flow === 'sendOtp') {
+      if (status === 409 || hasAny(['already registered', 'already exists'])) {
+        return ['This mobile number is already registered. Please sign in instead.'];
+      }
+      if (status === 429 || hasAny(['too many', 'rate limit'])) {
+        return ['Too many OTP requests. Please wait and try again.'];
+      }
+    }
+
+    if (flow === 'verifyOtp') {
+      if (status === 400 || status === 401 || hasAny(['invalid otp', 'incorrect otp', 'otp is invalid'])) {
+        return ['Invalid OTP. Enter the correct OTP and try again.'];
+      }
+      if (hasAny(['expired otp', 'otp expired', 'expired'])) {
+        return ['OTP has expired. Please request a new OTP.'];
+      }
+    }
+
+    if (flow === 'register') {
+      if (status === 409 || hasAny(['already registered', 'already exists', 'duplicate'])) {
+        return ['User already exists with this mobile/email/PAN. Please sign in or use different details.'];
+      }
+      if (hasAny(['password', 'match'])) {
+        return ['Password and confirm password must match.'];
+      }
+      if (hasAny(['captcha', 'invalid response'])) {
+        return ['Captcha verification failed. Please solve captcha again.'];
+      }
+    }
+
+    if (backendMessages.length > 0) {
+      return backendMessages;
+    }
+
+    return ['Something went wrong during signup. Please try again.'];
   }
 }

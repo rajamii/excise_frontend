@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { UserRouteAccessService } from '../../core/config/user-route-access.service';
-import { Authority } from '../../shared/constants/authority.enum';
 
 const routes: Routes = [
   {
@@ -18,7 +17,7 @@ const routes: Routes = [
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.COMMISSIONER],
+          requiredPermission: 'officer.commissioner.view',
         },
       },
       {
@@ -29,7 +28,7 @@ const routes: Routes = [
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.IT_CELL],
+          requiredPermission: 'officer.itcell.view',
         },
       },
       {
@@ -40,7 +39,7 @@ const routes: Routes = [
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.OFFICER_IN_CHARGE],
+          requiredPermission: 'officer.oic.view',
         },
       },
       {
@@ -51,7 +50,7 @@ const routes: Routes = [
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.PERMIT_SECTION],
+          requiredPermission: 'officer.permit_section.view',
         },
       },
       // MASTER DATA ROUTES
@@ -66,7 +65,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN, Authority.IT_CELL],
+              requiredPermission: 'master.users.view',
             },
           },
           {
@@ -77,7 +76,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.roles.view',
             },
           },
           // ✅ COMMENTED OUT: District route causing compilation errors
@@ -101,7 +100,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.subdivisions.view',
             },
           },
           {
@@ -112,7 +111,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.police_stations.view',
             },
           },
           {
@@ -123,7 +122,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.license_types.view',
             },
           },
           {
@@ -134,7 +133,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.license_categories.view',
             },
           },
           {
@@ -145,7 +144,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.license_titles.view',
             },
           },
           {
@@ -156,7 +155,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.license_subcategories.view',
             },
           },
           {
@@ -167,7 +166,7 @@ const routes: Routes = [
               ),
             canActivate: [UserRouteAccessService],
             data: {
-              authorities: [Authority.SITE_ADMIN],
+              requiredPermission: 'master.roads.view',
             },
           },
         ]

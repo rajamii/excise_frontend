@@ -59,9 +59,8 @@
                                             Date to Use Hologram in Factory
                                         </label>
                                         <input type="date" class="form-control" [(ngModel)]="requestData.usageDate"
-                                            name="usageDate" required>
-                                        <small class="form-text">Select the date when hologram will be used in
-                                            factory</small>
+                                            name="usageDate" required [min]="minUsageDate" [max]="maxUsageDate">
+                                        <small class="form-text">Select only today, tomorrow, or the day after tomorrow for factory usage</small>
                                     </div>
                                 </div>
 

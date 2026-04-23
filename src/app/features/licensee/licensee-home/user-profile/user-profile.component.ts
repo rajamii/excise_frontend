@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { Subscription, catchError, throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 
@@ -19,6 +19,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MasterService } from '../../../../core/services/master.service';
 import { BaseComponent } from '../../../../base/base.components';
 import { BaseDependency } from '../../../../base/dependency/base.dependency';
+import { MyLicensesComponent } from '../../my-licenses/my-licenses.component';
 
 /**
  * UserProfileComponent
@@ -58,25 +59,26 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   // DEPENDENCY INJECTION
   // =========================================================================
 
-  private fb            = inject(FormBuilder);
+  private fb = inject(FormBuilder);
   private mastersService = inject(MasterService);
-  public  dialogRef     = inject(MatDialogRef<UserProfileComponent>);
+  public dialogRef = inject(MatDialogRef<UserProfileComponent>);
+  private dialog = inject(MatDialog);
 
   // =========================================================================
   // STATE
   // =========================================================================
 
-  loaded         = false;
-  user: any      = null;
+  loaded = false;
+  user: any = null;
   licenseeProfile: any = null;
 
   profileForm!: FormGroup;
-  showEditForm  = false;
-  isNewProfile  = true;
+  showEditForm = false;
+  isNewProfile = true;
   profileLoading = false;
-  isSaving       = false;
-  saveSuccess    = false;
-  saveError      = '';
+  isSaving = false;
+  saveSuccess = false;
+  saveError = '';
 
   resolvedRoleName = 'Licensee';
 
@@ -93,16 +95,16 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   ];
 
   maritalStatusOptions = [
-    { value: 'SINGLE',   label: 'Single' },
-    { value: 'MARRIED',  label: 'Married' },
+    { value: 'SINGLE', label: 'Single' },
+    { value: 'MARRIED', label: 'Married' },
     { value: 'DIVORCED', label: 'Divorced' },
-    { value: 'WIDOWED',  label: 'Widowed' }
+    { value: 'WIDOWED', label: 'Widowed' }
   ];
 
   residentialStatusOptions = [
-    { value: 'RESIDENT',     label: 'Resident' },
+    { value: 'RESIDENT', label: 'Resident' },
     { value: 'NON_RESIDENT', label: 'Non-Resident' },
-    { value: 'OCI',          label: 'Overseas Citizen of India' }
+    { value: 'OCI', label: 'Overseas Citizen of India' }
   ];
 
   // =========================================================================
@@ -138,14 +140,14 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
       father_name: [
         '',
         [Validators.required, Validators.minLength(2), Validators.maxLength(100),
-         Validators.pattern(/^[a-zA-Z\s]+$/)]
+        Validators.pattern(/^[a-zA-Z\s]+$/)]
       ],
-      dob:         ['', Validators.required],
-      gender:      ['', Validators.required],
+      dob: ['', Validators.required],
+      gender: ['', Validators.required],
       nationality: ['Indian', [Validators.required, Validators.maxLength(50)]],
 
       // ── Mutable anytime ───────────────────────────────────────────────────
-      marital_status:     ['', Validators.required],
+      marital_status: ['', Validators.required],
       residential_status: ['', Validators.required]
     });
   }
@@ -158,12 +160,46 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     const sub = this.accountService.getAuthenticationState().subscribe(account => {
       if (account) {
         this.user = account;
-        if (account.role) {
-          this.resolvedRoleName = String(account.role);
-        }
+        this.resolvedRoleName = this.resolveRoleName(account);
       }
     });
     this.subscriptions.add(sub);
+  }
+
+  private resolveRoleName(account: any): string {
+    const role = account?.role;
+
+    if (!role) {
+      return 'Licensee';
+    }
+
+    if (typeof role === 'string') {
+      const name = role.trim();
+      return name ? name : 'Licensee';
+    }
+
+    if (typeof role === 'number') {
+      return role === 2 ? 'Licensee' : `Role ${role}`;
+    }
+
+    if (typeof role === 'object') {
+      const candidate =
+        String(role?.displayName || '').trim() ||
+        String(role?.name || '').trim() ||
+        String(role?.roleName || '').trim() ||
+        String(role?.label || '').trim();
+
+      if (candidate) {
+        return candidate;
+      }
+
+      const id = Number(role?.id);
+      if (Number.isFinite(id) && id > 0) {
+        return id === 2 ? 'Licensee' : `Role ${id}`;
+      }
+    }
+
+    return 'Licensee';
   }
 
   /**
@@ -179,17 +215,17 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
       next: (profile: any) => {
         console.log('🔍 RAW API RESPONSE:', profile);
         console.log('📋 Profile fields:', Object.keys(profile || {}));
-        
+
         if (profile) {
           this.licenseeProfile = this.enrichProfileWithDisplayValues(profile);
           console.log('✨ ENRICHED PROFILE:', this.licenseeProfile);
-          this.isNewProfile    = false;
+          this.isNewProfile = false;
           this.populateForm();
         } else {
           this.isNewProfile = true;
         }
         this.profileLoading = false;
-        this.loaded         = true;
+        this.loaded = true;
       },
       error: (error: any) => {
         console.error('❌ Error loading profile:', error);
@@ -198,7 +234,7 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
           this.isNewProfile = true;
         }
         this.profileLoading = false;
-        this.loaded         = true;
+        this.loaded = true;
       }
     });
     this.subscriptions.add(sub);
@@ -215,7 +251,7 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     console.log('  residentialStatus:', profile.residentialStatus);
     console.log('  fatherName:', profile.fatherName);
     console.log('  panNumber:', profile.panNumber);
-    
+
     const enriched = {
       ...profile,
       // Use backend field names (camelCase) but also add snake_case aliases for template
@@ -228,13 +264,13 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
       marital_status: profile.maritalStatus,
       residential_status: profile.residentialStatus
     };
-    
+
     console.log('  → gender_display:', enriched.gender_display);
     console.log('  → marital_status_display:', enriched.marital_status_display);
     console.log('  → residential_status_display:', enriched.residential_status_display);
     console.log('  → father_name:', enriched.father_name);
     console.log('  → pan_number:', enriched.pan_number);
-    
+
     return enriched;
   }
 
@@ -261,20 +297,20 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     if (!this.licenseeProfile || !this.profileForm) return;
 
     this.profileForm.patchValue({
-      father_name:        this.licenseeProfile.fatherName        ?? '',
-      dob:                this.licenseeProfile.dob                ?? '',
-      gender:             this.licenseeProfile.gender             ?? '',
-      nationality:        this.licenseeProfile.nationality        ?? 'Indian',
-      marital_status:     this.licenseeProfile.maritalStatus     ?? '',
+      father_name: this.licenseeProfile.fatherName ?? '',
+      dob: this.licenseeProfile.dob ?? '',
+      gender: this.licenseeProfile.gender ?? '',
+      nationality: this.licenseeProfile.nationality ?? 'Indian',
+      marital_status: this.licenseeProfile.maritalStatus ?? '',
       residential_status: this.licenseeProfile.residentialStatus ?? ''
     });
 
     // Lock immutable fields when editing an existing profile
-    if (!this.isNewProfile) {
-      ['father_name', 'dob', 'gender', 'nationality'].forEach(field => {
-        this.profileForm.get(field)?.disable();
-      });
-    }
+    // if (!this.isNewProfile) {
+    //   ['father_name', 'dob', 'gender', 'nationality'].forEach(field => {
+    //     this.profileForm.get(field)?.disable();
+    //   });
+    // }
   }
 
   // =========================================================================
@@ -299,14 +335,14 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
 
   openEditForm(): void {
     this.showEditForm = true;
-    this.saveError    = '';
-    this.saveSuccess  = false;
+    this.saveError = '';
+    this.saveSuccess = false;
   }
 
   cancelEdit(): void {
     this.showEditForm = false;
-    this.saveError    = '';
-    this.saveSuccess  = false;
+    this.saveError = '';
+    this.saveSuccess = false;
     this.populateForm();
   }
 
@@ -322,8 +358,8 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
       return;
     }
 
-    this.isSaving    = true;
-    this.saveError   = '';
+    this.isSaving = true;
+    this.saveError = '';
     this.saveSuccess = false;
 
     const payload = this.isNewProfile
@@ -333,23 +369,23 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     const save$ = this.isNewProfile
       ? this.mastersService.createLicenseeProfile(payload)
       : this.mastersService
-          .patchLicenseeProfile(this.licenseeProfile.id, payload)
-          .pipe(
-            // Some backends only allow self-updates at /me/ and reject id-based update with 403.
-            catchError((error: any) => {
-              if ([403, 404, 405].includes(error?.status)) {
-                return this.mastersService.patchMyLicenseeProfile(payload);
-              }
-              return throwError(() => error);
-            })
-          );
+        .patchLicenseeProfile(this.licenseeProfile.id, payload)
+        .pipe(
+          // Some backends only allow self-updates at /me/ and reject id-based update with 403.
+          catchError((error: any) => {
+            if ([403, 404, 405].includes(error?.status)) {
+              return this.mastersService.patchMyLicenseeProfile(payload);
+            }
+            return throwError(() => error);
+          })
+        );
 
     const sub = save$.subscribe({
       next: (response: any) => {
-        this.isSaving        = false;
-        this.saveSuccess     = true;
+        this.isSaving = false;
+        this.saveSuccess = true;
         this.licenseeProfile = this.enrichProfileWithDisplayValues(response);
-        this.isNewProfile    = false;
+        this.isNewProfile = false;
 
         // Lock immutable fields after successful creation
         ['father_name', 'dob', 'gender', 'nationality'].forEach(field => {
@@ -357,7 +393,7 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
         });
 
         setTimeout(() => {
-          this.saveSuccess  = false;
+          this.saveSuccess = false;
           this.showEditForm = false;
         }, 2000);
       },
@@ -390,7 +426,10 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
 
   openMyLicenses(): void {
     this.dialogRef.close();
-    this.router.navigate(['/licensee/my-licenses']);
+    this.dialog.open(MyLicensesComponent, {
+      width: '900px',
+      maxHeight: '90vh'
+    });
   }
 
   // =========================================================================
@@ -402,10 +441,10 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
    */
   private formatDate(date: any): string {
     if (!date) return '';
-    const d     = new Date(date);
-    const year  = d.getFullYear();
+    const d = new Date(date);
+    const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day   = String(d.getDate()).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 
@@ -415,11 +454,11 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   private formatCreatePayload(): any {
     const v = this.profileForm.getRawValue();
     return {
-      fatherName:        v.father_name,
-      dob:                this.formatDate(v.dob),
-      gender:             v.gender,
-      nationality:        v.nationality,
-      maritalStatus:     v.marital_status,
+      fatherName: v.father_name,
+      dob: this.formatDate(v.dob),
+      gender: v.gender,
+      nationality: v.nationality,
+      maritalStatus: v.marital_status,
       residentialStatus: v.residential_status
     };
   }
@@ -430,7 +469,11 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   private formatUpdatePayload(): any {
     const v = this.profileForm.getRawValue();
     return {
-      maritalStatus:     v.marital_status,
+      fatherName: v.father_name,
+      dob: this.formatDate(v.dob),
+      gender: v.gender,
+      nationality: v.nationality,
+      maritalStatus: v.marital_status,
       residentialStatus: v.residential_status
     };
   }

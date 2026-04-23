@@ -1,10 +1,10 @@
 import { Routes } from "@angular/router";
 import { LoginComponent } from "./features/login/login.component";
-import { Authority } from "./shared/constants/authority.enum";
 import { UserRouteAccessService } from "./core/config/user-route-access.service";
 import { HomeComponent } from "./layouts/landing/home/home.component";
 import { HomeLinksComponent } from "./layouts/landing/home/home-links/home-links.component";
 import { InfoPagesComponent } from "./layouts/info-pages/info-pages.component";
+import { AccessDeniedComponent } from "./shared/components/access-denied/access-denied.component";
 import { PageNotFoundComponent } from "./shared/components/page-not-found/page-not-found.component";
 
 export const routes: Routes = [
@@ -46,23 +46,7 @@ export const routes: Routes = [
     path: "dashboard",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [
-        // Admin roles
-        Authority.SITE_ADMIN,
-        Authority.SINGLE_WINDOW,
-        Authority.DISTRICT_USER,
-        Authority.JOINT_COMMISSIONER,
-        Authority.SECRETARY,
-        Authority.SUB_ENQUIRY_OFFICER,
-        // Officer roles
-        Authority.COMMISSIONER,
-        Authority.IT_CELL,
-        Authority.PERMIT_SECTION,
-        Authority.OFFICER_IN_CHARGE,
-        // Licensee roles
-        Authority.LICENSEE,
-        Authority.SUPPLY_CHAIN
-      ],
+      requiredPermission: 'dashboard.view',
     },
     loadChildren: () => import("./features/dashboard/dashboard.module").then(m => m.DashboardModule),
   },
@@ -72,7 +56,7 @@ export const routes: Routes = [
     path: "officer-dashboard/oic",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.OFFICER_IN_CHARGE],
+      requiredPermission: 'officer.oic.view',
     },
     loadComponent: () => import("./features/admin/officer-in-charge/officer-in-charge.component").then(m => m.OfficerInChargeComponent),
   },
@@ -80,7 +64,7 @@ export const routes: Routes = [
     path: "officer-dashboard/commissioner",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.COMMISSIONER],
+      requiredPermission: 'officer.commissioner.view',
     },
     loadComponent: () => import("./features/admin/commissioner/commissioner-dashboard/commissioner-dashboard.component").then(m => m.CommissionerDashboardComponent),
   },
@@ -88,7 +72,7 @@ export const routes: Routes = [
     path: "officer-dashboard/itcell",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.IT_CELL],
+      requiredPermission: 'officer.itcell.view',
     },
     loadComponent: () => import("./features/admin/it-cell/itcell.component").then(m => m.ITCELLComponent),
   },
@@ -96,7 +80,7 @@ export const routes: Routes = [
     path: "officer-dashboard/permit-section",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.PERMIT_SECTION],
+      requiredPermission: 'officer.permit_section.view',
     },
     loadComponent: () => import("./features/admin/permit-section/permit-section.component").then(m => m.PermitSectionComponent),
   },
@@ -104,13 +88,39 @@ export const routes: Routes = [
 
   {
     path: "dev-payment-confirmation",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component"
-      ).then((m) => m.PaymentConfirmationComponent),
+        "./shared/components/payment-wallet-redirect/payment-wallet-redirect.component"
+      ).then((m) => m.PaymentWalletRedirectComponent),
+  },
+  {
+    path: "dev-payment-integrations",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
+    loadComponent: () =>
+      import("./features/licensee/payment-integrations/payment-integrations.component").then(
+        (m) => m.PaymentIntegrationsComponent
+      ),
+  },
+  {
+    path: "payment/callback",
+    loadComponent: () =>
+      import("./features/licensee/payment-integrations/payment-callback.component").then(
+        (m) => m.PaymentCallbackComponent
+      ),
+  },
+  {
+    path: "payment/cancel",
+    loadComponent: () =>
+      import("./features/licensee/payment-integrations/payment-cancel.component").then(
+        (m) => m.PaymentCancelComponent
+      ),
   },
   {
     path: "supply-chain-view",
+    canActivate: [UserRouteAccessService],
     loadComponent: () =>
       import(
         "./shared/components/unified-supply-chain-view/unified-supply-chain-view.component"
@@ -118,13 +128,75 @@ export const routes: Routes = [
   },
   {
     path: "dev-local-sales-register",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/breweryRegisters/local-sales-register/local-sales-register.component"
       ).then((m) => m.LocalSalesRegisterComponent),
   },
   {
+    path: "dev-final-transit-permit-view",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finaltransitpermit/finaltransitpermit.component"
+      ).then((m) => m.FinaltransitpermitComponent),
+  },
+  {
+    path: "dev-final-requisition-letters",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finalrequistionletters/finalrequistionletters/finalrequistionletters.component"
+      ).then((m) => m.FinalrequistionlettersComponent),
+  },
+  {
+    path: "payment-slip-view",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./shared/components/unified-payment-slip-view/unified-payment-slip-view.component"
+      ).then((m) => m.UnifiedPaymentSlipViewComponent),
+  },
+  {
+    path: "unified-letter-view/cancellation",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/unifiedfinalletterview/unifiedfinalletterview.component"
+      ).then((m) => m.UnifiedfinalletterviewComponent),
+  },
+  {
+    path: "unified-letter-view/revalidation",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/unifiedfinalletterview/unifiedfinalletterview.component"
+      ).then((m) => m.UnifiedfinalletterviewComponent),
+  },
+  {
+    path: "unified-letter-view/requisition",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finalrequistionletters/finalrequistionletters/finalrequistionletters.component"
+      ).then((m) => m.FinalrequistionlettersComponent),
+  },
+  {
+    path: "unified-letter-view/transit",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finaltransitpermit/finaltransitpermit.component"
+      ).then((m) => m.FinaltransitpermitComponent),
+  },
+  {
     path: "dev-payment-receipt",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/payments/payment-receipt/payment-receipt.component"
@@ -132,6 +204,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-import-permit",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/import-permit/import-permit.component"
@@ -140,6 +214,8 @@ export const routes: Routes = [
 
   {
     path: "dev-supply-chain-revalidation-request",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/revalidation-request/revalidation-request.component"
@@ -147,6 +223,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-transit-permit",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/transit-permit/transit-permit.component"
@@ -154,6 +232,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-transit-permit-register",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/transit-permit-register/transit-permit-register.component"
@@ -161,6 +241,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-hologram",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/HoloGram/hologram/hologram.component"
@@ -168,6 +250,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-hologramrequestlevel1",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component"
@@ -175,6 +259,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-daily-record-register",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/daily-record-register/daily-record-register.component"
@@ -182,6 +268,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-daily-production-register",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/beer-production-register/beer-production-register.component"
@@ -189,20 +277,17 @@ export const routes: Routes = [
   },
   {
     path: "dev-beer-production-register",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/beer-production-register/beer-production-register.component"
       ).then((m) => m.BeerProductionRegisterComponent),
   },
   {
-    path: "dev-brands-details",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/registers/brands-details/brands-details.component"
-      ).then((m) => m.BrandsDetailsComponent),
-  },
-  {
     path: "app-permit-section",
+    canActivate: [UserRouteAccessService],
+    data: { requiredPermission: "officer.permit_section.view" },
     loadComponent: () =>
       import(
         "./features/admin/permit-section/permit-section.component"
@@ -212,6 +297,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-commissioner-dashboard",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.commissioner.view" },
     loadComponent: () =>
       import(
         "./features/admin/commissioner/commissioner-dashboard/commissioner-dashboard.component"
@@ -219,6 +306,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-officer-in-charge",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.oic.view" },
     loadComponent: () =>
       import(
         "./features/admin/officer-in-charge/officer-in-charge.component"
@@ -226,6 +315,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-itcell",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.itcell.view" },
     loadComponent: () =>
       import("./features/admin/it-cell/itcell.component").then(
         (m) => m.ITCELLComponent,
@@ -234,6 +325,8 @@ export const routes: Routes = [
 
   {
     path: "dev-hologram-monthly-report",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component"
@@ -242,6 +335,8 @@ export const routes: Routes = [
 
   {
     path: "dev-hologram-daily-register-oic",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.oic.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/HoloGram/hologram-dailyregisteroic/hologram-dailyregisteroic.component"
@@ -250,6 +345,8 @@ export const routes: Routes = [
 
   {
     path: "dev-hologram-overview",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component"
@@ -257,13 +354,17 @@ export const routes: Routes = [
   },
   {
     path: "dev-hologram-request-list",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.oic.view" },
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/supplychaincomponents/hologramrequest/hologramrequest.component"
-      ).then((m) => m.HologramrequestComponent),
+        "./features/licensee/supplyChain/HoloGram/officerinchargehologramreq/officerinchargehologramreq.component"
+      ).then((m) => m.OfficerinchargehologramreqComponent),
   },
   {
     path: "dev/monthlyhologramstatement-oic",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.oic.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component"
@@ -271,6 +372,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-oic-transit-permit",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.oic.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/supplychaincomponents/oic-transit-permit/oic-transit-permit.component"
@@ -278,6 +381,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-hologram-details",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/HoloGram/hologramdetails/hologramdetails.component"
@@ -285,6 +390,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-oic-daily-hologram-register",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.oic.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/oicdailyhologramregister/oicdailyhologramregister.component"
@@ -292,6 +399,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-brand-warehouse",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "licensee.module.view" },
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component"
@@ -299,6 +408,8 @@ export const routes: Routes = [
   },
   {
     path: "dev-admin-officer-in-charge",
+    canActivate: [UserRouteAccessService],
+    data: { devOnly: true, requiredPermission: "officer.oic.view" },
     loadComponent: () =>
       import(
         "./features/admin/officer-in-charge/officer-in-charge.component"
@@ -310,18 +421,7 @@ export const routes: Routes = [
     path: "admin",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [
-        Authority.SITE_ADMIN,
-        Authority.SINGLE_WINDOW,
-        Authority.DISTRICT_USER,
-        Authority.JOINT_COMMISSIONER,
-        Authority.SECRETARY,
-        Authority.SUB_ENQUIRY_OFFICER,
-        Authority.COMMISSIONER,
-        Authority.IT_CELL,
-        Authority.PERMIT_SECTION,
-        Authority.OFFICER_IN_CHARGE,
-      ],
+      requiredPermission: 'admin.module.view',
     },
     loadChildren: () => import("./features/admin/admin.routes"),
   },
@@ -331,7 +431,7 @@ export const routes: Routes = [
     path: "licensee",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.LICENSEE],
+      requiredPermission: 'licensee.module.view',
     },
     loadChildren: () =>
       import("./features/licensee/licensee.routes").then(
@@ -339,11 +439,33 @@ export const routes: Routes = [
       ),
   },
 
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./features/login/forgot-password.component').then(m => m.ForgotPasswordComponent)
+  },
+  {
+    // The path MUST match the format constructed in the Django email payload
+    path: 'reset-password/:uid/:token',
+    loadComponent: () => import('./features/login/reset-password.component').then(m => m.ResetPasswordComponent)
+  },
+
+  // Access denied aliases
+  {
+    path: "accessdenied",
+    component: AccessDeniedComponent,
+  },
+  {
+    path: "unauthorized",
+    component: AccessDeniedComponent,
+  },
+
   // Wildcard fallback
   {
     path: "**",
     component: PageNotFoundComponent,
   },
+
+  
 ];
 
 export default routes;

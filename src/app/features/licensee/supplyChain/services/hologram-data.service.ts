@@ -41,6 +41,8 @@ export interface HologramProcurement {
   workflow?: number;
   currentStage?: number;
   carton_details?: any[];
+  arrivalDate?: string;
+  arrival_date?: string;
   editHistory?: {
     editedBy: string;
     editedDate: string;
@@ -83,6 +85,7 @@ export interface HologramRequest {
   id?: number;
   refNo?: string;
   licensee?: number;
+  licenseId?: string;
   licenseeName?: string;
   submissionDate?: string;
   usageDate: string;
@@ -93,6 +96,13 @@ export interface HologramRequest {
   stageId?: number;
   workflow?: number;
   currentStage?: number;
+  current_stage_name?: string;
+  current_stage_is_initial?: boolean;
+  current_stage_is_final?: boolean;
+  current_stage_entry_actions?: string[];
+  allowed_actions?: string[];
+  rolls_assigned?: any[];
+  issued_assets?: any[];
 }
 
 // Keep legacy interfaces for compatibility if needed, but we are moving to API
@@ -310,7 +320,7 @@ export class HologramDataService {
     // Add distillery filter to only get Sikkim Distilleries Ltd brands
     const params = new HttpParams().set('distillery', 'Sikkim Distilleries Ltd');
     
-    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`, { params })
+    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/brands/`, { params })
       .pipe(
         map(response => {
           if (response.success && response.data) {

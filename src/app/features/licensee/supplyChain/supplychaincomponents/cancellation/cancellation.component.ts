@@ -12,11 +12,12 @@ interface TableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
+  establishmentName?: string;
   status: string;
   amount: string;
   workflowId?: number;
   currentStage?: number;
-  priority?: string;
+  permitNumber?: string;
   cancellationReason?: string;
   requestDate?: string;
   licenseType?: string;
@@ -34,11 +35,23 @@ interface TableData {
 export class CancellationComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
+  private initialSummaryAutoSelected = false;
 
   // Filter properties for cancellation
   cancellationDateFilter: string = '';
+  cancellationMonthFilter: string = '';
   cancellationStatusFilter: string = '';
-  cancellationReasonFilter: string = '';
+  cancellationCompanyFilter: string = '';
+  cancellationCompanyOptions: string[] = [];
+  activeSummaryFilter: string = '';
+
+  private getCompanyNameForFilter(item: TableData): string {
+    const establishment = String(item?.establishmentName || '').trim();
+    if (establishment && establishment.toLowerCase() !== 'n/a' && establishment !== '-') {
+      return establishment;
+    }
+    return String(item?.distilleryName || '').trim();
+  }
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
@@ -46,6 +59,7 @@ export class CancellationComponent implements OnInit {
   pageSize: number = 5;
 
   filteredCancellationData: TableData[] = [];
+  summaryCancellationData: TableData[] = [];
 
   // Sample data for cancellation applications (from commissioner's perspective)
   cancellationData: TableData[] = [
@@ -56,7 +70,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Sikkim Distilleries Ltd",
       status: "PENDING",
       amount: "15.00",
-      priority: "high",
       cancellationReason: "Business Closure",
       licenseType: "Manufacturing License"
     },
@@ -67,7 +80,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Darjeeling Artisan Pvt Ltd",
       status: "APPROVED",
       amount: "20.00",
-      priority: "normal",
       cancellationReason: "Voluntary Surrender",
       licenseType: "Retail License"
     },
@@ -78,7 +90,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Royal Sikkim Brewery",
       status: "APPROVED",
       amount: "0.00",
-      priority: "urgent",
       cancellationReason: "Non-Compliance",
       licenseType: "Manufacturing License"
     },
@@ -89,7 +100,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Himalayan Distilleries Pvt Ltd",
       status: "PROCESSING",
       amount: "0.00",
-      priority: "high",
       cancellationReason: "License Transfer",
       licenseType: "Wholesale License"
     },
@@ -100,7 +110,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Eastern Himalaya Distillery",
       status: "REJECTED",
       amount: "0.00",
-      priority: "normal",
       cancellationReason: "Financial Issues",
       licenseType: "Manufacturing License"
     },
@@ -111,7 +120,6 @@ export class CancellationComponent implements OnInit {
       distilleryName: "Gangtok Premium Spirits",
       status: "PENDING",
       amount: "0.00",
-      priority: "urgent",
       cancellationReason: "Regulatory Violation",
       licenseType: "Retail License"
     }
@@ -146,7 +154,7 @@ export class CancellationComponent implements OnInit {
         this.cancellationData = data.map((item: any, index: number) => {
           const mappedItem = {
             id: item.id || item.pk || `fallback-${index}-${Date.now()}`, // Ensure unique ID
-            referenceNo: item.ourRefNo || item.our_ref_no || `CAN/${item.id || index}/2025`,
+            referenceNo: item.ourRefNo || item.our_ref_no || 'N/A',
             submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') :
               (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') :
                 (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') :
@@ -156,11 +164,31 @@ export class CancellationComponent implements OnInit {
                 (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') :
                   new Date().toLocaleDateString('en-GB'))),
             distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
+            establishmentName:
+              item.establishmentName ||
+              item.establishment_name ||
+              item.manufacturingUnitName ||
+              item.manufacturing_unit_name ||
+              item.licenseeName ||
+              item.licensee_name ||
+              'N/A',
             status: item.status || 'CancellationPending',
             amount: (item.totalCancellationAmount || item.total_cancellation_amount || item.cancellationBrAmount || item.cancellation_br_amount || '0.00').toString(),
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-            priority: this.determinePriority(item),
+            permitNumber: (
+              item.cancelledPermitNumbers ||
+              item.cancelledPermitNumber ||
+              item.cancelled_permit_numbers ||
+              item.cancelled_permit_number ||
+              item.permitNumber ||
+              item.permit_no ||
+              item.permitNo ||
+              item.originalPermitNumbers ||
+              item.original_permit_no ||
+              item.originalPermitNo ||
+              '-'
+            ).toString(),
             cancellationReason: item.reasonForCancellation || item.reason_for_cancellation || 'Cancellation Request',
             licenseType: item.licenseType || item.license_type || 'Import Permit',
             allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActions(item.status),
@@ -189,6 +217,7 @@ export class CancellationComponent implements OnInit {
         }
 
         this.applyCancellationFilters();
+        this.maybeAutoSelectPendingSummary();
       },
       error: (err) => {
         console.error('Error fetching cancellations', err);
@@ -198,6 +227,20 @@ export class CancellationComponent implements OnInit {
         this.loadSampleCancellationData();
       }
     });
+  }
+
+  private maybeAutoSelectPendingSummary(): void {
+    if (this.initialSummaryAutoSelected) return;
+    this.initialSummaryAutoSelected = true;
+
+    if (this.cancellationStatusFilter || this.activeSummaryFilter) return;
+
+    const pendingCount = this.getCancellationStatusCount('PENDING');
+    if (pendingCount > 0) {
+      this.activeSummaryFilter = 'PENDING';
+      this.cancellationStatusFilter = 'PENDING';
+      this.applyCancellationFilters();
+    }
   }
 
   // Unified action handler
@@ -237,25 +280,62 @@ export class CancellationComponent implements OnInit {
     return 'licensee';
   }
 
-  private determinePriority(item: any): string {
-    const status = item.status?.toUpperCase();
-    const amount = parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || '0');
+  private normalizeStatus(status: string | null | undefined): string {
+    return String(status || '').toLowerCase().replace(/[\s_-]+/g, '');
+  }
 
-    if (status?.includes('URGENT') || amount > 50000) {
-      return 'urgent';
-    } else if (status?.includes('HIGH') || amount > 20000) {
-      return 'high';
-    } else {
-      return 'normal';
-    }
+  private isRejectedStatus(status: string | null | undefined): boolean {
+    return this.normalizeStatus(status).includes('reject');
+  }
+
+  private isApprovedStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    return value.includes('approv') && !value.includes('reject');
+  }
+
+  private isForwardedPaySlipStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    return value.includes('forward') && value.includes('payslip');
+  }
+
+  private isPendingLikeStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return true;
+    if (this.isApprovedStatus(value) || this.isRejectedStatus(value)) return false;
+    return (
+      value.includes('pending') ||
+      value.includes('processing') ||
+      value.includes('submitted') ||
+      value.includes('forward')
+    );
+  }
+
+  private isPendingSummaryStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return true;
+    if (this.isApprovedStatus(value) || this.isRejectedStatus(value)) return false;
+    // Pending summary should NOT include "processing" (those go to "Under Process").
+    return (
+      value.includes('pending') ||
+      value.includes('review') ||
+      value.includes('submitted') ||
+      value.includes('forward')
+    ) && !value.includes('processing');
+  }
+
+  private isUnderProcessLikeStatus(status: string | null | undefined): boolean {
+    const value = this.normalizeStatus(status);
+    if (!value) return false;
+    if (this.isApprovedStatus(value) || this.isRejectedStatus(value)) return false;
+    if (this.isPendingSummaryStatus(value)) return false;
+    // Remaining non-final statuses are treated as under process.
+    return true;
   }
 
   private getDefaultActions(status: string): string[] {
-    const statusUpper = status?.toUpperCase();
-
-    if (statusUpper?.includes('APPROVED') || statusUpper?.includes('REJECTED')) {
+    if (this.isApprovedStatus(status) || this.isRejectedStatus(status)) {
       return []; // No actions for completed items
-    } else if (statusUpper?.includes('PENDING') || statusUpper?.includes('PROCESSING') || statusUpper === 'FORWARDEDCANCELLATIONTOCOMMISSIONER' || !status) {
+    } else if (this.isPendingLikeStatus(status)) {
       return ['APPROVE', 'REJECT']; // Default actions for pending items
     } else {
       return [];
@@ -273,7 +353,7 @@ export class CancellationComponent implements OnInit {
         distilleryName: "Sikkim Distilleries Ltd",
         status: "CancellationPending",
         amount: "15.00",
-        priority: "high",
+        permitNumber: "1",
         cancellationReason: "Business Closure",
         licenseType: "Manufacturing License",
         allowedActions: ['APPROVE', 'REJECT']
@@ -286,7 +366,7 @@ export class CancellationComponent implements OnInit {
         distilleryName: "Darjeeling Artisan Pvt Ltd",
         status: "ApprovedCancellationByCommissioner",
         amount: "20.00",
-        priority: "normal",
+        permitNumber: "1",
         cancellationReason: "Voluntary Surrender",
         licenseType: "Retail License",
         allowedActions: []
@@ -299,43 +379,61 @@ export class CancellationComponent implements OnInit {
 
   // Filter methods
   applyCancellationFilters(): void {
-    let filtered = [...this.cancellationData];
+    let summary = [...this.cancellationData];
 
     // Date filter
     if (this.cancellationDateFilter) {
       const filterDate = new Date(this.cancellationDateFilter);
-      filtered = filtered.filter(item => {
+      summary = summary.filter(item => {
         const itemDate = this.parseDate(item.submissionDate);
         return itemDate.toDateString() === filterDate.toDateString();
       });
     }
 
+    // Month filter (Jan-Dec)
+    if (this.cancellationMonthFilter) {
+      const monthNum = parseInt(this.cancellationMonthFilter, 10);
+      summary = summary.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.getMonth() + 1 === monthNum;
+      });
+    }
+
+    this.cancellationCompanyOptions = Array.from(
+      new Set(
+        summary
+          .map(item => this.getCompanyNameForFilter(item))
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    this.summaryCancellationData = summary;
+
+    let filtered = [...summary];
+
+    if (this.cancellationCompanyFilter) {
+      filtered = filtered.filter(item => this.getCompanyNameForFilter(item) === this.cancellationCompanyFilter);
+    }
+
     // Status filter
     if (this.cancellationStatusFilter) {
       filtered = filtered.filter(item => {
-        const itemStatus = item.status?.toUpperCase();
-        const filterStatus = this.cancellationStatusFilter.toUpperCase();
+        const itemStatus = this.normalizeStatus(item.status);
+        const filterStatus = this.normalizeStatus(this.cancellationStatusFilter);
 
         // Handle different status variations
-        if (filterStatus === 'PENDING') {
-          return itemStatus === 'PENDING' ||
-            itemStatus === 'CANCELLATIONPENDING' ||
-            itemStatus === 'FORWARDEDCANCELLATIONTOCOMMISSIONER';
-        } else if (filterStatus === 'APPROVED') {
-          return itemStatus === 'APPROVED' || itemStatus === 'APPROVEDCANCELLATIONBYCOMMISSIONER';
-        } else if (filterStatus === 'REJECTED') {
-          return itemStatus === 'REJECTED' || itemStatus === 'REJECTEDCANCELLATIONBYCOMMISSIONER';
+        if (filterStatus === 'pending') {
+          return this.isPendingSummaryStatus(item.status);
+        } else if (filterStatus === 'approved') {
+          return this.isApprovedStatus(item.status);
+        } else if (filterStatus === 'rejected') {
+          return this.isRejectedStatus(item.status);
+        } else if (filterStatus === 'underprocess') {
+          return this.isUnderProcessLikeStatus(item.status);
         } else {
           return itemStatus === filterStatus;
         }
       });
-    }
-
-    // Reason filter
-    if (this.cancellationReasonFilter) {
-      filtered = filtered.filter(item =>
-        item.cancellationReason === this.cancellationReasonFilter
-      );
     }
 
     this.filteredCancellationData = filtered;
@@ -344,8 +442,10 @@ export class CancellationComponent implements OnInit {
 
   clearCancellationFilters(): void {
     this.cancellationDateFilter = '';
+    this.cancellationMonthFilter = '';
     this.cancellationStatusFilter = '';
-    this.cancellationReasonFilter = '';
+    this.cancellationCompanyFilter = '';
+    this.activeSummaryFilter = '';
     this.applyCancellationFilters();
   }
 
@@ -353,40 +453,71 @@ export class CancellationComponent implements OnInit {
     this.applyCancellationFilters();
   }
 
-  onCancellationStatusFilterChange(): void {
+  onCancellationMonthFilterChange(): void {
     this.applyCancellationFilters();
   }
 
-  onCancellationReasonFilterChange(): void {
+  onCancellationCompanyFilterChange(): void {
+    this.applyCancellationFilters();
+  }
+
+  onCancellationStatusFilterChange(): void {
+    this.syncActiveSummaryFilter();
     this.applyCancellationFilters();
   }
 
   // Summary methods
   getCancellationStatusCount(status: string): number {
     if (status === 'PENDING') {
-      return this.filteredCancellationData.filter(item =>
-        item.status === 'PENDING' || item.status === 'CancellationPending'
-      ).length;
+      return this.summaryCancellationData.filter(item => this.isPendingSummaryStatus(item.status)).length;
     } else if (status === 'APPROVED') {
-      return this.filteredCancellationData.filter(item =>
-        item.status === 'APPROVED' ||
-        item.status === 'ApprovedCancellationByCommissioner' ||
-        item.status?.toUpperCase().includes('APPROVED')
-      ).length;
+      return this.summaryCancellationData.filter(item => this.isApprovedStatus(item.status)).length;
     } else if (status === 'REJECTED') {
-      return this.filteredCancellationData.filter(item =>
-        item.status === 'REJECTED' ||
-        item.status === 'RejectedCancellationByCommissioner' ||
-        item.status?.toUpperCase().includes('REJECTED')
-      ).length;
+      return this.summaryCancellationData.filter(item => this.isRejectedStatus(item.status)).length;
+    } else if (status === 'UNDER_PROCESS') {
+      return this.summaryCancellationData.filter(item => this.isUnderProcessLikeStatus(item.status)).length;
     }
-    return this.filteredCancellationData.filter(item => item.status === status).length;
+    return this.summaryCancellationData.filter(
+      item => this.normalizeStatus(item.status) === this.normalizeStatus(status)
+    ).length;
   }
 
   getUrgentCancellationCount(): number {
-    return this.filteredCancellationData.filter(item =>
-      item.priority === 'urgent' || item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
+    return this.summaryCancellationData.filter(item =>
+      item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
     ).length;
+  }
+
+  onSummaryCardClick(filter: string): void {
+    const normalized = this.normalizeStatus(filter);
+    const current = this.normalizeStatus(this.cancellationStatusFilter);
+
+    if (!normalized || normalized === 'all') {
+      this.activeSummaryFilter = '';
+      this.cancellationStatusFilter = '';
+      this.applyCancellationFilters();
+      return;
+    }
+
+    if (current === normalized) {
+      this.activeSummaryFilter = '';
+      this.cancellationStatusFilter = '';
+      this.applyCancellationFilters();
+      return;
+    }
+
+    this.activeSummaryFilter = filter;
+    this.cancellationStatusFilter = filter;
+    this.applyCancellationFilters();
+  }
+
+  private syncActiveSummaryFilter(): void {
+    const normalized = this.normalizeStatus(this.cancellationStatusFilter);
+    if (['pending', 'approved', 'underprocess'].includes(normalized)) {
+      this.activeSummaryFilter = this.cancellationStatusFilter;
+      return;
+    }
+    this.activeSummaryFilter = '';
   }
 
   // Action methods
@@ -435,13 +566,13 @@ export class CancellationComponent implements OnInit {
     const originalActions = [...(item.allowedActions || [])];
 
     // Determine action based on status
-    const itemStatus = item.status?.toUpperCase();
+    const itemStatus = item.status || '';
     let action: 'APPROVE' | 'ApprovePayslip' = 'APPROVE';
-    let targetStatus = 'ApprovedCancellationByCommissioner';
+    let targetStatus = 'APPROVED';
 
-    if (itemStatus === 'FORWARDEDCANCELLATIONPAYSLIPTOCOMMISSIONER') {
+    if (this.isForwardedPaySlipStatus(itemStatus)) {
       action = 'ApprovePayslip';
-      targetStatus = 'ApprovedCancellationPaySLipByCommissioner';
+      targetStatus = 'APPROVED_PAYSLIP';
     }
 
     // Optimistically update the UI immediately
@@ -575,24 +706,24 @@ export class CancellationComponent implements OnInit {
 
     // Optimistically update the UI immediately
     if (index !== -1) {
-      this.cancellationData[index].status = 'RejectedCancellationByCommissioner';
+      this.cancellationData[index].status = 'REJECTED';
       this.cancellationData[index].allowedActions = [];
     }
 
     if (filteredIndex !== -1) {
-      this.filteredCancellationData[filteredIndex].status = 'RejectedCancellationByCommissioner';
+      this.filteredCancellationData[filteredIndex].status = 'REJECTED';
       this.filteredCancellationData[filteredIndex].allowedActions = [];
     }
 
     // Force UI refresh immediately
     // Determine action based on status
-    const itemStatus = item.status?.toUpperCase();
+    const itemStatus = item.status || '';
     let action: 'REJECT' | 'RejectPayslip' = 'REJECT';
-    let targetStatus = 'RejectedCancellationByCommissioner';
+    let targetStatus = 'REJECTED';
 
-    if (itemStatus === 'FORWARDEDCANCELLATIONPAYSLIPTOCOMMISSIONER') {
+    if (this.isForwardedPaySlipStatus(itemStatus)) {
       action = 'RejectPayslip';
-      targetStatus = 'RejectedCancellationPaySlipByCommissioner';
+      targetStatus = 'REJECTED_PAYSLIP';
     }
 
     // Optimistically update status
@@ -667,17 +798,17 @@ export class CancellationComponent implements OnInit {
           if (confirm('Backend server error occurred. The rejection might have been processed. Would you like to keep the rejection status?')) {
             // Keep the optimistic update
             if (index !== -1) {
-              this.cancellationData[index].status = 'RejectedCancellationByCommissioner';
+              this.cancellationData[index].status = targetStatus;
               this.cancellationData[index].allowedActions = [];
             }
 
             if (filteredIndex !== -1) {
-              this.filteredCancellationData[filteredIndex].status = 'RejectedCancellationByCommissioner';
+              this.filteredCancellationData[filteredIndex].status = targetStatus;
               this.filteredCancellationData[filteredIndex].allowedActions = [];
             }
 
             if (item.id) {
-              this.storeApprovedCancellation(item.id, 'RejectedCancellationByCommissioner');
+              this.storeApprovedCancellation(item.id, targetStatus);
             }
             this.applyCancellationFilters();
           }
@@ -690,26 +821,14 @@ export class CancellationComponent implements OnInit {
 
   // Helper methods
   getStatusClass(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-      case 'CANCELLATIONPENDING':
-      case 'FORWARDEDCANCELLATIONTOCOMMISSIONER':
-        return 'pending';
-      case 'APPROVED':
-      case 'APPROVEDCANCELLATIONBYCOMMISSIONER':
-        return 'approved';
-      case 'REJECTED':
-      case 'REJECTEDCANCELLATIONBYCOMMISSIONER':
-        return 'rejected';
-      case 'PROCESSING':
-        return 'processing';
-      case 'EXPIRED':
-        return 'expired';
-      case 'CANCELLED':
-        return 'cancelled';
-      default:
-        return 'default';
-    }
+    const normalizedStatus = this.normalizeStatus(status);
+    if (this.isRejectedStatus(normalizedStatus)) return 'rejected';
+    if (this.isApprovedStatus(normalizedStatus)) return 'approved';
+    if (normalizedStatus.includes('processing')) return 'processing';
+    if (this.isPendingLikeStatus(normalizedStatus)) return 'pending';
+    if (normalizedStatus.includes('expired')) return 'expired';
+    if (normalizedStatus.includes('cancelled')) return 'cancelled';
+    return 'default';
   }
 
   // Check if approve/reject buttons should be shown
@@ -722,7 +841,7 @@ export class CancellationComponent implements OnInit {
       if (hasAction) return true;
     }
 
-    const status = item.status?.toUpperCase();
+    const status = item.status || '';
 
     // Check if already processed locally
     if (item.id && this.isApprovedInStorage(item.id)) {
@@ -730,20 +849,12 @@ export class CancellationComponent implements OnInit {
     }
 
     // Don't show buttons if already approved or rejected (Fallback)
-    if (status?.includes('APPROVED') || status?.includes('REJECTED')) {
+    if (this.isApprovedStatus(status) || this.isRejectedStatus(status)) {
       return false;
     }
 
     // Fallback: Only show if user is commissioner and status allows actions
-    return this.isCommissioner() && (
-      status === 'PENDING' ||
-      status === 'CANCELLATIONPENDING' ||
-      status === 'FORWARDEDCANCELLATIONTOCOMMISSIONER' ||
-      status === 'FORWARDEDCANCELLATIONPAYSLIPTOCOMMISSIONER' || // Enable for payment slip review
-      status === 'PROCESSING' ||
-      !status || // Handle cases where status might be undefined
-      status === 'SUBMITTED'
-    );
+    return this.isCommissioner() && this.isPendingLikeStatus(status);
   }
 
   // Check if approve button should be shown
@@ -815,16 +926,14 @@ export class CancellationComponent implements OnInit {
 
   // Check if final letter can be generated (only for approved cancellations)
   canGenerateFinalLetter(item: TableData): boolean {
-    const status = item.status?.toUpperCase();
+    const status = item.status || '';
 
     // Check if approved locally first
     const storedStatus = item.id ? this.getStoredStatus(item.id) : null;
-    const isApprovedLocally = storedStatus?.toUpperCase().includes('APPROVED') || false;
+    const isApprovedLocally = this.isApprovedStatus(storedStatus || '');
 
     // Must be approved (either from API or locally stored) and user must be commissioner
-    const isApproved = status?.includes('APPROVED') ||
-      status === 'APPROVEDCANCELLATIONBYCOMMISSIONER' ||
-      isApprovedLocally;
+    const isApproved = this.isApprovedStatus(status) || isApprovedLocally;
     const isCommissioner = this.isCommissioner();
     const hasId = !!item.id;
 
@@ -832,8 +941,8 @@ export class CancellationComponent implements OnInit {
   }
 
   canPay(item: TableData): boolean {
-    const status = item.status?.toUpperCase();
-    const isApproved = status?.includes('APPROVED') || status === 'APPROVEDCANCELLATIONBYCOMMISSIONER';
+    const status = item.status || '';
+    const isApproved = this.isApprovedStatus(status);
     // Ensure we are in licensee mode/dashboard if we strictly want to limit it
     const isLicensee = !this.isCommissioner(); // Rough check based on component usage
     return isApproved && isLicensee;
@@ -852,17 +961,37 @@ export class CancellationComponent implements OnInit {
   }
 
   private parseDate(dateString: string): Date {
-    // Handle DD-MM-YYYY format (common in the app)
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      // Assuming DD-MM-YYYY format
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-      const year = parseInt(parts[2], 10);
+    const s = String(dateString || '').trim();
+    if (!s) return new Date(NaN);
+
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const year = parseInt(iso[1], 10);
+      const month = parseInt(iso[2], 10) - 1;
+      const day = parseInt(iso[3], 10);
       return new Date(year, month, day);
     }
-    // Fallback to standard Date parsing
-    return new Date(dateString);
+
+    // DD-MM-YYYY
+    const dmyDash = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmyDash) {
+      const day = parseInt(dmyDash[1], 10);
+      const month = parseInt(dmyDash[2], 10) - 1;
+      const year = parseInt(dmyDash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    // DD/MM/YYYY
+    const dmySlash = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (dmySlash) {
+      const day = parseInt(dmySlash[1], 10);
+      const month = parseInt(dmySlash[2], 10) - 1;
+      const year = parseInt(dmySlash[3], 10);
+      return new Date(year, month, day);
+    }
+
+    return new Date(s);
   }
 
   // Pagination methods
@@ -978,7 +1107,7 @@ export class CancellationComponent implements OnInit {
 
   // Role detection methods
   isCommissioner(): boolean {
-    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    const hasRole = this.accountService.hasAnyRole('commissioner');
     const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
     return hasRole || isCommissionerRoute;
   }
@@ -1069,5 +1198,76 @@ export class CancellationComponent implements OnInit {
       case 'warning': return 'linear-gradient(135deg, #f59e0b, #d97706)';
       default: return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
     }
+  }
+
+  // Action include list for unified action buttons
+  getActionIncludeList(item: TableData): string[] {
+    const actions = ['VIEW'];
+    
+    // For cancellation, show payment slip after payment is made
+    const hasPayment = this.hasPaymentBeenMade(item);
+    
+    console.log('🔍 getActionIncludeList (cancellation):', {
+      itemId: item.id,
+      refNo: item.referenceNo,
+      status: item.status,
+      hasPayment,
+      allowedActions: item.allowedActions,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    // Show "View Payment Slip" after payment is made
+    if (hasPayment) {
+      actions.push('VIEW_PAYMENT_SLIP');
+    }
+    
+    // Trust backend for VIEW_PERMIT_SLIP action
+    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
+      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+      actions.push('VIEW_PERMIT_SLIP');
+    }
+    
+    console.log('🔍 Final actions array:', actions);
+    return actions;
+  }
+
+  hasPaymentBeenMade(item: TableData): boolean {
+    // Check if payment has been completed for cancellation
+    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Payment indicators for cancellation
+    // After submission and payment, status changes to forwarded or approved
+    const statusIndicatesPayment = status.includes('forwarded') ||
+                                   status.includes('approved') ||
+                                   status.includes('payslip') ||
+                                   status.includes('paid');
+    
+    console.log('🔍 hasPaymentBeenMade (cancellation):', {
+      status: item.status,
+      normalizedStatus: status,
+      statusIndicatesPayment
+    });
+    
+    return statusIndicatesPayment;
+  }
+
+  canViewPermitSlip(item: TableData): boolean {
+    // Only commissioner can view permit slip at final approved stage
+    if (!this.isCommissioner()) {
+      return false;
+    }
+    
+    const status = this.normalizeStatus(item.status || '');
+    const isCommissionerApproved = status.includes('commissioner') && status.includes('approv');
+    const isFinalApproved = (isCommissionerApproved || status.includes('finalapproved')) && !this.isRejectedStatus(status);
+    
+    console.log('🔍 canViewPermitSlip (cancellation):', {
+      status: item.status,
+      normalizedStatus: status,
+      isFinalApproved,
+      isCommissioner: this.isCommissioner()
+    });
+    
+    return isFinalApproved;
   }
 }
