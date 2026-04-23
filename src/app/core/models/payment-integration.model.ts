@@ -179,3 +179,16 @@ export interface PaymentStatusUpdatePayload {
   responseTxnamount?: number;
   responseTxndate?: string;
 }
+
+export interface BilldeskWalletRechargeInitiatePayload {
+  transaction_id: string;
+  wallet_type: string;
+  head_of_account: string;
+  amount: number;
+}
+
+export interface BilldeskWalletRechargeInitiateResponse {
+  billdeskUrl: string;
+  requestMsg: string;
+  transactionId: string;
+}

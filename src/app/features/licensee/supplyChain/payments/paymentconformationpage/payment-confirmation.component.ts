@@ -2308,45 +2308,34 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
 
     Swal.fire({
-      title: 'Processing Recharge',
-      text: 'Crediting wallet for testing...',
+      title: 'Redirecting to BillDesk',
+      text: 'Preparing payment request...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
 
-    this.paymentIntegrationService.creditWalletRecharge(licenseeId, {
+    this.paymentIntegrationService.initiateBilldeskWalletRecharge({
       transaction_id: transactionId,
       wallet_type: walletType,
       head_of_account: headOfAccount,
       amount: Number(this.addMoneyAmount || 0),
-      remarks: `Dummy recharge via UI (${context.walletLabel})`
     }).subscribe({
       next: (response) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
-        this.setActiveTab('recharge');
-        this.refreshWalletData();
 
-        const created = response?.wallet_transaction || null;
-        const walletTransactionId = String(created?.wallet_transaction_id || created?.walletTransactionId || '').trim();
-        const createdAt = String(created?.created_at || created?.createdAt || '').trim();
-        const statusText = String(created?.payment_status || created?.paymentStatus || 'success');
+        const billdeskUrl = String((response as any)?.billdeskUrl || (response as any)?.billdesk_url || '').trim();
+        const requestMsg = String((response as any)?.requestMsg || (response as any)?.request_msg || '').trim();
+        if (!billdeskUrl || !requestMsg) {
+          this.showErrorMessage('BillDesk initiation failed: missing gateway parameters.');
+          return;
+        }
 
-        this.router.navigate(['/dashboard/wallet-recharge/success'], {
-          queryParams: {
-            transactionId,
-            walletTransactionId: walletTransactionId || undefined,
-            walletType,
-            hoa: headOfAccount,
-            amount: Number(this.addMoneyAmount || 0),
-            status: statusText,
-            createdAt: createdAt || undefined
-          }
-        });
+        this.submitToBillDesk(billdeskUrl, requestMsg);
       },
       error: (err) => {
         Swal.close();
-        console.error('Wallet recharge credit failed:', err);
+        console.error('BillDesk initiate failed:', err);
         const errorMessage =
           err?.error?.detail ||
           err?.error?.error ||
@@ -2356,6 +2345,26 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.showErrorMessage(String(errorMessage));
       }
     });
+  }
+
+  private submitToBillDesk(url: string, requestMsg: string): void {
+    if (!this.isBrowser) {
+      this.showErrorMessage('Unable to redirect: browser environment not available.');
+      return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'msg';
+    input.value = requestMsg;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
   }
 
   private mapAddMoneyWalletTypeToApi(walletType: AddMoneyWalletType): string {

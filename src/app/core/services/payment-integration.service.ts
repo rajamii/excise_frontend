@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  BilldeskWalletRechargeInitiatePayload,
+  BilldeskWalletRechargeInitiateResponse,
   ModuleHoaResponse,
   PaymentInitiatePayload,
   PaymentInitiateResponse,
@@ -21,6 +23,7 @@ import {
 })
 export class PaymentIntegrationService {
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/payment`;
+  private readonly gatewayUrl = `${environment.apiBaseUrl}/transactional/payment-gateway`;
 
   constructor(private http: HttpClient) {}
 
@@ -73,6 +76,15 @@ export class PaymentIntegrationService {
 
   initiatePayment(payload: PaymentInitiatePayload): Observable<PaymentInitiateResponse> {
     return this.http.post<PaymentInitiateResponse>(`${this.baseUrl}/transactions/initiate/`, payload);
+  }
+
+  initiateBilldeskWalletRecharge(
+    payload: BilldeskWalletRechargeInitiatePayload
+  ): Observable<BilldeskWalletRechargeInitiateResponse> {
+    return this.http.post<BilldeskWalletRechargeInitiateResponse>(
+      `${this.gatewayUrl}/billdesk/initiate/`,
+      payload
+    );
   }
 
   listTransactions(filters?: {
