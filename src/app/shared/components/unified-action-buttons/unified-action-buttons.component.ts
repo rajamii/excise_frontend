@@ -313,17 +313,32 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     if (this.shouldRequireNewLicenseUploadsDeclaration(normalizedAction)) {
       this.showNewLicenseUploadsDeclaration(normalizedButton).then((ok) => {
-        if (ok) this.executeAction(normalizedButton);
+        if (ok) this.continueActionAfterDeclaration(normalizedButton);
       });
       return;
     }
 
-    // Handle confirmation if required
-    if (normalizedButton.requiresConfirmation) {
-      this.showConfirmationDialog(normalizedButton);
-    } else {
-      this.executeAction(normalizedButton);
+    this.continueActionAfterDeclaration(normalizedButton);
+  }
+
+  private continueActionAfterDeclaration(button: ActionButtonConfig): void {
+    if (this.shouldBypassDetailedNewLicenseApproveConfirmation(button)) {
+      this.executeAction(button);
+      return;
     }
+
+    if (button.requiresConfirmation) {
+      this.showConfirmationDialog(button);
+    } else {
+      this.executeAction(button);
+    }
+  }
+
+  private shouldBypassDetailedNewLicenseApproveConfirmation(button: ActionButtonConfig): boolean {
+    return this.displayMode === 'detailed' &&
+      this.itemType === 'new-license' &&
+      this.context !== 'licensee' &&
+      this.normalizeActionName(button?.action) === 'APPROVE';
   }
 
   private shouldRequireNewLicenseUploadsDeclaration(action: string): boolean {

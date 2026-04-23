@@ -18,6 +18,13 @@
       </app-label-registration-packaging-details>
     </mat-step>
 
+    <mat-step label="Upload Documents">
+      <app-label-registration-upload-documents
+        (back)="stepper.previous()"
+        (next)="stepper.next()">
+      </app-label-registration-upload-documents>
+    </mat-step>
+
     <mat-step label="Submit Application">
       <app-label-registration-submit-application
         (back)="stepper.previous()">

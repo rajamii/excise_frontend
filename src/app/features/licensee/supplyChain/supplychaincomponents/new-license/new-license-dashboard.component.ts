@@ -238,14 +238,37 @@ export class NewLicenseDashboardComponent implements OnInit {
 
   viewApplication(row: NewLicenseItem): void {
     const id = row.id || row.applicationId;
+    const source = this.getDetailViewSource();
     this.router.navigate(['/supply-chain-view'], {
       queryParams: {
         id,
         ref: row.applicationId,
         type: 'new-license',
-        source: 'licensee'
+        source
       }
     });
+  }
+
+  private getDetailViewSource(): string {
+    const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);
+
+    if (this.roleService.isLicenseeRole(roleId)) {
+      return 'licensee';
+    }
+
+    switch (roleId) {
+      case 5:
+        return 'permit-section';
+      case 6:
+        return 'itcell';
+      case 7:
+        return 'officer-in-charge';
+      case 9:
+      case 10:
+        return 'commissioner-dashboard';
+      default:
+        return 'commissioner-dashboard';
+    }
   }
 
   viewTimeline(row: NewLicenseItem): void {

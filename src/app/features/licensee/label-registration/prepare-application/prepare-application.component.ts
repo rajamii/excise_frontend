@@ -24,7 +24,7 @@ export class LabelRegistrationPrepareApplicationComponent implements OnInit {
   readonly maintenanceModeEnabled = true;
   maintenanceBypassEnabled = false;
 
-  constructor(private accountService: AccountService) {}
+  constructor(private accountService: AccountService) { }
 
   ngOnInit(): void {
     this.loadMaintenanceBypassState();
