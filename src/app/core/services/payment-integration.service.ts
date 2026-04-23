@@ -6,6 +6,8 @@ import { environment } from '../../../environments/environment';
 import {
   BilldeskWalletRechargeInitiatePayload,
   BilldeskWalletRechargeInitiateResponse,
+  BilldeskLicenseFeeInitiatePayload,
+  BilldeskSecurityDepositInitiatePayload,
   ModuleHoaResponse,
   PaymentInitiatePayload,
   PaymentInitiateResponse,
@@ -83,6 +85,24 @@ export class PaymentIntegrationService {
   ): Observable<BilldeskWalletRechargeInitiateResponse> {
     return this.http.post<BilldeskWalletRechargeInitiateResponse>(
       `${this.gatewayUrl}/billdesk/initiate/`,
+      payload
+    );
+  }
+
+  initiateBilldeskLicenseFee(
+    payload: BilldeskLicenseFeeInitiatePayload
+  ): Observable<BilldeskWalletRechargeInitiateResponse> {
+    return this.http.post<BilldeskWalletRechargeInitiateResponse>(
+      `${this.gatewayUrl}/billdesk/initiate/license-fee/`,
+      payload
+    );
+  }
+
+  initiateBilldeskSecurityDeposit(
+    payload: BilldeskSecurityDepositInitiatePayload
+  ): Observable<BilldeskWalletRechargeInitiateResponse> {
+    return this.http.post<BilldeskWalletRechargeInitiateResponse>(
+      `${this.gatewayUrl}/billdesk/initiate/security-deposit/`,
       payload
     );
   }

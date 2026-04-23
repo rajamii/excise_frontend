@@ -146,15 +146,21 @@ interface PendingWalletPaymentPreview {
   shortfall: number;
 }
 
-const SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
-const LICENSE_FEE_HOA = '0099-00-999-99-99';
+// Per payment logic document:
+// - License fee HOA: 0039-00-800-45-02
+// - Security deposit: no HOA (backend stores sentinel like "non")
+const SECURITY_DEPOSIT_HOA_SENTINEL = 'non';
+const LEGACY_SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
+const LICENSE_FEE_HOA = '0039-00-800-45-02';
+const LEGACY_LICENSE_FEE_HOA = '0099-00-999-99-99';
+const LICENSE_RENEWAL_MODULE_CODE = '002';
 
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   excise: '',
   brewery: '',
   education: '',
   hologram: '',
-  security_deposit: SECURITY_DEPOSIT_HOA,
+  security_deposit: '',
   license_fee: LICENSE_FEE_HOA
 };
 
@@ -236,6 +242,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   securityDepositBalance = 0;
   licenseFeeBalance = 0;
   activeLicenseeId = '';
+  private activeLicenseeName = '';
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private resolvedLicenseModuleType: WalletModuleType = '';
   private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
@@ -788,8 +795,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.licenseFeeBalance = 0;
     this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
     this.isBreweryUser = startsAsBrewery;
+    this.activeLicenseeName = '';
 
     rows.forEach((row: any) => {
+      if (!this.activeLicenseeName) {
+        const candidateName = String(
+          this.pickAny(row, ['licensee_name', 'licenseeName', 'manufacturing_unit', 'manufacturingUnit'], '')
+        ).trim();
+        if (candidateName) {
+          this.activeLicenseeName = candidateName;
+        }
+      }
       const walletType = String(
         this.pickAny(row, ['wallet_type', 'walletType'], '')
       ).toLowerCase();
@@ -806,9 +822,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
       if (inferredWalletType === 'security_deposit') {
         this.securityDepositBalance += balance;
-        if (hoa) {
-          this.walletHoaByType.security_deposit = String(hoa);
-        }
+        // No HOA for security deposit as per latest business rule.
       } else if (inferredWalletType === 'license_fee') {
         this.licenseFeeBalance += balance;
         if (hoa) {
@@ -1016,10 +1030,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private inferWalletTypeFromHoa(hoa: string): string {
-    if (hoa === SECURITY_DEPOSIT_HOA) {
+    if (hoa === SECURITY_DEPOSIT_HOA_SENTINEL || hoa === LEGACY_SECURITY_DEPOSIT_HOA) {
       return 'security_deposit';
     }
-    if (hoa === LICENSE_FEE_HOA) {
+    if (hoa === LICENSE_FEE_HOA || hoa === LEGACY_LICENSE_FEE_HOA) {
       return 'license_fee';
     }
     if (hoa === '0045-00-112-45-03') {
@@ -2234,14 +2248,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           walletType,
           moduleLabel: 'Manufacturing',
           walletLabel: 'Security Deposit Wallet',
-          hoa: this.walletHoaByType.security_deposit
+          hoa: ''
         };
       case 'license_fee':
         return {
           walletType,
           moduleLabel: 'Manufacturing',
           walletLabel: 'License Fee Wallet',
-          hoa: this.walletHoaByType.license_fee
+          hoa: LICENSE_FEE_HOA
         };
       default:
         return {
@@ -2294,17 +2308,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    const headOfAccount = String(context.hoa || '').trim();
-    if (!headOfAccount) {
-      this.showErrorMessage('Unable to proceed: Head Of Account not found.');
-      return;
-    }
-
     const walletType = this.mapAddMoneyWalletTypeToApi(context.walletType);
     const transactionId = String(this.addMoneyTransactionId || '').trim();
     if (!transactionId) {
       this.showErrorMessage('Unable to proceed: Wallet Transaction ID not found.');
       return;
+    }
+
+    // For non-security_deposit and non-license_fee, HOA is mandatory.
+    if (context.walletType !== 'license_fee' && context.walletType !== 'security_deposit') {
+      const headOfAccount = String(context.hoa || '').trim();
+      if (!headOfAccount) {
+        this.showErrorMessage('Unable to proceed: Head Of Account not found.');
+        return;
+      }
     }
 
     Swal.fire({
@@ -2314,12 +2331,33 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       didOpen: () => Swal.showLoading()
     });
 
-    this.paymentIntegrationService.initiateBilldeskWalletRecharge({
-      transaction_id: transactionId,
-      wallet_type: walletType,
-      head_of_account: headOfAccount,
-      amount: Number(this.addMoneyAmount || 0),
-    }).subscribe({
+    const amount = Number(this.addMoneyAmount || 0);
+
+    const request$ =
+      context.walletType === 'license_fee'
+        ? this.paymentIntegrationService.initiateBilldeskLicenseFee({
+            transaction_id: transactionId,
+            amount,
+            payer_id: licenseeId,
+            payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+          })
+        : context.walletType === 'security_deposit'
+          ? this.paymentIntegrationService.initiateBilldeskSecurityDeposit({
+              transaction_id: transactionId,
+              amount,
+              licensee_id: licenseeId,
+              licensee_name: this.activeLicenseeName || licenseeId,
+              bank_fdr_code: 'SIKFDR',
+              payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+            })
+          : this.paymentIntegrationService.initiateBilldeskWalletRecharge({
+              transaction_id: transactionId,
+              wallet_type: walletType,
+              head_of_account: String(context.hoa || '').trim(),
+              amount
+            });
+
+    request$.subscribe({
       next: (response) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
