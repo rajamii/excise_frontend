@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { catchError, forkJoin, of, Observable } from 'rxjs';
+import { catchError, forkJoin, of, Observable, timeout } from 'rxjs';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
@@ -2357,7 +2357,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               amount
             });
 
-    request$.subscribe({
+    request$.pipe(timeout(30000)).subscribe({
       next: (response) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
@@ -2374,6 +2374,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       error: (err) => {
         Swal.close();
         console.error('BillDesk initiate failed:', err);
+        if (String(err?.name || '').toLowerCase() === 'timeouterror') {
+          this.showErrorMessage('BillDesk initiation timed out. Please check server/network and try again.');
+          return;
+        }
         const errorMessage =
           err?.error?.detail ||
           err?.error?.error ||
@@ -2996,10 +3000,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private getRechargeRowsForCurrentView(): RechargeItem[] {
     const rows = [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    // "Others" (license fee + security deposit): show every recharge here so the tab is not empty;
-    // detailed splits stay under License Fee / Security Deposit tabs.
+    // "Others" (license fee + security deposit): show only license fee + security deposit recharges.
+    // Excise/education/hologram wallet recharges belong to "Wallets" view only.
     if (this.walletViewMode === 'others') {
-      return rows;
+      return rows.filter((row) =>
+        this.isOtherWalletType(
+          String(row.walletType || '').trim(),
+          String(row.hoa || '').trim()
+        )
+      );
     }
     // "Wallets" (brewery/distillery): fee/deposit wallets are not part of this view — hide those recharges.
     return rows.filter((row) => {
