@@ -62,9 +62,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
-  private licenseRowsForWalletNav: any[] = [];
-  private newLicenseWalletUnlock = false;
-  private hasBlockingNewLicenseApplicationFee = false;
+  // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
     requisition: 'ENA Requisition',
@@ -823,26 +821,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }).subscribe({
       next: ({ licenses, approvedPayload, allApplications }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
-        // Wallet should be enabled only once the user has an issued license (post-approval).
-        // Do not use new-license application rows (e.g., application fee paid) to enable Wallet navigation.
-        this.licenseRowsForWalletNav = licenseRows.filter((row) => row?.is_active !== false);
         const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
         const allRows = Array.isArray(allApplications) ? allApplications : [];
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
         const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
-        // For brand-new applicants (no issued license yet), keep Wallet hidden until the workflow
-        // reaches Awaiting Payment / Approved (typically after commissioner approval).
-        this.newLicenseWalletUnlock = approvedFromAll.length > 0 || awaitingPaymentFromAll.length > 0;
-
-        // If the user has started a new-license application fee payment flow (₹500) but is not yet
-        // in awaiting-payment/approved stages, keep Wallet hidden (matches legacy UX).
-        this.hasBlockingNewLicenseApplicationFee = allRows.some((row) => {
-          const feeStatus = String(
-            row?.application_fee_payment_status ?? row?.applicationFeePaymentStatus ?? ''
-          ).trim().toUpperCase();
-          if (!feeStatus) return false;
-          return !this.isApprovedStage(row) && !this.isAwaitingPaymentStage(row);
-        });
         const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
 
         console.log('Menu data sources:', {
@@ -859,9 +841,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.showBreweryOrDistilleryMenus = false;
         this.hasBreweryOrDistilleryWalletViews = false;
         this.showManufacturingWalletNav = false;
-        this.licenseRowsForWalletNav = [];
-        this.newLicenseWalletUnlock = false;
-        this.hasBlockingNewLicenseApplicationFee = false;
         this.triggerUiRefresh();
       }
     });
@@ -879,16 +858,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Brewery OR Distillery: transit + hologram menus.
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
     this.hasBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
-    const eligibleFromLicenses = (Array.isArray(this.licenseRowsForWalletNav) ? this.licenseRowsForWalletNav : []).some((item) =>
-      isLicenseeWalletNavEligible(item)
-    );
-    // If user has no issued license yet, hide Wallet unless commissioner-approval unlock condition is met.
-    const hasIssuedLicense = (Array.isArray(this.licenseRowsForWalletNav) ? this.licenseRowsForWalletNav : []).some((row) =>
-      !!(row?.license_id || row?.licenseId)
-    );
-    this.showManufacturingWalletNav = hasIssuedLicense ? eligibleFromLicenses : (this.newLicenseWalletUnlock && eligibleFromLicenses);
-    if (this.hasBlockingNewLicenseApplicationFee) {
-      this.showManufacturingWalletNav = false;
+    const eligibleFromAnyRow = (Array.isArray(rows) ? rows : []).some((item) => isLicenseeWalletNavEligible(item));
+    // Multi-application safe: if ANY issued license / eligible application exists, keep Wallet visible.
+    this.showManufacturingWalletNav = eligibleFromAnyRow;
+    // Never hide the active Wallet menu item while the user is already inside the Wallet view.
+    if (this.isWalletActive()) {
+      this.showManufacturingWalletNav = true;
     }
 
     console.log('Resolved menu flags:', {
