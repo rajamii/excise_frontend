@@ -232,6 +232,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   selectedAddMoneyContext: AddMoneyViewContext | null = null;
   addMoneyTransactionId = '';
   addMoneyAmount = 0;
+  private billdeskRetryLockUntil: Date | null = null;
   private movedModalState: Array<{ element: HTMLElement; parent: Node; nextSibling: Node | null }> = [];
 
   // Wallet Balances
@@ -2291,6 +2292,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   proceedUnifiedAddMoney(): void {
+    const retryAfterSeconds = this.getBilldeskPendingRetryAfterSeconds();
+    if (retryAfterSeconds > 0) {
+      this.showBilldeskPendingRetryPopup(retryAfterSeconds);
+      return;
+    }
+
     if (this.addMoneyAmount <= 0) {
       this.showErrorMessage('Please enter amount greater than zero.');
       return;
@@ -2374,8 +2381,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       error: (err) => {
         Swal.close();
         console.error('BillDesk initiate failed:', err);
+
+        const retrySecondsFromServer = this.extractRetryAfterSeconds(err);
+        if (retrySecondsFromServer > 0) {
+          this.showBilldeskPendingRetryPopup(retrySecondsFromServer);
+          this.refreshWalletData();
+          return;
+        }
+
         if (String(err?.name || '').toLowerCase() === 'timeouterror') {
           this.showErrorMessage('BillDesk initiation timed out. Please check server/network and try again.');
+          this.refreshWalletData();
           return;
         }
         const errorMessage =
@@ -2412,6 +2428,87 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private mapAddMoneyWalletTypeToApi(walletType: AddMoneyWalletType): string {
     if (walletType === 'education') return 'education_cess';
     return walletType;
+  }
+
+  private getBilldeskPendingRetryAfterSeconds(): number {
+    const nowMs = Date.now();
+    const lockMs = 15 * 60 * 1000;
+
+    let remainingFromServer = 0;
+    const serverUntilMs = this.billdeskRetryLockUntil?.getTime() || 0;
+    if (serverUntilMs > nowMs) {
+      remainingFromServer = Math.ceil((serverUntilMs - nowMs) / 1000);
+    }
+
+    const rows = Array.isArray(this.rechargeData) ? this.rechargeData : [];
+    let remainingFromWallet = 0;
+    for (const row of rows) {
+      const status = String((row as any)?.status || '').toLowerCase();
+      if (!status.includes('pending')) continue;
+
+      const created = (row as any)?.date instanceof Date ? (row as any).date : new Date((row as any)?.date || '');
+      const createdMs = created instanceof Date && !Number.isNaN(created.getTime()) ? created.getTime() : 0;
+      if (!createdMs) continue;
+
+      const lockUntil = createdMs + lockMs;
+      const remaining = Math.ceil((lockUntil - nowMs) / 1000);
+      if (remaining > remainingFromWallet) remainingFromWallet = remaining;
+    }
+
+    return Math.max(0, remainingFromServer, remainingFromWallet);
+  }
+
+  private extractRetryAfterSeconds(err: any): number {
+    const httpStatus = Number(err?.status || 0);
+    if (httpStatus !== 409) return 0;
+
+    const raw =
+      err?.error?.retry_after_seconds ||
+      err?.error?.retryAfterSeconds ||
+      err?.error?.retry_after ||
+      err?.error?.retryAfter ||
+      0;
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  }
+
+  private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
+    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
+    this.billdeskRetryLockUntil = new Date(Date.now() + totalSeconds * 1000);
+
+    const format = (seconds: number) => {
+      const s = Math.max(0, Math.floor(seconds));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    let interval: any;
+    Swal.fire({
+      icon: 'info',
+      title: 'Payment Pending',
+      html:
+        `<div style="text-align:left">` +
+        `<div>BillDesk payment is still pending.</div>` +
+        `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
+        `</div>`,
+      showConfirmButton: false,
+      allowOutsideClick: true,
+      timer: totalSeconds * 1000,
+      timerProgressBar: true,
+      didOpen: () => {
+        const container = Swal.getHtmlContainer();
+        const countdownEl = container ? (container.querySelector('b') as HTMLElement | null) : null;
+        interval = setInterval(() => {
+          const left = Swal.getTimerLeft();
+          if (left === null || left === undefined) return;
+          if (countdownEl) countdownEl.textContent = format(Math.ceil(left / 1000));
+        }, 250);
+      },
+      willClose: () => {
+        if (interval) clearInterval(interval);
+      }
+    });
   }
 
   downloadDetails(): void {

@@ -87,9 +87,21 @@ export function isApprovedOrAwaitingLicensePaymentStage(item: any): boolean {
  */
 export function isLicenseeWalletNavEligible(item: any): boolean {
   const hasLicenseId = !!(item?.license_id || item?.licenseId);
+
+  // New-license application fee (module_code=001) must be successful before enabling Wallet navigation
+  // for brand-new applicants who don't yet have an issued license.
+  const feeStatusRaw = str(item?.application_fee_payment_status ?? item?.applicationFeePaymentStatus ?? '');
+  if (feeStatusRaw) {
+    const normalized = feeStatusRaw.trim().toUpperCase();
+    if (normalized !== 'S') {
+      return false;
+    }
+  }
+
   if (hasLicenseId) {
     return true;
   }
+
   if (!isApprovedOrAwaitingLicensePaymentStage(item)) {
     return false;
   }

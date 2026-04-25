@@ -6,6 +6,8 @@ import { Subscription } from 'rxjs';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { FormDataBuilder } from '../../../../../shared/utils/form-data.util';
+import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { timeout } from 'rxjs';
 
 @Component({
   selector: 'app-declaration-payment',
@@ -26,6 +28,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   constructor(
     private licenseAppService: LicenseApplicationService,
+    private paymentIntegrationService: PaymentIntegrationService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private fb: FormBuilder
@@ -654,27 +657,73 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         FormDataBuilder.logFormData(formData, 'New License Application');
         console.groupEnd();
 
-        this.licenseAppService.submitNewLicenseApplication(formData).subscribe({
+        Swal.fire({
+          title: 'Redirecting to BillDesk',
+          text: 'Preparing application fee payment...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        this.licenseAppService.createNewLicenseApplicationDraft(formData).subscribe({
           next: (response: any) => {
-            console.log('✅ New License Application submitted successfully:', response);
+            const applicationId = String(response?.application_id || response?.applicationId || '').trim();
+            if (!applicationId) {
+              Swal.close();
+              this.isSubmitting = false;
+              Swal.fire('Error', 'Unable to create application draft (missing Application ID).', 'error');
+              return;
+            }
 
-            this.applicationId = response.application_id || response.applicationId || 'NLA/XXX/XXXX-XX/XXXX';
+            this.applicationId = applicationId;
 
-            Swal.fire({
-              icon: 'success',
-              title: 'Success!',
-              text: `Application ID: ${this.applicationId}`,
-              confirmButtonText: 'OK'
+            this.paymentIntegrationService.initiateBilldeskNewLicenseApplicationFee({
+              application_id: applicationId,
+              amount: Number(this.applicationFee || 500),
+              payment_module_code: '001'
+            }).pipe(timeout(30000)).subscribe({
+              next: (initRes: any) => {
+                Swal.close();
+                const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
+                const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
+                if (!billdeskUrl || !requestMsg) {
+                  this.isSubmitting = false;
+                  Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
+                  return;
+                }
+                this.submitToBillDesk(billdeskUrl, requestMsg);
+              },
+              error: (err: any) => {
+                Swal.close();
+                console.error('❌ BillDesk initiation failed:', err);
+
+                const retrySeconds = this.extractRetryAfterSeconds(err);
+                if (retrySeconds > 0) {
+                  this.isSubmitting = false;
+                  this.showBilldeskPendingRetryPopup(retrySeconds);
+                  return;
+                }
+
+                if (String(err?.name || '').toLowerCase() === 'timeouterror') {
+                  this.isSubmitting = false;
+                  Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
+                  return;
+                }
+
+                const message =
+                  err?.error?.detail ||
+                  err?.error?.message ||
+                  err?.message ||
+                  'Unable to initiate BillDesk payment.';
+
+                this.isSubmitting = false;
+                Swal.fire('Error', String(message), 'error');
+              }
             });
-
-            this.isSubmitting = false;
           },
           error: (err: any) => {
-            console.error('❌ New License submission failed:', err);
-            console.log('Full error object:', err);
-
+            Swal.close();
+            console.error('❌ New License draft creation failed:', err);
             const errorMessage = this.formatErrorMessage(err);
-
             Swal.fire({
               title: 'Submission Failed',
               html: errorMessage,
@@ -683,7 +732,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
               allowOutsideClick: false,
               width: 600
             });
-
             this.isSubmitting = false;
           }
         });
@@ -697,6 +745,72 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
           icon: 'error',
           confirmButtonText: 'OK'
         });
+      }
+    });
+  }
+
+  private submitToBillDesk(url: string, requestMsg: string): void {
+    try {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'msg';
+      input.value = requestMsg;
+
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    } catch (e) {
+      console.error('❌ BillDesk redirect failed:', e);
+      this.isSubmitting = false;
+      Swal.fire('Error', 'Unable to redirect to BillDesk. Please try again.', 'error');
+    }
+  }
+
+  private extractRetryAfterSeconds(err: any): number {
+    const httpStatus = Number(err?.status || 0);
+    if (httpStatus !== 409) return 0;
+    const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  }
+
+  private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
+    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
+    const format = (seconds: number) => {
+      const s = Math.max(0, Math.floor(seconds));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    let interval: any;
+    Swal.fire({
+      icon: 'info',
+      title: 'Payment Pending',
+      html:
+        `<div style="text-align:left">` +
+        `<div>Your last BillDesk application-fee payment is still pending.</div>` +
+        `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
+        `</div>`,
+      showConfirmButton: false,
+      allowOutsideClick: true,
+      timer: totalSeconds * 1000,
+      timerProgressBar: true,
+      didOpen: () => {
+        const container = Swal.getHtmlContainer();
+        const countdownEl = container ? (container.querySelector('b') as HTMLElement | null) : null;
+        interval = setInterval(() => {
+          const left = Swal.getTimerLeft();
+          if (left === null || left === undefined) return;
+          if (countdownEl) countdownEl.textContent = format(Math.ceil(left / 1000));
+        }, 250);
+      },
+      willClose: () => {
+        if (interval) clearInterval(interval);
       }
     });
   }

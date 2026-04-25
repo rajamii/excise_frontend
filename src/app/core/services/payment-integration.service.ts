@@ -8,6 +8,7 @@ import {
   BilldeskWalletRechargeInitiateResponse,
   BilldeskLicenseFeeInitiatePayload,
   BilldeskSecurityDepositInitiatePayload,
+  BilldeskNewLicenseApplicationFeeInitiatePayload,
   ModuleHoaResponse,
   PaymentInitiatePayload,
   PaymentInitiateResponse,
@@ -103,6 +104,15 @@ export class PaymentIntegrationService {
   ): Observable<BilldeskWalletRechargeInitiateResponse> {
     return this.http.post<BilldeskWalletRechargeInitiateResponse>(
       `${this.gatewayUrl}/billdesk/initiate/security-deposit/`,
+      payload
+    );
+  }
+
+  initiateBilldeskNewLicenseApplicationFee(
+    payload: BilldeskNewLicenseApplicationFeeInitiatePayload
+  ): Observable<BilldeskWalletRechargeInitiateResponse> {
+    return this.http.post<BilldeskWalletRechargeInitiateResponse>(
+      `${this.gatewayUrl}/billdesk/initiate/new-license-application-fee/`,
       payload
     );
   }

@@ -214,3 +214,11 @@ export interface BilldeskSecurityDepositInitiatePayload {
   application_id?: string;
   requisition_id_no?: string;
 }
+
+export interface BilldeskNewLicenseApplicationFeeInitiatePayload {
+  application_id: string;
+  amount?: number;
+  payment_module_code?: string;
+  head_of_account?: string;
+  transaction_id?: string;
+}
