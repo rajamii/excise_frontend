@@ -796,8 +796,9 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         `<div>Your last BillDesk application-fee payment is still pending.</div>` +
         `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
         `</div>`,
-      showConfirmButton: false,
-      allowOutsideClick: true,
+      confirmButtonText: 'Cancel',
+      showConfirmButton: true,
+      allowOutsideClick: false,
       timer: totalSeconds * 1000,
       timerProgressBar: true,
       didOpen: () => {

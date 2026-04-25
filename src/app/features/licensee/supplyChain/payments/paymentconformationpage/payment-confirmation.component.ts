@@ -2294,6 +2294,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   proceedUnifiedAddMoney(): void {
     const retryAfterSeconds = this.getBilldeskPendingRetryAfterSeconds();
     if (retryAfterSeconds > 0) {
+      // Close the underlying Payment Details modal so the reminder renders on top.
+      this.closeUnifiedAddMoneyView();
       this.showBilldeskPendingRetryPopup(retryAfterSeconds);
       return;
     }
@@ -2384,6 +2386,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
         const retrySecondsFromServer = this.extractRetryAfterSeconds(err);
         if (retrySecondsFromServer > 0) {
+          // Close the underlying Payment Details modal so the reminder renders on top.
+          this.closeUnifiedAddMoneyView();
           this.showBilldeskPendingRetryPopup(retrySecondsFromServer);
           this.refreshWalletData();
           return;
@@ -2492,8 +2496,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         `<div>BillDesk payment is still pending.</div>` +
         `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
         `</div>`,
-      showConfirmButton: false,
-      allowOutsideClick: true,
+      confirmButtonText: 'Cancel',
+      showConfirmButton: true,
+      allowOutsideClick: false,
       timer: totalSeconds * 1000,
       timerProgressBar: true,
       didOpen: () => {
