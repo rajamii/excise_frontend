@@ -65,18 +65,51 @@ export function hasLicenseCategoryAndSubcategorySelected(item: any): boolean {
   return !!extractLicenseCategoryKey(item) && !!extractLicenseSubcategoryKey(item);
 }
 
-export function isApprovedOrAwaitingLicensePaymentStage(item: any): boolean {
-  const stage = str(
+function normalizeStageToken(raw: unknown): string {
+  return str(raw).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Workflow stage gate for Wallet navigation.
+ *
+ * Wallet becomes available when the application reaches:
+ * - `awaiting_payment` (Awaiting License Fee Payment), OR
+ * - commissioner approval / final approved stage.
+ */
+export function isWalletEnabledStage(item: any): boolean {
+  const stageRaw =
     item?.current_stage_name ??
       item?.currentStageName ??
       item?.current_stage ??
       item?.currentStage ??
-      ''
-  ).toLowerCase();
+      '';
+  const stage = normalizeStageToken(stageRaw);
+
+  if (!stage || stage.includes('reject')) {
+    return false;
+  }
+
+  if (stage === 'awaitingpayment') {
+    return true;
+  }
+
   if (stage.includes('approved')) {
     return true;
   }
-  return stage.includes('awaiting') && stage.includes('payment');
+
+  // Some deployments store commissioner stage as exactly "Commissioner"/"Commisioner".
+  // Exclude Joint Commissioner (intermediate review).
+  if (stage.includes('joint')) {
+    return false;
+  }
+  const hasCommissionerToken = stage.includes('commissioner') || stage.includes('commisioner');
+  if (!hasCommissionerToken) {
+    return false;
+  }
+  if (stage === 'commissioner' || stage === 'commisioner') {
+    return true;
+  }
+  return stage.includes('approv');
 }
 
 /**
@@ -102,7 +135,7 @@ export function isLicenseeWalletNavEligible(item: any): boolean {
     return true;
   }
 
-  if (!isApprovedOrAwaitingLicensePaymentStage(item)) {
+  if (!isWalletEnabledStage(item)) {
     return false;
   }
   return hasLicenseCategoryAndSubcategorySelected(item);
