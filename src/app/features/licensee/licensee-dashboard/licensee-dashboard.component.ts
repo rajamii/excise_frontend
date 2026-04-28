@@ -95,7 +95,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadDashboardData();
+    // this.loadDashboardData();
 
     this.routerSubscription = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
@@ -123,7 +123,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (result) => {
-          // ✅ DEDUPLICATE ALL APPLICATIONS FIRST
+          // DEDUPLICATE ALL APPLICATIONS FIRST
           let filteredApplications = {
             applied: this.deduplicateApplications(result.applications.applied || []),
             pending: this.deduplicateApplications(result.applications.pending || []),
@@ -132,7 +132,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             rejected: this.deduplicateApplications(result.applications.rejected || [])
           };
 
-          // ✅ MOVE APPROVED LICENSES WITH ACTIVE RENEWALS TO APPLIED
+          // MOVE APPROVED LICENSES WITH ACTIVE RENEWALS TO APPLIED
           const renewedLicenseIds = this.getRenewedLicenseIds(
             filteredApplications.applied,
             filteredApplications.pending,
@@ -148,7 +148,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
             
             if (isRenewed) {
-              console.log(`🔄 Dashboard: Moving approved license ${licenseId} to Applied - has active renewal`);
+              // console.log(`Dashboard: Moving approved license ${licenseId} to Applied - has active renewal`);
               // Mark the license as "being renewed"
               const renewedApp = {
                 ...app,
@@ -166,20 +166,20 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
           // Store counts
           this.dashboardCounts = {
-            applied: allApplied.length, // ✅ Includes renewed licenses
+            applied: allApplied.length, // Includes renewed licenses
             pending: filteredApplications.pending.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
-            approved: approvedWithoutRenewal.length, // ✅ Only licenses without active renewals
+            approved: approvedWithoutRenewal.length, // Only licenses without active renewals
             rejected: filteredApplications.rejected.length
           };
 
-          console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
+          // console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
 
           // Update datasources
           this.updateDataSources({
-            applied: allApplied, // ✅ Includes renewed licenses
+            applied: allApplied, //  Includes renewed licenses
             pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment],
-            approved: approvedWithoutRenewal, // ✅ Only licenses without renewals
+            approved: approvedWithoutRenewal, //  Only licenses without renewals
             rejected: filteredApplications.rejected
           });
         },
@@ -279,7 +279,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         
         if (licenseIdStr && this.isValidLicenseId(licenseIdStr)) {
           renewedIds.add(licenseIdStr);
-          console.log(`🔄 Dashboard: Found renewed license ID from renewalOf: ${licenseIdStr} (App: ${app.applicationId})`);
+          // console.log(`🔄 Dashboard: Found renewed license ID from renewalOf: ${licenseIdStr} (App: ${app.applicationId})`);
           return;
         }
       }
@@ -300,7 +300,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         
         if (licenseIdStr && this.isValidLicenseId(licenseIdStr)) {
           renewedIds.add(licenseIdStr);
-          console.log(`🔄 Dashboard: Found renewed license ID from license field: ${licenseIdStr} (App: ${app.applicationId})`);
+          // console.log(`🔄 Dashboard: Found renewed license ID from license field: ${licenseIdStr} (App: ${app.applicationId})`);
         }
       }
       
@@ -321,12 +321,12 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         
         if (derivedLicenseId && this.isValidLicenseId(derivedLicenseId)) {
           renewedIds.add(derivedLicenseId);
-          console.log(`🔄 Dashboard: Derived license ID from app ID: ${derivedLicenseId} (App: ${appId})`);
+          // console.log(`🔄 Dashboard: Derived license ID from app ID: ${derivedLicenseId} (App: ${appId})`);
         }
       }
     });
     
-    console.log(`🔄 Dashboard: Total renewed license IDs to hide: ${renewedIds.size}`, Array.from(renewedIds));
+    // console.log(`🔄 Dashboard: Total renewed license IDs to hide: ${renewedIds.size}`, Array.from(renewedIds));
     return renewedIds;
   }
 

@@ -25,7 +25,7 @@ export class UnifiedDashboardService {
     renewal: `${this.baseUrl}/license_application`,
     new: `${this.baseUrl}/new_license_application`,
     salesman: `${this.baseUrl}/salesman_barman`,
-    company: `${this.baseUrl}/company-registration` // ✅ ADDED: Company registration endpoint
+    company: `${this.baseUrl}/company-registration`
   };
 
   private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
@@ -39,7 +39,7 @@ export class UnifiedDashboardService {
   }
 
   constructor(private http: HttpClient, private accountService: AccountService) {
-    // Prevent cross-user data leakage (SPA keeps services alive between logins).
+    
     this.accountService.getAuthenticationState().subscribe((account) => {
       const nextKey = account?.username ? String(account.username) : null;
       if (nextKey !== this.cacheUserKey) {
@@ -53,31 +53,30 @@ export class UnifiedDashboardService {
     this.unifiedAppsCache$ = undefined;
   }
 
-  /** ✅ FIXED: Combine counts from all 4 application types (added company) */
+  
   getUnifiedDashboardCounts(): Observable<DashboardCount> {
     const requests = [
       this.http.get<DashboardCount>(`${this.endpoints.renewal}/dashboard-counts/`).pipe(
         catchError(err => {
-          console.error('❌ Renewal counts error:', err);
+          console.error(' Renewal counts error:', err);
           return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
         })
       ),
       this.http.get<DashboardCount>(`${this.endpoints.new}/dashboard-counts/`).pipe(
         catchError(err => {
-          console.error('❌ New license counts error:', err);
+          console.error(' New license counts error:', err);
           return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
         })
       ),
       this.http.get<DashboardCount>(`${this.endpoints.salesman}/dashboard-counts/`).pipe(
         catchError(err => {
-          console.error('❌ Salesman counts error:', err);
+          console.error(' Salesman counts error:', err);
           return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
         })
       ),
-      // ✅ ADDED: Company registration counts
       this.http.get<DashboardCount>(`${this.endpoints.company}/dashboard-counts/`).pipe(
         catchError(err => {
-          console.error('❌ Company registration counts error:', err);
+          console.error(' Company registration counts error:', err);
           return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
         })
       )
@@ -93,7 +92,7 @@ export class UnifiedDashboardService {
     );
   }
 
-  /** ✅ FIXED: Get applications from all 4 types (added company) */
+  // Get applications from all 4 types (added company)
   getUnifiedApplicationsByStatus(forceRefresh = false): Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
@@ -134,7 +133,7 @@ export class UnifiedDashboardService {
           return of({ applied: [], pending: [], approved: [], rejected: [] });
         })
       ),
-      // ✅ ADDED: Company registration applications
+      //  ADDED: Company registration applications
       this.http.get<any>(`${this.endpoints.company}/list-by-status/`).pipe(
         catchError(err => {
           console.error('Company registration error:', err);
@@ -223,7 +222,7 @@ export class UnifiedDashboardService {
         const normalizedSalesman = normalize(salesman, 'salesman-barman');
         const normalizedCompany = normalize(company, 'company-registration'); // ✅ ADDED
 
-        // ✅ FIXED: Include company applications in aggregation
+        // FIXED: Include company applications in aggregation
         let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied];
         let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending];
         let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved, ...normalizedCompany.approved];
@@ -283,7 +282,7 @@ export class UnifiedDashboardService {
     if (app.member_name) return app.member_name;
     if (app.memberName) return app.memberName;
     
-    // ✅ ADDED: Company registration name fields
+    // ADDED: Company registration name fields
     if (type === 'company-registration') {
       return app.company_name || app.companyName || 'N/A';
     }
@@ -303,7 +302,7 @@ export class UnifiedDashboardService {
     if (app.license_category && typeof app.license_category === 'object') {
       return app.license_category.name || app.license_category.licenseCategory || app.license_category.license_category || 'N/A';
     }
-    // ✅ ADDED: Fallback for company registration (may use "brand_type" or "license")
+    // ADDED: Fallback for company registration (may use "brand_type" or "license")
     return app.license_category_name || app.licenseCategoryName || app.license_category || app.brand_type || app.brandType || app.license || 'N/A';
   }
 
@@ -317,7 +316,7 @@ export class UnifiedDashboardService {
     if (app.district && typeof app.district === 'object') {
       return app.district.name || app.district.district || 'N/A';
     }
-    // ✅ ADDED: Fallback for company registration (may use "state")
+    // ADDED: Fallback for company registration (may use "state")
     return app.site_district_name || app.excise_district_name || app.district || app.state || 'N/A';
   }
 
