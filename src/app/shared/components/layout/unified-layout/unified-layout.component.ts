@@ -62,6 +62,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
+  // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
     requisition: 'ENA Requisition',
@@ -857,7 +858,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Brewery OR Distillery: transit + hologram menus.
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
     this.hasBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
-    this.showManufacturingWalletNav = rows.some((item) => isLicenseeWalletNavEligible(item));
+    // Wallet becomes visible once the source application reaches `awaiting_payment`
+    // (Awaiting License Fee Payment) or final approval.
+    this.showManufacturingWalletNav = this.computeWalletNavVisible(rows);
 
     console.log('Resolved menu flags:', {
       hasDistillery,
@@ -879,6 +882,53 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.triggerUiRefresh();
   }
 
+  private computeWalletNavVisible(rows: any[]): boolean {
+    const list = Array.isArray(rows) ? rows : [];
+
+    // Index applications by application_id so we can validate license rows (NA/...) against their source stage.
+    const appsById = new Map<string, any>();
+    for (const item of list) {
+      const appId = String(item?.application_id ?? item?.applicationId ?? item?.pk ?? '').trim();
+      if (appId) {
+        appsById.set(appId, item);
+      }
+    }
+
+    const isNewLicenseDerivedLicenseRow = (item: any): boolean => {
+      const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim().toUpperCase();
+      return srcId.startsWith('NLI/');
+    };
+
+    for (const item of list) {
+      const hasLicenseId = !!(item?.license_id ?? item?.licenseId);
+
+      // Application rows: use stage-based eligibility directly.
+      const appId = String(item?.application_id ?? item?.applicationId ?? '').trim();
+      if (appId && !hasLicenseId) {
+        if (isLicenseeWalletNavEligible(item)) {
+          return true;
+        }
+        continue;
+      }
+
+      // License rows: always allow existing licensees, but for new-license-derived licenses (source_object_id=NLI/...),
+      // require that the source application is Commissioner-approved.
+      if (hasLicenseId) {
+        if (!isNewLicenseDerivedLicenseRow(item)) {
+          return true;
+        }
+
+        const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim();
+        const srcApp = srcId ? appsById.get(srcId) : undefined;
+        if (srcApp && isLicenseeWalletNavEligible(srcApp)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   private isApprovedStage(item: any): boolean {
     const stage = String(
       item?.current_stage_name ??
@@ -898,7 +948,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       item?.currentStage ??
       ''
     ).toLowerCase();
-    return stage.includes('awaiting') && stage.includes('payment');
+    const normalized = stage.replace(/[^a-z0-9]/g, '');
+    return normalized === 'awaitingpayment' || (normalized.includes('awaiting') && normalized.includes('payment'));
   }
 
   private isDistillery(item: any): boolean {

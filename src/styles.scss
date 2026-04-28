@@ -115,6 +115,12 @@ body{ background-color: #EDF7FE; }
   box-shadow: 0 24px 60px rgba(9, 27, 68, 0.22) !important;
 }
 
+// Ensure SweetAlert2 popups (e.g., payment pending timer) appear above Bootstrap modals.
+// Bootstrap modal z-index is ~1050+, so keep Swal well above that.
+.swal2-container {
+  z-index: 30000 !important;
+}
+
 .idle-timeout-title {
   font-size: 1.35rem !important;
   font-weight: 700 !important;

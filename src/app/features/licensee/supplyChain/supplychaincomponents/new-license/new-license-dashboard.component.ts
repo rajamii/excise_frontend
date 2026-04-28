@@ -27,6 +27,8 @@ interface NewLicenseItem {
   applicantName: string;
   establishmentName: string;
   submittedOn: string;
+  paymentStatus: string;
+  canView: boolean;
   currentStage: string;
   currentStageRaw: string;
   statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
@@ -297,21 +299,44 @@ export class NewLicenseDashboardComponent implements OnInit {
         return [];
       }
 
-      return items.map((item: any) => ({
-        id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
-        applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
-        applicantName: this.getApplicantName(item),
-        establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
-        submittedOn: this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on),
-        currentStageRaw: String(item?.current_stage_name || item?.currentStageName || item?.current_stage || ''),
-        currentStage: this.isLicenseeUser()
-          ? this.simplifyStageForLicensee(
-              statusGroup,
-              item?.current_stage_name || item?.currentStageName || item?.current_stage || ''
-            )
-          : this.formatStageName(item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup),
-        statusGroup
-      }));
+      return items.map((item: any) => {
+        const rawPayment = String(
+          item?.application_fee_payment_status ||
+          item?.applicationFeePaymentStatus ||
+          item?.payment_status ||
+          item?.paymentStatus ||
+          ''
+        ).trim();
+        const paymentStatus = this.normalizePaymentStatus(rawPayment);
+        const canView = paymentStatus === 'Successful';
+        const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
+        const submittedOn = paymentStatus === 'Successful'
+          ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
+          : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
+
+        const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
+        const currentStageComputed = this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(statusGroup, currentStageRaw)
+          : this.formatStageName(currentStageRaw || statusGroup);
+
+        // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
+        const currentStage = this.isLicenseeUser() && !canView
+          ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
+          : currentStageComputed;
+
+        return ({
+          id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
+          applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
+          applicantName: this.getApplicantName(item),
+          establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
+          submittedOn,
+          paymentStatus,
+          canView,
+          currentStageRaw,
+          currentStage,
+          statusGroup
+        });
+      });
     };
 
     return [
@@ -321,6 +346,15 @@ export class NewLicenseDashboardComponent implements OnInit {
       ...mapGroup(grouped?.approved, 'approved'),
       ...mapGroup(grouped?.rejected, 'rejected')
     ];
+  }
+
+  private normalizePaymentStatus(value: string): string {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'Pending';
+    if (raw === 's' || raw === 'success' || raw.includes('success')) return 'Successful';
+    if (raw === 'f' || raw === 'failed' || raw.includes('fail') || raw.includes('error')) return 'Failed';
+    if (raw === 'p' || raw === 'pending' || raw.includes('pending')) return 'Pending';
+    return String(value);
   }
 
   private getApplicantName(item: any): string {

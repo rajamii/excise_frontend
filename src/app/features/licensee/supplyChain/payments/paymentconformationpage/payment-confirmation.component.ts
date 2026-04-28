@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { catchError, forkJoin, of, Observable } from 'rxjs';
+import { catchError, forkJoin, of, Observable, timeout } from 'rxjs';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
@@ -146,15 +146,21 @@ interface PendingWalletPaymentPreview {
   shortfall: number;
 }
 
-const SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
-const LICENSE_FEE_HOA = '0099-00-999-99-99';
+// Per payment logic document:
+// - License fee HOA: 0039-00-800-45-02
+// - Security deposit: no HOA (backend stores sentinel like "non")
+const SECURITY_DEPOSIT_HOA_SENTINEL = 'non';
+const LEGACY_SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
+const LICENSE_FEE_HOA = '0039-00-800-45-02';
+const LEGACY_LICENSE_FEE_HOA = '0099-00-999-99-99';
+const LICENSE_RENEWAL_MODULE_CODE = '002';
 
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   excise: '',
   brewery: '',
   education: '',
   hologram: '',
-  security_deposit: SECURITY_DEPOSIT_HOA,
+  security_deposit: '',
   license_fee: LICENSE_FEE_HOA
 };
 
@@ -226,6 +232,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   selectedAddMoneyContext: AddMoneyViewContext | null = null;
   addMoneyTransactionId = '';
   addMoneyAmount = 0;
+  private billdeskRetryLockUntil: Date | null = null;
   private movedModalState: Array<{ element: HTMLElement; parent: Node; nextSibling: Node | null }> = [];
 
   // Wallet Balances
@@ -236,6 +243,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   securityDepositBalance = 0;
   licenseFeeBalance = 0;
   activeLicenseeId = '';
+  private activeLicenseeName = '';
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private resolvedLicenseModuleType: WalletModuleType = '';
   private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
@@ -788,8 +796,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.licenseFeeBalance = 0;
     this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
     this.isBreweryUser = startsAsBrewery;
+    this.activeLicenseeName = '';
 
     rows.forEach((row: any) => {
+      if (!this.activeLicenseeName) {
+        const candidateName = String(
+          this.pickAny(row, ['licensee_name', 'licenseeName', 'manufacturing_unit', 'manufacturingUnit'], '')
+        ).trim();
+        if (candidateName) {
+          this.activeLicenseeName = candidateName;
+        }
+      }
       const walletType = String(
         this.pickAny(row, ['wallet_type', 'walletType'], '')
       ).toLowerCase();
@@ -806,9 +823,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
       if (inferredWalletType === 'security_deposit') {
         this.securityDepositBalance += balance;
-        if (hoa) {
-          this.walletHoaByType.security_deposit = String(hoa);
-        }
+        // No HOA for security deposit as per latest business rule.
       } else if (inferredWalletType === 'license_fee') {
         this.licenseFeeBalance += balance;
         if (hoa) {
@@ -1016,10 +1031,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private inferWalletTypeFromHoa(hoa: string): string {
-    if (hoa === SECURITY_DEPOSIT_HOA) {
+    if (hoa === SECURITY_DEPOSIT_HOA_SENTINEL || hoa === LEGACY_SECURITY_DEPOSIT_HOA) {
       return 'security_deposit';
     }
-    if (hoa === LICENSE_FEE_HOA) {
+    if (hoa === LICENSE_FEE_HOA || hoa === LEGACY_LICENSE_FEE_HOA) {
       return 'license_fee';
     }
     if (hoa === '0045-00-112-45-03') {
@@ -2234,14 +2249,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           walletType,
           moduleLabel: 'Manufacturing',
           walletLabel: 'Security Deposit Wallet',
-          hoa: this.walletHoaByType.security_deposit
+          hoa: ''
         };
       case 'license_fee':
         return {
           walletType,
           moduleLabel: 'Manufacturing',
           walletLabel: 'License Fee Wallet',
-          hoa: this.walletHoaByType.license_fee
+          hoa: LICENSE_FEE_HOA
         };
       default:
         return {
@@ -2277,6 +2292,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   proceedUnifiedAddMoney(): void {
+    const retryAfterSeconds = this.getBilldeskPendingRetryAfterSeconds();
+    if (retryAfterSeconds > 0) {
+      // Close the underlying Payment Details modal so the reminder renders on top.
+      this.closeUnifiedAddMoneyView();
+      this.showBilldeskPendingRetryPopup(retryAfterSeconds);
+      return;
+    }
+
     if (this.addMoneyAmount <= 0) {
       this.showErrorMessage('Please enter amount greater than zero.');
       return;
@@ -2294,12 +2317,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    const headOfAccount = String(context.hoa || '').trim();
-    if (!headOfAccount) {
-      this.showErrorMessage('Unable to proceed: Head Of Account not found.');
-      return;
-    }
-
     const walletType = this.mapAddMoneyWalletTypeToApi(context.walletType);
     const transactionId = String(this.addMoneyTransactionId || '').trim();
     if (!transactionId) {
@@ -2307,46 +2324,80 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
+    // For non-security_deposit and non-license_fee, HOA is mandatory.
+    if (context.walletType !== 'license_fee' && context.walletType !== 'security_deposit') {
+      const headOfAccount = String(context.hoa || '').trim();
+      if (!headOfAccount) {
+        this.showErrorMessage('Unable to proceed: Head Of Account not found.');
+        return;
+      }
+    }
+
     Swal.fire({
-      title: 'Processing Recharge',
-      text: 'Crediting wallet for testing...',
+      title: 'Redirecting to BillDesk',
+      text: 'Preparing payment request...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
 
-    this.paymentIntegrationService.creditWalletRecharge(licenseeId, {
-      transaction_id: transactionId,
-      wallet_type: walletType,
-      head_of_account: headOfAccount,
-      amount: Number(this.addMoneyAmount || 0),
-      remarks: `Dummy recharge via UI (${context.walletLabel})`
-    }).subscribe({
+    const amount = Number(this.addMoneyAmount || 0);
+
+    const request$ =
+      context.walletType === 'license_fee'
+        ? this.paymentIntegrationService.initiateBilldeskLicenseFee({
+            transaction_id: transactionId,
+            amount,
+            payer_id: licenseeId,
+            payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+          })
+        : context.walletType === 'security_deposit'
+          ? this.paymentIntegrationService.initiateBilldeskSecurityDeposit({
+              transaction_id: transactionId,
+              amount,
+              licensee_id: licenseeId,
+              licensee_name: this.activeLicenseeName || licenseeId,
+              bank_fdr_code: 'SIKFDR',
+              payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+            })
+          : this.paymentIntegrationService.initiateBilldeskWalletRecharge({
+              transaction_id: transactionId,
+              wallet_type: walletType,
+              head_of_account: String(context.hoa || '').trim(),
+              amount
+            });
+
+    request$.pipe(timeout(30000)).subscribe({
       next: (response) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
-        this.setActiveTab('recharge');
-        this.refreshWalletData();
 
-        const created = response?.wallet_transaction || null;
-        const walletTransactionId = String(created?.wallet_transaction_id || created?.walletTransactionId || '').trim();
-        const createdAt = String(created?.created_at || created?.createdAt || '').trim();
-        const statusText = String(created?.payment_status || created?.paymentStatus || 'success');
+        const billdeskUrl = String((response as any)?.billdeskUrl || (response as any)?.billdesk_url || '').trim();
+        const requestMsg = String((response as any)?.requestMsg || (response as any)?.request_msg || '').trim();
+        if (!billdeskUrl || !requestMsg) {
+          this.showErrorMessage('BillDesk initiation failed: missing gateway parameters.');
+          return;
+        }
 
-        this.router.navigate(['/dashboard/wallet-recharge/success'], {
-          queryParams: {
-            transactionId,
-            walletTransactionId: walletTransactionId || undefined,
-            walletType,
-            hoa: headOfAccount,
-            amount: Number(this.addMoneyAmount || 0),
-            status: statusText,
-            createdAt: createdAt || undefined
-          }
-        });
+        this.submitToBillDesk(billdeskUrl, requestMsg);
       },
       error: (err) => {
         Swal.close();
-        console.error('Wallet recharge credit failed:', err);
+        console.error('BillDesk initiate failed:', err);
+
+        const retrySecondsFromServer = this.extractRetryAfterSeconds(err);
+        if (retrySecondsFromServer > 0) {
+          // Close the underlying Payment Details modal so the reminder renders on top.
+          this.closeUnifiedAddMoneyView();
+          this.showBilldeskPendingRetryPopup(retrySecondsFromServer);
+          this.refreshWalletData();
+          return;
+        }
+
+        if (String(err?.name || '').toLowerCase() === 'timeouterror') {
+          this.showErrorMessage('BillDesk initiation timed out. Please check server/network and try again.');
+          this.refreshWalletData();
+          return;
+        }
         const errorMessage =
           err?.error?.detail ||
           err?.error?.error ||
@@ -2358,9 +2409,111 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     });
   }
 
+  private submitToBillDesk(url: string, requestMsg: string): void {
+    if (!this.isBrowser) {
+      this.showErrorMessage('Unable to redirect: browser environment not available.');
+      return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'msg';
+    input.value = requestMsg;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  }
+
   private mapAddMoneyWalletTypeToApi(walletType: AddMoneyWalletType): string {
     if (walletType === 'education') return 'education_cess';
     return walletType;
+  }
+
+  private getBilldeskPendingRetryAfterSeconds(): number {
+    const nowMs = Date.now();
+    const lockMs = 15 * 60 * 1000;
+
+    let remainingFromServer = 0;
+    const serverUntilMs = this.billdeskRetryLockUntil?.getTime() || 0;
+    if (serverUntilMs > nowMs) {
+      remainingFromServer = Math.ceil((serverUntilMs - nowMs) / 1000);
+    }
+
+    const rows = Array.isArray(this.rechargeData) ? this.rechargeData : [];
+    let remainingFromWallet = 0;
+    for (const row of rows) {
+      const status = String((row as any)?.status || '').toLowerCase();
+      if (!status.includes('pending')) continue;
+
+      const created = (row as any)?.date instanceof Date ? (row as any).date : new Date((row as any)?.date || '');
+      const createdMs = created instanceof Date && !Number.isNaN(created.getTime()) ? created.getTime() : 0;
+      if (!createdMs) continue;
+
+      const lockUntil = createdMs + lockMs;
+      const remaining = Math.ceil((lockUntil - nowMs) / 1000);
+      if (remaining > remainingFromWallet) remainingFromWallet = remaining;
+    }
+
+    return Math.max(0, remainingFromServer, remainingFromWallet);
+  }
+
+  private extractRetryAfterSeconds(err: any): number {
+    const httpStatus = Number(err?.status || 0);
+    if (httpStatus !== 409) return 0;
+
+    const raw =
+      err?.error?.retry_after_seconds ||
+      err?.error?.retryAfterSeconds ||
+      err?.error?.retry_after ||
+      err?.error?.retryAfter ||
+      0;
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  }
+
+  private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
+    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
+    this.billdeskRetryLockUntil = new Date(Date.now() + totalSeconds * 1000);
+
+    const format = (seconds: number) => {
+      const s = Math.max(0, Math.floor(seconds));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    let interval: any;
+    Swal.fire({
+      icon: 'info',
+      title: 'Payment Pending',
+      html:
+        `<div style="text-align:left">` +
+        `<div>BillDesk payment is still pending.</div>` +
+        `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
+        `</div>`,
+      confirmButtonText: 'Cancel',
+      showConfirmButton: true,
+      allowOutsideClick: false,
+      timer: totalSeconds * 1000,
+      timerProgressBar: true,
+      didOpen: () => {
+        const container = Swal.getHtmlContainer();
+        const countdownEl = container ? (container.querySelector('b') as HTMLElement | null) : null;
+        interval = setInterval(() => {
+          const left = Swal.getTimerLeft();
+          if (left === null || left === undefined) return;
+          if (countdownEl) countdownEl.textContent = format(Math.ceil(left / 1000));
+        }, 250);
+      },
+      willClose: () => {
+        if (interval) clearInterval(interval);
+      }
+    });
   }
 
   downloadDetails(): void {
@@ -2949,10 +3102,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private getRechargeRowsForCurrentView(): RechargeItem[] {
     const rows = [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    // "Others" (license fee + security deposit): show every recharge here so the tab is not empty;
-    // detailed splits stay under License Fee / Security Deposit tabs.
+    // "Others" (license fee + security deposit): show only license fee + security deposit recharges.
+    // Excise/education/hologram wallet recharges belong to "Wallets" view only.
     if (this.walletViewMode === 'others') {
-      return rows;
+      return rows.filter((row) =>
+        this.isOtherWalletType(
+          String(row.walletType || '').trim(),
+          String(row.hoa || '').trim()
+        )
+      );
     }
     // "Wallets" (brewery/distillery): fee/deposit wallets are not part of this view — hide those recharges.
     return rows.filter((row) => {

@@ -557,6 +557,10 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseUrl}/apply/`, formData);
   }
 
+  createNewLicenseApplicationDraft(formData: FormData): Observable<any> {
+    return this.http.post(`${this.newLicenseUrl}/apply/draft/`, formData);
+  }
+
   private formatDate(value: any): string {
     if (value instanceof Date) {
       const year = value.getFullYear();

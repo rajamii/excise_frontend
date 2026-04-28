@@ -179,3 +179,46 @@ export interface PaymentStatusUpdatePayload {
   responseTxnamount?: number;
   responseTxndate?: string;
 }
+
+export interface BilldeskWalletRechargeInitiatePayload {
+  transaction_id: string;
+  wallet_type: string;
+  head_of_account: string;
+  amount: number;
+}
+
+export interface BilldeskWalletRechargeInitiateResponse {
+  billdeskUrl: string;
+  requestMsg: string;
+  transactionId: string;
+}
+
+export interface BilldeskLicenseFeeInitiatePayload {
+  transaction_id: string;
+  amount: number;
+  payer_id?: string;
+  payment_module_code?: string;
+  application_id?: string;
+  requisition_id_no?: string;
+}
+
+export interface BilldeskSecurityDepositInitiatePayload {
+  transaction_id: string;
+  amount: number;
+  licensee_id: string;
+  licensee_name?: string;
+  bank_fdr_code?: string;
+  license_type?: string;
+  district?: string;
+  payment_module_code?: string;
+  application_id?: string;
+  requisition_id_no?: string;
+}
+
+export interface BilldeskNewLicenseApplicationFeeInitiatePayload {
+  application_id: string;
+  amount?: number;
+  payment_module_code?: string;
+  head_of_account?: string;
+  transaction_id?: string;
+}

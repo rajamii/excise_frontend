@@ -101,6 +101,7 @@
             <th>Sl. No.</th>
             <th>Application ID</th>
             <th>Submitted On</th>
+            <th>Payment</th>
             <th>Applicant</th>
             <th>Establishment</th>
             <th>Current Stage</th>
@@ -112,11 +113,23 @@
             <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
             <td class="fw-semibold">{{ row.applicationId }}</td>
             <td>{{ row.submittedOn }}</td>
+            <td>
+              <span
+                class="badge"
+                [ngClass]="{
+                  'bg-success': row.paymentStatus === 'Successful',
+                  'bg-danger': row.paymentStatus === 'Failed',
+                  'bg-warning text-dark': row.paymentStatus === 'Pending'
+                }"
+              >
+                {{ row.paymentStatus }}
+              </span>
+            </td>
             <td>{{ row.applicantName }}</td>
             <td>{{ row.establishmentName }}</td>
             <td>{{ row.currentStage }}</td>
             <td>
-              <button class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
+              <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                 <i class="bi bi-eye-fill"></i>
               </button>
               <button *ngIf="!isLicenseeUser()" class="btn btn-link p-0 action-eye" title="View Timeline" (click)="viewTimeline(row)">

@@ -29,6 +29,15 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'dashboard.view' }
       },
+      {
+        path: 'new-license/application-fee/receipt',
+        loadComponent: () =>
+          import('../licensee/apply-new-license/application-fee-receipt/application-fee-receipt.component').then(
+            (m) => m.ApplicationFeeReceiptComponent
+          ),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'dashboard.view' }
+      },
       // Officer in charge: open hologram inventory/overview as a full page (not inside dashboard section card)
       {
         path: 'hologram-overview',

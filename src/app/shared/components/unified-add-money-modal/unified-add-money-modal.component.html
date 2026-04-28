@@ -31,7 +31,7 @@
                 </td>
               </tr>
 
-              <tr class="unified-pay-row">
+              <tr class="unified-pay-row" *ngIf="context?.walletType !== 'security_deposit'">
                 <td class="fw-semibold">Head Of Account <span class="text-danger">*</span></td>
                 <td>
                   <div class="input-group">

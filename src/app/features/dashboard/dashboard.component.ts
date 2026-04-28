@@ -679,9 +679,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.isLicenseeUser()) {
       return;
     }
-    // Wallet section is available to all licensee users. Non-manufacturing users are restricted to "Others" view
-    // inside the wallet page itself.
-    return;
+    if (!this.licenseeMenuAccessResolved) {
+      return;
+    }
+    // Wallet becomes visible once the source application reaches `awaiting_payment`
+    // (Awaiting License Fee Payment) or final approval.
+    if (!this.showManufacturingWalletNav) {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
   }
 
   private loadLicenseeMenuAccess(): void {
@@ -727,7 +739,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.showDistilleryMenus = hasDistillery;
         this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
         this.showBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
-        this.showManufacturingWalletNav = combinedRows.some((item) => isLicenseeWalletNavEligible(item));
+        this.showManufacturingWalletNav = this.computeWalletNavVisible(combinedRows);
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
         this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
@@ -762,7 +774,51 @@ export class DashboardComponent implements OnInit, OnDestroy {
       item?.currentStage ??
       ''
     ).toLowerCase();
-    return stage.includes('awaiting') && stage.includes('payment');
+    const normalized = stage.replace(/[^a-z0-9]/g, '');
+    return normalized === 'awaitingpayment' || (normalized.includes('awaiting') && normalized.includes('payment'));
+  }
+
+  private computeWalletNavVisible(rows: any[]): boolean {
+    const list = Array.isArray(rows) ? rows : [];
+
+    const appsById = new Map<string, any>();
+    for (const item of list) {
+      const appId = String(item?.application_id ?? item?.applicationId ?? item?.pk ?? '').trim();
+      if (appId) {
+        appsById.set(appId, item);
+      }
+    }
+
+    const isNewLicenseDerivedLicenseRow = (item: any): boolean => {
+      const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim().toUpperCase();
+      return srcId.startsWith('NLI/');
+    };
+
+    for (const item of list) {
+      const hasLicenseId = !!(item?.license_id ?? item?.licenseId);
+
+      const appId = String(item?.application_id ?? item?.applicationId ?? '').trim();
+      if (appId && !hasLicenseId) {
+        if (isLicenseeWalletNavEligible(item)) {
+          return true;
+        }
+        continue;
+      }
+
+      if (hasLicenseId) {
+        if (!isNewLicenseDerivedLicenseRow(item)) {
+          return true;
+        }
+
+        const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim();
+        const srcApp = srcId ? appsById.get(srcId) : undefined;
+        if (srcApp && isLicenseeWalletNavEligible(srcApp)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   private isDistillery(item: any): boolean {
