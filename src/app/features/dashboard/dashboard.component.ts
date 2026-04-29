@@ -1222,7 +1222,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
         walletView,
-        source: 'dashboard-wallet'
+        source: 'dashboard-wallet',
+        nav: Date.now()
       }
     });
   }
