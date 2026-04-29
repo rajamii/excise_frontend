@@ -602,6 +602,63 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
 
     const appType = this.application.type;
 
+    if (appType === 'new-license') {
+      const licenseFee = Number(
+        this.application.license_fee_amount ??
+          this.application.licenseFeeAmount ??
+          this.application.yearly_license_fee ??
+          this.application.yearlyLicenseFee ??
+          0
+      );
+      const securityFee = Number(this.application.security_fee_amount ?? this.application.securityFeeAmount ?? 0);
+      const total = licenseFee + securityFee;
+
+      Swal.fire({
+        title: 'Confirm Payment',
+        html: `License Fee: â‚¹${licenseFee || 0}<br>Security Fee: â‚¹${securityFee || 0}<br><b>Total: â‚¹${total || 0}</b>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Pay from Wallet',
+        cancelButtonText: 'Cancel'
+      }).then(result => {
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+          title: 'Processing Payment...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        forkJoin([
+          this.licenseAppService.payNewLicenseFee(appId, new FormData()),
+          this.licenseAppService.payNewLicenseSecurityFee(appId),
+        ]).subscribe({
+          next: () => {
+            Swal.fire({
+              title: 'Success!',
+              text: 'Fees paid successfully.',
+              icon: 'success',
+              confirmButtonText: 'OK'
+            }).then(() => {
+              this.dialogRef.close(true);
+            });
+          },
+          error: (err) => {
+            console.error('Error paying fees:', err);
+            Swal.fire({
+              title: 'Error',
+              text: err?.error?.detail || 'Failed to pay fees. Please check wallet balance and try again.',
+              icon: 'error'
+            });
+          }
+        });
+      });
+
+      return;
+    }
+
     Swal.fire({
       title: 'Confirm Payment',
       text: `Fee Amount: ₹${this.application.yearly_license_fee || this.application.yearlyLicenseFee || 0}`,

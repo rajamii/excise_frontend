@@ -531,13 +531,29 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private pickPreferredWalletLicense(rows: MyLicenseRow[]): MyLicenseRow | null {
-    const walletEligible = rows.filter((row) => this.resolveModuleTypeFromLicense(row) !== '');
-    const approvedWalletEligible = walletEligible.filter((row) => this.isApprovedLicenseRow(row));
-    if (approvedWalletEligible.length > 0) {
-      return approvedWalletEligible[0];
+    const moduleTypePriority = (row: MyLicenseRow): number => {
+      const moduleType = this.resolveModuleTypeFromLicense(row);
+      if (moduleType === 'distillery' || moduleType === 'brewery') return 0;
+      if (moduleType === 'other') return 1;
+      return 2;
+    };
+
+    const naBoost = (row: MyLicenseRow): number => {
+      const licenseId = String(row?.license_id ?? row?.licenseId ?? '').trim().toUpperCase();
+      return licenseId.startsWith('NA/') ? 0 : 1;
+    };
+
+    const eligible = rows
+      .filter((row) => this.resolveModuleTypeFromLicense(row) !== '')
+      .slice()
+      .sort((a, b) => moduleTypePriority(a) - moduleTypePriority(b) || naBoost(a) - naBoost(b));
+
+    const approvedEligible = eligible.filter((row) => this.isApprovedLicenseRow(row));
+    if (approvedEligible.length > 0) {
+      return approvedEligible[0];
     }
-    if (walletEligible.length > 0) {
-      return walletEligible[0];
+    if (eligible.length > 0) {
+      return eligible[0];
     }
     return rows[0] ?? null;
   }
@@ -713,9 +729,27 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
     if (!isManufacturing && this.walletViewMode !== 'others') {
       this.walletViewMode = 'others';
+      const currentView = String(this.route.snapshot?.queryParams?.['walletView'] || '').trim().toLowerCase();
+      if (currentView !== 'others') {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { walletView: 'others' },
+          queryParamsHandling: 'merge'
+        });
+      }
     }
 
     this.ensureActiveTabAllowed();
+  }
+
+  private normalizeWalletTypeKey(raw: any): string {
+    const value = String(raw || '').trim().toLowerCase();
+    if (!value) return '';
+    const cleaned = value.replace(/[\s-]+/g, '_');
+    if (cleaned === 'education' || cleaned === 'educationcess' || cleaned === 'education_cess') return 'education_cess';
+    if (cleaned === 'licensefee' || cleaned === 'license_fee') return 'license_fee';
+    if (cleaned === 'securitydeposit' || cleaned === 'security_deposit') return 'security_deposit';
+    return cleaned;
   }
 
   canShowTab(tab: string): boolean {
@@ -809,13 +843,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       }
       const walletType = String(
         this.pickAny(row, ['wallet_type', 'walletType'], '')
-      ).toLowerCase();
+      );
       const moduleType = String(
         this.pickAny(row, ['module_type', 'moduleType'], '')
       ).toLowerCase();
       const hoa = this.pickAny(row, ['head_of_account', 'headOfAccount'], '');
       const balance = this.toNumber(this.pickAny(row, ['current_balance', 'currentBalance'], 0));
-      const inferredWalletType = walletType || this.inferWalletTypeFromHoa(String(hoa));
+      const inferredWalletType =
+        this.normalizeWalletTypeKey(walletType) ||
+        this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(hoa)));
       const treatAsBreweryWallet =
         inferredWalletType === 'brewery' ||
         moduleType === 'brewery' ||
@@ -874,8 +910,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       transactionId: String(this.pickAny(row, ['transaction_id', 'transactionId', 'reference_no', 'referenceNo'], '-')),
       transactionType: this.pickAny(row, ['transaction_type', 'transactionType'], 'Wallet Recharge'),
       hoa: this.pickAny(row, ['head_of_account', 'headOfAccount'], '-'),
-      walletType: String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase() ||
-        this.inferWalletTypeFromHoa(String(this.pickAny(row, ['head_of_account', 'headOfAccount'], ''))),
+      walletType:
+        this.normalizeWalletTypeKey(this.pickAny(row, ['wallet_type', 'walletType'], '')) ||
+        this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '')))),
       amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
       date: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
       status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'))
@@ -888,8 +925,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const mappedModalHistory: Array<WalletHistoryTransaction & { walletType: string }> = rows.map((row: any, index: number) => {
       const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
       const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], ''));
-      const walletTypeRaw = String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase();
-      const walletType = walletTypeRaw || this.inferWalletTypeFromHoa(hoa);
+      const walletTypeRaw = this.normalizeWalletTypeKey(this.pickAny(row, ['wallet_type', 'walletType'], ''));
+      const walletType = walletTypeRaw || this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(hoa));
       const createdAt = this.pickAny(row, ['created_at', 'createdAt'], new Date().toISOString());
       const balanceAfter = this.toNumber(this.pickAny(row, ['balance_after', 'balanceAfter'], 0));
       const paymentFor = this.resolvePaymentForType(row);
@@ -3115,8 +3152,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     // "Wallets" (brewery/distillery): fee/deposit wallets are not part of this view — hide those recharges.
     return rows.filter((row) => {
       const wt =
-        String(row.walletType || '').toLowerCase() ||
-        this.inferWalletTypeFromHoa(String(row.hoa || '').trim());
+        this.normalizeWalletTypeKey(row.walletType) ||
+        this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(row.hoa || '').trim()));
       return wt !== 'license_fee' && wt !== 'security_deposit';
     });
   }
@@ -3141,14 +3178,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private resolveWalletTypeForRow(row: { walletType?: string; hoa?: string } | null | undefined): string {
-    const rawType = String(row?.walletType || '').trim().toLowerCase();
+    const rawType = this.normalizeWalletTypeKey(row?.walletType);
     if (rawType) return rawType;
     const hoa = String(row?.hoa || '').trim();
-    return this.inferWalletTypeFromHoa(hoa);
+    return this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(hoa));
   }
 
   private isOtherWalletType(walletTypeRaw: string, hoaRaw: string): boolean {
-    const type = String(walletTypeRaw || '').trim().toLowerCase() || this.inferWalletTypeFromHoa(String(hoaRaw || '').trim());
+    const type =
+      this.normalizeWalletTypeKey(walletTypeRaw) ||
+      this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(hoaRaw || '').trim()));
     return type === 'security_deposit' || type === 'license_fee';
   }
 

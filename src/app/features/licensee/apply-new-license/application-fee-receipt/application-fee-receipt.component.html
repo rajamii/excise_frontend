@@ -58,7 +58,7 @@
 
     <div class="receipt-actions no-print">
       <button class="btn btn-primary" (click)="printSlip()">Print Slip</button>
-      <button class="btn btn-outline-secondary" (click)="goToDashboard()">Go to Dashboard</button>
+      <button class="btn btn-outline-secondary" (click)="goToDashboard()" [disabled]="statusKind === 'processing'">Go to Dashboard</button>
     </div>
   </div>
 </div>

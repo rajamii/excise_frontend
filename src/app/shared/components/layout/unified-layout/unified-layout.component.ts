@@ -608,7 +608,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           queryParams: {
             section: 'wallet',
             tab: 'recharge',
-            source: 'sidenav-payments'
+            source: 'sidenav-payments',
+            nav: Date.now()
           }
         });
         break;

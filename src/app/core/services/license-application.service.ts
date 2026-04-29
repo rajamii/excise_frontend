@@ -781,6 +781,11 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-license-fee/`, formData);
   }
 
+  payNewLicenseSecurityFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-security-fee/`, {});
+  }
+
   getNewLicenseDashboardCounts(): Observable<any> {
     return this.http.get(`${this.newLicenseUrl}/dashboard-counts/`);
   }
