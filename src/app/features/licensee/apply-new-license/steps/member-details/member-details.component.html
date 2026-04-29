@@ -1,0 +1,186 @@
+<form [formGroup]="memberDetailsForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Member Details</div>
+      <div class="validation">* Applicable for {{ memberRoleLabel }}</div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <h5 class="section-title">{{ memberRoleLabel }} Information</h5>
+      <div class="form-field-container">
+        <mat-form-field appearance="outline">
+          <mat-label>First Name</mat-label>
+          <input matInput placeholder="Enter First Name" type="text" formControlName="firstName" required />
+          @if (memberDetailsForm.controls['firstName'].touched && memberDetailsForm.controls['firstName'].invalid) {
+            <mat-error>{{ getErrorMessage('firstName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Middle Name</mat-label>
+          <input matInput placeholder="Enter Middle Name" type="text" formControlName="middleName" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Last Name</mat-label>
+          <input matInput placeholder="Enter Last Name" type="text" formControlName="lastName" required />
+          @if (memberDetailsForm.controls['lastName'].touched && memberDetailsForm.controls['lastName'].invalid) {
+            <mat-error>{{ getErrorMessage('lastName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Father's / Husband's Name</mat-label>
+          <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="fatherHusbandName" required />
+          @if (memberDetailsForm.controls['fatherHusbandName'].touched && memberDetailsForm.controls['fatherHusbandName'].invalid) {
+            <mat-error>{{ getErrorMessage('fatherHusbandName') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="radio-group-container">
+          <label class="field-label">Gender <span class="required">*</span></label>
+          <mat-radio-group formControlName="gender" required>
+            <mat-radio-button value="Male">Male</mat-radio-button>
+            <mat-radio-button value="Female">Female</mat-radio-button>
+          </mat-radio-group>
+          @if (memberDetailsForm.controls['gender'].touched && memberDetailsForm.controls['gender'].invalid) {
+            <mat-error class="radio-error">{{ getErrorMessage('gender') }}</mat-error>
+          }
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Date of Birth</mat-label>
+          <input matInput [matDatepicker]="memberDobPicker" formControlName="dob" placeholder="Select Date of Birth" aria-label="Date of Birth" required />
+          <mat-datepicker-toggle matIconSuffix [for]="memberDobPicker"></mat-datepicker-toggle>
+          <mat-datepicker #memberDobPicker></mat-datepicker>
+          @if (memberDetailsForm.controls['dob'].touched && memberDetailsForm.controls['dob'].invalid) {
+            <mat-error>{{ getErrorMessage('dob') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nationality</mat-label>
+          <mat-select formControlName="nationality" required>
+            @for (nationality of nationalities; track nationality) {
+              <mat-option [value]="nationality">{{ nationality }}</mat-option>
+            }
+          </mat-select>
+          @if (memberDetailsForm.controls['nationality'].touched && memberDetailsForm.controls['nationality'].invalid) {
+            <mat-error>{{ getErrorMessage('nationality') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Address</mat-label>
+          <textarea
+            matInput
+            placeholder="Enter Address"
+            formControlName="address"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="4"
+            required></textarea>
+          @if (memberDetailsForm.controls['address'].touched && memberDetailsForm.controls['address'].invalid) {
+            <mat-error>{{ getErrorMessage('address') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>PAN</mat-label>
+          <input matInput placeholder="Enter PAN" type="text" formControlName="pan" required />
+          @if (memberDetailsForm.controls['pan'].touched && memberDetailsForm.controls['pan'].invalid) {
+            <mat-error>{{ getErrorMessage('pan') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Aadhaar No.</mat-label>
+          <input matInput placeholder="Enter Aadhaar No." type="text" formControlName="aadhaar" required />
+          @if (memberDetailsForm.controls['aadhaar'].touched && memberDetailsForm.controls['aadhaar'].invalid) {
+            <mat-error>{{ getErrorMessage('aadhaar') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Mobile Number</mat-label>
+          <input matInput placeholder="Enter 10-digit mobile number" type="tel" formControlName="mobileNumber" required />
+          @if (memberDetailsForm.controls['mobileNumber'].touched && memberDetailsForm.controls['mobileNumber'].invalid) {
+            <mat-error>{{ getErrorMessage('mobileNumber') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email Id</mat-label>
+          <input matInput placeholder="Enter Email" type="email" formControlName="emailId" />
+          @if (memberDetailsForm.controls['emailId'].touched && memberDetailsForm.controls['emailId'].invalid) {
+            <mat-error>{{ getErrorMessage('emailId') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="checkbox">
+          <mat-checkbox formControlName="sikkimSubject" required>
+            The selected {{ memberRoleLabel }} holds Sikkim Subject Certificate / Certificate of Identification / Residential Certificate (for urban area only).
+          </mat-checkbox>
+          @if (memberDetailsForm.controls['sikkimSubject'].touched && memberDetailsForm.controls['sikkimSubject'].invalid) {
+            <mat-error>{{ getErrorMessage('sikkimSubject') }}</mat-error>
+          }
+        </div>
+      </div>
+
+      <h5 class="section-title">Upload Documents</h5>
+      <div class="documents-upload-container">
+        @for (doc of documents; track doc.key) {
+          <div class="document-upload-row">
+            <div class="document-info">
+              <span class="document-label">
+                {{ doc.name }}
+                @if (doc.required) { <span class="required">*</span> }
+              </span>
+              <span class="document-formats">Supported File Formats: {{ doc.format }}</span>
+            </div>
+            <div class="document-actions">
+              <input
+                type="file"
+                [id]="doc.key"
+                (change)="onFileSelect($event, doc)"
+                [accept]="doc.accept"
+                [attr.aria-label]="'Upload ' + doc.name"
+                title="Upload {{ doc.name }}"
+                class="hidden-file-input" />
+              <label
+                [for]="doc.key"
+                mat-raised-button
+                color="primary"
+                class="file-upload-button">
+                <mat-icon class="file-upload-icon">upload_file</mat-icon>
+                Choose File
+              </label>
+
+              @if (doc.fileUrl) {
+                <button mat-icon-button color="accent" (click)="viewFile(doc)" type="button">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              }
+              @if (doc.file) {
+                <span class="file-name">{{ doc.file.name }}</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()" type="button">Back</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="proceedToNext()"
+        [disabled]="!memberDetailsForm.valid || !areDocumentsUploaded()"
+        type="button">
+        Next
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</form>

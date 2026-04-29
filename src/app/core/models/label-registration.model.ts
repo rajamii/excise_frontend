@@ -50,6 +50,19 @@ export interface LabelRegistrationPackagingDetails {
   packagingRows: LabelRegistrationPackagingItem[];
 }
 
+export interface LabelRegistrationUploadedDocument {
+  key: string;
+  name: string;
+  required: boolean;
+  fileName: string;
+  mimeType?: string;
+  uploadedAt?: string;
+}
+
+export interface LabelRegistrationUploadDetails {
+  documents: LabelRegistrationUploadedDocument[];
+}
+
 export interface LabelRegistrationSubmission {
   applicationId: string;
   status: string;

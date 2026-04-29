@@ -16,13 +16,19 @@
     <app-applicant-details (back)="stepper.previous()" (next)="stepper.next()"></app-applicant-details>
   </mat-step>
 
+  @if (shouldShowMemberDetailsStep) {
+    <mat-step label="Member Details">
+      <app-member-details (back)="stepper.previous()" (next)="stepper.next()"></app-member-details>
+    </mat-step>
+  }
+
   <!-- Step 4: Site Details & Documents Combined -->
   <mat-step label="Site Details">
     <app-site-details (back)="stepper.previous()" (next)="stepper.next()"></app-site-details>
   </mat-step>
 
   <!-- Step 5: Company Details (Only if licenseType is 'Company') -->
-  @if (licenseType == 2) {
+  @if (isCompanyType) {
     <mat-step label="Company Details">
       <app-unit-details (back)="stepper.previous()" (next)="stepper.next()"></app-unit-details>
     </mat-step>

@@ -72,6 +72,21 @@
           }
         </div>
 
+        @if (keyInfoForm.get('siteType')?.value === 'Existing') {
+          <mat-form-field appearance="outline">
+            <mat-label>Old Site License No<span class="required">*</span></mat-label>
+            <input
+              matInput
+              placeholder="Enter Old Site License No"
+              formControlName="existingSiteLicense"
+              required
+              maxlength="100">
+            @if (keyInfoForm.controls['existingSiteLicense'].invalid && keyInfoForm.controls['existingSiteLicense'].touched) {
+              <mat-error>{{ getErrorMessage('existingSiteLicense') }}</mat-error>
+            }
+          </mat-form-field>
+        }
+
       </div>
     </mat-card-content>
 

@@ -7,6 +7,12 @@ import { LicenseApplicationService } from '../../../../../core/services/license-
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { FormDataBuilder } from '../../../../../shared/utils/form-data.util';
 
+interface ApplicantDeclarationData {
+  nationality?: string | null;
+  mode_of_operation?: string | null;
+  modeOfOperation?: string | null;
+}
+
 @Component({
   selector: 'app-declaration-payment',
   standalone: true,
@@ -62,6 +68,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     establishmentname: 'Establishment Name',
     sitetype: 'Site Type',
     site_type: 'Site Type',
+    existing_site_license: 'Old Site License No',
     first_name: 'First Name',
     middle_name: 'Middle Name',
     last_name: 'Last Name',
@@ -71,6 +78,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     fatherhusbandname: 'Father/Husband Name',
     dob: 'Date of Birth',
     nationality: 'Nationality',
+    coi_rc_ss: 'Certificate Type',
     gender: 'Gender',
     pan: 'PAN',
     applicant_mobile_number: 'Mobile Number',
@@ -92,10 +100,19 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     hassikkimcertificate: 'Has Sikkim Certificate',
     has_excise_license: 'Has Excise License',
     hasexciselicense: 'Has Excise License',
+    existing_license_category_id: 'Existing License Category',
+    existing_license_no: 'Existing License Number',
     family_excise_license: 'Family Excise License',
     familyexciselicense: 'Family Excise License',
+    family_license_category_id: 'Family License Category',
+    family_license_no: 'Family License Number',
     criminal_conviction: 'Criminal Conviction',
     criminalconviction: 'Criminal Conviction',
+    member_name: 'Member Name',
+    member_mobile_number: 'Member Mobile Number',
+    member_email: 'Member Email Id',
+    aadhaar: 'Aadhaar No.',
+    sikkim_subject: 'Member Holds COI / RC / SS',
     sitedistrict: 'Site District',
     site_district: 'Site District',
     district: 'District',
@@ -128,8 +145,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     site_owned: 'Site Owned by Applicant',
     nocobtained: 'NOC Obtained',
     noc_obtained: 'NOC Obtained',
+    parcha: 'Parcha Document',
     tradelicensecovered: 'Trade License Covered',
     trade_license_covered: 'Trade License Covered',
+    trade_license: 'Trade License Document',
     company_name: 'Company Name',
     companyname: 'Company Name',
     company_address: 'Company Address',
@@ -152,8 +171,34 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     return data?.license_type || data?.licenseType;
   }
 
+  get selectedLicenseTypeName(): string {
+    const selectedLicenseTypeId = Number(this.licenseType);
+    const storedLicenseTypes = this.getParsedSession<Array<{ id?: number; licenseType?: string }>>('licenseTypes') ?? [];
+    const matchedType = storedLicenseTypes.find((licenseType) => Number(licenseType.id) === selectedLicenseTypeId);
+
+    return String(matchedType?.licenseType ?? '');
+  }
+
   get isCompanyType(): boolean {
-    return Number(this.licenseType) === 2;
+    return this.selectedLicenseTypeName.toLowerCase() === 'company' || Number(this.licenseType) === 2;
+  }
+
+  get isIndividualType(): boolean {
+    return this.selectedLicenseTypeName.toLowerCase() === 'individual' || Number(this.licenseType) === 1;
+  }
+
+  get requiresNationalityDocument(): boolean {
+    const applicantData = this.getParsedSession<ApplicantDeclarationData>('applicantDetailsData');
+    const nationality = String(applicantData?.nationality ?? '').trim();
+
+    return this.isIndividualType || (this.isCompanyType && nationality === 'Indian');
+  }
+
+  get shouldShowMemberDetails(): boolean {
+    const applicantData = this.getParsedSession<ApplicantDeclarationData>('applicantDetailsData');
+    const modeOfOperation = String(applicantData?.mode_of_operation ?? applicantData?.modeOfOperation ?? '').trim();
+
+    return modeOfOperation === 'Salesman' || modeOfOperation === 'Barman';
   }
 
   get selectLicenseData() {
@@ -170,6 +215,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   get siteDetailsData() {
     return this.getDataForView('siteDetailsData');
+  }
+
+  get memberDetailsData() {
+    return this.getDataForView('memberDetailsData');
   }
 
   get unitDetailsData() {
@@ -247,6 +296,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       `${field}_name`,          // snake_case with _name
       field.replace(/_/g, '') + 'Name'  // no underscore + Name
     ];
+
+    if (field.endsWith('_id')) {
+      possibleNameFields.push(field.replace(/_id$/, '_name'));
+    }
 
     for (const nameField of possibleNameFields) {
       if (allData[nameField]) {
@@ -348,6 +401,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       'selectLicenseData',
       'keyInfoData',
       'applicantDetailsData',
+      'memberDetailsData',
       'siteDetailsData',
       'unitDetailsData'
     ];
@@ -425,6 +479,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('✅ Site Type OK');
     }
 
+    if (keyData?.site_type === 'Existing' && !keyData?.existing_site_license) {
+      missingFields.push('Old Site License No');
+    }
+
     const applicantData = this.getParsedSession('applicantDetailsData');
     console.log('📋 Applicant Data:', applicantData);
     
@@ -468,6 +526,50 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       missingFields.push('Mobile Number');
     } else {
       console.log('✅ Mobile Number OK');
+    }
+
+    if (this.requiresNationalityDocument && !applicantData?.coi_rc_ss) {
+      missingFields.push('Certificate Type');
+    }
+
+    if (applicantData?.has_excise_license === 'Yes') {
+      if (!applicantData?.existing_license_category_id) {
+        missingFields.push('Existing License Category');
+      }
+      if (!applicantData?.existing_license_no) {
+        missingFields.push('Existing License Number');
+      }
+    }
+
+    if (applicantData?.family_excise_license === 'Yes') {
+      if (!applicantData?.family_license_category_id) {
+        missingFields.push('Family License Category');
+      }
+      if (!applicantData?.family_license_no) {
+        missingFields.push('Family License Number');
+      }
+    }
+
+    const memberData = this.getParsedSession('memberDetailsData');
+    if (this.shouldShowMemberDetails) {
+      if (!memberData?.member_name) {
+        missingFields.push('Member Name');
+      }
+      if (!memberData?.father_husband_name) {
+        missingFields.push('Member Father/Husband Name');
+      }
+      if (!memberData?.gender) {
+        missingFields.push('Member Gender');
+      }
+      if (!memberData?.dob) {
+        missingFields.push('Member Date of Birth');
+      }
+      if (!memberData?.pan) {
+        missingFields.push('Member PAN');
+      }
+      if (!memberData?.member_mobile_number) {
+        missingFields.push('Member Mobile Number');
+      }
     }
 
     const siteData = this.getParsedSession('siteDetailsData');
@@ -575,9 +677,9 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('✅ PAN Card OK');
     }
     
-    if (!docs.get('sikkim_certificate')) {
+    if (this.requiresNationalityDocument && !docs.get('sikkim_certificate')) {
       console.error('❌ Missing: Sikkim Certificate');
-      missingFields.push('Sikkim Certificate');
+      missingFields.push('COI / RC / SS Document');
     } else {
       console.log('✅ Sikkim Certificate OK');
     }
@@ -590,6 +692,30 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
 
     console.log('🔍 Validation Result:', { valid: missingFields.length === 0, missingFields });
+    if (siteData?.site_owned === 'Yes' && !docs.get('parcha')) {
+      missingFields.push('Parcha');
+    }
+
+    if (siteData?.trade_license_covered === 'Yes' && !docs.get('trade_license')) {
+      missingFields.push('Trade License');
+    }
+
+    if (this.shouldShowMemberDetails) {
+      if (!docs.get('member_pass_photo')) {
+        missingFields.push('Member Passport Size Photo');
+      }
+      if (!docs.get('member_aadhaar_card')) {
+        missingFields.push('Member Aadhaar Card');
+      }
+      if (!docs.get('member_residential_certificate')) {
+        missingFields.push('Member COI / RC / SS Document');
+      }
+      if (!docs.get('member_dob_proof')) {
+        missingFields.push('Member Date of Birth Proof');
+      }
+    }
+
+    console.log('Validation result (final):', { valid: missingFields.length === 0, missingFields });
     console.groupEnd();
 
     return {
@@ -706,6 +832,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       'selectLicenseData',
       'keyInfoData',
       'applicantDetailsData',
+      'memberDetailsData',
       'siteDetailsData',
       'unitDetailsData'
     ];

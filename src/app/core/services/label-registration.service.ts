@@ -8,6 +8,7 @@ import { environment } from '../../../environments/environment';
 })
 export class LabelRegistrationService {
   private baseUrl = `${environment.apiBaseUrl}/transactional/label-registration`;
+  private readonly draftDocuments = new Map<string, File>();
 
   constructor(private http: HttpClient) {}
 
@@ -22,5 +23,30 @@ export class LabelRegistrationService {
   getLabelRegistrationDetail(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.baseUrl}/detail/${encodedId}/`);
+  }
+
+  setDraftDocument(key: string, file: File | null): void {
+    if (!key) {
+      return;
+    }
+
+    if (file) {
+      this.draftDocuments.set(key, file);
+      return;
+    }
+
+    this.draftDocuments.delete(key);
+  }
+
+  getDraftDocument(key: string): File | null {
+    return this.draftDocuments.get(key) ?? null;
+  }
+
+  getDraftDocuments(): Array<{ key: string; file: File }> {
+    return Array.from(this.draftDocuments.entries()).map(([key, file]) => ({ key, file }));
+  }
+
+  clearDraftDocuments(): void {
+    this.draftDocuments.clear();
   }
 }
