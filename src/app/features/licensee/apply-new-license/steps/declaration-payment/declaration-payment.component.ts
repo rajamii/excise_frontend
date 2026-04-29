@@ -24,7 +24,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   private photoSub?: Subscription;
   applicationFee = 500;
   isSubmitting = false;
-  applicationId: string | null = null;
+  draftApplicationId: string | null = null;
+  submittedApplicationId: string | null = null;
 
   constructor(
     private licenseAppService: LicenseApplicationService,
@@ -39,6 +40,18 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // If user comes back from BillDesk receipt page and chooses "Go to Dashboard",
+    // we show the "Application Submitted" view in this step.
+    try {
+      const submitted = String(sessionStorage.getItem('new_license_submitted_application_id') || '').trim();
+      if (submitted) {
+        this.submittedApplicationId = submitted;
+        sessionStorage.removeItem('new_license_submitted_application_id');
+      }
+    } catch {
+      // no-op
+    }
+
     this.photoSub = this.licenseAppService.getPassPhotoObservable().subscribe((file: File | null) => {
       if (this.passPhotoUrl) URL.revokeObjectURL(this.passPhotoUrl);
       this.passPhotoUrl = file ? URL.createObjectURL(file) : null;
@@ -674,7 +687,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
               return;
             }
 
-            this.applicationId = applicationId;
+            this.draftApplicationId = applicationId;
+            try {
+              sessionStorage.setItem('new_license_draft_application_id', applicationId);
+            } catch {
+              // no-op
+            }
 
             this.paymentIntegrationService.initiateBilldeskNewLicenseApplicationFee({
               application_id: applicationId,

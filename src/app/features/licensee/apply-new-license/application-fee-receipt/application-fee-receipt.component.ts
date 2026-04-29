@@ -34,9 +34,10 @@ export class ApplicationFeeReceiptComponent {
     autoSubmitError: ''
   };
 
-  statusKind: 'success' | 'failed' = 'success';
-  headerTitle = 'Application Fee Payment Successful';
-  statusLabel = 'Payment Successful';
+  private initialized = false;
+  statusKind: 'success' | 'failed' | 'processing' = 'processing';
+  headerTitle = 'Processing Payment...';
+  statusLabel = 'Processing';
 
   constructor(
     private route: ActivatedRoute,
@@ -54,6 +55,7 @@ export class ApplicationFeeReceiptComponent {
         autoSubmitted: String(params.get('autoSubmitted') || '0').trim(),
         autoSubmitError: String(params.get('autoSubmitError') || '').trim()
       };
+      this.initialized = true;
       this.refreshDerived();
     });
     this.refreshDerived();
@@ -66,6 +68,13 @@ export class ApplicationFeeReceiptComponent {
   }
 
   private refreshDerived(): void {
+    if (!this.initialized) {
+      this.statusKind = 'processing';
+      this.headerTitle = 'Processing Payment...';
+      this.statusLabel = 'Processing';
+      return;
+    }
+
     this.statusKind = this.normalizeStatus(this.vm.status);
 
     this.headerTitle =
@@ -96,9 +105,19 @@ export class ApplicationFeeReceiptComponent {
   }
 
   goToDashboard(): void {
+    if (this.statusKind === 'processing') return;
+
+    // After payment success, show the "Application Submitted" view inside the New License stepper.
+    // (Do not show it before BillDesk completes.)
+    try {
+      const id = String(this.vm.applicationId || '').trim();
+      if (id) sessionStorage.setItem('new_license_submitted_application_id', id);
+    } catch {
+      // no-op
+    }
     this.router.navigate(['/dashboard'], {
       queryParams: {
-        section: 'new-license',
+        section: 'new-license-apply',
         source: 'application-fee-receipt',
         applicationId: this.vm.applicationId || undefined
       }

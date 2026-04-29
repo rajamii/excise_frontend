@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { KeyInfoComponent } from './steps/key-info/key-info.component';
 import { SiteDetailsComponent } from './steps/site-details/site-details.component';
@@ -7,6 +7,7 @@ import { ApplicantDetailsComponent } from './steps/applicant-details/applicant-d
 import { DeclarationPaymentComponent } from './steps/declaration-payment/declaration-payment.component';
 import { SelectLicenseComponent } from './steps/select-license/select-license.component';
 import { AccountService } from '../../../core/services/account.service';
+import { MatStepper } from '@angular/material/stepper';
 
 @Component({
   selector: 'app-apply-new-license',
@@ -23,13 +24,22 @@ import { AccountService } from '../../../core/services/account.service';
   templateUrl: './apply-new-license.component.html',
   styleUrl: './apply-new-license.component.scss'
 })
-export class ApplyNewLicenseComponent implements OnInit {
+export class ApplyNewLicenseComponent implements OnInit, AfterViewInit {
+  @ViewChild('stepper') stepper?: MatStepper;
+  private hasSubmittedFromSlip = false;
   
   constructor(private accountService: AccountService) {}
 
   ngOnInit(): void {
     // ✅ Ensure user profile is loaded when starting a new license application
     this.ensureUserProfileLoaded();
+
+    try {
+      const submitted = String(sessionStorage.getItem('new_license_submitted_application_id') || '').trim();
+      this.hasSubmittedFromSlip = Boolean(submitted);
+    } catch {
+      this.hasSubmittedFromSlip = false;
+    }
   }
 
   /**
@@ -52,6 +62,21 @@ export class ApplyNewLicenseComponent implements OnInit {
       });
     } else {
       console.log('✅ User profile already loaded');
+    }
+  }
+
+  ngAfterViewInit(): void {
+    try {
+      if (this.hasSubmittedFromSlip && this.stepper) {
+        queueMicrotask(() => {
+          if (!this.stepper) return;
+          this.stepper.linear = false;
+          this.stepper.steps.forEach((s) => (s.completed = true));
+          this.stepper.selectedIndex = Math.max(0, this.stepper.steps.length - 1);
+        });
+      }
+    } catch {
+      // no-op
     }
   }
 

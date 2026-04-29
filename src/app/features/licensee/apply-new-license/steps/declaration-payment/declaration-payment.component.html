@@ -1,7 +1,7 @@
 <mat-card>
   <mat-card-header>
     <div class="heading">Declaration & Payment</div>
-    @if (!applicationId) {
+    @if (!submittedApplicationId) {
       <div class="validation">
         Review all details before final submission
       </div>
@@ -10,7 +10,7 @@
 
   <mat-card-content>
     <!-- FORM VIEW - Show only when NOT submitted -->
-    @if (!applicationId) {
+    @if (!submittedApplicationId) {
       
       <!-- Application Type Section -->
       @if (selectLicenseData.length > 0) {
@@ -156,7 +156,7 @@
     }
 
     <!-- SUCCESS VIEW - Show only when submitted -->
-    @if (applicationId) {
+    @if (submittedApplicationId) {
       <div class="success-section">
         <div class="success-header">
           <mat-icon>check_circle</mat-icon>
@@ -164,7 +164,7 @@
         </div>
         <div class="application-id">
           <span class="label">Application ID:</span>
-          <span class="value">{{ applicationId }}</span>
+          <span class="value">{{ submittedApplicationId }}</span>
         </div>
         <div class="next-steps">
           <h4>Next Steps:</h4>
@@ -181,7 +181,7 @@
 
   <!-- Action buttons -->
   <mat-card-actions>
-    @if (!applicationId) {
+    @if (!submittedApplicationId) {
       <button mat-stroked-button (click)="goBack()" type="button">Back</button>
       <button 
         mat-flat-button 
