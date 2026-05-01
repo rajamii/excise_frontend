@@ -20,6 +20,7 @@ import {
   WalletSummaryResponse,
   WalletTransactionResponse,
 } from '../models/payment-integration.model';
+import { getDeviceMetadata } from '../../shared/utils/device-utils';
 
 @Injectable({
   providedIn: 'root',
@@ -121,7 +122,8 @@ export class PaymentIntegrationService {
   initiateNewLicenseFee(applicationId: string, amount: number): Observable<any> {
     const payload = {
       application_id: applicationId,
-      amount: amount
+      amount: amount,
+      device_data: getDeviceMetadata(),
       // Note: payment_module_code and head_of_account will default securely on the backend if omitted.
     };
 
