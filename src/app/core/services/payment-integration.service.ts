@@ -28,7 +28,7 @@ export class PaymentIntegrationService {
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/payment`;
   private readonly gatewayUrl = `${environment.apiBaseUrl}/transactional/payment-gateway`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getMasterData(moduleCode?: string): Observable<PaymentMasterDataResponse> {
     let params = new HttpParams();
@@ -115,6 +115,17 @@ export class PaymentIntegrationService {
       `${this.gatewayUrl}/billdesk/initiate/new-license-application-fee/`,
       payload
     );
+  }
+
+  // Calls the Django endpoint to create the BillDesk order
+  initiateNewLicenseFee(applicationId: string, amount: number): Observable<any> {
+    const payload = {
+      application_id: applicationId,
+      amount: amount
+      // Note: payment_module_code and head_of_account will default securely on the backend if omitted.
+    };
+
+    return this.http.post(`${environment.apiBaseUrl}/transactional/payment-gateway/billdesk/initiate/new-license-application-fee/`, payload);
   }
 
   listTransactions(filters?: {

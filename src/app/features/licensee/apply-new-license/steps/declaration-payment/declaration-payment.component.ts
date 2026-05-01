@@ -8,6 +8,7 @@ import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms'
 import { FormDataBuilder } from '../../../../../shared/utils/form-data.util';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { timeout } from 'rxjs';
+import { environment } from '../../../../../../environments/environment';
 
 @Component({
   selector: 'app-declaration-payment',
@@ -22,14 +23,15 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   declarationForm: FormGroup;
   passPhotoUrl: string | null = null;
   private photoSub?: Subscription;
-  applicationFee = 500;
+  feeAmount = 500;
   isSubmitting = false;
   draftApplicationId: string | null = null;
   submittedApplicationId: string | null = null;
+  isProcessing = false;
 
   constructor(
     private licenseAppService: LicenseApplicationService,
-    private paymentIntegrationService: PaymentIntegrationService,
+    private paymentService: PaymentIntegrationService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private fb: FormBuilder
@@ -246,9 +248,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       .filter(item => item.value !== null && item.value !== undefined && item.value !== '');
   }
 
-  /**
-   * ✅ FIXED: Get display value - checks for Name field first, then looks up in master data
-   */
+  // Get display value - checks for Name field first, then looks up in master data
+
   private getDisplayValue(field: string, value: any, allData: Record<string, any>): string {
     if (!value && value !== 0) return '';
 
@@ -256,8 +257,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
     console.log(`🔍 getDisplayValue called for field: ${field}, normalized: ${normalized}, value:`, value);
 
-    // ✅ PRIORITY 1: Check if there's a corresponding Name field in the data
-    // This handles cases like license_type + license_typeName
+    // PRIORITY 1: Check if there's a corresponding Name field in the data
+
     const possibleNameFields = [
       `${field}Name`,           // exact match with Name suffix
       `${field}_name`,          // snake_case with _name
@@ -266,12 +267,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
     for (const nameField of possibleNameFields) {
       if (allData[nameField]) {
-        console.log(`✅ Found name field ${nameField} for ${field}:`, allData[nameField]);
+        console.log(`Found name field ${nameField} for ${field}:`, allData[nameField]);
         return allData[nameField];
       }
     }
 
-    // ✅ PRIORITY 2: Look up in master data if it's an ID field
+    // PRIORITY 2: Look up in master data if it's an ID field
     try {
       let masterData: any[] = [];
       let masterKey = '';
@@ -313,37 +314,37 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       // If we identified a master data source, look it up
       if (masterKey) {
         const rawData = sessionStorage.getItem(masterKey);
-        console.log(`🔍 Looking up ${masterKey} in sessionStorage:`, rawData ? 'Found' : 'Not found');
-        
+        console.log(`Looking up ${masterKey} in sessionStorage:`, rawData ? 'Found' : 'Not found');
+
         if (rawData) {
           masterData = JSON.parse(rawData);
-          console.log(`📊 ${masterKey} contains ${masterData.length} items`);
-          
+          console.log(`${masterKey} contains ${masterData.length} items`);
+
           // Try matching by id (as number or string)
           let item = masterData.find(d => d.id === Number(value) || d.id === value);
-          
+
           if (item) {
             // Try multiple possible field names
             const name = item[displayField] || item.name || item.title;
             if (name) {
-              console.log(`✅ Found ${displayField} in ${masterKey}:`, name);
+              console.log(`Found ${displayField} in ${masterKey}:`, name);
               return name;
             }
           } else {
-            console.warn(`⚠️ No item found in ${masterKey} with id: ${value}`);
+            console.warn(`No item found in ${masterKey} with id: ${value}`);
             console.log('Available items:', masterData.slice(0, 3));
           }
         } else {
-          console.warn(`⚠️ ${masterKey} not found in sessionStorage`);
+          console.warn(`${masterKey} not found in sessionStorage`);
         }
       }
 
-      // ✅ PRIORITY 3: Return the original value if no lookup found
-      console.log(`ℹ️ Returning original value for ${field}:`, value);
+      // PRIORITY 3: Return the original value if no lookup found
+      console.log(`ℹReturning original value for ${field}:`, value);
       return value.toString();
 
     } catch (e) {
-      console.error(`❌ Failed to get display value for ${field}:`, e);
+      console.error(`Failed to get display value for ${field}:`, e);
       return value.toString();
     }
   }
@@ -358,7 +359,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   private debugSessionStorage(): void {
-    console.group('🔍 DEBUG: SessionStorage Contents Before Submission (NEW LICENSE)');
+    console.group('DEBUG: SessionStorage Contents Before Submission (NEW LICENSE)');
 
     const keys = [
       'selectLicenseData',
@@ -373,22 +374,22 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       if (data) {
         try {
           const parsed = JSON.parse(data);
-          console.group(`📄 ${key}`);
+          console.group(`${key}`);
           console.table(parsed);
           console.groupEnd();
         } catch (e) {
-          console.error(`❌ Failed to parse ${key}:`, e);
+          console.error(`Failed to parse ${key}:`, e);
         }
       } else {
-        console.warn(`⚠️ ${key} is empty`);
+        console.warn(`${key} is empty`);
       }
     });
 
     const photoFile = this.licenseAppService.getPassPhoto();
-    console.log('📷 Pass Photo file:', photoFile ? `${photoFile.name} (${photoFile.size} bytes)` : 'MISSING');
+    console.log('Pass Photo file:', photoFile ? `${photoFile.name} (${photoFile.size} bytes)` : 'MISSING');
 
     const siteDocuments = this.licenseAppService.getAllSiteDocuments();
-    console.log('📁 Site Documents:', siteDocuments.size, 'files');
+    console.log('Site Documents:', siteDocuments.size, 'files');
     siteDocuments.forEach((file: File, name: string) => {
       console.log(`  - ${name}: ${file.name} (${file.size} bytes)`);
     });
@@ -399,205 +400,205 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   private validateRequiredData(): { valid: boolean; missingFields: string[] } {
     const missingFields: string[] = [];
 
-    console.group('🔍 VALIDATING REQUIRED DATA');
+    console.group('VALIDATING REQUIRED DATA');
 
     const selectData = this.getParsedSession('selectLicenseData');
-    console.log('📋 Select License Data:', selectData);
+    console.log('Select License Data:', selectData);
     if (!selectData?.licenseType && !selectData?.license_type) {
-      console.error('❌ Missing: License Type');
+      console.error('Missing: License Type');
       missingFields.push('License Type');
     } else {
-      console.log('✅ License Type OK');
+      console.log('License Type OK');
     }
 
     const keyData = this.getParsedSession('keyInfoData');
-    console.log('📋 Key Info Data:', keyData);
-    
+    console.log('Key Info Data:', keyData);
+
     if (!keyData?.license_category) {
-      console.error('❌ Missing: License Category');
+      console.error('Missing: License Category');
       missingFields.push('License Category');
     } else {
-      console.log('✅ License Category OK:', keyData.license_category);
+      console.log('License Category OK:', keyData.license_category);
     }
-    
+
     if (!keyData?.license_sub_category) {
-      console.error('❌ Missing: License Sub Category');
+      console.error('Missing: License Sub Category');
       missingFields.push('License Sub Category');
     } else {
-      console.log('✅ License Sub Category OK:', keyData.license_sub_category);
+      console.log('License Sub Category OK:', keyData.license_sub_category);
     }
-    
+
     if (!keyData?.establishment_name) {
-      console.error('❌ Missing: Establishment Name');
+      console.error('Missing: Establishment Name');
       missingFields.push('Establishment Name');
     } else {
-      console.log('✅ Establishment Name OK');
+      console.log('Establishment Name OK');
     }
-    
+
     if (!keyData?.site_type) {
-      console.error('❌ Missing: Site Type');
+      console.error('Missing: Site Type');
       missingFields.push('Site Type');
     } else {
-      console.log('✅ Site Type OK');
+      console.log('Site Type OK');
     }
 
     const applicantData = this.getParsedSession('applicantDetailsData');
-    console.log('📋 Applicant Data:', applicantData);
-    
+    console.log('Applicant Data:', applicantData);
+
     if (!applicantData?.applicant_name) {
-      console.error('❌ Missing: Applicant Name');
+      console.error('Missing: Applicant Name');
       missingFields.push('Applicant Name');
     } else {
-      console.log('✅ Applicant Name OK');
+      console.log('Applicant Name OK');
     }
-    
+
     if (!applicantData?.father_husband_name) {
-      console.error('❌ Missing: Father/Husband Name');
+      console.error('Missing: Father/Husband Name');
       missingFields.push('Father/Husband Name');
     } else {
-      console.log('✅ Father/Husband Name OK');
+      console.log('Father/Husband Name OK');
     }
-    
+
     if (!applicantData?.dob) {
-      console.error('❌ Missing: Date of Birth');
+      console.error('Missing: Date of Birth');
       missingFields.push('Date of Birth');
     } else {
-      console.log('✅ DOB OK');
+      console.log('DOB OK');
     }
-    
+
     if (!applicantData?.gender) {
-      console.error('❌ Missing: Gender');
+      console.error('Missing: Gender');
       missingFields.push('Gender');
     } else {
-      console.log('✅ Gender OK');
+      console.log('Gender OK');
     }
-    
+
     if (!applicantData?.email) {
-      console.error('❌ Missing: Email');
+      console.error('Missing: Email');
       missingFields.push('Email');
     } else {
-      console.log('✅ Email OK');
+      console.log('Email OK');
     }
-    
+
     if (!applicantData?.mobile_number) {
-      console.error('❌ Missing: Mobile Number');
+      console.error('Missing: Mobile Number');
       missingFields.push('Mobile Number');
     } else {
-      console.log('✅ Mobile Number OK');
+      console.log('Mobile Number OK');
     }
 
     const siteData = this.getParsedSession('siteDetailsData');
-    console.log('📋 Site Details Data:', siteData);
-    
+    console.log('Site Details Data:', siteData);
+
     if (!siteData?.district) {
-      console.error('❌ Missing: Site District');
+      console.error('Missing: Site District');
       missingFields.push('Site District');
     } else {
-      console.log('✅ Site District OK:', siteData.district);
+      console.log('Site District OK:', siteData.district);
     }
-    
+
     if (!siteData?.subdivision) {
-      console.error('❌ Missing: Site Subdivision');
+      console.error('Missing: Site Subdivision');
       missingFields.push('Site Subdivision');
     } else {
-      console.log('✅ Site Subdivision OK:', siteData.subdivision);
+      console.log('Site Subdivision OK:', siteData.subdivision);
     }
-    
+
     if (!siteData?.police_station) {
-      console.error('❌ Missing: Police Station');
+      console.error('Missing: Police Station');
       missingFields.push('Police Station');
     } else {
-      console.log('✅ Police Station OK:', siteData.police_station);
+      console.log('Police Station OK:', siteData.police_station);
     }
-    
+
     if (!siteData?.road) {
-      console.error('❌ Missing: Road Name');
+      console.error('Missing: Road Name');
       missingFields.push('Road Name');
     } else {
-      console.log('✅ Road OK:', siteData.road);
+      console.log('Road OK:', siteData.road);
     }
-    
+
     if (!siteData?.location_category) {
-      console.error('❌ Missing: Location Category');
+      console.error('Missing: Location Category');
       missingFields.push('Location Category');
     } else {
-      console.log('✅ Location Category OK');
+      console.log('Location Category OK');
     }
-    
+
     if (!siteData?.location) {
-      console.error('❌ Missing: Location Name');
+      console.error('Missing: Location Name');
       missingFields.push('Location Name');
     } else {
-      console.log('✅ Location Name OK');
+      console.log('Location Name OK');
     }
-    
+
     if (!siteData?.ward) {
-      console.error('❌ Missing: Ward Name');
+      console.error('Missing: Ward Name');
       missingFields.push('Ward Name');
     } else {
-      console.log('✅ Ward Name OK');
+      console.log('Ward Name OK');
     }
-    
+
     if (!siteData?.address) {
-      console.error('❌ Missing: Business Address');
+      console.error('Missing: Business Address');
       missingFields.push('Business Address');
     } else {
-      console.log('✅ Business Address OK');
+      console.log('Business Address OK');
     }
-    
+
     if (!siteData?.pin_code) {
-      console.error('❌ Missing: PIN Code');
+      console.error('Missing: PIN Code');
       missingFields.push('PIN Code');
     } else {
-      console.log('✅ PIN Code OK');
+      console.log('PIN Code OK');
     }
-    
+
     if (!siteData?.construction_type) {
-      console.error('❌ Missing: Construction Type');
+      console.error('Missing: Construction Type');
       missingFields.push('Construction Type');
     } else {
-      console.log('✅ Construction Type OK');
+      console.log('Construction Type OK');
     }
-    
+
     if (!siteData?.site_owned) {
-      console.error('❌ Missing: Site Ownership');
+      console.error('Missing: Site Ownership');
       missingFields.push('Site Ownership');
     } else {
-      console.log('✅ Site Ownership OK');
+      console.log('Site Ownership OK');
     }
-    
+
     if (!siteData?.trade_license_covered) {
-      console.error('❌ Missing: Trade License Covered');
+      console.error('Missing: Trade License Covered');
       missingFields.push('Trade License Covered');
     } else {
-      console.log('✅ Trade License Covered OK');
+      console.log('Trade License Covered OK');
     }
 
     const passPhoto = this.licenseAppService.getPassPhoto();
     if (!passPhoto) {
-      console.error('❌ Missing: Passport Photo');
+      console.error('Missing: Passport Photo');
       missingFields.push('Passport Photo');
     } else {
-      console.log('✅ Passport Photo OK:', passPhoto.name);
+      console.log('Passport Photo OK:', passPhoto.name);
     }
 
     const docs = this.licenseAppService.getAllSiteDocuments();
-    console.log('📋 Documents:', Array.from(docs.keys()));
-    
+    console.log('Documents:', Array.from(docs.keys()));
+
     if (!docs.get('pan_card')) {
-      console.error('❌ Missing: PAN Card');
+      console.error('Missing: PAN Card');
       missingFields.push('PAN Card');
     } else {
-      console.log('✅ PAN Card OK');
+      console.log('PAN Card OK');
     }
-    
+
     if (!docs.get('sikkim_certificate')) {
-      console.error('❌ Missing: Sikkim Certificate');
+      console.error('Missing: Sikkim Certificate');
       missingFields.push('Sikkim Certificate');
     } else {
-      console.log('✅ Sikkim Certificate OK');
+      console.log('Sikkim Certificate OK');
     }
-    
+
     if (!docs.get('dob_proof')) {
       console.error('❌ Missing: Date of Birth Proof');
       missingFields.push('Date of Birth Proof');
@@ -615,9 +616,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   submit(): void {
-    console.log('🔵 Submit button clicked!');
-    console.log('isSubmitting:', this.isSubmitting);
-    console.log('Declaration form valid:', this.declarationForm.valid);
 
     if (!this.declarationForm.valid) {
       Swal.fire('Warning', 'Please accept the declaration to proceed.', 'warning');
@@ -625,7 +623,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
 
     if (this.isSubmitting) {
-      console.log('⚠️ Already submitting, ignoring click');
+      console.log('Already submitting, ignoring click');
       return;
     }
 
@@ -654,11 +652,11 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       cancelButtonText: 'Cancel',
     }).then((confirm) => {
       if (!confirm.isConfirmed) {
-        console.log('❌ User cancelled submission');
+        console.log('User cancelled submission');
         return;
       }
 
-      console.log('✅ User confirmed, proceeding with submission');
+      console.log('User confirmed, proceeding with submission');
       this.isSubmitting = true;
 
       try {
@@ -666,7 +664,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
         const formData = this.licenseAppService.prepareNewLicenseFormData();
 
-        console.group("📦 FINAL FORMDATA SENT TO BACKEND (NEW LICENSE)");
+        console.group("FINAL FORMDATA SENT TO BACKEND (NEW LICENSE)");
         FormDataBuilder.logFormData(formData, 'New License Application');
         console.groupEnd();
 
@@ -694,53 +692,55 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
               // no-op
             }
 
-            this.paymentIntegrationService.initiateBilldeskNewLicenseApplicationFee({
-              application_id: applicationId,
-              amount: Number(this.applicationFee || 500),
-              payment_module_code: '001'
-            }).pipe(timeout(30000)).subscribe({
-              next: (initRes: any) => {
-                Swal.close();
-                const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
-                const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
-                if (!billdeskUrl || !requestMsg) {
-                  this.isSubmitting = false;
-                  Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
-                  return;
-                }
-                this.submitToBillDesk(billdeskUrl, requestMsg);
-              },
-              error: (err: any) => {
-                Swal.close();
-                console.error('❌ BillDesk initiation failed:', err);
+            // this.paymentService.initiateBilldeskNewLicenseApplicationFee({
+            //   application_id: applicationId,
+            //   amount: Number(this.feeAmount || 500),
+            //   payment_module_code: '001'
+            // }).pipe(timeout(30000)).subscribe({
+            //   next: (initRes: any) => {
+            //     Swal.close();
+            //     const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
+            //     const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
+            //     if (!billdeskUrl || !requestMsg) {
+            //       this.isSubmitting = false;
+            //       Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
+            //       return;
+            //     }
+            //     this.submitToBillDesk(billdeskUrl, requestMsg);
+            //   },
+            //   error: (err: any) => {
+            //     Swal.close();
+            //     console.error('BillDesk initiation failed:', err);
 
-                const retrySeconds = this.extractRetryAfterSeconds(err);
-                if (retrySeconds > 0) {
-                  this.isSubmitting = false;
-                  this.showBilldeskPendingRetryPopup(retrySeconds);
-                  return;
-                }
+            //     const retrySeconds = this.extractRetryAfterSeconds(err);
+            //     if (retrySeconds > 0) {
+            //       this.isSubmitting = false;
+            //       this.showBilldeskPendingRetryPopup(retrySeconds);
+            //       return;
+            //     }
 
-                if (String(err?.name || '').toLowerCase() === 'timeouterror') {
-                  this.isSubmitting = false;
-                  Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
-                  return;
-                }
+            //     if (String(err?.name || '').toLowerCase() === 'timeouterror') {
+            //       this.isSubmitting = false;
+            //       Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
+            //       return;
+            //     }
 
-                const message =
-                  err?.error?.detail ||
-                  err?.error?.message ||
-                  err?.message ||
-                  'Unable to initiate BillDesk payment.';
+            //     const message =
+            //       err?.error?.detail ||
+            //       err?.error?.message ||
+            //       err?.message ||
+            //       'Unable to initiate BillDesk payment.';
 
-                this.isSubmitting = false;
-                Swal.fire('Error', String(message), 'error');
-              }
-            });
+            //     this.isSubmitting = false;
+            //     Swal.fire('Error', String(message), 'error');
+            //   }
+            // });
+
+            this.onPayClick();
           },
           error: (err: any) => {
             Swal.close();
-            console.error('❌ New License draft creation failed:', err);
+            console.error('New License draft creation failed:', err);
             const errorMessage = this.formatErrorMessage(err);
             Swal.fire({
               title: 'Submission Failed',
@@ -755,7 +755,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         });
 
       } catch (error) {
-        console.error('❌ Unexpected error during submission:', error);
+        console.error('Unexpected error during submission:', error);
         this.isSubmitting = false;
         Swal.fire({
           title: 'Error',
@@ -765,6 +765,63 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         });
       }
     });
+  }
+
+  onPayClick() {
+    if (!this.draftApplicationId || !this.feeAmount) return;
+
+    this.isProcessing = true;
+
+    this.paymentService.initiateNewLicenseFee(this.draftApplicationId, this.feeAmount).subscribe({
+      next: (response) => {
+        this.isProcessing = false;
+
+        // The backend returns a 409 Conflict if a payment is already pending.
+        if (response.already_pending) {
+          alert('A payment is already pending. Please try again later.');
+          return;
+        }
+
+        // Proceed to launch the SDK with the generated credentials
+        this.launchBillDesk(response);
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        console.error('Failed to initiate payment', err);
+
+        // Handle specific 409 pending lock error returned by backend[cite: 1].
+        if (err.status === 409) {
+          alert(err.error.detail);
+        } else {
+          alert('Payment initiation failed. Please try again.');
+        }
+      }
+    });
+  }
+
+  private launchBillDesk(apiData: any) {
+    // 1. Prepare the flow config object required by the SDK[cite: 2]
+    const flow_config = {
+      merchantId: apiData.merchant_id,
+      bdOrderId: apiData.bd_order_id,
+      authToken: apiData.auth_token,
+      childWindow: true, // Opens external pages (like OTP) in a separate window[cite: 2]
+      returnUrl: environment.payment.callbackUrl, // Should match your backend return URL setup[cite: 2]
+      retryCount: 3
+    };
+    // 2. Prepare the main config object[cite: 2]
+    const config = {
+      flowType: "payments", // Fixed value required by the SDK[cite: 2]
+      flowConfig: flow_config,
+      // Optional: You can add themeConfig here to match your app's UI colors[cite: 2]
+    };
+
+    // 3. Invoke the globally scoped SDK method[cite: 2, 3]
+    if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
+      window.loadBillDeskSdk(config);
+    } else {
+      console.error('BillDesk SDK is not loaded in the window object.');
+    }
   }
 
   private submitToBillDesk(url: string, requestMsg: string): void {
