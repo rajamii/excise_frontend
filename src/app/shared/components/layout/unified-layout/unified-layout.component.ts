@@ -79,12 +79,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     icon: string;
     hideForSiteAdmin?: boolean;
     hideForPermitSection?: boolean;
+    hideForItCell?: boolean;
     hideForOic?: boolean;
     hideForCommissioner?: boolean;
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }> = [
-    { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForOic: true },
+    { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'requisition', label: 'ENA Requisition', icon: 'description' },
     { section: 'revalidation', label: 'ENA Revalidation', icon: 'refresh', hideForPermitSection: true },
     { section: 'cancellation', label: 'ENA Cancellation', icon: 'cancel', hideForPermitSection: true },
@@ -397,6 +398,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     icon: string;
     hideForSiteAdmin?: boolean;
     hideForPermitSection?: boolean;
+    hideForItCell?: boolean;
     hideForOic?: boolean;
     hideForCommissioner?: boolean;
     showOnlyForOic?: boolean;
@@ -406,6 +408,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (item.showOnlyForCommissioner && !this.isCommissionerUser()) return false;
     if (item.hideForSiteAdmin && this.isSiteAdminUser()) return false;
     if (item.hideForPermitSection && this.isPermitSectionUser()) return false;
+    if (item.hideForItCell && this.isItCellUser()) return false;
     if (item.hideForOic && this.isOicUser()) return false;
     if (item.hideForCommissioner && this.isCommissionerUser()) return false;
     if (!this.canAccessSection(item.section)) return false;
@@ -1086,6 +1089,15 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('permitsection');
   }
 
+  isItCellUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 6) {
+      return true;
+    }
+
+    return this.getNormalizedRoleName().includes('itcell');
+  }
+
   private getNormalizedRoleName(): string {
     const roleName = String(
       this.currentUser?.role?.name ||
@@ -1125,7 +1137,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    if (this.isPermitSectionUser() && (section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
+    if (this.isPermitSectionUser() && (section === 'new-license' || section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
+      return false;
+    }
+
+    if (this.isItCellUser() && section === 'new-license') {
       return false;
     }
 
