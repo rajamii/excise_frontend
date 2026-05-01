@@ -207,6 +207,54 @@ interface CommissionerData {
               </table>
             </div>
 
+            <!-- Pagination Controls -->
+            <div
+              class="d-flex justify-content-between align-items-center mt-3 border-top pt-3"
+              *ngIf="filteredApplications.length > 0">
+              <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small">Show:</span>
+                <select
+                  class="form-select form-select-sm"
+                  style="width: 70px"
+                  [ngModel]="pageSize"
+                  (ngModelChange)="changePageSize($event)">
+                  <option [ngValue]="5">5</option>
+                  <option [ngValue]="10">10</option>
+                  <option [ngValue]="15">15</option>
+                  <option [ngValue]="20">20</option>
+                </select>
+                <span class="text-muted small">entries</span>
+              </div>
+
+              <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small">
+                  Showing {{ (currentPage - 1) * pageSize + 1 }}
+                  to {{ Math.min(currentPage * pageSize, filteredApplications.length) }}
+                  of {{ filteredApplications.length }} entries
+                </span>
+
+                <nav aria-label="Page navigation">
+                  <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" [class.disabled]="currentPage === 1">
+                      <button class="page-link" (click)="goToPage(currentPage - 1)">
+                        <i class="bi bi-chevron-left"></i>
+                      </button>
+                    </li>
+                    <li class="page-item disabled">
+                      <span class="page-link">
+                        Page {{ currentPage }} of {{ getTotalPages() }}
+                      </span>
+                    </li>
+                    <li class="page-item" [class.disabled]="currentPage === getTotalPages()">
+                      <button class="page-link" (click)="goToPage(currentPage + 1)">
+                        <i class="bi bi-chevron-right"></i>
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+
             <div class="empty-state" *ngIf="filteredApplications.length === 0">
               <div class="empty-icon"><i class="bi bi-journal-x"></i></div>
               <h5 class="empty-title">No Hologram Applications Found</h5>
@@ -819,6 +867,8 @@ interface CommissionerData {
   `]
 })
 export class CommissionerDashboardComponent implements OnInit {
+  readonly Math = Math;
+
   @Input() embeddedHologramOnly = false;
 
   // Services
@@ -1496,6 +1546,13 @@ export class CommissionerDashboardComponent implements OnInit {
   // Pagination methods
   getTotalPages(): number {
     return Math.max(1, Math.ceil(this.filteredApplications.length / this.pageSize));
+  }
+
+  changePageSize(size: string | number): void {
+    const parsed = typeof size === 'string' ? parseInt(size, 10) : size;
+    if (!parsed || parsed < 1) return;
+    this.pageSize = parsed;
+    this.currentPage = 1;
   }
 
   getPaged(): CommissionerData[] {
