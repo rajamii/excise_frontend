@@ -1,121 +1,106 @@
 <!-- Daily Hologram Record Register -->
 <div class="daily-register-container">
-  <!-- Header Section -->
-  <div class="register-header">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div class="header-info">
-      </div>
-      <div class="header-actions">
-        <button class="btn btn-outline-primary btn-sm me-2" (click)="refreshData()" [disabled]="isLoading">
-          <i class="bi bi-arrow-clockwise me-1"></i>
-          <span *ngIf="!isLoading">Refresh</span>
-          <span *ngIf="isLoading">Loading...</span>
-        </button>
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-2">
+      <div class="summary-card total-entries"
+              role="button"
+              tabindex="0"
+              [class.active]="activeSummaryFilter === 'all'"
+              (click)="setSummaryFilter('all')"
+              (keydown.enter)="setSummaryFilter('all')"
+              (keydown.space)="setSummaryFilter('all')">
+        <div class="card-icon">
+          <i class="bi bi-list-ul"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ summary.totalEntries }}</h3>
+          <p class="card-label">Total Entries</p>
+        </div>
       </div>
     </div>
-
-    <!-- Summary Cards -->
-    <div class="row g-3 mb-4">
-      <div class="col-md-2">
-        <div class="summary-card total-entries"
-             role="button"
-             tabindex="0"
-             [class.active]="activeSummaryFilter === 'all'"
-             (click)="setSummaryFilter('all')"
-             (keydown.enter)="setSummaryFilter('all')"
-             (keydown.space)="setSummaryFilter('all')">
-          <div class="card-icon">
-            <i class="bi bi-list-ul"></i>
-          </div>
-          <div class="card-content">
-            <h3 class="card-value">{{ summary.totalEntries }}</h3>
-            <p class="card-label">Total Entries</p>
-          </div>
+    <div class="col-md-2">
+      <div class="summary-card applied-entries"
+              role="button"
+              tabindex="0"
+              [class.active]="activeSummaryFilter === 'applied'"
+              (click)="setSummaryFilter('applied')"
+              (keydown.enter)="setSummaryFilter('applied')"
+              (keydown.space)="setSummaryFilter('applied')">
+        <div class="card-icon">
+          <i class="bi bi-file-earmark-text"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ summary.applied }}</h3>
+          <p class="card-label">Applied</p>
         </div>
       </div>
-      <div class="col-md-2">
-        <div class="summary-card applied-entries"
-             role="button"
-             tabindex="0"
-             [class.active]="activeSummaryFilter === 'applied'"
-             (click)="setSummaryFilter('applied')"
-             (keydown.enter)="setSummaryFilter('applied')"
-             (keydown.space)="setSummaryFilter('applied')">
-          <div class="card-icon">
-            <i class="bi bi-file-earmark-text"></i>
-          </div>
-          <div class="card-content">
-            <h3 class="card-value">{{ summary.applied }}</h3>
-            <p class="card-label">Applied</p>
-          </div>
+    </div>
+    <div class="col-md-2">
+      <div class="summary-card processing-entries"
+              role="button"
+              tabindex="0"
+              [class.active]="activeSummaryFilter === 'underProcess'"
+              (click)="setSummaryFilter('underProcess')"
+              (keydown.enter)="setSummaryFilter('underProcess')"
+              (keydown.space)="setSummaryFilter('underProcess')">
+        <div class="card-icon">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ summary.underProcess }}</h3>
+          <p class="card-label">Under Process</p>
         </div>
       </div>
-      <div class="col-md-2">
-        <div class="summary-card processing-entries"
-             role="button"
-             tabindex="0"
-             [class.active]="activeSummaryFilter === 'underProcess'"
-             (click)="setSummaryFilter('underProcess')"
-             (keydown.enter)="setSummaryFilter('underProcess')"
-             (keydown.space)="setSummaryFilter('underProcess')">
-          <div class="card-icon">
-            <i class="bi bi-hourglass-split"></i>
-          </div>
-          <div class="card-content">
-            <h3 class="card-value">{{ summary.underProcess }}</h3>
-            <p class="card-label">Under Process</p>
-          </div>
+    </div>
+    <div class="col-md-2">
+      <div class="summary-card completed-ontime"
+              role="button"
+              tabindex="0"
+              [class.active]="activeSummaryFilter === 'onTime'"
+              (click)="setSummaryFilter('onTime')"
+              (keydown.enter)="setSummaryFilter('onTime')"
+              (keydown.space)="setSummaryFilter('onTime')">
+        <div class="card-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ summary.completedOnTime }}</h3>
+          <p class="card-label">On Time</p>
         </div>
       </div>
-      <div class="col-md-2">
-        <div class="summary-card completed-ontime"
-             role="button"
-             tabindex="0"
-             [class.active]="activeSummaryFilter === 'onTime'"
-             (click)="setSummaryFilter('onTime')"
-             (keydown.enter)="setSummaryFilter('onTime')"
-             (keydown.space)="setSummaryFilter('onTime')">
-          <div class="card-icon">
-            <i class="bi bi-check-circle"></i>
-          </div>
-          <div class="card-content">
-            <h3 class="card-value">{{ summary.completedOnTime }}</h3>
-            <p class="card-label">On Time</p>
-          </div>
+    </div>
+    <div class="col-md-2">
+      <div class="summary-card completed-late"
+              role="button"
+              tabindex="0"
+              [class.active]="activeSummaryFilter === 'late'"
+              (click)="setSummaryFilter('late')"
+              (keydown.enter)="setSummaryFilter('late')"
+              (keydown.space)="setSummaryFilter('late')">
+        <div class="card-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ summary.completedLate }}</h3>
+          <p class="card-label">Late</p>
         </div>
       </div>
-      <div class="col-md-2">
-        <div class="summary-card completed-late"
-             role="button"
-             tabindex="0"
-             [class.active]="activeSummaryFilter === 'late'"
-             (click)="setSummaryFilter('late')"
-             (keydown.enter)="setSummaryFilter('late')"
-             (keydown.space)="setSummaryFilter('late')">
-          <div class="card-icon">
-            <i class="bi bi-clock"></i>
-          </div>
-          <div class="card-content">
-            <h3 class="card-value">{{ summary.completedLate }}</h3>
-            <p class="card-label">Late</p>
-          </div>
+    </div>
+    <div class="col-md-2">
+      <div class="summary-card overdue-entries"
+              role="button"
+              tabindex="0"
+              [class.active]="activeSummaryFilter === 'overdue'"
+              (click)="setSummaryFilter('overdue')"
+              (keydown.enter)="setSummaryFilter('overdue')"
+              (keydown.space)="setSummaryFilter('overdue')">
+        <div class="card-icon">
+          <i class="bi bi-exclamation-triangle"></i>
         </div>
-      </div>
-      <div class="col-md-2">
-        <div class="summary-card overdue-entries"
-             role="button"
-             tabindex="0"
-             [class.active]="activeSummaryFilter === 'overdue'"
-             (click)="setSummaryFilter('overdue')"
-             (keydown.enter)="setSummaryFilter('overdue')"
-             (keydown.space)="setSummaryFilter('overdue')">
-          <div class="card-icon">
-            <i class="bi bi-exclamation-triangle"></i>
-          </div>
-          <div class="card-content">
-            <h3 class="card-value">{{ summary.overdue }}</h3>
-            <p class="card-label">Overdue</p>
-          </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ summary.overdue }}</h3>
+          <p class="card-label">Overdue</p>
         </div>
       </div>
     </div>
@@ -123,82 +108,74 @@
 
   <!-- Filters Section -->
   <div class="filters-section mb-4">
-    <div class="row g-3">
-      <div class="col-md-3">
-        <label class="form-label small">Reference Number</label>
-        <input type="text" class="form-control form-control-sm" 
-               [(ngModel)]="filters.referenceNumber" 
-               (input)="applyFilters()"
-               placeholder="Search by reference...">
+    <div class="filters-bar">
+      <div class="filter-item filter-ref">
+        <label class="form-label small">Reference</label>
+        <input
+          type="text"
+          class="form-control form-control-sm"
+          [(ngModel)]="filters.referenceNumber"
+          (input)="applyFilters()"
+          placeholder="Search by ref...">
       </div>
-      <div class="col-md-2">
+
+      <div class="filter-item filter-status">
         <label class="form-label small">Status</label>
-        <select class="form-select form-select-sm" 
-                [(ngModel)]="filters.status" 
-                (change)="applyFilters()">
-          <option value="">All Status</option>
+        <select class="form-select form-select-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
+          <option value="">All</option>
           <option value="APPLIED">Applied</option>
           <option value="UNDER_PROCESS">Under Process</option>
           <option value="COMPLETED">Completed</option>
         </select>
       </div>
-      <div class="col-md-2">
+
+      <div class="filter-item filter-type">
         <label class="form-label small">Type</label>
-        <select class="form-select form-select-sm" 
-                [(ngModel)]="filters.type" 
-                (change)="applyFilters()">
-          <option value="">All Types</option>
+        <select class="form-select form-select-sm" [(ngModel)]="filters.type" (change)="applyFilters()">
+          <option value="">All</option>
           <option value="LOCAL">Local</option>
           <option value="EXPORT">Export</option>
           <option value="DEFENCE">Defence</option>
         </select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label small">From Date</label>
-        <input type="date" class="form-control form-control-sm" 
-               [(ngModel)]="filters.dateFrom" 
-               (change)="applyFilters()">
+
+      <div class="filter-item filter-from">
+        <label class="form-label small">From</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateFrom" (change)="applyFilters()">
       </div>
-      <div class="col-md-2">
-        <label class="form-label small">To Date</label>
-        <input type="date" class="form-control form-control-sm" 
-               [(ngModel)]="filters.dateTo" 
-               (change)="applyFilters()">
+
+      <div class="filter-item filter-to">
+        <label class="form-label small">To</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateTo" (change)="applyFilters()">
       </div>
-      <div class="col-md-1">
-        <label class="form-label small">&nbsp;</label>
-        <div class="d-flex gap-1">
-          <button class="btn btn-outline-secondary btn-sm" (click)="clearFilters()" title="Clear Filters">
-            <i class="bi bi-x-circle"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Additional Filters Row -->
-    <div class="row g-3 mt-2">
-      <div class="col-md-3">
-        <label class="form-label small">Distillery/Brewery</label>
-        <select class="form-select form-select-sm" 
-                [(ngModel)]="filters.distillery" 
-                (change)="applyFilters()">
-          <option value="">All Distilleries/Breweries</option>
+
+      <div class="filter-item filter-distillery">
+        <label class="form-label small">Distillery</label>
+        <select class="form-select form-select-sm" [(ngModel)]="filters.distillery" (change)="applyFilters()">
+          <option value="">All</option>
           <option *ngFor="let distillery of distilleries" [value]="distillery">
             {{ getDistilleryOptionLabel(distillery) }}
           </option>
         </select>
       </div>
-      <div class="col-md-2">
-        <div class="form-check mt-4">
-          <input class="form-check-input" type="checkbox" 
-                 [(ngModel)]="filters.onlyOverdue" 
-                 (change)="applyFilters()"
-                 id="overdueFilter">
+
+      <div class="filter-item filter-overdue">
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            [(ngModel)]="filters.onlyOverdue"
+            (change)="applyFilters()"
+            id="overdueFilter">
           <label class="form-check-label small" for="overdueFilter">
-            Show only overdue entries
+            Overdue only
           </label>
         </div>
       </div>
+
+      <button class="btn btn-outline-secondary btn-sm filter-clear" (click)="clearFilters()" title="Clear Filters">
+        <i class="bi bi-x-circle"></i>
+      </button>
     </div>
   </div>
 
@@ -228,15 +205,15 @@
       <table class="table table-hover register-table">
         <thead>
           <tr>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Sl. No.</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Reference No</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Distillery</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Type</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Quantity</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Status</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Time Remaining</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Completed On Time</th>
-            <th style="background-color: #000000 !important; color: white !important; font-weight: 600; padding: 14px 12px; border: none;">Actions</th>
+            <th>Sl. No.</th>
+            <th>Reference No</th>
+            <th>Distillery</th>
+            <th>Type</th>
+            <th>Quantity</th>
+            <th>Status</th>
+            <th>Time Remaining</th>
+            <th>Completed On Time</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
