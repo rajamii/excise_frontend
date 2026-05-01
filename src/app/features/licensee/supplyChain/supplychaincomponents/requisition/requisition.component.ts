@@ -631,7 +631,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     
     // WORKFLOW LOGIC:
     // 1. After licensee pays → Show "View Payment Slip" for everyone (licensee, permit section, commissioner)
-    // 2. After commissioner approves (final stage) → Show BOTH "View Payment Slip" AND "View Permit Slip" for commissioner
+    // 2. After commissioner approves (final stage) → Show BOTH "View Payment Slip" AND "View Permit Slip" for commissioner/permit section
     // 3. For approved requisitions → Show "Cancel" button (if no active revalidation/cancellation)
     
     const hasPayment = this.hasPaymentBeenMade(item);
@@ -650,8 +650,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       actions.push('VIEW_PAYMENT_SLIP');
     }
     
-    // Show "View Permit Slip" only for commissioner after final approval
-    if (isFinalApproved && this.isCommissioner()) {
+    // Show "View Permit Slip" for commissioner and permit section after final approval
+    if (isFinalApproved && (this.isCommissioner() || this.isPermitSection())) {
       actions.push('VIEW_SLIP');
     }
     
