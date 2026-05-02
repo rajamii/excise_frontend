@@ -636,7 +636,8 @@ export class UnifiedfinalletterviewComponent implements OnInit {
       const section = this.letterType === 'revalidation' ? 'revalidation' : 'cancellation';
       this.router.navigate(['/dashboard'], { queryParams: { section } });
     } else if (source === 'permit-section') {
-      this.router.navigate(['/app-permit-section']);
+      const section = this.letterType === 'revalidation' ? 'revalidation' : 'cancellation';
+      this.router.navigate(['/dashboard'], { queryParams: { section } });
     } else {
       // Default: go back to dashboard
       this.router.navigate(['/dashboard']);
