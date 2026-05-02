@@ -60,8 +60,11 @@ export class WorkflowActionService {
   getAvailableActions(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
     console.log('?? WORKFLOW ACTION SERVICE: getAvailableActions called with:', data);
 
-    // 1. If actions are already provided (passed from API/list), use them
-    if (data.allowedActionConfigs && data.allowedActionConfigs.length > 0) {
+    // 1. If actions are already provided (passed from API/list), use them.
+    // New-license details must always ask the backend because approval can move
+    // the application to awaiting_payment while older list/detail data still has
+    // preloaded officer actions.
+    if (data.type !== 'new-license' && data.allowedActionConfigs && data.allowedActionConfigs.length > 0) {
       console.log('?? WORKFLOW ACTION SERVICE: Using provided action configs:', data.allowedActionConfigs);
       return of(data.allowedActionConfigs);
     }

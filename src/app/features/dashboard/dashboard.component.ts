@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -126,6 +126,9 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  @ViewChild(DailyhologramrecordregisterComponent)
+  private dailyHologramWorkingRecords?: DailyhologramrecordregisterComponent;
+
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
@@ -613,6 +616,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    if ([5, 6].includes(Number(this.currentUser?.roleId || 0)) && String(this.selectedSupplyChainSection || '') === 'new-license') {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
+
     // Licensee: cannot open ENA / transit / hologram until license fee is paid (exclude awaiting unpaid rows).
     if (
       this.isLicenseeUser() &&
@@ -1131,13 +1145,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   showHeaderAction(): boolean {
     if (!this.selectedSupplyChainSection) return false;
 
-    // Strict check: Only Licensee users (Role ID 2) can see the "Create" buttons
-    // Officers (OIC, Commissioner, Permit Section, etc.) should only see the list/tables
+    const section = this.selectedSupplyChainSection;
+
+    // Commissioner: show Refresh for Working Records
+    if (section === 'commissioner-hologram-working-records' && this.isCommissionerUser()) {
+      return true;
+    }
+
+    // Licensee: show Create actions only
     if (!this.isLicenseeUser()) {
       return false;
     }
-
-    const section = this.selectedSupplyChainSection;
 
     // List of sections that have a "Create" action for Licensees
     const sectionsWithActions = [
@@ -1158,6 +1176,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const section = this.selectedSupplyChainSection;
 
     switch (section) {
+      case 'commissioner-hologram-working-records': return 'Refresh';
       case 'requisition': return 'New Requisition';
       case 'transit': return 'Apply Transit';
       case 'hologram': return 'New Hologram';
@@ -1174,6 +1193,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const section = this.selectedSupplyChainSection;
 
     switch (section) {
+      case 'commissioner-hologram-working-records': return 'refresh';
       case 'requisition': return 'add_circle';
       case 'transit': return 'local_shipping';
       case 'hologram': return 'add_circle';
@@ -1188,6 +1208,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onHeaderAction(): void {
     const section = this.selectedSupplyChainSection;
+
+    if (section === 'commissioner-hologram-working-records') {
+      this.dailyHologramWorkingRecords?.refreshData();
+      return;
+    }
 
     if (section === 'requisition') {
       // Navigate within SPA to the import permit (requisition) application form

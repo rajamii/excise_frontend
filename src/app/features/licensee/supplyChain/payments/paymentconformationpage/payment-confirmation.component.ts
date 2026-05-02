@@ -222,6 +222,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private autoSelectLastPaidTabOnLoad = false;
   private pendingHologramAutoPayRefNo = '';
   private pendingHologramAutoPayType = '';
+  private readonly hologramDeepLinkStorageKey = 'wallet.pending.hologram.ref';
   isBreweryUser = false;
   walletModuleLabel = 'Distillery';
   showRetryButton = false;
@@ -353,9 +354,19 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
       this.capturePendingWalletPaymentContext(params);
 
-      // Handle hologram payment navigation
-      if (params['refNo'] && params['action'] === 'makePayment') {
-        this.pendingHologramAutoPayRefNo = String(params['refNo'] || '').trim();
+      // Handle hologram payment navigation (deep link from Hologram Procurement "Make Payment")
+      const actionLower = String(params['action'] || '').trim().toLowerCase();
+      const deepLinkRefNo =
+        String(
+          params['refNo'] ??
+          params['ref_no'] ??
+          params['referenceNo'] ??
+          params['reference_no'] ??
+          ''
+        ).trim();
+
+      if (deepLinkRefNo && actionLower === 'makepayment') {
+        this.pendingHologramAutoPayRefNo = deepLinkRefNo;
         this.pendingHologramAutoPayType = String(params['type'] || '').trim();
 
         // Only default to hologram if no tab is specified or if tab is hologram
@@ -389,10 +400,23 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         }
 
         // Build pending payment context even if URL only contains refNo.
-        this.tryBuildHologramPendingContextFromRefNo(
-          this.pendingHologramAutoPayRefNo,
-          this.pendingHologramAutoPayType
-        );
+        // `tryBuild...` may be a no-op until hologram procurements load; loadHologramDataFromApi()
+        // also retries once data is available.
+        this.persistPendingHologramDeepLinkRef(this.pendingHologramAutoPayRefNo);
+        this.tryBuildHologramPendingContextFromRefNo(this.pendingHologramAutoPayRefNo, this.pendingHologramAutoPayType);
+
+        // If a pending context already exists (e.g., restored from storage) but is missing the reference,
+        // update it immediately so the "Reference" column does not show '-'.
+        if (this.pendingWalletPaymentContext?.tab === 'hologram') {
+          const currentRef = String(this.pendingWalletPaymentContext.referenceNo || '').trim();
+          if (!currentRef || currentRef === '-') {
+            this.pendingWalletPaymentContext = {
+              ...this.pendingWalletPaymentContext,
+              referenceNo: this.pendingHologramAutoPayRefNo
+            };
+            this.persistPendingPaymentContextToStorage();
+          }
+        }
       }
     });
 
@@ -799,7 +823,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (activeAliases.length === 0) return true;
 
     const candidate = String(
-      this.pickAny(item, ['licensee_id', 'licenseeId', 'license_id', 'licenseId', 'user_id', 'userId'], '')
+      this.pickAny(item, [
+        'licensee_id',
+        'licenseeId',
+        'license_id',
+        'licenseId',
+        'licensed_id',
+        'licensedId',
+        'user_id',
+        'userId'
+      ], '')
     ).trim().toLowerCase();
 
     const candidateAliases = this.expandLicenseAliases(candidate);
@@ -915,7 +948,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '')))),
       amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
       date: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
-      status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'))
+      status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], ''))
     }));
   }
 
@@ -931,7 +964,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       const balanceAfter = this.toNumber(this.pickAny(row, ['balance_after', 'balanceAfter'], 0));
       const paymentFor = this.resolvePaymentForType(row);
 
-      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], ''));
       const isCredit = entryType === 'credit' || entryType === 'cr';
       const type: WalletHistoryType = isCredit
         ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Credited')
@@ -963,7 +996,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.historyData = rows.map((row: any, index: number) => {
       const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
-      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], ''));
       const isCredit = entryType === 'credit' || entryType === 'cr';
       const paymentFor = this.resolvePaymentForType(row);
       const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '') || '');
@@ -1051,7 +1084,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private normalizeTransactionStatus(value: any): string {
     const raw = String(value || '').trim().toLowerCase();
-    if (!raw) return 'Payment Successful';
+    // If backend doesn't send a status, treat it as pending (NOT successful) to avoid
+    // incorrectly hiding pending-payment CTAs.
+    if (!raw) return 'Pending';
     if (raw === 'r' || raw.includes('refund')) {
       return 'Refunded';
     }
@@ -1130,9 +1165,24 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.hologramData = (data || [])
           .filter(item => this.isForActiveLicense(item))
           .map(item => {
-            const localQty = Number((item as any).localQty ?? (item as any).local_qty) || 0;
-            const exportQty = Number((item as any).exportQty ?? (item as any).export_qty) || 0;
-            const defenceQty = Number((item as any).defenceQty ?? (item as any).defence_qty) || 0;
+            const localQty = Number(
+              (item as any).requested_local_qty ??
+              (item as any).requestedLocalQty ??
+              (item as any).localQty ??
+              (item as any).local_qty
+            ) || 0;
+            const exportQty = Number(
+              (item as any).requested_export_qty ??
+              (item as any).requestedExportQty ??
+              (item as any).exportQty ??
+              (item as any).export_qty
+            ) || 0;
+            const defenceQty = Number(
+              (item as any).requested_defence_qty ??
+              (item as any).requestedDefenceQty ??
+              (item as any).defenceQty ??
+              (item as any).defence_qty
+            ) || 0;
             const totalQty = localQty + exportQty + defenceQty;
             const hologramFee = totalQty * 0.15;
             const paymentDetails: any = (item as any).paymentDetails || (item as any).payment_details || {};
@@ -1156,6 +1206,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               (item as any).ourRefNo ||
               (item as any).our_ref_no ||
               (item as any).referenceNo ||
+              (item as any).reference_no ||
               '';
             const normalizedStatus = (item as any).status || (item as any).paymentStatus || (item as any).payment_status || 'Pending';
 
@@ -1193,6 +1244,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private syncPendingPaymentContextWithLatestData(): void {
+    const deepLinkRef = this.getPendingHologramDeepLinkRef();
+    if ((!this.pendingWalletPaymentContext || this.pendingWalletPaymentContext.tab !== 'hologram') && deepLinkRef) {
+      this.tryBuildHologramPendingContextFromRefNo(deepLinkRef, this.pendingHologramAutoPayType);
+    }
+
     const context = this.pendingWalletPaymentContext;
     if (!context || context.tab !== 'hologram') return;
 
@@ -1210,17 +1266,37 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return isHologram && isDebitLike && isSuccessful && txnRef === ref;
     });
 
-    const hasPayableHologramItem = this.hologramData.some((item) => {
+    const matchingHologramItems = this.hologramData.filter((item) => {
       const itemRef = String(item?.referenceNo || '').trim().toUpperCase();
-      return itemRef === ref && this.canPayHologram(item);
+      return itemRef === ref;
     });
 
-    if (hasMatchingPaidTxn || !hasPayableHologramItem) {
+    if (hasMatchingPaidTxn) {
       this.pendingWalletPaymentContext = null;
       this.pendingHologramAutoPayRefNo = '';
       this.pendingHologramAutoPayType = '';
       this.hasHandledPendingWalletPayment = true;
       this.clearPendingPaymentContextFromStorage();
+      this.clearPendingHologramDeepLinkRef();
+      return;
+    }
+
+    if (matchingHologramItems.length === 0) {
+      return;
+    }
+
+    const hasPayableHologramItem = matchingHologramItems.some((item) => this.canPayHologram(item));
+
+    if (!hasPayableHologramItem) {
+      if (deepLinkRef && ref === deepLinkRef.trim().toUpperCase()) {
+        return;
+      }
+      this.pendingWalletPaymentContext = null;
+      this.pendingHologramAutoPayRefNo = '';
+      this.pendingHologramAutoPayType = '';
+      this.hasHandledPendingWalletPayment = true;
+      this.clearPendingPaymentContextFromStorage();
+      this.clearPendingHologramDeepLinkRef();
     }
   }
 
@@ -1241,7 +1317,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       : sameRefItems;
 
     const candidatePool = typedItems.length > 0 ? typedItems : sameRefItems;
-    const chosen = candidatePool.find((item) => this.canPayHologram(item));
+    const isDeepLinkedRef = targetRefUpper === this.getPendingHologramDeepLinkRef().trim().toUpperCase();
+    const chosen = candidatePool.find((item) => this.canPayHologram(item)) || (isDeepLinkedRef ? candidatePool[0] : undefined);
     if (!chosen) return;
 
     const id = String(chosen?.id || '').trim();
@@ -1255,9 +1332,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       referenceNo: String(chosen.referenceNo || targetRef),
       amount
     };
+    this.pendingHologramAutoPayRefNo = String(chosen.referenceNo || targetRef);
     this.hasHandledPendingWalletPayment = false;
     this.setActiveTab('hologram');
     this.persistPendingPaymentContextToStorage();
+    this.persistPendingHologramDeepLinkRef(this.pendingHologramAutoPayRefNo);
   }
 
   loadCancellationDataFromApi(): void {
@@ -1699,10 +1778,21 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   shouldShowPendingPaymentInTab(tab: PaymentModuleTab): boolean {
+    const deepLinkRef = this.getPendingHologramDeepLinkRef();
+    if (tab === 'hologram' && deepLinkRef && this.activeTab === tab) {
+      if (!this.pendingWalletPaymentContext || this.pendingWalletPaymentContext.tab !== 'hologram') {
+        this.tryBuildHologramPendingContextFromRefNo(deepLinkRef, this.pendingHologramAutoPayType);
+      }
+      return !!this.pendingWalletPaymentContext && this.pendingWalletPaymentContext.tab === 'hologram';
+    }
+
     const context = this.pendingWalletPaymentContext;
     if (!context) return false;
     if (context.tab === 'hologram' && tab === 'hologram') {
-      return this.activeTab === tab && !this.hasHologramRowForReference(context.referenceNo);
+      // Always show the synthetic "Pending Payment" row for hologram when a deep-linked
+      // pending context exists. The detailed hologram rows below can still be used for
+      // per-item payments; this row acts as the primary call-to-action after navigation.
+      return this.activeTab === tab;
     }
     return context.tab === tab && this.activeTab === tab;
   }
@@ -1955,6 +2045,50 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
   }
 
+  private getPendingHologramDeepLinkRef(): string {
+    const fromMemory = String(this.pendingHologramAutoPayRefNo || '').trim();
+    if (fromMemory) return fromMemory;
+
+    const params = this.route.snapshot?.queryParams || {};
+    const fromQuery = String(
+      params['refNo'] ??
+      params['ref_no'] ??
+      params['referenceNo'] ??
+      params['reference_no'] ??
+      ''
+    ).trim();
+    const action = String(params['action'] || '').trim().toLowerCase();
+    if (fromQuery && action === 'makepayment') {
+      return fromQuery;
+    }
+
+    if (!this.isBrowser) return '';
+    try {
+      return String(sessionStorage.getItem(this.hologramDeepLinkStorageKey) || '').trim();
+    } catch {
+      return '';
+    }
+  }
+
+  private persistPendingHologramDeepLinkRef(refNo: string): void {
+    const ref = String(refNo || '').trim();
+    if (!ref || !this.isBrowser) return;
+    try {
+      sessionStorage.setItem(this.hologramDeepLinkStorageKey, ref);
+    } catch {
+      // no-op
+    }
+  }
+
+  private clearPendingHologramDeepLinkRef(): void {
+    if (!this.isBrowser) return;
+    try {
+      sessionStorage.removeItem(this.hologramDeepLinkStorageKey);
+    } catch {
+      // no-op
+    }
+  }
+
   goToAddMoneyForPendingPayment(): void {
     const context = this.pendingWalletPaymentContext;
     if (!context) return;
@@ -2032,6 +2166,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.pendingHologramAutoPayRefNo = '';
     this.pendingHologramAutoPayType = '';
     this.clearPendingPaymentContextFromStorage();
+    this.clearPendingHologramDeepLinkRef();
 
     this.router.navigate([], {
       relativeTo: this.route,
@@ -2742,12 +2877,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   // Hologram payment methods
   canPayHologram(item: HologramItem): boolean {
+    // Backend sometimes appends extra words to the approved status (eg "APPROVED BY COMMISSIONER - PAYMENT PENDING"),
+    // so treat it as payable when the normalized token CONTAINS an approved marker, not only when it equals it.
     const token = String(item?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const payableTokens = new Set([
-      'approvedbycommissioner',
-      'approvedbyjointcommissioner'
-    ]);
-    return payableTokens.has(token);
+    if (!token) return false;
+
+    return (
+      token.includes('approvedbycommissioner') ||
+      token.includes('commissionerapproved') ||
+      token.includes('approvedbyjointcommissioner') ||
+      token.includes('jointcommissionerapproved')
+    );
   }
 
   payHologramItem(item: HologramItem): void {
@@ -2958,19 +3098,26 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     const rows: HologramTabRow[] = [];
     const seenRefs = new Set<string>();
+    const deepLinkRefKey = this.getPendingHologramDeepLinkRef().trim().toUpperCase();
 
     for (const item of this.hologramData) {
       const ref = String(item?.referenceNo || '').trim();
       if (!ref) continue;
       const refKey = ref.toUpperCase();
       const history = historyByRef.get(refKey);
-      const canPay = this.canPayHologram(item);
+      const historyStatus = String(history?.status || '').toLowerCase();
+      const historyIsSuccessful = !!history && (
+        historyStatus.includes('success') ||
+        historyStatus.includes('paid') ||
+        historyStatus.includes('completed')
+      );
+      const canPay = (this.canPayHologram(item) || (!!deepLinkRefKey && refKey === deepLinkRefKey)) && !historyIsSuccessful;
       const isPaid = !canPay;
       const dateTime = history?.dateTime || item.paymentDate || (item as any).createdAt || (item as any).date || '';
-      const status = history?.status || (isPaid ? 'Payment Successful' : 'Pending');
-      const type = history?.type || (isPaid ? 'Wallet Utilization' : 'Pending Payment');
-      const amount = Number(history?.amount ?? item.hologramFee ?? 0);
-      const txnId = history?.txnId || history?.reference || '-';
+      const status = canPay ? 'Pending' : (history?.status || 'Payment Successful');
+      const type = canPay ? 'Pending Payment' : (history?.type || 'Wallet Utilization');
+      const amount = Number(canPay ? item.hologramFee : (history?.amount ?? item.hologramFee ?? 0));
+      const txnId = canPay ? '-' : (history?.txnId || history?.reference || '-');
 
       rows.push({
         id: history?.id || String(item.id || ref),

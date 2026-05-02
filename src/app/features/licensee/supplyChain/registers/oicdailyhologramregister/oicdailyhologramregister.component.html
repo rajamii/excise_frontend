@@ -765,32 +765,10 @@
                     </div>
                     }
                   </div>
-                  }
-                  
-                  <!-- Show remaining allocated ranges (not yet selected) -->
-                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0 && (entry.allocatedRanges || []).length > 0) {
-                  @for (allocated of (entry.allocatedRanges || []); track allocated.cartoonNumber) {
-                  <div class="roll-range-item"
-                       [style.border-color]="getRollColor(allocated.cartoonNumber)"
-                       [style.background-color]="getRollBackgroundColor(allocated.cartoonNumber)">
-                    <div class="roll-badge" [style.background-color]="getRollColor(allocated.cartoonNumber)">
-                      <i class="bi bi-box me-1"></i>
-                      <strong>{{ allocated.cartoonNumber }}</strong>
-                    </div>
-                    <div class="range-info">
-                      @if (allocated.fromSerial && allocated.toSerial) {
-                      <span class="range-label">Range:</span>
-                      <span class="range-value">{{ allocated.fromSerial }} - {{ allocated.toSerial }}</span>
-                      } @else {
-                      <span class="range-label text-muted small">Range not available</span>
-                      }
-                    </div>
-                  </div>
-                  }
-                  }
-                  
+                   }
+                   
                   <!-- Empty state -->
-                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0 && (entry.allocatedRanges?.length || 0) === 0) {
+                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0) {
                   <span class="text-muted">-</span>
                   }
                 </div>

@@ -165,7 +165,7 @@ export class FinalrequistionlettersComponent implements OnInit {
         this.backRoute = "/dashboard?section=requisition";
       } else if (source === 'permit-section') {
         this.backButtonText = "Back to Dashboard";
-        this.backRoute = "/app-permit-section";
+        this.backRoute = "/dashboard?section=requisition";
       } else {
         // Default to licensee dashboard
         this.backButtonText = "Back to Dashboard";
