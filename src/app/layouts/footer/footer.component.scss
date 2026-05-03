@@ -49,8 +49,8 @@ footer{
     border-radius: 6px;
 
     img{
-        width: 40px;
-        height: 40px;
+        width: 55px;
+        height: 55px;
         object-fit: contain;
     }
 }
@@ -58,8 +58,20 @@ footer{
 .dept-name{
     display: flex;
     flex-direction: column;
-    font-weight: 300;
-    line-height: 1.4;
+    font-weight: 200;
+    line-height: 1.5;
+    font-size: 14px;
+    
+    .text1 {
+        font-size: 15px;
+        font-weight: 100;
+        letter-spacing: 0.5px;
+    }
+    
+    .text2 {
+        font-size: 13px;
+        font-weight: 50;
+    }
 }
 
 .copyright{
