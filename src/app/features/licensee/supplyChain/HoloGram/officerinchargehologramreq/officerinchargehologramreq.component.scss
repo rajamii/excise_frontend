@@ -398,6 +398,10 @@
   // Prevent the sidebar container from blocking clicks on the table/actions.
   // Only the visible toggle/panel should be clickable.
   pointer-events: none;
+  // Force GPU acceleration for smoother animation
+  transform: translateY(-50%) translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 .hologram-available-sidebar-content {
@@ -406,14 +410,16 @@
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
   border-radius: 16px 0 0 16px;
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.12), -3px 0 12px rgba(0, 0, 0, 0.06);
-  transform: translateX(100%);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(100%) translateZ(0);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   border: 2px solid rgba(59, 130, 246, 0.12);
   pointer-events: auto;
+  will-change: transform;
+  backface-visibility: hidden;
 
   &.expanded {
-    transform: translateX(0);
+    transform: translateX(0) translateZ(0);
   }
 }
 
@@ -516,11 +522,12 @@
 .hologram-available-toggle {
   position: absolute;
   right: 0;
-  transform: translateX(0);
+  transform: translateX(0) translateZ(0);
   border: none;
   background: transparent;
   padding: 0;
   pointer-events: auto;
+  backface-visibility: hidden;
 
   .toggle-content {
     background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 60%, #0369a1 100%);
@@ -533,11 +540,13 @@
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   &:hover .toggle-content {
-    transform: translateX(-2px);
+    transform: translateX(-2px) translateZ(0);
   }
 
   .toggle-text {
