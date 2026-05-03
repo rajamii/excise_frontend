@@ -1,5 +1,5 @@
 <div class="receipt-page">
-  <div class="receipt-card" [class.failed]="statusKind === 'failed'">
+    <div class="receipt-card" [class.failed]="statusKind === 'failed'">
     <div class="receipt-header">
       <div class="title-block">
         <h2 class="title">{{ headerTitle }}</h2>
@@ -43,11 +43,18 @@
         <div class="alert-body">{{ vm.reason || 'Payment could not be completed.' }}</div>
       </div>
 
-      <div class="note" *ngIf="statusKind !== 'failed'">
+      <div class="note" *ngIf="statusKind === 'success'">
         <div class="note-title">Application Submission</div>
         <div class="note-body">
           Auto-submitted: <b>{{ autoSubmittedLabel }}</b>
           <span *ngIf="vm.autoSubmitError"> ({{ vm.autoSubmitError }})</span>
+        </div>
+      </div>
+
+      <div class="note" *ngIf="statusKind === 'pending'">
+        <div class="note-title">Next Step</div>
+        <div class="note-body">
+          Your payment is not confirmed yet. Please wait for some time and check the status from <b>New License Management</b>.
         </div>
       </div>
 

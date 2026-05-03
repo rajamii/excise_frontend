@@ -90,6 +90,9 @@ export class NewLicenseDashboardComponent implements OnInit {
   searchFilter = '';
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
 
+  private readonly billdeskRetryStateKey = 'new_license_billdesk_retry_state_v1';
+  private readonly billdeskCooldownSeconds = 15 * 60;
+
   ngOnInit(): void {
     this.loadData();
   }
@@ -260,6 +263,34 @@ export class NewLicenseDashboardComponent implements OnInit {
     if (!row?.applicationId) return;
     if (!row.canPayNow) return;
 
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    const cooldownRemaining = this.getCooldownRemainingSeconds(applicationId);
+    if (cooldownRemaining > 0) {
+      this.showCooldownPopup(cooldownRemaining);
+      return;
+    }
+
+    const isPending = String(row.paymentStatus || '').trim().toLowerCase() === 'pending';
+    if (isPending) {
+      void Swal.fire({
+        title: 'Payment Pending',
+        html:
+          `Your last BillDesk payment attempt is still showing as <b>Pending</b>.<br/>` +
+          `There may be an issue with the payment response from BillDesk. You can try again later.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Proceed',
+        cancelButtonText: 'Back',
+        allowOutsideClick: false,
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        this.startBilldeskInitiation(applicationId);
+      });
+      return;
+    }
+
     void Swal.fire({
       title: 'Retry Application Fee Payment?',
       text: `Proceed to pay application fee for ${row.applicationId}?`,
@@ -270,54 +301,67 @@ export class NewLicenseDashboardComponent implements OnInit {
     }).then((res) => {
       if (!res.isConfirmed) return;
 
-      void Swal.fire({
-        title: 'Redirecting to BillDesk',
-        text: 'Preparing application fee payment...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
-
-      this.paymentIntegrationService
-        .initiateBilldeskNewLicenseApplicationFee({
-          application_id: String(row.applicationId).trim(),
-          amount: 500,
-          payment_module_code: '001',
-        })
-        .pipe(timeout(30000))
-        .subscribe({
-          next: (initRes: any) => {
-            Swal.close();
-            const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
-            const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
-            if (!billdeskUrl || !requestMsg) {
-              void Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
-              return;
-            }
-            this.submitToBillDesk(billdeskUrl, requestMsg);
-          },
-          error: (err: any) => {
-            Swal.close();
-
-            const retrySeconds = this.extractRetryAfterSeconds(err);
-            if (retrySeconds > 0) {
-              this.showBilldeskPendingRetryPopup(retrySeconds);
-              return;
-            }
-
-            if (String(err?.name || '').toLowerCase() === 'timeouterror') {
-              void Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
-              return;
-            }
-
-            const msg =
-              err?.error?.detail ||
-              err?.error?.message ||
-              err?.message ||
-              'Unable to initiate BillDesk payment.';
-            void Swal.fire('Error', String(msg), 'error');
-          },
-        });
+      this.startBilldeskInitiation(applicationId);
     });
+  }
+
+  private startBilldeskInitiation(applicationId: string): void {
+    void Swal.fire({
+      title: 'Redirecting to BillDesk',
+      text: 'Preparing application fee payment...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    this.paymentIntegrationService
+      .initiateBilldeskNewLicenseApplicationFee({
+        application_id: String(applicationId).trim(),
+        amount: 500,
+        payment_module_code: '001',
+      })
+      .pipe(timeout(30000))
+      .subscribe({
+        next: (initRes: any) => {
+          Swal.close();
+          this.clearRetryState(applicationId);
+
+          const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
+          const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
+          if (!billdeskUrl || !requestMsg) {
+            this.recordBilldeskFailure(applicationId);
+            void Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
+            return;
+          }
+          this.submitToBillDesk(billdeskUrl, requestMsg);
+        },
+        error: (err: any) => {
+          Swal.close();
+
+          const retrySeconds = this.extractRetryAfterSeconds(err);
+          if (retrySeconds > 0) {
+            this.showBilldeskPendingRetryPopup(retrySeconds);
+            return;
+          }
+
+          const timerSeconds = this.recordBilldeskFailure(applicationId);
+          if (timerSeconds > 0) {
+            this.showCooldownPopup(timerSeconds);
+            return;
+          }
+
+          if (String(err?.name || '').toLowerCase() === 'timeouterror') {
+            void Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
+            return;
+          }
+
+          const msg =
+            err?.error?.detail ||
+            err?.error?.message ||
+            err?.message ||
+            'Unable to initiate BillDesk payment. Please try again later.';
+          void Swal.fire('Error', String(msg), 'error');
+        },
+      });
   }
 
   private submitToBillDesk(url: string, requestMsg: string): void {
@@ -379,6 +423,116 @@ export class NewLicenseDashboardComponent implements OnInit {
         if (interval) clearInterval(interval);
       },
     });
+  }
+
+  private showCooldownPopup(retryAfterSeconds: number): void {
+    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
+    const format = (seconds: number) => {
+      const s = Math.max(0, Math.floor(seconds));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    let interval: any;
+    void Swal.fire({
+      icon: 'info',
+      title: 'Please Try Later',
+      html: `There seems to be an issue with the payment server. Please try again after <b>${format(totalSeconds)}</b>.`,
+      showConfirmButton: true,
+      confirmButtonText: 'OK',
+      allowOutsideClick: false,
+      didOpen: () => {
+        const content = Swal.getHtmlContainer();
+        let remaining = totalSeconds;
+        interval = setInterval(() => {
+          remaining -= 1;
+          if (!content) return;
+          const b = content.querySelector('b');
+          if (b) b.textContent = format(remaining);
+          if (remaining <= 0) clearInterval(interval);
+        }, 1000);
+      },
+      willClose: () => {
+        if (interval) clearInterval(interval);
+      },
+    });
+  }
+
+  private readRetryState(): Record<string, { failures: number; cooldownUntil?: number }> {
+    try {
+      const raw = String(localStorage.getItem(this.billdeskRetryStateKey) || '').trim();
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private writeRetryState(state: Record<string, { failures: number; cooldownUntil?: number }>): void {
+    try {
+      localStorage.setItem(this.billdeskRetryStateKey, JSON.stringify(state || {}));
+    } catch {
+      // no-op
+    }
+  }
+
+  private getCooldownRemainingSeconds(applicationId: string): number {
+    const id = String(applicationId || '').trim();
+    if (!id) return 0;
+
+    const state = this.readRetryState();
+    const entry = state[id];
+    const until = Number(entry?.cooldownUntil || 0);
+    if (!until || !Number.isFinite(until)) return 0;
+
+    const now = Date.now();
+    if (now >= until) {
+      delete state[id];
+      this.writeRetryState(state);
+      return 0;
+    }
+
+    return Math.max(1, Math.floor((until - now) / 1000));
+  }
+
+  private clearRetryState(applicationId: string): void {
+    const id = String(applicationId || '').trim();
+    if (!id) return;
+
+    const state = this.readRetryState();
+    if (state[id]) {
+      delete state[id];
+      this.writeRetryState(state);
+    }
+  }
+
+  // Returns cooldown seconds if lock started, otherwise 0.
+  private recordBilldeskFailure(applicationId: string): number {
+    const id = String(applicationId || '').trim();
+    if (!id) return 0;
+
+    const state = this.readRetryState();
+    const current = state[id] || { failures: 0 };
+
+    const now = Date.now();
+    const cooldownUntil = Number(current.cooldownUntil || 0);
+    if (cooldownUntil && Number.isFinite(cooldownUntil) && now < cooldownUntil) {
+      return Math.max(1, Math.floor((cooldownUntil - now) / 1000));
+    }
+
+    const failures = Number(current.failures || 0) + 1;
+    if (failures >= 3) {
+      const until = now + this.billdeskCooldownSeconds * 1000;
+      state[id] = { failures: 0, cooldownUntil: until };
+      this.writeRetryState(state);
+      return this.billdeskCooldownSeconds;
+    }
+
+    state[id] = { failures };
+    this.writeRetryState(state);
+    return 0;
   }
 
   private getDetailViewSource(): string {
