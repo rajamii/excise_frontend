@@ -478,16 +478,16 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           available_range: roll.available_range || roll.availableRange // Add this field!
         }));
 
-        // Sort by received date (newest first) and then by ID (newest first)
+        // Sort by received date (oldest first) and then by ID (oldest first)
         this.rollsData.sort((a: any, b: any) => {
           const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
           const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
 
-          if (dateB !== dateA) {
-            return dateB - dateA; // Newer date first
+          if (dateA !== dateB) {
+            return dateA - dateB; // Older date first
           }
 
-          return (b.id || 0) - (a.id || 0); // Newer ID first
+          return (a.id || 0) - (b.id || 0); // Older ID first
         });
 
         // Also sync to localStorage for offline capability
@@ -511,11 +511,11 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
           const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
 
-          if (dateB !== dateA) {
-            return dateB - dateA;
+          if (dateA !== dateB) {
+            return dateA - dateB;
           }
 
-          return (b.id || 0) - (a.id || 0);
+          return (a.id || 0) - (b.id || 0);
         });
 
         this.applyRollsFilters();
@@ -698,7 +698,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           newUntil: roll.newUntil
         } as AvailableHologram;
       })
-      .sort((a, b) => b.id - a.id); // Sort by ID (newest first)
+      .sort((a, b) => a.id - b.id); // Sort by ID (oldest first)
 
     // Also sync to localStorage for offline capability
     localStorage.setItem('hologramOverviewAvailable', JSON.stringify(this.availableData));
