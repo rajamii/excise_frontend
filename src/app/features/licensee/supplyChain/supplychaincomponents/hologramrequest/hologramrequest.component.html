@@ -48,6 +48,54 @@
   </div>
 </div>
 
+<!-- Holograms Available Sidebar (info-only) -->
+<div class="hologram-available-sidebar">
+  <div class="hologram-available-sidebar-content" [class.expanded]="isHologramAvailableSidebarExpanded">
+    <div class="hologram-available-sidebar-header">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="header-icon-wrapper">
+            <i class="bi bi-qr-code"></i>
+          </div>
+          <div class="header-text">
+            <h6 class="mb-0 fw-bold">Holograms Available</h6>
+            <small class="text-muted">Local / Export / Defence</small>
+          </div>
+        </div>
+        <button type="button" class="hologram-available-close-btn" (click)="toggleHologramAvailableSidebar()"
+          title="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="hologram-available-sidebar-body">
+      <div class="hologram-available-item local">
+        <span class="item-label">Local</span>
+        <span class="item-value">{{ getAvailableHologramsByType('LOCAL') | number }}</span>
+      </div>
+
+      <div class="hologram-available-item export">
+        <span class="item-label">Export</span>
+        <span class="item-value">{{ getAvailableHologramsByType('EXPORT') | number }}</span>
+      </div>
+
+      <div class="hologram-available-item defence">
+        <span class="item-label">Defence</span>
+        <span class="item-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</span>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="hologram-available-toggle" *ngIf="!isHologramAvailableSidebarExpanded"
+    (click)="toggleHologramAvailableSidebar()">
+    <div class="toggle-content">
+      <i class="bi bi-info-circle-fill"></i>
+      <span class="toggle-text">Holograms</span>
+    </div>
+  </button>
+</div>
+
 
 <!-- Compact Filter Section -->
 <div class="compact-filter-section mb-3">

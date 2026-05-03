@@ -37,6 +37,15 @@ export class HologramrequestComponent implements OnInit {
   showRollsModal = false;
   selectedRequestForRolls: any = null;
 
+  // Holograms Available (sidebar info-only)
+  isHologramAvailableSidebarExpanded = false;
+  private rollsDetails: any[] = [];
+  private hologramAvailability: Record<'LOCAL' | 'EXPORT' | 'DEFENCE', number> = {
+    LOCAL: 0,
+    EXPORT: 0,
+    DEFENCE: 0,
+  };
+
   // Pagination state
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize: number = 5;
@@ -53,6 +62,44 @@ export class HologramrequestComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadHologramRequests();
+    this.loadHologramAvailability();
+  }
+
+  toggleHologramAvailableSidebar(): void {
+    this.isHologramAvailableSidebarExpanded = !this.isHologramAvailableSidebarExpanded;
+  }
+
+  private loadHologramAvailability(): void {
+    this.hologramService.getRollsDetails().subscribe({
+      next: (rolls: any[]) => {
+        this.rollsDetails = Array.isArray(rolls) ? rolls : [];
+        this.recomputeHologramAvailability();
+      },
+      error: (err) => {
+        console.error('Error loading rolls details for availability sidebar', err);
+        this.rollsDetails = [];
+        this.hologramAvailability = { LOCAL: 0, EXPORT: 0, DEFENCE: 0 };
+      }
+    });
+  }
+
+  private recomputeHologramAvailability(): void {
+    const totals: Record<'LOCAL' | 'EXPORT' | 'DEFENCE', number> = { LOCAL: 0, EXPORT: 0, DEFENCE: 0 };
+
+    for (const roll of this.rollsDetails) {
+      const type = String(roll?.type || roll?.hologram_type || roll?.hologramType || '').toUpperCase();
+      if (type !== 'LOCAL' && type !== 'EXPORT' && type !== 'DEFENCE') continue;
+
+      const qtyRaw = roll?.available ?? roll?.available_count ?? roll?.availableCount ?? 0;
+      const qty = Number(qtyRaw) || 0;
+      totals[type] += qty;
+    }
+
+    this.hologramAvailability = totals;
+  }
+
+  getAvailableHologramsByType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
+    return Number(this.hologramAvailability?.[type]) || 0;
   }
 
   loadHologramRequests(): void {

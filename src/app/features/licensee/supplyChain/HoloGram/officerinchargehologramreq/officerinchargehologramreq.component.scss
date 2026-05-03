@@ -485,19 +485,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.2s ease;
   text-align: left;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-  }
-
-  &:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2);
-  }
 
   .item-label {
     font-weight: 700;
@@ -508,11 +498,6 @@
   .item-value {
     font-weight: 800;
     font-size: 1rem;
-  }
-
-  &.active {
-    border-color: rgba(13, 110, 253, 0.35);
-    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.16);
   }
 
   &.local .item-value {
@@ -526,11 +511,6 @@
   &.defence .item-value {
     color: #d97706;
   }
-}
-
-.hologram-available-footer-note {
-  padding-top: 4px;
-  text-align: center;
 }
 
 .hologram-available-toggle {

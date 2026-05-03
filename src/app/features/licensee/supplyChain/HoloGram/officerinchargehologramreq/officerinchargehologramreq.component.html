@@ -416,29 +416,19 @@
         </div>
 
         <div class="hologram-available-sidebar-body">
-            <button type="button" class="hologram-available-item local"
-                (click)="onHologramTypeCardClick('LOCAL'); toggleHologramAvailableSidebar()"
-                [class.active]="isHologramTypeCardActive('LOCAL')">
+            <div class="hologram-available-item local">
                 <span class="item-label">Local</span>
                 <span class="item-value">{{ getAvailableHologramsByType('LOCAL') | number }}</span>
-            </button>
+            </div>
 
-            <button type="button" class="hologram-available-item export"
-                (click)="onHologramTypeCardClick('EXPORT'); toggleHologramAvailableSidebar()"
-                [class.active]="isHologramTypeCardActive('EXPORT')">
+            <div class="hologram-available-item export">
                 <span class="item-label">Export</span>
                 <span class="item-value">{{ getAvailableHologramsByType('EXPORT') | number }}</span>
-            </button>
+            </div>
 
-            <button type="button" class="hologram-available-item defence"
-                (click)="onHologramTypeCardClick('DEFENCE'); toggleHologramAvailableSidebar()"
-                [class.active]="isHologramTypeCardActive('DEFENCE')">
+            <div class="hologram-available-item defence">
                 <span class="item-label">Defence</span>
                 <span class="item-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</span>
-            </button>
-
-            <div class="hologram-available-footer-note">
-                <small class="text-muted">Click a type to filter the table.</small>
             </div>
         </div>
     </div>
