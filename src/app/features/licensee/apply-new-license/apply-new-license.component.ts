@@ -1,13 +1,18 @@
-import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { KeyInfoComponent } from './steps/key-info/key-info.component';
 import { SiteDetailsComponent } from './steps/site-details/site-details.component';
 import { UnitDetailsComponent } from './steps/unit-details/unit-details.component';
 import { ApplicantDetailsComponent } from './steps/applicant-details/applicant-details.component';
+import { MemberDetailsComponent } from './steps/member-details/member-details.component';
 import { DeclarationPaymentComponent } from './steps/declaration-payment/declaration-payment.component';
 import { SelectLicenseComponent } from './steps/select-license/select-license.component';
 import { AccountService } from '../../../core/services/account.service';
-import { MatStepper } from '@angular/material/stepper';
+
+interface ApplicantDetailsStepData {
+  mode_of_operation?: string | null;
+  modeOfOperation?: string | null;
+}
 
 @Component({
   selector: 'app-apply-new-license',
@@ -17,6 +22,7 @@ import { MatStepper } from '@angular/material/stepper';
     SelectLicenseComponent,
     KeyInfoComponent,
     ApplicantDetailsComponent,
+    MemberDetailsComponent,
     SiteDetailsComponent,
     UnitDetailsComponent,
     DeclarationPaymentComponent
@@ -24,22 +30,13 @@ import { MatStepper } from '@angular/material/stepper';
   templateUrl: './apply-new-license.component.html',
   styleUrl: './apply-new-license.component.scss'
 })
-export class ApplyNewLicenseComponent implements OnInit, AfterViewInit {
-  @ViewChild('stepper') stepper?: MatStepper;
-  private hasSubmittedFromSlip = false;
+export class ApplyNewLicenseComponent implements OnInit {
   
   constructor(private accountService: AccountService) {}
 
   ngOnInit(): void {
     // ✅ Ensure user profile is loaded when starting a new license application
     this.ensureUserProfileLoaded();
-
-    try {
-      const submitted = String(sessionStorage.getItem('new_license_submitted_application_id') || '').trim();
-      this.hasSubmittedFromSlip = Boolean(submitted);
-    } catch {
-      this.hasSubmittedFromSlip = false;
-    }
   }
 
   /**
@@ -65,24 +62,41 @@ export class ApplyNewLicenseComponent implements OnInit, AfterViewInit {
     }
   }
 
-  ngAfterViewInit(): void {
-    try {
-      if (this.hasSubmittedFromSlip && this.stepper) {
-        queueMicrotask(() => {
-          if (!this.stepper) return;
-          this.stepper.linear = false;
-          this.stepper.steps.forEach((s) => (s.completed = true));
-          this.stepper.selectedIndex = Math.max(0, this.stepper.steps.length - 1);
-        });
-      }
-    } catch {
-      // no-op
-    }
-  }
-
   // Getter to retrieve the selected license type from session storage
   get licenseType() {
     const storedData = sessionStorage.getItem('selectLicenseData');
     return storedData ? JSON.parse(storedData).licenseType : null;
+  }
+
+  get isCompanyType(): boolean {
+    const licenseTypeName = this.getSelectedLicenseTypeName().toLowerCase();
+    return licenseTypeName === 'company' || Number(this.licenseType) === 2;
+  }
+
+  get shouldShowMemberDetailsStep(): boolean {
+    const applicantDetails = this.getParsedSession<ApplicantDetailsStepData>('applicantDetailsData');
+    const modeOfOperation = String(
+      applicantDetails?.mode_of_operation ?? applicantDetails?.modeOfOperation ?? ''
+    ).trim();
+
+    return modeOfOperation === 'Salesman' || modeOfOperation === 'Barman';
+  }
+
+  private getParsedSession<T = any>(key: string): T | null {
+    try {
+      const storedData = sessionStorage.getItem(key);
+      return storedData ? JSON.parse(storedData) as T : null;
+    } catch (error) {
+      console.error(`Failed to parse session data for ${key}:`, error);
+      return null;
+    }
+  }
+
+  private getSelectedLicenseTypeName(): string {
+    const selectedLicenseTypeId = Number(this.licenseType);
+    const storedLicenseTypes = this.getParsedSession<Array<{ id?: number; licenseType?: string }>>('licenseTypes') ?? [];
+    const matchedType = storedLicenseTypes.find((licenseType) => Number(licenseType.id) === selectedLicenseTypeId);
+
+    return String(matchedType?.licenseType ?? '');
   }
 }

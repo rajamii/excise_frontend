@@ -18,8 +18,12 @@ export interface LicenseApplication {
   licenseTypeName?: string;
   license_category?: number;
   licenseCategoryName?: string;
+  license_sub_category?: number;
+  licenseSubCategoryName?: string;
   establishment?: string;
   establishment_name?: string;
+  site_type?: string;
+  existing_site_license?: string;
 
   // Contact information
   mobile_number?: string;
@@ -64,6 +68,8 @@ export interface LicenseApplication {
   // Member details
   status?: string;
   member_name?: string;
+  aadhaar?: string;
+  sikkim_subject?: string | boolean;
   father_husband_name?: string;
   nationality?: string;
   gender?: string;
@@ -71,6 +77,21 @@ export interface LicenseApplication {
   member_mobile_number?: string;
   member_email?: string;
   photo?: string;
+
+  // Applicant eligibility
+  coi_rc_ss?: string;
+  has_sikkim_certificate?: string;
+  has_excise_license?: string;
+  existing_license_category_id?: number | string;
+  existing_license_no?: string;
+  family_excise_license?: string;
+  family_license_category_id?: number | string;
+  family_license_no?: string;
+  criminal_conviction?: string;
+  marital_status?: string;
+  residential_status?: string;
+  present_address?: string;
+  permanent_address?: string;
 
   // Workflow status
   current_stage?: string;
@@ -87,6 +108,13 @@ export interface LicenseApplication {
   remarks?: string;
   fee_amount?: number;
   is_fee_calculated?: boolean;
+  parcha?: string;
+  trade_license?: string;
+  trade_license_covered?: string;
+  member_pass_photo?: string;
+  member_aadhaar_card?: string;
+  member_residential_certificate?: string;
+  member_dob_proof?: string;
 
   // Additional properties from errors
   print_count?: number;

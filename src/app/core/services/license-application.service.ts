@@ -303,6 +303,7 @@ export class LicenseApplicationService {
     const selectLicenseData = this.getSessionData('selectLicenseData');
     const keyInfoData = this.getSessionData('keyInfoData');
     const applicantDetailsData = this.getSessionData('applicantDetailsData');
+    const memberDetailsData = this.getSessionData('memberDetailsData');
     const siteDetailsData = this.getSessionData('siteDetailsData');
     const unitDetailsData = this.getSessionData('unitDetailsData');
 
@@ -310,6 +311,7 @@ export class LicenseApplicationService {
     console.log('  selectLicenseData:', selectLicenseData);
     console.log('  keyInfoData:', keyInfoData);
     console.log('  applicantDetailsData:', applicantDetailsData);
+    console.log('  memberDetailsData:', memberDetailsData);
     console.log('  siteDetailsData:', siteDetailsData);
     console.log('  unitDetailsData:', unitDetailsData);
 
@@ -348,6 +350,9 @@ export class LicenseApplicationService {
       }
       if (keyInfoData.site_type) {
         formData.append('site_type', String(keyInfoData.site_type));
+      }
+      if (keyInfoData.existing_site_license) {
+        formData.append('existing_site_license', String(keyInfoData.existing_site_license));
       }
     }
 
@@ -389,14 +394,29 @@ export class LicenseApplicationService {
       if (applicantDetailsData.mode_of_operation) {
         formData.append('mode_of_operation', String(applicantDetailsData.mode_of_operation));
       }
+      if (applicantDetailsData.coi_rc_ss) {
+        formData.append('coi_rc_ss', String(applicantDetailsData.coi_rc_ss));
+      }
       if (applicantDetailsData.has_sikkim_certificate) {
         formData.append('has_sikkim_certificate', String(applicantDetailsData.has_sikkim_certificate));
       }
       if (applicantDetailsData.has_excise_license) {
         formData.append('has_excise_license', String(applicantDetailsData.has_excise_license));
       }
+      if (applicantDetailsData.existing_license_category_id) {
+        formData.append('existing_license_category_id', String(applicantDetailsData.existing_license_category_id));
+      }
+      if (applicantDetailsData.existing_license_no) {
+        formData.append('existing_license_no', String(applicantDetailsData.existing_license_no));
+      }
       if (applicantDetailsData.family_excise_license) {
         formData.append('family_excise_license', String(applicantDetailsData.family_excise_license));
+      }
+      if (applicantDetailsData.family_license_category_id) {
+        formData.append('family_license_category_id', String(applicantDetailsData.family_license_category_id));
+      }
+      if (applicantDetailsData.family_license_no) {
+        formData.append('family_license_no', String(applicantDetailsData.family_license_no));
       }
       if (applicantDetailsData.criminal_conviction) {
         formData.append('criminal_conviction', String(applicantDetailsData.criminal_conviction));
@@ -407,6 +427,25 @@ export class LicenseApplicationService {
     }
 
     // ✅ 4. SITE DETAILS - CRITICAL: Convert IDs to CODES
+    // ✅ 3A. MEMBER DETAILS (conditional salesman / barman flow)
+    if (memberDetailsData) {
+      if (memberDetailsData.member_name) {
+        formData.append('member_name', String(memberDetailsData.member_name));
+      }
+      if (memberDetailsData.member_mobile_number) {
+        formData.append('member_mobile_number', String(memberDetailsData.member_mobile_number));
+      }
+      if (memberDetailsData.member_email) {
+        formData.append('member_email', String(memberDetailsData.member_email));
+      }
+      if (memberDetailsData.aadhaar) {
+        formData.append('aadhaar', String(memberDetailsData.aadhaar));
+      }
+      if (memberDetailsData.sikkim_subject !== null && memberDetailsData.sikkim_subject !== undefined) {
+        formData.append('sikkim_subject', String(memberDetailsData.sikkim_subject));
+      }
+    }
+
     if (siteDetailsData) {
       // site_district - Send CODE as STRING
       if (siteDetailsData.district) {
@@ -542,7 +581,21 @@ export class LicenseApplicationService {
     }
 
     const siteDocuments = this.getAllSiteDocuments();
+    const supportedDocumentFields = new Set([
+      'pan_card',
+      'sikkim_certificate',
+      'dob_proof',
+      'parcha',
+      'trade_license',
+      'member_pass_photo',
+      'member_aadhaar_card',
+      'member_residential_certificate',
+      'member_dob_proof'
+    ]);
     siteDocuments.forEach((file: File, docName: string) => {
+      if (!supportedDocumentFields.has(docName)) {
+        return;
+      }
       formData.append(docName, file, file.name);
       console.log(`✅ ${docName} added:`, file.name);
     });

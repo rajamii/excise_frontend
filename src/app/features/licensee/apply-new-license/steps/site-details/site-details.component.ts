@@ -75,8 +75,16 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
   documents: DocumentUpload[] = [
     {
-      name: 'noc_landlord',
-      label: 'NOC from the Land lord regarding the use of the Premises',
+      name: 'parcha',
+      label: 'Parcha (Land Ownership Record)',
+      file: null,
+      fileUrl: '',
+      required: false,
+      formats: '.jpg,.jpeg,.png,.pdf'
+    },
+    {
+      name: 'trade_license',
+      label: 'Trade License',
       file: null,
       fileUrl: '',
       required: false,
@@ -291,26 +299,68 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     }
   }
 
-  /**
-   * Setup conditional validation for NOC field
-   */
   private setupConditionalValidation() {
-    this.siteDetailsForm.get('siteOwned')?.valueChanges
+    const siteOwnedControl = this.siteDetailsForm.get('siteOwned');
+    const nocControl = this.siteDetailsForm.get('nocObtained');
+    const tradeLicenseCoveredControl = this.siteDetailsForm.get('tradeLicenseCovered');
+
+    siteOwnedControl?.valueChanges
       .pipe(takeUntil(this.destroy$))
-      .subscribe(value => {
-        const nocControl = this.siteDetailsForm.get('nocObtained');
-        
-        if (value === 'No') {
-          nocControl?.setValidators([Validators.required]);
-          this.documents[0].required = true;
-        } else {
-          nocControl?.clearValidators();
-          this.documents[0].required = false;
+      .subscribe((value) => {
+        const parchaDocument = this.documents.find((document) => document.name === 'parcha');
+
+        if (parchaDocument) {
+          parchaDocument.required = value === 'Yes';
         }
-        
-        nocControl?.updateValueAndValidity();
+
+        if (value === 'Yes') {
+          nocControl?.setValue('No', { emitEvent: false });
+        } else if (value === 'No') {
+          nocControl?.setValue('Yes', { emitEvent: false });
+          this.clearDocumentSelection('parcha');
+        } else {
+          nocControl?.setValue(null, { emitEvent: false });
+          this.clearDocumentSelection('parcha');
+        }
+
+        this.saveToSessionStorage();
         this.cdr.detectChanges();
       });
+
+    tradeLicenseCoveredControl?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((value) => {
+        const tradeLicenseDocument = this.documents.find((document) => document.name === 'trade_license');
+
+        if (tradeLicenseDocument) {
+          tradeLicenseDocument.required = value === 'Yes';
+        }
+
+        if (value !== 'Yes') {
+          this.clearDocumentSelection('trade_license');
+        }
+
+        this.saveToSessionStorage();
+        this.cdr.detectChanges();
+      });
+
+    const currentSiteOwnedValue = siteOwnedControl?.value;
+    const currentTradeLicenseValue = tradeLicenseCoveredControl?.value;
+    const parchaDocument = this.documents.find((document) => document.name === 'parcha');
+    const tradeLicenseDocument = this.documents.find((document) => document.name === 'trade_license');
+
+    if (parchaDocument) {
+      parchaDocument.required = currentSiteOwnedValue === 'Yes';
+    }
+    if (tradeLicenseDocument) {
+      tradeLicenseDocument.required = currentTradeLicenseValue === 'Yes';
+    }
+
+    if (currentSiteOwnedValue === 'Yes') {
+      nocControl?.setValue('No', { emitEvent: false });
+    } else if (currentSiteOwnedValue === 'No') {
+      nocControl?.setValue('Yes', { emitEvent: false });
+    }
   }
 
   /**
@@ -849,7 +899,23 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     doc.fileUrl = URL.createObjectURL(file);
     this.licenseApplicationService.setSiteDocument(docName, file);
     console.log(`✅ Document ${docName} uploaded:`, file.name);
+    this.saveToSessionStorage();
     this.cdr.detectChanges();
+  }
+
+  private clearDocumentSelection(docName: string) {
+    const document = this.documents.find(doc => doc.name === docName);
+    if (!document) {
+      return;
+    }
+
+    if (document.fileUrl) {
+      URL.revokeObjectURL(document.fileUrl);
+    }
+
+    document.file = null;
+    document.fileUrl = '';
+    this.licenseApplicationService.removeSiteDocument(docName);
   }
 
   viewDocument(doc: DocumentUpload) {
@@ -918,7 +984,9 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       breadth: formData.breadth || null,
       site_owned: formData.siteOwned || null,
       trade_license_covered: formData.tradeLicenseCovered || null,
-      noc_obtained: formData.siteOwned === 'Yes' ? 'No' : (formData.nocObtained || null)
+      noc_obtained: formData.siteOwned === 'Yes' ? 'No' : (formData.siteOwned === 'No' ? 'Yes' : null),
+      parcha: this.getDocumentReference('parcha'),
+      trade_license: this.getDocumentReference('trade_license')
     };
     
     console.log('💾 Saving Site Details:', backendData);
@@ -944,6 +1012,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     if (!categoryId) return null;
     const cat = this.locationCategories.find(c => c.id === categoryId);
     return cat?.categoryName || null;
+  }
+
+  private getDocumentReference(docName: string): string | null {
+    const document = this.documents.find(doc => doc.name === docName);
+    return document?.file?.name ?? null;
   }
 
   // =========================================================================
