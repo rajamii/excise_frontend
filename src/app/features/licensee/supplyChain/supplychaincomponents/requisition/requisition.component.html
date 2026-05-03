@@ -4,7 +4,7 @@
     <div class="header-actions d-flex gap-2" *ngIf="canViewArrivalSummary()">
       <button type="button" class="btn btn-sm all-bulk-record-btn" (click)="openArrivalSummaryModal()">
         <i class="bi bi-clipboard-data me-1"></i>
-        ENA Inventory Records
+        Bulk Spirit Inventory Records
       </button>
     </div>
   </div>
@@ -240,14 +240,14 @@
                 type="button"
                 class="btn btn-sm mt-2 arrival-update-btn"
                 (click)="openArrivalModal(item)">
-                {{ isArrivalRejected(item) ? 'Re-enter BL Arrival' : 'Update BL Arrival' }}
+                {{ isArrivalRejected(item) ? 'Re-enter Bulk Spirit Arrival' : 'Update Bulk Spirit Arrival' }}
               </button>
               <button
                 *ngIf="canViewArrivalDetails(item)"
                 type="button"
                 class="btn btn-sm mt-2 arrival-view-btn"
                 (click)="openArrivalViewModal(item)">
-               View BL Inventory
+               View Bulk Spirit Inventory
               </button>
               <span
                 *ngIf="shouldShowArrivalRejectedBadge(item)"
@@ -640,7 +640,7 @@
         <div class="header-content">
           <i class="bi bi-file-earmark-text-fill header-icon"></i>
           <div>
-            <h5 class="modal-title">BL Details</h5>
+            <h5 class="modal-title">Bulk Spirit Details</h5>
             <p class="modal-subtitle">Bulk Liter Requisition Information</p>
           </div>
         </div>
@@ -670,7 +670,7 @@
 
         <div class="alert alert-info d-flex align-items-center mb-4">
           <i class="bi bi-info-circle-fill me-2"></i>
-          <span>Submitted BL details will move to OIC review first. Only approved entries will appear in All Bulk Detail Record.</span>
+          <span>Submitted Bulk Spirit details will move to OIC review first. Only approved entries will appear in All Bulk Detail Record.</span>
         </div>
 
         <div class="alert d-flex align-items-center mb-4"
@@ -685,7 +685,7 @@
           <i class="bi bi-x-circle-fill me-2" *ngIf="arrivalViewApprovalStatus === 'REJECTED'"></i>
           <i class="bi bi-info-circle-fill me-2" *ngIf="!arrivalViewApprovalStatus"></i>
           <span>
-            BL approval status: <strong>{{ arrivalViewApprovalStatus || 'N/A' }}</strong>
+            Bulk Spirit approval status: <strong>{{ arrivalViewApprovalStatus || 'N/A' }}</strong>
             <span *ngIf="arrivalViewReviewRemarks"> | Remarks: {{ arrivalViewReviewRemarks }}</span>
           </span>
           <span
@@ -812,8 +812,8 @@
         <div class="header-content">
           <i class="bi bi-clipboard-data header-icon"></i>
           <div class="header-text">
-            <h5 class="modal-title">ENA Bulk Inventory Records</h5>
-            <p class="modal-subtitle">View and filter all bulk liquor arrival details</p>
+            <h5 class="modal-title">ENA Bulk Spirit Inventory Records</h5>
+            <p class="modal-subtitle">View and filter all bulk Spirit arrival details</p>
           </div>
         </div>
         <button type="button" class="btn-close btn-close-white" (click)="closeArrivalSummaryModal()" aria-label="Close"></button>
