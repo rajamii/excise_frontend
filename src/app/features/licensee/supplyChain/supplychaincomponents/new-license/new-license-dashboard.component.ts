@@ -12,6 +12,8 @@ import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
 import { RoleService } from '../../../../../core/services/role.service';
+import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { timeout } from 'rxjs';
 
 interface NewLicenseCounts {
   applied: number;
@@ -29,6 +31,7 @@ interface NewLicenseItem {
   submittedOn: string;
   paymentStatus: string;
   canView: boolean;
+  canPayNow: boolean;
   currentStage: string;
   currentStageRaw: string;
   statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
@@ -54,6 +57,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private roleService = inject(RoleService);
+  private paymentIntegrationService = inject(PaymentIntegrationService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -251,6 +255,132 @@ export class NewLicenseDashboardComponent implements OnInit {
     });
   }
 
+  payNow(row: NewLicenseItem): void {
+    if (!this.isLicenseeUser()) return;
+    if (!row?.applicationId) return;
+    if (!row.canPayNow) return;
+
+    void Swal.fire({
+      title: 'Retry Application Fee Payment?',
+      text: `Proceed to pay application fee for ${row.applicationId}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Pay Now',
+      cancelButtonText: 'Cancel',
+    }).then((res) => {
+      if (!res.isConfirmed) return;
+
+      void Swal.fire({
+        title: 'Redirecting to BillDesk',
+        text: 'Preparing application fee payment...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      this.paymentIntegrationService
+        .initiateBilldeskNewLicenseApplicationFee({
+          application_id: String(row.applicationId).trim(),
+          amount: 500,
+          payment_module_code: '001',
+        })
+        .pipe(timeout(30000))
+        .subscribe({
+          next: (initRes: any) => {
+            Swal.close();
+            const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
+            const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
+            if (!billdeskUrl || !requestMsg) {
+              void Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
+              return;
+            }
+            this.submitToBillDesk(billdeskUrl, requestMsg);
+          },
+          error: (err: any) => {
+            Swal.close();
+
+            const retrySeconds = this.extractRetryAfterSeconds(err);
+            if (retrySeconds > 0) {
+              this.showBilldeskPendingRetryPopup(retrySeconds);
+              return;
+            }
+
+            if (String(err?.name || '').toLowerCase() === 'timeouterror') {
+              void Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
+              return;
+            }
+
+            const msg =
+              err?.error?.detail ||
+              err?.error?.message ||
+              err?.message ||
+              'Unable to initiate BillDesk payment.';
+            void Swal.fire('Error', String(msg), 'error');
+          },
+        });
+    });
+  }
+
+  private submitToBillDesk(url: string, requestMsg: string): void {
+    try {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'msg';
+      input.value = requestMsg;
+
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    } catch {
+      void Swal.fire('Error', 'Unable to redirect to BillDesk. Please try again.', 'error');
+    }
+  }
+
+  private extractRetryAfterSeconds(err: any): number {
+    const httpStatus = Number(err?.status || 0);
+    if (httpStatus !== 409) return 0;
+    const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  }
+
+  private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
+    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
+    const format = (seconds: number) => {
+      const s = Math.max(0, Math.floor(seconds));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    let interval: any;
+    void Swal.fire({
+      icon: 'info',
+      title: 'Payment Already Pending',
+      html: `A BillDesk transaction is already pending. Please wait <b>${format(totalSeconds)}</b> and try again.`,
+      showConfirmButton: true,
+      confirmButtonText: 'OK',
+      allowOutsideClick: false,
+      didOpen: () => {
+        const content = Swal.getHtmlContainer();
+        let remaining = totalSeconds;
+        interval = setInterval(() => {
+          remaining -= 1;
+          if (!content) return;
+          const b = content.querySelector('b');
+          if (b) b.textContent = format(remaining);
+          if (remaining <= 0) clearInterval(interval);
+        }, 1000);
+      },
+      willClose: () => {
+        if (interval) clearInterval(interval);
+      },
+    });
+  }
+
   private getDetailViewSource(): string {
     const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);
 
@@ -308,7 +438,9 @@ export class NewLicenseDashboardComponent implements OnInit {
           ''
         ).trim();
         const paymentStatus = this.normalizePaymentStatus(rawPayment);
-        const canView = paymentStatus === 'Successful';
+        const feePaid = Boolean(item?.is_application_fee_paid ?? item?.isApplicationFeePaid);
+        const canView = paymentStatus === 'Successful' && feePaid;
+        const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful';
         const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
         const submittedOn = paymentStatus === 'Successful'
           ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
@@ -332,6 +464,7 @@ export class NewLicenseDashboardComponent implements OnInit {
           submittedOn,
           paymentStatus,
           canView,
+          canPayNow,
           currentStageRaw,
           currentStage,
           statusGroup

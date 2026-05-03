@@ -132,6 +132,14 @@
               <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                 <i class="bi bi-eye-fill"></i>
               </button>
+              <button
+                *ngIf="row.canPayNow"
+                class="btn btn-sm btn-outline-primary me-2"
+                title="Pay Now"
+                (click)="payNow(row)"
+              >
+                Pay Now
+              </button>
               <button *ngIf="!isLicenseeUser()" class="btn btn-link p-0 action-eye" title="View Timeline" (click)="viewTimeline(row)">
                 <i class="bi bi-clock-history"></i>
               </button>

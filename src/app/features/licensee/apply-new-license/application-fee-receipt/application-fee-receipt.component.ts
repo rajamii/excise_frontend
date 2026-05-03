@@ -107,17 +107,25 @@ export class ApplicationFeeReceiptComponent {
   goToDashboard(): void {
     if (this.statusKind === 'processing') return;
 
-    // After payment success, show the "Application Submitted" view inside the New License stepper.
-    // (Do not show it before BillDesk completes.)
-    try {
-      const id = String(this.vm.applicationId || '').trim();
-      if (id) sessionStorage.setItem('new_license_submitted_application_id', id);
-    } catch {
-      // no-op
+    const autoSubmitted = String(this.vm.autoSubmitted || '').trim() === '1';
+
+    // Show "Application Submitted" in the stepper ONLY when BillDesk reports success
+    // AND the backend auto-submitted the draft (autoSubmitted=1).
+    if (this.statusKind === 'success' && autoSubmitted) {
+      try {
+        const id = String(this.vm.applicationId || '').trim();
+        if (id) sessionStorage.setItem('new_license_submitted_application_id', id);
+      } catch {
+        // no-op
+      }
     }
+
+    // UX: if payment failed/pending, return to New License Management (not the apply stepper).
+    const section =
+      this.statusKind === 'success' && autoSubmitted ? 'new-license-apply' : 'new-license';
     this.router.navigate(['/dashboard'], {
       queryParams: {
-        section: 'new-license-apply',
+        section,
         source: 'application-fee-receipt',
         applicationId: this.vm.applicationId || undefined
       }
