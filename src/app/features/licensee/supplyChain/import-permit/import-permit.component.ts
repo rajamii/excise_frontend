@@ -641,8 +641,12 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
 
     // Extract printable HTML and open a clean window for printing
     setTimeout(() => {
-      const printable =
-        document.getElementById('importPermitPrintSection')?.innerHTML || '';
+      const el = document.getElementById('importPermitPrintSection');
+      if (!el) {
+        alert('Print preview is not available on this page.');
+        return;
+      }
+      const printable = el.innerHTML || '';
       const styles = Array.from(
         document.querySelectorAll('link[rel="stylesheet"], style')
       )
