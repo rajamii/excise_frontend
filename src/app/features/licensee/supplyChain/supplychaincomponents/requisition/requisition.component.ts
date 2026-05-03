@@ -180,6 +180,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalSummaryMonthFilter: string = '';
   allArrivalDetailsRows: ArrivalDetailsRow[] = [];
   filteredArrivalDetailsRows: ArrivalDetailsRow[] = [];
+  arrivalSummaryPageSizeOptions: number[] = [5, 10, 25, 50];
+  arrivalSummaryPageSize: number = 5;
+  arrivalSummaryPageIndex: number = 0;
   private sidebarGuardTimer: ReturnType<typeof setInterval> | null = null;
   private queryParamSub: Subscription | null = null;
   private pendingArrivalRef: string = '';
@@ -928,9 +931,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.isArrivalSummaryLoading = true;
     this.arrivalSummaryErrorMessage = '';
     this.arrivalSummaryDateFilter = '';
-    this.arrivalSummaryMonthFilter = '';
+    // Default to current running month; user can clear filters to view all months together.
+    this.arrivalSummaryMonthFilter = this.toIsoMonth(new Date());
     this.allArrivalDetailsRows = [];
     this.filteredArrivalDetailsRows = [];
+    this.arrivalSummaryPageIndex = 0;
+    this.arrivalSummaryPageSize = 5;
 
     this.enaRequisitionService.getAllRequisitionArrivalDetails().subscribe({
       next: (response: any) => {
@@ -1022,6 +1028,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalSummaryMonthFilter = '';
     this.allArrivalDetailsRows = [];
     this.filteredArrivalDetailsRows = [];
+    this.arrivalSummaryPageIndex = 0;
     this.setBulkRecordModalMode(false);
   }
 
@@ -1053,6 +1060,50 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
       return true;
     });
+
+    // Reset pagination whenever filters change.
+    this.arrivalSummaryPageIndex = 0;
+  }
+
+  get arrivalSummaryTotalPages(): number {
+    if (this.filteredArrivalDetailsRows.length === 0) return 0;
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    return Math.ceil(this.filteredArrivalDetailsRows.length / size);
+  }
+
+  get arrivalSummaryPageStart(): number {
+    if (this.filteredArrivalDetailsRows.length === 0) return 0;
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    return this.arrivalSummaryPageIndex * size + 1;
+  }
+
+  get arrivalSummaryPageEnd(): number {
+    if (this.filteredArrivalDetailsRows.length === 0) return 0;
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    return Math.min((this.arrivalSummaryPageIndex + 1) * size, this.filteredArrivalDetailsRows.length);
+  }
+
+  get pagedArrivalDetailsRows(): ArrivalDetailsRow[] {
+    if (this.filteredArrivalDetailsRows.length === 0) return [];
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    const start = this.arrivalSummaryPageIndex * size;
+    return this.filteredArrivalDetailsRows.slice(start, start + size);
+  }
+
+  onArrivalSummaryPageSizeChange(): void {
+    this.arrivalSummaryPageIndex = 0;
+  }
+
+  prevArrivalSummaryPage(): void {
+    if (this.arrivalSummaryPageIndex <= 0) return;
+    this.arrivalSummaryPageIndex -= 1;
+  }
+
+  nextArrivalSummaryPage(): void {
+    const total = this.arrivalSummaryTotalPages;
+    if (total === 0) return;
+    if (this.arrivalSummaryPageIndex >= total - 1) return;
+    this.arrivalSummaryPageIndex += 1;
   }
 
   getArrivalSummaryMonthlyRows(): ArrivalMonthSummaryRow[] {

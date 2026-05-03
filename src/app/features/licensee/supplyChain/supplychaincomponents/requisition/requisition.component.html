@@ -928,8 +928,8 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of filteredArrivalDetailsRows; let i = index">
-                  <td class="serial-col">{{ i + 1 }}</td>
+                <tr *ngFor="let row of pagedArrivalDetailsRows; let i = index">
+                  <td class="serial-col">{{ arrivalSummaryPageStart + i }}</td>
                   <td class="date-col">{{ formatArrivalDate(row.arrivalDate) }}</td>
                   <td class="ref-col">
                     {{ row.referenceNo }}
@@ -954,6 +954,33 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="filteredArrivalDetailsRows.length > 0">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted">Showing {{ arrivalSummaryPageStart }}-{{ arrivalSummaryPageEnd }} of {{ filteredArrivalDetailsRows.length }}</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <label class="text-muted mb-0">Page size</label>
+              <select class="form-select form-select-sm" style="width: auto;"
+                [(ngModel)]="arrivalSummaryPageSize"
+                (change)="onArrivalSummaryPageSizeChange()">
+                <option *ngFor="let opt of arrivalSummaryPageSizeOptions" [ngValue]="opt">{{ opt }}</option>
+              </select>
+
+              <button class="btn btn-outline-secondary btn-sm" type="button"
+                (click)="prevArrivalSummaryPage()"
+                [disabled]="arrivalSummaryPageIndex <= 0">
+                Prev
+              </button>
+              <span class="text-muted">Page {{ arrivalSummaryPageIndex + 1 }} / {{ arrivalSummaryTotalPages }}</span>
+              <button class="btn btn-outline-secondary btn-sm" type="button"
+                (click)="nextArrivalSummaryPage()"
+                [disabled]="arrivalSummaryPageIndex >= arrivalSummaryTotalPages - 1">
+                Next
+              </button>
+            </div>
           </div>
         </div>
 
