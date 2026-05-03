@@ -49,8 +49,8 @@ interface BlDetailRow {
       <section class="hero-panel">
         <div class="hero-copy">
           <span class="eyebrow">Officer Review Desk</span>
-          <h2>ENA Details Information</h2>
-          <p>Review arrival ENA submissions before they move into the licensee ENA record and permanent ENA history.</p>
+          <h2>Bulk Spirit Details Information</h2>
+         
         </div>
         <button type="button" class="refresh-btn" (click)="loadRows()" [disabled]="loading">
           <span class="refresh-icon" aria-hidden="true">R</span>
@@ -59,7 +59,7 @@ interface BlDetailRow {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card total stat-card-clickable" role="button" tabindex="0" aria-label="Show all ENA details"
+        <article class="stat-card total stat-card-clickable" role="button" tabindex="0" aria-label="Show all Bulk Spirit details"
           (click)="onStatCardClick('ALL')" (keydown.enter)="onStatCardClick('ALL')"
           (keydown.space)="onStatCardClick('ALL'); $event.preventDefault()"
           [class.active]="isStatCardActive('ALL')">
@@ -70,7 +70,7 @@ interface BlDetailRow {
           <div class="stat-pill">{{ getTotalCount() }}</div>
         </article>
 
-        <article class="stat-card pending stat-card-clickable" role="button" tabindex="0" aria-label="Filter pending ENA details"
+        <article class="stat-card pending stat-card-clickable" role="button" tabindex="0" aria-label="Filter pending Bulk Spirit details"
   (click)="onStatCardClick('PENDING')" (keydown.enter)="onStatCardClick('PENDING')"
   (keydown.space)="onStatCardClick('PENDING'); $event.preventDefault()"
   [class.active]="isStatCardActive('PENDING')">
@@ -80,7 +80,7 @@ interface BlDetailRow {
           </div>
           <div class="stat-pill">{{ getCount('PENDING') }}</div>
         </article>
-        <article class="stat-card approved stat-card-clickable" role="button" tabindex="0" aria-label="Filter approved ENA details"
+        <article class="stat-card approved stat-card-clickable" role="button" tabindex="0" aria-label="Filter approved Bulk Spirit details"
   (click)="onStatCardClick('APPROVED')" (keydown.enter)="onStatCardClick('APPROVED')"
   (keydown.space)="onStatCardClick('APPROVED'); $event.preventDefault()"
   [class.active]="isStatCardActive('APPROVED')">
@@ -90,7 +90,7 @@ interface BlDetailRow {
           </div>
           <div class="stat-pill">{{ getCount('APPROVED') }}</div>
         </article>
-        <article class="stat-card rejected stat-card-clickable" role="button" tabindex="0" aria-label="Filter rejected ENA details"
+        <article class="stat-card rejected stat-card-clickable" role="button" tabindex="0" aria-label="Filter rejected Bulk Spirit details"
   (click)="onStatCardClick('REJECTED')" (keydown.enter)="onStatCardClick('REJECTED')"
   (keydown.space)="onStatCardClick('REJECTED'); $event.preventDefault()"
   [class.active]="isStatCardActive('REJECTED')">
@@ -130,7 +130,7 @@ interface BlDetailRow {
       </section>
 
       <div *ngIf="errorMessage" class="status-banner error">{{ errorMessage }}</div>
-      <div *ngIf="loading" class="loading-state">Loading ENA details...</div>
+      <div *ngIf="loading" class="loading-state">Loading Bulk Spirit details...</div>
 
       <section class="table-panel" *ngIf="!loading">
         <div class="table-panel-header" *ngIf="filteredRows.length > 0">
@@ -2159,7 +2159,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
-        this.errorMessage = 'Unable to load ENA details for OIC review.';
+        this.errorMessage = 'Unable to load Bulk Spirit details for OIC review.';
       }
     });
   }
@@ -2592,7 +2592,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.actingId = null;
-        this.errorMessage = `Unable to approve ENA details for ${details.referenceNo}.`;
+        this.errorMessage = `Unable to approve Bulk Spirit details for ${details.referenceNo}.`;
       }
     });
   }
@@ -2780,7 +2780,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       error: () => {
         this.actingId = null;
         this.rejectSubmitting = false;
-        this.errorMessage = `Unable to reject ENA details for ${this.rejectDialog.referenceNo || 'this entry'}.`;
+        this.errorMessage = `Unable to reject Bulk Spirit details for ${this.rejectDialog.referenceNo || 'this entry'}.`;
       }
     });
   }

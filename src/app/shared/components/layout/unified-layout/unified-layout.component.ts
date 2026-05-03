@@ -94,7 +94,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
-    { section: 'bl-details', label: 'ENA Details Information', icon: 'water_drop', showOnlyForOic: true },
+    { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
         { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
     { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
