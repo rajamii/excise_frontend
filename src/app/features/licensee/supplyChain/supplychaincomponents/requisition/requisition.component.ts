@@ -194,7 +194,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   // Pagination
   currentPage: number = 1;
-  pageSize: number = 10;
+  pageSize: number = 5;
   pageSizeOptions: number[] = [5, 10, 25, 50];
 
   constructor(@Inject(PLATFORM_ID) platformId: Object) {
