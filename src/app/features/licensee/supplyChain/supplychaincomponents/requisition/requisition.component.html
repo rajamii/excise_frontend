@@ -121,18 +121,9 @@
       </select>
     </div>
 
-    <!-- Company Filter -->
-    <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="requisitionCompanyFilter"
-        (change)="onRequisitionCompanyFilterChange()" title="Filter by company">
-        <option value="">All Companies</option>
-        <option *ngFor="let company of requisitionCompanyOptions" [value]="company">{{ company }}</option>
-      </select>
-    </div>
-
     <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearRequisitionFilters()"
-      *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter || requisitionCompanyFilter"
+      *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -141,7 +132,7 @@
 
   <!-- Filter Results Summary -->
   <div class="filter-results-compact mt-2"
-    *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter || requisitionCompanyFilter">
+    *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredRequisitionData.length }}</strong> of <strong>{{ requisitionData.length }}</strong>
@@ -151,7 +142,6 @@
       <span *ngIf="requisitionMonthFilter" class="filter-tag">Month: {{ requisitionMonthFilter | date:'MMM yyyy'
         }}</span>
       <span *ngIf="requisitionYearFilter" class="filter-tag">Year: {{ requisitionYearFilter }}</span>
-      <span *ngIf="requisitionCompanyFilter" class="filter-tag">Company: {{ requisitionCompanyFilter }}</span>
       <span *ngIf="requisitionStatusFilter" class="filter-tag">Status: {{ requisitionStatusFilter }}</span>
     </small>
   </div>

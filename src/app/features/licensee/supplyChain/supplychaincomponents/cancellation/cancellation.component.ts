@@ -41,17 +41,7 @@ export class CancellationComponent implements OnInit {
   cancellationDateFilter: string = '';
   cancellationMonthFilter: string = '';
   cancellationStatusFilter: string = '';
-  cancellationCompanyFilter: string = '';
-  cancellationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
-
-  private getCompanyNameForFilter(item: TableData): string {
-    const establishment = String(item?.establishmentName || '').trim();
-    if (establishment && establishment.toLowerCase() !== 'n/a' && establishment !== '-') {
-      return establishment;
-    }
-    return String(item?.distilleryName || '').trim();
-  }
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
@@ -399,21 +389,9 @@ export class CancellationComponent implements OnInit {
       });
     }
 
-    this.cancellationCompanyOptions = Array.from(
-      new Set(
-        summary
-          .map(item => this.getCompanyNameForFilter(item))
-          .filter(v => !!v)
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
     this.summaryCancellationData = summary;
 
     let filtered = [...summary];
-
-    if (this.cancellationCompanyFilter) {
-      filtered = filtered.filter(item => this.getCompanyNameForFilter(item) === this.cancellationCompanyFilter);
-    }
 
     // Status filter
     if (this.cancellationStatusFilter) {
@@ -444,7 +422,6 @@ export class CancellationComponent implements OnInit {
     this.cancellationDateFilter = '';
     this.cancellationMonthFilter = '';
     this.cancellationStatusFilter = '';
-    this.cancellationCompanyFilter = '';
     this.activeSummaryFilter = '';
     this.applyCancellationFilters();
   }
@@ -454,10 +431,6 @@ export class CancellationComponent implements OnInit {
   }
 
   onCancellationMonthFilterChange(): void {
-    this.applyCancellationFilters();
-  }
-
-  onCancellationCompanyFilterChange(): void {
     this.applyCancellationFilters();
   }
 

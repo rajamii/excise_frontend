@@ -126,17 +126,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   requisitionMonthFilter: string = '';
   requisitionYearFilter: string = '';
   requisitionStatusFilter: string = '';
-  requisitionCompanyFilter: string = '';
-  requisitionCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
-
-  private getCompanyNameForFilter(item: TableData): string {
-    const establishment = String(item?.establishmentName || '').trim();
-    if (establishment && establishment.toLowerCase() !== 'n/a' && establishment !== '-') {
-      return establishment;
-    }
-    return String(item?.distilleryName || '').trim();
-  }
 
   // Modal properties
   isCancellationModalOpen: boolean = false;
@@ -533,22 +523,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return matches;
     });
 
-    this.requisitionCompanyOptions = Array.from(
-      new Set(
-        this.summaryRequisitionData
-          .map(item => this.getCompanyNameForFilter(item))
-          .filter(v => !!v)
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
     this.filteredRequisitionData = this.summaryRequisitionData.filter(item => {
-      if (this.requisitionCompanyFilter) {
-        const company = this.getCompanyNameForFilter(item);
-        if (company !== this.requisitionCompanyFilter) {
-          return false;
-        }
-      }
-
       if (!this.requisitionStatusFilter) {
         return true;
       }
@@ -2084,7 +2059,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.requisitionMonthFilter = '';
     this.requisitionYearFilter = '';
     this.requisitionStatusFilter = '';
-    this.requisitionCompanyFilter = '';
     this.activeSummaryFilter = '';
     this.applyFilters();
   }
@@ -2107,10 +2081,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   onRequisitionDateFilterChange(): void {
-    this.applyFilters();
-  }
-
-  onRequisitionCompanyFilterChange(): void {
     this.applyFilters();
   }
 

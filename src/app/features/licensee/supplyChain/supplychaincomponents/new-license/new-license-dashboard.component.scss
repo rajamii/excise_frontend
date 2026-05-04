@@ -3,8 +3,16 @@
 }
 
 .new-license-register-header {
-  .stats-row {
-    margin-bottom: 1.25rem !important;
+  .stats-cards-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+
+    .summary-card {
+      flex: 1 1 0;
+      min-width: 0;
+    }
   }
 }
 
@@ -100,6 +108,15 @@
   }
 }
 
+.total-requests {
+  --summary-accent-start: #1C2B78;
+  --summary-accent-end: #2d4aa7;
+
+  .card-icon {
+    background: linear-gradient(135deg, #1C2B78, #2d4aa7);
+  }
+}
+
 .applied-requests {
   --summary-accent-start: #7b6dff;
   --summary-accent-end: #4b3db7;
@@ -163,11 +180,30 @@
 }
 
 .compact-filter {
-  min-width: 220px;
-  flex: 1;
+  flex: 0 0 auto;
+
+  &.compact-filter--search {
+    width: 260px;
+  }
+
+  &.compact-filter--date {
+    width: 150px;
+  }
+
+  &.compact-filter--month {
+    width: 145px;
+  }
 }
 
-.register-table .register-container {
+@media (max-width: 768px) {
+  .compact-filter {
+    width: 100% !important;
+  }
+
+  .stats-cards-row .summary-card {
+    flex: 1 1 140px;
+  }
+}.register-table .register-container {
   border: 1px solid #dbe2ea;
   border-radius: 14px;
   background: #fff;
@@ -317,12 +353,6 @@ table {
 
 .error-state {
   color: #b91c1c;
-}
-
-@media (max-width: 768px) {
-  .compact-filter {
-    min-width: 100%;
-  }
 }
 
 // Pay Now Button Custom Styling

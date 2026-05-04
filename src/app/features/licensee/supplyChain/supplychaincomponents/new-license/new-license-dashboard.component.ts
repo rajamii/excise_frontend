@@ -85,9 +85,9 @@ export class NewLicenseDashboardComponent implements OnInit {
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize = 5;
   pageIndex = 0;
-  stageFilterOptions: string[] = [];
-  statusFilter = '';
   searchFilter = '';
+  dateFilter = '';
+  monthFilter = '';
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
 
   private readonly billdeskRetryStateKey = 'new_license_billdesk_retry_state_v1';
@@ -122,19 +122,7 @@ export class NewLicenseDashboardComponent implements OnInit {
           rejected: Number(counts?.rejected || 0)
         };
         this.allRows = this.flattenGroupedData(grouped);
-        this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
-
-        // Admin UX: when opening "New License" from sidebar, default to Pending if there is any pending work.
-        // This avoids landing on Approved / All when there are pending items to process.
-        const isAdmin = this.roleService.isAdminRole();
-        const hasPending = this.serverCounts.pending > 0;
-        const current = (this.statusFilter || '').trim().toLowerCase();
-        if (isAdmin && hasPending && (!current || current === 'approved')) {
-          this.statusFilter = 'pending';
-          this.activeSummaryFilter = 'pending';
-          this.applyFilters();
-        }
 
         if (this.allRows.length === 0) {
           this.error = null;
@@ -151,7 +139,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   applyFilters(): void {
     const q = this.searchFilter.trim().toLowerCase();
 
-    // Summary rows are affected by search only (counts stay stable when selecting status via card/dropdown).
+    // Summary rows are affected by search only (counts stay stable when selecting status via card).
     this.summaryRows = this.allRows.filter((row) => {
       const matchesSearch = !q
         || row.applicationId.toLowerCase().includes(q)
@@ -162,24 +150,31 @@ export class NewLicenseDashboardComponent implements OnInit {
       return matchesSearch;
     });
 
-    const selected = (this.statusFilter || '').trim().toLowerCase();
     this.filteredRows = this.summaryRows.filter((row) => {
-      const stageRaw = (row.currentStageRaw || '').toLowerCase();
-      const stageText = (row.currentStage || '').toLowerCase();
+      // Date filter
+      if (this.dateFilter) {
+        const rowDate = (row.submittedOn || '').split('T')[0];
+        // submittedOn may be formatted as "dd-MMM-yyyy", convert to ISO for comparison
+        const isoDate = this.toIsoDate(row.submittedOn);
+        if (isoDate !== this.dateFilter) return false;
+      }
 
-      const matchesStatus =
-        !selected
-        || row.statusGroup === selected
-        || stageRaw === selected
-        || stageRaw.includes(selected)
-        || stageText === selected
-        || stageText.includes(selected);
+      // Month filter (yyyy-MM)
+      if (this.monthFilter) {
+        const isoDate = this.toIsoDate(row.submittedOn);
+        if (!isoDate || isoDate.substring(0, 7) !== this.monthFilter) return false;
+      }
 
-      return matchesStatus;
+      // Summary card status filter
+      if (this.activeSummaryFilter) {
+        if (row.statusGroup !== this.activeSummaryFilter) return false;
+      }
+
+      return true;
     });
 
     const calculated = this.calculateCounts(this.summaryRows);
-    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.statusFilter;
+    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.dateFilter && !this.monthFilter;
     this.counts = canUseServerCounts ? this.serverCounts : calculated;
 
     this.syncActiveSummaryFilter();
@@ -225,23 +220,21 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   clearFilters(): void {
-    this.statusFilter = '';
     this.searchFilter = '';
+    this.dateFilter = '';
+    this.monthFilter = '';
     this.activeSummaryFilter = '';
     this.applyFilters();
   }
 
-  onSummaryCardClick(group: NewLicenseItem['statusGroup']): void {
-    const current = (this.statusFilter || '').trim().toLowerCase();
-    if (current === group) {
-      this.statusFilter = '';
+  onSummaryCardClick(group: NewLicenseItem['statusGroup'] | 'all'): void {
+    if (group === 'all' || this.activeSummaryFilter === group) {
       this.activeSummaryFilter = '';
       this.applyFilters();
       return;
     }
 
-    this.statusFilter = group;
-    this.activeSummaryFilter = group;
+    this.activeSummaryFilter = group as NewLicenseItem['statusGroup'];
     this.applyFilters();
   }
 
@@ -665,6 +658,17 @@ export class NewLicenseDashboardComponent implements OnInit {
     }).replace(/ /g, '-');
   }
 
+  /** Converts a formatted date string (e.g. "02-May-2026" or ISO) to "yyyy-MM-dd" for filter comparison. */
+  private toIsoDate(dateValue: string | undefined): string {
+    if (!dateValue) return '';
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
   private formatStageName(stageValue: any): string {
     const raw = String(stageValue ?? '').trim();
     if (!raw) return 'Not available';
@@ -686,18 +690,6 @@ export class NewLicenseDashboardComponent implements OnInit {
     return 'Pending';
   }
 
-  private getStageFilterOptions(rows: NewLicenseItem[]): string[] {
-    const values = Array.from(
-      new Set(
-        rows
-          .map((row) => (row.currentStage || '').trim())
-          .filter((v) => !!v)
-      )
-    );
-    values.sort((a, b) => a.localeCompare(b));
-    return values;
-  }
-
   private calculateCounts(rows: NewLicenseItem[]): NewLicenseCounts {
     const next: NewLicenseCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
     for (const row of rows || []) {
@@ -711,11 +703,6 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private syncActiveSummaryFilter(): void {
-    const selected = (this.statusFilter || '').trim().toLowerCase();
-    if (selected === 'applied' || selected === 'pending' || selected === 'objection' || selected === 'approved' || selected === 'rejected') {
-      this.activeSummaryFilter = selected as NewLicenseItem['statusGroup'];
-      return;
-    }
-    this.activeSummaryFilter = '';
+    // activeSummaryFilter is managed directly by onSummaryCardClick; nothing to sync here.
   }
 }
