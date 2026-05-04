@@ -259,6 +259,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   // Month/Date filters for other overview tabs
   availableFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
+  availableTypeFilter: 'ALL' | 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'ALL';
   issuedFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
   historyFilters: TabDateFilters = { month: '', dateFrom: '', dateTo: '' };
 
@@ -2283,21 +2284,31 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   applyAvailableFilters(): void {
-    const hasFilters = !!(this.availableFilters.month || this.availableFilters.dateFrom || this.availableFilters.dateTo);
-    if (!hasFilters) {
-      this.filteredAvailableData = [...this.availableData];
-      this.availableTablePage = 1;
-      return;
+    const hasDateFilters = !!(this.availableFilters.month || this.availableFilters.dateFrom || this.availableFilters.dateTo);
+    const hasTypeFilter = this.availableTypeFilter !== 'ALL';
+
+    let data = [...this.availableData];
+
+    if (hasTypeFilter) {
+      data = data.filter(row => row.type === this.availableTypeFilter);
     }
 
-    this.filteredAvailableData = this.availableData.filter((row) =>
-      this.matchesTabDateFilters(this.getAvailableRowDate(row), this.availableFilters)
-    );
+    if (hasDateFilters) {
+      data = data.filter(row => this.matchesTabDateFilters(this.getAvailableRowDate(row), this.availableFilters));
+    }
+
+    this.filteredAvailableData = data;
     this.availableTablePage = 1;
+  }
+
+  setAvailableTypeFilter(type: 'ALL' | 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
+    this.availableTypeFilter = this.availableTypeFilter === type ? 'ALL' : type;
+    this.applyAvailableFilters();
   }
 
   clearAvailableFilters(): void {
     this.availableFilters = { month: '', dateFrom: '', dateTo: '' };
+    this.availableTypeFilter = 'ALL';
     this.applyAvailableFilters();
   }
 

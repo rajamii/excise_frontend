@@ -511,7 +511,12 @@
                 <!-- Stat Cards -->
                 <div class="row g-3 mb-4">
                   <div class="col-md-3">
-                    <div class="avail-stat-card avail-total">
+                    <div class="avail-stat-card avail-total"
+                      [class.avail-active]="availableTypeFilter === 'ALL'"
+                      role="button" tabindex="0"
+                      (click)="setAvailableTypeFilter('ALL')"
+                      (keydown.enter)="setAvailableTypeFilter('ALL')"
+                      title="Show all holograms">
                       <div class="avail-stat-icon">
                         <i class="bi bi-layers-fill"></i>
                       </div>
@@ -523,7 +528,12 @@
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="avail-stat-card avail-local">
+                    <div class="avail-stat-card avail-local"
+                      [class.avail-active]="availableTypeFilter === 'LOCAL'"
+                      role="button" tabindex="0"
+                      (click)="setAvailableTypeFilter('LOCAL')"
+                      (keydown.enter)="setAvailableTypeFilter('LOCAL')"
+                      title="Filter by Local">
                       <div class="avail-stat-icon">
                         <i class="bi bi-house-fill"></i>
                       </div>
@@ -535,7 +545,12 @@
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="avail-stat-card avail-export">
+                    <div class="avail-stat-card avail-export"
+                      [class.avail-active]="availableTypeFilter === 'EXPORT'"
+                      role="button" tabindex="0"
+                      (click)="setAvailableTypeFilter('EXPORT')"
+                      (keydown.enter)="setAvailableTypeFilter('EXPORT')"
+                      title="Filter by Export">
                       <div class="avail-stat-icon">
                         <i class="bi bi-globe2"></i>
                       </div>
@@ -547,7 +562,12 @@
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="avail-stat-card avail-defence">
+                    <div class="avail-stat-card avail-defence"
+                      [class.avail-active]="availableTypeFilter === 'DEFENCE'"
+                      role="button" tabindex="0"
+                      (click)="setAvailableTypeFilter('DEFENCE')"
+                      (keydown.enter)="setAvailableTypeFilter('DEFENCE')"
+                      title="Filter by Defence">
                       <div class="avail-stat-icon">
                         <i class="bi bi-shield-fill"></i>
                       </div>

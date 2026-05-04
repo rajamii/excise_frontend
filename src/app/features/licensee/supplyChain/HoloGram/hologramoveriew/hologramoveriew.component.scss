@@ -1995,10 +1995,43 @@ Details Modal Styling
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+
+  // Hover bottom line effect
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 3px;
+    border-radius: 0 0 14px 14px;
+    transition: width 0.25s ease;
+  }
 
   &:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+
+    &::after {
+      width: 100%;
+    }
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3), 0 4px 14px rgba(0, 0, 0, 0.07);
+  }
+
+  // Active (selected) state
+  &.avail-active {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+
+    &::after {
+      width: 100%;
+    }
   }
 
   .avail-stat-icon {
@@ -2039,6 +2072,8 @@ Details Modal Styling
     .avail-stat-icon { background: linear-gradient(135deg, #10b981, #059669); }
     .avail-stat-value { color: #065f46; }
     .avail-stat-label { color: #047857; }
+    &::after { background: #10b981; }
+    &.avail-active { border-color: #10b981; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.25); }
   }
 
   // Local Available – blue
@@ -2048,6 +2083,8 @@ Details Modal Styling
     .avail-stat-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
     .avail-stat-value { color: #1e3a8a; }
     .avail-stat-label { color: #1d4ed8; }
+    &::after { background: #3b82f6; }
+    &.avail-active { border-color: #3b82f6; box-shadow: 0 6px 18px rgba(59, 130, 246, 0.25); }
   }
 
   // Export Available – indigo/purple
@@ -2057,6 +2094,8 @@ Details Modal Styling
     .avail-stat-icon { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
     .avail-stat-value { color: #3b0764; }
     .avail-stat-label { color: #6d28d9; }
+    &::after { background: #7c3aed; }
+    &.avail-active { border-color: #7c3aed; box-shadow: 0 6px 18px rgba(124, 58, 237, 0.25); }
   }
 
   // Defence Available – amber/orange
@@ -2066,6 +2105,8 @@ Details Modal Styling
     .avail-stat-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
     .avail-stat-value { color: #78350f; }
     .avail-stat-label { color: #b45309; }
+    &::after { background: #f59e0b; }
+    &.avail-active { border-color: #f59e0b; box-shadow: 0 6px 18px rgba(245, 158, 11, 0.25); }
   }
 }
 
