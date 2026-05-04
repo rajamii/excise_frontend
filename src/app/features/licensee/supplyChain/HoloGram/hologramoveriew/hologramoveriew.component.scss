@@ -1983,3 +1983,215 @@ Details Modal Styling
     }
   }
 }
+
+// ── Available Hologram Inventory – Stat Cards ──────────────────────────────
+.avail-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+
+  // Hover bottom line effect
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 3px;
+    border-radius: 0 0 14px 14px;
+    transition: width 0.25s ease;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+
+    &::after {
+      width: 100%;
+    }
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3), 0 4px 14px rgba(0, 0, 0, 0.07);
+  }
+
+  // Active (selected) state
+  &.avail-active {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+
+    &::after {
+      width: 100%;
+    }
+  }
+
+  .avail-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .avail-stat-content {
+    .avail-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .avail-stat-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-top: 2px;
+      opacity: 0.85;
+    }
+    .avail-stat-sub {
+      font-size: 0.68rem;
+      opacity: 0.6;
+      margin-top: 1px;
+    }
+  }
+
+  // Total Available – teal/green
+  &.avail-total {
+    background: linear-gradient(135deg, #e8fdf5 0%, #d0f5e8 100%);
+    border: 1.5px solid #6ee7b7;
+    .avail-stat-icon { background: linear-gradient(135deg, #10b981, #059669); }
+    .avail-stat-value { color: #065f46; }
+    .avail-stat-label { color: #047857; }
+    &::after { background: #10b981; }
+    &.avail-active { border-color: #10b981; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.25); }
+  }
+
+  // Local Available – blue
+  &.avail-local {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1.5px solid #93c5fd;
+    .avail-stat-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .avail-stat-value { color: #1e3a8a; }
+    .avail-stat-label { color: #1d4ed8; }
+    &::after { background: #3b82f6; }
+    &.avail-active { border-color: #3b82f6; box-shadow: 0 6px 18px rgba(59, 130, 246, 0.25); }
+  }
+
+  // Export Available – indigo/purple
+  &.avail-export {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border: 1.5px solid #c4b5fd;
+    .avail-stat-icon { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+    .avail-stat-value { color: #3b0764; }
+    .avail-stat-label { color: #6d28d9; }
+    &::after { background: #7c3aed; }
+    &.avail-active { border-color: #7c3aed; box-shadow: 0 6px 18px rgba(124, 58, 237, 0.25); }
+  }
+
+  // Defence Available – amber/orange
+  &.avail-defence {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1.5px solid #fcd34d;
+    .avail-stat-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .avail-stat-value { color: #78350f; }
+    .avail-stat-label { color: #b45309; }
+    &::after { background: #f59e0b; }
+    &.avail-active { border-color: #f59e0b; box-shadow: 0 6px 18px rgba(245, 158, 11, 0.25); }
+  }
+}
+
+// ── Available Hologram Inventory – Filter Bar ──────────────────────────────
+.avail-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+
+  .avail-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    i { color: #6366f1; }
+  }
+
+  .avail-filter-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .avail-filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 130px;
+    max-width: 200px;
+  }
+
+  .avail-filter-label-text {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #475569;
+    margin: 0;
+  }
+
+  .avail-filter-select,
+  .avail-filter-input {
+    border-radius: 7px;
+    border-color: #cbd5e1;
+    font-size: 0.82rem;
+
+    &:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+    }
+  }
+
+  .avail-filter-clear {
+    flex: 0 0 auto;
+    min-width: unset;
+    max-width: unset;
+    justify-content: flex-end;
+    padding-bottom: 1px;
+  }
+
+  .avail-clear-btn {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    color: #64748b;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.75rem;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #dc2626;
+    }
+  }
+}

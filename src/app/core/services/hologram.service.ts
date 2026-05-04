@@ -14,7 +14,8 @@ export interface DailyRegisterEntry {
   usageDate: string;
   hologramType: string;
   quantity: number;
-  status: 'APPLIED' | 'UNDER_PROCESS' | 'COMPLETED';
+  status: 'APPLIED' | 'UNDER_PROCESS' | 'COMPLETED' | 'REJECTED';
+  statusMessage?: string;
   completedOnTime?: boolean;
   isOverdue: boolean;
   timeRemaining?: string;
@@ -129,12 +130,10 @@ export class HologramService {
    * Export daily register data
    */
   exportDailyRegister(format: 'csv' | 'excel' = 'excel'): Observable<Blob> {
-    return this.http.get(
-      `${this.apiUrl}/commissioner-dashboard/export_daily_register/`,
-      {
-        params: { format },
-        responseType: 'blob'
-      }
-    );
+    const params = new HttpParams().set('format', format);
+    return this.http.get(`${this.apiUrl}/commissioner-dashboard/export_daily_register/`, {
+      params,
+      responseType: 'blob'
+    });
   }
 }

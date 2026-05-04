@@ -126,6 +126,7 @@
           <option value="APPLIED">Applied</option>
           <option value="UNDER_PROCESS">Under Process</option>
           <option value="COMPLETED">Completed</option>
+          <option value="REJECTED">Rejected</option>
         </select>
       </div>
 
@@ -180,9 +181,17 @@
   </div>
 
   <!-- Deadline Breach Alert -->
-  <div class="alert alert-danger" *ngIf="approvalDeadlineBreaches.length > 0">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    {{ approvalDeadlineBreachMessage }}
+  <div class="alert alert-danger d-flex align-items-center justify-content-between"
+       *ngIf="approvalDeadlineBreaches.length > 0 && showApprovalDeadlineBreachAlert">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <span>{{ approvalDeadlineBreachMessage }}</span>
+    </div>
+    <button type="button"
+            class="btn-close"
+            aria-label="Close"
+            (click)="dismissApprovalDeadlineBreachAlert()">
+    </button>
   </div>
 
   <!-- Error Message -->
