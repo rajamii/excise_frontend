@@ -47,6 +47,7 @@ interface FilterOptions {
   hologramType: string;
   urgencyLevel: string;
   month: string;
+  year: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -119,6 +120,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     hologramType: '',
     urgencyLevel: '',
     month: '',
+    year: '',
     dateFrom: '',
     dateTo: ''
   };
@@ -404,6 +406,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const matchesMonth = !this.filters.month ||
         (new Date(request.submissionDate).getMonth() + 1) === Number(this.filters.month);
 
+      const matchesYear = !this.filters.year ||
+        new Date(request.submissionDate).getFullYear() === Number(this.filters.year);
+
       const matchesDateFrom = !this.filters.dateFrom ||
         new Date(request.submissionDate) >= new Date(this.filters.dateFrom);
 
@@ -411,7 +416,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         new Date(request.submissionDate) <= new Date(this.filters.dateTo);
 
       return matchesReference && matchesStatus && matchesRequestType &&
-        matchesHologramType && matchesUrgencyLevel && matchesMonth && matchesDateFrom && matchesDateTo;
+        matchesHologramType && matchesUrgencyLevel && matchesMonth && matchesYear && matchesDateFrom && matchesDateTo;
     });
 
     // Sort filtered results by submission date and reference number - newest first (descending order)
@@ -461,6 +466,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       hologramType: '',
       urgencyLevel: '',
       month: '',
+      year: '',
       dateFrom: '',
       dateTo: ''
     };
