@@ -839,7 +839,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     } else {
       console.log('PAN Card OK');
     }
-    
+
     if (this.requiresNationalityDocument && !docs.get('sikkim_certificate')) {
       console.error('❌ Missing: Sikkim Certificate');
       missingFields.push('COI / RC / SS Document');
@@ -1083,27 +1083,26 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   private launchBillDesk(apiData: any) {
     // 1. Prepare the flow config object required by the SDK[cite: 2]
     const flow_config = {
-      merchantId: apiData.merchant_id,
-      bdOrderId: apiData.bd_order_id,
-      authToken: apiData.auth_token,
-      childWindow: true, // Opens external pages (like OTP) in a separate window[cite: 2]
-      returnUrl: environment.payment.callbackUrl, // Should match your backend return URL setup[cite: 2]
+      merchantId: apiData.merchantId || apiData.merchant_id, // Fallbacks just in case
+      bdOrderId: apiData.bdOrderId || apiData.bd_order_id,
+      authToken: apiData.authToken || apiData.auth_token,
+      childWindow: true,
+      returnUrl: environment.payment.callbackUrl,
       retryCount: 3
     };
-    // 2. Prepare the main config object[cite: 2]
-    const config = {
-      flowType: "payments", // Fixed value required by the SDK[cite: 2]
-      flowConfig: flow_config,
-      // Optional: You can add themeConfig here to match your app's UI colors[cite: 2]
-    };
+    // 2. Prepare the main config object
+  const config = {
+    flowType: "payments", 
+    flowConfig: flow_config,
+  };
 
-    // 3. Invoke the globally scoped SDK method[cite: 2, 3]
-    if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
-      window.loadBillDeskSdk(config);
-    } else {
-      console.error('BillDesk SDK is not loaded in the window object.');
-    }
+  // 3. Invoke the globally scoped SDK method
+  if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
+    window.loadBillDeskSdk(config);
+  } else {
+    console.error('BillDesk SDK is not loaded in the window object.');
   }
+}
 
   private submitToBillDesk(url: string, requestMsg: string): void {
     try {

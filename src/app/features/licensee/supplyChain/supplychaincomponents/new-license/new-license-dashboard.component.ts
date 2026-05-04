@@ -306,26 +306,51 @@ export class NewLicenseDashboardComponent implements OnInit {
       didOpen: () => Swal.showLoading(),
     });
 
+    // 🚀 FIXED: Calling the correct service method you provided!
     this.paymentIntegrationService
-      .initiateBilldeskNewLicenseApplicationFee({
-        application_id: String(applicationId).trim(),
-        amount: 500,
-        payment_module_code: '001',
-      })
+      .initiateNewLicenseFee(String(applicationId).trim(), 500)
       .pipe(timeout(30000))
       .subscribe({
         next: (initRes: any) => {
           Swal.close();
           this.clearRetryState(applicationId);
 
-          const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
-          const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
-          if (!billdeskUrl || !requestMsg) {
+          // 1. Check if backend returned the required SDK parameters
+          // (Handles both camelCase from your Django renderer and snake_case)
+          const bdOrderId = initRes?.bdOrderId || initRes?.bd_order_id;
+          const authToken = initRes?.authToken || initRes?.auth_token;
+          const merchantId = initRes?.merchantId || initRes?.merchant_id;
+
+          if (!bdOrderId || !authToken || !merchantId) {
             this.recordBilldeskFailure(applicationId);
-            void Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
+            // Notice we added 'SDK' here. If you see this exact message, you know THIS code ran.
+            void Swal.fire('Error', 'BillDesk initiation failed: missing SDK gateway parameters.', 'error');
             return;
           }
-          this.submitToBillDesk(billdeskUrl, requestMsg);
+
+          // 2. Prepare the flow config object required by the SDK
+          const flow_config = {
+            merchantId: merchantId,
+            bdOrderId: bdOrderId,
+            authToken: authToken,
+            childWindow: true,
+            returnUrl: environment.payment.callbackUrl,
+            retryCount: 3
+          };
+
+          // 3. Prepare the main config object
+          const config = {
+            flowType: "payments",
+            flowConfig: flow_config,
+          };
+
+          // 4. Invoke the globally scoped SDK method
+          if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
+            window.loadBillDeskSdk(config);
+          } else {
+            console.error('BillDesk SDK is not loaded in the window object.');
+            void Swal.fire('Error', 'Payment SDK failed to load. Please refresh and try again.', 'error');
+          }
         },
         error: (err: any) => {
           Swal.close();
