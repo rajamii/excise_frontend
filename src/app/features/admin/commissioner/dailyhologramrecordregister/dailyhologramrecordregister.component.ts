@@ -83,6 +83,8 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   approvalDeadlineBreaches: DailyRegisterEntry[] = [];
   approvalDeadlineBreachMessage = '';
   approvalDeadlineLabel = '';
+  showApprovalDeadlineBreachAlert = true;
+  private approvalDeadlineBreachSignature = '';
 
   constructor(
     private hologramService: HologramService,
@@ -158,6 +160,12 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
         (sampleRefs ? `Ref: ${sampleRefs}${breaches.length > 4 ? '…' : ''}` : '');
     } else {
       this.approvalDeadlineBreachMessage = '';
+    }
+
+    const signature = breaches.map((b) => b.referenceNo).sort().join('|');
+    if (signature !== this.approvalDeadlineBreachSignature) {
+      this.approvalDeadlineBreachSignature = signature;
+      this.showApprovalDeadlineBreachAlert = true;
     }
 
     // Keep commissioner dashboard warning in sync
@@ -520,6 +528,7 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
       case 'APPLIED': return 'bg-info text-white';
       case 'UNDER_PROCESS': return 'bg-warning text-dark';
       case 'COMPLETED': return 'bg-success text-white';
+      case 'REJECTED': return 'bg-danger text-white';
       default: return 'bg-secondary';
     }
   }
@@ -529,6 +538,7 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
       case 'APPLIED': return 'bi bi-file-earmark-text';
       case 'UNDER_PROCESS': return 'bi bi-hourglass-split';
       case 'COMPLETED': return 'bi bi-check-circle-fill';
+      case 'REJECTED': return 'bi bi-x-circle-fill';
       default: return 'bi bi-question-circle';
     }
   }
@@ -597,6 +607,10 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     this.loadDailyRegisterEntries(true);
   }
 
+  dismissApprovalDeadlineBreachAlert(): void {
+    this.showApprovalDeadlineBreachAlert = false;
+  }
+
   isSlaBreached(entry: DailyRegisterEntry): boolean {
     return !!entry.isOverdue || (entry.status === 'COMPLETED' && entry.completedOnTime === false);
   }
@@ -632,6 +646,10 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     if (entry.status === 'APPLIED') {
       return 'Awaiting Approval';
     }
+
+    if (entry.status === 'REJECTED') {
+      return entry.statusMessage || 'No action was taken';
+    }
     
     if (entry.status === 'COMPLETED') {
       const saved = this.getEntrySavedTime(entry);
@@ -655,6 +673,10 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   getTimeRemainingClass(entry: DailyRegisterEntry): string {
     if (entry.status === 'APPLIED') {
       return 'text-info';
+    }
+
+    if (entry.status === 'REJECTED') {
+      return 'text-danger fw-bold';
     }
     
     if (entry.status === 'COMPLETED') {
