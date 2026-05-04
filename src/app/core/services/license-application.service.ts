@@ -329,8 +329,11 @@ export class LicenseApplicationService {
     });
 
     // ✅ 1. LICENSE TYPE - Send ID as INTEGER
+    const selectedLicenseTypeId = Number(selectLicenseData?.licenseType || selectLicenseData?.license_type || 0);
+    const isIndividualApplication = selectedLicenseTypeId === 1;
+
     if (selectLicenseData?.licenseType || selectLicenseData?.license_type) {
-      const licenseTypeId = selectLicenseData.licenseType || selectLicenseData.license_type;
+      const licenseTypeId = selectedLicenseTypeId;
       formData.append('license_type', String(licenseTypeId));
       console.log('✅ license_type ID:', licenseTypeId);
     }
@@ -394,11 +397,12 @@ export class LicenseApplicationService {
       if (applicantDetailsData.mode_of_operation) {
         formData.append('mode_of_operation', String(applicantDetailsData.mode_of_operation));
       }
-      if (applicantDetailsData.coi_rc_ss) {
+      if (isIndividualApplication && applicantDetailsData.coi_rc_ss) {
         formData.append('coi_rc_ss', String(applicantDetailsData.coi_rc_ss));
       }
       if (applicantDetailsData.has_sikkim_certificate) {
-        formData.append('has_sikkim_certificate', String(applicantDetailsData.has_sikkim_certificate));
+        const hasSikkimCertificate = isIndividualApplication ? applicantDetailsData.has_sikkim_certificate : 'No';
+        formData.append('has_sikkim_certificate', String(hasSikkimCertificate));
       }
       if (applicantDetailsData.has_excise_license) {
         formData.append('has_excise_license', String(applicantDetailsData.has_excise_license));
@@ -586,6 +590,7 @@ export class LicenseApplicationService {
       'sikkim_certificate',
       'dob_proof',
       'parcha',
+      'noc',
       'trade_license',
       'member_pass_photo',
       'member_aadhaar_card',

@@ -8,11 +8,17 @@ import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms'
 import { FormDataBuilder } from '../../../../../shared/utils/form-data.util';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { timeout } from 'rxjs';
+import { MasterService } from '../../../../../core/services/master.service';
 
 interface ApplicantDeclarationData {
-  nationality?: string | null;
   mode_of_operation?: string | null;
   modeOfOperation?: string | null;
+}
+
+interface UploadedDocumentView {
+  key: string;
+  label: string;
+  fileName: string;
 }
 
 @Component({
@@ -32,10 +38,37 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   isSubmitting = false;
   draftApplicationId: string | null = null;
   submittedApplicationId: string | null = null;
+  private readonly documentObjectUrls = new Map<string, string>();
+
+  private readonly uploadedDocumentLabels: Record<string, string> = {
+    pan_card: 'PAN Card',
+    sikkim_certificate: 'COI / RC / SS Document',
+    dob_proof: 'Date of Birth Proof',
+    parcha: 'Parcha Document',
+    noc: 'NOC Document',
+    trade_license: 'Trade License Document',
+    member_pass_photo: 'Member Passport Size Photo',
+    member_aadhaar_card: 'Member Aadhaar Card',
+    member_residential_certificate: 'Member COI / RC / SS Document',
+    member_dob_proof: 'Member Date of Birth Proof'
+  };
+  private readonly documentFieldKeys = new Set([
+    'parcha',
+    'noc',
+    'trade_license',
+    'pan_card',
+    'sikkim_certificate',
+    'dob_proof',
+    'member_pass_photo',
+    'member_aadhaar_card',
+    'member_residential_certificate',
+    'member_dob_proof'
+  ]);
 
   constructor(
     private licenseAppService: LicenseApplicationService,
     private paymentIntegrationService: PaymentIntegrationService,
+    private masterService: MasterService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private fb: FormBuilder
@@ -46,6 +79,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.ensureReviewMasterData();
+
     // If user comes back from BillDesk receipt page and chooses "Go to Dashboard",
     // we show the "Application Submitted" view in this step.
     try {
@@ -70,6 +105,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.passPhotoUrl) URL.revokeObjectURL(this.passPhotoUrl);
+    this.documentObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+    this.documentObjectUrls.clear();
     this.photoSub?.unsubscribe();
   }
 
@@ -161,6 +198,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     site_owned: 'Site Owned by Applicant',
     nocobtained: 'NOC Obtained',
     noc_obtained: 'NOC Obtained',
+    noc: 'NOC Document',
     parcha: 'Parcha Document',
     tradelicensecovered: 'Trade License Covered',
     trade_license_covered: 'Trade License Covered',
@@ -204,10 +242,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   get requiresNationalityDocument(): boolean {
-    const applicantData = this.getParsedSession<ApplicantDeclarationData>('applicantDetailsData');
-    const nationality = String(applicantData?.nationality ?? '').trim();
-
-    return this.isIndividualType || (this.isCompanyType && nationality === 'Indian');
+    return this.isIndividualType;
   }
 
   get shouldShowMemberDetails(): boolean {
@@ -241,6 +276,15 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     return this.getDataForView('unitDetailsData');
   }
 
+  get uploadedDocuments(): UploadedDocumentView[] {
+    const docs = this.licenseAppService.getAllSiteDocuments();
+    return Array.from(docs.entries()).map(([key, file]) => ({
+      key,
+      label: this.uploadedDocumentLabels[key] ?? FormDataBuilder.toTitleCase(key),
+      fileName: file.name
+    }));
+  }
+
   get displaySections() {
     return [
       { title: 'Application Type', data: this.selectLicenseData },
@@ -265,8 +309,35 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
   }
 
+  private ensureReviewMasterData(): void {
+    this.cacheMasterDataIfMissing('licenseCategories', () => this.masterService.getLicenseCategories());
+    this.cacheMasterDataIfMissing('licenseSubcategories', () => this.masterService.getLicenseSubcategories());
+    this.cacheMasterDataIfMissing('locationCategories', () => this.masterService.getLocationCategories());
+    this.cacheMasterDataIfMissing('locationSubcategories', () => this.masterService.getLocationSubcategories());
+    this.cacheMasterDataIfMissing('locations', () => this.masterService.getLocations());
+    this.cacheMasterDataIfMissing('wards', () => this.masterService.getWards());
+  }
+
+  private cacheMasterDataIfMissing(key: string, loader: () => any): void {
+    if (sessionStorage.getItem(key)) {
+      return;
+    }
+
+    loader().subscribe({
+      next: (data: any[]) => {
+        sessionStorage.setItem(key, JSON.stringify(data));
+        this.cdr.detectChanges();
+      },
+      error: (error: any) => console.error(`Failed to load ${key} for declaration review`, error)
+    });
+  }
+
   private getSafeLabel(key: string): string {
-    return this.licenseApplicationLabels[key] || FormDataBuilder.toTitleCase(key);
+    const normalized = key.toLowerCase().replace(/_/g, '');
+    return this.licenseApplicationLabels[key]
+      || this.licenseApplicationLabels[normalized]
+      || this.licenseApplicationLabels[this.toSnakeCase(key)]
+      || FormDataBuilder.toTitleCase(key);
   }
 
   private getDataForView(key: string): { key: string; value: any }[] {
@@ -277,8 +348,11 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
     return Object.entries(data)
       .filter(([k]) => {
-        // Skip code fields and Name suffixed fields (which contain display names)
+        // Skip code fields and companion display-name fields. The base field
+        // uses those names through getDisplayValue().
         if (k.endsWith('_code') || k.endsWith('code') || k.endsWith('Name')) return false;
+        if (this.isCompanionDisplayNameField(k, data)) return false;
+        if (this.documentFieldKeys.has(k)) return false;
 
         const normalized = k.toLowerCase().replace(/_/g, '');
         if (processedFields.has(normalized)) return false;
@@ -293,6 +367,16 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         return { key: label, value: displayValue };
       })
       .filter(item => item.value !== null && item.value !== undefined && item.value !== '');
+  }
+
+  private isCompanionDisplayNameField(field: string, data: Record<string, any>): boolean {
+    if (!field.endsWith('_name')) {
+      return false;
+    }
+
+    const baseField = field.replace(/_name$/, '');
+    const idField = `${baseField}_id`;
+    return Object.prototype.hasOwnProperty.call(data, baseField) || Object.prototype.hasOwnProperty.call(data, idField);
   }
 
   /**
@@ -310,11 +394,15 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     const possibleNameFields = [
       `${field}Name`,           // exact match with Name suffix
       `${field}_name`,          // snake_case with _name
-      field.replace(/_/g, '') + 'Name'  // no underscore + Name
+      field.replace(/_/g, '') + 'Name',  // no underscore + Name
+      `${this.toSnakeCase(field)}_name`
     ];
 
     if (field.endsWith('_id')) {
       possibleNameFields.push(field.replace(/_id$/, '_name'));
+    }
+    if (field.endsWith('Id')) {
+      possibleNameFields.push(this.toSnakeCase(field).replace(/_id$/, '_name'));
     }
 
     for (const nameField of possibleNameFields) {
@@ -334,12 +422,16 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       if (normalized === 'licensetype') {
         masterKey = 'licenseTypes';
         displayField = 'licenseType';
-      } else if (normalized === 'licensecategory') {
+      } else if (
+        normalized === 'licensecategory' ||
+        normalized === 'existinglicensecategoryid' ||
+        normalized === 'familylicensecategoryid'
+      ) {
         masterKey = 'licenseCategories';
         displayField = 'licenseCategory';
       } else if (normalized === 'licensesubcategory') {
         masterKey = 'licenseSubcategories';
-        displayField = 'licenseSubcategory';
+        displayField = 'description';
       } else if (normalized === 'sitedistrict' || normalized === 'district') {
         masterKey = 'districts';
         displayField = 'district';
@@ -354,7 +446,16 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         displayField = 'roadName';
       } else if (normalized === 'locationcategory') {
         masterKey = 'locationCategories';
-        displayField = 'locationCategory';
+        displayField = 'categoryName';
+      } else if (normalized === 'locationsubcategory') {
+        masterKey = 'locationSubcategories';
+        displayField = 'subcategoryName';
+      } else if (normalized === 'location') {
+        masterKey = 'locations';
+        displayField = 'locationDescription';
+      } else if (normalized === 'ward') {
+        masterKey = 'wards';
+        displayField = 'wardName';
       } else if (normalized === 'sitetype') {
         masterKey = 'siteTypes';
         displayField = 'siteType';
@@ -377,7 +478,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
           
           if (item) {
             // Try multiple possible field names
-            const name = item[displayField] || item.name || item.title;
+            const name = this.getItemDisplayName(item, displayField);
             if (name) {
               console.log(`✅ Found ${displayField} in ${masterKey}:`, name);
               return name;
@@ -401,8 +502,49 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
   }
 
+  private toSnakeCase(value: string): string {
+    return value.replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`).replace(/^_/, '');
+  }
+
+  private getItemDisplayName(item: Record<string, any>, displayField: string): string | null {
+    const candidates = [
+      displayField,
+      this.toSnakeCase(displayField),
+      'description',
+      'name',
+      'title'
+    ];
+
+    for (const candidate of candidates) {
+      const value = item[candidate];
+      if (value !== null && value !== undefined && value !== '') {
+        return String(value);
+      }
+    }
+
+    return null;
+  }
+
   goBack() {
     this.back.emit();
+  }
+
+  viewUploadedDocument(documentKey: string): void {
+    const file = this.licenseAppService.getSiteDocument(documentKey);
+    if (!file) {
+      Swal.fire('Document Missing', 'This uploaded document is not available for preview.', 'warning');
+      return;
+    }
+
+    const existingUrl = this.documentObjectUrls.get(documentKey);
+    if (existingUrl) {
+      window.open(existingUrl, '_blank');
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    this.documentObjectUrls.set(documentKey, url);
+    window.open(url, '_blank');
   }
 
   goToDashboard(): void {
@@ -674,6 +816,9 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     } else {
       console.log('✅ Trade License Covered OK');
     }
+    if (siteData?.trade_license_covered === 'No') {
+      missingFields.push('Trade License Covered');
+    }
 
     const passPhoto = this.licenseAppService.getPassPhoto();
     if (!passPhoto) {
@@ -710,6 +855,15 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     console.log('🔍 Validation Result:', { valid: missingFields.length === 0, missingFields });
     if (siteData?.site_owned === 'Yes' && !docs.get('parcha')) {
       missingFields.push('Parcha');
+    }
+
+    if (siteData?.site_owned === 'No') {
+      if (siteData?.noc_obtained !== 'Yes') {
+        missingFields.push('NOC Obtained');
+      }
+      if (!docs.get('noc')) {
+        missingFields.push('NOC Document');
+      }
     }
 
     if (siteData?.trade_license_covered === 'Yes' && !docs.get('trade_license')) {

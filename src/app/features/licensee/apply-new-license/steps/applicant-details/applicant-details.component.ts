@@ -261,8 +261,13 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   }
 
   get requiresNationalityDocument(): boolean {
+    return this.isIndividualApplication;
+  }
+
+  get isEligibilityAllowed(): boolean {
     const formValue = this.applicantDetailsForm.getRawValue();
-    return this.isIndividualApplication || (this.isCompanyApplication && formValue.nationality === 'Indian');
+    const hasRequiredCertificate = formValue.hasSikkimCertificate !== 'No' || this.isCompanyApplication;
+    return hasRequiredCertificate && formValue.criminalConviction !== 'Yes';
   }
 
   get selectedCoiRcSsLabel(): string {
@@ -431,6 +436,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     raw.permanent_address = raw.permanentAddress;
     raw.mode_of_operation = raw.modeOfOperation || null;
     raw.coi_rc_ss = this.requiresNationalityDocument ? raw.coiRcSsDocumentType : null;
+    raw.hasSikkimCertificate = this.requiresNationalityDocument ? raw.hasSikkimCertificate : 'No';
     raw.has_sikkim_certificate = raw.hasSikkimCertificate;
     raw.has_excise_license = raw.hasExciseLicense;
     raw.existing_license_category_id = raw.hasExciseLicense === 'Yes' ? raw.existingLicenseCategoryId : null;
@@ -753,7 +759,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   }
 
   proceedToNext(): void {
-    if (this.applicantDetailsForm.valid && this.areRequiredDocumentsUploaded()) {
+    if (this.applicantDetailsForm.valid && this.isEligibilityAllowed && this.areRequiredDocumentsUploaded()) {
       this.saveToSessionStorage();
       this.next.emit();
       return;

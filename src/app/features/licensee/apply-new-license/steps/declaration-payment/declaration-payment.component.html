@@ -144,6 +144,33 @@
         </div>
       }
 
+      @if (uploadedDocuments.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>folder_open</mat-icon>
+            <h3>Uploaded Documents</h3>
+          </div>
+          <div class="documents-review-list">
+            @for (doc of uploadedDocuments; track doc.key) {
+              <div class="document-review-item">
+                <div class="document-review-info">
+                  <span class="label">{{ doc.label }}:</span>
+                  <span class="value">{{ doc.fileName }}</span>
+                </div>
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  type="button"
+                  (click)="viewUploadedDocument(doc.key)">
+                  <mat-icon>visibility</mat-icon>
+                  View
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Fee Information -->
       <div class="info-section fee-section">
         <div class="section-header">

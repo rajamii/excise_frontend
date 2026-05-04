@@ -11,7 +11,7 @@
       <h5 class="section-title">Site Address</h5>
       <div class="form-field-container">
         <mat-form-field appearance="outline">
-          <mat-label>District <span class="required">*</span></mat-label>
+          <mat-label>District</mat-label>
           <mat-select formControlName="siteDistrict" required (selectionChange)="onDistrictChange($event.value)">
             @if (districts.length === 0) {
               <mat-option disabled>Loading districts...</mat-option>
@@ -28,7 +28,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Site Sub Division <span class="required">*</span></mat-label>
+          <mat-label>Site Sub Division</mat-label>
           <mat-select formControlName="siteSubdivision" required>
             @if (siteSubdivisions.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
               <mat-option disabled>No subdivisions available</mat-option>
@@ -48,7 +48,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Police Station <span class="required">*</span></mat-label>
+          <mat-label>Police Station</mat-label>
           <mat-select formControlName="policeStation" required>
             @if (sitePoliceStations.length === 0 && siteDetailsForm.get('siteSubdivision')?.value) {
               <mat-option disabled>No police stations available</mat-option>
@@ -68,7 +68,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Location Category <span class="required">*</span></mat-label>
+          <mat-label>Location Category</mat-label>
           <mat-select formControlName="locationCategory" required>
             @if (locationCategories.length === 0) {
               <mat-option disabled>Loading categories...</mat-option>
@@ -85,7 +85,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Location Subcategory <span class="required">*</span></mat-label>
+          <mat-label>Location Subcategory</mat-label>
           <mat-select formControlName="locationSubcategory" required>
             @if (locationSubcategories.length === 0 && siteDetailsForm.get('locationCategory')?.value) {
               <mat-option disabled>No subcategories available</mat-option>
@@ -105,7 +105,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Location Name <span class="required">*</span></mat-label>
+          <mat-label>Location Name</mat-label>
           <mat-select formControlName="location" required>
             @if (locations.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
               <mat-option disabled>No locations available</mat-option>
@@ -125,7 +125,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Ward Name <span class="required">*</span></mat-label>
+          <mat-label>Ward Name</mat-label>
           <mat-select formControlName="ward" required>
             @if (wards.length === 0 && siteDetailsForm.get('location')?.value) {
               <mat-option disabled>No wards available</mat-option>
@@ -145,7 +145,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Address of the Business Premises <span class="required">*</span></mat-label>
+          <mat-label>Address of the Business Premises</mat-label>
           <textarea
             matInput
             placeholder="Enter Site Address (max 500 characters)"
@@ -162,7 +162,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Road Name <span class="required">*</span></mat-label>
+          <mat-label>Road Name</mat-label>
           <mat-select formControlName="roadName" required>
             @if (roadNames.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
               <mat-option disabled>No roads available</mat-option>
@@ -180,7 +180,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>PIN Code <span class="required">*</span></mat-label>
+          <mat-label>PIN Code</mat-label>
           <input matInput placeholder="Enter PIN" type="number" formControlName="pinCode" required />
           @if (siteDetailsForm.controls['pinCode'].invalid && siteDetailsForm.controls['pinCode'].touched) {
             <mat-error>{{ getErrorMessage('pinCode') }}</mat-error>
@@ -191,7 +191,7 @@
       <h5 class="section-title">Site Map (Optional)</h5>
       <div class="form-field-container">
         <mat-form-field appearance="outline">
-          <mat-label>Type of Construction of Proposed Shop <span class="required">*</span></mat-label>
+          <mat-label>Type of Construction of Proposed Shop</mat-label>
           <mat-select formControlName="constructionType" required>
             @for (type of constructionTypes; track type) {
               <mat-option [value]="type">{{ type }}</mat-option>
@@ -234,6 +234,22 @@
           }
         </div>
 
+        @if (siteDetailsForm.get('siteOwned')?.value === 'No') {
+          <div class="radio-question">
+            <label class="question-label">
+              If no, whether NOC along with the Parcha from Land lord regarding the use of Premises to run the Excise License Applied for, has been obtained?
+              <span class="required">*</span>
+            </label>
+            <mat-radio-group formControlName="nocObtained" required>
+              <mat-radio-button value="Yes">Yes</mat-radio-button>
+              <mat-radio-button value="No">No</mat-radio-button>
+            </mat-radio-group>
+            @if (siteDetailsForm.controls['nocObtained'].invalid && siteDetailsForm.controls['nocObtained'].touched) {
+              <mat-error class="radio-error">{{ getErrorMessage('nocObtained') }}</mat-error>
+            }
+          </div>
+        }
+
         <div class="radio-question">
           <label class="question-label">
             Whether the proposed shop is covered by Trade License? <span class="required">*</span>
@@ -248,12 +264,13 @@
         </div>
       </div>
 
-      @if (siteDetailsForm.get('siteOwned')?.value === 'Yes' || siteDetailsForm.get('tradeLicenseCovered')?.value === 'Yes') {
+      @if (siteDetailsForm.get('siteOwned')?.value === 'Yes' || siteDetailsForm.get('nocObtained')?.value === 'Yes' || siteDetailsForm.get('tradeLicenseCovered')?.value === 'Yes') {
         <div>
           <h5 class="section-title">Upload Documents</h5>
           <div class="documents-upload-container">
             @for (doc of documents; track doc.name) {
               @if ((doc.name === 'parcha' && siteDetailsForm.get('siteOwned')?.value === 'Yes') ||
+                   (doc.name === 'noc' && siteDetailsForm.get('nocObtained')?.value === 'Yes') ||
                    (doc.name === 'trade_license' && siteDetailsForm.get('tradeLicenseCovered')?.value === 'Yes')) {
                 <div class="document-upload-row">
                   <div class="document-info">

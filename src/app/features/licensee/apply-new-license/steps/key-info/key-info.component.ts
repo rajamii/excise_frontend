@@ -112,6 +112,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           licenseCategory: item.licenseCategory,
           description: item.description ?? ''
         }));        
+        sessionStorage.setItem('licenseCategories', JSON.stringify(this.licenseCategories));
         this.restoreCategoryIfNeeded();
       },
       error: (err) => console.error('Failed to load license categories', err)
@@ -162,6 +163,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           this.filterSubCategories(currentCategory);
         }
         
+        sessionStorage.setItem('licenseSubcategories', JSON.stringify(this.allSubCategories));
         this.restoreSubcategoryIfNeeded();
       },
       error: (err) => console.error('Failed to load subcategories', err)
@@ -253,7 +255,9 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       
       // Backend field names (PrimaryKeyRelatedField expects IDs)
       license_category: formData.licenseCategory,
+      license_category_name: this.getLicenseCategoryName(formData.licenseCategory),
       license_sub_category: formData.licenseSubCategory,
+      license_sub_category_name: this.getLicenseSubcategoryName(formData.licenseSubCategory),
       establishment_name: formData.establishmentName,
       site_type: formData.siteType,
       existing_site_license: formData.siteType === 'Existing' ? formData.existingSiteLicense : null
@@ -261,6 +265,18 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     
     console.log('Saving Key Info:', backendData);
     sessionStorage.setItem('keyInfoData', JSON.stringify(backendData));
+  }
+
+  private getLicenseCategoryName(categoryId: number | string | null): string | null {
+    if (!categoryId) return null;
+    const matchedCategory = this.licenseCategories.find(category => Number(category.id) === Number(categoryId));
+    return matchedCategory?.licenseCategory ?? null;
+  }
+
+  private getLicenseSubcategoryName(subcategoryId: number | string | null): string | null {
+    if (!subcategoryId) return null;
+    const matchedSubcategory = this.allSubCategories.find(subcategory => Number(subcategory.id) === Number(subcategoryId));
+    return matchedSubcategory?.description ?? null;
   }
 
   /**

@@ -83,6 +83,14 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       formats: '.jpg,.jpeg,.png,.pdf'
     },
     {
+      name: 'noc',
+      label: 'NOC from the Land lord regarding the use of the Premises',
+      file: null,
+      fileUrl: '',
+      required: false,
+      formats: '.jpg,.jpeg,.png,.pdf'
+    },
+    {
       name: 'trade_license',
       label: 'Trade License',
       file: null,
@@ -155,7 +163,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       ]),
       siteOwned: new FormControl(storedValues.site_owned, [Validators.required]),
       nocObtained: new FormControl(storedValues.noc_obtained),
-      tradeLicenseCovered: new FormControl(storedValues.trade_license_covered, [Validators.required]),
+      tradeLicenseCovered: new FormControl(storedValues.trade_license_covered, [Validators.required, Validators.pattern(/^Yes$/)]),
     });
 
     this.setupConditionalValidation();
@@ -308,19 +316,48 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .pipe(takeUntil(this.destroy$))
       .subscribe((value) => {
         const parchaDocument = this.documents.find((document) => document.name === 'parcha');
+        const nocDocument = this.documents.find((document) => document.name === 'noc');
 
         if (parchaDocument) {
           parchaDocument.required = value === 'Yes';
         }
 
         if (value === 'Yes') {
-          nocControl?.setValue('No', { emitEvent: false });
+          nocControl?.clearValidators();
+          nocControl?.setValue(null, { emitEvent: false });
+          if (nocDocument) {
+            nocDocument.required = false;
+          }
+          this.clearDocumentSelection('noc');
         } else if (value === 'No') {
-          nocControl?.setValue('Yes', { emitEvent: false });
+          nocControl?.setValidators([Validators.required, Validators.pattern(/^Yes$/)]);
           this.clearDocumentSelection('parcha');
         } else {
+          nocControl?.clearValidators();
           nocControl?.setValue(null, { emitEvent: false });
+          if (nocDocument) {
+            nocDocument.required = false;
+          }
           this.clearDocumentSelection('parcha');
+          this.clearDocumentSelection('noc');
+        }
+
+        nocControl?.updateValueAndValidity({ emitEvent: false });
+        this.saveToSessionStorage();
+        this.cdr.detectChanges();
+      });
+
+    nocControl?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((value) => {
+        const nocDocument = this.documents.find((document) => document.name === 'noc');
+
+        if (nocDocument) {
+          nocDocument.required = siteOwnedControl?.value === 'No' && value === 'Yes';
+        }
+
+        if (value !== 'Yes') {
+          this.clearDocumentSelection('noc');
         }
 
         this.saveToSessionStorage();
@@ -347,20 +384,27 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     const currentSiteOwnedValue = siteOwnedControl?.value;
     const currentTradeLicenseValue = tradeLicenseCoveredControl?.value;
     const parchaDocument = this.documents.find((document) => document.name === 'parcha');
+    const nocDocument = this.documents.find((document) => document.name === 'noc');
     const tradeLicenseDocument = this.documents.find((document) => document.name === 'trade_license');
 
     if (parchaDocument) {
       parchaDocument.required = currentSiteOwnedValue === 'Yes';
+    }
+    if (nocDocument) {
+      nocDocument.required = currentSiteOwnedValue === 'No' && nocControl?.value === 'Yes';
     }
     if (tradeLicenseDocument) {
       tradeLicenseDocument.required = currentTradeLicenseValue === 'Yes';
     }
 
     if (currentSiteOwnedValue === 'Yes') {
-      nocControl?.setValue('No', { emitEvent: false });
+      nocControl?.clearValidators();
+      nocControl?.setValue(null, { emitEvent: false });
     } else if (currentSiteOwnedValue === 'No') {
-      nocControl?.setValue('Yes', { emitEvent: false });
+      nocControl?.setValidators([Validators.required, Validators.pattern(/^Yes$/)]);
     }
+
+    nocControl?.updateValueAndValidity({ emitEvent: false });
   }
 
   /**
@@ -509,6 +553,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           status: item.status,
           subcategoryCount: item.subcategoryCount || item.subcategory_count
         }));
+        sessionStorage.setItem('locationCategories', JSON.stringify(this.locationCategories));
         console.log('✅ Location Categories loaded:', this.locationCategories.length);
         this.restoreAllFromSession();
       },
@@ -528,6 +573,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           isActive: item.isActive ?? item.is_active ?? true,
           status: item.status
         }));
+        sessionStorage.setItem('locationSubcategories', JSON.stringify(this.allLocationSubcategories));
         console.log('✅ Location Subcategories loaded:', this.allLocationSubcategories.length);
         this.restoreAllFromSession();
       },
@@ -545,6 +591,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           districtCode: item.districtCode || item.district_code || item.district,
           isActive: item.isActive ?? item.is_active ?? true
         }));
+        sessionStorage.setItem('locations', JSON.stringify(this.allLocations));
         console.log('✅ Locations loaded:', this.allLocations.length);
         this.restoreAllFromSession();
       },
@@ -567,6 +614,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           isActive: item.isActive ?? item.is_active ?? true,
           status: item.status
         }));
+        sessionStorage.setItem('wards', JSON.stringify(this.allWards));
         console.log('✅ Wards loaded:', this.allWards.length);
         this.restoreAllFromSession();
       },
@@ -971,6 +1019,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       location_category: formData.locationCategory || null,
       location_category_name: this.getLocationCategoryDisplayName(formData.locationCategory),
       location_subcategory: formData.locationSubcategory || null,
+      location_subcategory_name: this.getLocationSubcategoryDisplayName(formData.locationSubcategory),
       location: formData.location || null,
       ward: formData.ward || null,
 
@@ -984,8 +1033,9 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       breadth: formData.breadth || null,
       site_owned: formData.siteOwned || null,
       trade_license_covered: formData.tradeLicenseCovered || null,
-      noc_obtained: formData.siteOwned === 'Yes' ? 'No' : (formData.siteOwned === 'No' ? 'Yes' : null),
+      noc_obtained: formData.siteOwned === 'No' ? formData.nocObtained || null : null,
       parcha: this.getDocumentReference('parcha'),
+      noc: this.getDocumentReference('noc'),
       trade_license: this.getDocumentReference('trade_license')
     };
     
@@ -1014,6 +1064,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     return cat?.categoryName || null;
   }
 
+  private getLocationSubcategoryDisplayName(subcategoryId: number | null): string | null {
+    if (!subcategoryId) return null;
+    const subcategory = this.allLocationSubcategories.find(s => s.id === subcategoryId);
+    return subcategory?.subcategoryName || null;
+  }
+
   private getDocumentReference(docName: string): string | null {
     const document = this.documents.find(doc => doc.name === docName);
     return document?.file?.name ?? null;
@@ -1030,6 +1086,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     } else if (control?.hasError('pattern')) {
       if (field === 'pinCode') {
         this.errorMessages[field].set('PIN Code must be a 6-digit number');
+      } else if (field === 'nocObtained') {
+        this.errorMessages[field].set('NOC must be obtained to proceed');
+      } else if (field === 'tradeLicenseCovered') {
+        this.errorMessages[field].set('Trade License must cover the proposed shop to proceed');
       } else if (field === 'length' || field === 'breadth') {
         this.errorMessages[field].set('Please enter a valid number (up to 2 decimal places)');
       } else {

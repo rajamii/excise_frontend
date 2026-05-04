@@ -95,6 +95,47 @@ mat-card {
         }
       }
 
+      .documents-review-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        .document-review-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 12px;
+          background-color: #ffffff;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+
+          .document-review-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+
+            .label {
+              font-weight: 500;
+              color: #666;
+              font-size: 14px;
+            }
+
+            .value {
+              font-weight: 600;
+              color: #1C2B78;
+              font-size: 15px;
+              word-break: break-word;
+            }
+          }
+
+          button {
+            flex-shrink: 0;
+          }
+        }
+      }
+
       .fee-container {
         .fee-info {
           display: flex;

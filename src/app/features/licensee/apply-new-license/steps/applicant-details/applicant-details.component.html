@@ -363,7 +363,7 @@
         mat-flat-button
         color="primary"
         (click)="proceedToNext()"
-        [disabled]="!applicantDetailsForm.valid"
+        [disabled]="!applicantDetailsForm.valid || !isEligibilityAllowed || !areRequiredDocumentsUploaded()"
         type="button">
         Next
       </button>
