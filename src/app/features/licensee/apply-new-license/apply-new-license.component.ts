@@ -74,12 +74,22 @@ export class ApplyNewLicenseComponent implements OnInit {
   }
 
   get shouldShowMemberDetailsStep(): boolean {
+    const modeOfOperation = this.selectedModeOfOperation;
+    return modeOfOperation === 'Salesman' || modeOfOperation === 'Barman';
+  }
+
+  get memberDetailsStepLabel(): string {
+    const modeOfOperation = this.selectedModeOfOperation;
+    return modeOfOperation === 'Salesman' || modeOfOperation === 'Barman'
+      ? `${modeOfOperation} Details`
+      : 'Member Details';
+  }
+
+  private get selectedModeOfOperation(): string {
     const applicantDetails = this.getParsedSession<ApplicantDetailsStepData>('applicantDetailsData');
-    const modeOfOperation = String(
+    return String(
       applicantDetails?.mode_of_operation ?? applicantDetails?.modeOfOperation ?? ''
     ).trim();
-
-    return modeOfOperation === 'Salesman' || modeOfOperation === 'Barman';
   }
 
   private getParsedSession<T = any>(key: string): T | null {

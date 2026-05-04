@@ -1,7 +1,7 @@
 <form [formGroup]="memberDetailsForm">
   <mat-card>
     <mat-card-header>
-      <div class="heading">Member Details</div>
+      <div class="heading">{{ memberRoleLabel }} Details</div>
       <div class="validation">* Applicable for {{ memberRoleLabel }}</div>
     </mat-card-header>
 
@@ -118,12 +118,9 @@
         </mat-form-field>
 
         <div class="checkbox">
-          <mat-checkbox formControlName="sikkimSubject" required>
+          <mat-checkbox formControlName="sikkimSubject">
             The selected {{ memberRoleLabel }} holds Sikkim Subject Certificate / Certificate of Identification / Residential Certificate (for urban area only).
           </mat-checkbox>
-          @if (memberDetailsForm.controls['sikkimSubject'].touched && memberDetailsForm.controls['sikkimSubject'].invalid) {
-            <mat-error>{{ getErrorMessage('sikkimSubject') }}</mat-error>
-          }
         </div>
       </div>
 
@@ -177,7 +174,7 @@
         mat-flat-button
         color="primary"
         (click)="proceedToNext()"
-        [disabled]="!memberDetailsForm.valid || !areDocumentsUploaded()"
+        [disabled]="!areDocumentsUploaded()"
         type="button">
         Next
       </button>
