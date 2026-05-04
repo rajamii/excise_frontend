@@ -37,6 +37,10 @@
           <span class="value">{{ getPackagingRows().length }}</span>
         </div>
         <div class="summary-row">
+          <span class="label">Uploaded Documents</span>
+          <span class="value">{{ getUploadedDocuments().length }}</span>
+        </div>
+        <div class="summary-row">
           <span class="label">Application Date</span>
           <span class="value">{{ licenseeDetails.applicationDate ? (licenseeDetails.applicationDate | date:'dd/MM/yyyy') : getCurrentDate() }}</span>
         </div>
@@ -182,6 +186,32 @@
         <span class="label">Average MRP / Bottle</span>
         <span class="value">INR {{ getAverageMrp() | number:'1.2-2' }}</span>
       </div>
+    </div>
+
+    <div class="info-section documents-section" *ngIf="!applicationId">
+      <div class="section-header">
+        <mat-icon>upload_file</mat-icon>
+        <h3>Supporting Documents</h3>
+      </div>
+
+      <div class="summary-row">
+        <span class="label">Required Documents Ready</span>
+        <span class="value">{{ getUploadedRequiredDocumentCount() }} / {{ getRequiredDocumentCount() }}</span>
+      </div>
+
+      <div class="documents-list" *ngIf="getUploadedDocuments().length; else noDocuments">
+        <div class="doc-row" *ngFor="let document of getUploadedDocuments()">
+          <span class="doc-name">{{ document.name }}</span>
+          <span class="doc-file">{{ document.fileName }}</span>
+        </div>
+      </div>
+
+      <ng-template #noDocuments>
+        <div class="detail-item">
+          <span class="label">Status</span>
+          <span class="value">No supporting documents uploaded yet.</span>
+        </div>
+      </ng-template>
     </div>
 
     <div class="terms-section" *ngIf="!applicationId">

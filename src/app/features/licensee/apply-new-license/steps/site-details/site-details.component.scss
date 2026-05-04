@@ -187,6 +187,21 @@ mat-card {
           align-items: center;
           gap: 12px;
           flex-wrap: wrap;
+
+          .hidden-file-input {
+            display: none;
+          }
+
+          .file-upload-button {
+            cursor: pointer;
+            margin: 0;
+            display: inline-flex;
+            align-items: center;
+          }
+
+          .file-upload-icon {
+            margin-right: 4px;
+          }
           
           label[mat-raised-button] {
             padding: 10px 20px;

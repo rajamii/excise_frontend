@@ -69,7 +69,14 @@
         <!-- Incorporation Date Field with Date Picker -->
         <mat-form-field appearance="outline">
           <mat-label>Incorporation Date</mat-label>
-          <input matInput [matDatepicker]="incorporationDate" formControlName="incorporationDate" required>
+          <input
+            matInput
+            [matDatepicker]="incorporationDate"
+            formControlName="incorporationDate"
+            placeholder="Select Incorporation Date"
+            aria-label="Incorporation Date"
+            title="Incorporation Date"
+            required>
           <mat-datepicker-toggle matIconSuffix [for]="incorporationDate"></mat-datepicker-toggle>
           <mat-datepicker #incorporationDate></mat-datepicker>
           @if (unitDetailsForm.controls['incorporationDate'].invalid) {

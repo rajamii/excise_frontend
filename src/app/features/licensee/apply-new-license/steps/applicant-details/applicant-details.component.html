@@ -6,11 +6,8 @@
     </mat-card-header>
 
     <mat-card-content>
-      <!-- ==================== PERSONAL INFO ==================== -->
       <h5 class="section-title">Personal Information</h5>
       <div class="form-field-container">
-
-        <!-- First / Middle / Last -->
         <mat-form-field appearance="outline">
           <mat-label>First Name</mat-label>
           <input matInput placeholder="Enter First Name" formControlName="firstName" required />
@@ -32,20 +29,21 @@
           </mat-error>
         </mat-form-field>
 
-        <!-- Father / Husband -->
         <mat-form-field appearance="outline">
           <mat-label>Father's / Husband's Name</mat-label>
-          <input matInput placeholder="Enter Father's / Husband's Name"
-                 formControlName="fatherHusbandName" required />
+          <input
+            matInput
+            placeholder="Enter Father's / Husband's Name"
+            formControlName="fatherHusbandName"
+            required />
           <mat-error *ngIf="f.fatherHusbandName.touched && f.fatherHusbandName.invalid">
             {{ getErrorMessage('fatherHusbandName') }}
           </mat-error>
         </mat-form-field>
 
-        <!-- DOB -->
         <mat-form-field appearance="outline">
           <mat-label>Date of Birth</mat-label>
-          <input matInput [matDatepicker]="dobPicker" formControlName="dob" required />
+          <input matInput [matDatepicker]="dobPicker" formControlName="dob" placeholder="Select Date of Birth" aria-label="Date of Birth" required />
           <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
           <mat-datepicker #dobPicker></mat-datepicker>
           <mat-error *ngIf="f.dob.touched && f.dob.invalid">
@@ -53,20 +51,17 @@
           </mat-error>
         </mat-form-field>
 
-        <!-- Gender -->
         <div class="radio-group-container">
           <label class="field-label">Gender <span class="required">*</span></label>
           <mat-radio-group formControlName="gender" required>
             <mat-radio-button value="Male">Male</mat-radio-button>
             <mat-radio-button value="Female">Female</mat-radio-button>
           </mat-radio-group>
-          <mat-error class="radio-error"
-                     *ngIf="f.gender.touched && f.gender.invalid">
+          <mat-error class="radio-error" *ngIf="f.gender.touched && f.gender.invalid">
             {{ getErrorMessage('gender') }}
           </mat-error>
         </div>
 
-        <!-- Nationality -->
         <mat-form-field appearance="outline">
           <mat-label>Nationality</mat-label>
           <mat-select formControlName="nationality" required>
@@ -79,7 +74,20 @@
           </mat-error>
         </mat-form-field>
 
-        <!-- ✅ NEW: Marital Status -->
+        @if (requiresNationalityDocument) {
+          <mat-form-field appearance="outline">
+            <mat-label>Certificate Type</mat-label>
+            <mat-select formControlName="coiRcSsDocumentType" required>
+              @for (option of coiRcSsOptions; track option.value) {
+                <mat-option [value]="option.value">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+            <mat-error *ngIf="f.coiRcSsDocumentType.touched && f.coiRcSsDocumentType.invalid">
+              {{ getErrorMessage('coiRcSsDocumentType') }}
+            </mat-error>
+          </mat-form-field>
+        }
+
         <mat-form-field appearance="outline">
           <mat-label>Marital Status</mat-label>
           <mat-select formControlName="maritalStatus" required>
@@ -92,12 +100,11 @@
           </mat-error>
         </mat-form-field>
 
-        <!-- Residential Status -->
         <mat-form-field appearance="outline">
           <mat-label>Residential Status</mat-label>
           <mat-select formControlName="residentialStatus" required>
-            @for (st of residentialStatuses; track st) {
-              <mat-option [value]="st">{{ st }}</mat-option>
+            @for (status of residentialStatuses; track status) {
+              <mat-option [value]="status">{{ status }}</mat-option>
             }
           </mat-select>
           <mat-error *ngIf="f.residentialStatus.touched && f.residentialStatus.invalid">
@@ -105,17 +112,20 @@
           </mat-error>
         </mat-form-field>
 
-        <!-- ✅ NEW: Mobile Number -->
         <mat-form-field appearance="outline">
           <mat-label>Mobile Number</mat-label>
-          <input matInput placeholder="Enter 10-digit mobile number" type="tel" 
-                 formControlName="applicantMobileNumber" required maxlength="10" />
+          <input
+            matInput
+            placeholder="Enter 10-digit mobile number"
+            type="tel"
+            formControlName="applicantMobileNumber"
+            required
+            maxlength="10" />
           <mat-error *ngIf="f.applicantMobileNumber.touched && f.applicantMobileNumber.invalid">
             {{ getErrorMessage('applicantMobileNumber') }}
           </mat-error>
         </mat-form-field>
 
-        <!-- Email (now required) -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
           <input matInput placeholder="Enter email id" type="email" formControlName="email" required />
@@ -124,23 +134,31 @@
           </mat-error>
         </mat-form-field>
 
-        <!-- Present Address -->
         <mat-form-field appearance="outline">
           <mat-label>Present Address</mat-label>
-          <textarea matInput placeholder="Enter Present Address"
-                    cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="4"
-                    formControlName="presentAddress" required></textarea>
+          <textarea
+            matInput
+            placeholder="Enter Present Address"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="4"
+            formControlName="presentAddress"
+            required></textarea>
           <mat-error *ngIf="f.presentAddress.touched && f.presentAddress.invalid">
             {{ getErrorMessage('presentAddress') }}
           </mat-error>
         </mat-form-field>
 
-        <!-- Permanent Address + same-checkbox -->
         <mat-form-field appearance="outline">
           <mat-label>Permanent Address</mat-label>
-          <textarea matInput placeholder="Enter Permanent Address"
-                    cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="4"
-                    formControlName="permanentAddress" required></textarea>
+          <textarea
+            matInput
+            placeholder="Enter Permanent Address"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="4"
+            formControlName="permanentAddress"
+            required></textarea>
           <mat-error *ngIf="f.permanentAddress.touched && f.permanentAddress.invalid">
             {{ getErrorMessage('permanentAddress') }}
           </mat-error>
@@ -152,17 +170,20 @@
           </mat-checkbox>
         </div>
 
-        <!-- PAN -->
         <mat-form-field appearance="outline">
           <mat-label>PAN No</mat-label>
-          <input matInput placeholder="Enter PAN No" type="text"
-                 formControlName="pan" pattern="^[A-Z]{5}[0-9]{4}[A-Z]$" required />
+          <input
+            matInput
+            placeholder="Enter PAN No"
+            type="text"
+            formControlName="pan"
+            pattern="^[A-Z]{5}[0-9]{4}[A-Z]$"
+            required />
           <mat-error *ngIf="f.pan.touched && f.pan.invalid">
             {{ getErrorMessage('pan') }}
           </mat-error>
         </mat-form-field>
 
-        <!-- Mode of Operation -->
         <mat-form-field appearance="outline">
           <mat-label>Mode of Operation</mat-label>
           <mat-select formControlName="modeOfOperation">
@@ -173,10 +194,8 @@
         </mat-form-field>
       </div>
 
-      <!-- ==================== RADIO QUESTIONS ==================== -->
       <h5 class="section-title">Eligibility Questions</h5>
       <div class="radio-questions-container">
-
         <div class="radio-question">
           <label class="question-label">
             Whether the Applicant holds Sikkim Subject Certificate / Certificate of Identification / Residential Certificate (for urban area only)?
@@ -186,8 +205,7 @@
             <mat-radio-button value="Yes">Yes</mat-radio-button>
             <mat-radio-button value="No">No</mat-radio-button>
           </mat-radio-group>
-          <mat-error class="radio-error"
-                     *ngIf="f.hasSikkimCertificate.touched && f.hasSikkimCertificate.invalid">
+          <mat-error class="radio-error" *ngIf="f.hasSikkimCertificate.touched && f.hasSikkimCertificate.invalid">
             {{ getErrorMessage('hasSikkimCertificate') }}
           </mat-error>
         </div>
@@ -201,10 +219,38 @@
             <mat-radio-button value="Yes">Yes</mat-radio-button>
             <mat-radio-button value="No">No</mat-radio-button>
           </mat-radio-group>
-          <mat-error class="radio-error"
-                     *ngIf="f.hasExciseLicense.touched && f.hasExciseLicense.invalid">
+          <mat-error class="radio-error" *ngIf="f.hasExciseLicense.touched && f.hasExciseLicense.invalid">
             {{ getErrorMessage('hasExciseLicense') }}
           </mat-error>
+
+          @if (applicantDetailsForm.get('hasExciseLicense')?.value === 'Yes') {
+            <div class="conditional-license-fields">
+              <mat-form-field appearance="outline">
+                <mat-label>License Category</mat-label>
+                <mat-select formControlName="existingLicenseCategoryId" required>
+                  @for (category of licenseCategories; track category.id) {
+                    <mat-option [value]="category.id">{{ category.licenseCategory }}</mat-option>
+                  }
+                </mat-select>
+                <mat-error *ngIf="f.existingLicenseCategoryId.touched && f.existingLicenseCategoryId.invalid">
+                  {{ getErrorMessage('existingLicenseCategoryId') }}
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>License Number</mat-label>
+                <input
+                  matInput
+                  placeholder="Enter License Number"
+                  formControlName="existingLicenseNo"
+                  required
+                  maxlength="100" />
+                <mat-error *ngIf="f.existingLicenseNo.touched && f.existingLicenseNo.invalid">
+                  {{ getErrorMessage('existingLicenseNo') }}
+                </mat-error>
+              </mat-form-field>
+            </div>
+          }
         </div>
 
         <div class="radio-question">
@@ -216,10 +262,38 @@
             <mat-radio-button value="Yes">Yes</mat-radio-button>
             <mat-radio-button value="No">No</mat-radio-button>
           </mat-radio-group>
-          <mat-error class="radio-error"
-                     *ngIf="f.familyExciseLicense.touched && f.familyExciseLicense.invalid">
+          <mat-error class="radio-error" *ngIf="f.familyExciseLicense.touched && f.familyExciseLicense.invalid">
             {{ getErrorMessage('familyExciseLicense') }}
           </mat-error>
+
+          @if (applicantDetailsForm.get('familyExciseLicense')?.value === 'Yes') {
+            <div class="conditional-license-fields">
+              <mat-form-field appearance="outline">
+                <mat-label>License Category</mat-label>
+                <mat-select formControlName="familyLicenseCategoryId" required>
+                  @for (category of licenseCategories; track category.id) {
+                    <mat-option [value]="category.id">{{ category.licenseCategory }}</mat-option>
+                  }
+                </mat-select>
+                <mat-error *ngIf="f.familyLicenseCategoryId.touched && f.familyLicenseCategoryId.invalid">
+                  {{ getErrorMessage('familyLicenseCategoryId') }}
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>License Number</mat-label>
+                <input
+                  matInput
+                  placeholder="Enter License Number"
+                  formControlName="familyLicenseNo"
+                  required
+                  maxlength="100" />
+                <mat-error *ngIf="f.familyLicenseNo.touched && f.familyLicenseNo.invalid">
+                  {{ getErrorMessage('familyLicenseNo') }}
+                </mat-error>
+              </mat-form-field>
+            </div>
+          }
         </div>
 
         <div class="radio-question">
@@ -231,61 +305,70 @@
             <mat-radio-button value="Yes">Yes</mat-radio-button>
             <mat-radio-button value="No">No</mat-radio-button>
           </mat-radio-group>
-          <mat-error class="radio-error"
-                     *ngIf="f.criminalConviction.touched && f.criminalConviction.invalid">
+          <mat-error class="radio-error" *ngIf="f.criminalConviction.touched && f.criminalConviction.invalid">
             {{ getErrorMessage('criminalConviction') }}
           </mat-error>
         </div>
       </div>
 
-      <!-- ==================== DOCUMENT UPLOAD ==================== -->
       <h5 class="section-title">Upload Documents</h5>
       <div class="documents-upload-container">
         @for (doc of documents; track doc.name) {
-          <div class="document-upload-row">
-            <div class="document-info">
-              <span class="document-label">
-                {{ doc.label }}
-                @if (doc.required) { <span class="required">*</span> }
-              </span>
-              <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
-            </div>
-            <div class="document-actions">
-              <input type="file"
-                     [id]="doc.name"
-                     (change)="onDocumentSelect($event, doc.name)"
-                     [accept]="doc.formats"
-                     style="display:none"/>
-              <label [for]="doc.name" mat-raised-button color="primary"
-                     style="cursor:pointer;margin:0;display:inline-flex;align-items:center;">
-                <mat-icon style="margin-right:4px;">upload_file</mat-icon>
-                Choose File
-              </label>
+          @if (doc.name !== 'sikkim_certificate' || requiresNationalityDocument) {
+            <div class="document-upload-row">
+              <div class="document-info">
+                <span class="document-label">
+                  {{ getDocumentLabel(doc) }}
+                  @if (doc.required) { <span class="required">*</span> }
+                </span>
+                <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
+              </div>
+              <div class="document-actions">
+                <input
+                  type="file"
+                  [id]="doc.name"
+                  (change)="onDocumentSelect($event, doc.name)"
+                  [accept]="doc.formats"
+                  [attr.aria-label]="'Upload ' + getDocumentLabel(doc)"
+                  title="Upload {{ getDocumentLabel(doc) }}"
+                  class="hidden-file-input" />
+                <label
+                  [for]="doc.name"
+                  mat-raised-button
+                  color="primary"
+                  class="file-upload-button">
+                  <mat-icon class="file-upload-icon">upload_file</mat-icon>
+                  Choose File
+                </label>
 
-              @if (doc.fileUrl) {
-                <button mat-icon-button color="accent"
-                        (click)="viewDocument(doc)" type="button">
-                  <mat-icon>visibility</mat-icon>
-                </button>
-              }
-              @if (doc.file) {
-                <span class="file-name">{{ doc.file.name }}</span>
-              }
+                @if (doc.fileUrl) {
+                  <button mat-icon-button color="accent" (click)="viewDocument(doc)" type="button">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                }
+                @if (doc.file) {
+                  <span class="file-name">{{ doc.file.name }}</span>
+                }
+              </div>
             </div>
-          </div>
+          }
         }
       </div>
     </mat-card-content>
 
-    <!-- ==================== ACTIONS ==================== -->
     <mat-card-actions>
       <button mat-stroked-button (click)="goBack()" type="button">Back</button>
       <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
-      <button mat-flat-button color="primary"
-              (click)="proceedToNext()"
-              [disabled]="!applicantDetailsForm.valid"
-              type="button">Next</button>
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="proceedToNext()"
+        [disabled]="!applicantDetailsForm.valid || !isEligibilityAllowed || !areRequiredDocumentsUploaded()"
+        type="button">
+        Next
+      </button>
     </mat-card-actions>
+
     @if (!areRequiredDocumentsUploaded()) {
       <div class="required-doc-warning">
         Upload all required documents to proceed.

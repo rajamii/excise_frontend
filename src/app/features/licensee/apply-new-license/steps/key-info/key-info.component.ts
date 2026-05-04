@@ -35,7 +35,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     licenseCategory: signal(''),
     licenseSubCategory: signal(''),
     establishmentName: signal(''),
-    siteType: signal('')
+    siteType: signal(''),
+    existingSiteLicense: signal('')
   };
 
   constructor(
@@ -57,8 +58,11 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         Validators.maxLength(150),
         Validators.pattern(PatternConstants.ORGANISATION_NAME),
       ]),
-      siteType: new FormControl(storedValues['siteType'] ?? null, Validators.required)
+      siteType: new FormControl(storedValues['siteType'] ?? null, Validators.required),
+      existingSiteLicense: new FormControl(storedValues['existingSiteLicense'] ?? storedValues['existing_site_license'] ?? '')
     });
+
+    this.setupSiteTypeValidation();
 
     this.keyInfoForm.valueChanges
       .pipe(takeUntil(this.destroy$))
@@ -108,6 +112,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           licenseCategory: item.licenseCategory,
           description: item.description ?? ''
         }));        
+        sessionStorage.setItem('licenseCategories', JSON.stringify(this.licenseCategories));
         this.restoreCategoryIfNeeded();
       },
       error: (err) => console.error('Failed to load license categories', err)
@@ -158,6 +163,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           this.filterSubCategories(currentCategory);
         }
         
+        sessionStorage.setItem('licenseSubcategories', JSON.stringify(this.allSubCategories));
         this.restoreSubcategoryIfNeeded();
       },
       error: (err) => console.error('Failed to load subcategories', err)
@@ -245,16 +251,32 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       licenseSubCategory: formData.licenseSubCategory,
       establishmentName: formData.establishmentName,
       siteType: formData.siteType,
+      existingSiteLicense: formData.siteType === 'Existing' ? formData.existingSiteLicense : null,
       
       // Backend field names (PrimaryKeyRelatedField expects IDs)
       license_category: formData.licenseCategory,
+      license_category_name: this.getLicenseCategoryName(formData.licenseCategory),
       license_sub_category: formData.licenseSubCategory,
+      license_sub_category_name: this.getLicenseSubcategoryName(formData.licenseSubCategory),
       establishment_name: formData.establishmentName,
-      site_type: formData.siteType
+      site_type: formData.siteType,
+      existing_site_license: formData.siteType === 'Existing' ? formData.existingSiteLicense : null
     };
     
     console.log('Saving Key Info:', backendData);
     sessionStorage.setItem('keyInfoData', JSON.stringify(backendData));
+  }
+
+  private getLicenseCategoryName(categoryId: number | string | null): string | null {
+    if (!categoryId) return null;
+    const matchedCategory = this.licenseCategories.find(category => Number(category.id) === Number(categoryId));
+    return matchedCategory?.licenseCategory ?? null;
+  }
+
+  private getLicenseSubcategoryName(subcategoryId: number | string | null): string | null {
+    if (!subcategoryId) return null;
+    const matchedSubcategory = this.allSubCategories.find(subcategory => Number(subcategory.id) === Number(subcategoryId));
+    return matchedSubcategory?.description ?? null;
   }
 
   /**
@@ -268,7 +290,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     } else if (control?.hasError('pattern')) {
       this.errorMessages[field].set('Invalid format');
     } else if (control?.hasError('maxlength')) {
-      this.errorMessages[field].set('Maximum 150 characters allowed');
+      this.errorMessages[field].set(field === 'existingSiteLicense' ? 'Maximum 100 characters allowed' : 'Maximum 150 characters allowed');
     } else {
       this.errorMessages[field].set('');
     }
@@ -288,6 +310,29 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
    */
   getErrorMessage(field: keyof typeof this.errorMessages): string {
     return this.errorMessages[field]();
+  }
+
+  private setupSiteTypeValidation(): void {
+    const existingSiteLicenseControl = this.keyInfoForm.get('existingSiteLicense');
+
+    this.keyInfoForm.get('siteType')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((siteType) => {
+        if (siteType === 'Existing') {
+          existingSiteLicenseControl?.setValidators([Validators.required, Validators.maxLength(100)]);
+        } else {
+          existingSiteLicenseControl?.clearValidators();
+          existingSiteLicenseControl?.setValue('', { emitEvent: false });
+        }
+
+        existingSiteLicenseControl?.updateValueAndValidity({ emitEvent: false });
+      });
+
+    const currentSiteType = this.keyInfoForm.get('siteType')?.value;
+    if (currentSiteType === 'Existing') {
+      existingSiteLicenseControl?.setValidators([Validators.required, Validators.maxLength(100)]);
+      existingSiteLicenseControl?.updateValueAndValidity({ emitEvent: false });
+    }
   }
 
   /**

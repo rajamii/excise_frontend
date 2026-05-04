@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
+import { LabelRegistrationUploadDetails, LabelRegistrationUploadedDocument } from '../../../../../../core/models/label-registration.model';
 import { LabelRegistrationService } from '../../../../../../core/services/label-registration.service';
 import { MaterialModule } from '../../../../../../shared/material.module';
 
@@ -19,6 +20,7 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
   licenseeDetails: any = {};
   productDetails: any = {};
   packagingDetails: any = {};
+  uploadDetails: LabelRegistrationUploadDetails = { documents: [] };
 
   acceptTerms = false;
   isSubmitting = false;
@@ -44,6 +46,7 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     this.licenseeDetails = this.getStorageData('labelRegLicenseeDetails');
     this.productDetails = this.getStorageData('labelRegProductDetails');
     this.packagingDetails = this.getStorageData('labelRegPackagingDetails');
+    this.uploadDetails = this.getStorageData<LabelRegistrationUploadDetails>('labelRegUploadDocuments', { documents: [] });
   }
 
   private getStorageData<T = any>(key: string, fallback: T | any = {}): T {
@@ -74,6 +77,21 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     }
     const total = rows.reduce((sum, row) => sum + Number(row?.mrpPerBottle ?? row?.mrp ?? 0), 0);
     return total / rows.length;
+  }
+
+  getUploadedDocuments(): LabelRegistrationUploadedDocument[] {
+    const documents = Array.isArray(this.uploadDetails?.documents) ? this.uploadDetails.documents : [];
+    return documents.filter((document) => String(document?.fileName || '').trim());
+  }
+
+  getRequiredDocumentCount(): number {
+    const documents = Array.isArray(this.uploadDetails?.documents) ? this.uploadDetails.documents : [];
+    return documents.filter((document) => document?.required).length;
+  }
+
+  getUploadedRequiredDocumentCount(): number {
+    const documents = Array.isArray(this.uploadDetails?.documents) ? this.uploadDetails.documents : [];
+    return documents.filter((document) => document?.required && String(document?.fileName || '').trim()).length;
   }
 
   async submitApplication(): Promise<void> {
@@ -163,6 +181,11 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     formData.append('licensee_details', JSON.stringify(this.licenseeDetails || {}));
     formData.append('product_details', JSON.stringify(this.productDetails || {}));
     formData.append('packaging_details', JSON.stringify(this.packagingDetails || {}));
+    formData.append('upload_details', JSON.stringify(this.uploadDetails || { documents: [] }));
+
+    this.labelRegistrationService.getDraftDocuments().forEach(({ key, file }) => {
+      formData.append(key, file, file.name);
+    });
 
     const applicationDate = String(this.licenseeDetails?.applicationDate || '').trim();
     formData.append('application_date', applicationDate || new Date().toISOString().split('T')[0]);
@@ -267,6 +290,13 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
       missing.push('Package Details (fill all mandatory columns for each row)');
     }
 
+    const requiredDocuments = Array.isArray(this.uploadDetails?.documents)
+      ? this.uploadDetails.documents.filter((document) => document?.required)
+      : [];
+    if (!requiredDocuments.length || requiredDocuments.some((document) => !String(document?.fileName || '').trim())) {
+      missing.push('Required supporting documents');
+    }
+
     return missing;
   }
 
@@ -338,6 +368,8 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     sessionStorage.removeItem('labelRegLicenseeDetails');
     sessionStorage.removeItem('labelRegProductDetails');
     sessionStorage.removeItem('labelRegPackagingDetails');
+    sessionStorage.removeItem('labelRegUploadDocuments');
     sessionStorage.removeItem('labelRegSubmission');
+    this.labelRegistrationService.clearDraftDocuments();
   }
 }
