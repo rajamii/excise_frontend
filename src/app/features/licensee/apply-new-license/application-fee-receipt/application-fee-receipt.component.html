@@ -51,6 +51,15 @@
         </div>
       </div>
 
+      <div class="note" *ngIf="statusKind === 'success' && vm.autoSubmitted === '1'">
+        <div class="note-title">Salesman/Barman Submission</div>
+        <div class="note-body">
+          Submitted with New License: <b>{{ sbmSubmittedLabel }}</b>
+          <span *ngIf="vm.sbmApplicationId"> (Application ID: <span class="mono">{{ vm.sbmApplicationId }}</span>)</span>
+          <span *ngIf="vm.sbmSubmitError"> ({{ vm.sbmSubmitError }})</span>
+        </div>
+      </div>
+
       <div class="note" *ngIf="statusKind === 'pending'">
         <div class="note-title">Next Step</div>
         <div class="note-body">

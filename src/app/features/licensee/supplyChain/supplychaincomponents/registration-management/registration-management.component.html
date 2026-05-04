@@ -97,6 +97,7 @@
               <th>Sl. No.</th>
               <th>Application ID</th>
               <th>Submitted On</th>
+              <th *ngIf="currentSection === 'salesman-barman-registration'">Payment</th>
               <th>Applicant</th>
               <th>Establishment</th>
               <th>Current Stage</th>
@@ -108,6 +109,7 @@
               <td>{{ i + 1 }}</td>
               <td class="fw-semibold">{{ row.applicationId }}</td>
               <td>{{ row.submittedOn }}</td>
+              <td *ngIf="currentSection === 'salesman-barman-registration'">{{ row.paymentStatus || 'Pending' }}</td>
               <td>{{ row.applicantName }}</td>
               <td>{{ row.establishmentName }}</td>
               <td>{{ row.currentStage }}</td>

@@ -34,6 +34,7 @@ export class RegistrationManagementComponent implements OnInit {
     id: string;
     applicationId: string;
     submittedOn: string;
+    paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
     currentStage: string;
@@ -74,12 +75,13 @@ export class RegistrationManagementComponent implements OnInit {
         stageText === selected ||
         stageText.includes(selected);
 
-      const matchesSearch =
-        !q ||
-        row.applicationId.toLowerCase().includes(q) ||
-        row.applicantName.toLowerCase().includes(q) ||
-        row.establishmentName.toLowerCase().includes(q) ||
-        row.currentStage.toLowerCase().includes(q);
+       const matchesSearch =
+         !q ||
+         row.applicationId.toLowerCase().includes(q) ||
+         String(row.paymentStatus || '').toLowerCase().includes(q) ||
+         row.applicantName.toLowerCase().includes(q) ||
+         row.establishmentName.toLowerCase().includes(q) ||
+         row.currentStage.toLowerCase().includes(q);
 
       return matchesStatus && matchesSearch;
     });
@@ -404,6 +406,7 @@ export class RegistrationManagementComponent implements OnInit {
     id: string;
     applicationId: string;
     submittedOn: string;
+    paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
     currentStage: string;
@@ -431,6 +434,13 @@ export class RegistrationManagementComponent implements OnInit {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.submitted_on),
+          paymentStatus: String(
+            item?.application_fee_payment_status_display ??
+            item?.applicationFeePaymentStatusDisplay ??
+            item?.application_fee_payment_status ??
+            item?.applicationFeePaymentStatus ??
+            ''
+          ),
           applicantName: this.getSalesmanApplicantName(item),
           establishmentName: String(item?.license_category_name ?? item?.licenseCategoryName ?? 'N/A'),
           currentStage: this.formatStageName(rawStage),

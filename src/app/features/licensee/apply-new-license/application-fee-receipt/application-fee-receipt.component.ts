@@ -12,6 +12,9 @@ type ReceiptVm = {
   createdAt: string;
   autoSubmitted: string;
   autoSubmitError: string;
+  sbmSubmitted: string;
+  sbmApplicationId: string;
+  sbmSubmitError: string;
 };
 
 @Component({
@@ -31,7 +34,10 @@ export class ApplicationFeeReceiptComponent {
     reason: '',
     createdAt: '',
     autoSubmitted: '0',
-    autoSubmitError: ''
+    autoSubmitError: '',
+    sbmSubmitted: '0',
+    sbmApplicationId: '',
+    sbmSubmitError: ''
   };
 
   private initialized = false;
@@ -53,7 +59,10 @@ export class ApplicationFeeReceiptComponent {
         reason: String(params.get('reason') || '').trim(),
         createdAt: String(params.get('createdAt') || '').trim(),
         autoSubmitted: String(params.get('autoSubmitted') || '0').trim(),
-        autoSubmitError: String(params.get('autoSubmitError') || '').trim()
+        autoSubmitError: String(params.get('autoSubmitError') || '').trim(),
+        sbmSubmitted: String(params.get('sbmSubmitted') || '0').trim(),
+        sbmApplicationId: String(params.get('sbmApplicationId') || '').trim(),
+        sbmSubmitError: String(params.get('sbmSubmitError') || '').trim()
       };
       this.initialized = true;
       this.refreshDerived();
@@ -108,6 +117,10 @@ export class ApplicationFeeReceiptComponent {
 
   get autoSubmittedLabel(): string {
     return String(this.vm.autoSubmitted || '').trim() === '1' ? 'Yes' : 'No';
+  }
+
+  get sbmSubmittedLabel(): string {
+    return String(this.vm.sbmSubmitted || '').trim() === '1' ? 'Yes' : 'No';
   }
 
   printSlip(): void {
