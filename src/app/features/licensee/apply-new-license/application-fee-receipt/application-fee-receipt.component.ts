@@ -138,6 +138,14 @@ export class ApplicationFeeReceiptComponent {
       try {
         const id = String(this.vm.applicationId || '').trim();
         if (id) sessionStorage.setItem('new_license_submitted_application_id', id);
+
+        // Also bubble up Salesman/Barman linkage info for the submitted view.
+        const sbmId = String(this.vm.sbmApplicationId || '').trim();
+        if (sbmId) sessionStorage.setItem('new_license_sbm_application_id', sbmId);
+        sessionStorage.setItem(
+          'new_license_sbm_submitted',
+          String(this.vm.sbmSubmitted || '0').trim() === '1' ? '1' : '0'
+        );
       } catch {
         // no-op
       }

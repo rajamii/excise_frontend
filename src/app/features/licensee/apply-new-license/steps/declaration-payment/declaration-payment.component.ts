@@ -39,6 +39,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   isSubmitting = false;
   draftApplicationId: string | null = null;
   submittedApplicationId: string | null = null;
+  sbmApplicationId: string | null = null;
+  sbmSubmitted: boolean = false;
   private readonly documentObjectUrls = new Map<string, string>();
 
   private readonly uploadedDocumentLabels: Record<string, string> = {
@@ -89,7 +91,16 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       const submitted = String(sessionStorage.getItem('new_license_submitted_application_id') || '').trim();
       if (submitted) {
         this.submittedApplicationId = submitted;
-        sessionStorage.removeItem('new_license_submitted_application_id');
+      }
+
+      const sbmId = String(sessionStorage.getItem('new_license_sbm_application_id') || '').trim();
+      if (sbmId) {
+        this.sbmApplicationId = sbmId;
+      }
+
+      const sbmSubmitted = String(sessionStorage.getItem('new_license_sbm_submitted') || '').trim();
+      if (sbmSubmitted) {
+        this.sbmSubmitted = sbmSubmitted === '1';
       }
     } catch {
       // no-op

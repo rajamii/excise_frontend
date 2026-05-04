@@ -212,6 +212,12 @@
           <span class="label">Application ID:</span>
           <span class="value">{{ submittedApplicationId }}</span>
         </div>
+        @if (sbmApplicationId) {
+          <div class="application-id" style="margin-top: 8px;">
+            <span class="label">Salesman/Barman Application:</span>
+            <span class="value">{{ sbmApplicationId }} ({{ sbmSubmitted ? 'Submitted' : 'Not Submitted' }})</span>
+          </div>
+        }
         <div class="next-steps">
           <h4>Next Steps:</h4>
           <ul>
