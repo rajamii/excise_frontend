@@ -90,9 +90,18 @@
       </select>
     </div>
 
+    <!-- Company Filter (Commissioner only) -->
+    <div class="compact-filter" *ngIf="isCommissioner()">
+      <select class="form-select form-select-sm" [(ngModel)]="revalidationCompanyFilter"
+        (change)="applyRevalidationFilters()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of revalidationCompanyOptions" [value]="company">{{ company }}</option>
+      </select>
+    </div>
+
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearRevalidationFilters()"
-      *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter"
+      *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -101,7 +110,7 @@
 
   <!-- Filter Results Summary -->
   <div class="filter-results-compact mt-2"
-    *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter">
+    *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredRevalidationData.length }}</strong> of <strong>{{ revlidationData.length
@@ -111,6 +120,7 @@
       <span *ngIf="revalidationMonthFilter" class="filter-tag">Month: {{ revalidationMonthFilter | date:'MMM
         yyyy' }}</span>
       <span *ngIf="revalidationYearFilter" class="filter-tag">Year: {{ revalidationYearFilter }}</span>
+      <span *ngIf="revalidationCompanyFilter" class="filter-tag">Company: {{ revalidationCompanyFilter }}</span>
       <span *ngIf="revalidationStatusFilter" class="filter-tag">Status: {{ revalidationStatusFilter
         }}</span>
     </small>

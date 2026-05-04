@@ -52,6 +52,8 @@ export class RevalidationComponent implements OnInit {
   revalidationMonthFilter: string = '';
   revalidationYearFilter: string = '';
   revalidationStatusFilter: string = '';
+  revalidationCompanyFilter: string = '';
+  revalidationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
 
   filteredRevalidationData: TableData[] = [];
@@ -215,7 +217,22 @@ export class RevalidationComponent implements OnInit {
       return true;
     });
 
+    // Build company options for commissioner filter
+    this.revalidationCompanyOptions = Array.from(
+      new Set(
+        this.summaryRevalidationData
+          .map(item => String(item?.factoryName || item?.distilleryName || '').trim())
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
     this.filteredRevalidationData = this.summaryRevalidationData.filter(item => {
+      // Company filter — commissioner only
+      if (this.revalidationCompanyFilter) {
+        const company = String(item?.factoryName || item?.distilleryName || '').trim();
+        if (company !== this.revalidationCompanyFilter) return false;
+      }
+
       if (!this.revalidationStatusFilter) {
         return true;
       }
@@ -249,6 +266,7 @@ export class RevalidationComponent implements OnInit {
     this.revalidationMonthFilter = '';
     this.revalidationYearFilter = '';
     this.revalidationStatusFilter = '';
+    this.revalidationCompanyFilter = '';
     this.activeSummaryFilter = '';
     this.summaryRevalidationData = [...this.revlidationData];
     this.filteredRevalidationData = [...this.revlidationData];

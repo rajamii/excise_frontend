@@ -41,6 +41,8 @@ export class CancellationComponent implements OnInit {
   cancellationDateFilter: string = '';
   cancellationMonthFilter: string = '';
   cancellationStatusFilter: string = '';
+  cancellationCompanyFilter: string = '';
+  cancellationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
 
   // Pagination
@@ -391,7 +393,23 @@ export class CancellationComponent implements OnInit {
 
     this.summaryCancellationData = summary;
 
+    // Build company options for commissioner filter
+    this.cancellationCompanyOptions = Array.from(
+      new Set(
+        summary
+          .map(item => String(item?.establishmentName || item?.distilleryName || '').trim())
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
     let filtered = [...summary];
+
+    // Company filter — commissioner only
+    if (this.cancellationCompanyFilter) {
+      filtered = filtered.filter(item =>
+        String(item?.establishmentName || item?.distilleryName || '').trim() === this.cancellationCompanyFilter
+      );
+    }
 
     // Status filter
     if (this.cancellationStatusFilter) {
@@ -422,6 +440,7 @@ export class CancellationComponent implements OnInit {
     this.cancellationDateFilter = '';
     this.cancellationMonthFilter = '';
     this.cancellationStatusFilter = '';
+    this.cancellationCompanyFilter = '';
     this.activeSummaryFilter = '';
     this.applyCancellationFilters();
   }

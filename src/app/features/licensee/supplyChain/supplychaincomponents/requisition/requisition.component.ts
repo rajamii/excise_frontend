@@ -126,6 +126,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   requisitionMonthFilter: string = '';
   requisitionYearFilter: string = '';
   requisitionStatusFilter: string = '';
+  requisitionCompanyFilter: string = '';
+  requisitionCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
 
   // Modal properties
@@ -523,7 +525,22 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return matches;
     });
 
+    // Build company options for commissioner filter
+    this.requisitionCompanyOptions = Array.from(
+      new Set(
+        this.summaryRequisitionData
+          .map(item => String(item?.establishmentName || item?.distilleryName || '').trim())
+          .filter(v => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
     this.filteredRequisitionData = this.summaryRequisitionData.filter(item => {
+      // Company filter — commissioner only
+      if (this.requisitionCompanyFilter) {
+        const company = String(item?.establishmentName || item?.distilleryName || '').trim();
+        if (company !== this.requisitionCompanyFilter) return false;
+      }
+
       if (!this.requisitionStatusFilter) {
         return true;
       }
@@ -2059,6 +2076,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.requisitionMonthFilter = '';
     this.requisitionYearFilter = '';
     this.requisitionStatusFilter = '';
+    this.requisitionCompanyFilter = '';
     this.activeSummaryFilter = '';
     this.applyFilters();
   }

@@ -82,9 +82,18 @@
       </select>
     </div>
 
+    <!-- Company Filter (Commissioner only) -->
+    <div class="compact-filter" *ngIf="isCommissioner()">
+      <select class="form-select form-select-sm" [(ngModel)]="cancellationCompanyFilter"
+        (change)="applyCancellationFilters()" title="Filter by company">
+        <option value="">All Companies</option>
+        <option *ngFor="let company of cancellationCompanyOptions" [value]="company">{{ company }}</option>
+      </select>
+    </div>
+
     <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearCancellationFilters()"
-      *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationStatusFilter"
+      *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationStatusFilter || cancellationCompanyFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
