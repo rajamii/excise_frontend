@@ -271,140 +271,106 @@
                 <!-- Rolls Summary Cards -->
                 <div class="row g-3 mb-4">
                   <div class="col-md-3">
-                    <div class="summary-card total-rolls" [class.filtered-card]="hasActiveRollsFilters()">
-                      <div class="card-icon">
-                        <i class="bi bi-collection"></i>
-                      </div>
-                      <div class="card-content">
-                        <h3 class="card-value">{{ getTotalRollsForRollsTab() }}</h3>
-                        <p class="card-label">
-                          {{ hasActiveRollsFilters() ? 'Filtered Rolls' : 'Total Rolls' }}
-                          @if (hasActiveRollsFilters()) {
-                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
-                          }
-                        </p>
+                    <div class="avail-stat-card avail-total">
+                      <div class="avail-stat-icon"><i class="bi bi-collection-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getTotalRollsForRollsTab() }}</div>
+                        <div class="avail-stat-label">{{ hasActiveRollsFilters() ? 'Filtered Rolls' : 'Total Rolls' }}</div>
+                        <div class="avail-stat-sub">{{ hasActiveRollsFilters() ? 'Filters applied' : 'All rolls' }}</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="summary-card available-holograms" [class.filtered-card]="hasActiveRollsFilters()">
-                      <div class="card-icon">
-                        <i class="bi bi-check-circle"></i>
-                      </div>
-                      <div class="card-content">
-                        <h3 class="card-value">{{ getAvailableHologramsForRollsTab() }}</h3>
-                        <p class="card-label">
-                          {{ hasActiveRollsFilters() ? 'Filtered Available' : 'Available Holograms' }}
-                          @if (hasActiveRollsFilters()) {
-                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
-                          }
-                        </p>
+                    <div class="avail-stat-card avail-local">
+                      <div class="avail-stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getAvailableHologramsForRollsTab() | number }}</div>
+                        <div class="avail-stat-label">{{ hasActiveRollsFilters() ? 'Filtered Available' : 'Available Holograms' }}</div>
+                        <div class="avail-stat-sub">Ready to use</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="summary-card used-holograms" [class.filtered-card]="hasActiveRollsFilters()">
-                      <div class="card-icon">
-                        <i class="bi bi-arrow-up-circle"></i>
-                      </div>
-                      <div class="card-content">
-                        <h3 class="card-value">{{ getUsedInProductionForRollsTab() }}</h3>
-                        <p class="card-label">
-                          {{ hasActiveRollsFilters() ? 'Filtered Used' : 'Used in Production' }}
-                          @if (hasActiveRollsFilters()) {
-                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
-                          }
-                        </p>
+                    <div class="avail-stat-card avail-export">
+                      <div class="avail-stat-icon"><i class="bi bi-arrow-up-circle-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getUsedInProductionForRollsTab() | number }}</div>
+                        <div class="avail-stat-label">{{ hasActiveRollsFilters() ? 'Filtered Used' : 'Used in Production' }}</div>
+                        <div class="avail-stat-sub">Issued to production</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="summary-card damaged-holograms" [class.filtered-card]="hasActiveRollsFilters()">
-                      <div class="card-icon">
-                        <i class="bi bi-exclamation-triangle"></i>
-                      </div>
-                      <div class="card-content">
-                        <h3 class="card-value">{{ getDamagedWastageForRollsTab() }}</h3>
-                        <p class="card-label">
-                          {{ hasActiveRollsFilters() ? 'Filtered Damaged' : 'Damaged/Wastage' }}
-                          @if (hasActiveRollsFilters()) {
-                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
-                          }
-                        </p>
+                    <div class="avail-stat-card avail-defence">
+                      <div class="avail-stat-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getDamagedWastageForRollsTab() | number }}</div>
+                        <div class="avail-stat-label">{{ hasActiveRollsFilters() ? 'Filtered Damaged' : 'Damaged/Wastage' }}</div>
+                        <div class="avail-stat-sub">Damaged or wasted</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- Rolls Filter Section -->
-                <div class="row g-3 mb-4">
-                  <div class="col-12">
-                    <div class="filter-card">
-                      <div class="card-body">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-2">
-                            <label class="form-label small fw-bold">Roll Status</label>
-                            <select class="form-select form-select-sm" [(ngModel)]="rollsFilters.rollStatus"
-                              (change)="applyRollsFilters()">
-                              <option value="">All Status</option>
-                              <option value="AVAILABLE">Available</option>
-                              <option value="IN_USE">In Use</option>
-                              <option value="COMPLETED">Completed</option>
-                              <option value="DAMAGED">Damaged</option>
-                            </select>
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label small fw-bold">Hologram Type</label>
-                            <select class="form-select form-select-sm" [(ngModel)]="rollsFilters.hologramType"
-                              (change)="applyRollsFilters()">
-                              <option value="">All Types</option>
-                              <option value="LOCAL">Local</option>
-                              <option value="EXPORT">Export</option>
-                              <option value="DEFENCE">Defence</option>
-                            </select>
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label small fw-bold">Month</label>
-                            <select class="form-select form-select-sm" [(ngModel)]="rollsFilters.month"
-                              (change)="applyRollsFilters()">
-                              <option value="">All Months</option>
-                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
-                            </select>
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label small fw-bold">Date From</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="rollsFilters.dateFrom"
-                              (change)="applyRollsFilters()">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label small fw-bold">Date To</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="rollsFilters.dateTo"
-                              (change)="applyRollsFilters()">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label small fw-bold">Serial Range</label>
-                            <div class="input-group input-group-sm flex-nowrap">
-                              <input type="text" class="form-control"
-                                [(ngModel)]="rollsFilters.serialSearch" (input)="applyRollsFilters()"
-                                placeholder="e.g. HG001001">
-                              <button class="btn btn-outline-secondary" type="button" (click)="clearRollsFilters()">
-                                <i class="bi bi-x-circle me-1"></i>Clear
-                              </button>
-                              <button class="btn btn-success" type="button" (click)="exportRollsData()">
-                                <i class="bi bi-download me-1"></i>Export
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                <!-- Rolls Filter Bar -->
+                <div class="avail-filter-bar mb-3">
+                  <div class="avail-filter-label">
+                    <i class="bi bi-funnel-fill me-1"></i>
+                    <span>Filters</span>
+                  </div>
+                  <div class="avail-filter-controls">
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Roll Status</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="rollsFilters.rollStatus" (change)="applyRollsFilters()">
+                        <option value="">All Status</option>
+                        <option value="AVAILABLE">Available</option>
+                        <option value="IN_USE">In Use</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="DAMAGED">Damaged</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Hologram Type</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="rollsFilters.hologramType" (change)="applyRollsFilters()">
+                        <option value="">All Types</option>
+                        <option value="LOCAL">Local</option>
+                        <option value="EXPORT">Export</option>
+                        <option value="DEFENCE">Defence</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Month</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="rollsFilters.month" (change)="applyRollsFilters()">
+                        <option value="">All Months</option>
+                        <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date From</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="rollsFilters.dateFrom" (change)="applyRollsFilters()">
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date To</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="rollsFilters.dateTo" (change)="applyRollsFilters()">
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Serial Range</label>
+                      <input type="text" class="form-control form-control-sm avail-filter-input" [(ngModel)]="rollsFilters.serialSearch" (input)="applyRollsFilters()" placeholder="e.g. HG001001">
+                    </div>
+                    <div class="avail-filter-item avail-filter-clear d-flex gap-2">
+                      <button class="btn btn-sm avail-clear-btn" (click)="clearRollsFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                      </button>
+                      <button class="btn btn-sm btn-success" (click)="exportRollsData()">
+                        <i class="bi bi-download me-1"></i>Export
+                      </button>
                     </div>
                   </div>
                 </div>
                 <!-- Filter Summary -->
-                <div class="mt-2 p-2 bg-light rounded">
+                <div class="mb-3">
                   <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>
-                    {{ getRollsFilterSummary() }}
+                    <i class="bi bi-info-circle me-1"></i>{{ getRollsFilterSummary() }}
                   </small>
                 </div>
 
@@ -717,61 +683,63 @@
                 <!-- Summary Cards for Issued Holograms -->
                 <div class="row g-3 mb-4">
                   <div class="col-md-4">
-                    <div class="card border-warning">
-                      <div class="card-body text-center">
-                        <h4 class="text-warning">{{ getInProgressCount() }}</h4>
-                        <small class="text-muted">In Process</small>
+                    <div class="avail-stat-card avail-defence">
+                      <div class="avail-stat-icon"><i class="bi bi-clock-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getInProgressCount() }}</div>
+                        <div class="avail-stat-label">In Process</div>
+                        <div class="avail-stat-sub">Pending officer approval</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-4">
-                    <div class="card border-success">
-                      <div class="card-body text-center">
-                        <h4 class="text-success">{{ getCompletedCount() }}</h4>
-                        <small class="text-muted">Completed</small>
+                    <div class="avail-stat-card avail-total">
+                      <div class="avail-stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getCompletedCount() }}</div>
+                        <div class="avail-stat-label">Completed</div>
+                        <div class="avail-stat-sub">Approved by officer</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-4">
-                    <div class="card border-info">
-                      <div class="card-body text-center">
-                        <h4 class="text-info">{{ getTotalIssuedQuantity() | number }}</h4>
-                        <small class="text-muted">Total Holograms Issued</small>
+                    <div class="avail-stat-card avail-local">
+                      <div class="avail-stat-icon"><i class="bi bi-layers-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getTotalIssuedQuantity() | number }}</div>
+                        <div class="avail-stat-label">Total Holograms Issued</div>
+                        <div class="avail-stat-sub">Across all requests</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="row g-3 mb-3">
-                  <div class="col-12">
-                    <div class="filter-card">
-                      <div class="card-body">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Month</label>
-                            <select class="form-select form-select-sm" [(ngModel)]="issuedFilters.month"
-                              (change)="applyIssuedFilters()">
-                              <option value="">All Months</option>
-                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
-                            </select>
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Date From</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="issuedFilters.dateFrom"
-                              (change)="applyIssuedFilters()">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Date To</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="issuedFilters.dateTo"
-                              (change)="applyIssuedFilters()">
-                          </div>
-                          <div class="col-md-3 d-flex justify-content-end">
-                            <button class="btn btn-outline-secondary btn-sm" (click)="clearIssuedFilters()">
-                              <i class="bi bi-x-circle me-1"></i>Clear
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                <!-- Issued Filter Bar -->
+                <div class="avail-filter-bar mb-3">
+                  <div class="avail-filter-label">
+                    <i class="bi bi-funnel-fill me-1"></i>
+                    <span>Filters</span>
+                  </div>
+                  <div class="avail-filter-controls">
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Month</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="issuedFilters.month" (change)="applyIssuedFilters()">
+                        <option value="">All Months</option>
+                        <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date From</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="issuedFilters.dateFrom" (change)="applyIssuedFilters()">
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date To</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="issuedFilters.dateTo" (change)="applyIssuedFilters()">
+                    </div>
+                    <div class="avail-filter-item avail-filter-clear">
+                      <button class="btn btn-sm avail-clear-btn" (click)="clearIssuedFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -882,36 +850,66 @@
               </div>
               <div class="card-body">
 
-                <div class="row g-3 mb-3">
-                  <div class="col-12">
-                    <div class="filter-card">
-                      <div class="card-body">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Month</label>
-                            <select class="form-select form-select-sm" [(ngModel)]="historyFilters.month"
-                              (change)="applyHistoryFilters()">
-                              <option value="">All Months</option>
-                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
-                            </select>
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Date From</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="historyFilters.dateFrom"
-                              (change)="applyHistoryFilters()">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Date To</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="historyFilters.dateTo"
-                              (change)="applyHistoryFilters()">
-                          </div>
-                          <div class="col-md-3 d-flex justify-content-end">
-                            <button class="btn btn-outline-secondary btn-sm" (click)="clearHistoryFilters()">
-                              <i class="bi bi-x-circle me-1"></i>Clear
-                            </button>
-                          </div>
-                        </div>
+                <!-- History Stat Cards -->
+                <div class="row g-3 mb-4">
+                  <div class="col-md-4">
+                    <div class="avail-stat-card avail-total">
+                      <div class="avail-stat-icon"><i class="bi bi-clock-history"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ filteredHistoryData.length | number }}</div>
+                        <div class="avail-stat-label">Total History Entries</div>
+                        <div class="avail-stat-sub">Completed register entries</div>
                       </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="avail-stat-card avail-local">
+                      <div class="avail-stat-icon"><i class="bi bi-check2-all"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ historyData.length | number }}</div>
+                        <div class="avail-stat-label">All Time Entries</div>
+                        <div class="avail-stat-sub">Approved by officer</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="avail-stat-card avail-export">
+                      <div class="avail-stat-icon"><i class="bi bi-layers-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getTotalHistoryQuantity() | number }}</div>
+                        <div class="avail-stat-label">Total Qty Issued</div>
+                        <div class="avail-stat-sub">From history records</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- History Filter Bar -->
+                <div class="avail-filter-bar mb-3">
+                  <div class="avail-filter-label">
+                    <i class="bi bi-funnel-fill me-1"></i>
+                    <span>Filters</span>
+                  </div>
+                  <div class="avail-filter-controls">
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Month</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="historyFilters.month" (change)="applyHistoryFilters()">
+                        <option value="">All Months</option>
+                        <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date From</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="historyFilters.dateFrom" (change)="applyHistoryFilters()">
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date To</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="historyFilters.dateTo" (change)="applyHistoryFilters()">
+                    </div>
+                    <div class="avail-filter-item avail-filter-clear">
+                      <button class="btn btn-sm avail-clear-btn" (click)="clearHistoryFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                      </button>
                     </div>
                   </div>
                 </div>

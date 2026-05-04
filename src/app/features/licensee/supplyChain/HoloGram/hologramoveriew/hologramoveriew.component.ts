@@ -2733,6 +2733,10 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     return this.issuedData.reduce((sum, item) => sum + item.quantity, 0);
   }
 
+  getTotalHistoryQuantity(): number {
+    return this.historyData.reduce((sum, item) => sum + (item.totalRollsAssigned || 0), 0);
+  }
+
   /**
    * Generate real serial ranges based on actual daily register entries
    * This uses the actual data entered by users instead of simulated data
