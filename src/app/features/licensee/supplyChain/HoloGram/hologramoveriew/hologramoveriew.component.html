@@ -94,120 +94,6 @@
         </div>
       </div>
 
-      <!-- Filter Section for Charts -->
-      <div class="row g-4 mb-4">
-        <div class="col-12">
-          <div class="analytics-card">
-            <div class="card-header">
-              <h6 class="card-title">
-                <i class="bi bi-funnel me-2"></i>
-                Analytics Filters
-              </h6>
-            </div>
-            <div class="card-body">
-              <div class="row g-3 align-items-end">
-                <div class="col-md-2">
-                  <label class="form-label small fw-bold">Specific Date</label>
-                  <input type="date" class="form-control form-control-sm" [(ngModel)]="chartFilters.specificDate"
-                    (change)="applyChartFilters()">
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label small fw-bold">Month</label>
-                  <select class="form-select form-select-sm" [(ngModel)]="chartFilters.month"
-                    (change)="applyChartFilters()">
-                    <option value="">All Months</option>
-                    <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
-                  </select>
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label small fw-bold">Year</label>
-                  <select class="form-select form-select-sm" [(ngModel)]="chartFilters.year"
-                    (change)="applyChartFilters()">
-                    <option value="">All Years</option>
-                    <option *ngFor="let year of years" [value]="year.value">{{ year.label }}</option>
-                  </select>
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label small fw-bold">Hologram Type</label>
-                  <select class="form-select form-select-sm" [(ngModel)]="chartFilters.type"
-                    (change)="applyChartFilters()">
-                    <option value="">All Types</option>
-                    <option value="LOCAL">Local</option>
-                    <option value="EXPORT">Export</option>
-                    <option value="DEFENCE">Defence</option>
-                  </select>
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label small fw-bold">Usage Status</label>
-                  <select class="form-select form-select-sm" [(ngModel)]="chartFilters.status"
-                    (change)="applyChartFilters()">
-                    <option value="">All Status</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="CANCELLED">Cancelled</option>
-                  </select>
-                </div>
-                <div class="col-md-2">
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm" (click)="applyChartFilters()">
-                      <i class="bi bi-search me-1"></i>Apply
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm" (click)="clearChartFilters()">
-                      <i class="bi bi-arrow-clockwise me-1"></i>Clear
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Advanced Filters (Collapsible) -->
-              <div class="mt-3">
-                <button class="btn btn-link btn-sm p-0 text-decoration-none"
-                  (click)="showAdvancedFilters = !showAdvancedFilters">
-                  <i class="bi" [class.bi-chevron-down]="!showAdvancedFilters"
-                    [class.bi-chevron-up]="showAdvancedFilters"></i>
-                  Advanced Filters
-                </button>
-
-                @if (showAdvancedFilters) {
-                <div class="mt-3">
-                  <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                      <label class="form-label small fw-bold">Date Range From</label>
-                      <input type="date" class="form-control form-control-sm" [(ngModel)]="chartFilters.dateFrom"
-                        (change)="applyChartFilters()">
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label small fw-bold">Date Range To</label>
-                      <input type="date" class="form-control form-control-sm" [(ngModel)]="chartFilters.dateTo"
-                        (change)="applyChartFilters()">
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label small fw-bold">Min Quantity</label>
-                      <input type="number" class="form-control form-control-sm" placeholder="0"
-                        [(ngModel)]="chartFilters.minQuantity" (input)="applyChartFilters()">
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label small fw-bold">Max Quantity</label>
-                      <input type="number" class="form-control form-control-sm" placeholder="1000000"
-                        [(ngModel)]="chartFilters.maxQuantity" (input)="applyChartFilters()">
-                    </div>
-                  </div>
-                </div>
-                }
-              </div>
-
-              <!-- Filter Results Summary -->
-              <div class="mt-3 p-2 bg-light rounded">
-                <small class="text-muted">
-                  <i class="bi bi-info-circle me-1"></i>
-                  Showing data for: {{ getFilterSummary() }}
-                </small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Charts and Analytics Section -->
       <div class="row g-4">
         <div class="col-lg-8">
@@ -622,71 +508,87 @@
                 </h5>
               </div>
               <div class="card-body">
+                <!-- Stat Cards -->
                 <div class="row g-3 mb-4">
                   <div class="col-md-3">
-                    <div class="card border-success">
-                      <div class="card-body text-center">
-                        <h4 class="text-success">{{ getTotalAvailable() | number }}</h4>
-                        <small class="text-muted">Total Available (From Serial Data)</small>
+                    <div class="avail-stat-card avail-total">
+                      <div class="avail-stat-icon">
+                        <i class="bi bi-layers-fill"></i>
+                      </div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getTotalAvailable() | number }}</div>
+                        <div class="avail-stat-label">Total Available</div>
+                        <div class="avail-stat-sub">From Serial Data</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="card border-success">
-                      <div class="card-body text-center">
-                        <h4 class="text-success">{{ getAvailableByType('LOCAL') | number }}</h4>
-                        <small class="text-muted">Local Available (From Serial Data)</small>
+                    <div class="avail-stat-card avail-local">
+                      <div class="avail-stat-icon">
+                        <i class="bi bi-house-fill"></i>
+                      </div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getAvailableByType('LOCAL') | number }}</div>
+                        <div class="avail-stat-label">Local Available</div>
+                        <div class="avail-stat-sub">From Serial Data</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="card border-dark">
-                      <div class="card-body text-center">
-                        <h4 class="text-dark">{{ getAvailableByType('EXPORT') | number }}</h4>
-                        <small class="text-muted">Export Available (From Serial Data)</small>
+                    <div class="avail-stat-card avail-export">
+                      <div class="avail-stat-icon">
+                        <i class="bi bi-globe2"></i>
+                      </div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getAvailableByType('EXPORT') | number }}</div>
+                        <div class="avail-stat-label">Export Available</div>
+                        <div class="avail-stat-sub">From Serial Data</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="card border-warning">
-                      <div class="card-body text-center">
-                        <h4 class="text-warning">{{ getAvailableByType('DEFENCE') | number }}</h4>
-                        <small class="text-muted">Defence Available (From Serial Data)</small>
+                    <div class="avail-stat-card avail-defence">
+                      <div class="avail-stat-icon">
+                        <i class="bi bi-shield-fill"></i>
+                      </div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getAvailableByType('DEFENCE') | number }}</div>
+                        <div class="avail-stat-label">Defence Available</div>
+                        <div class="avail-stat-sub">From Serial Data</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="row g-3 mb-3">
-                  <div class="col-12">
-                    <div class="filter-card">
-                      <div class="card-body">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Month</label>
-                            <select class="form-select form-select-sm" [(ngModel)]="availableFilters.month"
-                              (change)="applyAvailableFilters()">
-                              <option value="">All Months</option>
-                              <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
-                            </select>
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Date From</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="availableFilters.dateFrom"
-                              (change)="applyAvailableFilters()">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label small fw-bold">Date To</label>
-                            <input type="date" class="form-control form-control-sm" [(ngModel)]="availableFilters.dateTo"
-                              (change)="applyAvailableFilters()">
-                          </div>
-                          <div class="col-md-3 d-flex justify-content-end">
-                            <button class="btn btn-outline-secondary btn-sm" (click)="clearAvailableFilters()">
-                              <i class="bi bi-x-circle me-1"></i>Clear
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                <!-- Filter Bar -->
+                <div class="avail-filter-bar mb-3">
+                  <div class="avail-filter-label">
+                    <i class="bi bi-funnel-fill me-1"></i>
+                    <span>Filters</span>
+                  </div>
+                  <div class="avail-filter-controls">
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Month</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="availableFilters.month"
+                        (change)="applyAvailableFilters()">
+                        <option value="">All Months</option>
+                        <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date From</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input"
+                        [(ngModel)]="availableFilters.dateFrom" (change)="applyAvailableFilters()">
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date To</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input"
+                        [(ngModel)]="availableFilters.dateTo" (change)="applyAvailableFilters()">
+                    </div>
+                    <div class="avail-filter-item avail-filter-clear">
+                      <button class="btn btn-sm avail-clear-btn" (click)="clearAvailableFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                      </button>
                     </div>
                   </div>
                 </div>
