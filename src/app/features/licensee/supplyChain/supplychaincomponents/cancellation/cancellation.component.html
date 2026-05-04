@@ -82,10 +82,10 @@
       </select>
     </div>
 
-    <!-- Company Filter -->
-    <div class="compact-filter">
+    <!-- Company Filter (Commissioner only) -->
+    <div class="compact-filter" *ngIf="isCommissioner()">
       <select class="form-select form-select-sm" [(ngModel)]="cancellationCompanyFilter"
-        (change)="onCancellationCompanyFilterChange()" title="Filter by company">
+        (change)="applyCancellationFilters()" title="Filter by company">
         <option value="">All Companies</option>
         <option *ngFor="let company of cancellationCompanyOptions" [value]="company">{{ company }}</option>
       </select>

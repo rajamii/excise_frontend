@@ -45,14 +45,6 @@ export class CancellationComponent implements OnInit {
   cancellationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
 
-  private getCompanyNameForFilter(item: TableData): string {
-    const establishment = String(item?.establishmentName || '').trim();
-    if (establishment && establishment.toLowerCase() !== 'n/a' && establishment !== '-') {
-      return establishment;
-    }
-    return String(item?.distilleryName || '').trim();
-  }
-
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
   currentPage: number = 1;
@@ -399,20 +391,24 @@ export class CancellationComponent implements OnInit {
       });
     }
 
+    this.summaryCancellationData = summary;
+
+    // Build company options for commissioner filter
     this.cancellationCompanyOptions = Array.from(
       new Set(
         summary
-          .map(item => this.getCompanyNameForFilter(item))
+          .map(item => String(item?.establishmentName || item?.distilleryName || '').trim())
           .filter(v => !!v)
       )
     ).sort((a, b) => a.localeCompare(b));
 
-    this.summaryCancellationData = summary;
-
     let filtered = [...summary];
 
+    // Company filter — commissioner only
     if (this.cancellationCompanyFilter) {
-      filtered = filtered.filter(item => this.getCompanyNameForFilter(item) === this.cancellationCompanyFilter);
+      filtered = filtered.filter(item =>
+        String(item?.establishmentName || item?.distilleryName || '').trim() === this.cancellationCompanyFilter
+      );
     }
 
     // Status filter
@@ -454,10 +450,6 @@ export class CancellationComponent implements OnInit {
   }
 
   onCancellationMonthFilterChange(): void {
-    this.applyCancellationFilters();
-  }
-
-  onCancellationCompanyFilterChange(): void {
     this.applyCancellationFilters();
   }
 

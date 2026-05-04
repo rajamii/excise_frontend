@@ -152,6 +152,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
     console.log('Resolved OIC license scope for request list:', this.currentScopedLicenseId || '(not found)');
     this.loadHologramRequests();
+    // Sidebar "Holograms Available" should always use backend data (not localStorage) to avoid stale/0 glitches.
+    this.loadHologramInventory();
   }
 
   getCurrentDateTime(): string {
@@ -860,13 +862,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   getAvailableHologramsByType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
-    // Load hologram inventory from localStorage
-    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-
-    // Filter by type and sum available counts
-    return savedRolls
-      .filter((roll: any) => roll.type === type)
-      .reduce((total: number, roll: any) => total + (roll.availableCount || 0), 0);
+    return (this.hologramInventory || [])
+      .filter((roll) => roll.type === type)
+      .reduce((total, roll) => total + (Number(roll.availableCount) || 0), 0);
   }
 
   exportData() {

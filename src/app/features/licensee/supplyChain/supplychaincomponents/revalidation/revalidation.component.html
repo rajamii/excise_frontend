@@ -90,10 +90,10 @@
       </select>
     </div>
 
-    <!-- Company Filter -->
-    <div class="compact-filter">
+    <!-- Company Filter (Commissioner only) -->
+    <div class="compact-filter" *ngIf="isCommissioner()">
       <select class="form-select form-select-sm" [(ngModel)]="revalidationCompanyFilter"
-        (change)="onRevalidationCompanyFilterChange()" title="Filter by company">
+        (change)="applyRevalidationFilters()" title="Filter by company">
         <option value="">All Companies</option>
         <option *ngFor="let company of revalidationCompanyOptions" [value]="company">{{ company }}</option>
       </select>

@@ -65,9 +65,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
-    requisition: 'ENA Requisition',
-    revalidation: 'ENA Revalidation',
-    cancellation: 'ENA Cancellation',
+    requisition: 'Bulk Spirit Requisition',
+    revalidation: 'Bulk Spirit Revalidation',
+    cancellation: 'Bulk Spirit Cancellation',
     transit: 'Transit Permit',
     hologram: 'New Hologram Procurement'
   };
@@ -86,15 +86,15 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
-    { section: 'requisition', label: 'ENA Requisition', icon: 'description' },
-    { section: 'revalidation', label: 'ENA Revalidation', icon: 'refresh', hideForPermitSection: true },
-    { section: 'cancellation', label: 'ENA Cancellation', icon: 'cancel', hideForPermitSection: true },
+    { section: 'requisition', label: 'Bulk Spirit Requisition', icon: 'description' },
+    { section: 'revalidation', label: 'Bulk Spirit Revalidation', icon: 'refresh', hideForPermitSection: true },
+    { section: 'cancellation', label: 'Bulk Spirit Cancellation', icon: 'cancel', hideForPermitSection: true },
     { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
     { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
-    { section: 'bl-details', label: 'ENA Details Information', icon: 'water_drop', showOnlyForOic: true },
+    { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
         { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
     { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },

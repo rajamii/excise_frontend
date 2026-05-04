@@ -245,15 +245,19 @@
     flex-direction: column !important;
 
     > .nav-item {
-      order: 3;
+      order: 4;
     }
 
     > .dashboard-nav-item {
       order: 1;
     }
 
-    > .wallet-nav-item {
+    > .new-license-nav-item {
       order: 2;
+    }
+
+    > .wallet-nav-item {
+      order: 3;
     }
   }
 

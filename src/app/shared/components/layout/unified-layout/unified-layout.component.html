@@ -35,11 +35,12 @@
             </a>
 
             <!-- Apply New License -->
-            <button class="nav-item" (click)="navigateToSupplyChain('new-license')" [class.active]="isDashboardSectionActive('new-license')">
+            <button class="nav-item new-license-nav-item" (click)="navigateToSupplyChain('new-license')" [class.active]="isDashboardSectionActive('new-license')">
               <mat-icon class="nav-icon">add_business</mat-icon>
               <span class="nav-text">New License</span>
             </button>
 
+            <!-- Wallet -->
             <button class="nav-item wallet-nav-item" *ngIf="showManufacturingWalletNav" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
               <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
               <span class="nav-text">Wallet</span>

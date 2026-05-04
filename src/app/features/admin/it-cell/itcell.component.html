@@ -23,18 +23,6 @@
           </div>
         </div>
         <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-          <div class="summary-card submitted-requests summary-card-clickable" role="button" tabindex="0"
-            (click)="onSummaryCardClick('Submitted')" [class.active]="activeSummaryFilter === 'Submitted'">
-            <div class="card-icon">
-              <i class="bi bi-send"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getStatusCount('Submitted') }}</h3>
-              <p class="card-label">Submitted</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
           <div class="summary-card under-review-requests summary-card-clickable" role="button" tabindex="0"
             (click)="onSummaryCardClick('Under IT Cell Review')" [class.active]="activeSummaryFilter === 'Under IT Cell Review'">
             <div class="card-icon">
@@ -181,9 +169,9 @@
               </tr>
             </thead>
             <tbody>
-              @for (hologram of filteredHologramData; track hologram.refNo; let i = $index) {
+              @for (hologram of getPaged(); track hologram.refNo; let i = $index) {
               <tr class="register-row" [class.edited-row]="hologram.editedByCommissioner">
-                <td class="sl-no">{{ i + 1 }}</td>
+                <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
                 <td class="ref-number">
                   <div class="d-flex align-items-center gap-2">
                     <span class="ref-text">{{ hologram.refNo }}</span>
@@ -217,9 +205,8 @@
                 </td>
                 <td class="actions">
                   <div class="action-buttons d-flex gap-1 flex-wrap">
-                    <button class="btn btn-primary btn-sm" (click)="viewApplication(hologram)" title="View Application">
-                      <i class="bi bi-eye me-1"></i>
-                      <span class="d-none d-md-inline">View</span>
+                    <button class="btn btn-sm itcell-view-btn" (click)="viewApplication(hologram)" title="View Application">
+                      <i class="bi bi-eye-fill"></i>
                     </button>
                   </div>
                 </td>
@@ -238,6 +225,29 @@
             </div>
           </div>
         </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+          <small class="text-muted">
+            Showing {{ (currentPage - 1) * pageSize + 1 }}–{{ Math.min(currentPage * pageSize, filteredHologramData.length) }} of {{ filteredHologramData.length }} entries
+          </small>
+          <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+              <small class="text-muted fw-semibold">Show:</small>
+              <select class="form-select form-select-sm" style="width: 70px;" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                <option *ngFor="let opt of pageSizeOptions" [ngValue]="opt">{{ opt }}</option>
+              </select>
+            </div>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1">«</button>
+              <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+              <span class="btn btn-light disabled" style="min-width: 90px; font-size: 0.8rem;">Page {{ currentPage }} / {{ getTotalPages() }}</span>
+              <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === getTotalPages()">›</button>
+              <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())" [disabled]="currentPage === getTotalPages()">»</button>
+            </div>
+          </div>
+        </div>
+
         } @else {
         <!-- Empty State -->
         <div class="empty-state">
@@ -246,7 +256,7 @@
           </div>
           <h5 class="empty-title">No Applications Found</h5>
           <p class="empty-message">
-            {{ (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All' || companyFilter) ?
+            {{ (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All') ?
             'No applications match your current filter criteria. Try adjusting your filters or clear them to see all
             applications.' :
             'No hologram applications have been submitted yet.' }}
@@ -255,6 +265,7 @@
         }
       </div>
     </div>
+
     }
 
     <!-- Process Flow Tab -->

@@ -35,7 +35,7 @@ export class ApplicationFeeReceiptComponent {
   };
 
   private initialized = false;
-  statusKind: 'success' | 'failed' | 'processing' = 'processing';
+  statusKind: 'success' | 'failed' | 'pending' | 'processing' = 'processing';
   headerTitle = 'Processing Payment...';
   statusLabel = 'Processing';
 
@@ -61,9 +61,10 @@ export class ApplicationFeeReceiptComponent {
     this.refreshDerived();
   }
 
-  private normalizeStatus(value: string): 'success' | 'failed' {
+  private normalizeStatus(value: string): 'success' | 'failed' | 'pending' {
     const raw = String(value || '').trim().toLowerCase();
     if (raw === 'f' || raw === 'failed' || raw.includes('fail') || raw.includes('error')) return 'failed';
+    if (raw === 'p' || raw === 'pending' || raw.includes('pending') || raw.includes('process')) return 'pending';
     return 'success';
   }
 
@@ -77,11 +78,20 @@ export class ApplicationFeeReceiptComponent {
 
     this.statusKind = this.normalizeStatus(this.vm.status);
 
-    this.headerTitle =
-      this.statusKind === 'failed' ? 'Application Fee Payment Failed' : 'Application Fee Payment Successful';
+    if (this.statusKind === 'failed') {
+      this.headerTitle = 'Application Fee Payment Failed';
+      this.statusLabel = 'Failed';
+      return;
+    }
 
-    if (this.statusKind === 'failed') this.statusLabel = 'Failed';
-    else this.statusLabel = 'Payment Successful';
+    if (this.statusKind === 'pending') {
+      this.headerTitle = 'Application Fee Payment Pending';
+      this.statusLabel = 'Pending';
+      return;
+    }
+
+    this.headerTitle = 'Application Fee Payment Successful';
+    this.statusLabel = 'Payment Successful';
   }
 
   get formattedAmount(): string {
@@ -107,17 +117,24 @@ export class ApplicationFeeReceiptComponent {
   goToDashboard(): void {
     if (this.statusKind === 'processing') return;
 
-    // After payment success, show the "Application Submitted" view inside the New License stepper.
-    // (Do not show it before BillDesk completes.)
-    try {
-      const id = String(this.vm.applicationId || '').trim();
-      if (id) sessionStorage.setItem('new_license_submitted_application_id', id);
-    } catch {
-      // no-op
+    const autoSubmitted = String(this.vm.autoSubmitted || '').trim() === '1';
+
+    // Show "Application Submitted" in the stepper ONLY when BillDesk reports success
+    // AND the backend auto-submitted the draft (autoSubmitted=1).
+    if (this.statusKind === 'success' && autoSubmitted) {
+      try {
+        const id = String(this.vm.applicationId || '').trim();
+        if (id) sessionStorage.setItem('new_license_submitted_application_id', id);
+      } catch {
+        // no-op
+      }
     }
+
+    // UX: if payment failed/pending, return to New License Management (not the apply stepper).
+    const section = this.statusKind === 'success' && autoSubmitted ? 'new-license-apply' : 'new-license';
     this.router.navigate(['/dashboard'], {
       queryParams: {
-        section: 'new-license-apply',
+        section,
         source: 'application-fee-receipt',
         applicationId: this.vm.applicationId || undefined
       }
