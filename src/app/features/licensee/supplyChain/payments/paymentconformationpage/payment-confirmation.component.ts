@@ -10,6 +10,7 @@ import { SupplyChainService } from '../../services/supplychain.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import {
@@ -326,7 +327,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     private supplyChainService: SupplyChainService,
     private enaRequisitionService: EnaRequisitionService,
     private paymentIntegrationService: PaymentIntegrationService,
-    private licenseApplicationService: LicenseApplicationService
+    private licenseApplicationService: LicenseApplicationService,
+    private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService
   ) { }
 
   ngOnInit(): void {
@@ -2256,6 +2258,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       case 'hologram':
         return this.hologramService.performAction('procurement', Number(context.id), 'pay', 'Payment Completed via Wallet');
       case 'license_fee':
+        if (String(context.itemType || '').trim().toLowerCase() === 'salesman-barman-registration') {
+          return this.salesmanBarmanRegistrationService.payRegistrationLicenseFee(String(context.id));
+        }
         return this.licenseApplicationService.payNewLicenseFee(String(context.id), new FormData());
       case 'security_deposit':
         return this.licenseApplicationService.payNewLicenseSecurityFee(String(context.id));

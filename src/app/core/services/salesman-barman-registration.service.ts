@@ -33,6 +33,11 @@ export class SalesmanBarmanRegistrationService {
     return this.http.get<SalesmanBarman>(`${this.baseUrl}/detail/${encodedId}/`);
   }
 
+  payRegistrationLicenseFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/${encodedId}/pay-license-fee/`, {});
+  }
+
   // === ADVANCE STAGE ===
   advanceStage(applicationId: string, stageId: number, context?: any): Observable<SalesmanBarman> {
     console.log('🚀 advanceStage called:', { applicationId, stageId, context });

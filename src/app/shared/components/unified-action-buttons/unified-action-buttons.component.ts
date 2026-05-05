@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { WorkflowActionService } from '../../../core/services/workflow-action.service';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { ApplicationType } from '../../constants/application.constants';
+import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
 import Swal from 'sweetalert2';
 
 export interface ActionItem {
@@ -163,7 +164,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   constructor(
     private workflowActionService: WorkflowActionService,
     private unifiedActionsService: UnifiedActionsService,
-    private router: Router
+    private router: Router,
+    private paymentIntegrationService: PaymentIntegrationService
   ) { }
 
   ngOnInit(): void {
@@ -732,7 +734,11 @@ private getTransitRejectSummary(): {
   private executeAction(button: ActionButtonConfig): void {
     switch (button.action) {
       case 'MAKE_PAYMENT':
-        this.handleNewLicenseMakePaymentAction();
+        if (this.itemType === 'salesman-barman-registration') {
+          this.handleSalesmanBarmanMakePaymentAction();
+        } else {
+          this.handleNewLicenseMakePaymentAction();
+        }
         break;
       case 'APPROVE':
       case 'REJECT':
@@ -780,6 +786,19 @@ private getTransitRejectSummary(): {
 
   private isAwaitingNewLicensePaymentForLicensee(): boolean {
     if (this.itemType !== 'new-license') return false;
+    if (this.context !== 'licensee') return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
+  private isAwaitingSalesmanBarmanPaymentForLicensee(): boolean {
+    if (this.itemType !== 'salesman-barman-registration') return false;
     if (this.context !== 'licensee') return false;
     const stageName = String(
       this.item?.['current_stage_name'] ??
@@ -888,6 +907,80 @@ private getTransitRejectSummary(): {
       error: () => {
         Swal.close();
         showProceedModal(this.item);
+      }
+    });
+  }
+
+  private handleSalesmanBarmanMakePaymentAction(): void {
+    if (!this.isAwaitingSalesmanBarmanPaymentForLicensee()) {
+      Swal.fire('Not Available', 'Payment is only available when the application is awaiting registration fee payment.', 'info');
+      return;
+    }
+
+    const applicationId = String(
+      this.item?.['application_id'] ??
+      this.item?.['applicationId'] ??
+      this.item?.referenceNo ??
+      this.item?.refNo ??
+      this.item?.id ??
+      ''
+    ).trim();
+    if (!applicationId) {
+      Swal.fire('Error', 'Application ID is missing for payment.', 'error');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Loading...',
+      text: 'Fetching registration fee',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.paymentIntegrationService.getPaymentModule('012').subscribe({
+      next: (module: any) => {
+        Swal.close();
+        const fee = this.toNumber(module?.license_fee ?? module?.licenseFee ?? module?.licenseFeeAmount ?? 0);
+        if (!fee || fee <= 0) {
+          Swal.fire('Fee Not Configured', 'Registration fee is not configured for Salesman/Barman (module_code=012).', 'error');
+          return;
+        }
+
+        Swal.fire({
+          title: 'Proceed to Pay',
+          html: `
+            <div style="text-align:left;">
+              <div style="margin-bottom:8px;">Registration Fee: <b>₹${this.formatInr(fee)}</b></div>
+              <div>Total: <b>₹${this.formatInr(fee)}</b></div>
+              <div style="margin-top:10px; font-size:12px; color:#6b7280;">
+                You will be taken to Wallet → License Fee tab to complete payment.
+              </div>
+            </div>
+          `,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Proceed',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+          this.router.navigate(['/dashboard'], {
+            queryParams: {
+              section: 'wallet',
+              action: 'pay',
+              tab: 'license_fee',
+              id: applicationId,
+              type: 'salesman-barman-registration',
+              ref: applicationId,
+              referenceNo: applicationId,
+              amount: fee,
+              source: 'salesman-barman-registration'
+            }
+          });
+        });
+      },
+      error: () => {
+        Swal.close();
+        Swal.fire('Error', 'Unable to fetch registration fee. Please try again later.', 'error');
       }
     });
   }
@@ -1329,6 +1422,21 @@ private getTransitRejectSummary(): {
           icon: 'payment',
           color: 'primary',
           tooltip: 'Pay license fee and security deposit from wallet'
+        });
+      }
+    }
+
+    // Salesman/Barman: once application is routed to awaiting payment for licensee,
+    // show Make Payment (registration fee from license fee wallet).
+    if (this.isAwaitingSalesmanBarmanPaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay registration fee from license fee wallet'
         });
       }
     }
