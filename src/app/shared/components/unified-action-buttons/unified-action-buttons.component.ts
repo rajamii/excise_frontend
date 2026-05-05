@@ -68,7 +68,8 @@ export interface ActionButtonConfig {
             type="button"
             [color]="button.color"
             class="action-btn"
-            (click)="onActionClick(button)">
+            (click)="onActionClick(button)"
+            (mousedown)="onActionClick(button)">
             <mat-icon>{{ button.icon }}</mat-icon>
             {{ button.label }}
           </button>
@@ -258,6 +259,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
+      'MAKE_PAYMENT',
       'SUBMIT'
     ];
     return this.getFilteredConfigs().filter(config =>
@@ -729,6 +731,9 @@ private getTransitRejectSummary(): {
    */
   private executeAction(button: ActionButtonConfig): void {
     switch (button.action) {
+      case 'MAKE_PAYMENT':
+        this.handleNewLicenseMakePaymentAction();
+        break;
       case 'APPROVE':
       case 'REJECT':
       case 'FORWARD':
@@ -771,6 +776,86 @@ private getTransitRejectSummary(): {
       default:
         this.handleGenericAction(button);
     }
+  }
+
+  private isAwaitingNewLicensePaymentForLicensee(): boolean {
+    if (this.itemType !== 'new-license') return false;
+    if (this.context !== 'licensee') return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
+  private getNewLicenseFeeAmounts(): { licenseFee: number; securityFee: number; total: number } {
+    const licenseFee = this.toNumber(
+      this.item?.['license_fee_amount'] ??
+      this.item?.['licenseFeeAmount'] ??
+      this.item?.['yearly_license_fee'] ??
+      this.item?.['yearlyLicenseFee'] ??
+      0
+    );
+    const securityFee = this.toNumber(this.item?.['security_fee_amount'] ?? this.item?.['securityFeeAmount'] ?? 0);
+    return { licenseFee, securityFee, total: licenseFee + securityFee };
+  }
+
+  private handleNewLicenseMakePaymentAction(): void {
+    if (!this.isAwaitingNewLicensePaymentForLicensee()) {
+      Swal.fire('Not Available', 'Payment is only available when the application is awaiting license fee/security deposit payment.', 'info');
+      return;
+    }
+
+    const applicationId = String(
+      this.item?.['application_id'] ??
+      this.item?.['applicationId'] ??
+      this.item?.referenceNo ??
+      this.item?.refNo ??
+      this.item?.id ??
+      ''
+    ).trim();
+    if (!applicationId) {
+      Swal.fire('Error', 'Application ID is missing for payment.', 'error');
+      return;
+    }
+
+    const { licenseFee, securityFee, total } = this.getNewLicenseFeeAmounts();
+    Swal.fire({
+      title: 'Proceed to Pay',
+      html: `
+        <div style="text-align:left;">
+          <div style="margin-bottom:8px;">License Fee: <b>₹${this.formatInr(licenseFee)}</b></div>
+          <div style="margin-bottom:8px;">Security Deposit: <b>₹${this.formatInr(securityFee)}</b></div>
+          <div>Total: <b>₹${this.formatInr(total)}</b></div>
+          <div style="margin-top:10px; font-size:12px; color:#6b7280;">
+            You will be taken to Wallet → License Fee / Security Deposit tabs to complete payment.
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Proceed',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      this.router.navigate(['/dashboard'], {
+        queryParams: {
+          section: 'wallet',
+          action: 'pay',
+          tab: 'license_fee',
+          id: applicationId,
+          type: 'new-license',
+          ref: applicationId,
+          referenceNo: applicationId,
+          amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+          securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+          source: 'new-license'
+        }
+      });
+    });
   }
 
   private handleWorkflowAction(button: ActionButtonConfig): void {
@@ -1198,6 +1283,21 @@ private getTransitRejectSummary(): {
     result = this.applyCancellationCommissionerActionRules(result);
     result = this.applyRevalidationCommissionerActionRules(result);
     result = this.applyHologramCommissionerActionRules(result);
+
+    // New License: once application is routed to awaiting payment for licensee,
+    // do not show an "Approve" workflow action; show Make Payment instead.
+    if (this.isAwaitingNewLicensePaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay license fee and security deposit from wallet'
+        });
+      }
+    }
 
     // Deduplicate by action so multiple transitions mapped to same action
     // (e.g., two "approve-like" paths) don't render duplicate buttons.

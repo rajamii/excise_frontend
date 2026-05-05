@@ -474,10 +474,23 @@ export class UnifiedActionsService {
         if (!applicationId) {
           return of({ success: false, message: 'Application ID is required for payment' });
         }
-        return this.http.post<any>(`${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/pay-license-fee/`, {}).pipe(
-          map(() => ({ success: true, message: 'Payment completed successfully' })),
-          catchError((error) => of({ success: false, message: error?.error?.detail || error?.error?.error || 'Payment failed' }))
-        );
+        const licenseFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.yearly_license_fee ?? item?.yearlyLicenseFee ?? 0);
+        const securityFee = Number(item?.security_fee_amount ?? item?.securityFeeAmount ?? 0);
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'new-license',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+            securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+            action: 'pay',
+            source: 'new-license'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
       }
 
       case 'requisition':
