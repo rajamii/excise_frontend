@@ -8,6 +8,7 @@ import { WorkflowActionService } from '../../../core/services/workflow-action.se
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { ApplicationType } from '../../constants/application.constants';
 import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
+import { AccountService } from '../../../core/services/account.service';
 import Swal from 'sweetalert2';
 
 export interface ActionItem {
@@ -165,8 +166,35 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     private workflowActionService: WorkflowActionService,
     private unifiedActionsService: UnifiedActionsService,
     private router: Router,
-    private paymentIntegrationService: PaymentIntegrationService
+    private paymentIntegrationService: PaymentIntegrationService,
+    private accountService: AccountService
   ) { }
+
+  private isCurrentUserLicensee(): boolean {
+    const roleFromIdentity = String(this.accountService.getUserProfileSync()?.role?.name ?? '').trim().toLowerCase();
+    if (roleFromIdentity) return roleFromIdentity === 'licensee';
+    const roleFromStorage = String(localStorage.getItem('role') ?? '').trim().toLowerCase();
+    if (roleFromStorage) return roleFromStorage === 'licensee';
+
+    // Fallback: some flows only persist `role_id` early (or `role` may be missing until `/me` resolves).
+    const roleId = String(localStorage.getItem('role_id') ?? '').trim();
+    if (roleId) return roleId === '2';
+
+    // Last-resort: decode JWT payload (if present) and infer role.
+    try {
+      const access = String(localStorage.getItem('access') ?? '').trim();
+      if (!access || !access.includes('.')) return false;
+      const payload = JSON.parse(atob(access.split('.')[1] ?? ''));
+      const jwtRole = String(payload?.role ?? payload?.role_name ?? payload?.roleName ?? '').trim().toLowerCase();
+      if (jwtRole) return jwtRole === 'licensee';
+      const jwtRoleId = String(payload?.role_id ?? payload?.roleId ?? payload?.roleid ?? '').trim();
+      if (jwtRoleId) return jwtRoleId === '2';
+    } catch {
+      // ignore
+    }
+
+    return false;
+  }
 
   ngOnInit(): void {
     // Load all button logic here
@@ -787,6 +815,7 @@ private getTransitRejectSummary(): {
   private isAwaitingNewLicensePaymentForLicensee(): boolean {
     if (this.itemType !== 'new-license') return false;
     if (this.context !== 'licensee') return false;
+    if (!this.isCurrentUserLicensee()) return false;
     const stageName = String(
       this.item?.['current_stage_name'] ??
       this.item?.['currentStageName'] ??
@@ -800,6 +829,7 @@ private getTransitRejectSummary(): {
   private isAwaitingSalesmanBarmanPaymentForLicensee(): boolean {
     if (this.itemType !== 'salesman-barman-registration') return false;
     if (this.context !== 'licensee') return false;
+    if (!this.isCurrentUserLicensee()) return false;
     const stageName = String(
       this.item?.['current_stage_name'] ??
       this.item?.['currentStageName'] ??
