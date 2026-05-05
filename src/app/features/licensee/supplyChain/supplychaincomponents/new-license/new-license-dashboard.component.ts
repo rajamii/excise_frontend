@@ -6,7 +6,6 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
@@ -90,8 +89,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   monthFilter = '';
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
 
-  private readonly billdeskRetryStateKey = 'new_license_billdesk_retry_state_v1';
-  private readonly billdeskCooldownSeconds = 15 * 60;
+  
 
   ngOnInit(): void {
     this.loadData();
@@ -259,9 +257,9 @@ export class NewLicenseDashboardComponent implements OnInit {
     const applicationId = String(row.applicationId || '').trim();
     if (!applicationId) return;
 
-    const cooldownRemaining = this.getCooldownRemainingSeconds(applicationId);
+    const cooldownRemaining = this.paymentIntegrationService.getCooldownRemainingSeconds(applicationId);
     if (cooldownRemaining > 0) {
-      this.showCooldownPopup(cooldownRemaining);
+      this.paymentIntegrationService.showCooldownPopup(cooldownRemaining);
       return;
     }
 
@@ -299,88 +297,50 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private startBilldeskInitiation(applicationId: string): void {
-    void Swal.fire({
-      title: 'Redirecting to BillDesk',
-      text: 'Preparing application fee payment...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
+  void Swal.fire({
+    title: 'Redirecting to BillDesk',
+    text: 'Preparing application fee payment...',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  this.paymentIntegrationService
+    .initiateNewLicenseFee(String(applicationId).trim(), 500)
+    .pipe(timeout(30000))
+    .subscribe({
+      next: (initRes: any) => {
+        Swal.close();
+        this.paymentIntegrationService.clearRetryState(applicationId);
+
+        // Check for SDK parameters (handles both casing styles)[cite: 2]
+        const hasSDK = (initRes?.bdOrderId || initRes?.bd_order_id) && 
+                       (initRes?.authToken || initRes?.auth_token);
+
+        if (hasSDK) {
+          try {
+            // Use the single shared method from your service
+            this.paymentIntegrationService.launchBillDeskSDK(initRes, (txn) => {
+              if (txn.status === 'success' || txn.status === '0300') {
+                // Success: Refresh data to reflect the new payment status[cite: 2]
+                this.loadData();
+                Swal.fire('Success', 'Payment processed successfully.', 'success');
+              } else {
+                Swal.fire('Payment Incomplete', 'Payment was cancelled or declined.', 'info');
+              }
+            });
+          } catch (err) {
+            void Swal.fire('Error', 'Payment SDK failed to load. Please refresh.', 'error');
+          }
+        } else {
+          this.paymentIntegrationService.recordBilldeskFailure(applicationId);
+          void Swal.fire('Error', 'Missing SDK gateway parameters.', 'error');
+        }
+      },
+      error: (err: any) => {
+        this.paymentIntegrationService.handleInitiationError(err, applicationId);
+      },
     });
-
-    // 🚀 FIXED: Calling the correct service method you provided!
-    this.paymentIntegrationService
-      .initiateNewLicenseFee(String(applicationId).trim(), 500)
-      .pipe(timeout(30000))
-      .subscribe({
-        next: (initRes: any) => {
-          Swal.close();
-          this.clearRetryState(applicationId);
-
-          // 1. Check if backend returned the required SDK parameters
-          // (Handles both camelCase from your Django renderer and snake_case)
-          const bdOrderId = initRes?.bdOrderId || initRes?.bd_order_id;
-          const authToken = initRes?.authToken || initRes?.auth_token;
-          const merchantId = initRes?.merchantId || initRes?.merchant_id;
-
-          if (!bdOrderId || !authToken || !merchantId) {
-            this.recordBilldeskFailure(applicationId);
-            // Notice we added 'SDK' here. If you see this exact message, you know THIS code ran.
-            void Swal.fire('Error', 'BillDesk initiation failed: missing SDK gateway parameters.', 'error');
-            return;
-          }
-
-          // 2. Prepare the flow config object required by the SDK
-          const flow_config = {
-            merchantId: merchantId,
-            bdOrderId: bdOrderId,
-            authToken: authToken,
-            childWindow: true,
-            returnUrl: environment.payment.callbackUrl,
-            retryCount: 3
-          };
-
-          // 3. Prepare the main config object
-          const config = {
-            flowType: "payments",
-            flowConfig: flow_config,
-          };
-
-          // 4. Invoke the globally scoped SDK method
-          if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
-            window.loadBillDeskSdk(config);
-          } else {
-            console.error('BillDesk SDK is not loaded in the window object.');
-            void Swal.fire('Error', 'Payment SDK failed to load. Please refresh and try again.', 'error');
-          }
-        },
-        error: (err: any) => {
-          Swal.close();
-
-          const retrySeconds = this.extractRetryAfterSeconds(err);
-          if (retrySeconds > 0) {
-            this.showBilldeskPendingRetryPopup(retrySeconds);
-            return;
-          }
-
-          const timerSeconds = this.recordBilldeskFailure(applicationId);
-          if (timerSeconds > 0) {
-            this.showCooldownPopup(timerSeconds);
-            return;
-          }
-
-          if (String(err?.name || '').toLowerCase() === 'timeouterror') {
-            void Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
-            return;
-          }
-
-          const msg =
-            err?.error?.detail ||
-            err?.error?.message ||
-            err?.message ||
-            'Unable to initiate BillDesk payment. Please try again later.';
-          void Swal.fire('Error', String(msg), 'error');
-        },
-      });
-  }
+}
 
   private submitToBillDesk(url: string, requestMsg: string): void {
     try {
@@ -409,149 +369,11 @@ export class NewLicenseDashboardComponent implements OnInit {
     return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
   }
 
-  private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
-    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
-    const format = (seconds: number) => {
-      const s = Math.max(0, Math.floor(seconds));
-      const mm = String(Math.floor(s / 60)).padStart(2, '0');
-      const ss = String(s % 60).padStart(2, '0');
-      return `${mm}:${ss}`;
-    };
+ 
 
-    let interval: any;
-    void Swal.fire({
-      icon: 'info',
-      title: 'Payment Already Pending',
-      html: `A BillDesk transaction is already pending. Please wait <b>${format(totalSeconds)}</b> and try again.`,
-      showConfirmButton: true,
-      confirmButtonText: 'OK',
-      allowOutsideClick: false,
-      didOpen: () => {
-        const content = Swal.getHtmlContainer();
-        let remaining = totalSeconds;
-        interval = setInterval(() => {
-          remaining -= 1;
-          if (!content) return;
-          const b = content.querySelector('b');
-          if (b) b.textContent = format(remaining);
-          if (remaining <= 0) clearInterval(interval);
-        }, 1000);
-      },
-      willClose: () => {
-        if (interval) clearInterval(interval);
-      },
-    });
-  }
+  
 
-  private showCooldownPopup(retryAfterSeconds: number): void {
-    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
-    const format = (seconds: number) => {
-      const s = Math.max(0, Math.floor(seconds));
-      const mm = String(Math.floor(s / 60)).padStart(2, '0');
-      const ss = String(s % 60).padStart(2, '0');
-      return `${mm}:${ss}`;
-    };
-
-    let interval: any;
-    void Swal.fire({
-      icon: 'info',
-      title: 'Please Try Later',
-      html: `There seems to be an issue with the payment server. Please try again after <b>${format(totalSeconds)}</b>.`,
-      showConfirmButton: true,
-      confirmButtonText: 'OK',
-      allowOutsideClick: false,
-      didOpen: () => {
-        const content = Swal.getHtmlContainer();
-        let remaining = totalSeconds;
-        interval = setInterval(() => {
-          remaining -= 1;
-          if (!content) return;
-          const b = content.querySelector('b');
-          if (b) b.textContent = format(remaining);
-          if (remaining <= 0) clearInterval(interval);
-        }, 1000);
-      },
-      willClose: () => {
-        if (interval) clearInterval(interval);
-      },
-    });
-  }
-
-  private readRetryState(): Record<string, { failures: number; cooldownUntil?: number }> {
-    try {
-      const raw = String(localStorage.getItem(this.billdeskRetryStateKey) || '').trim();
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-
-  private writeRetryState(state: Record<string, { failures: number; cooldownUntil?: number }>): void {
-    try {
-      localStorage.setItem(this.billdeskRetryStateKey, JSON.stringify(state || {}));
-    } catch {
-      // no-op
-    }
-  }
-
-  private getCooldownRemainingSeconds(applicationId: string): number {
-    const id = String(applicationId || '').trim();
-    if (!id) return 0;
-
-    const state = this.readRetryState();
-    const entry = state[id];
-    const until = Number(entry?.cooldownUntil || 0);
-    if (!until || !Number.isFinite(until)) return 0;
-
-    const now = Date.now();
-    if (now >= until) {
-      delete state[id];
-      this.writeRetryState(state);
-      return 0;
-    }
-
-    return Math.max(1, Math.floor((until - now) / 1000));
-  }
-
-  private clearRetryState(applicationId: string): void {
-    const id = String(applicationId || '').trim();
-    if (!id) return;
-
-    const state = this.readRetryState();
-    if (state[id]) {
-      delete state[id];
-      this.writeRetryState(state);
-    }
-  }
-
-  // Returns cooldown seconds if lock started, otherwise 0.
-  private recordBilldeskFailure(applicationId: string): number {
-    const id = String(applicationId || '').trim();
-    if (!id) return 0;
-
-    const state = this.readRetryState();
-    const current = state[id] || { failures: 0 };
-
-    const now = Date.now();
-    const cooldownUntil = Number(current.cooldownUntil || 0);
-    if (cooldownUntil && Number.isFinite(cooldownUntil) && now < cooldownUntil) {
-      return Math.max(1, Math.floor((cooldownUntil - now) / 1000));
-    }
-
-    const failures = Number(current.failures || 0) + 1;
-    if (failures >= 3) {
-      const until = now + this.billdeskCooldownSeconds * 1000;
-      state[id] = { failures: 0, cooldownUntil: until };
-      this.writeRetryState(state);
-      return this.billdeskCooldownSeconds;
-    }
-
-    state[id] = { failures };
-    this.writeRetryState(state);
-    return 0;
-  }
+  
 
   private getDetailViewSource(): string {
     const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);

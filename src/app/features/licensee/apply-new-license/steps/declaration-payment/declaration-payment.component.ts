@@ -7,7 +7,6 @@ import { LicenseApplicationService } from '../../../../../core/services/license-
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { FormDataBuilder } from '../../../../../shared/utils/form-data.util';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
-import { timeout } from 'rxjs';
 import { environment } from '../../../../../../environments/environment';
 import { MasterService } from '../../../../../core/services/master.service';
 
@@ -20,6 +19,13 @@ interface UploadedDocumentView {
   key: string;
   label: string;
   fileName: string;
+}
+
+// Declare the global BillDesk function so TypeScript doesn't throw errors
+declare global {
+  interface Window {
+    loadBillDeskSdk: (config: any) => void;
+  }
 }
 
 @Component({
@@ -84,6 +90,16 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.ensureReviewMasterData();
+
+    this.paymentService.paymentStatus$.subscribe(result => {
+      if (result.status === 'success' || result.status === '0300') {
+        // Handle success (e.g., show success screen or refresh list)
+        this.submittedApplicationId = result.applicationId;
+      } else {
+        // Handle failure
+        Swal.fire('Error', 'Payment failed or cancelled', 'error');
+      }
+    });
 
     // If user comes back from BillDesk receipt page and chooses "Go to Dashboard",
     // we show the "Application Submitted" view in this step.
@@ -1060,85 +1076,95 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   onPayClick() {
-    if (!this.draftApplicationId || !this.feeAmount) return;
+  if (!this.draftApplicationId || !this.feeAmount) return;
 
-    this.isProcessing = true;
+  this.isProcessing = true;
 
-    this.paymentService.initiateNewLicenseFee(this.draftApplicationId, this.feeAmount).subscribe({
-      next: (response) => {
-        this.isProcessing = false;
-        this.isSubmitting = false;
+  this.paymentService.initiateNewLicenseFee(this.draftApplicationId, this.feeAmount).subscribe({
+    next: (response: any) => {
+      this.isProcessing = false;
+      this.isSubmitting = false;
+      Swal.close();
+
+      // Check for SDK Parameters
+      const hasSDKParams = (response?.bd_order_id || response?.bdOrderId) && 
+                           (response?.auth_token || response?.authToken);
+
+      if (hasSDKParams) {
         try {
-          Swal.close();
-        } catch {
-          // no-op
+          // Use the shared service method
+          this.paymentService.launchBillDeskSDK(response, (txn) => {
+            if (txn.status === 'success' || txn.status === '0300') {
+              this.submittedApplicationId = this.draftApplicationId;
+              this.cdr.detectChanges();
+            } else {
+              Swal.fire('Payment Incomplete', 'The payment was cancelled or declined.', 'error');
+            }
+          });
+        } catch (err) {
+          Swal.fire('Error', 'Payment SDK failed to load.', 'error');
         }
-
-        // The backend returns a 409 Conflict if a payment is already pending.
-        if (response.already_pending) {
-          const billdeskUrl = String(response?.billdesk_url || response?.billdeskUrl || '').trim();
-          const requestMsg = String(response?.request_msg || response?.requestMsg || '').trim();
-          if (billdeskUrl && requestMsg) {
-            this.submitToBillDesk(billdeskUrl, requestMsg);
-            return;
-          }
-          alert('A payment is already pending. Please try again later.');
-          return;
-        }
-
-        const billdeskUrl = String(response?.billdesk_url || response?.billdeskUrl || '').trim();
-        const requestMsg = String(response?.request_msg || response?.requestMsg || '').trim();
-        if (!billdeskUrl || !requestMsg) {
-          alert('BillDesk initiation failed: missing gateway parameters.');
-          return;
-        }
-
-        // Use form POST redirect (works for both real gateway and backend mock endpoint)
-        this.submitToBillDesk(billdeskUrl, requestMsg);
-      },
-      error: (err) => {
-        this.isProcessing = false;
-        this.isSubmitting = false;
-        try {
-          Swal.close();
-        } catch {
-          // no-op
-        }
-        console.error('Failed to initiate payment', err);
-
-        // Handle specific 409 pending lock error returned by backend[cite: 1].
-        if (err.status === 409) {
-          alert(err.error.detail);
-        } else {
-          alert('Payment initiation failed. Please try again.');
-        }
+        return;
       }
-    });
-  }
 
-  private launchBillDesk(apiData: any) {
-    // 1. Prepare the flow config object required by the SDK[cite: 2]
-    const flow_config = {
-      merchantId: apiData.merchantId || apiData.merchant_id, // Fallbacks just in case
-      bdOrderId: apiData.bdOrderId || apiData.bd_order_id,
-      authToken: apiData.authToken || apiData.auth_token,
-      childWindow: true,
-      returnUrl: environment.payment.callbackUrl,
-      retryCount: 3
-    };
-    // 2. Prepare the main config object
-  const config = {
-    flowType: "payments", 
-    flowConfig: flow_config,
-  };
+      // FALLBACK: Traditional Redirect (for mock/old testing)[cite: 1]
+      const billdeskUrl = String(response?.billdesk_url || response?.billdeskUrl || '').trim();
+      const requestMsg = String(response?.request_msg || response?.requestMsg || '').trim();
 
-  // 3. Invoke the globally scoped SDK method
-  if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
-    window.loadBillDeskSdk(config);
-  } else {
-    console.error('BillDesk SDK is not loaded in the window object.');
-  }
+      if (billdeskUrl && requestMsg) {
+        this.submitToBillDesk(billdeskUrl, requestMsg);
+      } else {
+        Swal.fire('Error', 'Missing gateway parameters.', 'error');
+      }
+    },
+    error: (err) => {
+      this.handlePaymentCallback(err); // Centralize error popups if possible
+    }
+  });
 }
+
+  // private launchBillDesk(apiData: any) {
+  //   // 1. Prepare the flow config object required by the SDK
+  //   const flow_config = {
+  //     merchantId: apiData.merchantId,
+  //     bdOrderId: apiData.bdOrderId,
+  //     authToken: apiData.authToken,
+  //     childWindow: true,
+  //     returnUrl: environment.payment.callbackUrl, // MUST match the backend 'ru' EXACTLY
+  //     retryCount: 3
+  //   };
+
+  //   // 2. Prepare the main config object[cite: 1]
+  //   const config = {
+  //     flowType: "payments",
+  //     flowConfig: flow_config,
+  //     responseHandler: (txn: any) => this.handlePaymentCallback(txn) // Captures popup closure
+  //   };
+
+  //   // 3. Invoke the globally scoped SDK method
+  //   if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
+  //     window.loadBillDeskSdk(config);
+  //   } else {
+  //     console.error('BillDesk SDK is not loaded in the window object.');
+  //     Swal.fire('Error', 'Payment SDK failed to load. Please ensure SDK scripts are in index.html.', 'error');
+  //   }
+  // }
+
+  private handlePaymentCallback(txn: any) {
+    console.log("BillDesk Callback received. Status:", txn.status);
+
+    // Billdesk auth_status for a successful transaction is '0300'[cite: 1]
+    if (txn.status === 'success' || txn.status === '0300') {
+      // The backend has already received the webhook and verified the JWS.
+      // Transition the user to the success screen:
+      this.submittedApplicationId = this.draftApplicationId;
+      this.cdr.detectChanges();
+    } else {
+      // Handles cancellations, 3DS failures, or declined cards
+      Swal.fire('Payment Incomplete', 'Your payment was cancelled or declined. Please try again.', 'error');
+    }
+  }
+
 
   private submitToBillDesk(url: string, requestMsg: string): void {
     try {
@@ -1161,51 +1187,51 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
   }
 
-  private extractRetryAfterSeconds(err: any): number {
-    const httpStatus = Number(err?.status || 0);
-    if (httpStatus !== 409) return 0;
-    const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
-    const seconds = Number(raw);
-    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
-  }
+  // private extractRetryAfterSeconds(err: any): number {
+  //   const httpStatus = Number(err?.status || 0);
+  //   if (httpStatus !== 409) return 0;
+  //   const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
+  //   const seconds = Number(raw);
+  //   return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  // }
 
-  private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
-    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
-    const format = (seconds: number) => {
-      const s = Math.max(0, Math.floor(seconds));
-      const mm = String(Math.floor(s / 60)).padStart(2, '0');
-      const ss = String(s % 60).padStart(2, '0');
-      return `${mm}:${ss}`;
-    };
+  // private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
+  //   const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
+  //   const format = (seconds: number) => {
+  //     const s = Math.max(0, Math.floor(seconds));
+  //     const mm = String(Math.floor(s / 60)).padStart(2, '0');
+  //     const ss = String(s % 60).padStart(2, '0');
+  //     return `${mm}:${ss}`;
+  //   };
 
-    let interval: any;
-    Swal.fire({
-      icon: 'info',
-      title: 'Payment Pending',
-      html:
-        `<div style="text-align:left">` +
-        `<div>Your last BillDesk application-fee payment is still pending.</div>` +
-        `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
-        `</div>`,
-      confirmButtonText: 'Cancel',
-      showConfirmButton: true,
-      allowOutsideClick: false,
-      timer: totalSeconds * 1000,
-      timerProgressBar: true,
-      didOpen: () => {
-        const container = Swal.getHtmlContainer();
-        const countdownEl = container ? (container.querySelector('b') as HTMLElement | null) : null;
-        interval = setInterval(() => {
-          const left = Swal.getTimerLeft();
-          if (left === null || left === undefined) return;
-          if (countdownEl) countdownEl.textContent = format(Math.ceil(left / 1000));
-        }, 250);
-      },
-      willClose: () => {
-        if (interval) clearInterval(interval);
-      }
-    });
-  }
+  //   let interval: any;
+  //   Swal.fire({
+  //     icon: 'info',
+  //     title: 'Payment Pending',
+  //     html:
+  //       `<div style="text-align:left">` +
+  //       `<div>Your last BillDesk application-fee payment is still pending.</div>` +
+  //       `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
+  //       `</div>`,
+  //     confirmButtonText: 'Cancel',
+  //     showConfirmButton: true,
+  //     allowOutsideClick: false,
+  //     timer: totalSeconds * 1000,
+  //     timerProgressBar: true,
+  //     didOpen: () => {
+  //       const container = Swal.getHtmlContainer();
+  //       const countdownEl = container ? (container.querySelector('b') as HTMLElement | null) : null;
+  //       interval = setInterval(() => {
+  //         const left = Swal.getTimerLeft();
+  //         if (left === null || left === undefined) return;
+  //         if (countdownEl) countdownEl.textContent = format(Math.ceil(left / 1000));
+  //       }, 250);
+  //     },
+  //     willClose: () => {
+  //       if (interval) clearInterval(interval);
+  //     }
+  //   });
+  // }
 
   private clearApplicationData(): void {
     const sections = [
@@ -1223,7 +1249,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
     this.licenseAppService.clearAllDocuments();
 
-    console.log('✅ Application data cleared successfully');
+    console.log('Application data cleared successfully');
   }
 
   private formatErrorMessage(err: any): string {

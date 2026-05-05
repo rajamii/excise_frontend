@@ -12,7 +12,7 @@ export const environment = {
 
     payment: {
         billdeskGatewayUrl: 'https://uat1.billdesk.com/pgidsk/PGIMerchantPayment',
-        callbackUrl: 'http://localhost:4200/payment/callback',
+        callbackUrl: 'http://localhost:4200/dashboard/wallet-recharge/success',
         cancelUrl: 'http://localhost:4200/payment/cancel',
     },
 };
