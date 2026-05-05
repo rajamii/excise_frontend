@@ -822,39 +822,73 @@ private getTransitRejectSummary(): {
       return;
     }
 
-    const { licenseFee, securityFee, total } = this.getNewLicenseFeeAmounts();
-    Swal.fire({
-      title: 'Proceed to Pay',
-      html: `
-        <div style="text-align:left;">
-          <div style="margin-bottom:8px;">License Fee: <b>₹${this.formatInr(licenseFee)}</b></div>
-          <div style="margin-bottom:8px;">Security Deposit: <b>₹${this.formatInr(securityFee)}</b></div>
-          <div>Total: <b>₹${this.formatInr(total)}</b></div>
-          <div style="margin-top:10px; font-size:12px; color:#6b7280;">
-            You will be taken to Wallet → License Fee / Security Deposit tabs to complete payment.
+    const resolveAmounts = (source: any): { licenseFee: number; securityFee: number; total: number } => {
+      const licenseFee = this.toNumber(
+        source?.['license_fee_amount'] ??
+        source?.['licenseFeeAmount'] ??
+        source?.['yearly_license_fee'] ??
+        source?.['yearlyLicenseFee'] ??
+        0
+      );
+      const securityFee = this.toNumber(source?.['security_fee_amount'] ?? source?.['securityFeeAmount'] ?? 0);
+      return { licenseFee, securityFee, total: licenseFee + securityFee };
+    };
+
+    const showProceedModal = (amountSource: any) => {
+      const { licenseFee, securityFee, total } = resolveAmounts(amountSource);
+      Swal.fire({
+        title: 'Proceed to Pay',
+        html: `
+          <div style="text-align:left;">
+            <div style="margin-bottom:8px;">License Fee: <b>₹${this.formatInr(licenseFee)}</b></div>
+            <div style="margin-bottom:8px;">Security Deposit: <b>₹${this.formatInr(securityFee)}</b></div>
+            <div>Total: <b>₹${this.formatInr(total)}</b></div>
+            <div style="margin-top:10px; font-size:12px; color:#6b7280;">
+              You will be taken to Wallet → License Fee / Security Deposit tabs to complete payment.
+            </div>
           </div>
-        </div>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Proceed',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (!result.isConfirmed) return;
-      this.router.navigate(['/dashboard'], {
-        queryParams: {
-          section: 'wallet',
-          action: 'pay',
-          tab: 'license_fee',
-          id: applicationId,
-          type: 'new-license',
-          ref: applicationId,
-          referenceNo: applicationId,
-          amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
-          securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
-          source: 'new-license'
-        }
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Proceed',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (!result.isConfirmed) return;
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            action: 'pay',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'new-license',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+            securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+            source: 'new-license'
+          }
+        });
       });
+    };
+
+    // Dashboard/list rows often don't carry computed fee fields; fetch full detail
+    // so the modal shows correct amounts.
+    Swal.fire({
+      title: 'Loading...',
+      text: 'Fetching fee amounts',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.workflowActionService.getNewLicenseApplicationDetail(applicationId).subscribe({
+      next: (detail: any) => {
+        Swal.close();
+        showProceedModal(detail || this.item);
+      },
+      error: () => {
+        Swal.close();
+        showProceedModal(this.item);
+      }
     });
   }
 
