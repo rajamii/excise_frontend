@@ -496,13 +496,22 @@ export class RegistrationManagementComponent implements OnInit {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.submitted_on),
-          paymentStatus: String(
-            item?.application_fee_payment_status_display ??
-            item?.applicationFeePaymentStatusDisplay ??
-            item?.application_fee_payment_status ??
-            item?.applicationFeePaymentStatus ??
-            ''
-          ),
+          paymentStatus: (() => {
+            const raw = String(
+              item?.application_fee_payment_status_display ??
+              item?.applicationFeePaymentStatusDisplay ??
+              item?.application_fee_payment_status ??
+              item?.applicationFeePaymentStatus ??
+              ''
+            );
+            // Applications submitted directly via the stepper have no payment gateway
+            // transaction — treat them as Success (no payment required).
+            const hasNewLicenseApp = !!(item?.new_license_application ?? item?.newLicenseApplication);
+            if (!hasNewLicenseApp && (!raw || raw === 'Pending' || raw === 'P')) {
+              return 'Success';
+            }
+            return raw || 'Pending';
+          })(),
           applicantName: this.getSalesmanApplicantName(item),
           establishmentName: String(item?.license_category_name ?? item?.licenseCategoryName ?? 'N/A'),
           companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),

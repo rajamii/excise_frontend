@@ -1146,10 +1146,6 @@
                                     <td>{{ applicationData.license || 'Not available' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Current Stage</td>
-                                    <td>{{ applicationData.current_stage_name || applicationData.currentStageName || applicationData.status || 'Not available' }}</td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Approval Status</td>
                                     <td>
                                         <span class="badge" [ngClass]="applicationData.is_approved ? 'bg-success' : 'bg-warning'">
