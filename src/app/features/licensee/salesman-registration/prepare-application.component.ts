@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { LicenseComponent } from './steps/license/license.component';
 import { DetailsComponent } from './steps/details/details.component';
-import { MakePaymentComponent } from "./steps/make-payment/make-payment.component";
 import { SubmitApplicationComponent } from "./steps/submit-application/submit-application.component";
 import { AccountService } from '../../../core/services/account.service';
 
@@ -13,7 +12,6 @@ import { AccountService } from '../../../core/services/account.service';
     MaterialModule, 
     LicenseComponent, 
     DetailsComponent, 
-    MakePaymentComponent, 
     SubmitApplicationComponent
   ],
   templateUrl: './prepare-application.component.html',

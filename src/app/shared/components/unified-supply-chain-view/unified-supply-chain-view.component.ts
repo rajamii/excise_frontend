@@ -2934,15 +2934,28 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     calculateNewLicenseUploads(): void {
         this.newLicenseUploads = [];
-        if (!this.applicationData || this.applicationType !== 'new-license') return;
+        if (!this.applicationData) return;
 
-        const docFields: Array<{ label: string; keys: string[] }> = [
-            { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
-            { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
-            { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
-            { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
-            { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
-        ];
+        let docFields: Array<{ label: string; keys: string[] }> = [];
+
+        if (this.applicationType === 'new-license') {
+            docFields = [
+                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
+                { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
+                { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
+                { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
+                { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
+            ];
+        } else if (this.applicationType === 'salesman-barman-registration') {
+            docFields = [
+                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto'] },
+                { label: 'Aadhaar Card', keys: ['aadhaar_card', 'aadhaarCard'] },
+                { label: 'Residential Certificate', keys: ['residential_certificate', 'residentialCertificate'] },
+                { label: 'Date of Birth Proof', keys: ['dateof_birth_proof', 'dateofBirthProof'] }
+            ];
+        } else {
+            return;
+        }
 
         for (const field of docFields) {
             const rawValue = this.pickFirstValue(field.keys);

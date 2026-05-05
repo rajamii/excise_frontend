@@ -73,7 +73,7 @@
                             <span [ngClass]="getStatusBadgeClass(isLicenseeContext() ? 'PENDING' : applicationData.status)" class="d-block mt-1">
                                 {{ isLicenseeContext() ? 'Pending' : getFormattedStatus(applicationData.status) }}
                             </span>
-                            <p class="mt-2"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
+                            <p class="mt-2" *ngIf="!isSalesmanBarmanRegistration()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
                     </div>
                 </div>
@@ -1159,7 +1159,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Submitted On</td>
-                                    <td>{{ applicationData.created_at | date: "dd-MM-yyyy" }}</td>
+                                    <td>{{ (applicationData.submissionDate | date: "dd-MM-yyyy") || (applicationData.created_at | date: "dd-MM-yyyy") || 'Not available' }}</td>
                                 </tr>
                             </tbody>
                         </table>
