@@ -212,6 +212,14 @@
                 <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
                   <i class="bi bi-eye-fill"></i>
                 </button>
+                <button
+                  *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
+                  class="btn btn-link p-0 action-timeline ms-2"
+                  title="View Timeline"
+                  (click)="viewTimeline(row)"
+                >
+                  <i class="bi bi-clock-history"></i>
+                </button>
               </td>
             </tr>
           </tbody>

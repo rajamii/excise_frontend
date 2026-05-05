@@ -3,10 +3,13 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
 import { environment } from '../../../../../../environments/environment';
 import { catchError, map } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
 import { RoleService } from '../../../../../core/services/role.service';
+import { ApplicationMovementComponent } from '../../../../licensee/licensee-dashboard/application-table/application-movement/application-movement.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-registration-management',
@@ -59,7 +62,8 @@ export class RegistrationManagementComponent implements OnInit {
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
-    private roleService: RoleService
+    private roleService: RoleService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -182,6 +186,26 @@ export class RegistrationManagementComponent implements OnInit {
         id: row.id || row.applicationId,
         ref: row.applicationId,
         source: 'licensee'
+      }
+    });
+  }
+
+  viewTimeline(row: { id: string; applicationId: string }): void {
+    const applicationId = String(row.applicationId || row.id || '').trim();
+    if (!applicationId) return;
+
+    const encoded = encodeURIComponent(applicationId);
+    this.http.get<any>(`${this.salesmanApiBase}/detail/${encoded}/`).subscribe({
+      next: (res: any) => {
+        this.dialog.open(ApplicationMovementComponent, {
+          width: '700px',
+          maxHeight: '80vh',
+          data: { movementDataSource: { data: [res] } }
+        });
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
+        void Swal.fire('Error', String(msg), 'error');
       }
     });
   }
