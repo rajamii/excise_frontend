@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../environments/environment';
 import { catchError, map } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
+import { RoleService } from '../../../../../core/services/role.service';
 
 @Component({
   selector: 'app-registration-management',
@@ -24,18 +25,23 @@ export class RegistrationManagementComponent implements OnInit {
   error: string | null = null;
 
   counts = {
+    newApplication: 0,
     approved: 0,
     pending: 0,
     objection: 0,
     rejected: 0
   };
 
+  activeCardFilter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected' | '' = '';
+
   allRows: Array<{
     id: string;
     applicationId: string;
     submittedOn: string;
+    paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
+    companyName?: string;
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
@@ -44,11 +50,16 @@ export class RegistrationManagementComponent implements OnInit {
   stageFilterOptions: string[] = [];
   statusFilter = '';
   searchFilter = '';
+  monthFilter = '';
+  dateFromFilter = '';
+  companyFilter = '';
+  companyOptions: string[] = [];
 
   constructor(
     private http: HttpClient,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private roleService: RoleService
   ) {}
 
   ngOnInit(): void {
@@ -58,14 +69,33 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
+  isAdminUser(): boolean {
+    return this.roleService.isAdminRole();
+  }
+
+  onCardFilterClick(filter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected'): void {
+    if (this.activeCardFilter === filter || filter === 'new') {
+      // 'new' = Total Application — always shows all rows (no status filter)
+      // toggling the same filter off also shows all rows
+      this.activeCardFilter = filter === 'new' ? 'new' : '';
+      this.statusFilter = '';
+    } else {
+      this.activeCardFilter = filter;
+      this.statusFilter = filter;
+    }
+    this.applyFilters();
+  }
+
   applyFilters(): void {
     const q = this.searchFilter.trim().toLowerCase();
     const selected = this.statusFilter.trim().toLowerCase();
+    const dateFrom = this.dateFromFilter ? new Date(this.dateFromFilter) : null;
 
     this.filteredRows = this.allRows.filter((row) => {
       const stageRaw = String(row.currentStageRaw || '').toLowerCase();
       const stageText = String(row.currentStage || '').toLowerCase();
 
+      // Status filter (driven by card click)
       const matchesStatus =
         !selected ||
         row.statusGroup === selected ||
@@ -74,20 +104,50 @@ export class RegistrationManagementComponent implements OnInit {
         stageText === selected ||
         stageText.includes(selected);
 
+      // Text search
       const matchesSearch =
         !q ||
         row.applicationId.toLowerCase().includes(q) ||
+        String(row.paymentStatus || '').toLowerCase().includes(q) ||
         row.applicantName.toLowerCase().includes(q) ||
         row.establishmentName.toLowerCase().includes(q) ||
         row.currentStage.toLowerCase().includes(q);
 
-      return matchesStatus && matchesSearch;
+      // Parse stored "DD-Mon-YYYY" back to a Date
+      let rowDate: Date | null = null;
+      if (row.submittedOn && row.submittedOn !== 'N/A') {
+        const parsed = new Date(row.submittedOn.replace(/-/g, ' '));
+        if (!isNaN(parsed.getTime())) rowDate = parsed;
+      }
+
+      // Month filter — 2-digit string "01"–"12"
+      const matchesMonth = !this.monthFilter || (
+        rowDate !== null && (rowDate.getMonth() + 1) === parseInt(this.monthFilter, 10)
+      );
+
+      // Single date filter — exact day match
+      const matchesDate = !dateFrom || (
+        rowDate !== null &&
+        rowDate.getFullYear() === dateFrom.getFullYear() &&
+        rowDate.getMonth() === dateFrom.getMonth() &&
+        rowDate.getDate() === dateFrom.getDate()
+      );
+
+      // Company filter (admin only)
+      const matchesCompany = !this.companyFilter ||
+        String((row as any).companyName || '').toLowerCase() === this.companyFilter.toLowerCase();
+
+      return matchesStatus && matchesSearch && matchesMonth && matchesDate && matchesCompany;
     });
   }
 
   clearFilters(): void {
     this.statusFilter = '';
     this.searchFilter = '';
+    this.monthFilter = '';
+    this.dateFromFilter = '';
+    this.companyFilter = '';
+    this.activeCardFilter = '';
     this.applyFilters();
   }
 
@@ -165,6 +225,7 @@ export class RegistrationManagementComponent implements OnInit {
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenCompanyGroupedData(grouped);
         this.counts = {
+          newApplication: 0,
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number(counts?.objection || 0),
@@ -384,12 +445,14 @@ export class RegistrationManagementComponent implements OnInit {
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenSalesmanGroupedData(grouped);
         this.counts = {
+          newApplication: Number((counts as any)?.new_application || (counts as any)?.newApplication || 0),
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number((counts as any)?.objection || 0),
           rejected: Number(counts?.rejected || 0)
         };
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+        this.companyOptions = this.getCompanyOptions(this.allRows);
         this.applyFilters();
         this.isLoading = false;
       },
@@ -404,8 +467,10 @@ export class RegistrationManagementComponent implements OnInit {
     id: string;
     applicationId: string;
     submittedOn: string;
+    paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
+    companyName?: string;
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
@@ -431,8 +496,16 @@ export class RegistrationManagementComponent implements OnInit {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.submitted_on),
+          paymentStatus: String(
+            item?.application_fee_payment_status_display ??
+            item?.applicationFeePaymentStatusDisplay ??
+            item?.application_fee_payment_status ??
+            item?.applicationFeePaymentStatus ??
+            ''
+          ),
           applicantName: this.getSalesmanApplicantName(item),
           establishmentName: String(item?.license_category_name ?? item?.licenseCategoryName ?? 'N/A'),
+          companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),
           currentStage: this.formatStageName(rawStage),
           currentStageRaw: rawStage,
           statusGroup
@@ -505,16 +578,18 @@ export class RegistrationManagementComponent implements OnInit {
     rows: Array<{ statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' }>,
     rawCounts: any
   ): {
+    newApplication: number;
     approved: number;
     pending: number;
     objection: number;
     rejected: number;
   } {
     if (rows.length > 0) {
-      return this.calculateCounts(rows);
+      return { newApplication: 0, ...this.calculateCounts(rows) };
     }
 
     return {
+      newApplication: 0,
       approved: Number(rawCounts?.approved || 0),
       pending: Number(rawCounts?.pending || rawCounts?.applied || 0),
       objection: Number(rawCounts?.objection || 0),
@@ -545,6 +620,20 @@ export class RegistrationManagementComponent implements OnInit {
         rows
           .map((row) => String(row.currentStage || '').trim())
           .filter((value) => !!value)
+      )
+    );
+    values.sort((a, b) => a.localeCompare(b));
+    return values;
+  }
+
+  private getCompanyOptions(
+    rows: Array<{ companyName?: string }>
+  ): string[] {
+    const values = Array.from(
+      new Set(
+        rows
+          .map((row) => String(row.companyName || '').trim())
+          .filter((v) => !!v && v !== 'N/A')
       )
     );
     values.sort((a, b) => a.localeCompare(b));

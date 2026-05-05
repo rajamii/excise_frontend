@@ -2,6 +2,8 @@
   width: 100%;
 }
 
+// ─── Summary Cards ────────────────────────────────────────────────────────────
+
 .summary-card {
   display: flex;
   align-items: center;
@@ -12,6 +14,55 @@
   padding: 14px 16px;
 }
 
+.summary-card-clickable {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+  user-select: none;
+
+  // Animated top-border accent bar
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    border-color: rgba(15, 23, 42, 0.15);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(13, 110, 253, 0.5);
+    outline-offset: 2px;
+  }
+
+  &.active {
+    border-color: rgba(13, 110, 253, 0.4);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2), 0 4px 14px rgba(0, 0, 0, 0.1);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+}
+
+// ─── Card icon base ───────────────────────────────────────────────────────────
+
 .card-icon {
   width: 44px;
   height: 44px;
@@ -20,46 +71,156 @@
   place-items: center;
   color: #fff;
   font-size: 1.3rem;
-}
-
-.approved-requests .card-icon {
-  background: linear-gradient(135deg, #15a34a, #16c47a);
-}
-
-.pending-requests .card-icon {
-  background: linear-gradient(135deg, #e39b12, #f0b429);
-}
-
-.objection-requests .card-icon {
-  background: linear-gradient(135deg, #e76e1f, #f08b3e);
-}
-
-.rejected-requests .card-icon {
-  background: linear-gradient(135deg, #d12222, #ef4444);
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 .card-value {
   font-size: 2rem;
+  font-weight: 700;
   margin: 0;
   line-height: 1;
 }
 
 .card-label {
   margin: 2px 0 0;
+  font-size: 0.85rem;
   color: #516078;
 }
+
+// ─── Per-status colour tokens ─────────────────────────────────────────────────
+
+.new-application-requests,
+.total-application-requests {
+  --accent-start: #3b82f6;
+  --accent-end: #6366f1;
+
+  .card-icon {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+  }
+
+  .card-value {
+    color: #3b82f6;
+  }
+}
+
+
+.approved-requests {
+  --accent-start: #15a34a;
+  --accent-end: #16c47a;
+
+  .card-icon {
+    background: linear-gradient(135deg, #15a34a, #16c47a);
+  }
+
+  .card-value {
+    color: #15a34a;
+  }
+}
+
+.pending-requests {
+  --accent-start: #e39b12;
+  --accent-end: #f0b429;
+
+  .card-icon {
+    background: linear-gradient(135deg, #e39b12, #f0b429);
+  }
+
+  .card-value {
+    color: #d97706;
+  }
+}
+
+.objection-requests {
+  --accent-start: #e76e1f;
+  --accent-end: #f08b3e;
+
+  .card-icon {
+    background: linear-gradient(135deg, #e76e1f, #f08b3e);
+  }
+
+  .card-value {
+    color: #e76e1f;
+  }
+}
+
+.rejected-requests {
+  --accent-start: #d12222;
+  --accent-end: #ef4444;
+
+  .card-icon {
+    background: linear-gradient(135deg, #d12222, #ef4444);
+  }
+
+  .card-value {
+    color: #dc2626;
+  }
+}
+
+// ─── Filter section ───────────────────────────────────────────────────────────
 
 .compact-filter-section {
   border: 1px solid #e3e7ef;
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: #fff;
 }
 
-.compact-filter {
-  flex: 1;
-  min-width: 280px;
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
+
+.filter-label-text {
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: #516078;
+  font-size: 0.82rem;
+}
+
+.filter-input {
+  flex-shrink: 0;
+
+  &.filter-input--search {
+    width: 260px;
+  }
+
+  &.filter-input--month {
+    width: 140px;
+  }
+
+  &.filter-input--date {
+    width: 145px;
+  }
+
+  &.filter-input--company {
+    width: 180px;
+  }
+}
+
+.filter-date-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.filter-date-label {
+  font-size: 0.8rem;
+  color: #516078;
+  font-weight: 500;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.filter-clear-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+// ─── Table container ──────────────────────────────────────────────────────────
 
 .register-container {
   margin-top: 14px;
@@ -108,6 +269,63 @@
 .action-eye i {
   font-size: 1.1rem;
   color: #2c64e8;
+}
+
+// ─── Status badges ────────────────────────────────────────────────────────────
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &--approved {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  &--pending {
+    background: #fef9c3;
+    color: #a16207;
+  }
+
+  &--objection {
+    background: #ffedd5;
+    color: #c2410c;
+  }
+
+  &--rejected {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+}
+
+// ─── Payment badges ───────────────────────────────────────────────────────────
+
+.payment-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &--success {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  &--failed {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  &--pending {
+    background: #fef9c3;
+    color: #a16207;
+  }
 }
 
 .loading-state,

@@ -39,6 +39,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   isSubmitting = false;
   draftApplicationId: string | null = null;
   submittedApplicationId: string | null = null;
+  sbmApplicationId: string | null = null;
+  sbmSubmitted: boolean = false;
   private readonly documentObjectUrls = new Map<string, string>();
 
   private readonly uploadedDocumentLabels: Record<string, string> = {
@@ -89,7 +91,16 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       const submitted = String(sessionStorage.getItem('new_license_submitted_application_id') || '').trim();
       if (submitted) {
         this.submittedApplicationId = submitted;
-        sessionStorage.removeItem('new_license_submitted_application_id');
+      }
+
+      const sbmId = String(sessionStorage.getItem('new_license_sbm_application_id') || '').trim();
+      if (sbmId) {
+        this.sbmApplicationId = sbmId;
+      }
+
+      const sbmSubmitted = String(sessionStorage.getItem('new_license_sbm_submitted') || '').trim();
+      if (sbmSubmitted) {
+        this.sbmSubmitted = sbmSubmitted === '1';
       }
     } catch {
       // no-op
@@ -1056,18 +1067,43 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     this.paymentService.initiateNewLicenseFee(this.draftApplicationId, this.feeAmount).subscribe({
       next: (response) => {
         this.isProcessing = false;
+        this.isSubmitting = false;
+        try {
+          Swal.close();
+        } catch {
+          // no-op
+        }
 
         // The backend returns a 409 Conflict if a payment is already pending.
         if (response.already_pending) {
+          const billdeskUrl = String(response?.billdesk_url || response?.billdeskUrl || '').trim();
+          const requestMsg = String(response?.request_msg || response?.requestMsg || '').trim();
+          if (billdeskUrl && requestMsg) {
+            this.submitToBillDesk(billdeskUrl, requestMsg);
+            return;
+          }
           alert('A payment is already pending. Please try again later.');
           return;
         }
 
-        // Proceed to launch the SDK with the generated credentials
-        this.launchBillDesk(response);
+        const billdeskUrl = String(response?.billdesk_url || response?.billdeskUrl || '').trim();
+        const requestMsg = String(response?.request_msg || response?.requestMsg || '').trim();
+        if (!billdeskUrl || !requestMsg) {
+          alert('BillDesk initiation failed: missing gateway parameters.');
+          return;
+        }
+
+        // Use form POST redirect (works for both real gateway and backend mock endpoint)
+        this.submitToBillDesk(billdeskUrl, requestMsg);
       },
       error: (err) => {
         this.isProcessing = false;
+        this.isSubmitting = false;
+        try {
+          Swal.close();
+        } catch {
+          // no-op
+        }
         console.error('Failed to initiate payment', err);
 
         // Handle specific 409 pending lock error returned by backend[cite: 1].
