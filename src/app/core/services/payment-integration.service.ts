@@ -118,14 +118,21 @@ export class PaymentIntegrationService {
     );
   }
 
+  getPaymentModule(moduleCode: string): Observable<any> {
+    return this.http.get<any>(`${this.gatewayUrl}/modules/${encodeURIComponent(String(moduleCode || '').trim())}/`);
+  }
+
   // Calls the Django endpoint to create the BillDesk order
-  initiateNewLicenseFee(applicationId: string, amount: number): Observable<any> {
+  initiateNewLicenseFee(applicationId: string, amount?: number): Observable<any> {
     const payload = {
       application_id: applicationId,
-      amount: amount,
       device_data: getDeviceMetadata(),
       // Note: payment_module_code and head_of_account will default securely on the backend if omitted.
-    };
+    } as any;
+
+    if (typeof amount === 'number' && isFinite(amount) && amount > 0) {
+      payload.amount = amount;
+    }
 
     return this.http.post(`${environment.apiBaseUrl}/transactional/payment-gateway/billdesk/initiate/new-license-application-fee/`, payload);
   }

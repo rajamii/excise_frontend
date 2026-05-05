@@ -35,7 +35,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   declarationForm: FormGroup;
   passPhotoUrl: string | null = null;
   private photoSub?: Subscription;
-  feeAmount = 500;
+  feeAmount = 0;
   isSubmitting = false;
   draftApplicationId: string | null = null;
   submittedApplicationId: string | null = null;
@@ -84,6 +84,25 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.ensureReviewMasterData();
+
+    // Load application fee from master payment module (module_code=001)
+    try {
+      this.paymentService.getPaymentModule('001').subscribe({
+        next: (res: any) => {
+          const fee = Number(res?.license_fee ?? res?.licenseFee ?? 0);
+          if (isFinite(fee) && fee > 0) {
+            this.feeAmount = fee;
+            this.cdr.detectChanges();
+          }
+        },
+        error: (err: any) => {
+          console.error('Failed to load payment module fee (001):', err);
+          // Keep feeAmount=0; backend will still resolve amount from DB during payment initiation.
+        }
+      });
+    } catch {
+      // no-op
+    }
 
     // If user comes back from BillDesk receipt page and chooses "Go to Dashboard",
     // we show the "Application Submitted" view in this step.
@@ -1060,11 +1079,14 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   onPayClick() {
-    if (!this.draftApplicationId || !this.feeAmount) return;
+    if (!this.draftApplicationId) return;
 
     this.isProcessing = true;
 
-    this.paymentService.initiateNewLicenseFee(this.draftApplicationId, this.feeAmount).subscribe({
+    // Prefer backend-resolved amount from DB; send amount only if we have a valid fee value.
+    const amountToSend = this.feeAmount && this.feeAmount > 0 ? this.feeAmount : undefined;
+
+    this.paymentService.initiateNewLicenseFee(this.draftApplicationId, amountToSend).subscribe({
       next: (response) => {
         this.isProcessing = false;
         this.isSubmitting = false;
