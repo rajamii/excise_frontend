@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../environments/environment';
 import { catchError, map } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
+import { RoleService } from '../../../../../core/services/role.service';
 
 @Component({
   selector: 'app-registration-management',
@@ -40,6 +41,7 @@ export class RegistrationManagementComponent implements OnInit {
     paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
+    companyName?: string;
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
@@ -50,11 +52,14 @@ export class RegistrationManagementComponent implements OnInit {
   searchFilter = '';
   monthFilter = '';
   dateFromFilter = '';
+  companyFilter = '';
+  companyOptions: string[] = [];
 
   constructor(
     private http: HttpClient,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private roleService: RoleService
   ) {}
 
   ngOnInit(): void {
@@ -62,6 +67,10 @@ export class RegistrationManagementComponent implements OnInit {
       this.currentSection = String(params?.['section'] || '').trim();
       this.loadData();
     });
+  }
+
+  isAdminUser(): boolean {
+    return this.roleService.isAdminRole();
   }
 
   onCardFilterClick(filter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected'): void {
@@ -124,7 +133,11 @@ export class RegistrationManagementComponent implements OnInit {
         rowDate.getDate() === dateFrom.getDate()
       );
 
-      return matchesStatus && matchesSearch && matchesMonth && matchesDate;
+      // Company filter (admin only)
+      const matchesCompany = !this.companyFilter ||
+        String((row as any).companyName || '').toLowerCase() === this.companyFilter.toLowerCase();
+
+      return matchesStatus && matchesSearch && matchesMonth && matchesDate && matchesCompany;
     });
   }
 
@@ -133,6 +146,7 @@ export class RegistrationManagementComponent implements OnInit {
     this.searchFilter = '';
     this.monthFilter = '';
     this.dateFromFilter = '';
+    this.companyFilter = '';
     this.activeCardFilter = '';
     this.applyFilters();
   }
@@ -438,6 +452,7 @@ export class RegistrationManagementComponent implements OnInit {
           rejected: Number(counts?.rejected || 0)
         };
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+        this.companyOptions = this.getCompanyOptions(this.allRows);
         this.applyFilters();
         this.isLoading = false;
       },
@@ -455,6 +470,7 @@ export class RegistrationManagementComponent implements OnInit {
     paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
+    companyName?: string;
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
@@ -489,6 +505,7 @@ export class RegistrationManagementComponent implements OnInit {
           ),
           applicantName: this.getSalesmanApplicantName(item),
           establishmentName: String(item?.license_category_name ?? item?.licenseCategoryName ?? 'N/A'),
+          companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),
           currentStage: this.formatStageName(rawStage),
           currentStageRaw: rawStage,
           statusGroup
@@ -603,6 +620,20 @@ export class RegistrationManagementComponent implements OnInit {
         rows
           .map((row) => String(row.currentStage || '').trim())
           .filter((value) => !!value)
+      )
+    );
+    values.sort((a, b) => a.localeCompare(b));
+    return values;
+  }
+
+  private getCompanyOptions(
+    rows: Array<{ companyName?: string }>
+  ): string[] {
+    const values = Array.from(
+      new Set(
+        rows
+          .map((row) => String(row.companyName || '').trim())
+          .filter((v) => !!v && v !== 'N/A')
       )
     );
     values.sort((a, b) => a.localeCompare(b));

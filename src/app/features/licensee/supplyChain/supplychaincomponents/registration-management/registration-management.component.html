@@ -105,6 +105,18 @@
         (ngModelChange)="applyFilters()"
       />
 
+      <!-- Company filter — admin only, salesman-barman section only -->
+      <select
+        *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
+        class="form-select form-select-sm filter-input filter-input--company"
+        [(ngModel)]="companyFilter"
+        (ngModelChange)="applyFilters()"
+        title="Filter by company / establishment"
+      >
+        <option value="">All Companies</option>
+        <option *ngFor="let co of companyOptions" [value]="co">{{ co }}</option>
+      </select>
+
       <!-- Month dropdown -->
       <select
         class="form-select form-select-sm filter-input filter-input--month"
@@ -142,7 +154,7 @@
       <button
         class="btn btn-outline-danger btn-sm filter-clear-btn"
         (click)="clearFilters()"
-        *ngIf="searchFilter || monthFilter || dateFromFilter || activeCardFilter"
+        *ngIf="searchFilter || monthFilter || dateFromFilter || activeCardFilter || companyFilter"
       >
         <i class="bi bi-x-circle"></i> Clear
       </button>
