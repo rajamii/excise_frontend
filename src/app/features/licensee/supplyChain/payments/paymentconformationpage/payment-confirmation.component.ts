@@ -1891,7 +1891,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       if (!this.pendingWalletPaymentContext || this.pendingWalletPaymentContext.tab !== 'hologram') {
         this.tryBuildHologramPendingContextFromRefNo(deepLinkRef, this.pendingHologramAutoPayType);
       }
-      return !!this.pendingWalletPaymentContext && this.pendingWalletPaymentContext.tab === 'hologram';
+      const ctx = this.pendingWalletPaymentContext;
+      if (!ctx || ctx.tab !== 'hologram') return false;
+      const ref = String(ctx.referenceNo || '').trim();
+      if (ref && this.hasPayableHologramForReference(ref)) {
+        return false;
+      }
+      return true;
     }
 
     const context = this.pendingWalletPaymentContext;
@@ -1900,6 +1906,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       // Always show the synthetic "Pending Payment" row for hologram when a deep-linked
       // pending context exists. The detailed hologram rows below can still be used for
       // per-item payments; this row acts as the primary call-to-action after navigation.
+      // But avoid showing a duplicate row when the hologram tab already has a payable
+      // procurement entry for the same reference.
+      const ref = String(context.referenceNo || '').trim();
+      if (ref && this.hasPayableHologramForReference(ref)) {
+        return false;
+      }
       return this.activeTab === tab;
     }
     return context.tab === tab && this.activeTab === tab;
@@ -3038,6 +3050,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   // Hologram payment methods
   canPayHologram(item: HologramItem): boolean {
+    const paymentDetails: any = (item as any)?.paymentDetails || (item as any)?.payment_details || null;
+    const paidAt = paymentDetails?.paid_at || paymentDetails?.paidAt || (item as any)?.paymentDate || null;
+    if (paidAt) return false;
+
+    const paymentStatusToken = String((item as any)?.paymentStatus || (item as any)?.payment_status || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+    if (paymentStatusToken.includes('success') || paymentStatusToken.includes('paid') || paymentStatusToken.includes('completed')) {
+      return false;
+    }
+
     // Backend sometimes appends extra words to the approved status (eg "APPROVED BY COMMISSIONER - PAYMENT PENDING"),
     // so treat it as payable when the normalized token CONTAINS an approved marker, not only when it equals it.
     const token = String(item?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -3053,7 +3076,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   payHologramItem(item: HologramItem): void {
     // Check if there are multiple types for the same reference number
-    const sameRefItems = this.hologramData.filter(h => h.referenceNo === item.referenceNo);
+    const refKey = String(item?.referenceNo || '').trim().toUpperCase();
+    const sameRefItems = this.hologramData.filter(h => String(h?.referenceNo || '').trim().toUpperCase() === refKey);
 
     if (sameRefItems.length > 1) {
       // Multiple types exist - check if all are ready for payment
@@ -3158,13 +3182,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   // Calculate total payment amount for all types under same reference
   getTotalPaymentForRef(refNo: string): number {
-    const sameRefItems = this.hologramData.filter(item => item.referenceNo === refNo);
+    const refKey = String(refNo || '').trim().toUpperCase();
+    const sameRefItems = this.hologramData.filter(item => String(item?.referenceNo || '').trim().toUpperCase() === refKey);
     return sameRefItems.reduce((total, item) => total + item.hologramFee, 0);
   }
 
   // Get total quantity for all types under same reference
   getTotalQuantityForRef(refNo: string): number {
-    const sameRefItems = this.hologramData.filter(item => item.referenceNo === refNo);
+    const refKey = String(refNo || '').trim().toUpperCase();
+    const sameRefItems = this.hologramData.filter(item => String(item?.referenceNo || '').trim().toUpperCase() === refKey);
     return sameRefItems.reduce((total, item) => total + item.totalQuantity, 0);
   }
 
@@ -3223,7 +3249,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const item = row?.hologramItem;
     if (!item) return;
     const id = String(item.id || '').trim();
-    const amount = Number(item.hologramFee || 0);
+    const amount = Number(row?.amount ?? item.hologramFee ?? 0);
     if (!id || !Number.isFinite(amount) || amount <= 0) return;
 
     this.pendingWalletPaymentContext = {
@@ -3245,6 +3271,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return this.hologramData.some(item => String(item?.referenceNo || '').trim().toUpperCase() === ref);
   }
 
+  private hasPayableHologramForReference(refNo: string): boolean {
+    const ref = String(refNo || '').trim().toUpperCase();
+    if (!ref) return false;
+    return this.hologramData.some(item => {
+      const itemRef = String(item?.referenceNo || '').trim().toUpperCase();
+      return itemRef === ref && this.canPayHologram(item);
+    });
+  }
+
   private getHologramTabRows(): HologramTabRow[] {
     const historyRows = this.getPaymentTransactionsFor('hologram');
     const historyByRef = new Map<string, HistoryItem>();
@@ -3261,10 +3296,21 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const seenRefs = new Set<string>();
     const deepLinkRefKey = this.getPendingHologramDeepLinkRef().trim().toUpperCase();
 
+    const itemsByRef = new Map<string, HologramItem[]>();
     for (const item of this.hologramData) {
       const ref = String(item?.referenceNo || '').trim();
       if (!ref) continue;
       const refKey = ref.toUpperCase();
+      const existing = itemsByRef.get(refKey) || [];
+      existing.push(item);
+      itemsByRef.set(refKey, existing);
+    }
+
+    for (const [refKey, items] of itemsByRef.entries()) {
+      if (!items.length) continue;
+      const ref = String(items[0]?.referenceNo || '').trim();
+      if (!ref) continue;
+
       const history = historyByRef.get(refKey);
       const historyStatus = String(history?.status || '').toLowerCase();
       const historyIsSuccessful = !!history && (
@@ -3272,19 +3318,21 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         historyStatus.includes('paid') ||
         historyStatus.includes('completed')
       );
-      const canPay = (this.canPayHologram(item) || (!!deepLinkRefKey && refKey === deepLinkRefKey)) && !historyIsSuccessful;
-      const isPaid = !canPay;
-      const dateTime = history?.dateTime || item.paymentDate || (item as any).createdAt || (item as any).date || '';
+
+      const anyPayable = items.some(i => this.canPayHologram(i));
+      const canPay = (anyPayable || (!!deepLinkRefKey && refKey === deepLinkRefKey)) && !historyIsSuccessful;
+      const dateTime = history?.dateTime || (items[0] as any).paymentDate || (items[0] as any).createdAt || (items[0] as any).date || '';
       const status = canPay ? 'Pending' : (history?.status || 'Payment Successful');
       const type = canPay ? 'Pending Payment' : (history?.type || 'Wallet Utilization');
-      const amount = Number(canPay ? item.hologramFee : (history?.amount ?? item.hologramFee ?? 0));
+      const pendingAmount = items.reduce((sum, i) => sum + Number(i?.hologramFee || 0), 0);
+      const amount = Number(canPay ? pendingAmount : (history?.amount ?? pendingAmount ?? 0));
       const txnId = canPay ? '-' : (history?.txnId || history?.reference || '-');
 
       rows.push({
-        id: history?.id || String(item.id || ref),
+        id: history?.id || String((items[0] as any)?.id || ref),
         txnId,
         type,
-        paymentFor: history?.paymentFor || 'Hologram Procurement',
+        paymentFor: 'Hologram Procurement',
         amount,
         reference: ref,
         status,
@@ -3292,8 +3340,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         licenseeId: history?.licenseeId || this.activeLicenseeId || '-',
         userId: history?.userId || '-',
         canPay,
-        procurementId: String(item.id || ''),
-        hologramItem: item
+        procurementId: String((items[0] as any)?.id || ''),
+        hologramItem: items[0]
       });
       seenRefs.add(refKey);
     }
@@ -3301,7 +3349,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     for (const row of historyRows) {
       const ref = String(row?.reference || '').trim().toUpperCase();
       if (ref && seenRefs.has(ref)) continue;
-      rows.push({ ...row });
+      rows.push({ ...row, paymentFor: 'Hologram Procurement' });
     }
 
     return rows.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
