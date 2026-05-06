@@ -1,0 +1,37 @@
+.container-fluid {
+  padding-top: 10px;
+}
+
+mat-card {
+  mat-card-header {
+    padding: 12px;
+    background-color: #1C2B78;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 500;
+    justify-content: space-between;
+    align-items: center;
+
+    button {
+      white-space: nowrap;
+    }
+  }
+
+  mat-card-content {
+    padding: 15px;
+  }
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+mat-table {
+  min-width: 900px;
+}
+
+mat-header-cell,
+mat-cell {
+  padding: 0 12px;
+}
