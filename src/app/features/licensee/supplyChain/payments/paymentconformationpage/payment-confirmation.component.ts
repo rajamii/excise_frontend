@@ -2078,6 +2078,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           this.persistPendingPaymentContextToStorage();
           return;
         }
+        this.maybeForceRefreshAfterNewLicenseApproval(context);
         this.finishPendingWalletPaymentHandling();
       },
       error: (err) => {
@@ -2096,6 +2097,52 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         });
         this.resetPendingPaymentAttemptState();
       }
+    });
+  }
+
+  private maybeForceRefreshAfterNewLicenseApproval(context: PendingWalletPaymentContext): void {
+    if (!this.isBrowser) return;
+
+    const tab = String(context?.tab || '').toLowerCase();
+    if (tab !== 'license_fee' && tab !== 'security_deposit') return;
+
+    const typeToken = String(context?.itemType || '').trim().toLowerCase();
+    const refToken = String(context?.referenceNo || '').trim().toUpperCase();
+    const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/');
+    if (!isNewLicense) return;
+
+    const applicationId = String(this.pendingNewLicenseApplicationId || context?.id || '').trim();
+    if (!applicationId) return;
+
+    const guardKey = `new_license_force_refresh_after_approval_${applicationId}`;
+    try {
+      if (sessionStorage.getItem(guardKey) === '1') return;
+    } catch {
+      // ignore storage errors
+    }
+
+    this.licenseApplicationService.getNewLicenseApplicationById(applicationId).pipe(
+      timeout(15000),
+      catchError(() => of(null))
+    ).subscribe((app: any) => {
+      if (!app) return;
+      const isApproved = Boolean(app?.is_approved ?? app?.isApproved ?? app?.is_approved_flag ?? false);
+      if (!isApproved) return;
+
+      try {
+        sessionStorage.setItem(guardKey, '1');
+      } catch {
+        // ignore storage errors
+      }
+
+      // Hard reload so that licensee dashboard tabs (category/sub-category driven) re-evaluate immediately.
+      setTimeout(() => {
+        try {
+          window.location.reload();
+        } catch {
+          // ignore
+        }
+      }, 300);
     });
   }
 
