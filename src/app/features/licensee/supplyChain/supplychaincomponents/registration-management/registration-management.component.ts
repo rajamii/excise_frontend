@@ -77,6 +77,22 @@ export class RegistrationManagementComponent implements OnInit {
     return this.roleService.isAdminRole();
   }
 
+  isLicenseeUser(): boolean {
+    return this.roleService.isLicenseeRole();
+  }
+
+  private simplifyStageForLicensee(stageValue: string, statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'): string {
+    if (statusGroup === 'approved') return 'Approved';
+    if (statusGroup === 'rejected') return 'Rejected';
+
+    const raw = String(stageValue || '').toLowerCase();
+    if (raw.includes('approve')) return 'Approved';
+    if (raw.includes('reject')) return 'Rejected';
+    if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+    if (raw.includes('payment')) return 'Awaiting Payment';
+    return 'Pending';
+  }
+
   onCardFilterClick(filter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected'): void {
     if (this.activeCardFilter === filter || filter === 'new') {
       // 'new' = Total Application — always shows all rows (no status filter)
@@ -516,6 +532,10 @@ export class RegistrationManagementComponent implements OnInit {
           statusGroup
         );
 
+        const computedStage = this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(rawStage, statusGroup)
+          : this.formatStageName(rawStage);
+
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
@@ -539,7 +559,7 @@ export class RegistrationManagementComponent implements OnInit {
           applicantName: this.getSalesmanApplicantName(item),
           establishmentName: String(item?.license_category_name ?? item?.licenseCategoryName ?? 'N/A'),
           companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),
-          currentStage: this.formatStageName(rawStage),
+          currentStage: computedStage,
           currentStageRaw: rawStage,
           statusGroup
         };

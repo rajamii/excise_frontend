@@ -2783,6 +2783,55 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .join(' ');
     }
 
+    private getRawStageToken(): string {
+        const data: any = this.applicationData as any;
+        return String(data?.currentStageName ?? data?.current_stage_name ?? '').trim();
+    }
+
+    private shouldSimplifyStatusForLicensee(): boolean {
+        // Do not rely on URL/query-param "source" to determine licensee UX.
+        // Admin/Officer users can navigate from licensee-like routes but must still see real workflow stage.
+        if (!this.roleService.isLicenseeRole()) return false;
+        return this.isNewLicense() || this.isSalesmanBarmanRegistration();
+    }
+
+    private simplifyStageForLicensee(stageValue: string, statusValue: string): 'Pending' | 'Awaiting Payment' | 'Approved' | 'Rejected' {
+        const raw = `${String(stageValue || '')} ${String(statusValue || '')}`.toLowerCase();
+        if (raw.includes('approve')) return 'Approved';
+        if (raw.includes('reject')) return 'Rejected';
+        if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+        if (raw.includes('payment')) return 'Awaiting Payment';
+        return 'Pending';
+    }
+
+    getCurrentStatusText(): string {
+        const status = String(this.applicationData?.status || '').trim();
+        if (!this.shouldSimplifyStatusForLicensee()) {
+            const stage = this.getRawStageToken();
+            const base = this.hasText(stage) ? stage : status;
+            return this.getFormattedStatus(base);
+        }
+        const stage = this.getRawStageToken();
+        return this.simplifyStageForLicensee(stage, status);
+    }
+
+    getCurrentStatusToken(): string {
+        if (!this.applicationData) return 'PENDING';
+
+        if (!this.shouldSimplifyStatusForLicensee()) {
+            const stage = this.getRawStageToken();
+            const status = String(this.applicationData?.status || '').trim();
+            const base = this.hasText(stage) ? stage : status;
+            return String(base || 'PENDING').toUpperCase();
+        }
+
+        const simplified = this.getCurrentStatusText().toLowerCase();
+        if (simplified.includes('reject')) return 'REJECTED';
+        if (simplified.includes('approve')) return 'APPROVED';
+        // Treat "Awaiting Payment" as warning/pending in badge styling.
+        return 'PENDING';
+    }
+
     getStatusBadgeClass(status: string): string {
         const upperStatus = status.toUpperCase();
 

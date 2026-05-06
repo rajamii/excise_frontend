@@ -70,8 +70,8 @@
                         <div class="info-card">
                             <h6 class="text-primary mb-2">Status Information</h6>
                             <p><strong>Current Status:</strong></p>
-                            <span [ngClass]="getStatusBadgeClass((isLicenseeContext() && !isSalesmanBarmanRegistration() && !isCompanyRegistration() && !isCompanyCollaboration()) ? 'PENDING' : applicationData.status)" class="d-block mt-1">
-                                {{ (isLicenseeContext() && !isSalesmanBarmanRegistration() && !isCompanyRegistration() && !isCompanyCollaboration()) ? 'Pending' : getFormattedStatus(applicationData.status) }}
+                            <span [ngClass]="getStatusBadgeClass(getCurrentStatusToken())" class="d-block mt-1">
+                                {{ getCurrentStatusText() }}
                             </span>
                             <p class="mt-2" *ngIf="!isSalesmanBarmanRegistration()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
