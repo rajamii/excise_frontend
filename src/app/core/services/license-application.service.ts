@@ -11,6 +11,7 @@ export class LicenseApplicationService {
   private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
   private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
+  private readonly workflowUrl = `${environment.apiBaseUrl}/auth`;
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocumentsSubject = new BehaviorSubject<Map<string, File>>(new Map());
@@ -737,7 +738,17 @@ export class LicenseApplicationService {
 
   resolveObjections(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/resolve-objections/`, formData);
+    return this.http.post(`${this.workflowUrl}/${encodedId}/resolve-objections/`, formData, {
+      responseType: 'text',
+      headers: new HttpHeaders({ Accept: 'application/json' })
+    }).pipe(
+      map((text: any) => {
+        const raw = String(text ?? '').trim();
+        if (!raw) return {};
+        if (raw.startsWith('<')) return { _raw: raw };
+        try { return JSON.parse(raw); } catch { return { _raw: raw }; }
+      })
+    );
   }
 
   deleteApplication(applicationId: string): Observable<any> {
@@ -831,11 +842,9 @@ export class LicenseApplicationService {
 
   resolveNewLicenseObjections(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    // Use text responseType to avoid JSON parse crashes when backend returns HTML (403/CSRF pages).
-    // Also include credentials in case the API is configured for session auth + CSRF.
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/resolve-objections/`, formData, {
-      responseType: 'text',
-      withCredentials: true
+    // Resolve objections is handled by the workflow API, not the transactional app endpoints.
+    return this.http.post(`${this.workflowUrl}/${encodedId}/resolve-objections/`, formData, {
+      responseType: 'text'
     }).pipe(
       map((text: any) => {
         const raw = String(text ?? '').trim();

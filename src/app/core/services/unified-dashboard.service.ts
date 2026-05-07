@@ -354,37 +354,17 @@ export class UnifiedDashboardService {
 
   getObjections(applicationId: string): Observable<Objection[]> {
     const encodedId = encodeURIComponent(String(applicationId || '').trim());
-    const inferred = this.inferAppTypeFromId(applicationId);
-
-    // For licensee objection resolution, objections are served under the transactional application endpoints.
-    // (The /auth/ workflow endpoints may be permission-restricted for licensees.)
-    const base =
-      inferred === 'new-license' ? this.endpoints.new :
-      inferred === 'license-renewal' ? this.endpoints.renewal :
-      this.endpoints.new;
-
-    return this.http.get<Objection[]>(`${base}/${encodedId}/objections/`);
+    return this.http.get<Objection[]>(`${this.workflowUrl}${encodedId}/objections/`);
   }
 
   resolveObjections(applicationId: string, type: UnifiedApplication['type'], formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(String(applicationId || '').trim());
-    const inferred = this.inferAppTypeFromId(applicationId);
-    const resolvedType = inferred || type;
-
-    const mapping: Record<UnifiedApplication['type'], string> = {
-      'license-renewal': this.endpoints.renewal,
-      'new-license': this.endpoints.new,
-      'salesman-barman': this.endpoints.salesman,
-      'company-registration': this.endpoints.company
-    };
-
-    const base = mapping[resolvedType] || this.endpoints.new;
+    void type;
 
     // Some backends/proxies return non-JSON (HTML/empty) on auth/CSRF issues which breaks JSON parsing.
     // Post as text and parse leniently to keep the UI error handling meaningful.
-    return this.http.post(`${base}/${encodedId}/resolve-objections/`, formData, {
+    return this.http.post(`${this.workflowUrl}${encodedId}/resolve-objections/`, formData, {
       responseType: 'text',
-      withCredentials: true,
       headers: new HttpHeaders({ Accept: 'application/json' })
     }).pipe(
       map((text: any) => {

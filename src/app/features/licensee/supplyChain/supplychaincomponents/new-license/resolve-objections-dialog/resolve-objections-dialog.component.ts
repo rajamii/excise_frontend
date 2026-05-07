@@ -63,13 +63,9 @@ export class ResolveObjectionsDialogComponent implements OnInit {
 
     const encodedId = encodeURIComponent(appId);
 
-    const transactionalUrl = `${environment.apiBaseUrl}/transactional/new_license_application/${encodedId}/objections/`;
     const authUrl = `${environment.apiBaseUrl}/auth/${encodedId}/objections/`;
 
-    const objections$ = this.fetchJsonLenient(transactionalUrl).pipe(
-      catchError(() => this.fetchJsonLenient(authUrl)),
-      catchError(() => of([]))
-    );
+    const objections$ = this.fetchJsonLenient(authUrl).pipe(catchError(() => of([])));
 
     const application$ = this.unifiedService.getApplicationDetail(appId, 'new-license').pipe(
       catchError(() => of(null))

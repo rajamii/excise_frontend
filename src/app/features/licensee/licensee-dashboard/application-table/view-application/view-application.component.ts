@@ -310,9 +310,6 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
             this.fetchObjections();
           }
 
-          this.buildDisplaySections();
-          this.fetchObjections();
-
           this.isLoading = false;
         },
         error: (err) => {
