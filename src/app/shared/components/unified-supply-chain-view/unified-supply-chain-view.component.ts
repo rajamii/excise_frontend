@@ -25,6 +25,8 @@ import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
 import { RoleService } from '../../../core/services/role.service';
+import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
+import { Objection } from '../../../core/models/license-application.model';
 
 // Constants
 import {
@@ -373,6 +375,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     applicationType: ApplicationType = 'requisition';
     isLoading = false;
     errorMessage = '';
+    objections: Objection[] = [];
+    private objectionIndex = new Map<string, { hasUnresolved: boolean; hasResolved: boolean }>();
 
     // Uploaded documents modal state
     docsModalOpen = false;
@@ -429,6 +433,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private masterService: MasterService,
         private roleService: RoleService,
         private unifiedActionsService: UnifiedActionsService,
+        private unifiedDashboardService: UnifiedDashboardService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         private sanitizer: DomSanitizer,
@@ -847,7 +852,89 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.applicationData = mappedData;
         this.resetSiteEnquiryReportState();
         this.calculateNewLicenseUploads();
+        this.loadObjectionsForCurrentApplication();
         this.loadWorkflowActions();
+    }
+
+    private canonicalFieldName(value: unknown): string {
+        const raw = String(value ?? '').trim();
+        if (!raw) return '';
+        if (raw.includes('_')) return raw.toLowerCase();
+        return raw.replace(/([A-Z])/g, '_$1').toLowerCase();
+    }
+
+    private rebuildObjectionIndex(): void {
+        this.objectionIndex = new Map();
+        for (const obj of this.objections || []) {
+            const key = this.canonicalFieldName((obj as any)?.fieldName);
+            if (!key) continue;
+            const entry = this.objectionIndex.get(key) || { hasUnresolved: false, hasResolved: false };
+            if ((obj as any)?.isResolved) entry.hasResolved = true;
+            else entry.hasUnresolved = true;
+            this.objectionIndex.set(key, entry);
+        }
+    }
+
+    private loadObjectionsForCurrentApplication(): void {
+        if (this.applicationType !== 'new-license') {
+            this.objections = [];
+            this.rebuildObjectionIndex();
+            return;
+        }
+        const appId = String(this.applicationData?.referenceNo || this.applicationData?.id || '').trim();
+        if (!appId) {
+            this.objections = [];
+            this.rebuildObjectionIndex();
+            return;
+        }
+
+        this.unifiedDashboardService.getObjections(appId).subscribe({
+            next: (data) => {
+                this.objections = Array.isArray(data) ? data : [];
+                this.rebuildObjectionIndex();
+                this.cdr.detectChanges();
+            },
+            error: () => {
+                this.objections = [];
+                this.rebuildObjectionIndex();
+            }
+        });
+    }
+
+    hasAnyUnresolvedObjections(): boolean {
+        for (const v of this.objectionIndex.values()) {
+            if (v.hasUnresolved) return true;
+        }
+        return false;
+    }
+
+    unresolvedObjectionCount(): number {
+        let count = 0;
+        for (const obj of this.objections || []) {
+            if (obj && !(obj as any).isResolved) count += 1;
+        }
+        return count;
+    }
+
+    objectionStateForField(fieldKey: string): 'none' | 'unresolved' | 'resolved' {
+        const key = this.canonicalFieldName(fieldKey);
+        const entry = this.objectionIndex.get(key);
+        if (!entry) return 'none';
+        if (entry.hasUnresolved) return 'unresolved';
+        if (entry.hasResolved) return 'resolved';
+        return 'none';
+    }
+
+    objectionStateForDocLabel(label: string): 'none' | 'unresolved' | 'resolved' {
+        const byLabel: Record<string, string> = {
+            'Passport Photo': 'pass_photo',
+            'PAN Card': 'pan_card',
+            'Sikkim Certificate': 'sikkim_certificate',
+            'DOB Proof': 'dob_proof',
+            'NOC from Landlord': 'noc_landlord',
+        };
+        const key = byLabel[String(label || '').trim()] || '';
+        return key ? this.objectionStateForField(key) : 'none';
     }
 
     private addComputedFields(mappedData: UnifiedApplicationData, apiData: any, config: ServiceConfig): void {

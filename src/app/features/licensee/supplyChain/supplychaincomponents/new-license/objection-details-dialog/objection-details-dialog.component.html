@@ -35,7 +35,10 @@
         @for (obj of resolved; track obj) {
           <div class="item resolved">
             <div class="top">
-              <div class="field">{{ label(obj.fieldName) }}</div>
+              <div class="field">
+                {{ label(obj.fieldName) }}
+                <span class="badge bg-info text-dark ms-2">UPDATED</span>
+              </div>
               <div class="meta">
                 @if (obj.resolvedByName) { <span>Resolved by: {{ obj.resolvedByName }}</span> }
                 @if (obj.resolvedAt) { <span>On: {{ obj.resolvedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }

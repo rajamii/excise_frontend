@@ -138,10 +138,19 @@
                 <span class="status-badge {{ row.statusGroup }}">
                   {{ row.currentStage }}
                 </span>
-                <span *ngIf="!isLicenseeUser() && row.hasObjectionUpdate" class="badge bg-info text-dark ms-2">
-                  UPDATED
+                <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
+                  ACTION REQUIRED
                 </span>
-               </td>
+                <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
+                  <span
+                    *ngFor="let fieldName of (row.updatedObjectionFields?.length ? row.updatedObjectionFields : [''])"
+                    class="badge bg-info text-dark ms-2"
+                    [title]="fieldName ? ('Updated field: ' + fieldName) : 'Updated'"
+                  >
+                    UPDATED
+                  </span>
+                </ng-container>
+                </td>
               <td>
                 <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                   <i class="bi bi-eye-fill"></i>

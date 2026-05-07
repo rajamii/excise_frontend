@@ -328,6 +328,18 @@ table {
 .status-badge.objection {
   background: #ffedd5;
   color: #9a3412;
+  animation: objectionPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes objectionPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.0);
+    transform: translateZ(0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.20);
+    transform: translateZ(0);
+  }
 }
 .status-badge.approved {
   background: #dcfce7;
