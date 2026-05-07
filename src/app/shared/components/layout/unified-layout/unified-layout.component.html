@@ -142,7 +142,7 @@
           <!-- Admin/Officer Navigation -->
           <div *ngIf="!isLicenseeUser()">
             <!-- Dashboard -->
-            <a routerLink="/dashboard" class="nav-item" [class.active]="isDashboardHomeActive()">
+            <a routerLink="/dashboard" class="nav-item" [class.active]="isDashboardHomeActive()" (click)="closeSidenav()">
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
@@ -159,55 +159,108 @@
             </ng-container>
 
             <!-- Site Admin master navigation -->
-            <div *ngIf="isSiteAdminUser()" (click)="closeSidenav()">
-              <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item">
+            <div *ngIf="isSiteAdminUser()">
+              <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">people</mat-icon>
                 <span class="nav-text">User</span>
               </a>
-              <a routerLink="/dashboard/admin/oic" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/oic" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">badge</mat-icon>
                 <span class="nav-text">OIC</span>
               </a>
-              <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
                 <span class="nav-text">Role</span>
               </a>
-              <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">map</mat-icon>
                 <span class="nav-text">District</span>
               </a>
-              <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">account_tree</mat-icon>
                 <span class="nav-text">Sub Division</span>
               </a>
-              <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">local_police</mat-icon>
                 <span class="nav-text">Police Station</span>
               </a>
-              <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">category</mat-icon>
                 <span class="nav-text">License Type</span>
               </a>
-              <a routerLink="/dashboard/admin/license-categories" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-categories" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">view_list</mat-icon>
                 <span class="nav-text">License Category</span>
               </a>
-              <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">badge</mat-icon>
                 <span class="nav-text">License Title</span>
               </a>
-              <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">layers</mat-icon>
                 <span class="nav-text">License Subcategory</span>
               </a>
-              <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">gavel</mat-icon>
                 <span class="nav-text">Terms &amp; Conditions</span>
               </a>
-              <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">route</mat-icon>
                 <span class="nav-text">Road</span>
               </a>
+              <div class="nav-expandable">
+                <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/about-us')" [class.active]="isAdminRouteActive('/dashboard/admin/about-us')">
+                  <mat-expansion-panel-header class="panel-header">
+                    <mat-panel-title class="panel-title">
+                      <mat-icon class="nav-icon">info</mat-icon>
+                      <span class="nav-text">About Us</span>
+                      <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
+
+                  <div class="panel-content">
+                    <a routerLink="/dashboard/admin/about-us/heads-of-organisations" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">account_balance</mat-icon>
+                      <span class="sub-text">Heads of Organisations</span>
+                    </a>
+                    <a routerLink="/dashboard/admin/about-us/excise-secretaries" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">supervisor_account</mat-icon>
+                      <span class="sub-text">Excise Secretaries</span>
+                    </a>
+                  </div>
+                </mat-expansion-panel>
+              </div>
+
+              <div class="nav-expandable">
+                <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/contact-us')" [class.active]="isAdminRouteActive('/dashboard/admin/contact-us')">
+                  <mat-expansion-panel-header class="panel-header">
+                    <mat-panel-title class="panel-title">
+                      <mat-icon class="nav-icon">contact_mail</mat-icon>
+                      <span class="nav-text">Contact Us</span>
+                      <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
+
+                  <div class="panel-content">
+                    <a routerLink="/dashboard/admin/contact-us/nodal-officer" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">person</mat-icon>
+                      <span class="sub-text">Website Nodal Officer</span>
+                    </a>
+                    <a routerLink="/dashboard/admin/contact-us/public-information-officers" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">groups</mat-icon>
+                      <span class="sub-text">Public Information Officers</span>
+                    </a>
+                    <a routerLink="/dashboard/admin/contact-us/directorate-district-officials" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">account_balance</mat-icon>
+                      <span class="sub-text">Directorate &amp; District Officials</span>
+                    </a>
+                    <a routerLink="/dashboard/admin/contact-us/grievance-redressal-officer" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">support_agent</mat-icon>
+                      <span class="sub-text">Grievance Redressal Officer</span>
+                    </a>
+                  </div>
+                </mat-expansion-panel>
+              </div>
             </div>
           </div>
         </div>

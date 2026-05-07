@@ -777,6 +777,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.isDashboardSectionActive('wallet');
   }
 
+  isAdminRouteActive(routePrefix: string): boolean {
+    const currentPath = this.router.url.split('?')[0].split('#')[0];
+    return currentPath === routePrefix || currentPath.startsWith(`${routePrefix}/`);
+  }
+
   getSidebarLabel(section: string, fallbackLabel?: string): string {
     return this.sidebarSectionLabels[section] || fallbackLabel || section;
   }
