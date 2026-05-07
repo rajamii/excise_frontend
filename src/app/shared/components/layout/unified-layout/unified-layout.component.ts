@@ -349,11 +349,30 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private refreshSidebarBadges(force = false): void {
-    if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+    if (this.isSiteAdminUser()) {
       if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
         this.pendingBadgeCounts = {};
         this.triggerUiRefresh();
       }
+      return;
+    }
+
+    // For licensee users, show payment-pending badges on New License and Salesman/Barman nav items.
+    if (this.isLicenseeUser()) {
+      const licenseeSections = ['new-license', 'salesman-barman-registration'];
+      this.sidebarPendingBadgeService
+        .refresh(licenseeSections, force)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (counts) => {
+            this.pendingBadgeCounts = counts || {};
+            this.triggerUiRefresh();
+          },
+          error: () => {
+            this.pendingBadgeCounts = {};
+            this.triggerUiRefresh();
+          }
+        });
       return;
     }
 

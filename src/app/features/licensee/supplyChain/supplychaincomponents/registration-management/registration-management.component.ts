@@ -240,6 +240,14 @@ export class RegistrationManagementComponent implements OnInit {
     this.error = null;
     this.isLoading = true;
 
+    // Reset filters when section changes so the default pending filter applies fresh.
+    this.activeCardFilter = '';
+    this.statusFilter = '';
+    this.searchFilter = '';
+    this.monthFilter = '';
+    this.dateFromFilter = '';
+    this.companyFilter = '';
+
     if (this.currentSection === 'salesman-barman-registration') {
       this.loadSalesmanBarmanData();
       return;
@@ -493,6 +501,17 @@ export class RegistrationManagementComponent implements OnInit {
         };
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.companyOptions = this.getCompanyOptions(this.allRows);
+
+        // Default to "Pending" filter for licensees only when there are pending items.
+        // If no pending items exist, show all applications (no filter).
+        if (this.isLicenseeUser() && this.activeCardFilter === '') {
+          const pendingCount = Number(counts?.pending || 0);
+          if (pendingCount > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          }
+        }
+
         this.applyFilters();
         this.isLoading = false;
       },
