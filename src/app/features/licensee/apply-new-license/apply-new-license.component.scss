@@ -27,21 +27,23 @@
 
   // ── Active / current step → blue ───────────────────────────────────────────
   .mat-step-header[aria-selected="true"] {
-    background-color: #dde4f7 !important;
-    border-color: #1c2b78 !important;
-    box-shadow: 0 2px 8px rgba(28, 43, 120, 0.15);
+    background-color: #bfdbfe !important;
+    border-color: #2563eb !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 
     .mat-step-label {
-      color: #1c2b78 !important;
+      color: #1d4ed8 !important;
       font-weight: 700;
     }
   }
 
-  // ── Completed step → green (header contains a done/edit icon) ─────────────
+  // ── Completed step → green ─────────────────────────────────────────────────
   .mat-step-header:has(.mat-step-icon-state-done),
   .mat-step-header:has(.mat-step-icon-state-edit) {
-    background-color: #dcfce7 !important;   // green-100
+    background-color: #dcfce7 !important;
     border-color: #16a34a !important;
+    border-radius: 8px !important;
     box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
 
     .mat-step-label {
@@ -59,9 +61,9 @@
     color: #fff !important;
   }
 
-  // Active → brand blue
+  // Active → bright blue
   .mat-step-icon-selected {
-    background-color: #1c2b78 !important;
+    background-color: #2563eb !important;   // blue-600
     color: #fff !important;
   }
 
