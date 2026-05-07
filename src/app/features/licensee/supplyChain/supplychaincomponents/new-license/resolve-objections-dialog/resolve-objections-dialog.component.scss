@@ -1,0 +1,107 @@
+.content {
+  width: min(980px, 95vw);
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 2px;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.hint {
+  margin: 6px 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 193, 7, 0.12);
+  color: rgba(0, 0, 0, 0.78);
+  font-size: 13px;
+}
+
+.hint-sub {
+  margin-top: 6px;
+  color: rgba(0, 0, 0, 0.66);
+  font-size: 12px;
+}
+
+.item {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.field {
+  font-weight: 700;
+}
+
+.remark {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(183, 28, 28, 0.9);
+  font-size: 13px;
+  max-width: 62%;
+}
+
+.warn {
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
+}
+
+.current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 13px;
+}
+
+.current-label {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.current-value {
+  word-break: break-word;
+}
+
+.doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.field-input {
+  width: 100%;
+}
+
+.file-row input[type="file"] {
+  width: 100%;
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(183, 28, 28, 0.08);
+  color: rgba(183, 28, 28, 0.95);
+}
+
+.empty {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.72);
+}

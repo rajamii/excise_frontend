@@ -1,0 +1,63 @@
+<h2 mat-dialog-title>Resolve Objections</h2>
+
+<mat-dialog-content class="content">
+  @if (isLoading) {
+    <div class="state">
+      <mat-spinner diameter="44"></mat-spinner>
+      <div>Loading objections...</div>
+    </div>
+  } @else if (error) {
+    <div class="error">{{ error }}</div>
+  } @else if (unresolvedObjections.length === 0) {
+    <div class="empty">No unresolved objections found.</div>
+  } @else {
+    <div class="hint">
+      Update only the fields mentioned in objections, then submit to send back to the officer.
+      <div class="hint-sub">All fields are required, and values must be updated (not same as current).</div>
+    </div>
+
+    <form [formGroup]="form" class="form">
+      @for (obj of unresolvedObjections; track obj) {
+        <div class="item">
+          <div class="item-head">
+            <div class="field">{{ label(obj.fieldName) }}</div>
+            <div class="remark">
+              <mat-icon class="warn">error</mat-icon>
+              <span>{{ obj.remarks }}</span>
+            </div>
+          </div>
+
+          <div class="current" *ngIf="currentValue(obj.fieldName) as cv">
+            <span class="current-label">Current:</span>
+            @if (isDocumentPath(cv)) {
+              <a class="doc-link" [href]="getDocumentUrl(cv)" target="_blank" rel="noopener">
+                <mat-icon>description</mat-icon>
+                View Document
+              </a>
+            } @else {
+              <span class="current-value">{{ cv }}</span>
+            }
+          </div>
+
+          @if (isFileField(obj.fieldName, currentValue(obj.fieldName))) {
+            <div class="file-row">
+              <input type="file" (change)="onFileSelected(obj.fieldName, $event)" />
+            </div>
+          } @else {
+            <mat-form-field appearance="outline" class="field-input">
+              <mat-label>Correct Value</mat-label>
+              <input matInput [formControlName]="obj.fieldName" />
+            </mat-form-field>
+          }
+        </div>
+      }
+    </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="close()">Close</button>
+  <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="!canSubmit">
+    Submit Corrections
+  </button>
+</mat-dialog-actions>

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -831,7 +831,19 @@ export class LicenseApplicationService {
 
   resolveNewLicenseObjections(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/resolve-objections/`, formData);
+    // Use text responseType to avoid JSON parse crashes when backend returns HTML (403/CSRF pages).
+    // Also include credentials in case the API is configured for session auth + CSRF.
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/resolve-objections/`, formData, {
+      responseType: 'text',
+      withCredentials: true
+    }).pipe(
+      map((text: any) => {
+        const raw = String(text ?? '').trim();
+        if (!raw) return {};
+        if (raw.startsWith('<')) return { _raw: raw };
+        try { return JSON.parse(raw); } catch { return { _raw: raw }; }
+      })
+    );
   }
 
   payNewLicenseFee(applicationId: string, formData: FormData): Observable<any> {

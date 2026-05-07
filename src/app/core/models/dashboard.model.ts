@@ -11,6 +11,7 @@ import { LicenseApplication } from "./license-application.model";
 export class DashboardCount {
   applied?: number;
   pending!: number;
+  objection?: number;
   approved!: number;
   rejected!: number;
   awaitingPayment?: number;
@@ -22,6 +23,7 @@ export class DashboardCount {
 export interface ApplicationStatus {
   applied: LicenseApplication[];
   pending: LicenseApplication[];
+  objection?: LicenseApplication[];
   approved: LicenseApplication[];
   rejected: LicenseApplication[];
   awaitingPayment?: LicenseApplication[];

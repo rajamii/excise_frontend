@@ -143,6 +143,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
     applied: 0,
     pending: 0,
+    objection: 0,
     approved: 0,
     rejected: 0,
     awaitingPayment: 0
@@ -152,11 +153,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
   pendingDataSource = new MatTableDataSource<UnifiedApplication>();
+  objectionDataSource = new MatTableDataSource<UnifiedApplication>();
   approvedDataSource = new MatTableDataSource<UnifiedApplication>();
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'approved';
+  activeTable: 'default' | 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' = 'approved';
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
@@ -168,7 +170,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private showManufacturingWalletNav = false;
 
   // Professional dashboard enhancements
-  previousCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  previousCounts: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
   recentActivities: any[] = [];
   performanceMetrics: any[] = [];
   customStats: any[] = [];
@@ -494,6 +496,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           let filteredApplications = {
             applied: result.applications.applied || [],
             pending: result.applications.pending || [],
+            objection: (result.applications as any).objection || [],
             awaitingPayment: result.applications.awaitingPayment || [],
             approved: result.applications.approved || [],
             rejected: result.applications.rejected || []
@@ -511,6 +514,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             applied: 0,
             pending: pendingBucket.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
+            objection: filteredApplications.objection.length,
             approved: filteredApplications.approved.length,
             rejected: filteredApplications.rejected.length
           };
@@ -530,13 +534,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
+            objection: filteredApplications.objection,
             approved: filteredApplications.approved,
             rejected: filteredApplications.rejected
           });
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
-          this.dashboardCounts = { applied: 0, pending: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
+          this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.clearDataSources();
         }
       });
@@ -910,7 +915,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // Professional dashboard methods (from licensee dashboard)
-  showTable(table: 'applied' | 'pending' | 'approved' | 'rejected') {
+  showTable(table: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected') {
     this.activeTable = table;
   }
 
@@ -964,11 +969,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private updateDataSources(result: {
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
+    objection: UnifiedApplication[];
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
   }): void {
     this.appliedDataSource.data = result.applied || [];
     this.pendingDataSource.data = result.pending || [];
+    this.objectionDataSource.data = result.objection || [];
     this.approvedDataSource.data = result.approved || [];
     this.rejectedDataSource.data = result.rejected || [];
   }
@@ -976,6 +983,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private clearDataSources(): void {
     this.appliedDataSource.data = [];
     this.pendingDataSource.data = [];
+    this.objectionDataSource.data = [];
     this.approvedDataSource.data = [];
     this.rejectedDataSource.data = [];
   }
@@ -1463,7 +1471,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const roleId = this.currentUser?.roleId;
     
     // All roles can see basic stats
-    if (['applied', 'pending', 'approved', 'rejected'].includes(type)) {
+    if (['applied', 'pending', 'objection', 'approved', 'rejected'].includes(type)) {
       return true;
     }
     
@@ -1475,6 +1483,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const trends: { [key: string]: number } = {
       applied: 12,
       pending: -8,
+      objection: 6,
       approved: 15,
       rejected: -5
     };
@@ -1490,6 +1499,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'New submissions';
       case 'pending':
         return roleId === 10 ? 'Awaiting your review' : 'Under review';
+      case 'objection':
+        return 'Needs correction';
       case 'approved':
         return 'Successfully processed';
       case 'rejected':

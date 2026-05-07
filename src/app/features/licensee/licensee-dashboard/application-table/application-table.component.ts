@@ -27,7 +27,7 @@ import { RoleService } from '../../../../core/services/role.service';
 export class ApplicationTableComponent implements OnInit, OnChanges {
     @Input() dataSource: MatTableDataSource<UnifiedApplication> = new MatTableDataSource<UnifiedApplication>();
     @Input() displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-    @Input() tableType: 'applied' | 'pending' | 'approved' | 'rejected' = 'applied';
+    @Input() tableType: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' = 'applied';
 
     @Output() view = new EventEmitter<UnifiedApplication>();
     @Output() payment = new EventEmitter<UnifiedApplication>();
@@ -39,6 +39,7 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
     stageDisplayMapping: { [key: string]: string } = {
         'applied': 'Application Submitted',
         'pending': 'Under Review',
+        'objection': 'Objection Raised',
         'awaiting_payment': 'Awaiting Payment',
         'approved': 'Approved',
         'rejected': 'Rejected',
