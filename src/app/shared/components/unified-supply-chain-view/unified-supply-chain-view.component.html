@@ -70,10 +70,10 @@
                         <div class="info-card">
                             <h6 class="text-primary mb-2">Status Information</h6>
                             <p><strong>Current Status:</strong></p>
-                            <span [ngClass]="getStatusBadgeClass(isLicenseeContext() ? 'PENDING' : applicationData.status)" class="d-block mt-1">
-                                {{ isLicenseeContext() ? 'Pending' : getFormattedStatus(applicationData.status) }}
+                            <span [ngClass]="getStatusBadgeClass(getCurrentStatusToken())" class="d-block mt-1">
+                                {{ getCurrentStatusText() }}
                             </span>
-                            <p class="mt-2"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
+                            <p class="mt-2" *ngIf="!isSalesmanBarmanRegistration()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
                     </div>
                 </div>
@@ -1146,20 +1146,8 @@
                                     <td>{{ applicationData.license || 'Not available' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Current Stage</td>
-                                    <td>{{ applicationData.current_stage_name || applicationData.currentStageName || applicationData.status || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Approval Status</td>
-                                    <td>
-                                        <span class="badge" [ngClass]="applicationData.is_approved ? 'bg-success' : 'bg-warning'">
-                                            {{ applicationData.is_approved ? 'Approved' : 'Pending' }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Submitted On</td>
-                                    <td>{{ applicationData.created_at | date: "dd-MM-yyyy" }}</td>
+                                    <td>{{ (applicationData.submissionDate | date: "dd-MM-yyyy") || (applicationData.created_at | date: "dd-MM-yyyy") || 'Not available' }}</td>
                                 </tr>
                             </tbody>
                         </table>

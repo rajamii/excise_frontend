@@ -103,6 +103,12 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.isLoading = true;
     this.error = null;
 
+    // Reset to default pending filter on each fresh load.
+    this.activeSummaryFilter = '';
+    this.searchFilter = '';
+    this.dateFilter = '';
+    this.monthFilter = '';
+
     forkJoin({
       counts: this.http.get<NewLicenseCounts>(`${this.apiBase}/dashboard-counts/`).pipe(
         catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
@@ -120,6 +126,14 @@ export class NewLicenseDashboardComponent implements OnInit {
           rejected: Number(counts?.rejected || 0)
         };
         this.allRows = this.flattenGroupedData(grouped);
+
+        // Default to "Pending" filter for licensees only when there are pending items.
+        // If no pending items exist, show all applications (no filter).
+        if (this.isLicenseeUser() && this.activeSummaryFilter === '') {
+          const pendingCount = Number(counts?.pending || 0);
+          this.activeSummaryFilter = pendingCount > 0 ? 'pending' : '';
+        }
+
         this.applyFilters();
 
         if (this.allRows.length === 0) {
@@ -519,6 +533,13 @@ export class NewLicenseDashboardComponent implements OnInit {
   private formatStageName(stageValue: any): string {
     const raw = String(stageValue ?? '').trim();
     if (!raw) return 'Not available';
+
+    // Backend sometimes returns numeric stage id instead of stage name.
+    // Stage 23 = awaiting_payment (critical UX for licensee + admin to take payment action).
+    const stageId = Number.parseInt(raw, 10);
+    if (Number.isFinite(stageId) && String(stageId) === raw) {
+      if (stageId === 23) return 'Awaiting Payment';
+    }
     return raw
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -529,9 +550,15 @@ export class NewLicenseDashboardComponent implements OnInit {
     if (statusGroup === 'rejected') return 'Rejected';
 
     const raw = String(stageValue ?? '').toLowerCase();
+    const stageId = Number.parseInt(raw, 10);
+    if (Number.isFinite(stageId) && String(stageId) === raw) {
+      if (stageId === 23) return 'Awaiting Payment';
+    }
     if (raw.includes('approved')) return 'Approved';
     if (raw.includes('reject')) return 'Rejected';
     if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+    // Some backends return payment-related stage names without the "awaiting_" prefix.
+    if (raw.includes('payment')) return 'Awaiting Payment';
 
     // Licensee UX: don't expose internal role/stage names (commissioner/permit section/etc).
     return 'Pending';

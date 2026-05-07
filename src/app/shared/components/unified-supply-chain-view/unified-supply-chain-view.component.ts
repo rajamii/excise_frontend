@@ -802,18 +802,38 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             allowedActionConfigs
         };
 
-        // For workflows where backend often sends generic "PENDING",
-        // prefer explicit current stage name for user-facing status.
+        // For workflows where backend often sends generic "PENDING" or a raw stage ID,
+        // resolve the real status name for user-facing display.
         if (
-            (
-                this.applicationType === 'salesman-barman-registration' ||
-                this.applicationType === 'company-registration' ||
-                this.applicationType === 'company-collaboration'
-            ) &&
-            mappedData.currentStageName &&
-            (!mappedData.status || String(mappedData.status).toUpperCase() === 'PENDING')
+            this.applicationType === 'salesman-barman-registration' ||
+            this.applicationType === 'company-registration' ||
+            this.applicationType === 'company-collaboration'
         ) {
-            mappedData.status = String(mappedData.currentStageName);
+            // Stage ID → human-readable status name mapping
+            const stageIdToStatusName: { [key: number]: string } = {
+                1: 'applicant_applied', 2: 'level_1', 3: 'level_2', 4: 'level_3', 5: 'level_4', 6: 'level_5',
+                7: 'level_1_objection', 8: 'level_2_objection', 9: 'level_3_objection',
+                10: 'level_4_objection', 11: 'level_5_objection',
+                12: 'approved', 13: 'applicant_applied', 14: 'level_1', 15: 'level_2', 16: 'approved',
+                23: 'awaiting_payment', 24: 'rejected_by_level_1', 25: 'rejected_by_level_2',
+                26: 'rejected_by_level_3', 27: 'rejected_by_level_4', 28: 'rejected_by_level_5',
+                29: 'rejected', 30: 'objection_raised', 31: 'awaiting_payment'
+            };
+
+            const rawStatus = String(mappedData.status || '');
+            const stageNum = parseInt(rawStatus, 10);
+
+            if (!isNaN(stageNum) && stageIdToStatusName[stageNum]) {
+                // Status is a raw numeric stage ID — map it to a name
+                mappedData.status = stageIdToStatusName[stageNum];
+            } else if (!rawStatus || rawStatus.toUpperCase() === 'PENDING') {
+                // Status is empty or generic PENDING — prefer currentStageName if available
+                if (mappedData.currentStageName) {
+                    mappedData.status = String(mappedData.currentStageName);
+                } else if (mappedData.currentStage && stageIdToStatusName[mappedData.currentStage]) {
+                    mappedData.status = stageIdToStatusName[mappedData.currentStage];
+                }
+            }
         }
 
         Object.keys(apiData).forEach(key => {
@@ -2763,6 +2783,55 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .join(' ');
     }
 
+    private getRawStageToken(): string {
+        const data: any = this.applicationData as any;
+        return String(data?.currentStageName ?? data?.current_stage_name ?? '').trim();
+    }
+
+    private shouldSimplifyStatusForLicensee(): boolean {
+        // Do not rely on URL/query-param "source" to determine licensee UX.
+        // Admin/Officer users can navigate from licensee-like routes but must still see real workflow stage.
+        if (!this.roleService.isLicenseeRole()) return false;
+        return this.isNewLicense() || this.isSalesmanBarmanRegistration();
+    }
+
+    private simplifyStageForLicensee(stageValue: string, statusValue: string): 'Pending' | 'Awaiting Payment' | 'Approved' | 'Rejected' {
+        const raw = `${String(stageValue || '')} ${String(statusValue || '')}`.toLowerCase();
+        if (raw.includes('approve')) return 'Approved';
+        if (raw.includes('reject')) return 'Rejected';
+        if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+        if (raw.includes('payment')) return 'Awaiting Payment';
+        return 'Pending';
+    }
+
+    getCurrentStatusText(): string {
+        const status = String(this.applicationData?.status || '').trim();
+        if (!this.shouldSimplifyStatusForLicensee()) {
+            const stage = this.getRawStageToken();
+            const base = this.hasText(stage) ? stage : status;
+            return this.getFormattedStatus(base);
+        }
+        const stage = this.getRawStageToken();
+        return this.simplifyStageForLicensee(stage, status);
+    }
+
+    getCurrentStatusToken(): string {
+        if (!this.applicationData) return 'PENDING';
+
+        if (!this.shouldSimplifyStatusForLicensee()) {
+            const stage = this.getRawStageToken();
+            const status = String(this.applicationData?.status || '').trim();
+            const base = this.hasText(stage) ? stage : status;
+            return String(base || 'PENDING').toUpperCase();
+        }
+
+        const simplified = this.getCurrentStatusText().toLowerCase();
+        if (simplified.includes('reject')) return 'REJECTED';
+        if (simplified.includes('approve')) return 'APPROVED';
+        // Treat "Awaiting Payment" as warning/pending in badge styling.
+        return 'PENDING';
+    }
+
     getStatusBadgeClass(status: string): string {
         const upperStatus = status.toUpperCase();
 
@@ -2934,15 +3003,28 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     calculateNewLicenseUploads(): void {
         this.newLicenseUploads = [];
-        if (!this.applicationData || this.applicationType !== 'new-license') return;
+        if (!this.applicationData) return;
 
-        const docFields: Array<{ label: string; keys: string[] }> = [
-            { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
-            { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
-            { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
-            { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
-            { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
-        ];
+        let docFields: Array<{ label: string; keys: string[] }> = [];
+
+        if (this.applicationType === 'new-license') {
+            docFields = [
+                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
+                { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
+                { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
+                { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
+                { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
+            ];
+        } else if (this.applicationType === 'salesman-barman-registration') {
+            docFields = [
+                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto'] },
+                { label: 'Aadhaar Card', keys: ['aadhaar_card', 'aadhaarCard'] },
+                { label: 'Residential Certificate', keys: ['residential_certificate', 'residentialCertificate'] },
+                { label: 'Date of Birth Proof', keys: ['dateof_birth_proof', 'dateofBirthProof'] }
+            ];
+        } else {
+            return;
+        }
 
         for (const field of docFields) {
             const rawValue = this.pickFirstValue(field.keys);

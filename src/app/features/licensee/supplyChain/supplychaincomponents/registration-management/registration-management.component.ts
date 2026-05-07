@@ -3,10 +3,13 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
 import { environment } from '../../../../../../environments/environment';
 import { catchError, map } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
 import { RoleService } from '../../../../../core/services/role.service';
+import { ApplicationMovementComponent } from '../../../../licensee/licensee-dashboard/application-table/application-movement/application-movement.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-registration-management',
@@ -34,6 +37,10 @@ export class RegistrationManagementComponent implements OnInit {
 
   activeCardFilter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected' | '' = '';
 
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize = 5;
+  pageIndex = 0;
+
   allRows: Array<{
     id: string;
     applicationId: string;
@@ -59,7 +66,8 @@ export class RegistrationManagementComponent implements OnInit {
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
-    private roleService: RoleService
+    private roleService: RoleService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -71,6 +79,22 @@ export class RegistrationManagementComponent implements OnInit {
 
   isAdminUser(): boolean {
     return this.roleService.isAdminRole();
+  }
+
+  isLicenseeUser(): boolean {
+    return this.roleService.isLicenseeRole();
+  }
+
+  private simplifyStageForLicensee(stageValue: string, statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'): string {
+    if (statusGroup === 'approved') return 'Approved';
+    if (statusGroup === 'rejected') return 'Rejected';
+
+    const raw = String(stageValue || '').toLowerCase();
+    if (raw.includes('approve')) return 'Approved';
+    if (raw.includes('reject')) return 'Rejected';
+    if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+    if (raw.includes('payment')) return 'Awaiting Payment';
+    return 'Pending';
   }
 
   onCardFilterClick(filter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected'): void {
@@ -139,6 +163,45 @@ export class RegistrationManagementComponent implements OnInit {
 
       return matchesStatus && matchesSearch && matchesMonth && matchesDate && matchesCompany;
     });
+
+    // Reset pagination whenever filters change.
+    this.pageIndex = 0;
+  }
+
+  get totalPages(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.ceil(this.filteredRows.length / this.pageSize);
+  }
+
+  get pageStart(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return this.pageIndex * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.filteredRows.length);
+  }
+
+  get pagedRows(): typeof this.filteredRows {
+    if (this.filteredRows.length === 0) return [];
+    const start = this.pageIndex * this.pageSize;
+    return this.filteredRows.slice(start, start + this.pageSize);
+  }
+
+  onPageSizeChange(): void {
+    this.pageIndex = 0;
+  }
+
+  prevPage(): void {
+    if (this.pageIndex <= 0) return;
+    this.pageIndex -= 1;
+  }
+
+  nextPage(): void {
+    if (this.totalPages === 0) return;
+    if (this.pageIndex >= this.totalPages - 1) return;
+    this.pageIndex += 1;
   }
 
   clearFilters(): void {
@@ -186,6 +249,26 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
+  viewTimeline(row: { id: string; applicationId: string }): void {
+    const applicationId = String(row.applicationId || row.id || '').trim();
+    if (!applicationId) return;
+
+    const encoded = encodeURIComponent(applicationId);
+    this.http.get<any>(`${this.salesmanApiBase}/detail/${encoded}/`).subscribe({
+      next: (res: any) => {
+        this.dialog.open(ApplicationMovementComponent, {
+          width: '700px',
+          maxHeight: '80vh',
+          data: { movementDataSource: { data: [res] } }
+        });
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
+        void Swal.fire('Error', String(msg), 'error');
+      }
+    });
+  }
+
   get entriesTitle(): string {
     if (this.currentSection === 'salesman-barman-registration') {
       return 'Salesman/Barman Application Entries';
@@ -199,6 +282,14 @@ export class RegistrationManagementComponent implements OnInit {
   private loadData(): void {
     this.error = null;
     this.isLoading = true;
+
+    // Reset filters when section changes so the default pending filter applies fresh.
+    this.activeCardFilter = '';
+    this.statusFilter = '';
+    this.searchFilter = '';
+    this.monthFilter = '';
+    this.dateFromFilter = '';
+    this.companyFilter = '';
 
     if (this.currentSection === 'salesman-barman-registration') {
       this.loadSalesmanBarmanData();
@@ -453,6 +544,17 @@ export class RegistrationManagementComponent implements OnInit {
         };
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.companyOptions = this.getCompanyOptions(this.allRows);
+
+        // Default to "Pending" filter for licensees only when there are pending items.
+        // If no pending items exist, show all applications (no filter).
+        if (this.isLicenseeUser() && this.activeCardFilter === '') {
+          const pendingCount = Number(counts?.pending || 0);
+          if (pendingCount > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          }
+        }
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -492,21 +594,34 @@ export class RegistrationManagementComponent implements OnInit {
           statusGroup
         );
 
+        const computedStage = this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(rawStage, statusGroup)
+          : this.formatStageName(rawStage);
+
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.submitted_on),
-          paymentStatus: String(
-            item?.application_fee_payment_status_display ??
-            item?.applicationFeePaymentStatusDisplay ??
-            item?.application_fee_payment_status ??
-            item?.applicationFeePaymentStatus ??
-            ''
-          ),
+          paymentStatus: (() => {
+            const raw = String(
+              item?.application_fee_payment_status_display ??
+              item?.applicationFeePaymentStatusDisplay ??
+              item?.application_fee_payment_status ??
+              item?.applicationFeePaymentStatus ??
+              ''
+            );
+            // Applications submitted directly via the stepper have no payment gateway
+            // transaction — treat them as Success (no payment required).
+            const hasNewLicenseApp = !!(item?.new_license_application ?? item?.newLicenseApplication);
+            if (!hasNewLicenseApp && (!raw || raw === 'Pending' || raw === 'P')) {
+              return 'Success';
+            }
+            return raw || 'Pending';
+          })(),
           applicantName: this.getSalesmanApplicantName(item),
           establishmentName: String(item?.license_category_name ?? item?.licenseCategoryName ?? 'N/A'),
           companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),
-          currentStage: this.formatStageName(rawStage),
+          currentStage: computedStage,
           currentStageRaw: rawStage,
           statusGroup
         };

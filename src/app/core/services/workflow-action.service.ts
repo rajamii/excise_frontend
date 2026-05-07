@@ -79,6 +79,18 @@ export class WorkflowActionService {
 
   }
 
+  /**
+   * Fetch full detail for workflow-backed applications (used when list/dashboard
+   * rows don't contain computed fields like license fee amounts).
+   */
+  getNewLicenseApplicationDetail(applicationId: string): Observable<any> {
+    const encoded = encodeURIComponent(String(applicationId || '').trim());
+    if (!encoded) return of(null);
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encoded}/`).pipe(
+      catchError(() => of(null))
+    );
+  }
+
 
   private fetchActionsFromBackend(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
     const id = data.id;

@@ -1,25 +1,16 @@
 <mat-horizontal-stepper [linear]="true" #stepper>
     <!-- License Step -->
     <mat-step label="License">
-      <!-- License component that emits 'next' event to move to the next step -->
       <app-license (next)="stepper.next()"></app-license>
     </mat-step>
     
     <!-- Dynamic Step for Role-Specific Details (Barman/Salesman/Generic) -->
     <mat-step [label]="role === 'Barman' ? 'Barman Details' : (role === 'Salesman' ? 'Salesman Details' : 'Details')">
-      <!-- Details component that emits 'back' to go to the previous step, and 'next' to move to the next step -->
       <app-details (back)="stepper.previous()" (next)="stepper.next()"></app-details>
     </mat-step>    
   
-    <!-- Payment Step -->
-    <mat-step label="Make Payment">
-      <!-- Payment component that emits 'back' to go to the previous step, and 'next' to move to the next step -->
-      <app-make-payment (back)="stepper.previous()" (next)="stepper.next()"></app-make-payment>
-    </mat-step>
-  
     <!-- Final Submission Step -->
     <mat-step label="Submit Application">
-      <!-- Submit component that emits 'back' to go to the previous step -->
       <app-submit-application (back)="stepper.previous()"></app-submit-application>
     </mat-step>
   </mat-horizontal-stepper>

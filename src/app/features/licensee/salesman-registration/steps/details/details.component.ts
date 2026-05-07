@@ -54,9 +54,9 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
   documents = [
     { key: 'passPhoto', name: 'Passport Size Photo', format: 'png, jpg, jpeg', accept: '.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' },
-    { key: 'aadhaarCard', name: 'Aadhaar card', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' },
-    { key: 'residentialCertificate', name: 'Sikkim Subject Certificate/ Certificate of Identification / Residential Certificate', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' },
-    { key: 'dateofBirthProof', name: 'Date of Birth proof', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' }
+    { key: 'aadhaarCard', name: 'Aadhaar card', format: 'pdf, png, jpg, jpeg', accept: '.pdf,.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' },
+    { key: 'residentialCertificate', name: 'Sikkim Subject Certificate/ Certificate of Identification / Residential Certificate', format: 'pdf, png, jpg, jpeg', accept: '.pdf,.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' },
+    { key: 'dateofBirthProof', name: 'Date of Birth proof', format: 'pdf, png, jpg, jpeg', accept: '.pdf,.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' }
   ];
 
   constructor(

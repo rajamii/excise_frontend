@@ -271,6 +271,11 @@
   color: #2c64e8;
 }
 
+.action-timeline i {
+  font-size: 1.1rem;
+  color: #6366f1;
+}
+
 // ─── Status badges ────────────────────────────────────────────────────────────
 
 .status-badge {
@@ -338,4 +343,54 @@
 
 .error-state {
   color: #dc2626;
+}
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+.pagination-bar {
+  border-top: 1px solid #e2e8f0;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .page-summary {
+    font-size: 0.82rem;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .page-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .page-size {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .page-size-label {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .page-size-select {
+    width: 90px;
+  }
+
+  .page-indicator {
+    font-size: 0.8rem;
+    color: #334155;
+    font-weight: 700;
+    white-space: nowrap;
+  }
 }

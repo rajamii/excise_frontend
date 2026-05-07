@@ -132,14 +132,14 @@
                 {{ row.paymentStatus }}
               </span>
             </td>
-            <td>{{ row.applicantName }}</td>
-            <td>{{ row.establishmentName }}</td>
-            <td>
+             <td>{{ row.applicantName }}</td>
+             <td>{{ row.establishmentName }}</td>
+             <td>
                 <span class="status-badge {{ row.statusGroup }}">
-                  {{ row.statusGroup | uppercase }}
+                  {{ row.currentStage }}
                 </span>
               </td>
-            <td>
+             <td>
               <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                 <i class="bi bi-eye-fill"></i>
               </button>
