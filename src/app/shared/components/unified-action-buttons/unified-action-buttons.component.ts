@@ -7,6 +7,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { WorkflowActionService } from '../../../core/services/workflow-action.service';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { ApplicationType } from '../../constants/application.constants';
+import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
+import { AccountService } from '../../../core/services/account.service';
 import Swal from 'sweetalert2';
 
 export interface ActionItem {
@@ -68,7 +70,8 @@ export interface ActionButtonConfig {
             type="button"
             [color]="button.color"
             class="action-btn"
-            (click)="onActionClick(button)">
+            (click)="onActionClick(button)"
+            (mousedown)="onActionClick(button)">
             <mat-icon>{{ button.icon }}</mat-icon>
             {{ button.label }}
           </button>
@@ -162,8 +165,36 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   constructor(
     private workflowActionService: WorkflowActionService,
     private unifiedActionsService: UnifiedActionsService,
-    private router: Router
+    private router: Router,
+    private paymentIntegrationService: PaymentIntegrationService,
+    private accountService: AccountService
   ) { }
+
+  private isCurrentUserLicensee(): boolean {
+    const roleFromIdentity = String(this.accountService.getUserProfileSync()?.role?.name ?? '').trim().toLowerCase();
+    if (roleFromIdentity) return roleFromIdentity === 'licensee';
+    const roleFromStorage = String(localStorage.getItem('role') ?? '').trim().toLowerCase();
+    if (roleFromStorage) return roleFromStorage === 'licensee';
+
+    // Fallback: some flows only persist `role_id` early (or `role` may be missing until `/me` resolves).
+    const roleId = String(localStorage.getItem('role_id') ?? '').trim();
+    if (roleId) return roleId === '2';
+
+    // Last-resort: decode JWT payload (if present) and infer role.
+    try {
+      const access = String(localStorage.getItem('access') ?? '').trim();
+      if (!access || !access.includes('.')) return false;
+      const payload = JSON.parse(atob(access.split('.')[1] ?? ''));
+      const jwtRole = String(payload?.role ?? payload?.role_name ?? payload?.roleName ?? '').trim().toLowerCase();
+      if (jwtRole) return jwtRole === 'licensee';
+      const jwtRoleId = String(payload?.role_id ?? payload?.roleId ?? payload?.roleid ?? '').trim();
+      if (jwtRoleId) return jwtRoleId === '2';
+    } catch {
+      // ignore
+    }
+
+    return false;
+  }
 
   ngOnInit(): void {
     // Load all button logic here
@@ -258,6 +289,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
+      'MAKE_PAYMENT',
       'SUBMIT'
     ];
     return this.getFilteredConfigs().filter(config =>
@@ -313,17 +345,32 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     if (this.shouldRequireNewLicenseUploadsDeclaration(normalizedAction)) {
       this.showNewLicenseUploadsDeclaration(normalizedButton).then((ok) => {
-        if (ok) this.executeAction(normalizedButton);
+        if (ok) this.continueActionAfterDeclaration(normalizedButton);
       });
       return;
     }
 
-    // Handle confirmation if required
-    if (normalizedButton.requiresConfirmation) {
-      this.showConfirmationDialog(normalizedButton);
-    } else {
-      this.executeAction(normalizedButton);
+    this.continueActionAfterDeclaration(normalizedButton);
+  }
+
+  private continueActionAfterDeclaration(button: ActionButtonConfig): void {
+    if (this.shouldBypassDetailedNewLicenseApproveConfirmation(button)) {
+      this.executeAction(button);
+      return;
     }
+
+    if (button.requiresConfirmation) {
+      this.showConfirmationDialog(button);
+    } else {
+      this.executeAction(button);
+    }
+  }
+
+  private shouldBypassDetailedNewLicenseApproveConfirmation(button: ActionButtonConfig): boolean {
+    return this.displayMode === 'detailed' &&
+      this.itemType === 'new-license' &&
+      this.context !== 'licensee' &&
+      this.normalizeActionName(button?.action) === 'APPROVE';
   }
 
   private shouldRequireNewLicenseUploadsDeclaration(action: string): boolean {
@@ -714,6 +761,13 @@ private getTransitRejectSummary(): {
    */
   private executeAction(button: ActionButtonConfig): void {
     switch (button.action) {
+      case 'MAKE_PAYMENT':
+        if (this.itemType === 'salesman-barman-registration') {
+          this.handleSalesmanBarmanMakePaymentAction();
+        } else {
+          this.handleNewLicenseMakePaymentAction();
+        }
+        break;
       case 'APPROVE':
       case 'REJECT':
       case 'FORWARD':
@@ -756,6 +810,209 @@ private getTransitRejectSummary(): {
       default:
         this.handleGenericAction(button);
     }
+  }
+
+  private isAwaitingNewLicensePaymentForLicensee(): boolean {
+    if (this.itemType !== 'new-license') return false;
+    if (this.context !== 'licensee') return false;
+    if (!this.isCurrentUserLicensee()) return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
+  private isAwaitingSalesmanBarmanPaymentForLicensee(): boolean {
+    if (this.itemType !== 'salesman-barman-registration') return false;
+    if (this.context !== 'licensee') return false;
+    if (!this.isCurrentUserLicensee()) return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
+  private getNewLicenseFeeAmounts(): { licenseFee: number; securityFee: number; total: number } {
+    const licenseFee = this.toNumber(
+      this.item?.['license_fee_amount'] ??
+      this.item?.['licenseFeeAmount'] ??
+      this.item?.['yearly_license_fee'] ??
+      this.item?.['yearlyLicenseFee'] ??
+      0
+    );
+    const securityFee = this.toNumber(this.item?.['security_fee_amount'] ?? this.item?.['securityFeeAmount'] ?? 0);
+    return { licenseFee, securityFee, total: licenseFee + securityFee };
+  }
+
+  private handleNewLicenseMakePaymentAction(): void {
+    if (!this.isAwaitingNewLicensePaymentForLicensee()) {
+      Swal.fire('Not Available', 'Payment is only available when the application is awaiting license fee/security deposit payment.', 'info');
+      return;
+    }
+
+    const applicationId = String(
+      this.item?.['application_id'] ??
+      this.item?.['applicationId'] ??
+      this.item?.referenceNo ??
+      this.item?.refNo ??
+      this.item?.id ??
+      ''
+    ).trim();
+    if (!applicationId) {
+      Swal.fire('Error', 'Application ID is missing for payment.', 'error');
+      return;
+    }
+
+    const resolveAmounts = (source: any): { licenseFee: number; securityFee: number; total: number } => {
+      const licenseFee = this.toNumber(
+        source?.['license_fee_amount'] ??
+        source?.['licenseFeeAmount'] ??
+        source?.['yearly_license_fee'] ??
+        source?.['yearlyLicenseFee'] ??
+        0
+      );
+      const securityFee = this.toNumber(source?.['security_fee_amount'] ?? source?.['securityFeeAmount'] ?? 0);
+      return { licenseFee, securityFee, total: licenseFee + securityFee };
+    };
+
+    const showProceedModal = (amountSource: any) => {
+      const { licenseFee, securityFee, total } = resolveAmounts(amountSource);
+      Swal.fire({
+        title: 'Proceed to Pay',
+        html: `
+          <div style="text-align:left;">
+            <div style="margin-bottom:8px;">License Fee: <b>₹${this.formatInr(licenseFee)}</b></div>
+            <div style="margin-bottom:8px;">Security Deposit: <b>₹${this.formatInr(securityFee)}</b></div>
+            <div>Total: <b>₹${this.formatInr(total)}</b></div>
+            <div style="margin-top:10px; font-size:12px; color:#6b7280;">
+              You will be taken to Wallet → License Fee / Security Deposit tabs to complete payment.
+            </div>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Proceed',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (!result.isConfirmed) return;
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            action: 'pay',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'new-license',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+            securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+            source: 'new-license'
+          }
+        });
+      });
+    };
+
+    // Dashboard/list rows often don't carry computed fee fields; fetch full detail
+    // so the modal shows correct amounts.
+    Swal.fire({
+      title: 'Loading...',
+      text: 'Fetching fee amounts',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.workflowActionService.getNewLicenseApplicationDetail(applicationId).subscribe({
+      next: (detail: any) => {
+        Swal.close();
+        showProceedModal(detail || this.item);
+      },
+      error: () => {
+        Swal.close();
+        showProceedModal(this.item);
+      }
+    });
+  }
+
+  private handleSalesmanBarmanMakePaymentAction(): void {
+    if (!this.isAwaitingSalesmanBarmanPaymentForLicensee()) {
+      Swal.fire('Not Available', 'Payment is only available when the application is awaiting registration fee payment.', 'info');
+      return;
+    }
+
+    const applicationId = String(
+      this.item?.['application_id'] ??
+      this.item?.['applicationId'] ??
+      this.item?.referenceNo ??
+      this.item?.refNo ??
+      this.item?.id ??
+      ''
+    ).trim();
+    if (!applicationId) {
+      Swal.fire('Error', 'Application ID is missing for payment.', 'error');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Loading...',
+      text: 'Fetching registration fee',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.paymentIntegrationService.getPaymentModule('012').subscribe({
+      next: (module: any) => {
+        Swal.close();
+        const fee = this.toNumber(module?.license_fee ?? module?.licenseFee ?? module?.licenseFeeAmount ?? 0);
+        if (!fee || fee <= 0) {
+          Swal.fire('Fee Not Configured', 'Registration fee is not configured for Salesman/Barman (module_code=012).', 'error');
+          return;
+        }
+
+        Swal.fire({
+          title: 'Proceed to Pay',
+          html: `
+            <div style="text-align:left;">
+              <div style="margin-bottom:8px;">Registration Fee: <b>₹${this.formatInr(fee)}</b></div>
+              <div>Total: <b>₹${this.formatInr(fee)}</b></div>
+              <div style="margin-top:10px; font-size:12px; color:#6b7280;">
+                You will be taken to Wallet → License Fee tab to complete payment.
+              </div>
+            </div>
+          `,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Proceed',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+          this.router.navigate(['/dashboard'], {
+            queryParams: {
+              section: 'wallet',
+              action: 'pay',
+              tab: 'license_fee',
+              id: applicationId,
+              type: 'salesman-barman-registration',
+              ref: applicationId,
+              referenceNo: applicationId,
+              amount: fee,
+              source: 'salesman-barman-registration'
+            }
+          });
+        });
+      },
+      error: () => {
+        Swal.close();
+        Swal.fire('Error', 'Unable to fetch registration fee. Please try again later.', 'error');
+      }
+    });
   }
 
   private handleWorkflowAction(button: ActionButtonConfig): void {
@@ -1183,6 +1440,36 @@ private getTransitRejectSummary(): {
     result = this.applyCancellationCommissionerActionRules(result);
     result = this.applyRevalidationCommissionerActionRules(result);
     result = this.applyHologramCommissionerActionRules(result);
+
+    // New License: once application is routed to awaiting payment for licensee,
+    // do not show an "Approve" workflow action; show Make Payment instead.
+    if (this.isAwaitingNewLicensePaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay license fee and security deposit from wallet'
+        });
+      }
+    }
+
+    // Salesman/Barman: once application is routed to awaiting payment for licensee,
+    // show Make Payment (registration fee from license fee wallet).
+    if (this.isAwaitingSalesmanBarmanPaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay registration fee from license fee wallet'
+        });
+      }
+    }
 
     // Deduplicate by action so multiple transitions mapped to same action
     // (e.g., two "approve-like" paths) don't render duplicate buttons.

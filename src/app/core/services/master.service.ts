@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { LicenseFee } from '../models/license-fee.model';
 /**
  * Master Service - Complete Version with All Endpoints
  * 
@@ -14,15 +15,15 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root'
 })
 export class MasterService {
-  
- 
- 
+
+
+
   // Base URL for all master data endpoints
   private readonly BASE_URL = `${environment.apiBaseUrl}/masters/core`;
 
   // User endpoints (licensee profiles live here)
   private readonly USER_BASE_URL = `${environment.apiBaseUrl}/auth/users`;
-  
+
   // =========================================================================
   // ENDPOINT URLs
   // =========================================================================
@@ -38,14 +39,14 @@ export class MasterService {
   private readonly ROAD_URL = `${this.BASE_URL}/roads`;
   private readonly LOCATION_URL = `${this.BASE_URL}/locations`;
   private readonly LICENSE_FEE_URL = `${this.BASE_URL}/license-fees`;
-  
+
   // ✅ NEW: Endpoints for the 3 new tables
   private readonly LOCATION_CATEGORY_URL = `${this.BASE_URL}/location-categories`;
   private readonly LOCATION_SUBCATEGORY_URL = `${this.BASE_URL}/location-subcategories`;
   private readonly WARD_URL = `${this.BASE_URL}/wards`;
 
   constructor(private http: HttpClient) {
-  
+
   }
 
   // =========================================================================
@@ -352,6 +353,38 @@ export class MasterService {
 
   getLicenseFee(id: number): Observable<any> {
     return this.http.get(`${this.LICENSE_FEE_URL}/${id}/`);
+  }
+
+  lookupLicenseFee(
+    licenseCategoryId: number | string,
+    licenseSubcategoryId: number | string,
+    locationCode: number | string
+  ): Observable<LicenseFee> {
+    const params = new HttpParams()
+      .set('license_category_id', String(licenseCategoryId))
+      .set('license_subcategory_id', String(licenseSubcategoryId))
+      .set('location_code', String(locationCode));
+
+    return this.http.get<LicenseFee>(`${this.LICENSE_FEE_URL}/lookup/`, { params });
+  }
+
+  /** Categories that have at least one active fee record */
+  getLicenseFeeAvailableCategories(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.LICENSE_FEE_URL}/available-categories/`);
+  }
+
+  /** Subcategories that have a fee record for the given category */
+  getLicenseFeeAvailableSubcategories(licenseCategoryId: number | string): Observable<any[]> {
+    const params = new HttpParams().set('license_category_id', String(licenseCategoryId));
+    return this.http.get<any[]>(`${this.LICENSE_FEE_URL}/available-subcategories/`, { params });
+  }
+
+  /** Locations that have a fee record for the given category + subcategory */
+  getLicenseFeeAvailableLocations(licenseCategoryId: number | string, licenseSubcategoryId: number | string): Observable<any[]> {
+    const params = new HttpParams()
+      .set('license_category_id', String(licenseCategoryId))
+      .set('license_subcategory_id', String(licenseSubcategoryId));
+    return this.http.get<any[]>(`${this.LICENSE_FEE_URL}/available-locations/`, { params });
   }
 
   createLicenseFee(data: any): Observable<any> {

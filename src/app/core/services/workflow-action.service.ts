@@ -60,8 +60,11 @@ export class WorkflowActionService {
   getAvailableActions(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
     console.log('?? WORKFLOW ACTION SERVICE: getAvailableActions called with:', data);
 
-    // 1. If actions are already provided (passed from API/list), use them
-    if (data.allowedActionConfigs && data.allowedActionConfigs.length > 0) {
+    // 1. If actions are already provided (passed from API/list), use them.
+    // New-license details must always ask the backend because approval can move
+    // the application to awaiting_payment while older list/detail data still has
+    // preloaded officer actions.
+    if (data.type !== 'new-license' && data.allowedActionConfigs && data.allowedActionConfigs.length > 0) {
       console.log('?? WORKFLOW ACTION SERVICE: Using provided action configs:', data.allowedActionConfigs);
       return of(data.allowedActionConfigs);
     }
@@ -74,6 +77,18 @@ export class WorkflowActionService {
       })
     );
 
+  }
+
+  /**
+   * Fetch full detail for workflow-backed applications (used when list/dashboard
+   * rows don't contain computed fields like license fee amounts).
+   */
+  getNewLicenseApplicationDetail(applicationId: string): Observable<any> {
+    const encoded = encodeURIComponent(String(applicationId || '').trim());
+    if (!encoded) return of(null);
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encoded}/`).pipe(
+      catchError(() => of(null))
+    );
   }
 
 

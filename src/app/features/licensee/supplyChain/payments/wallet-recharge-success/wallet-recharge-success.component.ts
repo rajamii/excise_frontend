@@ -30,10 +30,16 @@ export class WalletRechargeSuccessComponent {
     createdAt: ''
   };
 
+  statusKind: 'success' | 'failed' = 'success';
+  headerTitle = 'Wallet Recharge Successful';
+  headerSubtitle = 'Amount credited for testing (dummy flow).';
+  statusLabel = 'Payment Successful';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router
   ) {
+    this.refreshDerived();
     this.route.queryParamMap.subscribe((params) => {
       this.vm = {
         transactionId: String(params.get('transactionId') || '').trim(),
@@ -44,7 +50,31 @@ export class WalletRechargeSuccessComponent {
         status: String(params.get('status') || 'success').trim(),
         createdAt: String(params.get('createdAt') || '').trim()
       };
+      this.refreshDerived();
     });
+  }
+
+  private normalizeStatus(value: string): string {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'success';
+    if (raw === 'f' || raw === 'failed' || raw.includes('fail')) return 'failed';
+    if (raw === 's' || raw === 'success' || raw.includes('success')) return 'success';
+    return raw;
+  }
+
+  private refreshDerived(): void {
+    const normalized = this.normalizeStatus(this.vm.status);
+    this.statusKind = normalized === 'failed' ? 'failed' : 'success';
+
+    this.headerTitle = this.statusKind === 'failed' ? 'Wallet Recharge Failed' : 'Wallet Recharge Successful';
+    this.headerSubtitle =
+      this.statusKind === 'failed'
+        ? 'Payment could not be completed. Please retry or contact support if the amount is debited.'
+        : 'Amount credited for testing (dummy flow).';
+
+    if (normalized === 'failed') this.statusLabel = 'Failed';
+    else if (normalized === 'success') this.statusLabel = 'Payment Successful';
+    else this.statusLabel = String(this.vm.status || 'success');
   }
 
   get formattedAmount(): string {

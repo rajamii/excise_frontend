@@ -4,7 +4,7 @@
     <div class="header-actions d-flex gap-2" *ngIf="canViewArrivalSummary()">
       <button type="button" class="btn btn-sm all-bulk-record-btn" (click)="openArrivalSummaryModal()">
         <i class="bi bi-clipboard-data me-1"></i>
-        ENA Inventory Records
+        Bulk Spirit Inventory Records
       </button>
     </div>
   </div>
@@ -121,10 +121,10 @@
       </select>
     </div>
 
-    <!-- Company Filter -->
-    <div class="compact-filter">
+    <!-- Company Filter (Commissioner / Permit Section only) -->
+    <div class="compact-filter" *ngIf="isCommissioner() || isPermitSection()">
       <select class="form-select form-select-sm" [(ngModel)]="requisitionCompanyFilter"
-        (change)="onRequisitionCompanyFilterChange()" title="Filter by company">
+        (change)="applyFilters()" title="Filter by company">
         <option value="">All Companies</option>
         <option *ngFor="let company of requisitionCompanyOptions" [value]="company">{{ company }}</option>
       </select>
@@ -240,14 +240,14 @@
                 type="button"
                 class="btn btn-sm mt-2 arrival-update-btn"
                 (click)="openArrivalModal(item)">
-                {{ isArrivalRejected(item) ? 'Re-enter BL Arrival' : 'Update BL Arrival' }}
+                {{ isArrivalRejected(item) ? 'Re-enter Bulk Spirit Arrival' : 'Update Bulk Spirit Arrival' }}
               </button>
               <button
                 *ngIf="canViewArrivalDetails(item)"
                 type="button"
                 class="btn btn-sm mt-2 arrival-view-btn"
                 (click)="openArrivalViewModal(item)">
-               View BL Inventory
+               View Bulk Spirit Inventory
               </button>
               <span
                 *ngIf="shouldShowArrivalRejectedBadge(item)"
@@ -640,7 +640,7 @@
         <div class="header-content">
           <i class="bi bi-file-earmark-text-fill header-icon"></i>
           <div>
-            <h5 class="modal-title">BL Details</h5>
+            <h5 class="modal-title">Bulk Spirit Details</h5>
             <p class="modal-subtitle">Bulk Liter Requisition Information</p>
           </div>
         </div>
@@ -670,7 +670,7 @@
 
         <div class="alert alert-info d-flex align-items-center mb-4">
           <i class="bi bi-info-circle-fill me-2"></i>
-          <span>Submitted BL details will move to OIC review first. Only approved entries will appear in All Bulk Detail Record.</span>
+          <span>Submitted Bulk Spirit details will move to OIC review first. Only approved entries will appear in All Bulk Detail Record.</span>
         </div>
 
         <div class="alert d-flex align-items-center mb-4"
@@ -685,7 +685,7 @@
           <i class="bi bi-x-circle-fill me-2" *ngIf="arrivalViewApprovalStatus === 'REJECTED'"></i>
           <i class="bi bi-info-circle-fill me-2" *ngIf="!arrivalViewApprovalStatus"></i>
           <span>
-            BL approval status: <strong>{{ arrivalViewApprovalStatus || 'N/A' }}</strong>
+            Bulk Spirit approval status: <strong>{{ arrivalViewApprovalStatus || 'N/A' }}</strong>
             <span *ngIf="arrivalViewReviewRemarks"> | Remarks: {{ arrivalViewReviewRemarks }}</span>
           </span>
           <span
@@ -812,8 +812,8 @@
         <div class="header-content">
           <i class="bi bi-clipboard-data header-icon"></i>
           <div class="header-text">
-            <h5 class="modal-title">ENA Bulk Inventory Records</h5>
-            <p class="modal-subtitle">View and filter all bulk liquor arrival details</p>
+            <h5 class="modal-title">ENA Bulk Spirit Inventory Records</h5>
+            <p class="modal-subtitle">View and filter all bulk Spirit arrival details</p>
           </div>
         </div>
         <button type="button" class="btn-close btn-close-white" (click)="closeArrivalSummaryModal()" aria-label="Close"></button>
@@ -928,8 +928,8 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of filteredArrivalDetailsRows; let i = index">
-                  <td class="serial-col">{{ i + 1 }}</td>
+                <tr *ngFor="let row of pagedArrivalDetailsRows; let i = index">
+                  <td class="serial-col">{{ arrivalSummaryPageStart + i }}</td>
                   <td class="date-col">{{ formatArrivalDate(row.arrivalDate) }}</td>
                   <td class="ref-col">
                     {{ row.referenceNo }}
@@ -954,6 +954,33 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="filteredArrivalDetailsRows.length > 0">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted">Showing {{ arrivalSummaryPageStart }}-{{ arrivalSummaryPageEnd }} of {{ filteredArrivalDetailsRows.length }}</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <label class="text-muted mb-0">Page size</label>
+              <select class="form-select form-select-sm" style="width: auto;"
+                [(ngModel)]="arrivalSummaryPageSize"
+                (change)="onArrivalSummaryPageSizeChange()">
+                <option *ngFor="let opt of arrivalSummaryPageSizeOptions" [ngValue]="opt">{{ opt }}</option>
+              </select>
+
+              <button class="btn btn-outline-secondary btn-sm" type="button"
+                (click)="prevArrivalSummaryPage()"
+                [disabled]="arrivalSummaryPageIndex <= 0">
+                Prev
+              </button>
+              <span class="text-muted">Page {{ arrivalSummaryPageIndex + 1 }} / {{ arrivalSummaryTotalPages }}</span>
+              <button class="btn btn-outline-secondary btn-sm" type="button"
+                (click)="nextArrivalSummaryPage()"
+                [disabled]="arrivalSummaryPageIndex >= arrivalSummaryTotalPages - 1">
+                Next
+              </button>
+            </div>
           </div>
         </div>
 

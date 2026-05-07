@@ -35,11 +35,13 @@
             </a>
 
             <!-- Apply New License -->
-            <button class="nav-item" (click)="navigateToSupplyChain('new-license')" [class.active]="isDashboardSectionActive('new-license')">
+            <button class="nav-item new-license-nav-item" (click)="navigateToSupplyChain('new-license')" [class.active]="isDashboardSectionActive('new-license')">
               <mat-icon class="nav-icon">add_business</mat-icon>
               <span class="nav-text">New License</span>
+              <span class="nav-badge" *ngIf="getPendingCount('new-license') as pending">{{ pending }}</span>
             </button>
 
+            <!-- Wallet -->
             <button class="nav-item wallet-nav-item" *ngIf="showManufacturingWalletNav" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
               <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
               <span class="nav-text">Wallet</span>
@@ -128,6 +130,7 @@
             <button class="nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
+              <span class="nav-badge" *ngIf="getPendingCount('salesman-barman-registration') as pending">{{ pending }}</span>
             </button>
             <button class="nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
             "isDashboardSectionActive('label-registration')">

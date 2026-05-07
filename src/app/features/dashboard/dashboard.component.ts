@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -126,6 +126,9 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  @ViewChild(DailyhologramrecordregisterComponent)
+  private dailyHologramWorkingRecords?: DailyhologramrecordregisterComponent;
+
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
@@ -613,6 +616,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    if ([5, 6].includes(Number(this.currentUser?.roleId || 0)) && String(this.selectedSupplyChainSection || '') === 'new-license') {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
+
     // Licensee: cannot open ENA / transit / hologram until license fee is paid (exclude awaiting unpaid rows).
     if (
       this.isLicenseeUser() &&
@@ -679,9 +693,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.isLicenseeUser()) {
       return;
     }
-    // Wallet section is available to all licensee users. Non-manufacturing users are restricted to "Others" view
-    // inside the wallet page itself.
-    return;
+    if (!this.licenseeMenuAccessResolved) {
+      return;
+    }
+    // Wallet becomes visible once the source application reaches `awaiting_payment`
+    // (Awaiting License Fee Payment) or final approval.
+    if (!this.showManufacturingWalletNav) {
+      this.selectedSupplyChainSection = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: null, tab: null, source: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+      return;
+    }
   }
 
   private loadLicenseeMenuAccess(): void {
@@ -727,7 +753,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.showDistilleryMenus = hasDistillery;
         this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
         this.showBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
-        this.showManufacturingWalletNav = combinedRows.some((item) => isLicenseeWalletNavEligible(item));
+        this.showManufacturingWalletNav = this.computeWalletNavVisible(combinedRows);
         this.licenseeMenuAccessResolved = true;
         this.enforceSectionAccess();
         this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
@@ -762,7 +788,51 @@ export class DashboardComponent implements OnInit, OnDestroy {
       item?.currentStage ??
       ''
     ).toLowerCase();
-    return stage.includes('awaiting') && stage.includes('payment');
+    const normalized = stage.replace(/[^a-z0-9]/g, '');
+    return normalized === 'awaitingpayment' || (normalized.includes('awaiting') && normalized.includes('payment'));
+  }
+
+  private computeWalletNavVisible(rows: any[]): boolean {
+    const list = Array.isArray(rows) ? rows : [];
+
+    const appsById = new Map<string, any>();
+    for (const item of list) {
+      const appId = String(item?.application_id ?? item?.applicationId ?? item?.pk ?? '').trim();
+      if (appId) {
+        appsById.set(appId, item);
+      }
+    }
+
+    const isNewLicenseDerivedLicenseRow = (item: any): boolean => {
+      const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim().toUpperCase();
+      return srcId.startsWith('NLI/');
+    };
+
+    for (const item of list) {
+      const hasLicenseId = !!(item?.license_id ?? item?.licenseId);
+
+      const appId = String(item?.application_id ?? item?.applicationId ?? '').trim();
+      if (appId && !hasLicenseId) {
+        if (isLicenseeWalletNavEligible(item)) {
+          return true;
+        }
+        continue;
+      }
+
+      if (hasLicenseId) {
+        if (!isNewLicenseDerivedLicenseRow(item)) {
+          return true;
+        }
+
+        const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim();
+        const srcApp = srcId ? appsById.get(srcId) : undefined;
+        if (srcApp && isLicenseeWalletNavEligible(srcApp)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   private isDistillery(item: any): boolean {
@@ -1061,7 +1131,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-register': 'Hologram Procurement',
       'hologram-daily-entry': 'Daily Hologram Entry',
       'stock-inventory': 'Brand Warehouse Stock',
-      'bl-details': 'ENA Details Information',
+      'bl-details': 'Bulk Spirit Details',
 
       'hologram-overview': 'Hologram Overview',
       'officer-activity': 'Officer Activity',
@@ -1075,13 +1145,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   showHeaderAction(): boolean {
     if (!this.selectedSupplyChainSection) return false;
 
-    // Strict check: Only Licensee users (Role ID 2) can see the "Create" buttons
-    // Officers (OIC, Commissioner, Permit Section, etc.) should only see the list/tables
+    const section = this.selectedSupplyChainSection;
+
+    // Commissioner: show Refresh for Working Records
+    if (section === 'commissioner-hologram-working-records' && this.isCommissionerUser()) {
+      return true;
+    }
+
+    // Licensee: show Create actions only
     if (!this.isLicenseeUser()) {
       return false;
     }
-
-    const section = this.selectedSupplyChainSection;
 
     // List of sections that have a "Create" action for Licensees
     const sectionsWithActions = [
@@ -1102,6 +1176,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const section = this.selectedSupplyChainSection;
 
     switch (section) {
+      case 'commissioner-hologram-working-records': return 'Refresh';
       case 'requisition': return 'New Requisition';
       case 'transit': return 'Apply Transit';
       case 'hologram': return 'New Hologram';
@@ -1118,6 +1193,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const section = this.selectedSupplyChainSection;
 
     switch (section) {
+      case 'commissioner-hologram-working-records': return 'refresh';
       case 'requisition': return 'add_circle';
       case 'transit': return 'local_shipping';
       case 'hologram': return 'add_circle';
@@ -1132,6 +1208,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onHeaderAction(): void {
     const section = this.selectedSupplyChainSection;
+
+    if (section === 'commissioner-hologram-working-records') {
+      this.dailyHologramWorkingRecords?.refreshData();
+      return;
+    }
 
     if (section === 'requisition') {
       // Navigate within SPA to the import permit (requisition) application form
@@ -1166,7 +1247,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         section: 'wallet',
         tab: 'recharge', // Default to recharge/wallet tab
         walletView,
-        source: 'dashboard-wallet'
+        source: 'dashboard-wallet',
+        nav: Date.now()
       }
     });
   }

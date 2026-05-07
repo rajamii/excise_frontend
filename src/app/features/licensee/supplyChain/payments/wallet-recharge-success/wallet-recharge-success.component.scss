@@ -46,6 +46,17 @@
     line-height: 1;
   }
 
+  .cross {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .badge.failed {
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    box-shadow: 0 10px 22px rgba(239, 68, 68, 0.26);
+  }
+
   .title {
     font-size: 20px;
     font-weight: 800;
@@ -115,6 +126,13 @@
     background: rgba(16, 185, 129, 0.14);
     color: #047857;
     border: 1px solid rgba(16, 185, 129, 0.32);
+  }
+
+  .pill.failed {
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.34);
+    box-shadow: 0 8px 18px rgba(239, 68, 68, 0.12);
   }
 
   .copy {

@@ -106,6 +106,9 @@ export class HologramMonthlyReportComponent implements OnInit {
   commissionerMode = false;
   manufacturingUnits: string[] = [];
 
+  // Date filter for table rows
+  dateFilter: string = '';
+
   // Data
   overviewSummary: OverviewSummary | null = null;
   statementRows: StatementRow[] = [];
@@ -1081,6 +1084,7 @@ export class HologramMonthlyReportComponent implements OnInit {
    * Handle month/year change
    */
   onMonthYearChange(): void {
+    this.dateFilter = '';
     this.loadMonthlyReport();
   }
 
@@ -1172,6 +1176,27 @@ export class HologramMonthlyReportComponent implements OnInit {
    */
   get hasDetailRows(): boolean {
     return this.statementRows.some(row => row.rowType !== 'SUMMARY');
+  }
+
+  get filteredStatementRows(): StatementRow[] {
+    if (!this.dateFilter) return this.statementRows;
+    return this.statementRows.filter(row => {
+      if (row.rowType === 'SUMMARY') return true;
+      const dt = row.meta?.transactionDateTime || row.label || '';
+      if (!dt) return false;
+      const parsed = new Date(dt);
+      if (Number.isNaN(parsed.getTime())) {
+        // Try parsing from label like "Arrival - 5/2/2026"
+        const match = dt.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (!match) return false;
+        const rowIso = `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+        return rowIso === this.dateFilter;
+      }
+      const y = parsed.getFullYear();
+      const m = String(parsed.getMonth() + 1).padStart(2, '0');
+      const d = String(parsed.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}` === this.dateFilter;
+    });
   }
 
   /**

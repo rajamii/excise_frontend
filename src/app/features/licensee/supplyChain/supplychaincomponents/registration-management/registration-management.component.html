@@ -1,8 +1,33 @@
 <div class="registration-management-container">
   <div class="new-license-register-header">
     <div class="row g-3 mb-4 stats-row">
-      <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="summary-card approved-requests">
+      <div class="col-xl col-lg-6 col-md-6" *ngIf="currentSection === 'salesman-barman-registration'">
+        <div
+          class="summary-card total-application-requests summary-card-clickable"
+          role="button"
+          tabindex="0"
+          (click)="onCardFilterClick('new')"
+          (keydown.enter)="onCardFilterClick('new')"
+          (keydown.space)="onCardFilterClick('new')"
+          [class.active]="activeCardFilter === 'new'"
+        >
+          <div class="card-icon"><i class="bi bi-grid-1x2"></i></div>
+          <div class="card-content">
+            <h3 class="card-value">{{ allRows.length }}</h3>
+            <p class="card-label">Total Application</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl col-lg-6 col-md-6">
+        <div
+          class="summary-card approved-requests summary-card-clickable"
+          role="button"
+          tabindex="0"
+          (click)="onCardFilterClick('approved')"
+          (keydown.enter)="onCardFilterClick('approved')"
+          (keydown.space)="onCardFilterClick('approved')"
+          [class.active]="activeCardFilter === 'approved'"
+        >
           <div class="card-icon"><i class="bi bi-check-circle"></i></div>
           <div class="card-content">
             <h3 class="card-value">{{ counts.approved }}</h3>
@@ -10,8 +35,16 @@
           </div>
         </div>
       </div>
-      <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="summary-card pending-requests">
+      <div class="col-xl col-lg-6 col-md-6">
+        <div
+          class="summary-card pending-requests summary-card-clickable"
+          role="button"
+          tabindex="0"
+          (click)="onCardFilterClick('pending')"
+          (keydown.enter)="onCardFilterClick('pending')"
+          (keydown.space)="onCardFilterClick('pending')"
+          [class.active]="activeCardFilter === 'pending'"
+        >
           <div class="card-icon"><i class="bi bi-clock-history"></i></div>
           <div class="card-content">
             <h3 class="card-value">{{ counts.pending }}</h3>
@@ -19,8 +52,16 @@
           </div>
         </div>
       </div>
-      <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="summary-card objection-requests">
+      <div class="col-xl col-lg-6 col-md-6">
+        <div
+          class="summary-card objection-requests summary-card-clickable"
+          role="button"
+          tabindex="0"
+          (click)="onCardFilterClick('objection')"
+          (keydown.enter)="onCardFilterClick('objection')"
+          (keydown.space)="onCardFilterClick('objection')"
+          [class.active]="activeCardFilter === 'objection'"
+        >
           <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
           <div class="card-content">
             <h3 class="card-value">{{ counts.objection }}</h3>
@@ -28,8 +69,16 @@
           </div>
         </div>
       </div>
-      <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="summary-card rejected-requests">
+      <div class="col-xl col-lg-6 col-md-6">
+        <div
+          class="summary-card rejected-requests summary-card-clickable"
+          role="button"
+          tabindex="0"
+          (click)="onCardFilterClick('rejected')"
+          (keydown.enter)="onCardFilterClick('rejected')"
+          (keydown.space)="onCardFilterClick('rejected')"
+          [class.active]="activeCardFilter === 'rejected'"
+        >
           <div class="card-icon"><i class="bi bi-x-circle"></i></div>
           <div class="card-content">
             <h3 class="card-value">{{ counts.rejected }}</h3>
@@ -41,38 +90,72 @@
   </div>
 
   <div class="compact-filter-section mb-3">
-    <div class="d-flex align-items-center gap-3 flex-wrap">
-      <div class="filter-label-text">
+    <div class="filter-row">
+      <span class="filter-label-text">
         <i class="bi bi-funnel me-1"></i>
         <small class="text-muted">Filters:</small>
-      </div>
+      </span>
 
-      <div class="compact-filter">
+      <!-- Search -->
+      <input
+        type="text"
+        class="form-control form-control-sm filter-input filter-input--search"
+        placeholder="Search by Application ID / Applicant / Establishment"
+        [(ngModel)]="searchFilter"
+        (ngModelChange)="applyFilters()"
+      />
+
+      <!-- Company filter — admin only, salesman-barman section only -->
+      <select
+        *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
+        class="form-select form-select-sm filter-input filter-input--company"
+        [(ngModel)]="companyFilter"
+        (ngModelChange)="applyFilters()"
+        title="Filter by company / establishment"
+      >
+        <option value="">All Companies</option>
+        <option *ngFor="let co of companyOptions" [value]="co">{{ co }}</option>
+      </select>
+
+      <!-- Month dropdown -->
+      <select
+        class="form-select form-select-sm filter-input filter-input--month"
+        [(ngModel)]="monthFilter"
+        (ngModelChange)="applyFilters()"
+        title="Filter by month"
+      >
+        <option value="">All Months</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+
+      <!-- Single date picker with label -->
+      <div class="filter-date-group">
+        <label class="filter-date-label">Date</label>
         <input
-          type="text"
-          class="form-control form-control-sm"
-          placeholder="Search by Application ID / Applicant / Establishment / Stage"
-          [(ngModel)]="searchFilter"
+          type="date"
+          class="form-control form-control-sm filter-input filter-input--date"
+          [(ngModel)]="dateFromFilter"
           (ngModelChange)="applyFilters()"
+          title="Filter by date"
         />
       </div>
 
-      <div class="compact-filter">
-        <select
-          class="form-select form-select-sm"
-          [(ngModel)]="statusFilter"
-          (ngModelChange)="applyFilters()"
-        >
-          <option value="">All Status</option>
-          <option value="approved">Approved</option>
-          <option value="pending">Pending</option>
-          <option value="objection">Objection</option>
-          <option value="rejected">Rejected</option>
-          <option *ngFor="let stage of stageFilterOptions" [value]="stage.toLowerCase()">{{ stage }}</option>
-        </select>
-      </div>
-
-      <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()" *ngIf="searchFilter || statusFilter">
+      <button
+        class="btn btn-outline-danger btn-sm filter-clear-btn"
+        (click)="clearFilters()"
+        *ngIf="searchFilter || monthFilter || dateFromFilter || activeCardFilter || companyFilter"
+      >
         <i class="bi bi-x-circle"></i> Clear
       </button>
     </div>
@@ -97,6 +180,7 @@
               <th>Sl. No.</th>
               <th>Application ID</th>
               <th>Submitted On</th>
+              <th *ngIf="currentSection === 'salesman-barman-registration'">Payment</th>
               <th>Applicant</th>
               <th>Establishment</th>
               <th>Current Stage</th>
@@ -104,21 +188,75 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of filteredRows; let i = index">
-              <td>{{ i + 1 }}</td>
+            <tr *ngFor="let row of pagedRows; let i = index">
+              <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
               <td class="fw-semibold">{{ row.applicationId }}</td>
               <td>{{ row.submittedOn }}</td>
+              <td *ngIf="currentSection === 'salesman-barman-registration'">
+                <span class="payment-badge"
+                  [class.payment-badge--success]="(row.paymentStatus || '').toLowerCase().includes('success')"
+                  [class.payment-badge--failed]="(row.paymentStatus || '').toLowerCase().includes('fail')"
+                  [class.payment-badge--pending]="!(row.paymentStatus || '').toLowerCase().includes('success') && !(row.paymentStatus || '').toLowerCase().includes('fail')"
+                >
+                  {{ row.paymentStatus || 'Pending' }}
+                </span>
+              </td>
               <td>{{ row.applicantName }}</td>
               <td>{{ row.establishmentName }}</td>
-              <td>{{ row.currentStage }}</td>
+              <td>
+                <span class="status-badge status-badge--{{ row.statusGroup }}">
+                  {{ row.currentStage }}
+                </span>
+              </td>
               <td>
                 <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
                   <i class="bi bi-eye-fill"></i>
+                </button>
+                <button
+                  *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
+                  class="btn btn-link p-0 action-timeline ms-2"
+                  title="View Timeline"
+                  (click)="viewTimeline(row)"
+                >
+                  <i class="bi bi-clock-history"></i>
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
+
+        <div class="pagination-bar" *ngIf="filteredRows.length > 0">
+          <div class="page-summary">
+            Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }}
+          </div>
+
+          <div class="page-controls">
+            <div class="page-size">
+              <span class="page-size-label">Page size</span>
+              <select
+                class="form-select form-select-sm page-size-select"
+                [(ngModel)]="pageSize"
+                (ngModelChange)="onPageSizeChange()"
+              >
+                <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+              </select>
+            </div>
+
+            <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0">
+              Prev
+            </button>
+            <span class="page-indicator" *ngIf="totalPages > 0">
+              Page {{ pageIndex + 1 }} / {{ totalPages }}
+            </span>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              (click)="nextPage()"
+              [disabled]="totalPages === 0 || pageIndex >= totalPages - 1"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="loading-state" *ngIf="isLoading">Loading entries...</div>

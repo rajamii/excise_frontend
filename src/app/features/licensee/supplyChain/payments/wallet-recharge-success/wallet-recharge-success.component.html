@@ -3,12 +3,13 @@
     <div class="container">
       <div class="card">
         <div class="header">
-          <div class="badge" aria-hidden="true">
-            <span class="check">✓</span>
+          <div class="badge" [class.failed]="statusKind === 'failed'" aria-hidden="true">
+            <span class="check" *ngIf="statusKind === 'success'">&#10003;</span>
+            <span class="cross" *ngIf="statusKind === 'failed'">&#10005;</span>
           </div>
           <div class="titles">
-            <div class="title">Wallet Recharge Successful</div>
-            <div class="subtitle">Amount credited for testing (dummy flow).</div>
+            <div class="title">{{ headerTitle }}</div>
+            <div class="subtitle">{{ headerSubtitle }}</div>
           </div>
         </div>
 
@@ -38,13 +39,15 @@
 
           <div class="row">
             <div class="label">Amount</div>
-            <div class="value amount">₹{{ formattedAmount }}</div>
+            <div class="value amount">&#8377;{{ formattedAmount }}</div>
           </div>
 
           <div class="row">
             <div class="label">Status</div>
             <div class="value">
-              <span class="pill success">{{ vm.status || 'success' }}</span>
+              <span class="pill" [class.success]="statusKind === 'success'" [class.failed]="statusKind === 'failed'">
+                {{ statusLabel }}
+              </span>
             </div>
           </div>
 

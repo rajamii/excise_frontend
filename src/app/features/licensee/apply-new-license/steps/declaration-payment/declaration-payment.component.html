@@ -1,7 +1,7 @@
 <mat-card>
   <mat-card-header>
     <div class="heading">Declaration & Payment</div>
-    @if (!applicationId) {
+    @if (!submittedApplicationId) {
       <div class="validation">
         Review all details before final submission
       </div>
@@ -10,7 +10,7 @@
 
   <mat-card-content>
     <!-- FORM VIEW - Show only when NOT submitted -->
-    @if (!applicationId) {
+    @if (!submittedApplicationId) {
       
       <!-- Application Type Section -->
       @if (selectLicenseData.length > 0) {
@@ -85,6 +85,25 @@
         </div>
       }
 
+      @if (shouldShowMemberDetails && memberDetailsData.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>badge</mat-icon>
+            <h3>{{ memberDetailsSectionTitle }}</h3>
+          </div>
+          <div class="details-grid">
+            @for (item of memberDetailsData; track item.key) {
+              @if (item.value) {
+                <div class="detail-item" [class.full-width]="item.key.includes('Address')">
+                  <span class="label">{{ item.key }}:</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
       <!-- Site Details Section -->
       @if (siteDetailsData.length > 0) {
         <div class="info-section">
@@ -125,6 +144,33 @@
         </div>
       }
 
+      @if (uploadedDocuments.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>folder_open</mat-icon>
+            <h3>Uploaded Documents</h3>
+          </div>
+          <div class="documents-review-list">
+            @for (doc of uploadedDocuments; track doc.key) {
+              <div class="document-review-item">
+                <div class="document-review-info">
+                  <span class="label">{{ doc.label }}:</span>
+                  <span class="value">{{ doc.fileName }}</span>
+                </div>
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  type="button"
+                  (click)="viewUploadedDocument(doc.key)">
+                  <mat-icon>visibility</mat-icon>
+                  View
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Fee Information -->
       <div class="info-section fee-section">
         <div class="section-header">
@@ -136,7 +182,7 @@
             <mat-icon class="fee-icon">info</mat-icon>
             <div class="fee-details">
               <p class="fee-label">Total Application Fee</p>
-              <p class="fee-amount">Rs {{ applicationFee }}/-</p>
+              <p class="fee-amount">Rs {{ feeAmount }}/-</p>
               <p class="fee-note">** State Excise Department, Government of Sikkim shall not entertain any chargeback or refund request made by the payer at any stage during or after the transaction. In case of any such concerns, the payer should raise it to <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a> for resolution.</p>
             </div>
           </div>
@@ -156,7 +202,7 @@
     }
 
     <!-- SUCCESS VIEW - Show only when submitted -->
-    @if (applicationId) {
+    @if (submittedApplicationId) {
       <div class="success-section">
         <div class="success-header">
           <mat-icon>check_circle</mat-icon>
@@ -164,8 +210,14 @@
         </div>
         <div class="application-id">
           <span class="label">Application ID:</span>
-          <span class="value">{{ applicationId }}</span>
+          <span class="value">{{ submittedApplicationId }}</span>
         </div>
+        @if (sbmApplicationId) {
+          <div class="application-id" style="margin-top: 8px;">
+            <span class="label">Salesman/Barman Application:</span>
+            <span class="value">{{ sbmApplicationId }} ({{ sbmSubmitted ? 'Submitted' : 'Not Submitted' }})</span>
+          </div>
+        }
         <div class="next-steps">
           <h4>Next Steps:</h4>
           <ul>
@@ -181,7 +233,7 @@
 
   <!-- Action buttons -->
   <mat-card-actions>
-    @if (!applicationId) {
+    @if (!submittedApplicationId) {
       <button mat-stroked-button (click)="goBack()" type="button">Back</button>
       <button 
         mat-flat-button 

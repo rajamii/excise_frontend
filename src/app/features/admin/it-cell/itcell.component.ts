@@ -22,6 +22,7 @@ export class ITCELLComponent implements OnInit {
   private initialSummaryAutoSelected = false;
 
   // Hologram Management
+  Math = Math;
   hologramData: any[] = [];
   summaryHologramData: any[] = [];
   filteredHologramData: any[] = [];
@@ -36,8 +37,13 @@ export class ITCELLComponent implements OnInit {
   selectedDate: string = '';
   statusFilter: string = 'All';
   companyFilter: string = '';
-  activeSummaryFilter: string = '';
   companyOptions: string[] = [];
+  activeSummaryFilter: string = '';
+
+  // Pagination
+  pageSizeOptions: number[] = [5, 10, 15, 20];
+  pageSize: number = 5;
+  currentPage: number = 1;
 
   // Available options
   months = [
@@ -173,6 +179,8 @@ export class ITCELLComponent implements OnInit {
       summary = summary.filter(item => item.date.startsWith(this.selectedDate));
     }
 
+    this.summaryHologramData = summary;
+
     // Update company dropdown based on current date/month/year filters
     this.companyOptions = Array.from(
       new Set(
@@ -181,8 +189,6 @@ export class ITCELLComponent implements OnInit {
           .filter(v => !!v)
       )
     ).sort((a, b) => a.localeCompare(b));
-
-    this.summaryHologramData = summary;
 
     let filtered = [...summary];
 
@@ -203,6 +209,7 @@ export class ITCELLComponent implements OnInit {
 
     this.filteredHologramData = filtered;
     this.syncActiveSummaryFilter();
+    this.currentPage = 1;
   }
 
   clearFilters(): void {
@@ -213,6 +220,26 @@ export class ITCELLComponent implements OnInit {
     this.companyFilter = '';
     this.activeSummaryFilter = '';
     this.applyFilters();
+  }
+
+  // Pagination methods
+  getTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredHologramData.length / this.pageSize));
+  }
+
+  getPaged(): any[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredHologramData.slice(start, start + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    const total = this.getTotalPages();
+    if (page < 1 || page > total) return;
+    this.currentPage = page;
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
   }
 
   onSummaryCardClick(filter: string): void {

@@ -3,9 +3,13 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
 import { environment } from '../../../../../../environments/environment';
 import { catchError, map } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
+import { RoleService } from '../../../../../core/services/role.service';
+import { ApplicationMovementComponent } from '../../../../licensee/licensee-dashboard/application-table/application-movement/application-movement.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-registration-management',
@@ -24,18 +28,27 @@ export class RegistrationManagementComponent implements OnInit {
   error: string | null = null;
 
   counts = {
+    newApplication: 0,
     approved: 0,
     pending: 0,
     objection: 0,
     rejected: 0
   };
 
+  activeCardFilter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected' | '' = '';
+
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize = 5;
+  pageIndex = 0;
+
   allRows: Array<{
     id: string;
     applicationId: string;
     submittedOn: string;
+    paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
+    companyName?: string;
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
@@ -44,11 +57,17 @@ export class RegistrationManagementComponent implements OnInit {
   stageFilterOptions: string[] = [];
   statusFilter = '';
   searchFilter = '';
+  monthFilter = '';
+  dateFromFilter = '';
+  companyFilter = '';
+  companyOptions: string[] = [];
 
   constructor(
     private http: HttpClient,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private roleService: RoleService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -58,14 +77,49 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
+  isAdminUser(): boolean {
+    return this.roleService.isAdminRole();
+  }
+
+  isLicenseeUser(): boolean {
+    return this.roleService.isLicenseeRole();
+  }
+
+  private simplifyStageForLicensee(stageValue: string, statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'): string {
+    if (statusGroup === 'approved') return 'Approved';
+    if (statusGroup === 'rejected') return 'Rejected';
+
+    const raw = String(stageValue || '').toLowerCase();
+    if (raw.includes('approve')) return 'Approved';
+    if (raw.includes('reject')) return 'Rejected';
+    if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+    if (raw.includes('payment')) return 'Awaiting Payment';
+    return 'Pending';
+  }
+
+  onCardFilterClick(filter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected'): void {
+    if (this.activeCardFilter === filter || filter === 'new') {
+      // 'new' = Total Application — always shows all rows (no status filter)
+      // toggling the same filter off also shows all rows
+      this.activeCardFilter = filter === 'new' ? 'new' : '';
+      this.statusFilter = '';
+    } else {
+      this.activeCardFilter = filter;
+      this.statusFilter = filter;
+    }
+    this.applyFilters();
+  }
+
   applyFilters(): void {
     const q = this.searchFilter.trim().toLowerCase();
     const selected = this.statusFilter.trim().toLowerCase();
+    const dateFrom = this.dateFromFilter ? new Date(this.dateFromFilter) : null;
 
     this.filteredRows = this.allRows.filter((row) => {
       const stageRaw = String(row.currentStageRaw || '').toLowerCase();
       const stageText = String(row.currentStage || '').toLowerCase();
 
+      // Status filter (driven by card click)
       const matchesStatus =
         !selected ||
         row.statusGroup === selected ||
@@ -74,20 +128,89 @@ export class RegistrationManagementComponent implements OnInit {
         stageText === selected ||
         stageText.includes(selected);
 
+      // Text search
       const matchesSearch =
         !q ||
         row.applicationId.toLowerCase().includes(q) ||
+        String(row.paymentStatus || '').toLowerCase().includes(q) ||
         row.applicantName.toLowerCase().includes(q) ||
         row.establishmentName.toLowerCase().includes(q) ||
         row.currentStage.toLowerCase().includes(q);
 
-      return matchesStatus && matchesSearch;
+      // Parse stored "DD-Mon-YYYY" back to a Date
+      let rowDate: Date | null = null;
+      if (row.submittedOn && row.submittedOn !== 'N/A') {
+        const parsed = new Date(row.submittedOn.replace(/-/g, ' '));
+        if (!isNaN(parsed.getTime())) rowDate = parsed;
+      }
+
+      // Month filter — 2-digit string "01"–"12"
+      const matchesMonth = !this.monthFilter || (
+        rowDate !== null && (rowDate.getMonth() + 1) === parseInt(this.monthFilter, 10)
+      );
+
+      // Single date filter — exact day match
+      const matchesDate = !dateFrom || (
+        rowDate !== null &&
+        rowDate.getFullYear() === dateFrom.getFullYear() &&
+        rowDate.getMonth() === dateFrom.getMonth() &&
+        rowDate.getDate() === dateFrom.getDate()
+      );
+
+      // Company filter (admin only)
+      const matchesCompany = !this.companyFilter ||
+        String((row as any).companyName || '').toLowerCase() === this.companyFilter.toLowerCase();
+
+      return matchesStatus && matchesSearch && matchesMonth && matchesDate && matchesCompany;
     });
+
+    // Reset pagination whenever filters change.
+    this.pageIndex = 0;
+  }
+
+  get totalPages(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.ceil(this.filteredRows.length / this.pageSize);
+  }
+
+  get pageStart(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return this.pageIndex * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.filteredRows.length);
+  }
+
+  get pagedRows(): typeof this.filteredRows {
+    if (this.filteredRows.length === 0) return [];
+    const start = this.pageIndex * this.pageSize;
+    return this.filteredRows.slice(start, start + this.pageSize);
+  }
+
+  onPageSizeChange(): void {
+    this.pageIndex = 0;
+  }
+
+  prevPage(): void {
+    if (this.pageIndex <= 0) return;
+    this.pageIndex -= 1;
+  }
+
+  nextPage(): void {
+    if (this.totalPages === 0) return;
+    if (this.pageIndex >= this.totalPages - 1) return;
+    this.pageIndex += 1;
   }
 
   clearFilters(): void {
     this.statusFilter = '';
     this.searchFilter = '';
+    this.monthFilter = '';
+    this.dateFromFilter = '';
+    this.companyFilter = '';
+    this.activeCardFilter = '';
     this.applyFilters();
   }
 
@@ -126,6 +249,26 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
+  viewTimeline(row: { id: string; applicationId: string }): void {
+    const applicationId = String(row.applicationId || row.id || '').trim();
+    if (!applicationId) return;
+
+    const encoded = encodeURIComponent(applicationId);
+    this.http.get<any>(`${this.salesmanApiBase}/detail/${encoded}/`).subscribe({
+      next: (res: any) => {
+        this.dialog.open(ApplicationMovementComponent, {
+          width: '700px',
+          maxHeight: '80vh',
+          data: { movementDataSource: { data: [res] } }
+        });
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
+        void Swal.fire('Error', String(msg), 'error');
+      }
+    });
+  }
+
   get entriesTitle(): string {
     if (this.currentSection === 'salesman-barman-registration') {
       return 'Salesman/Barman Application Entries';
@@ -139,6 +282,14 @@ export class RegistrationManagementComponent implements OnInit {
   private loadData(): void {
     this.error = null;
     this.isLoading = true;
+
+    // Reset filters when section changes so the default pending filter applies fresh.
+    this.activeCardFilter = '';
+    this.statusFilter = '';
+    this.searchFilter = '';
+    this.monthFilter = '';
+    this.dateFromFilter = '';
+    this.companyFilter = '';
 
     if (this.currentSection === 'salesman-barman-registration') {
       this.loadSalesmanBarmanData();
@@ -165,6 +316,7 @@ export class RegistrationManagementComponent implements OnInit {
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenCompanyGroupedData(grouped);
         this.counts = {
+          newApplication: 0,
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number(counts?.objection || 0),
@@ -384,12 +536,25 @@ export class RegistrationManagementComponent implements OnInit {
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenSalesmanGroupedData(grouped);
         this.counts = {
+          newApplication: Number((counts as any)?.new_application || (counts as any)?.newApplication || 0),
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number((counts as any)?.objection || 0),
           rejected: Number(counts?.rejected || 0)
         };
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+        this.companyOptions = this.getCompanyOptions(this.allRows);
+
+        // Default to "Pending" filter for licensees only when there are pending items.
+        // If no pending items exist, show all applications (no filter).
+        if (this.isLicenseeUser() && this.activeCardFilter === '') {
+          const pendingCount = Number(counts?.pending || 0);
+          if (pendingCount > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          }
+        }
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -404,8 +569,10 @@ export class RegistrationManagementComponent implements OnInit {
     id: string;
     applicationId: string;
     submittedOn: string;
+    paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
+    companyName?: string;
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
@@ -427,13 +594,34 @@ export class RegistrationManagementComponent implements OnInit {
           statusGroup
         );
 
+        const computedStage = this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(rawStage, statusGroup)
+          : this.formatStageName(rawStage);
+
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.submitted_on),
+          paymentStatus: (() => {
+            const raw = String(
+              item?.application_fee_payment_status_display ??
+              item?.applicationFeePaymentStatusDisplay ??
+              item?.application_fee_payment_status ??
+              item?.applicationFeePaymentStatus ??
+              ''
+            );
+            // Applications submitted directly via the stepper have no payment gateway
+            // transaction — treat them as Success (no payment required).
+            const hasNewLicenseApp = !!(item?.new_license_application ?? item?.newLicenseApplication);
+            if (!hasNewLicenseApp && (!raw || raw === 'Pending' || raw === 'P')) {
+              return 'Success';
+            }
+            return raw || 'Pending';
+          })(),
           applicantName: this.getSalesmanApplicantName(item),
           establishmentName: String(item?.license_category_name ?? item?.licenseCategoryName ?? 'N/A'),
-          currentStage: this.formatStageName(rawStage),
+          companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),
+          currentStage: computedStage,
           currentStageRaw: rawStage,
           statusGroup
         };
@@ -505,16 +693,18 @@ export class RegistrationManagementComponent implements OnInit {
     rows: Array<{ statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' }>,
     rawCounts: any
   ): {
+    newApplication: number;
     approved: number;
     pending: number;
     objection: number;
     rejected: number;
   } {
     if (rows.length > 0) {
-      return this.calculateCounts(rows);
+      return { newApplication: 0, ...this.calculateCounts(rows) };
     }
 
     return {
+      newApplication: 0,
       approved: Number(rawCounts?.approved || 0),
       pending: Number(rawCounts?.pending || rawCounts?.applied || 0),
       objection: Number(rawCounts?.objection || 0),
@@ -545,6 +735,20 @@ export class RegistrationManagementComponent implements OnInit {
         rows
           .map((row) => String(row.currentStage || '').trim())
           .filter((value) => !!value)
+      )
+    );
+    values.sort((a, b) => a.localeCompare(b));
+    return values;
+  }
+
+  private getCompanyOptions(
+    rows: Array<{ companyName?: string }>
+  ): string[] {
+    const values = Array.from(
+      new Set(
+        rows
+          .map((row) => String(row.companyName || '').trim())
+          .filter((v) => !!v && v !== 'N/A')
       )
     );
     values.sort((a, b) => a.localeCompare(b));

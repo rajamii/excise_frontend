@@ -558,6 +558,19 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="shouldShowPendingPaymentInTab('security_deposit')">
+              <td>-</td>
+              <td>Pending Payment</td>
+              <td>{{ getPendingPaymentModuleLabel() }}</td>
+              <td class="text-end">Rs {{ getPendingPaymentAmount() | number:'1.2-2' }}</td>
+              <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
+              <td><span class="badge bg-warning text-dark">Pending</span></td>
+              <td class="text-end">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+              </td>
+            </tr>
             @for (item of getPaginatedRowsForTab('security_deposit'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>
@@ -593,6 +606,19 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="shouldShowPendingPaymentInTab('license_fee')">
+              <td>-</td>
+              <td>Pending Payment</td>
+              <td>{{ getPendingPaymentModuleLabel() }}</td>
+              <td class="text-end">Rs {{ getPendingPaymentAmount() | number:'1.2-2' }}</td>
+              <td>{{ pendingWalletPaymentContext?.referenceNo || '-' }}</td>
+              <td><span class="badge bg-warning text-dark">Pending</span></td>
+              <td class="text-end">
+                <button class="btn btn-success btn-sm" (click)="openPendingWalletPaymentConfirmation()">
+                  <i class="bi bi-check-circle me-1"></i>Pay Now
+                </button>
+              </td>
+            </tr>
             @for (item of getPaginatedRowsForTab('license_fee'); track item.id) {
             <tr>
               <td>{{ item.txnId }}</td>

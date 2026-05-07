@@ -28,7 +28,7 @@ footer{
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     gap: 22px;
 }
 
@@ -45,31 +45,46 @@ footer{
     justify-content: center;
     align-items: center;
 
-    background: #FFFFFF;
+    background: transparent;
     border-radius: 6px;
 
     img{
-        width: 40px;
-        height: 40px;
+        width: 55px;
+        height: 55px;
+        object-fit: contain;
     }
 }
 
 .dept-name{
     display: flex;
     flex-direction: column;
-    font-weight: 300;
-    line-height: 1.4;
+    font-weight: 200;
+    line-height: 1.5;
+    font-size: 14px;
+    
+    .text1 {
+        font-size: 15px;
+        font-weight: 100;
+        letter-spacing: 0.5px;
+    }
+    
+    .text2 {
+        font-size: 13px;
+        font-weight: 50;
+    }
 }
 
 .copyright{
     display: flex;
     flex-direction: column;
+    position: absolute;
+    left: 10px;
 
-    font-weight: 300;
+    font-weight: 400;
     line-height: 1.4;
     font-size: 9px;
 
-    color: #bac0c4;
+    color: #e2e8f0;
 }
 
 .links-container{
@@ -87,6 +102,10 @@ footer{
         grid-template-columns: auto auto;
         column-gap: 13px;
     }
+    .copyright{
+        position: static;
+        margin-top: 10px;
+    }
 }
 
 .link{
@@ -97,15 +116,38 @@ footer{
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 8px 0;
+    gap: 20px;
+    position: relative;
     
     border-top: 0.3px solid rgb(79, 79, 79);
 
     align-self: stretch;
 }
 
-.logo-container img {
-    max-width: 110px;
-    object-fit: contain;
-    padding: 4px 0px;
+.nic-logo-container {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    right: 20px;
+    
+    img {
+        max-width: 100px;
+        max-height: 50px;
+        object-fit: contain;
+    }
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    img {
+        max-width: 50px;
+        max-height: 50px;
+        object-fit: contain;
+        padding: 4px 0px;
+    }
 }
 

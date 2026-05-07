@@ -2,14 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LabelRegistrationDocuments } from '../models/label-registration.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LabelRegistrationService {
   private baseUrl = `${environment.apiBaseUrl}/transactional/label-registration`;
-  private labelDocuments: Partial<Record<keyof LabelRegistrationDocuments, File>> = {};
+  private readonly draftDocuments = new Map<string, File>();
 
   constructor(private http: HttpClient) {}
 
@@ -26,21 +25,28 @@ export class LabelRegistrationService {
     return this.http.get(`${this.baseUrl}/detail/${encodedId}/`);
   }
 
-  setLabelDocuments(docs: Partial<Record<keyof LabelRegistrationDocuments, File>>): void {
-    this.labelDocuments = { ...this.labelDocuments, ...docs };
+  setDraftDocument(key: string, file: File | null): void {
+    if (!key) {
+      return;
+    }
+
+    if (file) {
+      this.draftDocuments.set(key, file);
+      return;
+    }
+
+    this.draftDocuments.delete(key);
   }
 
-  getLabelDocuments(): Partial<Record<keyof LabelRegistrationDocuments, File>> {
-    return this.labelDocuments;
+  getDraftDocument(key: string): File | null {
+    return this.draftDocuments.get(key) ?? null;
   }
 
-  removeLabelDocument(key: keyof LabelRegistrationDocuments): void {
-    const docs = { ...this.labelDocuments };
-    delete docs[key];
-    this.labelDocuments = docs;
+  getDraftDocuments(): Array<{ key: string; file: File }> {
+    return Array.from(this.draftDocuments.entries()).map(([key, file]) => ({ key, file }));
   }
 
-  clearLabelDocuments(): void {
-    this.labelDocuments = {};
+  clearDraftDocuments(): void {
+    this.draftDocuments.clear();
   }
 }

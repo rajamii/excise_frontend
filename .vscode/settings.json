@@ -1,2 +1,6 @@
 {
+  "files.associations": {
+    "*.component.html": "ng-template"
+  },
+  "html.validate.enabled": false
 }

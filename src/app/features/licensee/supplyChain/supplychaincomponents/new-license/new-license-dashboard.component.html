@@ -1,82 +1,89 @@
 <div class="new-license-register-header">
-  <div class="row g-3 mb-4 stats-row">
-    <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('approved')" [class.active]="activeSummaryFilter === 'approved'">
-        <div class="card-icon"><i class="bi bi-check-circle"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.approved }}</h3>
-          <p class="card-label">Approved</p>
-        </div>
+  <div class="stats-cards-row mb-4">
+    <!-- Total Applications Card -->
+    <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('all')" [class.active]="activeSummaryFilter === ''">
+      <div class="card-icon"><i class="bi bi-list-ul"></i></div>
+      <div class="card-content">
+        <h3 class="card-value">{{ allRows.length }}</h3>
+        <p class="card-label">Total Applications</p>
       </div>
     </div>
-    <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('pending')" [class.active]="activeSummaryFilter === 'pending'">
-        <div class="card-icon"><i class="bi bi-clock-history"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.pending }}</h3>
-          <p class="card-label">Pending</p>
-        </div>
+    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('approved')" [class.active]="activeSummaryFilter === 'approved'">
+      <div class="card-icon"><i class="bi bi-check-circle"></i></div>
+      <div class="card-content">
+        <h3 class="card-value">{{ counts.approved }}</h3>
+        <p class="card-label">Approved</p>
       </div>
     </div>
-    <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card objection-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('objection')" [class.active]="activeSummaryFilter === 'objection'">
-        <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.objection }}</h3>
-          <p class="card-label">Objection</p>
-        </div>
+    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('pending')" [class.active]="activeSummaryFilter === 'pending'">
+      <div class="card-icon"><i class="bi bi-clock-history"></i></div>
+      <div class="card-content">
+        <h3 class="card-value">{{ counts.pending }}</h3>
+        <p class="card-label">Pending</p>
       </div>
     </div>
-    <div class="col-xl-3 col-lg-6 col-md-6">
-      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('rejected')" [class.active]="activeSummaryFilter === 'rejected'">
-        <div class="card-icon"><i class="bi bi-x-circle"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.rejected }}</h3>
-          <p class="card-label">Rejected</p>
-        </div>
+    <div class="summary-card objection-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('objection')" [class.active]="activeSummaryFilter === 'objection'">
+      <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
+      <div class="card-content">
+        <h3 class="card-value">{{ counts.objection }}</h3>
+        <p class="card-label">Objection</p>
+      </div>
+    </div>
+    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('rejected')" [class.active]="activeSummaryFilter === 'rejected'">
+      <div class="card-icon"><i class="bi bi-x-circle"></i></div>
+      <div class="card-content">
+        <h3 class="card-value">{{ counts.rejected }}</h3>
+        <p class="card-label">Rejected</p>
       </div>
     </div>
   </div>
 </div>
 
 <div class="compact-filter-section mb-3">
-  <div class="d-flex align-items-center gap-3 flex-wrap">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
     <div class="filter-label-text">
       <i class="bi bi-funnel me-1"></i>
       <small class="text-muted">Filters:</small>
     </div>
 
-    <div class="compact-filter">
+    <div class="compact-filter compact-filter--search">
       <input
         type="text"
         class="form-control form-control-sm"
-        placeholder="Search by Application ID / Applicant / Establishment / Stage"
+        placeholder="Search by ID / Applicant / Establishment"
         [(ngModel)]="searchFilter"
         (ngModelChange)="applyFilters()"
       />
     </div>
 
-    <div class="compact-filter">
-      <select
-        class="form-select form-select-sm"
-        [(ngModel)]="statusFilter"
+    <!-- Date Filter -->
+    <div class="compact-filter compact-filter--date">
+      <input
+        type="date"
+        class="form-control form-control-sm"
+        [(ngModel)]="dateFilter"
         (ngModelChange)="applyFilters()"
-      >
-        <option value="">All Status</option>
-        <option value="applied">Applied</option>
-        <option value="pending">Pending</option>
-        <option value="objection">Objection</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
-        <option *ngFor="let stage of stageFilterOptions" [value]="stage.toLowerCase()">{{ stage }}</option>
-      </select>
+        title="Filter by date"
+      />
     </div>
 
-    <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()" *ngIf="searchFilter || statusFilter">
+    <!-- Month Filter -->
+    <div class="compact-filter compact-filter--month">
+      <input
+        type="month"
+        class="form-control form-control-sm"
+        [(ngModel)]="monthFilter"
+        (ngModelChange)="applyFilters()"
+        title="Filter by month"
+      />
+    </div>
+
+    <button class="btn btn-outline-danger btn-sm flex-shrink-0" (click)="clearFilters()" *ngIf="searchFilter || dateFilter || monthFilter">
       <i class="bi bi-x-circle"></i> Clear
     </button>
   </div>
@@ -101,6 +108,7 @@
             <th>Sl. No.</th>
             <th>Application ID</th>
             <th>Submitted On</th>
+            <th>Payment</th>
             <th>Applicant</th>
             <th>Establishment</th>
             <th>Current Stage</th>
@@ -112,12 +120,36 @@
             <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
             <td class="fw-semibold">{{ row.applicationId }}</td>
             <td>{{ row.submittedOn }}</td>
-            <td>{{ row.applicantName }}</td>
-            <td>{{ row.establishmentName }}</td>
-            <td>{{ row.currentStage }}</td>
             <td>
-              <button class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
+              <span
+                class="badge"
+                [ngClass]="{
+                  'bg-success': row.paymentStatus === 'Successful',
+                  'bg-danger': row.paymentStatus === 'Failed',
+                  'bg-warning text-dark': row.paymentStatus === 'Pending'
+                }"
+              >
+                {{ row.paymentStatus }}
+              </span>
+            </td>
+             <td>{{ row.applicantName }}</td>
+             <td>{{ row.establishmentName }}</td>
+             <td>
+                <span class="status-badge {{ row.statusGroup }}">
+                  {{ row.currentStage }}
+                </span>
+              </td>
+             <td>
+              <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                 <i class="bi bi-eye-fill"></i>
+              </button>
+              <button
+                *ngIf="row.canPayNow"
+                class="btn btn-sm btn-primary me-2 pay-now-btn"
+                title="Pay Now"
+                (click)="payNow(row)"
+              >
+                Pay Now
               </button>
               <button *ngIf="!isLicenseeUser()" class="btn btn-link p-0 action-eye" title="View Timeline" (click)="viewTimeline(row)">
                 <i class="bi bi-clock-history"></i>

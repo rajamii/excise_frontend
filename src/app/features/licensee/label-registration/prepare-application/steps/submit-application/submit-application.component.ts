@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
-import { LabelRegistrationDocuments } from '../../../../../../core/models/label-registration.model';
+import { LabelRegistrationUploadDetails, LabelRegistrationUploadedDocument } from '../../../../../../core/models/label-registration.model';
 import { LabelRegistrationService } from '../../../../../../core/services/label-registration.service';
 import { MaterialModule } from '../../../../../../shared/material.module';
 
@@ -20,7 +20,7 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
   licenseeDetails: any = {};
   productDetails: any = {};
   packagingDetails: any = {};
-  documentMeta: Array<{ key: string; name: string; required: boolean; fileName: string }> = [];
+  uploadDetails: LabelRegistrationUploadDetails = { documents: [] };
 
   acceptTerms = false;
   isSubmitting = false;
@@ -38,11 +38,15 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
 
   ngOnDestroy(): void {}
 
+  refreshFromSessionStorage(): void {
+    this.loadApplicationData();
+  }
+
   private loadApplicationData(): void {
     this.licenseeDetails = this.getStorageData('labelRegLicenseeDetails');
     this.productDetails = this.getStorageData('labelRegProductDetails');
     this.packagingDetails = this.getStorageData('labelRegPackagingDetails');
-    this.documentMeta = this.getStorageData('labelRegDocumentMeta', []);
+    this.uploadDetails = this.getStorageData<LabelRegistrationUploadDetails>('labelRegUploadDocuments', { documents: [] });
   }
 
   private getStorageData<T = any>(key: string, fallback: T | any = {}): T {
@@ -62,13 +66,6 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     return Array.isArray(this.packagingDetails?.packagingRows) ? this.packagingDetails.packagingRows : [];
   }
 
-  getUploadedDocuments(): Array<{ key: keyof LabelRegistrationDocuments; file: File }> {
-    const docs = this.labelRegistrationService.getLabelDocuments();
-    return Object.entries(docs)
-      .filter(([_, file]) => !!file)
-      .map(([key, file]) => ({ key: key as keyof LabelRegistrationDocuments, file: file as File }));
-  }
-
   getCurrentDate(): string {
     return new Date().toLocaleDateString('en-GB');
   }
@@ -78,8 +75,23 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     if (!rows.length) {
       return 0;
     }
-    const total = rows.reduce((sum, row) => sum + Number(row.mrp || 0), 0);
+    const total = rows.reduce((sum, row) => sum + Number(row?.mrpPerBottle ?? row?.mrp ?? 0), 0);
     return total / rows.length;
+  }
+
+  getUploadedDocuments(): LabelRegistrationUploadedDocument[] {
+    const documents = Array.isArray(this.uploadDetails?.documents) ? this.uploadDetails.documents : [];
+    return documents.filter((document) => String(document?.fileName || '').trim());
+  }
+
+  getRequiredDocumentCount(): number {
+    const documents = Array.isArray(this.uploadDetails?.documents) ? this.uploadDetails.documents : [];
+    return documents.filter((document) => document?.required).length;
+  }
+
+  getUploadedRequiredDocumentCount(): number {
+    const documents = Array.isArray(this.uploadDetails?.documents) ? this.uploadDetails.documents : [];
+    return documents.filter((document) => document?.required && String(document?.fileName || '').trim()).length;
   }
 
   async submitApplication(): Promise<void> {
@@ -88,8 +100,31 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
       return;
     }
 
-    if (!this.isDataReadyForSubmit()) {
-      Swal.fire('Incomplete application', 'Please complete all steps before submission.', 'error');
+    this.loadApplicationData();
+    const missing = this.getMissingSubmitRequirements();
+    if (missing.length) {
+      const html = `
+        <div style="text-align:left">
+          <p>Please complete the following before submission:</p>
+          <ul style="margin:0;padding-left:18px">
+            ${missing.map((item) => `<li>${item}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+
+      const result = await Swal.fire({
+        title: 'Incomplete application',
+        html,
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonText: 'Go Back',
+        cancelButtonText: 'Stay Here',
+        confirmButtonColor: '#1C2B78'
+      });
+
+      if (result.isConfirmed) {
+        this.goBack();
+      }
       return;
     }
 
@@ -120,15 +155,22 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
       },
       error: (error: HttpErrorResponse) => {
         console.error('Label registration submit failed:', error);
-        this.applicationId = this.generateApplicationId();
-        this.submissionMode = 'local';
-        this.saveSubmission('Saved Locally', 'local');
         this.isSubmitting = false;
-        Swal.fire(
-          'Saved In Local Mode',
-          `Backend endpoint is unavailable. Local reference ID: ${this.applicationId}`,
-          'warning'
-        );
+
+        if (error.status === 0) {
+          this.applicationId = this.generateApplicationId();
+          this.submissionMode = 'local';
+          this.saveSubmission('Saved Locally', 'local');
+          Swal.fire(
+            'Saved In Local Mode',
+            `Backend endpoint is unreachable. Local reference ID: ${this.applicationId}`,
+            'warning'
+          );
+          return;
+        }
+
+        const serverMessage = this.extractServerMessage(error);
+        Swal.fire('Submission failed', serverMessage, 'error');
       }
     });
   }
@@ -139,26 +181,151 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     formData.append('licensee_details', JSON.stringify(this.licenseeDetails || {}));
     formData.append('product_details', JSON.stringify(this.productDetails || {}));
     formData.append('packaging_details', JSON.stringify(this.packagingDetails || {}));
-    formData.append('application_date', new Date().toISOString().split('T')[0]);
+    formData.append('upload_details', JSON.stringify(this.uploadDetails || { documents: [] }));
 
-    const documents = this.labelRegistrationService.getLabelDocuments();
-    Object.entries(documents).forEach(([key, file]) => {
-      if (file) {
-        formData.append(key, file);
-      }
+    this.labelRegistrationService.getDraftDocuments().forEach(({ key, file }) => {
+      formData.append(key, file, file.name);
     });
+
+    const applicationDate = String(this.licenseeDetails?.applicationDate || '').trim();
+    formData.append('application_date', applicationDate || new Date().toISOString().split('T')[0]);
 
     return formData;
   }
 
-  private isDataReadyForSubmit(): boolean {
-    const hasLicensee = !!this.licenseeDetails?.licenseNumber;
-    const hasProduct = !!this.productDetails?.labelName;
-    const hasPackaging = this.getPackagingRows().length > 0;
-    const docs = this.labelRegistrationService.getLabelDocuments();
-    const hasRequiredDocs = !!docs.undertaking && !!docs.brandAuthorization && !!docs.labelArtworkFront && !!docs.labAnalysisReport;
+  private getMissingSubmitRequirements(): string[] {
+    const missing: string[] = [];
 
-    return hasLicensee && hasProduct && hasPackaging && hasRequiredDocs;
+    if (!String(this.licenseeDetails?.applicationYear || '').trim()) {
+      missing.push('Label Registration Year (Applicant Details)');
+    }
+    if (!String(this.licenseeDetails?.applicantType || '').trim()) {
+      missing.push('Applicant Type (Applicant Details)');
+    }
+    if (!String(this.licenseeDetails?.liquorCategory || '').trim()) {
+      missing.push('Liquor Category (Applicant Details)');
+    }
+    if (!String(this.licenseeDetails?.applicationDate || '').trim()) {
+      missing.push('Application Date (Applicant Details)');
+    }
+    if (!String(this.licenseeDetails?.registrationValidFrom || '').trim()) {
+      missing.push('Registration Valid From (Applicant Details)');
+    }
+    if (!String(this.licenseeDetails?.registrationValidUpTo || '').trim()) {
+      missing.push('Registration Valid Up To (Applicant Details)');
+    }
+
+    if (!String(this.productDetails?.bottlerOrigin || '').trim()) {
+      missing.push('Bottler Origin (Manufacturer & Brand)');
+    }
+    if (!String(this.productDetails?.bottlerName || '').trim()) {
+      missing.push('Bottler (Manufacturer & Brand)');
+    }
+    if (!String(this.productDetails?.bottlerAddress || '').trim()) {
+      missing.push('Bottler Address (Manufacturer & Brand)');
+    }
+
+    if (!String(this.productDetails?.brandOwnerType || '').trim()) {
+      missing.push('Brand Owner Type (Manufacturer & Brand)');
+    }
+    if (!String(this.productDetails?.brandOwnerName || '').trim()) {
+      missing.push('Brand Owner (Manufacturer & Brand)');
+    }
+    if (!String(this.productDetails?.brandOwnerAddress || '').trim()) {
+      missing.push('Brand Owner Address (Manufacturer & Brand)');
+    }
+
+    if (!String(this.productDetails?.liquorKind || '').trim()) {
+      missing.push('Liquor Kind (Manufacturer & Brand)');
+    }
+    if (!String(this.productDetails?.liquorType || '').trim()) {
+      missing.push('Liquor Type (Manufacturer & Brand)');
+    }
+    if (!String(this.productDetails?.brandName || '').trim()) {
+      missing.push('Brand Name (Manufacturer & Brand)');
+    }
+
+    const allowedStrengthRaw = this.productDetails?.allowedStrength;
+    if (allowedStrengthRaw === null || allowedStrengthRaw === undefined || String(allowedStrengthRaw).trim() === '') {
+      missing.push('Allowed Strength (Manufacturer & Brand)');
+    }
+    const strengthValueRaw = this.productDetails?.strengthValue;
+    if (strengthValueRaw === null || strengthValueRaw === undefined || String(strengthValueRaw).trim() === '') {
+      missing.push('Liquor Strength Value (Manufacturer & Brand)');
+    }
+    if (!String(this.productDetails?.strengthUnit || '').trim()) {
+      missing.push('Strength Unit (Manufacturer & Brand)');
+    }
+
+    const rows = this.getPackagingRows();
+    if (!rows.length) {
+      missing.push('Package Details (add at least one row)');
+    } else if (
+      rows.some((row) => {
+        const measureValueMl = Number(row?.measureValueMl ?? row?.sizeMl);
+        const bottlesPerCase = Number(row?.bottlesPerCase ?? row?.unitsPerCase);
+        const edpPerCaseRaw = row?.edpPerCase;
+        const edpPerCase = Number(edpPerCaseRaw);
+        const mrpPerBottleRaw = row?.mrpPerBottle ?? row?.mrp;
+        const mrpPerBottle = Number(mrpPerBottleRaw);
+        const packageType = String(row?.packageType ?? row?.packagingType ?? '').trim();
+        const purposeSale = String(row?.purposeSale ?? '').trim();
+
+        return !(
+          measureValueMl >= 1 &&
+          bottlesPerCase >= 1 &&
+          edpPerCaseRaw !== null &&
+          edpPerCaseRaw !== undefined &&
+          String(edpPerCaseRaw).trim() !== '' &&
+          edpPerCase >= 0 &&
+          mrpPerBottleRaw !== null &&
+          mrpPerBottleRaw !== undefined &&
+          String(mrpPerBottleRaw).trim() !== '' &&
+          mrpPerBottle >= 0 &&
+          !!packageType &&
+          !!purposeSale
+        );
+      })
+    ) {
+      missing.push('Package Details (fill all mandatory columns for each row)');
+    }
+
+    const requiredDocuments = Array.isArray(this.uploadDetails?.documents)
+      ? this.uploadDetails.documents.filter((document) => document?.required)
+      : [];
+    if (!requiredDocuments.length || requiredDocuments.some((document) => !String(document?.fileName || '').trim())) {
+      missing.push('Required supporting documents');
+    }
+
+    return missing;
+  }
+
+  private extractServerMessage(error: HttpErrorResponse): string {
+    if (error.status === 401) {
+      return 'Your session has expired. Please log in again and retry.';
+    }
+    if (error.status === 403) {
+      return 'You do not have permission to submit this application.';
+    }
+
+    const payload: any = error.error;
+    if (!payload) {
+      return 'Submission failed. Please try again.';
+    }
+
+    if (typeof payload === 'string') {
+      return payload;
+    }
+
+    if (payload.detail) {
+      return String(payload.detail);
+    }
+
+    if (Array.isArray(payload.missing) && payload.missing.length) {
+      return `Missing required documents: ${payload.missing.join(', ')}.`;
+    }
+
+    return 'Submission failed. Please check your inputs and try again.';
   }
 
   private saveSubmission(status: string, mode: 'online' | 'local'): void {
@@ -201,8 +368,8 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     sessionStorage.removeItem('labelRegLicenseeDetails');
     sessionStorage.removeItem('labelRegProductDetails');
     sessionStorage.removeItem('labelRegPackagingDetails');
-    sessionStorage.removeItem('labelRegDocumentMeta');
+    sessionStorage.removeItem('labelRegUploadDocuments');
     sessionStorage.removeItem('labelRegSubmission');
-    this.labelRegistrationService.clearLabelDocuments();
+    this.labelRegistrationService.clearDraftDocuments();
   }
 }

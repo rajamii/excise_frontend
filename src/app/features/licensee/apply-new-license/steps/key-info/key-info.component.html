@@ -10,7 +10,7 @@
 
         <!-- Category of License -->
         <mat-form-field appearance="outline">
-          <mat-label>Category of License<span class="required">*</span></mat-label>
+          <mat-label>Category of License</mat-label>
           <mat-select formControlName="licenseCategory" required>
             @if (licenseCategories.length === 0) {
             <mat-option disabled>Loading categories...</mat-option>
@@ -28,7 +28,7 @@
 
         <!-- Sub Category of License -->
         <mat-form-field appearance="outline">
-          <mat-label>Sub Category of License<span class="required">*</span></mat-label>
+          <mat-label>Sub Category of License</mat-label>
           <mat-select formControlName="licenseSubCategory" required>
             @if (licenseSubCategories.length === 0 && keyInfoForm.get('licenseCategory')?.value) {
             <mat-option disabled>No subcategories available for this category</mat-option>
@@ -49,7 +49,7 @@
 
         <!-- Name of the Business Premises -->
         <mat-form-field appearance="outline">
-          <mat-label>Name of the Business Premises<span class="required">*</span></mat-label>
+          <mat-label>Name of the Business Premises</mat-label>
           <input matInput 
                  placeholder="Enter Establishment Name (max 150 characters)"
                  formControlName="establishmentName" 
@@ -71,6 +71,21 @@
           <mat-error class="radio-error">{{ getErrorMessage('siteType') }}</mat-error>
           }
         </div>
+
+        @if (keyInfoForm.get('siteType')?.value === 'Existing') {
+          <mat-form-field appearance="outline">
+            <mat-label>Old Site License No</mat-label>
+            <input
+              matInput
+              placeholder="Enter Old Site License No"
+              formControlName="existingSiteLicense"
+              required
+              maxlength="100">
+            @if (keyInfoForm.controls['existingSiteLicense'].invalid && keyInfoForm.controls['existingSiteLicense'].touched) {
+              <mat-error>{{ getErrorMessage('existingSiteLicense') }}</mat-error>
+            }
+          </mat-form-field>
+        }
 
       </div>
     </mat-card-content>

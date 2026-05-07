@@ -1,100 +1,100 @@
-<form [formGroup]="licenseeForm">
+<form [formGroup]="applicantForm">
   <mat-card>
     <mat-card-header>
-      <div class="heading">Licensee Details</div>
+      <div class="heading">Applicant Details</div>
       <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
     <mat-card-content>
       <div class="form-field-container">
         <mat-form-field appearance="outline">
-          <mat-label>Application Year</mat-label>
-          <input matInput formControlName="applicationYear" readonly />
-          <mat-icon matSuffix>event</mat-icon>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>License Number</mat-label>
-          <input matInput formControlName="licenseNumber" required />
-          <mat-icon matSuffix>badge</mat-icon>
-          @if (licenseeForm.controls['licenseNumber'].invalid && licenseeForm.controls['licenseNumber'].touched) {
-            <mat-error>{{ getErrorMessage('licenseNumber') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>License Type</mat-label>
-          <mat-select formControlName="licenseType" required>
-            <mat-option value="">-- Select License Type --</mat-option>
-            @for (type of licenseTypes; track type.value) {
-              <mat-option [value]="type.value">{{ type.label }}</mat-option>
+          <mat-label>Label Registration Year</mat-label>
+          <mat-select formControlName="applicationYear" required (selectionChange)="onApplicationYearChange($event.value)">
+            <mat-option value="">-- Select Year --</mat-option>
+            @for (year of applicationYears; track year) {
+              <mat-option [value]="year">{{ year }}</mat-option>
             }
           </mat-select>
-          @if (licenseeForm.controls['licenseType'].invalid && licenseeForm.controls['licenseType'].touched) {
-            <mat-error>{{ getErrorMessage('licenseType') }}</mat-error>
+          @if (applicantForm.controls['applicationYear'].invalid && applicantForm.controls['applicationYear'].touched) {
+            <mat-error>{{ getErrorMessage('applicationYear') }}</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Licensee Name</mat-label>
-          <input matInput formControlName="licenseeName" required />
-          @if (licenseeForm.controls['licenseeName'].invalid && licenseeForm.controls['licenseeName'].touched) {
-            <mat-error>{{ getErrorMessage('licenseeName') }}</mat-error>
+          <mat-label>Applicant Type</mat-label>
+          <mat-select formControlName="applicantType" required>
+            <mat-option value="">-- Select Applicant Type --</mat-option>
+            @if (isLoadingApplicantTypes) {
+              <mat-option disabled>Loading...</mat-option>
+            } @else {
+              @for (type of applicantTypes; track type.value) {
+                <mat-option [value]="type.value">{{ type.label }}</mat-option>
+              }
+            }
+          </mat-select>
+          @if (applicantForm.controls['applicantType'].invalid && applicantForm.controls['applicantType'].touched) {
+            <mat-error>{{ getErrorMessage('applicantType') }}</mat-error>
+          }
+          @if (applicantTypesError) {
+            <mat-hint class="error-hint">{{ applicantTypesError }}</mat-hint>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Establishment Name</mat-label>
-          <input matInput formControlName="establishmentName" required />
-          @if (licenseeForm.controls['establishmentName'].invalid && licenseeForm.controls['establishmentName'].touched) {
-            <mat-error>{{ getErrorMessage('establishmentName') }}</mat-error>
+          <mat-label>Liquor Category</mat-label>
+          <mat-select formControlName="liquorCategory" required>
+            <mat-option value="">-- Select Category --</mat-option>
+            @if (isLoadingLiquorCategories) {
+              <mat-option disabled>Loading...</mat-option>
+            } @else {
+              @for (item of liquorCategories; track item) {
+                <mat-option [value]="item">{{ item }}</mat-option>
+              }
+            }
+          </mat-select>
+          @if (applicantForm.controls['liquorCategory'].invalid && applicantForm.controls['liquorCategory'].touched) {
+            <mat-error>{{ getErrorMessage('liquorCategory') }}</mat-error>
+          }
+          @if (liquorCategoriesError) {
+            <mat-hint class="error-hint">{{ liquorCategoriesError }}</mat-hint>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Contact Person</mat-label>
-          <input matInput formControlName="contactPerson" required />
-          @if (licenseeForm.controls['contactPerson'].invalid && licenseeForm.controls['contactPerson'].touched) {
-            <mat-error>{{ getErrorMessage('contactPerson') }}</mat-error>
+          <mat-label>Application Date</mat-label>
+          <input matInput [matDatepicker]="applicationDatePicker" formControlName="applicationDate" placeholder="DD/MM/YYYY" title="Application Date" required />
+          <mat-datepicker-toggle matSuffix [for]="applicationDatePicker"></mat-datepicker-toggle>
+          <mat-datepicker #applicationDatePicker></mat-datepicker>
+          @if (applicantForm.controls['applicationDate'].invalid && applicantForm.controls['applicationDate'].touched) {
+            <mat-error>{{ getErrorMessage('applicationDate') }}</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Contact Number</mat-label>
-          <input matInput formControlName="contactNumber" required />
-          @if (licenseeForm.controls['contactNumber'].invalid && licenseeForm.controls['contactNumber'].touched) {
-            <mat-error>{{ getErrorMessage('contactNumber') }}</mat-error>
+          <mat-label>Registration Valid From</mat-label>
+          <input matInput [matDatepicker]="validFromPicker" formControlName="registrationValidFrom" placeholder="DD/MM/YYYY" title="Registration Valid From" required />
+          <mat-datepicker-toggle matSuffix [for]="validFromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #validFromPicker></mat-datepicker>
+          @if (applicantForm.controls['registrationValidFrom'].invalid && applicantForm.controls['registrationValidFrom'].touched) {
+            <mat-error>{{ getErrorMessage('registrationValidFrom') }}</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Email Address</mat-label>
-          <input matInput formControlName="emailAddress" required />
-          @if (licenseeForm.controls['emailAddress'].invalid && licenseeForm.controls['emailAddress'].touched) {
-            <mat-error>{{ getErrorMessage('emailAddress') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Premises Address</mat-label>
-          <textarea
-            matInput
-            formControlName="premisesAddress"
-            cdkTextareaAutosize
-            cdkAutosizeMinRows="2"
-            cdkAutosizeMaxRows="4"
-            required>
-          </textarea>
-          @if (licenseeForm.controls['premisesAddress'].invalid && licenseeForm.controls['premisesAddress'].touched) {
-            <mat-error>{{ getErrorMessage('premisesAddress') }}</mat-error>
+          <mat-label>Registration Valid Up To</mat-label>
+          <input matInput [matDatepicker]="validUpToPicker" formControlName="registrationValidUpTo" placeholder="DD/MM/YYYY" title="Registration Valid Up To" required />
+          <mat-datepicker-toggle matSuffix [for]="validUpToPicker"></mat-datepicker-toggle>
+          <mat-datepicker #validUpToPicker></mat-datepicker>
+          @if (applicantForm.controls['registrationValidUpTo'].invalid && applicantForm.controls['registrationValidUpTo'].touched) {
+            <mat-error>{{ getErrorMessage('registrationValidUpTo') }}</mat-error>
           }
         </mat-form-field>
       </div>
     </mat-card-content>
 
     <mat-card-actions>
-      <button mat-flat-button color="primary" (click)="proceedToNext()">Next</button>
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+      <button mat-flat-button color="primary" type="button" (click)="proceedToNext()">Next</button>
+      <button mat-stroked-button color="warn" type="button" (click)="resetForm()">Reset</button>
     </mat-card-actions>
   </mat-card>
 </form>

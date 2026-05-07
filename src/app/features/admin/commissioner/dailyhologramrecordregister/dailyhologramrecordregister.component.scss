@@ -1,6 +1,6 @@
 // Daily Register Container
 .daily-register-container {
-  background: #f8f9fa;
+  background: linear-gradient(180deg, #f1f5ff 0%, #f8f9fa 45%, #f8f9fa 100%);
   min-height: 100vh;
   padding: 1rem;
 }
@@ -41,6 +41,8 @@
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     transform: translateY(-2px);
@@ -64,6 +66,16 @@
     border-color: rgba(13, 110, 253, 0.55);
     box-shadow: 0 10px 30px rgba(13, 110, 253, 0.18);
     transform: translateY(-2px);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: rgba(13, 110, 253, 0.25);
   }
 
   .card-icon {
@@ -99,25 +111,43 @@
   &.total-entries .card-icon {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
+  &.total-entries::after {
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  }
 
   &.applied-entries .card-icon {
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+  &.applied-entries::after {
+    background: linear-gradient(180deg, #4facfe 0%, #00f2fe 100%);
   }
 
   &.processing-entries .card-icon {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   }
+  &.processing-entries::after {
+    background: linear-gradient(180deg, #f093fb 0%, #f5576c 100%);
+  }
 
   &.completed-ontime .card-icon {
     background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  }
+  &.completed-ontime::after {
+    background: linear-gradient(180deg, #43e97b 0%, #38f9d7 100%);
   }
 
   &.completed-late .card-icon {
     background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   }
+  &.completed-late::after {
+    background: linear-gradient(180deg, #fa709a 0%, #fee140 100%);
+  }
 
   &.overdue-entries .card-icon {
     background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+  }
+  &.overdue-entries::after {
+    background: linear-gradient(180deg, #ff9a9e 0%, #fecfef 100%);
   }
 }
 
@@ -125,25 +155,91 @@
 .filters-section {
   background: white;
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0.75rem 0.85rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(13, 110, 253, 0.12);
+  position: relative;
+  overflow: hidden;
 
-  .form-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.25rem;
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(13, 110, 253, 0.85) 0%, rgba(102, 126, 234, 0.85) 50%, rgba(118, 75, 162, 0.85) 100%);
   }
 
-  .form-control,
-  .form-select {
-    border: 1px solid #ced4da;
-    border-radius: 6px;
+  .filters-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
 
-    &:focus {
-      border-color: #80bdff;
-      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  .filter-item {
+    min-width: 140px;
+
+    .form-label {
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 0.15rem;
+      letter-spacing: 0.2px;
+    }
+
+    .form-control,
+    .form-select {
+      height: 32px;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      border-bottom-width: 2px;
+      border-bottom-color: transparent;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+
+      &:hover {
+        border-color: rgba(13, 110, 253, 0.35);
+        border-bottom-color: rgba(13, 110, 253, 0.45);
+      }
+
+      &:focus {
+        border-color: rgba(13, 110, 253, 0.55);
+        border-bottom-color: rgba(13, 110, 253, 0.85);
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.16);
+        transform: translateY(-1px);
+      }
     }
   }
+
+  .filter-ref {
+    min-width: 220px;
+  }
+
+  .filter-from,
+  .filter-to {
+    min-width: 155px;
+  }
+
+  .filter-distillery {
+    min-width: 220px;
+  }
+
+  .filter-overdue {
+    min-width: 130px;
+    padding-bottom: 6px;
+
+    .form-check {
+      margin: 0;
+    }
+  }
+
+  .filter-clear {
+    height: 32px;
+    border-radius: 10px;
+    padding: 0 0.55rem;
+  }
+
 }
 
 // Register Table
@@ -158,13 +254,16 @@
     font-size: 0.9rem;
 
     thead {
-      background: #f8fafc;
-      
+      background: #000000;
+      --bs-table-bg: #000000;
+      --bs-table-color: #ffffff;
+       
       th {
-        font-weight: 600;
-        color: #374151;
-        border-bottom: 2px solid #e5e7eb;
-        padding: 1rem 0.75rem;
+        font-weight: 700;
+        color: #ffffff !important;
+        background-color: #000000 !important;
+        border-bottom: none;
+        padding: 0.9rem 0.75rem;
         text-transform: uppercase;
         font-size: 0.8rem;
         letter-spacing: 0.5px;
@@ -314,14 +413,12 @@
   .filters-section {
     padding: 0.75rem;
 
-    .row {
-      margin: 0;
+    .filters-bar {
+      gap: 0.5rem;
+    }
 
-      .col-md-3,
-      .col-md-2,
-      .col-md-1 {
-        padding: 0.25rem;
-      }
+    .filter-item {
+      min-width: 100%;
     }
   }
 

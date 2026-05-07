@@ -1,4 +1,4 @@
-<div class="bg-light min-vh-100">
+﻿<div class="bg-light min-vh-100">
   <!-- Government Header -->
 
   <br />
@@ -8,7 +8,7 @@
         <!-- Main Form Card -->
         <div class="card shadow-lg border-0 mb-4" style="max-width: 1150px; margin: 0 auto">
           <div class="card-header bg-secondary text-white text-center py-3">
-            <h4 class="mb-0 fw-bold">Requisition for ENA Import Permit</h4>
+            <h4 class="mb-0 fw-bold">Requisition for Bulk Spirit Import Permit</h4>
           </div>
           <div class="card-body bg-white">
             <!-- Error Message -->
@@ -165,12 +165,6 @@
 
               <!-- Action Buttons -->
               <div class="d-flex justify-content-center mt-4 gap-2">
-                <button class="btn btn-primary" (click)="saveForm()">
-                  <i class="bi bi-save me-1"></i>Save
-                </button>
-                <button class="btn btn-secondary" (click)="printBill()">
-                  <i class="bi bi-printer me-1"></i>Print Bill
-                </button>
                 <button class="btn btn-success" (click)="submitForm()">
                   <i class="bi bi-check-circle me-1"></i>Submit
                 </button>
@@ -182,64 +176,6 @@
           </div>
         </div>
 
-        <!-- Letter Preview Card -->
-        <div id="importPermitPrintSection" *ngIf="!accessMessage" class="main card shadow-sm border-0 printable-content"
-          style="max-width: 1150px; margin: 0 auto">
-          <div class="letter-header text-center fw-bold mb-3 fs-5">
-            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-              <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
-                style="height: 60px; width: auto" />
-              <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
-            </div>
-          </div>
-          <div class="letter-content">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <div>
-                <strong>Ref No:</strong>
-                <span class="fw-bold">{{ formData.refNo }}</span>
-              </div>
-              <div>
-                <strong>Date:</strong>
-                <span class="fw-bold">{{
-                  formData.date | date : "dd-MM-yyyy"
-                  }}</span>
-              </div>
-            </div>
-
-            <p>
-              <strong>Sub:</strong>
-              <span class="fw-bold">{{ formData.numberOfPermits }}</span> import
-              permits of <strong>Grain ENA</strong> for
-              <span class="fw-bold">{{ formData.quantity }}</span> x
-              <span class="fw-bold">{{ formData.numberOfPermits }}</span> =
-              <span class="fw-bold">{{ calculatedTotal }}</span> BL.
-            </p>
-
-            <p>
-              We request the issuance of
-              <span class="fw-bold">{{ formData.numberOfPermits }}</span> import
-              permits for <span class="fw-bold">{{ calculatedTotal }}</span> BL
-              Grain ENA, having strength of
-              <span class="fw-bold">{{ bulkSpiritKindType }}</span>° to <span class="fw-bold">{{ formData.strengthTo
-                }}</span>°, to be lifted from
-              <span class="fw-bold">{{
-                getDistilleryName(formData.liftedFrom)
-                }}</span>
-            </p>
-
-            <p>
-              Grain ENA shall be conveyed in destination via route:
-              <span class="fw-bold">{{ formData.viaRoute }}</span>
-            </p>
-
-            <p>Thanking You</p>
-
-            <div class="signature-section">
-              <p>&nbsp;</p>
-              <p>&nbsp;</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>

@@ -229,13 +229,14 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  // ✅ FIXED: Navigate to the correct licensee dashboard route
+  // Navigate to the Salesman/Barman Registration section of the licensee dashboard
   goToDashboard() {
     sessionStorage.clear();
     this.salesmanBarmanService.clearSalesmanBarmanDocuments();
     this.revokeFileUrls();
-    // Changed from '/site-admin/dashboard' to '/licensee/dashboard'
-    this.router.navigate(['/licensee/dashboard']);
+    this.router.navigate(['/dashboard'], {
+      queryParams: { section: 'salesman-barman-registration' }
+    });
   }
 
   goBack() {

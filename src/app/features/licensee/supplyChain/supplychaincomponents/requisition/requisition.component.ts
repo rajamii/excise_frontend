@@ -130,14 +130,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   requisitionCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
 
-  private getCompanyNameForFilter(item: TableData): string {
-    const establishment = String(item?.establishmentName || '').trim();
-    if (establishment && establishment.toLowerCase() !== 'n/a' && establishment !== '-') {
-      return establishment;
-    }
-    return String(item?.distilleryName || '').trim();
-  }
-
   // Modal properties
   isCancellationModalOpen: boolean = false;
   selectedRequisition: TableData | null = null;
@@ -180,6 +172,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalSummaryMonthFilter: string = '';
   allArrivalDetailsRows: ArrivalDetailsRow[] = [];
   filteredArrivalDetailsRows: ArrivalDetailsRow[] = [];
+  arrivalSummaryPageSizeOptions: number[] = [5, 10, 25, 50];
+  arrivalSummaryPageSize: number = 5;
+  arrivalSummaryPageIndex: number = 0;
   private sidebarGuardTimer: ReturnType<typeof setInterval> | null = null;
   private queryParamSub: Subscription | null = null;
   private pendingArrivalRef: string = '';
@@ -191,7 +186,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   // Pagination
   currentPage: number = 1;
-  pageSize: number = 10;
+  pageSize: number = 5;
   pageSizeOptions: number[] = [5, 10, 25, 50];
 
   constructor(@Inject(PLATFORM_ID) platformId: Object) {
@@ -530,20 +525,20 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return matches;
     });
 
+    // Build company options for commissioner filter
     this.requisitionCompanyOptions = Array.from(
       new Set(
         this.summaryRequisitionData
-          .map(item => this.getCompanyNameForFilter(item))
+          .map(item => String(item?.establishmentName || item?.distilleryName || '').trim())
           .filter(v => !!v)
       )
     ).sort((a, b) => a.localeCompare(b));
 
     this.filteredRequisitionData = this.summaryRequisitionData.filter(item => {
+      // Company filter — commissioner only
       if (this.requisitionCompanyFilter) {
-        const company = this.getCompanyNameForFilter(item);
-        if (company !== this.requisitionCompanyFilter) {
-          return false;
-        }
+        const company = String(item?.establishmentName || item?.distilleryName || '').trim();
+        if (company !== this.requisitionCompanyFilter) return false;
       }
 
       if (!this.requisitionStatusFilter) {
@@ -631,7 +626,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     
     // WORKFLOW LOGIC:
     // 1. After licensee pays → Show "View Payment Slip" for everyone (licensee, permit section, commissioner)
-    // 2. After commissioner approves (final stage) → Show BOTH "View Payment Slip" AND "View Permit Slip" for commissioner
+    // 2. After commissioner approves (final stage) → Show BOTH "View Payment Slip" AND "View Permit Slip" for commissioner/permit section
     // 3. For approved requisitions → Show "Cancel" button (if no active revalidation/cancellation)
     
     const hasPayment = this.hasPaymentBeenMade(item);
@@ -650,8 +645,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       actions.push('VIEW_PAYMENT_SLIP');
     }
     
-    // Show "View Permit Slip" only for commissioner after final approval
-    if (isFinalApproved && this.isCommissioner()) {
+    // Show "View Permit Slip" for commissioner and permit section after final approval
+    if (isFinalApproved && (this.isCommissioner() || this.isPermitSection())) {
       actions.push('VIEW_SLIP');
     }
     
@@ -928,9 +923,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.isArrivalSummaryLoading = true;
     this.arrivalSummaryErrorMessage = '';
     this.arrivalSummaryDateFilter = '';
-    this.arrivalSummaryMonthFilter = '';
+    // Default to current running month; user can clear filters to view all months together.
+    this.arrivalSummaryMonthFilter = this.toIsoMonth(new Date());
     this.allArrivalDetailsRows = [];
     this.filteredArrivalDetailsRows = [];
+    this.arrivalSummaryPageIndex = 0;
+    this.arrivalSummaryPageSize = 5;
 
     this.enaRequisitionService.getAllRequisitionArrivalDetails().subscribe({
       next: (response: any) => {
@@ -1022,6 +1020,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalSummaryMonthFilter = '';
     this.allArrivalDetailsRows = [];
     this.filteredArrivalDetailsRows = [];
+    this.arrivalSummaryPageIndex = 0;
     this.setBulkRecordModalMode(false);
   }
 
@@ -1053,6 +1052,50 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
       return true;
     });
+
+    // Reset pagination whenever filters change.
+    this.arrivalSummaryPageIndex = 0;
+  }
+
+  get arrivalSummaryTotalPages(): number {
+    if (this.filteredArrivalDetailsRows.length === 0) return 0;
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    return Math.ceil(this.filteredArrivalDetailsRows.length / size);
+  }
+
+  get arrivalSummaryPageStart(): number {
+    if (this.filteredArrivalDetailsRows.length === 0) return 0;
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    return this.arrivalSummaryPageIndex * size + 1;
+  }
+
+  get arrivalSummaryPageEnd(): number {
+    if (this.filteredArrivalDetailsRows.length === 0) return 0;
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    return Math.min((this.arrivalSummaryPageIndex + 1) * size, this.filteredArrivalDetailsRows.length);
+  }
+
+  get pagedArrivalDetailsRows(): ArrivalDetailsRow[] {
+    if (this.filteredArrivalDetailsRows.length === 0) return [];
+    const size = Number(this.arrivalSummaryPageSize || 10) || 10;
+    const start = this.arrivalSummaryPageIndex * size;
+    return this.filteredArrivalDetailsRows.slice(start, start + size);
+  }
+
+  onArrivalSummaryPageSizeChange(): void {
+    this.arrivalSummaryPageIndex = 0;
+  }
+
+  prevArrivalSummaryPage(): void {
+    if (this.arrivalSummaryPageIndex <= 0) return;
+    this.arrivalSummaryPageIndex -= 1;
+  }
+
+  nextArrivalSummaryPage(): void {
+    const total = this.arrivalSummaryTotalPages;
+    if (total === 0) return;
+    if (this.arrivalSummaryPageIndex >= total - 1) return;
+    this.arrivalSummaryPageIndex += 1;
   }
 
   getArrivalSummaryMonthlyRows(): ArrivalMonthSummaryRow[] {
@@ -2056,10 +2099,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   onRequisitionDateFilterChange(): void {
-    this.applyFilters();
-  }
-
-  onRequisitionCompanyFilterChange(): void {
     this.applyFilters();
   }
 

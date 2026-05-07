@@ -56,14 +56,6 @@ export class RevalidationComponent implements OnInit {
   revalidationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
 
-  private getCompanyNameForFilter(item: TableData): string {
-    const factory = String(item?.factoryName || '').trim();
-    if (factory && factory.toLowerCase() !== 'n/a' && factory !== '-') {
-      return factory;
-    }
-    return String(item?.distilleryName || '').trim();
-  }
-
   filteredRevalidationData: TableData[] = [];
   summaryRevalidationData: TableData[] = [];
 
@@ -225,20 +217,20 @@ export class RevalidationComponent implements OnInit {
       return true;
     });
 
+    // Build company options for commissioner filter
     this.revalidationCompanyOptions = Array.from(
       new Set(
         this.summaryRevalidationData
-          .map(item => this.getCompanyNameForFilter(item))
+          .map(item => String(item?.factoryName || item?.distilleryName || '').trim())
           .filter(v => !!v)
       )
     ).sort((a, b) => a.localeCompare(b));
 
     this.filteredRevalidationData = this.summaryRevalidationData.filter(item => {
+      // Company filter — commissioner only
       if (this.revalidationCompanyFilter) {
-        const company = this.getCompanyNameForFilter(item);
-        if (company !== this.revalidationCompanyFilter) {
-          return false;
-        }
+        const company = String(item?.factoryName || item?.distilleryName || '').trim();
+        if (company !== this.revalidationCompanyFilter) return false;
       }
 
       if (!this.revalidationStatusFilter) {
@@ -295,10 +287,6 @@ export class RevalidationComponent implements OnInit {
 
   onRevalidationStatusFilterChange(): void {
     this.syncActiveSummaryFilter();
-    this.applyRevalidationFilters();
-  }
-
-  onRevalidationCompanyFilterChange(): void {
     this.applyRevalidationFilters();
   }
 

@@ -1,0 +1,52 @@
+<div class="container-fluid">
+  <mat-card>
+    <mat-card-header>
+      <div class="page-title">About Us - {{ activeCategory.label }}</div>
+      <button matButton="filled" (click)="onAdd(activeCategory)">
+        <mat-icon>add</mat-icon> Add {{ activeCategory.singularLabel }}
+      </button>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="table-container">
+        <mat-table [dataSource]="dataSource[activeCategory.key] || []">
+          <ng-container *ngFor="let column of activeCategory.displayedColumns" [matColumnDef]="column">
+            <mat-header-cell *matHeaderCellDef>{{ getColumnLabel(column) }}</mat-header-cell>
+
+            <mat-cell *matCellDef="let row">
+              <ng-container *ngIf="column !== 'actions'; else actionsTemplate">
+                <ng-container *ngIf="isFileColumn(column); else textValueTemplate">
+                  <button
+                    matIconButton
+                    color="primary"
+                    title="View image"
+                    aria-label="View image"
+                    [disabled]="!canViewFile(row, column)"
+                    (click)="viewFile(row, column)">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                </ng-container>
+
+                <ng-template #textValueTemplate>
+                  {{ getColumnValue(row, column) }}
+                </ng-template>
+              </ng-container>
+
+              <ng-template #actionsTemplate>
+                <button matIconButton color="primary" (click)="onEdit(activeCategory, row)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button matIconButton color="warn" (click)="onDelete(activeCategory, row)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </ng-template>
+            </mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="activeCategory.displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: activeCategory.displayedColumns;"></mat-row>
+        </mat-table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -37,8 +37,8 @@ export type UserContext = typeof USER_CONTEXTS[keyof typeof USER_CONTEXTS];
 export const WORKFLOW_IDS = {
     // From DB: workflow_workflow table
     [APPLICATION_TYPES.REQUISITION]: 3,  // Supply Chain
-    [APPLICATION_TYPES.REVALIDATION]: 4, // ENA Revalidation
-    [APPLICATION_TYPES.CANCELLATION]: 5, // ENA Cancellation
+    [APPLICATION_TYPES.REVALIDATION]: 4, // Bulk Spirit Revalidation
+    [APPLICATION_TYPES.CANCELLATION]: 5, // Bulk Spirit Cancellation
     [APPLICATION_TYPES.TRANSIT]: 8,      // Transit Permit
     [APPLICATION_TYPES.HOLOGRAM]: 7,     // Hologram Request
     [APPLICATION_TYPES.NEW_LICENSE]: 0,  // New License workflow id not required for view-only flow

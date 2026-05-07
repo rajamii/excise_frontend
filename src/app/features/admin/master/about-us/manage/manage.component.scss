@@ -1,0 +1,18 @@
+.container-fluid {
+  padding: 0;
+
+  h2 {
+    color: #fff;
+    background-color: #1C2B78;
+  }
+
+  mat-dialog-content {
+    display: grid;
+    gap: 12px;
+    padding-top: 15px;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+}

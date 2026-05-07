@@ -9,21 +9,25 @@ import {
   NodalOfficer,
   PublicInformationOfficer
 } from '../../core/models/contact-us.model';
+import {
+  ExciseSecretary,
+  HeadOfOrganisation
+} from '../../core/models/about-us.model';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 export interface Commissioner {
-  slNo: number;
   name: string;
-  fromDate: string;
-  toDate: string;
+  designation: string;
+  email: string;
 }
 
-const COMMISSIONER_DATA: Commissioner[] = [
-  { slNo: 1, name: 'Shri T. P. Sharma', fromDate: '26/09/1974', toDate: '19/03/1975' },
-  { slNo: 2, name: 'Shri P. K. Pradhan, IAS', fromDate: '13/03/1975', toDate: '08/08/1977' },
-  { slNo: 3, name: 'Shri R. B. Mukhia, IAS', fromDate: '09/08/1977', toDate: '23/05/1980' },
-  { slNo: 4, name: 'Shri C. D. Rai, IAS', fromDate: '24/05/1980', toDate: '31/03/1983' },
-  { slNo: 5, name: 'Shri R. Narayan, IAS', fromDate: '01/04/1983', toDate: '07/04/1985' },
+const COMMISSIONER_DATA: ExciseSecretary[] = [
+  { name: 'Shri T. P. Sharma', designation: 'Excise Secretary', email: '-' },
+  { name: 'Shri P. K. Pradhan, IAS', designation: 'Excise Secretary', email: '-' },
+  { name: 'Shri R. B. Mukhia, IAS', designation: 'Excise Secretary', email: '-' },
+  { name: 'Shri C. D. Rai, IAS', designation: 'Excise Secretary', email: '-' },
+  { name: 'Shri R. Narayan, IAS', designation: 'Excise Secretary', email: '-' },
 ];
 
 @Component({
@@ -43,7 +47,7 @@ export class InfoPagesComponent implements OnInit {
   
   markdownContent: string = '';
 
-  commissionerColumns: string[] = ['slNo', 'name', 'fromDate', 'toDate'];
+  commissionerColumns: string[] = ['name', 'designation', 'email'];
   commissionerData = COMMISSIONER_DATA;
 
   nodalOfficer: NodalOfficer[] = [];
@@ -63,7 +67,7 @@ export class InfoPagesComponent implements OnInit {
   districtColumns: string[] = ['district', 'name', 'designation', 'address', 'phoneNumber'];
   districtData: PublicInformationOfficer[] = [];
 
-  hods = [
+  hods: HeadOfOrganisation[] = [
     {
       name: 'Shri Om Prakash Mathur',
       title: 'Honorable Governor',
@@ -136,6 +140,24 @@ export class InfoPagesComponent implements OnInit {
           console.error('Error fetching officers:', err);
         }
       });
+
+      // Load Heads of Organisations
+      this.infoPagesService.getHeadsOfOrganisations().subscribe({
+        next: (data) => {
+          if (data?.length) {
+            this.hods = data;
+          }
+        }
+      });
+
+      // Load Excise Secretaries / Principal Secretaries
+      this.infoPagesService.getExciseSecretaries().subscribe({
+        next: (data) => {
+          if (data?.length) {
+            this.commissionerData = data;
+          }
+        }
+      });
     }
 
     applyFilters(): void {
@@ -152,6 +174,22 @@ export class InfoPagesComponent implements OnInit {
           next: data => this.markdownContent = data,
           error: () => this.markdownContent = '*Content not available.*'
         });
+    }
+
+    getImageUrl(image: string | File): string {
+      if (!image || (typeof File !== 'undefined' && image instanceof File)) {
+        return '';
+      }
+
+      const imageUrl = String(image);
+
+      if (imageUrl.startsWith('http') || imageUrl.startsWith('assets/')) {
+        return imageUrl;
+      }
+
+      return imageUrl.startsWith('/')
+        ? `${environment.apiBaseUrl}${imageUrl}`
+        : `${environment.apiBaseUrl}/${imageUrl}`;
     }
 
   }

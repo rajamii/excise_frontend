@@ -59,14 +59,6 @@
                 </select>
               </div>
 
-              <!-- Current Selection Display -->
-              <div>
-                <label class="form-label small mb-1">Current Register</label>
-                <div class="alert alert-info py-1 px-2 mb-0 small">
-                  {{ getCurrentHologramTypeDisplay() }}
-                </div>
-              </div>
-
               <!-- Commissioner Manufacturing Unit Dropdown -->
               <div *ngIf="commissionerMode">
                 <label class="form-label small mb-1">Distillery/Brewery</label>
@@ -77,6 +69,27 @@
                     {{ unit }}
                   </option>
                 </select>
+              </div>
+
+              <!-- Date Filter -->
+              <div>
+                <label class="form-label small mb-1">Filter by Date</label>
+                <div class="d-flex align-items-center gap-2">
+                  <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFilter"
+                    title="Filter rows by specific date" style="width: 160px;">
+                  <button *ngIf="dateFilter" class="btn btn-outline-danger btn-sm"
+                    (click)="dateFilter = ''" title="Clear date filter">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Current Selection Display -->
+              <div>
+                <label class="form-label small mb-1">Current Register</label>
+                <div class="alert alert-info py-1 px-2 mb-0 small">
+                  {{ getCurrentHologramTypeDisplay() }}
+                </div>
               </div>
             </div>
 
@@ -132,21 +145,7 @@
         </div>
       </div>
 
-      <!-- Auto-Generated Monthly Report Notice -->
-      <div class="bg-info bg-opacity-10 border border-info rounded mx-3 mb-3">
-        <div class="p-3">
-          <div class="d-flex align-items-center">
-            <i class="bi bi-info-circle text-info fs-4 me-3"></i>
-            <div>
-              <h6 class="mb-1 text-info fw-bold">Auto-Generated Monthly Report</h6>
-              <p class="mb-0 small text-muted">
-                This monthly statement is automatically calculated from the Daily Hologram Manufacturing Register. 
-                All data is read-only and reflects the consolidated daily entries for the selected month.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- Data Table Section -->
       <div class="bg-white">
@@ -286,7 +285,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (row of statementRows; track $index) {
+                @for (row of filteredStatementRows; track $index) {
                 @if (row.rowType === 'SUMMARY') {
                   <!-- Skip all summary rows - month summary is shown above the table -->
                 } @else if (row.rowType === 'ARRIVAL') {

@@ -6,12 +6,13 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
 import { RoleService } from '../../../../../core/services/role.service';
+import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { timeout } from 'rxjs';
 
 interface NewLicenseCounts {
   applied: number;
@@ -27,6 +28,9 @@ interface NewLicenseItem {
   applicantName: string;
   establishmentName: string;
   submittedOn: string;
+  paymentStatus: string;
+  canView: boolean;
+  canPayNow: boolean;
   currentStage: string;
   currentStageRaw: string;
   statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
@@ -52,6 +56,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private roleService = inject(RoleService);
+  private paymentIntegrationService = inject(PaymentIntegrationService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -79,10 +84,12 @@ export class NewLicenseDashboardComponent implements OnInit {
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize = 5;
   pageIndex = 0;
-  stageFilterOptions: string[] = [];
-  statusFilter = '';
   searchFilter = '';
+  dateFilter = '';
+  monthFilter = '';
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
+
+  
 
   ngOnInit(): void {
     this.loadData();
@@ -95,6 +102,12 @@ export class NewLicenseDashboardComponent implements OnInit {
   loadData(): void {
     this.isLoading = true;
     this.error = null;
+
+    // Reset to default pending filter on each fresh load.
+    this.activeSummaryFilter = '';
+    this.searchFilter = '';
+    this.dateFilter = '';
+    this.monthFilter = '';
 
     forkJoin({
       counts: this.http.get<NewLicenseCounts>(`${this.apiBase}/dashboard-counts/`).pipe(
@@ -113,19 +126,15 @@ export class NewLicenseDashboardComponent implements OnInit {
           rejected: Number(counts?.rejected || 0)
         };
         this.allRows = this.flattenGroupedData(grouped);
-        this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
-        this.applyFilters();
 
-        // Admin UX: when opening "New License" from sidebar, default to Pending if there is any pending work.
-        // This avoids landing on Approved / All when there are pending items to process.
-        const isAdmin = this.roleService.isAdminRole();
-        const hasPending = this.serverCounts.pending > 0;
-        const current = (this.statusFilter || '').trim().toLowerCase();
-        if (isAdmin && hasPending && (!current || current === 'approved')) {
-          this.statusFilter = 'pending';
-          this.activeSummaryFilter = 'pending';
-          this.applyFilters();
+        // Default to "Pending" filter for licensees only when there are pending items.
+        // If no pending items exist, show all applications (no filter).
+        if (this.isLicenseeUser() && this.activeSummaryFilter === '') {
+          const pendingCount = Number(counts?.pending || 0);
+          this.activeSummaryFilter = pendingCount > 0 ? 'pending' : '';
         }
+
+        this.applyFilters();
 
         if (this.allRows.length === 0) {
           this.error = null;
@@ -142,7 +151,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   applyFilters(): void {
     const q = this.searchFilter.trim().toLowerCase();
 
-    // Summary rows are affected by search only (counts stay stable when selecting status via card/dropdown).
+    // Summary rows are affected by search only (counts stay stable when selecting status via card).
     this.summaryRows = this.allRows.filter((row) => {
       const matchesSearch = !q
         || row.applicationId.toLowerCase().includes(q)
@@ -153,24 +162,31 @@ export class NewLicenseDashboardComponent implements OnInit {
       return matchesSearch;
     });
 
-    const selected = (this.statusFilter || '').trim().toLowerCase();
     this.filteredRows = this.summaryRows.filter((row) => {
-      const stageRaw = (row.currentStageRaw || '').toLowerCase();
-      const stageText = (row.currentStage || '').toLowerCase();
+      // Date filter
+      if (this.dateFilter) {
+        const rowDate = (row.submittedOn || '').split('T')[0];
+        // submittedOn may be formatted as "dd-MMM-yyyy", convert to ISO for comparison
+        const isoDate = this.toIsoDate(row.submittedOn);
+        if (isoDate !== this.dateFilter) return false;
+      }
 
-      const matchesStatus =
-        !selected
-        || row.statusGroup === selected
-        || stageRaw === selected
-        || stageRaw.includes(selected)
-        || stageText === selected
-        || stageText.includes(selected);
+      // Month filter (yyyy-MM)
+      if (this.monthFilter) {
+        const isoDate = this.toIsoDate(row.submittedOn);
+        if (!isoDate || isoDate.substring(0, 7) !== this.monthFilter) return false;
+      }
 
-      return matchesStatus;
+      // Summary card status filter
+      if (this.activeSummaryFilter) {
+        if (row.statusGroup !== this.activeSummaryFilter) return false;
+      }
+
+      return true;
     });
 
     const calculated = this.calculateCounts(this.summaryRows);
-    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.statusFilter;
+    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.dateFilter && !this.monthFilter;
     this.counts = canUseServerCounts ? this.serverCounts : calculated;
 
     this.syncActiveSummaryFilter();
@@ -216,36 +232,183 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   clearFilters(): void {
-    this.statusFilter = '';
     this.searchFilter = '';
+    this.dateFilter = '';
+    this.monthFilter = '';
     this.activeSummaryFilter = '';
     this.applyFilters();
   }
 
-  onSummaryCardClick(group: NewLicenseItem['statusGroup']): void {
-    const current = (this.statusFilter || '').trim().toLowerCase();
-    if (current === group) {
-      this.statusFilter = '';
+  onSummaryCardClick(group: NewLicenseItem['statusGroup'] | 'all'): void {
+    if (group === 'all' || this.activeSummaryFilter === group) {
       this.activeSummaryFilter = '';
       this.applyFilters();
       return;
     }
 
-    this.statusFilter = group;
-    this.activeSummaryFilter = group;
+    this.activeSummaryFilter = group as NewLicenseItem['statusGroup'];
     this.applyFilters();
   }
 
   viewApplication(row: NewLicenseItem): void {
     const id = row.id || row.applicationId;
+    const source = this.getDetailViewSource();
     this.router.navigate(['/supply-chain-view'], {
       queryParams: {
         id,
         ref: row.applicationId,
         type: 'new-license',
-        source: 'licensee'
+        source
       }
     });
+  }
+
+  payNow(row: NewLicenseItem): void {
+    if (!this.isLicenseeUser()) return;
+    if (!row?.applicationId) return;
+    if (!row.canPayNow) return;
+
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    const cooldownRemaining = this.paymentIntegrationService.getCooldownRemainingSeconds(applicationId);
+    if (cooldownRemaining > 0) {
+      this.paymentIntegrationService.showCooldownPopup(cooldownRemaining);
+      return;
+    }
+
+    const isPending = String(row.paymentStatus || '').trim().toLowerCase() === 'pending';
+    if (isPending) {
+      void Swal.fire({
+        title: 'Payment Pending',
+        html:
+          `Your last BillDesk payment attempt is still showing as <b>Pending</b>.<br/>` +
+          `There may be an issue with the payment response from BillDesk. You can try again later.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Proceed',
+        cancelButtonText: 'Back',
+        allowOutsideClick: false,
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        this.startBilldeskInitiation(applicationId);
+      });
+      return;
+    }
+
+    void Swal.fire({
+      title: 'Retry Application Fee Payment?',
+      text: `Proceed to pay application fee for ${row.applicationId}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Pay Now',
+      cancelButtonText: 'Cancel',
+    }).then((res) => {
+      if (!res.isConfirmed) return;
+
+      this.startBilldeskInitiation(applicationId);
+    });
+  }
+
+  private startBilldeskInitiation(applicationId: string): void {
+  void Swal.fire({
+    title: 'Redirecting to BillDesk',
+    text: 'Preparing application fee payment...',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  this.paymentIntegrationService
+    .initiateNewLicenseFee(String(applicationId).trim(), 500)
+    .pipe(timeout(30000))
+    .subscribe({
+      next: (initRes: any) => {
+        Swal.close();
+        this.paymentIntegrationService.clearRetryState(applicationId);
+
+        // Check for SDK parameters (handles both casing styles)[cite: 2]
+        const hasSDK = (initRes?.bdOrderId || initRes?.bd_order_id) && 
+                       (initRes?.authToken || initRes?.auth_token);
+
+        if (hasSDK) {
+          try {
+            // Use the single shared method from your service
+            this.paymentIntegrationService.launchBillDeskSDK(initRes, (txn) => {
+              if (txn.status === 'success' || txn.status === '0300') {
+                // Success: Refresh data to reflect the new payment status[cite: 2]
+                this.loadData();
+                Swal.fire('Success', 'Payment processed successfully.', 'success');
+              } else {
+                Swal.fire('Payment Incomplete', 'Payment was cancelled or declined.', 'info');
+              }
+            });
+          } catch (err) {
+            void Swal.fire('Error', 'Payment SDK failed to load. Please refresh.', 'error');
+          }
+        } else {
+          this.paymentIntegrationService.recordBilldeskFailure(applicationId);
+          void Swal.fire('Error', 'Missing SDK gateway parameters.', 'error');
+        }
+      },
+      error: (err: any) => {
+        this.paymentIntegrationService.handleInitiationError(err, applicationId);
+      },
+    });
+}
+
+  private submitToBillDesk(url: string, requestMsg: string): void {
+    try {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'msg';
+      input.value = requestMsg;
+
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    } catch {
+      void Swal.fire('Error', 'Unable to redirect to BillDesk. Please try again.', 'error');
+    }
+  }
+
+  private extractRetryAfterSeconds(err: any): number {
+    const httpStatus = Number(err?.status || 0);
+    if (httpStatus !== 409) return 0;
+    const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  }
+
+ 
+
+  
+
+  
+
+  private getDetailViewSource(): string {
+    const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);
+
+    if (this.roleService.isLicenseeRole(roleId)) {
+      return 'licensee';
+    }
+
+    switch (roleId) {
+      case 5:
+        return 'permit-section';
+      case 6:
+        return 'itcell';
+      case 7:
+        return 'officer-in-charge';
+      case 9:
+      case 10:
+        return 'commissioner-dashboard';
+      default:
+        return 'commissioner-dashboard';
+    }
   }
 
   viewTimeline(row: NewLicenseItem): void {
@@ -274,21 +437,47 @@ export class NewLicenseDashboardComponent implements OnInit {
         return [];
       }
 
-      return items.map((item: any) => ({
-        id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
-        applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
-        applicantName: this.getApplicantName(item),
-        establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
-        submittedOn: this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on),
-        currentStageRaw: String(item?.current_stage_name || item?.currentStageName || item?.current_stage || ''),
-        currentStage: this.isLicenseeUser()
-          ? this.simplifyStageForLicensee(
-              statusGroup,
-              item?.current_stage_name || item?.currentStageName || item?.current_stage || ''
-            )
-          : this.formatStageName(item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup),
-        statusGroup
-      }));
+      return items.map((item: any) => {
+        const rawPayment = String(
+          item?.application_fee_payment_status ||
+          item?.applicationFeePaymentStatus ||
+          item?.payment_status ||
+          item?.paymentStatus ||
+          ''
+        ).trim();
+        const paymentStatus = this.normalizePaymentStatus(rawPayment);
+        const feePaid = Boolean(item?.is_application_fee_paid ?? item?.isApplicationFeePaid);
+        const canView = paymentStatus === 'Successful' && feePaid;
+        const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful';
+        const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
+        const submittedOn = paymentStatus === 'Successful'
+          ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
+          : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
+
+        const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
+        const currentStageComputed = this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(statusGroup, currentStageRaw)
+          : this.formatStageName(currentStageRaw || statusGroup);
+
+        // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
+        const currentStage = this.isLicenseeUser() && !canView
+          ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
+          : currentStageComputed;
+
+        return ({
+          id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
+          applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
+          applicantName: this.getApplicantName(item),
+          establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
+          submittedOn,
+          paymentStatus,
+          canView,
+          canPayNow,
+          currentStageRaw,
+          currentStage,
+          statusGroup
+        });
+      });
     };
 
     return [
@@ -298,6 +487,15 @@ export class NewLicenseDashboardComponent implements OnInit {
       ...mapGroup(grouped?.approved, 'approved'),
       ...mapGroup(grouped?.rejected, 'rejected')
     ];
+  }
+
+  private normalizePaymentStatus(value: string): string {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'Pending';
+    if (raw === 's' || raw === 'success' || raw.includes('success')) return 'Successful';
+    if (raw === 'f' || raw === 'failed' || raw.includes('fail') || raw.includes('error')) return 'Failed';
+    if (raw === 'p' || raw === 'pending' || raw.includes('pending')) return 'Pending';
+    return String(value);
   }
 
   private getApplicantName(item: any): string {
@@ -321,9 +519,27 @@ export class NewLicenseDashboardComponent implements OnInit {
     }).replace(/ /g, '-');
   }
 
+  /** Converts a formatted date string (e.g. "02-May-2026" or ISO) to "yyyy-MM-dd" for filter comparison. */
+  private toIsoDate(dateValue: string | undefined): string {
+    if (!dateValue) return '';
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
   private formatStageName(stageValue: any): string {
     const raw = String(stageValue ?? '').trim();
     if (!raw) return 'Not available';
+
+    // Backend sometimes returns numeric stage id instead of stage name.
+    // Stage 23 = awaiting_payment (critical UX for licensee + admin to take payment action).
+    const stageId = Number.parseInt(raw, 10);
+    if (Number.isFinite(stageId) && String(stageId) === raw) {
+      if (stageId === 23) return 'Awaiting Payment';
+    }
     return raw
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -334,24 +550,18 @@ export class NewLicenseDashboardComponent implements OnInit {
     if (statusGroup === 'rejected') return 'Rejected';
 
     const raw = String(stageValue ?? '').toLowerCase();
+    const stageId = Number.parseInt(raw, 10);
+    if (Number.isFinite(stageId) && String(stageId) === raw) {
+      if (stageId === 23) return 'Awaiting Payment';
+    }
     if (raw.includes('approved')) return 'Approved';
     if (raw.includes('reject')) return 'Rejected';
     if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+    // Some backends return payment-related stage names without the "awaiting_" prefix.
+    if (raw.includes('payment')) return 'Awaiting Payment';
 
     // Licensee UX: don't expose internal role/stage names (commissioner/permit section/etc).
     return 'Pending';
-  }
-
-  private getStageFilterOptions(rows: NewLicenseItem[]): string[] {
-    const values = Array.from(
-      new Set(
-        rows
-          .map((row) => (row.currentStage || '').trim())
-          .filter((v) => !!v)
-      )
-    );
-    values.sort((a, b) => a.localeCompare(b));
-    return values;
   }
 
   private calculateCounts(rows: NewLicenseItem[]): NewLicenseCounts {
@@ -367,11 +577,6 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private syncActiveSummaryFilter(): void {
-    const selected = (this.statusFilter || '').trim().toLowerCase();
-    if (selected === 'applied' || selected === 'pending' || selected === 'objection' || selected === 'approved' || selected === 'rejected') {
-      this.activeSummaryFilter = selected as NewLicenseItem['statusGroup'];
-      return;
-    }
-    this.activeSummaryFilter = '';
+    // activeSummaryFilter is managed directly by onSummaryCardClick; nothing to sync here.
   }
 }

@@ -3,7 +3,8 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, of } from 'rxjs';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { MatDialog } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
@@ -16,18 +17,21 @@ import { CompanyRegistrationService } from '../../../core/services/company-regis
 import { CompanyCollaborationService } from '../../../core/services/company-collaboration.service';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
+import { MasterService } from '../../../core/services/master.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
+import { LicenseCategory } from '../../../core/models/license-category.model';
+import { LicenseFee } from '../../../core/models/license-fee.model';
 import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
 import { RoleService } from '../../../core/services/role.service';
 
 // Constants
-import { 
-    APPLICATION_TYPES, 
-    ApplicationType, 
-    USER_CONTEXTS, 
-    UserContext, 
+import {
+    APPLICATION_TYPES,
+    ApplicationType,
+    USER_CONTEXTS,
+    UserContext,
     WORKFLOW_IDS,
     APPLICATION_TITLES,
     PAGE_TITLES,
@@ -48,14 +52,14 @@ export interface UnifiedApplicationData {
     referenceNo: string;
     submissionDate: Date;
     status: string;
-    
+
     // Workflow fields
     currentStage?: number;
     currentStageName?: string;
     workflowId?: number;
     allowedActions?: string[];
     allowedActionConfigs?: ActionButtonConfig[];
-    
+
     // Common computed fields (properly typed)
     distilleryName?: string;
     brAmount?: number;
@@ -205,30 +209,30 @@ export interface UnifiedApplicationData {
     current_stage_name?: string;
     is_approved?: boolean;
     created_at?: string | Date;
-    
+
     // Transit permit specific fields
     routeDetails?: string;
     checkpostExit?: string;
     driverLicense?: string;
     transporterName?: string;
-    
+
     // Product/Brand specific fields
     brand?: string;
     sizeML?: number;
     bottleType?: string;
     brandOwner?: string;
     manufacturingUnit?: string;
-    
+
     // Fee/Tax fields
     educationCess?: number;
     exciseDuty?: number;
     additionalExcise?: number;
-    
+
     // Hologram specific fields
     hologramSeriesStart?: string;
     hologramSeriesEnd?: string;
     cartoonNumber?: string;
-    
+
     // Dynamic fields (populated from backend model)
     [key: string]: any;
 }
@@ -301,10 +305,66 @@ interface FieldMapping {
     // Add more as needed dynamically
 }
 
+interface SiteEnquiryReportField {
+    key: string;
+    label: string;
+    displayValue: string;
+    href?: string;
+}
+
+interface ApproveExecutionOptions {
+    successMessage?: string;
+    failureMessage?: string;
+    workflowContextData?: Record<string, any>;
+}
+
+interface NewLicenseFeeApprovalDialogData {
+    applicationId: string;
+    initialLicenseCategoryId?: number | null;
+    initialLicenseCategoryName?: string | null;
+    initialLicenseSubcategoryId?: number | null;
+    initialLicenseSubcategoryName?: string | null;
+    initialLocationCode?: string | number | null;
+    initialLocationName?: string | null;
+    initialDistrictName?: string | null;
+}
+
+interface NewLicenseFeeApprovalResult {
+    applicationId: string;
+    licenseCategoryId: number;
+    licenseCategoryName: string;
+    licenseSubcategoryId: number;
+    licenseSubcategoryName: string;
+    locationCode: string;
+    locationDescription: string;
+    licenseFee: LicenseFee;
+}
+
+interface NewLicenseFeeApprovalSubcategoryOption {
+    id: number;
+    description: string;
+    categoryId: number;
+}
+
+interface NewLicenseFeeApprovalLocationOption {
+    id?: number;
+    locationCode: string;
+    locationDescription: string;
+    districtName?: string;
+    isSynthetic?: boolean;
+}
+
+interface PendingNewLicenseFeeApproval {
+    item: any;
+    context: UserContext;
+    applicationId: string;
+    options?: ApproveExecutionOptions;
+}
+
 @Component({
     selector: 'app-unified-supply-chain-view',
     standalone: true,
-    imports: [CommonModule, UnifiedActionButtonsComponent],
+    imports: [CommonModule, ReactiveFormsModule, UnifiedActionButtonsComponent],
     templateUrl: './unified-supply-chain-view.component.html',
     styleUrls: ['./unified-supply-chain-view.component.scss']
 })
@@ -318,6 +378,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     docsModalOpen = false;
     activeDoc: { label: string; url: string; isImage: boolean } | null = null;
     newLicenseUploads: Array<{ label: string; url: string; isImage: boolean }> = [];
+    siteEnquiryReportModalOpen = false;
+    siteEnquiryReportLoading = false;
+    siteEnquiryReportError = '';
+    siteEnquiryReport: Record<string, any> | null = null;
+    siteEnquiryReportEntries: SiteEnquiryReportField[] = [];
+    newLicenseFeeApprovalModalOpen = false;
+    newLicenseFeeApprovalOptionsLoading = false;
+    newLicenseFeeApprovalFeeLoading = false;
+    newLicenseFeeApprovalOptionsError = '';
+    newLicenseFeeApprovalFeeError = '';
+    newLicenseFeeApprovalCategories: LicenseCategory[] = [];
+    newLicenseFeeApprovalAllSubcategories: NewLicenseFeeApprovalSubcategoryOption[] = [];
+    newLicenseFeeApprovalFilteredSubcategories: NewLicenseFeeApprovalSubcategoryOption[] = [];
+    newLicenseFeeApprovalLocations: NewLicenseFeeApprovalLocationOption[] = [];
+    newLicenseFeeApprovalDetails: LicenseFee | null = null;
+    pendingNewLicenseFeeApproval: PendingNewLicenseFeeApproval | null = null;
+    readonly newLicenseFeeApprovalForm: FormGroup;
 
     openDocsModal(): void { this.docsModalOpen = true; this.cdr.detectChanges(); }
     closeDocsModal(): void { this.docsModalOpen = false; this.activeDoc = null; this.cdr.detectChanges(); }
@@ -334,13 +411,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.cdr.detectChanges();
     }
     closeDocViewer(): void { this.activeDoc = null; this.cdr.detectChanges(); }
-    
+
     private readonly isBrowser: boolean;
 
     constructor(
         private route: ActivatedRoute,
         private router: Router,
         private http: HttpClient,
+        private fb: FormBuilder,
         private enaRequisitionService: EnaRequisitionService,
         private supplyChainService: SupplyChainService,
         private hologramDataService: HologramDataService,
@@ -348,8 +426,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private companyCollaborationService: CompanyCollaborationService,
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private licenseApplicationService: LicenseApplicationService,
-        private unifiedActionsService: UnifiedActionsService,
+        private masterService: MasterService,
         private roleService: RoleService,
+        private unifiedActionsService: UnifiedActionsService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         private sanitizer: DomSanitizer,
@@ -357,6 +436,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         @Inject(PLATFORM_ID) platformId: Object
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
+        this.newLicenseFeeApprovalForm = this.fb.group({
+            licenseCategoryId: [null, Validators.required],
+            licenseSubcategoryId: [{ value: null, disabled: true }, Validators.required],
+            locationCode: [null, Validators.required]
+        });
+        this.bindNewLicenseFeeApprovalForm();
     }
 
     private isOicUser(): boolean {
@@ -601,7 +686,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     ngOnInit(): void {
         if (!this.isBrowser) return;
-        
+
         const params = this.extractRouteParams();
         if (params.ref || params.id) {
             this.applicationType = params.type;
@@ -615,16 +700,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const type = this.route.snapshot.queryParamMap.get('type') as ApplicationType || 'requisition';
         const ref = this.route.snapshot.paramMap.get('ref') || this.route.snapshot.queryParamMap.get('ref');
         const id = this.route.snapshot.queryParamMap.get('id');
-        
+
         return { type, ref, id };
     }
 
     private loadApplicationData(refNo: string, id: string): void {
         this.isLoading = true;
         this.errorMessage = '';
-        
+
         const config = this.currentServiceConfig;
-        
+
         if (id) {
             this.loadByIdWithFallback(config, id, refNo);
         } else {
@@ -644,7 +729,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     private loadByIdWithFallback(config: ServiceConfig, id: string, refNo: string): void {
         const detailObservable = config.service[config.detailMethod](id);
-        
+
         detailObservable.subscribe({
             next: (data: any) => {
                 if (data) {
@@ -662,11 +747,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     private loadByReference(config: ServiceConfig, refNo: string): void {
         const listObservable = config.service[config.listMethod]();
-        
+
         listObservable.subscribe({
             next: (data: any) => {
                 const items = Array.isArray(data) ? data : (data.results || []);
-                
+
                 if (items.length === 0) {
                     this.errorMessage = `No ${this.applicationType} data available.`;
                     this.isLoading = false;
@@ -674,7 +759,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 }
 
                 const foundItem = this.findItemByReference(items, refNo, config.fieldMappings.referenceNo);
-                
+
                 if (foundItem) {
                     this.mapApplicationData(foundItem, config);
                 } else {
@@ -717,18 +802,38 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             allowedActionConfigs
         };
 
-        // For workflows where backend often sends generic "PENDING",
-        // prefer explicit current stage name for user-facing status.
+        // For workflows where backend often sends generic "PENDING" or a raw stage ID,
+        // resolve the real status name for user-facing display.
         if (
-            (
-                this.applicationType === 'salesman-barman-registration' ||
-                this.applicationType === 'company-registration' ||
-                this.applicationType === 'company-collaboration'
-            ) &&
-            mappedData.currentStageName &&
-            (!mappedData.status || String(mappedData.status).toUpperCase() === 'PENDING')
+            this.applicationType === 'salesman-barman-registration' ||
+            this.applicationType === 'company-registration' ||
+            this.applicationType === 'company-collaboration'
         ) {
-            mappedData.status = String(mappedData.currentStageName);
+            // Stage ID → human-readable status name mapping
+            const stageIdToStatusName: { [key: number]: string } = {
+                1: 'applicant_applied', 2: 'level_1', 3: 'level_2', 4: 'level_3', 5: 'level_4', 6: 'level_5',
+                7: 'level_1_objection', 8: 'level_2_objection', 9: 'level_3_objection',
+                10: 'level_4_objection', 11: 'level_5_objection',
+                12: 'approved', 13: 'applicant_applied', 14: 'level_1', 15: 'level_2', 16: 'approved',
+                23: 'awaiting_payment', 24: 'rejected_by_level_1', 25: 'rejected_by_level_2',
+                26: 'rejected_by_level_3', 27: 'rejected_by_level_4', 28: 'rejected_by_level_5',
+                29: 'rejected', 30: 'objection_raised', 31: 'awaiting_payment'
+            };
+
+            const rawStatus = String(mappedData.status || '');
+            const stageNum = parseInt(rawStatus, 10);
+
+            if (!isNaN(stageNum) && stageIdToStatusName[stageNum]) {
+                // Status is a raw numeric stage ID — map it to a name
+                mappedData.status = stageIdToStatusName[stageNum];
+            } else if (!rawStatus || rawStatus.toUpperCase() === 'PENDING') {
+                // Status is empty or generic PENDING — prefer currentStageName if available
+                if (mappedData.currentStageName) {
+                    mappedData.status = String(mappedData.currentStageName);
+                } else if (mappedData.currentStage && stageIdToStatusName[mappedData.currentStage]) {
+                    mappedData.status = stageIdToStatusName[mappedData.currentStage];
+                }
+            }
         }
 
         Object.keys(apiData).forEach(key => {
@@ -740,6 +845,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.addComputedFields(mappedData, apiData, config);
 
         this.applicationData = mappedData;
+        this.resetSiteEnquiryReportState();
         this.calculateNewLicenseUploads();
         this.loadWorkflowActions();
     }
@@ -823,41 +929,41 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             case 'revalidation':
                 mappedData['originalPermitNo'] = mappedData.referenceNo;
                 mappedData['originalPermitDate'] = mappedData.submissionDate;
-                
+
                 const revalidationTotalBl = this.parseNumericValue(this.extractFieldValue(apiData, ['totalBl', 'total_bl']));
                 const revalidationBrAmount = this.parseNumericValue(this.extractFieldValue(apiData, ['revalidationBrAmount', 'revalidation_br_amount']));
-                
+
                 if (revalidationTotalBl > 0) {
                     mappedData['brAmount'] = revalidationTotalBl;
                 }
-                
+
                 if (revalidationBrAmount > 0) {
                     mappedData['revalidationAmount'] = revalidationBrAmount;
                 } else {
                     mappedData['revalidationAmount'] = 1000;
                 }
-                
+
                 const revalidationStatus = mappedData.status || '';
                 if (revalidationStatus && revalidationStatus !== 'PENDING' && revalidationStatus.length > 10) {
                     mappedData['reasonForRevalidation'] = revalidationStatus;
                 } else {
                     mappedData['reasonForRevalidation'] = 'Permit revalidation requested';
                 }
-                
+
                 const revalidationDate = this.extractFieldValue(apiData, ['revalidationDate', 'revalidation_date']);
                 if (revalidationDate) {
                     mappedData['expiryDate'] = this.parseDate(revalidationDate);
                 }
-                
+
                 mappedData['newQuantity'] = mappedData['quantity'];
                 mappedData['newPurpose'] = mappedData['purpose'];
-                
+
                 if (!mappedData['checkpostEntry'] || mappedData['checkpostEntry'] === '') {
                     const revalidationState = this.extractFieldValue(apiData, ['state']);
                     mappedData['checkpostEntry'] = revalidationState ? `${revalidationState} Border` : 'Not specified';
                 }
                 break;
-                
+
             case 'cancellation':
                 const cancelledPermitNumber = this.extractFieldValue(apiData, ['cancelledPermitNumber', 'cancelled_permit_number']);
                 if (cancelledPermitNumber) {
@@ -865,14 +971,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 } else {
                     mappedData['originalPermitNo'] = mappedData.referenceNo;
                 }
-                
+
                 const cancellationEachPermitDate = this.extractFieldValue(apiData, ['cancellationEachPermitDate', 'cancellation_each_permit_date']);
                 if (cancellationEachPermitDate) {
                     mappedData['originalPermitDate'] = this.parseDate(cancellationEachPermitDate);
                 } else {
                     mappedData['originalPermitDate'] = mappedData.submissionDate;
                 }
-                
+
                 const cancellationTotalAmount = this.parseNumericValue(
                     this.extractFieldValue(apiData, ['totalCancellationAmount', 'total_cancellation_amount'])
                 );
@@ -880,7 +986,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.extractFieldValue(apiData, ['cancellationBrAmount', 'cancellation_br_amount'])
                 );
                 const cancellationTotalBl = this.parseNumericValue(this.extractFieldValue(apiData, ['totalBl', 'total_bl']));
-                
+
                 if (cancellationTotalAmount > 0) {
                     mappedData['cancellationAmount'] = cancellationTotalAmount;
                     mappedData['refundAmount'] = cancellationTotalAmount;
@@ -894,29 +1000,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     mappedData['refundAmount'] = cancellationTotalBl;
                     mappedData['brAmount'] = cancellationTotalBl;
                 }
-                
+
                 const refundProcessedDate = this.extractFieldValue(apiData, ['refundProcessedDate', 'refund_processed_date']);
                 if (refundProcessedDate) {
                     mappedData['refundStatus'] = 'PROCESSED';
                 } else {
                     mappedData['refundStatus'] = 'PENDING';
                 }
-                
+
                 const cancellationStatus = mappedData.status || '';
                 if (cancellationStatus && cancellationStatus !== 'PENDING' && cancellationStatus.length > 5) {
                     mappedData['cancellationReason'] = cancellationStatus;
                 } else {
                     mappedData['cancellationReason'] = 'Permit cancellation requested';
                 }
-                
+
                 mappedData['cancelledPermitNumber'] = cancelledPermitNumber || mappedData.referenceNo;
-                
+
                 if (!mappedData['checkpostEntry'] || mappedData['checkpostEntry'] === '') {
                     const cancellationState = this.extractFieldValue(apiData, ['state']);
                     mappedData['checkpostEntry'] = cancellationState ? `${cancellationState} Border` : 'Not specified';
                 }
                 break;
-                
+
             case 'transit':
                 mappedData['vehicleNumber'] = this.extractFieldValue(apiData, ['vehicleNumber', 'vehicle_number']);
                 mappedData['driverName'] = this.extractFieldValue(apiData, ['driverName', 'driver_name']);
@@ -927,18 +1033,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 mappedData['checkpostEntry'] = this.extractFieldValue(apiData, ['checkpostEntryName', 'checkpost_entry_name', 'checkpost_entry', 'checkpostEntry']);
                 mappedData['checkpostExit'] = this.extractFieldValue(apiData, ['checkpostExitName', 'checkpost_exit_name', 'checkpost_exit', 'checkpostExit']);
                 mappedData['transporterName'] = this.extractFieldValue(apiData, ['transporterName', 'transporter_name']);
-                
+
                 mappedData['permitType'] = this.extractFieldValue(apiData, ['liquorType', 'liquor_type', 'permit_type', 'permitType']);
                 mappedData['brand'] = this.extractFieldValue(apiData, ['brand']);
                 mappedData['sizeML'] = this.parseNumericValue(this.extractFieldValue(apiData, ['sizeMl', 'size_ml']));
                 mappedData['bottleType'] = this.extractFieldValue(apiData, ['bottleType', 'bottle_type']);
                 mappedData['brandOwner'] = this.extractFieldValue(apiData, ['brandOwner', 'brand_owner']);
                 mappedData['manufacturingUnit'] = this.extractFieldValue(apiData, ['manufacturingUnitName', 'manufacturing_unit_name']);
-                
+
                 mappedData['educationCess'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalEducationCess', 'total_education_cess']));
                 mappedData['exciseDuty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalExciseDuty', 'total_excise_duty']));
                 mappedData['additionalExcise'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalAdditionalExcise', 'total_additional_excise']));
-                
+
                 const transitProduct = {
                     id: mappedData.id,
                     brand: mappedData['brand'],
@@ -960,7 +1066,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 mappedData['cancelledByDisplay'] = this.extractFieldValue(apiData, ['cancelledByDisplay', 'cancelled_by_display']) || '';
                 mappedData['cancelledReasonDisplay'] = this.extractFieldValue(apiData, ['cancelledReasonDisplay', 'cancelled_reason_display']) || '';
                 break;
-                
+
             case 'hologram':
                 mappedData['localQty'] = this.parseNumericValue(
                     this.extractFieldValue(apiData, ['requested_local_qty', 'localQty', 'local_qty'])
@@ -1033,35 +1139,35 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const decodedRefNo = decodeURIComponent(refNo || '');
         const targetRef = String(refNo || '');
         const decodedTargetRef = String(decodedRefNo || '');
-        
+
         for (const field of referenceFields) {
-            const foundItem = items.find((item: any) => 
+            const foundItem = items.find((item: any) =>
                 String(item[field] ?? '') === targetRef || String(item[field] ?? '') === decodedTargetRef
             );
             if (foundItem) return foundItem;
         }
-        
+
         for (const field of referenceFields) {
-            const foundItem = items.find((item: any) => 
+            const foundItem = items.find((item: any) =>
                 String(item[field] ?? '') && (
-                    String(item[field] ?? '').includes(targetRef) || 
+                    String(item[field] ?? '').includes(targetRef) ||
                     String(item[field] ?? '').includes(decodedTargetRef)
                 )
             );
             if (foundItem) return foundItem;
         }
-        
+
         if (items.length > 0) {
             return items[0];
         }
-        
+
         return null;
     }
 
     private parseDate(value: any): Date {
         if (!value) return new Date();
         if (value instanceof Date) return value;
-        
+
         const parsed = new Date(value);
         return isNaN(parsed.getTime()) ? new Date() : parsed;
     }
@@ -1117,18 +1223,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     private parseNumericValue(value: any, defaultValue: number = 0): number {
         if (value === null || value === undefined || value === '') return defaultValue;
-        
+
         // Handle string numbers
         if (typeof value === 'string') {
             const parsed = parseFloat(value);
             return isNaN(parsed) ? defaultValue : parsed;
         }
-        
+
         // Handle numeric values
         if (typeof value === 'number') {
             return isNaN(value) ? defaultValue : value;
         }
-        
+
         // Try to convert other types
         const parsed = parseFloat(value.toString());
         return isNaN(parsed) ? defaultValue : parsed;
@@ -1200,10 +1306,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             }
         }
     }
-    
+
     getUserContext(): UserContext {
         const source = this.route.snapshot.queryParamMap.get('source');
-        
+
         const contextMap: { [key: string]: UserContext } = {
             'commissioner-dashboard': USER_CONTEXTS.COMMISSIONER,
             'commissioner': USER_CONTEXTS.COMMISSIONER,
@@ -1214,17 +1320,17 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'licensee-dashboard': USER_CONTEXTS.LICENSEE,
             'licensee': USER_CONTEXTS.LICENSEE
         };
-        
+
         if (source && contextMap[source]) {
             return contextMap[source];
         }
-        
+
         // Fallback: determine from current URL path
         const currentUrl = this.router.url;
         if (currentUrl.includes('commissioner')) return USER_CONTEXTS.COMMISSIONER;
         if (currentUrl.includes('permit-section')) return USER_CONTEXTS.PERMIT_SECTION;
         if (currentUrl.includes('dashboard') && currentUrl.includes('section=')) return USER_CONTEXTS.LICENSEE;
-        
+
         return USER_CONTEXTS.LICENSEE; // Default context
     }
 
@@ -1287,48 +1393,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     return;
                 }
 
-                this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
-                    next: (result: any) => {
-                        const isSuccess = result?.success !== false;
-                        if (isSuccess) {
-                            if (result.message) {
-                                this.snackBar.open(result.message, 'Close', { duration: 3000 });
-                            }
-                            const currentId = this.applicationData?.id?.toString() || '';
-                            const currentRef = this.applicationData?.referenceNo || '';
-                            this.loadApplicationData(currentRef, currentId);
-                        } else {
-                            this.snackBar.open(result?.message || 'Action failed', 'Close', { duration: 4000 });
-                        }
-                    },
-                    error: (error: any) => {
-                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
-                    }
-                });
+                this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
             },
             error: () => {
                 if (this.isCurrentStageSiteEnquiry()) {
                     this.openSiteEnquiryAndApprove(item, context, applicationId);
                     return;
                 }
-                this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
-                    next: (result: any) => {
-                        const isSuccess = result?.success !== false;
-                        if (isSuccess) {
-                            if (result.message) {
-                                this.snackBar.open(result.message, 'Close', { duration: 3000 });
-                            }
-                            const currentId = this.applicationData?.id?.toString() || '';
-                            const currentRef = this.applicationData?.referenceNo || '';
-                            this.loadApplicationData(currentRef, currentId);
-                        } else {
-                            this.snackBar.open(result?.message || 'Action failed', 'Close', { duration: 4000 });
-                        }
-                    },
-                    error: (error: any) => {
-                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Action failed'), 'Close', { duration: 4500 });
-                    }
-                });
+                this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
             }
         });
     }
@@ -1393,6 +1465,918 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return stageName.includes('site enquiry') || stageName.includes('site_enquiry') || stageName.includes('site-enquiry');
     }
 
+    private continueApprovalWithOptionalNewLicenseFeeDialog(
+        item: any,
+        context: UserContext,
+        applicationId: string,
+        options?: ApproveExecutionOptions
+    ): void {
+        if (this.shouldOpenNewLicenseFeeApprovalDialog()) {
+            this.openNewLicenseFeeApprovalDialogAndApprove(item, context, applicationId, options);
+            return;
+        }
+
+        this.executeApproveAction(item, context, options);
+    }
+
+    get canConfirmNewLicenseFeeApproval(): boolean {
+        return this.newLicenseFeeApprovalForm.valid &&
+            !!this.newLicenseFeeApprovalDetails &&
+            !this.newLicenseFeeApprovalOptionsLoading &&
+            !this.newLicenseFeeApprovalFeeLoading;
+    }
+
+    get newLicenseFeeApprovalApplicationId(): string {
+        return this.pendingNewLicenseFeeApproval?.applicationId ||
+            this.applicationData?.referenceNo ||
+            this.getCurrentApplicationId() ||
+            'Application';
+    }
+
+    private openNewLicenseFeeApprovalDialogAndApprove(
+        item: any,
+        context: UserContext,
+        applicationId: string,
+        options?: ApproveExecutionOptions
+    ): void {
+        this.pendingNewLicenseFeeApproval = {
+            item,
+            context,
+            applicationId,
+            options
+        };
+
+        this.openNewLicenseFeeApprovalModal(this.buildNewLicenseFeeApprovalDialogData(applicationId));
+    }
+
+    private executeApproveAction(item: any, context: UserContext, options?: ApproveExecutionOptions): void {
+        this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context, {
+            workflowContextData: options?.workflowContextData
+        }).subscribe({
+            next: (result: any) => {
+                const isSuccess = result?.success !== false;
+                if (isSuccess) {
+                    const successMessage = options?.successMessage || result?.message;
+                    if (successMessage) {
+                        this.snackBar.open(successMessage, 'Close', { duration: 3500 });
+                    }
+                    const currentId = this.applicationData?.id?.toString() || '';
+                    const currentRef = this.applicationData?.referenceNo || '';
+                    this.loadApplicationData(currentRef, currentId);
+                    return;
+                }
+
+                this.snackBar.open(
+                    result?.message || options?.failureMessage || 'Action failed',
+                    'Close',
+                    { duration: 4500 }
+                );
+            },
+            error: (error: any) => {
+                this.snackBar.open(
+                    this.extractHttpErrorMessage(error, options?.failureMessage || 'Action failed'),
+                    'Close',
+                    { duration: 4500 }
+                );
+            }
+        });
+    }
+
+    private shouldOpenNewLicenseFeeApprovalDialog(): boolean {
+        if (this.applicationType !== 'new-license') {
+            return false;
+        }
+
+        // Check role via RoleService first (most reliable)
+        if (this.roleService.hasRole(9)) {
+            return true;
+        }
+
+        // Fallback: check localStorage (covers cases where RoleService hasn't hydrated yet)
+        if (this.isBrowser) {
+            const storedRoleId = Number(localStorage.getItem('role_id') || 0);
+            const storedRoleName = String(localStorage.getItem('role') || '').toLowerCase();
+
+            if (
+                storedRoleId === 9 ||
+                storedRoleName.includes('joint_commissioner') ||
+                storedRoleName.includes('joint commissioner')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bindNewLicenseFeeApprovalForm(): void {
+        this.newLicenseFeeApprovalForm.get('licenseCategoryId')?.valueChanges.subscribe((categoryId) => {
+            const id = this.parseNumericValue(categoryId);
+            if (!id) {
+                // Category cleared — reset subcategory and location
+                const subcategoryControl = this.newLicenseFeeApprovalForm.get('licenseSubcategoryId');
+                subcategoryControl?.disable({ emitEvent: false });
+                subcategoryControl?.setValue(null, { emitEvent: false });
+                this.newLicenseFeeApprovalFilteredSubcategories = [];
+                this.newLicenseFeeApprovalLocations = [];
+                this.resetNewLicenseFeeApprovalFeeState();
+                this.cdr.detectChanges();
+                return;
+            }
+            this.loadAvailableSubcategories(id);
+        });
+
+        this.newLicenseFeeApprovalForm.get('licenseSubcategoryId')?.valueChanges.subscribe((subcategoryId) => {
+            const categoryId = this.parseNumericValue(this.newLicenseFeeApprovalForm.get('licenseCategoryId')?.value);
+            const subId = this.parseNumericValue(subcategoryId);
+            if (!categoryId || !subId) {
+                this.newLicenseFeeApprovalLocations = [];
+                this.resetNewLicenseFeeApprovalFeeState();
+                this.cdr.detectChanges();
+                return;
+            }
+            this.loadAvailableLocations(categoryId, subId);
+        });
+
+        this.newLicenseFeeApprovalForm.get('locationCode')?.valueChanges.subscribe(() => {
+            this.loadNewLicenseFeeApprovalDetailsIfReady();
+        });
+    }
+
+    cancelNewLicenseFeeApproval(): void {
+        this.newLicenseFeeApprovalModalOpen = false;
+        this.pendingNewLicenseFeeApproval = null;
+        this.resetNewLicenseFeeApprovalState();
+        this.cdr.detectChanges();
+    }
+
+    confirmNewLicenseFeeApproval(): void {
+        if (!this.canConfirmNewLicenseFeeApproval || !this.newLicenseFeeApprovalDetails || !this.pendingNewLicenseFeeApproval) {
+            this.newLicenseFeeApprovalForm.markAllAsTouched();
+            return;
+        }
+
+        const rawValue = this.newLicenseFeeApprovalForm.getRawValue();
+        const selectedCategory = this.newLicenseFeeApprovalCategories.find(
+            (item) => item.id === Number(rawValue.licenseCategoryId)
+        );
+        const selectedSubcategory = this.newLicenseFeeApprovalFilteredSubcategories.find(
+            (item) => item.id === Number(rawValue.licenseSubcategoryId)
+        );
+        const selectedLocation = this.newLicenseFeeApprovalLocations.find(
+            (item) => item.locationCode === String(rawValue.locationCode ?? '')
+        );
+
+        const selection: NewLicenseFeeApprovalResult = {
+            applicationId: this.pendingNewLicenseFeeApproval.applicationId,
+            licenseCategoryId: Number(rawValue.licenseCategoryId),
+            licenseCategoryName: selectedCategory?.licenseCategory || '',
+            licenseSubcategoryId: Number(rawValue.licenseSubcategoryId),
+            licenseSubcategoryName: selectedSubcategory?.description || '',
+            locationCode: String(rawValue.locationCode ?? ''),
+            locationDescription: selectedLocation?.locationDescription || '',
+            licenseFee: this.newLicenseFeeApprovalDetails
+        };
+
+        const pendingApproval = this.pendingNewLicenseFeeApproval;
+        this.newLicenseFeeApprovalModalOpen = false;
+        this.pendingNewLicenseFeeApproval = null;
+        this.resetNewLicenseFeeApprovalState();
+        this.cdr.detectChanges();
+
+        this.executeApproveAction(pendingApproval.item, pendingApproval.context, {
+            ...pendingApproval.options,
+            successMessage: pendingApproval.options?.successMessage || 'Application approved and selected fee linked successfully.',
+            failureMessage: pendingApproval.options?.failureMessage || 'Approval failed.',
+            workflowContextData: {
+                ...(pendingApproval.options?.workflowContextData ?? {}),
+                ...this.buildNewLicenseFeeWorkflowContextData(selection)
+            }
+        });
+    }
+
+    private openNewLicenseFeeApprovalModal(data: NewLicenseFeeApprovalDialogData): void {
+        this.newLicenseFeeApprovalModalOpen = true;
+        this.newLicenseFeeApprovalOptionsLoading = true;
+        this.newLicenseFeeApprovalOptionsError = '';
+        this.resetNewLicenseFeeApprovalFeeState();
+
+        const initialCategoryId = data.initialLicenseCategoryId ?? null;
+        const initialCategoryName = data.initialLicenseCategoryName ?? null;
+        const initialSubcategoryId = data.initialLicenseSubcategoryId ?? null;
+        const initialSubcategoryName = data.initialLicenseSubcategoryName ?? null;
+        const initialLocationCode = this.normalizeLocationCode(data.initialLocationCode);
+        const initialLocationName = data.initialLocationName ?? null;
+        const initialDistrictName = data.initialDistrictName ?? null;
+
+        this.newLicenseFeeApprovalForm.reset({
+            licenseCategoryId: null,
+            licenseSubcategoryId: null,
+            locationCode: null
+        }, { emitEvent: false });
+
+        this.newLicenseFeeApprovalForm.get('licenseSubcategoryId')?.disable({ emitEvent: false });
+        this.newLicenseFeeApprovalFilteredSubcategories = [];
+        this.newLicenseFeeApprovalLocations = [];
+
+        // Load only categories that have at least one active fee record
+        this.masterService.getLicenseFeeAvailableCategories().subscribe({
+            next: (categories: any[]) => {
+                this.newLicenseFeeApprovalOptionsError = '';
+                this.newLicenseFeeApprovalCategories = (Array.isArray(categories) ? categories : [])
+                    .map((item: any) => this.normalizeNewLicenseFeeApprovalCategory(item))
+                    .filter((item: LicenseCategory) => !!item.id && !!item.licenseCategory);
+
+                if (!this.newLicenseFeeApprovalCategories.length) {
+                    this.newLicenseFeeApprovalOptionsError = 'No license fee records found. Please add fee records first.';
+                }
+
+                this.newLicenseFeeApprovalOptionsLoading = false;
+
+                const preselectedCategory =
+                    this.resolvePreselectedCategory(initialCategoryId, initialCategoryName) ??
+                    this.injectSubmittedCategoryOption(initialCategoryId, initialCategoryName);
+                const preselectedCategoryId =
+                    typeof preselectedCategory?.id === 'number' && preselectedCategory.id > 0
+                        ? preselectedCategory.id
+                        : null;
+                if (preselectedCategory && preselectedCategoryId !== null) {
+                    this.newLicenseFeeApprovalForm.get('licenseCategoryId')?.setValue(preselectedCategoryId, { emitEvent: false });
+                    // Load subcategories for the pre-selected category
+                    this.loadAvailableSubcategories(
+                        preselectedCategoryId,
+                        initialSubcategoryId,
+                        initialLocationCode,
+                        initialSubcategoryName,
+                        initialLocationName,
+                        initialDistrictName
+                    );
+                }
+
+                this.cdr.detectChanges();
+            },
+            error: (error: any) => {
+                this.newLicenseFeeApprovalOptionsLoading = false;
+                this.newLicenseFeeApprovalOptionsError = this.extractHttpErrorMessage(
+                    error,
+                    'Failed to load license categories.',
+                    'license fee categories'
+                );
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    private loadAvailableSubcategories(
+        categoryId: number,
+        preselectSubcategoryId: number | null = null,
+        preselectLocationCode: string | null = null,
+        preselectSubcategoryName: string | null = null,
+        preselectLocationName: string | null = null,
+        preselectDistrictName: string | null = null
+    ): void {
+        const subcategoryControl = this.newLicenseFeeApprovalForm.get('licenseSubcategoryId');
+        subcategoryControl?.disable({ emitEvent: false });
+        subcategoryControl?.setValue(null, { emitEvent: false });
+        this.newLicenseFeeApprovalOptionsError = '';
+        this.newLicenseFeeApprovalFilteredSubcategories = [];
+        this.newLicenseFeeApprovalLocations = [];
+        this.resetNewLicenseFeeApprovalFeeState();
+
+        this.masterService.getLicenseFeeAvailableSubcategories(categoryId).subscribe({
+            next: (subcategories: any[]) => {
+                this.newLicenseFeeApprovalFilteredSubcategories = (Array.isArray(subcategories) ? subcategories : [])
+                    .map((item: any) => this.normalizeNewLicenseFeeApprovalSubcategory(item))
+                    .filter((item: NewLicenseFeeApprovalSubcategoryOption) => item.id > 0 && !!item.description);
+
+                subcategoryControl?.enable({ emitEvent: false });
+
+                const preselectedSubcategory =
+                    this.resolvePreselectedSubcategory(
+                        preselectSubcategoryId,
+                        preselectSubcategoryName
+                    ) ??
+                    this.injectSubmittedSubcategoryOption(
+                        categoryId,
+                        preselectSubcategoryId,
+                        preselectSubcategoryName
+                    );
+                if (preselectedSubcategory) {
+                    subcategoryControl?.setValue(preselectedSubcategory.id, { emitEvent: false });
+                    this.loadAvailableLocations(
+                        categoryId,
+                        preselectedSubcategory.id,
+                        preselectLocationCode,
+                        preselectLocationName,
+                        preselectDistrictName
+                    );
+                }
+
+                this.cdr.detectChanges();
+            },
+            error: (error: any) => {
+                subcategoryControl?.enable({ emitEvent: false });
+                this.newLicenseFeeApprovalOptionsError = this.extractHttpErrorMessage(
+                    error,
+                    'Failed to load license subcategories.',
+                    'license fee subcategories'
+                );
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    private loadAvailableLocations(
+        categoryId: number,
+        subcategoryId: number,
+        preselectLocationCode: string | null = null,
+        preselectLocationName: string | null = null,
+        preselectDistrictName: string | null = null
+    ): void {
+        const locationControl = this.newLicenseFeeApprovalForm.get('locationCode');
+        locationControl?.setValue(null, { emitEvent: false });
+        this.newLicenseFeeApprovalOptionsError = '';
+        this.newLicenseFeeApprovalLocations = [];
+        this.resetNewLicenseFeeApprovalFeeState();
+
+        this.masterService.getLicenseFeeAvailableLocations(categoryId, subcategoryId).subscribe({
+            next: (locations: any[]) => {
+                this.newLicenseFeeApprovalLocations = (Array.isArray(locations) ? locations : [])
+                    .map((item: any) => this.normalizeNewLicenseFeeApprovalLocation(item))
+                    .filter((item: NewLicenseFeeApprovalLocationOption) => !!item.locationCode);
+
+                const preselectedLocation =
+                    this.resolvePreselectedLocation(
+                        preselectLocationCode,
+                        preselectLocationName,
+                        preselectDistrictName
+                    ) ??
+                    this.injectSubmittedLocationOption(
+                        preselectLocationCode,
+                        preselectLocationName,
+                        preselectDistrictName
+                    );
+                if (preselectedLocation) {
+                    locationControl?.setValue(preselectedLocation.locationCode, { emitEvent: false });
+                    this.loadNewLicenseFeeApprovalDetailsIfReady();
+                }
+
+                this.cdr.detectChanges();
+            },
+            error: (error: any) => {
+                this.newLicenseFeeApprovalOptionsError = this.extractHttpErrorMessage(
+                    error,
+                    'Failed to load fee-mapped locations.',
+                    'license fee locations'
+                );
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    private buildNewLicenseFeeApprovalDialogData(applicationId: string): NewLicenseFeeApprovalDialogData {
+        return {
+            applicationId,
+            initialLicenseCategoryId: this.extractApplicationNumericSelection(
+                'license_category_id',
+                'licenseCategoryId',
+                'license_category',
+                'licenseCategory'
+            ),
+            initialLicenseCategoryName: this.extractApplicationDisplaySelection(
+                'license_category_name',
+                'licenseCategoryName',
+                'license_category',
+                'licenseCategory'
+            ),
+            initialLicenseSubcategoryId: this.extractApplicationNumericSelection(
+                'license_subcategory_id',
+                'license_sub_category_id',
+                'licenseSubcategoryId',
+                'licenseSubCategoryId',
+                'license_sub_category',
+                'licenseSubCategory',
+                'licenseSubcategory'
+            ),
+            initialLicenseSubcategoryName: this.extractApplicationDisplaySelection(
+                'license_sub_category_name',
+                'licenseSubCategoryName',
+                'license_sub_category',
+                'licenseSubCategory',
+                'licenseSubcategory'
+            ),
+            initialLocationCode: this.extractApplicationStringSelection(
+                'location_code',
+                'locationCode',
+                'location'
+            ),
+            initialLocationName: this.extractApplicationDisplaySelection(
+                'location_name',
+                'locationName',
+                'location'
+            ),
+            initialDistrictName: this.extractApplicationDisplaySelection(
+                'site_district_name',
+                'siteDistrictName',
+                'site_district',
+                'siteDistrict'
+            )
+        };
+    }
+
+    private buildNewLicenseFeeWorkflowContextData(selection: NewLicenseFeeApprovalResult): Record<string, any> {
+        const fee = selection.licenseFee as any;
+        // API returns camelCase (DRF camelCase renderer); fall back to snake_case for safety
+        const licenseFeeVal = fee.licenseFee ?? fee.license_fee;
+        const securityAmountVal = fee.securityAmount ?? fee.security_amount;
+        const renewalAmountVal = fee.renewalAmount ?? fee.renewal_amount;
+        const lateFeeVal = fee.lateFee ?? fee.late_fee;
+
+        return {
+            selected_license_fee_id: fee.id,
+            license_category_id: selection.licenseCategoryId,
+            license_subcategory_id: selection.licenseSubcategoryId,
+            location_code: selection.locationCode,
+            license_fee_selection: {
+                id: fee.id,
+                application_id: selection.applicationId,
+                license_category_id: selection.licenseCategoryId,
+                license_category_name: selection.licenseCategoryName,
+                license_subcategory_id: selection.licenseSubcategoryId,
+                license_subcategory_name: selection.licenseSubcategoryName,
+                location_code: selection.locationCode,
+                location_description: selection.locationDescription,
+                license_fee: licenseFeeVal,
+                security_amount: securityAmountVal,
+                renewal_amount: renewalAmountVal,
+                late_fee: lateFeeVal
+            }
+        };
+    }
+
+    private handleNewLicenseFeeApprovalCategoryChange(categoryId: number | null, resetSubcategory: boolean): void {
+        const subcategoryControl = this.newLicenseFeeApprovalForm.get('licenseSubcategoryId');
+
+        if (!categoryId) {
+            this.newLicenseFeeApprovalFilteredSubcategories = [];
+            subcategoryControl?.disable({ emitEvent: false });
+            subcategoryControl?.setValue(null, { emitEvent: false });
+            this.resetNewLicenseFeeApprovalFeeState();
+            return;
+        }
+
+        this.newLicenseFeeApprovalFilteredSubcategories = this.newLicenseFeeApprovalAllSubcategories.filter(
+            (item) => item.categoryId === categoryId
+        );
+        subcategoryControl?.enable({ emitEvent: false });
+
+        const currentSubcategoryId = this.parseNumericValue(subcategoryControl?.value);
+        const hasValidSubcategory = !!currentSubcategoryId &&
+            this.newLicenseFeeApprovalFilteredSubcategories.some((item) => item.id === currentSubcategoryId);
+
+        if (resetSubcategory || !hasValidSubcategory) {
+            subcategoryControl?.setValue(null, { emitEvent: false });
+        }
+
+        this.resetNewLicenseFeeApprovalFeeState();
+        this.cdr.detectChanges();
+    }
+
+    private loadNewLicenseFeeApprovalDetailsIfReady(): void {
+        const categoryId = this.parseNumericValue(this.newLicenseFeeApprovalForm.get('licenseCategoryId')?.value);
+        const subcategoryId = this.parseNumericValue(this.newLicenseFeeApprovalForm.getRawValue()?.licenseSubcategoryId);
+        const locationCode = String(this.newLicenseFeeApprovalForm.get('locationCode')?.value ?? '').trim();
+
+        if (!categoryId || !subcategoryId || !locationCode || locationCode === 'null') {
+            return;
+        }
+
+        if (this.isSyntheticSubmittedLocationCode(locationCode)) {
+            this.newLicenseFeeApprovalDetails = null;
+            this.newLicenseFeeApprovalFeeLoading = false;
+            this.newLicenseFeeApprovalFeeError = 'Submitted location is not mapped to an approval fee record yet. Please choose a location from the dropdown before confirming approval.';
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.newLicenseFeeApprovalFeeLoading = true;
+        this.masterService.lookupLicenseFee(categoryId, subcategoryId, locationCode).subscribe({
+            next: (fee: any) => {
+                this.newLicenseFeeApprovalFeeLoading = false;
+                if (!fee || fee.detail) {
+                    // fee.detail means the backend returned an error body with 200 status
+                    this.newLicenseFeeApprovalDetails = null;
+                    this.newLicenseFeeApprovalFeeError = fee?.detail || 'No fee record found for this combination';
+                    this.cdr.detectChanges();
+                    return;
+                }
+                // Store raw response directly — template uses string interpolation, no pipe needed
+                this.newLicenseFeeApprovalDetails = fee as LicenseFee;
+                this.cdr.detectChanges();
+            },
+            error: (error: any) => {
+                this.newLicenseFeeApprovalFeeLoading = false;
+                this.newLicenseFeeApprovalDetails = null;
+                this.newLicenseFeeApprovalFeeError =
+                    error?.status === 404
+                        ? 'No fee record found for this combination'
+                        : this.extractHttpErrorMessage(
+                            error,
+                            'No fee record found for this combination',
+                            'license fee details'
+                        );
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    private extractApplicationNumericSelection(...keys: string[]): number | null {
+        if (!this.applicationData) {
+            return null;
+        }
+
+        for (const key of keys) {
+            const rawValue = this.unwrapApplicationSelectionValue((this.applicationData as any)?.[key]);
+            if (rawValue === null || rawValue === undefined) {
+                continue;
+            }
+
+            const normalized = String(rawValue).trim();
+            if (!normalized) {
+                continue;
+            }
+
+            const parsed = Number(normalized);
+            if (Number.isFinite(parsed)) {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private extractApplicationStringSelection(...keys: string[]): string | null {
+        if (!this.applicationData) {
+            return null;
+        }
+
+        for (const key of keys) {
+            const rawValue = this.unwrapApplicationSelectionValue((this.applicationData as any)?.[key]);
+            if (rawValue === null || rawValue === undefined) {
+                continue;
+            }
+
+            const normalized = String(rawValue).trim();
+            if (normalized) {
+                return normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private extractApplicationDisplaySelection(...keys: string[]): string | null {
+        if (!this.applicationData) {
+            return null;
+        }
+
+        for (const key of keys) {
+            const rawValue = this.unwrapApplicationDisplayValue((this.applicationData as any)?.[key]);
+            if (rawValue === null || rawValue === undefined) {
+                continue;
+            }
+
+            const normalized = String(rawValue).trim();
+            if (normalized) {
+                return normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private unwrapApplicationSelectionValue(value: any): any {
+        if (!value || typeof value !== 'object') {
+            return value;
+        }
+
+        return value.location_code ??
+            value.locationCode ??
+            value.license_category_id ??
+            value.licenseCategoryId ??
+            value.license_subcategory_id ??
+            value.licenseSubcategoryId ??
+            value.id ??
+            value.pk ??
+            value.value ??
+            null;
+    }
+
+    private unwrapApplicationDisplayValue(value: any): any {
+        if (!value || typeof value !== 'object') {
+            return value;
+        }
+
+        return value.location_description ??
+            value.locationDescription ??
+            value.license_category ??
+            value.licenseCategory ??
+            value.license_sub_category ??
+            value.licenseSubCategory ??
+            value.category_name ??
+            value.categoryName ??
+            value.description ??
+            value.name ??
+            value.label ??
+            value.district ??
+            value.subdivision ??
+            value.police_station ??
+            value.policeStation ??
+            value.ward_name ??
+            value.wardName ??
+            value.value ??
+            this.unwrapApplicationSelectionValue(value);
+    }
+
+    private resetNewLicenseFeeApprovalState(): void {
+        this.newLicenseFeeApprovalOptionsLoading = false;
+        this.newLicenseFeeApprovalOptionsError = '';
+        this.newLicenseFeeApprovalCategories = [];
+        this.newLicenseFeeApprovalAllSubcategories = [];
+        this.newLicenseFeeApprovalFilteredSubcategories = [];
+        this.newLicenseFeeApprovalLocations = [];
+        this.newLicenseFeeApprovalForm.reset({
+            licenseCategoryId: null,
+            licenseSubcategoryId: null,
+            locationCode: null
+        }, { emitEvent: false });
+        this.newLicenseFeeApprovalForm.get('licenseSubcategoryId')?.disable({ emitEvent: false });
+        this.resetNewLicenseFeeApprovalFeeState();
+    }
+
+    private resetNewLicenseFeeApprovalFeeState(): void {
+        this.newLicenseFeeApprovalDetails = null;
+        this.newLicenseFeeApprovalFeeLoading = false;
+        this.newLicenseFeeApprovalFeeError = '';
+    }
+
+    private normalizeLocationCode(value: string | number | null | undefined): string | null {
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+
+        return String(value).trim();
+    }
+
+    private normalizeSelectionText(value: unknown): string {
+        return String(value ?? '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    private resolvePreselectedCategory(
+        categoryId: number | null,
+        categoryName: string | null
+    ): LicenseCategory | null {
+        if (categoryId) {
+            const exactMatch = this.newLicenseFeeApprovalCategories.find((item) => item.id === categoryId);
+            if (exactMatch) {
+                return exactMatch;
+            }
+        }
+
+        const normalizedName = this.normalizeSelectionText(categoryName);
+        if (!normalizedName) {
+            return null;
+        }
+
+        return this.newLicenseFeeApprovalCategories.find(
+            (item) => this.normalizeSelectionText(item.licenseCategory) === normalizedName
+        ) ?? this.newLicenseFeeApprovalCategories.find(
+            (item) => this.normalizeSelectionText(item.licenseCategory).includes(normalizedName) ||
+                normalizedName.includes(this.normalizeSelectionText(item.licenseCategory))
+        ) ?? null;
+    }
+
+    private injectSubmittedCategoryOption(
+        categoryId: number | null,
+        categoryName: string | null
+    ): LicenseCategory | null {
+        const normalizedName = String(categoryName ?? '').trim();
+        if (!categoryId || !normalizedName) {
+            return null;
+        }
+
+        const syntheticOption: LicenseCategory = {
+            id: categoryId,
+            licenseCategory: normalizedName,
+            description: 'Submitted application value'
+        };
+
+        this.newLicenseFeeApprovalCategories = [
+            syntheticOption,
+            ...this.newLicenseFeeApprovalCategories.filter((item) => item.id !== categoryId)
+        ];
+
+        return syntheticOption;
+    }
+
+    private resolvePreselectedSubcategory(
+        subcategoryId: number | null,
+        subcategoryName: string | null
+    ): NewLicenseFeeApprovalSubcategoryOption | null {
+        if (subcategoryId) {
+            const exactMatch = this.newLicenseFeeApprovalFilteredSubcategories.find((item) => item.id === subcategoryId);
+            if (exactMatch) {
+                return exactMatch;
+            }
+        }
+
+        const normalizedName = this.normalizeSelectionText(subcategoryName);
+        if (!normalizedName) {
+            return null;
+        }
+
+        return this.newLicenseFeeApprovalFilteredSubcategories.find(
+            (item) => this.normalizeSelectionText(item.description) === normalizedName
+        ) ?? this.newLicenseFeeApprovalFilteredSubcategories.find(
+            (item) => this.normalizeSelectionText(item.description).includes(normalizedName) ||
+                normalizedName.includes(this.normalizeSelectionText(item.description))
+        ) ?? null;
+    }
+
+    private injectSubmittedSubcategoryOption(
+        categoryId: number,
+        subcategoryId: number | null,
+        subcategoryName: string | null
+    ): NewLicenseFeeApprovalSubcategoryOption | null {
+        const normalizedName = String(subcategoryName ?? '').trim();
+        if (!categoryId || !subcategoryId || !normalizedName) {
+            return null;
+        }
+
+        const syntheticOption: NewLicenseFeeApprovalSubcategoryOption = {
+            id: subcategoryId,
+            description: normalizedName,
+            categoryId
+        };
+
+        this.newLicenseFeeApprovalFilteredSubcategories = [
+            syntheticOption,
+            ...this.newLicenseFeeApprovalFilteredSubcategories.filter((item) => item.id !== subcategoryId)
+        ];
+
+        return syntheticOption;
+    }
+
+    private resolvePreselectedLocation(
+        locationCode: string | null,
+        locationName: string | null,
+        districtName: string | null
+    ): NewLicenseFeeApprovalLocationOption | null {
+        if (locationCode) {
+            const exactMatch = this.newLicenseFeeApprovalLocations.find(
+                (item) => item.locationCode === locationCode
+            );
+            if (exactMatch) {
+                return exactMatch;
+            }
+        }
+
+        const normalizedLocationName = this.normalizeSelectionText(locationName);
+        if (!normalizedLocationName) {
+            return null;
+        }
+
+        const nameMatches = this.newLicenseFeeApprovalLocations.filter(
+            (item) => this.normalizeSelectionText(item.locationDescription) === normalizedLocationName
+        );
+        const fuzzyMatches = nameMatches.length
+            ? nameMatches
+            : this.newLicenseFeeApprovalLocations.filter((item) => {
+                const normalizedOption = this.normalizeSelectionText(item.locationDescription);
+                return normalizedOption.includes(normalizedLocationName) ||
+                    normalizedLocationName.includes(normalizedOption);
+            });
+        if (!fuzzyMatches.length) {
+            return null;
+        }
+
+        const normalizedDistrictName = this.normalizeSelectionText(districtName);
+        if (!normalizedDistrictName || fuzzyMatches.length === 1) {
+            return fuzzyMatches[0];
+        }
+
+        return fuzzyMatches.find(
+            (item) => this.normalizeSelectionText(item.districtName) === normalizedDistrictName
+        ) ?? fuzzyMatches.find((item) => {
+            const normalizedOptionDistrict = this.normalizeSelectionText(item.districtName);
+            return normalizedOptionDistrict.includes(normalizedDistrictName) ||
+                normalizedDistrictName.includes(normalizedOptionDistrict);
+        }) ?? fuzzyMatches[0];
+    }
+
+    private injectSubmittedLocationOption(
+        locationCode: string | null,
+        locationName: string | null,
+        districtName: string | null
+    ): NewLicenseFeeApprovalLocationOption | null {
+        const normalizedName = String(locationName ?? '').trim();
+        if (!normalizedName) {
+            return null;
+        }
+
+        const syntheticCode =
+            this.normalizeLocationCode(locationCode) ??
+            this.buildSyntheticSubmittedLocationCode(normalizedName, districtName);
+
+        const syntheticOption: NewLicenseFeeApprovalLocationOption = {
+            locationCode: syntheticCode,
+            locationDescription: normalizedName,
+            districtName: String(districtName ?? '').trim() || undefined,
+            isSynthetic: this.isSyntheticSubmittedLocationCode(syntheticCode)
+        };
+
+        this.newLicenseFeeApprovalLocations = [
+            syntheticOption,
+            ...this.newLicenseFeeApprovalLocations.filter((item) => item.locationCode !== syntheticCode)
+        ];
+
+        return syntheticOption;
+    }
+
+    private normalizeNewLicenseFeeApprovalCategory(item: any): LicenseCategory {
+        return {
+            id: this.parseNumericValue(item?.id) ?? 0,
+            licenseCategory: String(item?.licenseCategory ?? item?.license_category ?? item?.name ?? '').trim(),
+            description: item?.description ?? ''
+        };
+    }
+
+    private normalizeNewLicenseFeeApprovalSubcategory(item: any): NewLicenseFeeApprovalSubcategoryOption {
+        // Resolve categoryId from all possible field shapes the API might return.
+        // NOTE: do NOT use parseNumericValue with ?? chaining here — parseNumericValue
+        // returns 0 (not null/undefined) for missing fields, so ?? would short-circuit
+        // on the first 0 and never reach the next candidate.
+        const rawCategoryId =
+            item?.license_category_id ??
+            item?.category?.id ??
+            item?.licenseCategory?.id ??
+            item?.category ??
+            item?.licenseCategory ??
+            null;
+
+        const categoryId = this.parseNumericValue(rawCategoryId);
+
+        return {
+            id: this.parseNumericValue(item?.id) ?? 0,
+            description: String(item?.description ?? item?.licenseSubcategory ?? item?.license_subcategory ?? item?.name ?? '').trim(),
+            categoryId
+        };
+    }
+
+    private normalizeNewLicenseFeeApprovalLocation(item: any): NewLicenseFeeApprovalLocationOption {
+        const locationCode =
+            item?.locationCode ??
+            item?.location_code ??
+            item?.code ??
+            item?.value ??
+            '';
+
+        return {
+            id: this.parseNumericValue(item?.id) ?? undefined,
+            locationCode: String(locationCode).trim(),
+            locationDescription: String(
+                item?.locationDescription ??
+                item?.location_description ??
+                item?.description ??
+                item?.name ??
+                locationCode
+            ).trim(),
+            districtName: String(
+                item?.districtName ??
+                item?.district_name ??
+                item?.district ??
+                ''
+            ).trim() || undefined,
+            isSynthetic: false
+        };
+    }
+
+    private buildSyntheticSubmittedLocationCode(locationName: string, districtName: string | null): string {
+        const normalizedLocation = this.normalizeSelectionText(locationName).replace(/\s+/g, '-');
+        const normalizedDistrict = this.normalizeSelectionText(districtName).replace(/\s+/g, '-');
+        const suffix = normalizedDistrict ? `-${normalizedDistrict}` : '';
+        return `__submitted__${normalizedLocation}${suffix}`;
+    }
+
+    private isSyntheticSubmittedLocationCode(locationCode: string | null | undefined): boolean {
+        return String(locationCode ?? '').trim().startsWith('__submitted__');
+    }
+
     private openSiteEnquiryAndApprove(item: any, context: UserContext, applicationId: string): void {
         const submitSiteEnquiry$ =
             this.applicationType === 'new-license'
@@ -1413,41 +2397,17 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
             submitSiteEnquiry$(result.formData).subscribe({
                 next: () => {
-                    this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
-                        next: (approveResult: any) => {
-                            const isSuccess = approveResult?.success !== false;
-                            if (isSuccess) {
-                                this.snackBar.open('Site enquiry submitted and application approved.', 'Close', { duration: 3500 });
-                                const currentId = this.applicationData?.id?.toString() || '';
-                                const currentRef = this.applicationData?.referenceNo || '';
-                                this.loadApplicationData(currentRef, currentId);
-                                return;
-                            }
-                            this.snackBar.open(approveResult?.message || 'Approval failed after site enquiry submit.', 'Close', { duration: 4500 });
-                        },
-                        error: (error: any) => {
-                            this.snackBar.open(this.extractHttpErrorMessage(error, 'Approval failed after site enquiry submit.'), 'Close', { duration: 4500 });
-                        }
+                    this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                        successMessage: 'Site enquiry submitted and application approved.',
+                        failureMessage: 'Approval failed after site enquiry submit.'
                     });
                 },
                 error: (error: any) => {
-                    const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.');
+                    const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.', 'site enquiry');
                     if (String(message).toLowerCase().includes('already submitted')) {
-                        this.unifiedActionsService.executeAction('APPROVE', item, this.applicationType, context).subscribe({
-                            next: (approveResult: any) => {
-                                const isSuccess = approveResult?.success !== false;
-                                if (isSuccess) {
-                                    this.snackBar.open('Existing site enquiry found. Application approved.', 'Close', { duration: 3500 });
-                                    const currentId = this.applicationData?.id?.toString() || '';
-                                    const currentRef = this.applicationData?.referenceNo || '';
-                                    this.loadApplicationData(currentRef, currentId);
-                                    return;
-                                }
-                                this.snackBar.open(approveResult?.message || 'Approval failed.', 'Close', { duration: 4500 });
-                            },
-                            error: (approveError: any) => {
-                                this.snackBar.open(this.extractHttpErrorMessage(approveError, 'Approval failed.'), 'Close', { duration: 4500 });
-                            }
+                        this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                            successMessage: 'Existing site enquiry found. Application approved.',
+                            failureMessage: 'Approval failed.'
                         });
                         return;
                     }
@@ -1468,7 +2428,157 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         ).trim();
     }
 
-    private extractHttpErrorMessage(error: any, fallback: string): string {
+    private getCurrentApplicationId(): string {
+        return this.getWorkflowApplicationId(this.applicationData);
+    }
+
+    private isPendingAtJointCommissionerStage(): boolean {
+        const stageText = String(
+            this.applicationData?.currentStageName ??
+            (this.applicationData as any)?.current_stage_name ??
+            ''
+        ).toLowerCase();
+        const stageToken = stageText.replace(/[^a-z]/g, '');
+        if (!stageToken.includes('jointcommissioner')) {
+            return false;
+        }
+
+        const statusText = String(this.applicationData?.status ?? '').toLowerCase();
+        const combined = `${stageText} ${statusText}`;
+        const isRejectedLike = combined.includes('reject');
+        const isObjectionLike = combined.includes('objection');
+        const isApprovedLike = combined.includes('approve') || combined.includes('payment');
+        const isPendingLike = combined.includes('pending') || (!isRejectedLike && !isObjectionLike && !isApprovedLike);
+
+        return isPendingLike && !isRejectedLike && !isObjectionLike && !isApprovedLike;
+    }
+
+    private buildSiteEnquiryReportEntries(report: Record<string, any>): SiteEnquiryReportField[] {
+        const hiddenKeys = new Set(['content_type']);
+
+        return Object.entries(report || {})
+            .filter(([key]) => !hiddenKeys.has(key))
+            .map(([key, value]) => {
+                const href = this.isFilePath(value)
+                    ? this.normalizeDocUrl(this.getFileUrl(value))
+                    : undefined;
+
+                return {
+                    key,
+                    label: this.getSiteEnquiryFieldLabel(key),
+                    displayValue: href ? 'Open File' : this.formatSiteEnquiryFieldValue(key, value),
+                    href
+                };
+            });
+    }
+
+    private getSiteEnquiryFieldLabel(key: string): string {
+        const normalized = String(key || '')
+            .replace(/_/g, ' ')
+            .replace(/([a-z])([A-Z])/g, '$1 $2');
+
+        const upperTokens = new Set(['id', 'noc', 'dob', 'rcc', 'api']);
+        return normalized
+            .split(' ')
+            .filter(part => !!part)
+            .map(part => {
+                const token = part.toLowerCase();
+                if (upperTokens.has(token)) {
+                    return token.toUpperCase();
+                }
+                return token.charAt(0).toUpperCase() + token.slice(1);
+            })
+            .join(' ');
+    }
+
+    private formatSiteEnquiryFieldValue(key: string, value: unknown): string {
+        if (value === null || value === undefined) {
+            return 'Not Available';
+        }
+
+        if (typeof value === 'boolean') {
+            return value ? 'Yes' : 'No';
+        }
+
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? `${value}` : 'Not Available';
+        }
+
+        if (Array.isArray(value)) {
+            return value.length
+                ? value.map(item => this.formatSiteEnquiryFieldValue(key, item)).join(', ')
+                : 'Not Available';
+        }
+
+        const text = String(value).trim();
+        if (!text) {
+            return 'Not Available';
+        }
+
+        if (this.shouldFormatSiteEnquiryDate(key, text)) {
+            return this.formatSiteEnquiryDate(text);
+        }
+
+        return this.humanizeSiteEnquiryEnum(text);
+    }
+
+    private shouldFormatSiteEnquiryDate(key: string, value: string): boolean {
+        const normalizedKey = String(key || '').toLowerCase();
+        if (!(normalizedKey.endsWith('_at') || normalizedKey.endsWith('_date') || normalizedKey === 'date')) {
+            return false;
+        }
+
+        const parsed = Date.parse(value);
+        return Number.isFinite(parsed);
+    }
+
+    private formatSiteEnquiryDate(value: string): string {
+        const date = new Date(value);
+        const hasTime = value.includes('T') || /\d{2}:\d{2}/.test(value);
+
+        return hasTime
+            ? date.toLocaleString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+    }
+
+    private humanizeSiteEnquiryEnum(value: string): string {
+        const normalized = value.toLowerCase();
+        const knownValues: Record<string, string> = {
+            rcc: 'RCC',
+            newlicenseapplication: 'New License Application',
+            licenseapplication: 'License Application'
+        };
+
+        if (knownValues[normalized]) {
+            return knownValues[normalized];
+        }
+
+        if (/^[a-z]+(_[a-z]+)+$/.test(normalized)) {
+            return this.getSiteEnquiryFieldLabel(normalized);
+        }
+
+        return value;
+    }
+
+    private resetSiteEnquiryReportState(): void {
+        this.siteEnquiryReportModalOpen = false;
+        this.siteEnquiryReportLoading = false;
+        this.siteEnquiryReportError = '';
+        this.siteEnquiryReport = null;
+        this.siteEnquiryReportEntries = [];
+    }
+
+    private extractHttpErrorMessage(error: any, fallback: string, apiContext = 'the requested API'): string {
         const detail = error?.error?.detail;
         if (typeof detail === 'string' && detail.trim()) {
             return detail.trim();
@@ -1482,7 +2592,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const rawError = error?.error;
         if (typeof rawError === 'string') {
             if (rawError.trim().toLowerCase().startsWith('<!doctype')) {
-                return 'Server returned an HTML error page instead of API JSON. Please check backend endpoint/permission for Site Enquiry.';
+                return `Server returned an HTML error page instead of API JSON. Please check backend endpoint/permission for ${apiContext}.`;
             }
             if (rawError.trim()) {
                 return rawError.trim();
@@ -1491,7 +2601,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         const topMessage = error?.message;
         if (typeof topMessage === 'string' && topMessage.toLowerCase().includes('unexpected token')) {
-            return 'Server returned an invalid JSON response (HTML page). Please check backend endpoint/permission for Site Enquiry.';
+            return `Server returned an invalid JSON response (HTML page). Please check backend endpoint/permission for ${apiContext}.`;
         }
 
         return fallback;
@@ -1511,6 +2621,41 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .filter(action => !!action && action !== 'VIEW');
 
         return normalizedActions.length ? Array.from(new Set(normalizedActions)) : null;
+    }
+
+    canViewSiteEnquiryReport(): boolean {
+        return this.isNewLicense() && this.roleService.hasRole(9) && this.isPendingAtJointCommissionerStage();
+    }
+
+    openSiteEnquiryReportModal(): void {
+        const applicationId = this.getCurrentApplicationId();
+        if (!applicationId) {
+            this.snackBar.open('Application reference not found for site enquiry report.', 'Close', { duration: 4000 });
+            return;
+        }
+
+        this.siteEnquiryReportModalOpen = true;
+        this.siteEnquiryReportLoading = true;
+        this.siteEnquiryReportError = '';
+        this.siteEnquiryReport = null;
+        this.siteEnquiryReportEntries = [];
+
+        this.licenseApplicationService.getSiteEnquiryReport(applicationId).subscribe({
+            next: (report: Record<string, any>) => {
+                this.siteEnquiryReport = report || null;
+                this.siteEnquiryReportEntries = this.buildSiteEnquiryReportEntries(report || {});
+                this.siteEnquiryReportLoading = false;
+            },
+            error: (error: any) => {
+                this.siteEnquiryReportError = this.extractHttpErrorMessage(error, 'Failed to load site enquiry report.', 'site enquiry');
+                this.siteEnquiryReportLoading = false;
+            }
+        });
+    }
+
+    closeSiteEnquiryReportModal(): void {
+        this.resetSiteEnquiryReportState();
+        this.cdr.detectChanges();
     }
 
     private canRequestRequisitionCancellation(): boolean {
@@ -1605,7 +2750,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
             return;
         }
-        
+
         if (source && NAVIGATION_ROUTES[source as keyof typeof NAVIGATION_ROUTES]) {
             const route = NAVIGATION_ROUTES[source as keyof typeof NAVIGATION_ROUTES];
             if (route === '/dashboard') {
@@ -1615,7 +2760,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             }
             return;
         }
-        
+
         // Fallback navigation
         const currentUrl = this.router.url;
         if (currentUrl.includes('/app-permit-section/')) {
@@ -1638,9 +2783,58 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .join(' ');
     }
 
+    private getRawStageToken(): string {
+        const data: any = this.applicationData as any;
+        return String(data?.currentStageName ?? data?.current_stage_name ?? '').trim();
+    }
+
+    private shouldSimplifyStatusForLicensee(): boolean {
+        // Do not rely on URL/query-param "source" to determine licensee UX.
+        // Admin/Officer users can navigate from licensee-like routes but must still see real workflow stage.
+        if (!this.roleService.isLicenseeRole()) return false;
+        return this.isNewLicense() || this.isSalesmanBarmanRegistration();
+    }
+
+    private simplifyStageForLicensee(stageValue: string, statusValue: string): 'Pending' | 'Awaiting Payment' | 'Approved' | 'Rejected' {
+        const raw = `${String(stageValue || '')} ${String(statusValue || '')}`.toLowerCase();
+        if (raw.includes('approve')) return 'Approved';
+        if (raw.includes('reject')) return 'Rejected';
+        if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+        if (raw.includes('payment')) return 'Awaiting Payment';
+        return 'Pending';
+    }
+
+    getCurrentStatusText(): string {
+        const status = String(this.applicationData?.status || '').trim();
+        if (!this.shouldSimplifyStatusForLicensee()) {
+            const stage = this.getRawStageToken();
+            const base = this.hasText(stage) ? stage : status;
+            return this.getFormattedStatus(base);
+        }
+        const stage = this.getRawStageToken();
+        return this.simplifyStageForLicensee(stage, status);
+    }
+
+    getCurrentStatusToken(): string {
+        if (!this.applicationData) return 'PENDING';
+
+        if (!this.shouldSimplifyStatusForLicensee()) {
+            const stage = this.getRawStageToken();
+            const status = String(this.applicationData?.status || '').trim();
+            const base = this.hasText(stage) ? stage : status;
+            return String(base || 'PENDING').toUpperCase();
+        }
+
+        const simplified = this.getCurrentStatusText().toLowerCase();
+        if (simplified.includes('reject')) return 'REJECTED';
+        if (simplified.includes('approve')) return 'APPROVED';
+        // Treat "Awaiting Payment" as warning/pending in badge styling.
+        return 'PENDING';
+    }
+
     getStatusBadgeClass(status: string): string {
         const upperStatus = status.toUpperCase();
-        
+
         if (SUCCESS_STATUS_KEYWORDS.some(keyword => upperStatus.includes(keyword))) {
             return STATUS_BADGE_CLASSES.SUCCESS;
         } else if (WARNING_STATUS_KEYWORDS.some(keyword => upperStatus.includes(keyword))) {
@@ -1809,15 +3003,28 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     calculateNewLicenseUploads(): void {
         this.newLicenseUploads = [];
-        if (!this.applicationData || this.applicationType !== 'new-license') return;
+        if (!this.applicationData) return;
 
-        const docFields: Array<{ label: string; keys: string[] }> = [
-            { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
-            { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
-            { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
-            { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
-            { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
-        ];
+        let docFields: Array<{ label: string; keys: string[] }> = [];
+
+        if (this.applicationType === 'new-license') {
+            docFields = [
+                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
+                { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
+                { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
+                { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
+                { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
+            ];
+        } else if (this.applicationType === 'salesman-barman-registration') {
+            docFields = [
+                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto'] },
+                { label: 'Aadhaar Card', keys: ['aadhaar_card', 'aadhaarCard'] },
+                { label: 'Residential Certificate', keys: ['residential_certificate', 'residentialCertificate'] },
+                { label: 'Date of Birth Proof', keys: ['dateof_birth_proof', 'dateofBirthProof'] }
+            ];
+        } else {
+            return;
+        }
 
         for (const field of docFields) {
             const rawValue = this.pickFirstValue(field.keys);
@@ -1840,10 +3047,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         // Clone the print section to modify image paths
         const clonedSection = printSection.cloneNode(true) as HTMLElement;
-        
+
         // Get the base URL for absolute paths
         const baseUrl = window.location.origin;
-        
+
         // Update all image src attributes to use absolute URLs
         const images = clonedSection.querySelectorAll('img');
         images.forEach(img => {
@@ -2039,7 +3246,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         `);
 
         printWindow.document.close();
-        
+
         setTimeout(() => {
             printWindow.focus();
             printWindow.print();

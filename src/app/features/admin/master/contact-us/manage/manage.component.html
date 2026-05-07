@@ -1,0 +1,73 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} {{ data.category.singularLabel }}
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <ng-container *ngFor="let field of data.category.fields">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ field.label }}</mat-label>
+
+          <mat-select
+            *ngIf="field.type === 'select'; else textInput"
+            [(ngModel)]="$any(contact)[field.key]"
+            [name]="field.key"
+            [required]="!!field.required"
+            [attr.aria-label]="field.label"
+            title="{{ field.label }}"
+            placeholder="{{ field.label }}"
+          >
+            <mat-option *ngFor="let option of field.options" [value]="option.value">
+              {{ option.label }}
+            </mat-option>
+          </mat-select>
+
+          <ng-template #textInput>
+            <textarea
+              *ngIf="field.type === 'textarea'; else inputField"
+              matInput
+              rows="3"
+              [(ngModel)]="$any(contact)[field.key]"
+              [name]="field.key"
+              [required]="!!field.required"
+              [attr.aria-label]="field.label"
+              title="{{ field.label }}"
+              placeholder="{{ field.label }}"
+            ></textarea>
+
+            <ng-template #inputField>
+              <input
+                matInput
+                [type]="field.type || 'text'"
+                [(ngModel)]="$any(contact)[field.key]"
+                [name]="field.key"
+                [required]="!!field.required"
+                [attr.aria-label]="field.label"
+                title="{{ field.label }}"
+                placeholder="{{ field.label }}"
+                [email]="field.type === 'email'"
+                [attr.pattern]="field.type === 'tel' ? phonePattern : null"
+              />
+            </ng-template>
+          </ng-template>
+
+          <mat-error *ngIf="form.controls[field.key]?.errors?.['required']">
+            {{ field.label }} is required
+          </mat-error>
+          <mat-error *ngIf="form.controls[field.key]?.errors?.['email']">
+            Enter a valid email address
+          </mat-error>
+          <mat-error *ngIf="form.controls[field.key]?.errors?.['pattern']">
+            Phone number must be 10 digits
+          </mat-error>
+        </mat-form-field>
+      </ng-container>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button type="button" matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button type="button" matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

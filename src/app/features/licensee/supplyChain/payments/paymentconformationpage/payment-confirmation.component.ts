@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { catchError, forkJoin, of, Observable } from 'rxjs';
+import { catchError, forkJoin, of, Observable, timeout } from 'rxjs';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import {
@@ -124,7 +126,7 @@ type WalletViewMode = 'wallets' | 'others';
 
 interface PendingWalletPaymentContext {
   id: string;
-  tab: PaymentModuleTab;
+  tab: WalletTableTab;
   itemType: string;
   referenceNo: string;
   amount: number;
@@ -146,15 +148,21 @@ interface PendingWalletPaymentPreview {
   shortfall: number;
 }
 
-const SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
-const LICENSE_FEE_HOA = '0099-00-999-99-99';
+// Per payment logic document:
+// - License fee HOA: 0039-00-800-45-02
+// - Security deposit: no HOA (backend stores sentinel like "non")
+const SECURITY_DEPOSIT_HOA_SENTINEL = 'non';
+const LEGACY_SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
+const LICENSE_FEE_HOA = '0039-00-800-45-02';
+const LEGACY_LICENSE_FEE_HOA = '0099-00-999-99-99';
+const LICENSE_RENEWAL_MODULE_CODE = '002';
 
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   excise: '',
   brewery: '',
   education: '',
   hologram: '',
-  security_deposit: SECURITY_DEPOSIT_HOA,
+  security_deposit: '',
   license_fee: LICENSE_FEE_HOA
 };
 
@@ -201,6 +209,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
   private hasHandledPendingWalletPayment = false;
   private cancellationWalletSyncAttempted = new Set<string>();
+  private chainedNewLicenseSecurityAmount = 0;
+  private pendingNewLicenseApplicationId = '';
+  private pendingNewLicenseReferenceNo = '';
+  private pendingNewLicenseLicenseFeeAmount = 0;
+  private pendingNewLicenseSecurityFeeAmount = 0;
 
   // Monthly filter method - declared early to avoid TypeScript issues
   private setCurrentMonthAutomatically(): void {
@@ -216,6 +229,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private autoSelectLastPaidTabOnLoad = false;
   private pendingHologramAutoPayRefNo = '';
   private pendingHologramAutoPayType = '';
+  private readonly hologramDeepLinkStorageKey = 'wallet.pending.hologram.ref';
   isBreweryUser = false;
   walletModuleLabel = 'Distillery';
   showRetryButton = false;
@@ -226,6 +240,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   selectedAddMoneyContext: AddMoneyViewContext | null = null;
   addMoneyTransactionId = '';
   addMoneyAmount = 0;
+  private billdeskRetryLockUntil: Date | null = null;
   private movedModalState: Array<{ element: HTMLElement; parent: Node; nextSibling: Node | null }> = [];
 
   // Wallet Balances
@@ -236,6 +251,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   securityDepositBalance = 0;
   licenseFeeBalance = 0;
   activeLicenseeId = '';
+  private activeLicenseeName = '';
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private resolvedLicenseModuleType: WalletModuleType = '';
   private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
@@ -310,7 +326,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     private hologramService: HologramDataService,
     private supplyChainService: SupplyChainService,
     private enaRequisitionService: EnaRequisitionService,
-    private paymentIntegrationService: PaymentIntegrationService
+    private paymentIntegrationService: PaymentIntegrationService,
+    private licenseApplicationService: LicenseApplicationService,
+    private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService
   ) { }
 
   ngOnInit(): void {
@@ -345,9 +363,19 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
       this.capturePendingWalletPaymentContext(params);
 
-      // Handle hologram payment navigation
-      if (params['refNo'] && params['action'] === 'makePayment') {
-        this.pendingHologramAutoPayRefNo = String(params['refNo'] || '').trim();
+      // Handle hologram payment navigation (deep link from Hologram Procurement "Make Payment")
+      const actionLower = String(params['action'] || '').trim().toLowerCase();
+      const deepLinkRefNo =
+        String(
+          params['refNo'] ??
+          params['ref_no'] ??
+          params['referenceNo'] ??
+          params['reference_no'] ??
+          ''
+        ).trim();
+
+      if (deepLinkRefNo && actionLower === 'makepayment') {
+        this.pendingHologramAutoPayRefNo = deepLinkRefNo;
         this.pendingHologramAutoPayType = String(params['type'] || '').trim();
 
         // Only default to hologram if no tab is specified or if tab is hologram
@@ -381,10 +409,23 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         }
 
         // Build pending payment context even if URL only contains refNo.
-        this.tryBuildHologramPendingContextFromRefNo(
-          this.pendingHologramAutoPayRefNo,
-          this.pendingHologramAutoPayType
-        );
+        // `tryBuild...` may be a no-op until hologram procurements load; loadHologramDataFromApi()
+        // also retries once data is available.
+        this.persistPendingHologramDeepLinkRef(this.pendingHologramAutoPayRefNo);
+        this.tryBuildHologramPendingContextFromRefNo(this.pendingHologramAutoPayRefNo, this.pendingHologramAutoPayType);
+
+        // If a pending context already exists (e.g., restored from storage) but is missing the reference,
+        // update it immediately so the "Reference" column does not show '-'.
+        if (this.pendingWalletPaymentContext?.tab === 'hologram') {
+          const currentRef = String(this.pendingWalletPaymentContext.referenceNo || '').trim();
+          if (!currentRef || currentRef === '-') {
+            this.pendingWalletPaymentContext = {
+              ...this.pendingWalletPaymentContext,
+              referenceNo: this.pendingHologramAutoPayRefNo
+            };
+            this.persistPendingPaymentContextToStorage();
+          }
+        }
       }
     });
 
@@ -523,13 +564,29 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private pickPreferredWalletLicense(rows: MyLicenseRow[]): MyLicenseRow | null {
-    const walletEligible = rows.filter((row) => this.resolveModuleTypeFromLicense(row) !== '');
-    const approvedWalletEligible = walletEligible.filter((row) => this.isApprovedLicenseRow(row));
-    if (approvedWalletEligible.length > 0) {
-      return approvedWalletEligible[0];
+    const moduleTypePriority = (row: MyLicenseRow): number => {
+      const moduleType = this.resolveModuleTypeFromLicense(row);
+      if (moduleType === 'distillery' || moduleType === 'brewery') return 0;
+      if (moduleType === 'other') return 1;
+      return 2;
+    };
+
+    const naBoost = (row: MyLicenseRow): number => {
+      const licenseId = String(row?.license_id ?? row?.licenseId ?? '').trim().toUpperCase();
+      return licenseId.startsWith('NA/') ? 0 : 1;
+    };
+
+    const eligible = rows
+      .filter((row) => this.resolveModuleTypeFromLicense(row) !== '')
+      .slice()
+      .sort((a, b) => moduleTypePriority(a) - moduleTypePriority(b) || naBoost(a) - naBoost(b));
+
+    const approvedEligible = eligible.filter((row) => this.isApprovedLicenseRow(row));
+    if (approvedEligible.length > 0) {
+      return approvedEligible[0];
     }
-    if (walletEligible.length > 0) {
-      return walletEligible[0];
+    if (eligible.length > 0) {
+      return eligible[0];
     }
     return rows[0] ?? null;
   }
@@ -705,9 +762,27 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
     if (!isManufacturing && this.walletViewMode !== 'others') {
       this.walletViewMode = 'others';
+      const currentView = String(this.route.snapshot?.queryParams?.['walletView'] || '').trim().toLowerCase();
+      if (currentView !== 'others') {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { walletView: 'others' },
+          queryParamsHandling: 'merge'
+        });
+      }
     }
 
     this.ensureActiveTabAllowed();
+  }
+
+  private normalizeWalletTypeKey(raw: any): string {
+    const value = String(raw || '').trim().toLowerCase();
+    if (!value) return '';
+    const cleaned = value.replace(/[\s-]+/g, '_');
+    if (cleaned === 'education' || cleaned === 'educationcess' || cleaned === 'education_cess') return 'education_cess';
+    if (cleaned === 'licensefee' || cleaned === 'license_fee') return 'license_fee';
+    if (cleaned === 'securitydeposit' || cleaned === 'security_deposit') return 'security_deposit';
+    return cleaned;
   }
 
   canShowTab(tab: string): boolean {
@@ -757,7 +832,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (activeAliases.length === 0) return true;
 
     const candidate = String(
-      this.pickAny(item, ['licensee_id', 'licenseeId', 'license_id', 'licenseId', 'user_id', 'userId'], '')
+      this.pickAny(item, [
+        'licensee_id',
+        'licenseeId',
+        'license_id',
+        'licenseId',
+        'licensed_id',
+        'licensedId',
+        'user_id',
+        'userId'
+      ], '')
     ).trim().toLowerCase();
 
     const candidateAliases = this.expandLicenseAliases(candidate);
@@ -788,17 +872,28 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.licenseFeeBalance = 0;
     this.walletHoaByType = { ...DEFAULT_WALLET_HOA_BY_TYPE };
     this.isBreweryUser = startsAsBrewery;
+    this.activeLicenseeName = '';
 
     rows.forEach((row: any) => {
+      if (!this.activeLicenseeName) {
+        const candidateName = String(
+          this.pickAny(row, ['licensee_name', 'licenseeName', 'manufacturing_unit', 'manufacturingUnit'], '')
+        ).trim();
+        if (candidateName) {
+          this.activeLicenseeName = candidateName;
+        }
+      }
       const walletType = String(
         this.pickAny(row, ['wallet_type', 'walletType'], '')
-      ).toLowerCase();
+      );
       const moduleType = String(
         this.pickAny(row, ['module_type', 'moduleType'], '')
       ).toLowerCase();
       const hoa = this.pickAny(row, ['head_of_account', 'headOfAccount'], '');
       const balance = this.toNumber(this.pickAny(row, ['current_balance', 'currentBalance'], 0));
-      const inferredWalletType = walletType || this.inferWalletTypeFromHoa(String(hoa));
+      const inferredWalletType =
+        this.normalizeWalletTypeKey(walletType) ||
+        this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(hoa)));
       const treatAsBreweryWallet =
         inferredWalletType === 'brewery' ||
         moduleType === 'brewery' ||
@@ -806,9 +901,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
       if (inferredWalletType === 'security_deposit') {
         this.securityDepositBalance += balance;
-        if (hoa) {
-          this.walletHoaByType.security_deposit = String(hoa);
-        }
+        // No HOA for security deposit as per latest business rule.
       } else if (inferredWalletType === 'license_fee') {
         this.licenseFeeBalance += balance;
         if (hoa) {
@@ -859,11 +952,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       transactionId: String(this.pickAny(row, ['transaction_id', 'transactionId', 'reference_no', 'referenceNo'], '-')),
       transactionType: this.pickAny(row, ['transaction_type', 'transactionType'], 'Wallet Recharge'),
       hoa: this.pickAny(row, ['head_of_account', 'headOfAccount'], '-'),
-      walletType: String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase() ||
-        this.inferWalletTypeFromHoa(String(this.pickAny(row, ['head_of_account', 'headOfAccount'], ''))),
+      walletType:
+        this.normalizeWalletTypeKey(this.pickAny(row, ['wallet_type', 'walletType'], '')) ||
+        this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '')))),
       amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
       date: this.toDate(this.pickAny(row, ['created_at', 'createdAt'], new Date())),
-      status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'))
+      status: this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], ''))
     }));
   }
 
@@ -873,13 +967,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const mappedModalHistory: Array<WalletHistoryTransaction & { walletType: string }> = rows.map((row: any, index: number) => {
       const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
       const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], ''));
-      const walletTypeRaw = String(this.pickAny(row, ['wallet_type', 'walletType'], '')).toLowerCase();
-      const walletType = walletTypeRaw || this.inferWalletTypeFromHoa(hoa);
+      const walletTypeRaw = this.normalizeWalletTypeKey(this.pickAny(row, ['wallet_type', 'walletType'], ''));
+      const walletType = walletTypeRaw || this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(hoa));
       const createdAt = this.pickAny(row, ['created_at', 'createdAt'], new Date().toISOString());
       const balanceAfter = this.toNumber(this.pickAny(row, ['balance_after', 'balanceAfter'], 0));
       const paymentFor = this.resolvePaymentForType(row);
 
-      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], ''));
       const isCredit = entryType === 'credit' || entryType === 'cr';
       const type: WalletHistoryType = isCredit
         ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Credited')
@@ -911,7 +1005,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     this.historyData = rows.map((row: any, index: number) => {
       const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
-      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], 'success'));
+      const normalizedStatus = this.normalizeTransactionStatus(this.pickAny(row, ['payment_status', 'paymentStatus'], ''));
       const isCredit = entryType === 'credit' || entryType === 'cr';
       const paymentFor = this.resolvePaymentForType(row);
       const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '') || '');
@@ -999,7 +1093,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private normalizeTransactionStatus(value: any): string {
     const raw = String(value || '').trim().toLowerCase();
-    if (!raw) return 'Payment Successful';
+    // If backend doesn't send a status, treat it as pending (NOT successful) to avoid
+    // incorrectly hiding pending-payment CTAs.
+    if (!raw) return 'Pending';
     if (raw === 'r' || raw.includes('refund')) {
       return 'Refunded';
     }
@@ -1016,10 +1112,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private inferWalletTypeFromHoa(hoa: string): string {
-    if (hoa === SECURITY_DEPOSIT_HOA) {
+    if (hoa === SECURITY_DEPOSIT_HOA_SENTINEL || hoa === LEGACY_SECURITY_DEPOSIT_HOA) {
       return 'security_deposit';
     }
-    if (hoa === LICENSE_FEE_HOA) {
+    if (hoa === LICENSE_FEE_HOA || hoa === LEGACY_LICENSE_FEE_HOA) {
       return 'license_fee';
     }
     if (hoa === '0045-00-112-45-03') {
@@ -1078,9 +1174,24 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.hologramData = (data || [])
           .filter(item => this.isForActiveLicense(item))
           .map(item => {
-            const localQty = Number((item as any).localQty ?? (item as any).local_qty) || 0;
-            const exportQty = Number((item as any).exportQty ?? (item as any).export_qty) || 0;
-            const defenceQty = Number((item as any).defenceQty ?? (item as any).defence_qty) || 0;
+            const localQty = Number(
+              (item as any).requested_local_qty ??
+              (item as any).requestedLocalQty ??
+              (item as any).localQty ??
+              (item as any).local_qty
+            ) || 0;
+            const exportQty = Number(
+              (item as any).requested_export_qty ??
+              (item as any).requestedExportQty ??
+              (item as any).exportQty ??
+              (item as any).export_qty
+            ) || 0;
+            const defenceQty = Number(
+              (item as any).requested_defence_qty ??
+              (item as any).requestedDefenceQty ??
+              (item as any).defenceQty ??
+              (item as any).defence_qty
+            ) || 0;
             const totalQty = localQty + exportQty + defenceQty;
             const hologramFee = totalQty * 0.15;
             const paymentDetails: any = (item as any).paymentDetails || (item as any).payment_details || {};
@@ -1104,6 +1215,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               (item as any).ourRefNo ||
               (item as any).our_ref_no ||
               (item as any).referenceNo ||
+              (item as any).reference_no ||
               '';
             const normalizedStatus = (item as any).status || (item as any).paymentStatus || (item as any).payment_status || 'Pending';
 
@@ -1141,6 +1253,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private syncPendingPaymentContextWithLatestData(): void {
+    const deepLinkRef = this.getPendingHologramDeepLinkRef();
+    if ((!this.pendingWalletPaymentContext || this.pendingWalletPaymentContext.tab !== 'hologram') && deepLinkRef) {
+      this.tryBuildHologramPendingContextFromRefNo(deepLinkRef, this.pendingHologramAutoPayType);
+    }
+
     const context = this.pendingWalletPaymentContext;
     if (!context || context.tab !== 'hologram') return;
 
@@ -1158,17 +1275,37 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return isHologram && isDebitLike && isSuccessful && txnRef === ref;
     });
 
-    const hasPayableHologramItem = this.hologramData.some((item) => {
+    const matchingHologramItems = this.hologramData.filter((item) => {
       const itemRef = String(item?.referenceNo || '').trim().toUpperCase();
-      return itemRef === ref && this.canPayHologram(item);
+      return itemRef === ref;
     });
 
-    if (hasMatchingPaidTxn || !hasPayableHologramItem) {
+    if (hasMatchingPaidTxn) {
       this.pendingWalletPaymentContext = null;
       this.pendingHologramAutoPayRefNo = '';
       this.pendingHologramAutoPayType = '';
       this.hasHandledPendingWalletPayment = true;
       this.clearPendingPaymentContextFromStorage();
+      this.clearPendingHologramDeepLinkRef();
+      return;
+    }
+
+    if (matchingHologramItems.length === 0) {
+      return;
+    }
+
+    const hasPayableHologramItem = matchingHologramItems.some((item) => this.canPayHologram(item));
+
+    if (!hasPayableHologramItem) {
+      if (deepLinkRef && ref === deepLinkRef.trim().toUpperCase()) {
+        return;
+      }
+      this.pendingWalletPaymentContext = null;
+      this.pendingHologramAutoPayRefNo = '';
+      this.pendingHologramAutoPayType = '';
+      this.hasHandledPendingWalletPayment = true;
+      this.clearPendingPaymentContextFromStorage();
+      this.clearPendingHologramDeepLinkRef();
     }
   }
 
@@ -1189,7 +1326,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       : sameRefItems;
 
     const candidatePool = typedItems.length > 0 ? typedItems : sameRefItems;
-    const chosen = candidatePool.find((item) => this.canPayHologram(item));
+    const isDeepLinkedRef = targetRefUpper === this.getPendingHologramDeepLinkRef().trim().toUpperCase();
+    const chosen = candidatePool.find((item) => this.canPayHologram(item)) || (isDeepLinkedRef ? candidatePool[0] : undefined);
     if (!chosen) return;
 
     const id = String(chosen?.id || '').trim();
@@ -1203,9 +1341,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       referenceNo: String(chosen.referenceNo || targetRef),
       amount
     };
+    this.pendingHologramAutoPayRefNo = String(chosen.referenceNo || targetRef);
     this.hasHandledPendingWalletPayment = false;
     this.setActiveTab('hologram');
     this.persistPendingPaymentContextToStorage();
+    this.persistPendingHologramDeepLinkRef(this.pendingHologramAutoPayRefNo);
   }
 
   loadCancellationDataFromApi(): void {
@@ -1587,19 +1727,62 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
     this.activeTab = requested as WalletTableTab;
+    this.syncPendingNewLicenseContextToActiveTab();
     const walletTab = this.getCurrentWalletTableTab();
     if (walletTab) {
       this.tableCurrentPageByTab[walletTab] = 1;
     }
   }
 
-  private normalizePaymentModuleTab(value: string): PaymentModuleTab | null {
+  private syncPendingNewLicenseContextToActiveTab(): void {
+    const ctx = this.pendingWalletPaymentContext;
+    if (!ctx) return;
+    if (String(ctx.itemType || '').trim().toLowerCase() !== 'new-license') return;
+    if (!this.pendingNewLicenseApplicationId) {
+      this.pendingNewLicenseApplicationId = String(ctx.id || '').trim();
+    }
+    if (!this.pendingNewLicenseReferenceNo) {
+      this.pendingNewLicenseReferenceNo = String(ctx.referenceNo || '').trim();
+    }
+
+    if (this.activeTab === 'license_fee') {
+      const amount = ctx.tab === 'license_fee'
+        ? ctx.amount
+        : (this.pendingNewLicenseLicenseFeeAmount || ctx.amount);
+      this.pendingWalletPaymentContext = {
+        ...ctx,
+        tab: 'license_fee',
+        amount: amount || 0,
+      };
+      this.chainedNewLicenseSecurityAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
+      this.ensurePendingNewLicenseAmountsResolved();
+      this.persistPendingPaymentContextToStorage();
+      return;
+    }
+
+    if (this.activeTab === 'security_deposit') {
+      const amount = ctx.tab === 'security_deposit'
+        ? ctx.amount
+        : (this.pendingNewLicenseSecurityFeeAmount || ctx.amount);
+      this.pendingWalletPaymentContext = {
+        ...ctx,
+        tab: 'security_deposit',
+        amount: amount || 0,
+      };
+      this.ensurePendingNewLicenseAmountsResolved();
+      this.persistPendingPaymentContextToStorage();
+    }
+  }
+
+  private normalizePaymentModuleTab(value: string): WalletTableTab | null {
     const normalized = String(value || '').trim().toLowerCase();
     if (normalized === 'requisition') return 'requisition';
     if (normalized === 'revalidation') return 'revalidation';
     if (normalized === 'cancellation') return 'cancellation';
     if (normalized === 'transit' || normalized === 'transit-permit') return 'transit';
     if (normalized === 'hologram' || normalized === 'hologram-request') return 'hologram';
+    if (normalized === 'license_fee' || normalized === 'licensefee') return 'license_fee';
+    if (normalized === 'security_deposit' || normalized === 'securitydeposit') return 'security_deposit';
     return null;
   }
 
@@ -1618,8 +1801,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       this.normalizePaymentModuleTab(String(params?.['tab'] || '')) ||
       this.normalizePaymentModuleTab(String(params?.['type'] || ''));
     const amount = this.toNumber(params?.['amount']);
+    const securityAmount = this.toNumber(params?.['securityAmount'] ?? params?.['security_amount']);
+    const type = String(params?.['type'] || '').trim().toLowerCase();
+    const referenceNo = String(params?.['referenceNo'] || params?.['ref'] || params?.['refNo'] || id || '-');
 
-    if (!id || !tab || amount <= 0) {
+    if (!id || !tab) {
       // For hologram makePayment deep-link we may only receive refNo;
       // context gets built later from loaded hologram data.
       if (action === 'makepayment') {
@@ -1630,27 +1816,103 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
+    // New license flow: amount can be missing/0 in deep-link; we will resolve from backend.
+    if (type === 'new-license') {
+      this.pendingNewLicenseApplicationId = id;
+      this.pendingNewLicenseReferenceNo = referenceNo;
+      if (securityAmount > 0) {
+        this.pendingNewLicenseSecurityFeeAmount = securityAmount;
+      }
+      this.ensurePendingNewLicenseAmountsResolved();
+    }
+
     this.pendingWalletPaymentContext = {
       id,
       tab,
       itemType: String(params?.['type'] || tab),
-      referenceNo: String(params?.['referenceNo'] || params?.['ref'] || params?.['refNo'] || '-'),
+      referenceNo,
       amount
     };
+    this.chainedNewLicenseSecurityAmount = (tab === 'license_fee' && securityAmount > 0) ? securityAmount : 0;
     this.hasHandledPendingWalletPayment = false;
     this.setActiveTab(tab);
     this.persistPendingPaymentContextToStorage();
+  }
+
+  private ensurePendingNewLicenseAmountsResolved(): void {
+    const applicationId = String(this.pendingNewLicenseApplicationId || '').trim();
+    if (!applicationId) return;
+    if (this.pendingNewLicenseLicenseFeeAmount > 0 && this.pendingNewLicenseSecurityFeeAmount > 0) return;
+
+    this.licenseApplicationService.getNewLicenseApplicationById(applicationId).pipe(
+      timeout(15000),
+      catchError(() => of(null))
+    ).subscribe((app: any) => {
+      if (!app) return;
+      const licenseFee = this.toNumber(
+        app?.license_fee_amount ?? app?.licenseFeeAmount ?? app?.yearly_license_fee ?? app?.yearlyLicenseFee ?? 0
+      );
+      const securityFee = this.toNumber(app?.security_fee_amount ?? app?.securityFeeAmount ?? 0);
+      if (licenseFee > 0) this.pendingNewLicenseLicenseFeeAmount = licenseFee;
+      if (securityFee > 0) this.pendingNewLicenseSecurityFeeAmount = securityFee;
+
+      // If current pending context is for new-license and has 0 amount, update it.
+      const ctx = this.pendingWalletPaymentContext;
+      if (!ctx) return;
+      if (String(ctx.itemType || '').trim().toLowerCase() !== 'new-license') return;
+      if (ctx.amount > 0) return;
+
+      const resolvedAmount = ctx.tab === 'security_deposit'
+        ? this.pendingNewLicenseSecurityFeeAmount
+        : this.pendingNewLicenseLicenseFeeAmount;
+      if (resolvedAmount > 0) {
+        this.pendingWalletPaymentContext = { ...ctx, amount: resolvedAmount };
+        this.persistPendingPaymentContextToStorage();
+      }
+    });
   }
 
   hasPendingWalletPaymentContext(): boolean {
     return !!this.pendingWalletPaymentContext;
   }
 
-  shouldShowPendingPaymentInTab(tab: PaymentModuleTab): boolean {
+  shouldShowPendingPaymentInTab(tab: WalletTableTab): boolean {
+    // New license deep-link: show Pay Now row even if amount is still resolving.
+    if ((tab === 'license_fee' || tab === 'security_deposit')
+      && this.pendingWalletPaymentContext
+      && String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() === 'new-license'
+      && this.pendingWalletPaymentContext.tab === tab
+      && this.activeTab === tab) {
+      return true;
+    }
+
+    const deepLinkRef = this.getPendingHologramDeepLinkRef();
+    if (tab === 'hologram' && deepLinkRef && this.activeTab === tab) {
+      if (!this.pendingWalletPaymentContext || this.pendingWalletPaymentContext.tab !== 'hologram') {
+        this.tryBuildHologramPendingContextFromRefNo(deepLinkRef, this.pendingHologramAutoPayType);
+      }
+      const ctx = this.pendingWalletPaymentContext;
+      if (!ctx || ctx.tab !== 'hologram') return false;
+      const ref = String(ctx.referenceNo || '').trim();
+      if (ref && this.hasPayableHologramForReference(ref)) {
+        return false;
+      }
+      return true;
+    }
+
     const context = this.pendingWalletPaymentContext;
     if (!context) return false;
     if (context.tab === 'hologram' && tab === 'hologram') {
-      return this.activeTab === tab && !this.hasHologramRowForReference(context.referenceNo);
+      // Always show the synthetic "Pending Payment" row for hologram when a deep-linked
+      // pending context exists. The detailed hologram rows below can still be used for
+      // per-item payments; this row acts as the primary call-to-action after navigation.
+      // But avoid showing a duplicate row when the hologram tab already has a payable
+      // procurement entry for the same reference.
+      const ref = String(context.referenceNo || '').trim();
+      if (ref && this.hasPayableHologramForReference(ref)) {
+        return false;
+      }
+      return this.activeTab === tab;
     }
     return context.tab === tab && this.activeTab === tab;
   }
@@ -1691,6 +1953,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const deductionAmount = Number(context.amount || 0);
     const currentBalance = this.getAvailableBalanceForModuleTab(context.tab);
     if (deductionAmount <= 0) {
+      if (String(context.itemType || '').trim().toLowerCase() === 'new-license') {
+        this.ensurePendingNewLicenseAmountsResolved();
+        const resolvedAmount = context.tab === 'security_deposit'
+          ? this.pendingNewLicenseSecurityFeeAmount
+          : this.pendingNewLicenseLicenseFeeAmount;
+        if (resolvedAmount > 0) {
+          this.pendingWalletPaymentContext = { ...context, amount: resolvedAmount };
+          this.persistPendingPaymentContextToStorage();
+          // Retry opening after state update.
+          setTimeout(() => this.openPendingWalletPaymentConfirmation(), 0);
+          return;
+        }
+        Swal.fire('Fee Not Configured', 'License fee / security deposit amount is not available for this application.', 'error');
+      }
       this.resetPendingPaymentAttemptState();
       return;
     }
@@ -1786,6 +2062,23 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.refreshWalletData();
         this.loadCancellationDataFromApi();
         this.loadHologramDataFromApi();
+        // New-license convenience: when user came from "Proceed to Pay" popup we deep-link into
+        // license_fee first and optionally chain security_deposit next.
+        if (context.tab === 'license_fee' && this.chainedNewLicenseSecurityAmount > 0) {
+          const nextAmount = this.chainedNewLicenseSecurityAmount;
+          this.chainedNewLicenseSecurityAmount = 0;
+          this.pendingWalletPaymentContext = {
+            ...context,
+            tab: 'security_deposit',
+            amount: nextAmount
+          };
+          this.hasHandledPendingWalletPayment = false;
+          this.isHandlingPendingWalletPayment = false;
+          this.setActiveTab('security_deposit');
+          this.persistPendingPaymentContextToStorage();
+          return;
+        }
+        this.maybeForceRefreshAfterNewLicenseApproval(context);
         this.finishPendingWalletPaymentHandling();
       },
       error: (err) => {
@@ -1804,6 +2097,52 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         });
         this.resetPendingPaymentAttemptState();
       }
+    });
+  }
+
+  private maybeForceRefreshAfterNewLicenseApproval(context: PendingWalletPaymentContext): void {
+    if (!this.isBrowser) return;
+
+    const tab = String(context?.tab || '').toLowerCase();
+    if (tab !== 'license_fee' && tab !== 'security_deposit') return;
+
+    const typeToken = String(context?.itemType || '').trim().toLowerCase();
+    const refToken = String(context?.referenceNo || '').trim().toUpperCase();
+    const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/');
+    if (!isNewLicense) return;
+
+    const applicationId = String(this.pendingNewLicenseApplicationId || context?.id || '').trim();
+    if (!applicationId) return;
+
+    const guardKey = `new_license_force_refresh_after_approval_${applicationId}`;
+    try {
+      if (sessionStorage.getItem(guardKey) === '1') return;
+    } catch {
+      // ignore storage errors
+    }
+
+    this.licenseApplicationService.getNewLicenseApplicationById(applicationId).pipe(
+      timeout(15000),
+      catchError(() => of(null))
+    ).subscribe((app: any) => {
+      if (!app) return;
+      const isApproved = Boolean(app?.is_approved ?? app?.isApproved ?? app?.is_approved_flag ?? false);
+      if (!isApproved) return;
+
+      try {
+        sessionStorage.setItem(guardKey, '1');
+      } catch {
+        // ignore storage errors
+      }
+
+      // Hard reload so that licensee dashboard tabs (category/sub-category driven) re-evaluate immediately.
+      setTimeout(() => {
+        try {
+          window.location.reload();
+        } catch {
+          // ignore
+        }
+      }, 300);
     });
   }
 
@@ -1903,6 +2242,50 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
   }
 
+  private getPendingHologramDeepLinkRef(): string {
+    const fromMemory = String(this.pendingHologramAutoPayRefNo || '').trim();
+    if (fromMemory) return fromMemory;
+
+    const params = this.route.snapshot?.queryParams || {};
+    const fromQuery = String(
+      params['refNo'] ??
+      params['ref_no'] ??
+      params['referenceNo'] ??
+      params['reference_no'] ??
+      ''
+    ).trim();
+    const action = String(params['action'] || '').trim().toLowerCase();
+    if (fromQuery && action === 'makepayment') {
+      return fromQuery;
+    }
+
+    if (!this.isBrowser) return '';
+    try {
+      return String(sessionStorage.getItem(this.hologramDeepLinkStorageKey) || '').trim();
+    } catch {
+      return '';
+    }
+  }
+
+  private persistPendingHologramDeepLinkRef(refNo: string): void {
+    const ref = String(refNo || '').trim();
+    if (!ref || !this.isBrowser) return;
+    try {
+      sessionStorage.setItem(this.hologramDeepLinkStorageKey, ref);
+    } catch {
+      // no-op
+    }
+  }
+
+  private clearPendingHologramDeepLinkRef(): void {
+    if (!this.isBrowser) return;
+    try {
+      sessionStorage.removeItem(this.hologramDeepLinkStorageKey);
+    } catch {
+      // no-op
+    }
+  }
+
   goToAddMoneyForPendingPayment(): void {
     const context = this.pendingWalletPaymentContext;
     if (!context) return;
@@ -1933,12 +2316,19 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         return this.supplyChainService.performTransitPermitAction(context.id, 'PAY', 'licensee');
       case 'hologram':
         return this.hologramService.performAction('procurement', Number(context.id), 'pay', 'Payment Completed via Wallet');
+      case 'license_fee':
+        if (String(context.itemType || '').trim().toLowerCase() === 'salesman-barman-registration') {
+          return this.salesmanBarmanRegistrationService.payRegistrationLicenseFee(String(context.id));
+        }
+        return this.licenseApplicationService.payNewLicenseFee(String(context.id), new FormData());
+      case 'security_deposit':
+        return this.licenseApplicationService.payNewLicenseSecurityFee(String(context.id));
       default:
         return of({});
     }
   }
 
-  private getAvailableBalanceForModuleTab(tab: PaymentModuleTab): number {
+  private getAvailableBalanceForModuleTab(tab: WalletTableTab): number {
     if (tab === 'hologram') {
       return this.hologramWalletBalance;
     }
@@ -1947,16 +2337,30 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return this.isBreweryUser ? this.breweryWalletBalance : this.exciseWalletBalance;
     }
 
+    if (tab === 'license_fee') {
+      return this.licenseFeeBalance;
+    }
+
+    if (tab === 'security_deposit') {
+      return this.securityDepositBalance;
+    }
+
     // Transit, revalidation and cancellation use combined non-hologram heads.
     return this.getTotalWalletBalance();
   }
 
-  private getWalletLabelForModuleTab(tab: PaymentModuleTab): string {
+  private getWalletLabelForModuleTab(tab: WalletTableTab): string {
     if (tab === 'hologram') {
       return 'Hologram Wallet';
     }
     if (tab === 'requisition') {
       return 'Excise / Additional Wallet Balance';
+    }
+    if (tab === 'license_fee') {
+      return 'License Fee Wallet';
+    }
+    if (tab === 'security_deposit') {
+      return 'Security Deposit Wallet';
     }
     if (tab === 'transit') {
       return 'Combined Excise and Education Wallet Balance';
@@ -1964,11 +2368,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return 'Available Wallet Balance';
   }
 
-  private getModuleLabelForTab(tab: PaymentModuleTab): string {
+  private getModuleLabelForTab(tab: WalletTableTab): string {
     if (tab === 'requisition') return 'Requisition';
     if (tab === 'revalidation') return 'Revalidation';
     if (tab === 'cancellation') return 'Cancellation';
     if (tab === 'transit') return 'Transit Permit';
+    if (tab === 'license_fee') return 'License Fee';
+    if (tab === 'security_deposit') return 'Security Deposit';
     return 'Hologram';
   }
 
@@ -1980,6 +2386,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.pendingHologramAutoPayRefNo = '';
     this.pendingHologramAutoPayType = '';
     this.clearPendingPaymentContextFromStorage();
+    this.clearPendingHologramDeepLinkRef();
 
     this.router.navigate([], {
       relativeTo: this.route,
@@ -2234,14 +2641,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           walletType,
           moduleLabel: 'Manufacturing',
           walletLabel: 'Security Deposit Wallet',
-          hoa: this.walletHoaByType.security_deposit
+          hoa: ''
         };
       case 'license_fee':
         return {
           walletType,
           moduleLabel: 'Manufacturing',
           walletLabel: 'License Fee Wallet',
-          hoa: this.walletHoaByType.license_fee
+          hoa: LICENSE_FEE_HOA
         };
       default:
         return {
@@ -2277,6 +2684,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   proceedUnifiedAddMoney(): void {
+    const retryAfterSeconds = this.getBilldeskPendingRetryAfterSeconds();
+    if (retryAfterSeconds > 0) {
+      // Close the underlying Payment Details modal so the reminder renders on top.
+      this.closeUnifiedAddMoneyView();
+      this.showBilldeskPendingRetryPopup(retryAfterSeconds);
+      return;
+    }
+
     if (this.addMoneyAmount <= 0) {
       this.showErrorMessage('Please enter amount greater than zero.');
       return;
@@ -2294,12 +2709,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    const headOfAccount = String(context.hoa || '').trim();
-    if (!headOfAccount) {
-      this.showErrorMessage('Unable to proceed: Head Of Account not found.');
-      return;
-    }
-
     const walletType = this.mapAddMoneyWalletTypeToApi(context.walletType);
     const transactionId = String(this.addMoneyTransactionId || '').trim();
     if (!transactionId) {
@@ -2307,46 +2716,80 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
+    // For non-security_deposit and non-license_fee, HOA is mandatory.
+    if (context.walletType !== 'license_fee' && context.walletType !== 'security_deposit') {
+      const headOfAccount = String(context.hoa || '').trim();
+      if (!headOfAccount) {
+        this.showErrorMessage('Unable to proceed: Head Of Account not found.');
+        return;
+      }
+    }
+
     Swal.fire({
-      title: 'Processing Recharge',
-      text: 'Crediting wallet for testing...',
+      title: 'Redirecting to BillDesk',
+      text: 'Preparing payment request...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
 
-    this.paymentIntegrationService.creditWalletRecharge(licenseeId, {
-      transaction_id: transactionId,
-      wallet_type: walletType,
-      head_of_account: headOfAccount,
-      amount: Number(this.addMoneyAmount || 0),
-      remarks: `Dummy recharge via UI (${context.walletLabel})`
-    }).subscribe({
+    const amount = Number(this.addMoneyAmount || 0);
+
+    const request$ =
+      context.walletType === 'license_fee'
+        ? this.paymentIntegrationService.initiateBilldeskLicenseFee({
+            transaction_id: transactionId,
+            amount,
+            payer_id: licenseeId,
+            payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+          })
+        : context.walletType === 'security_deposit'
+          ? this.paymentIntegrationService.initiateBilldeskSecurityDeposit({
+              transaction_id: transactionId,
+              amount,
+              licensee_id: licenseeId,
+              licensee_name: this.activeLicenseeName || licenseeId,
+              bank_fdr_code: 'SIKFDR',
+              payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+            })
+          : this.paymentIntegrationService.initiateBilldeskWalletRecharge({
+              transaction_id: transactionId,
+              wallet_type: walletType,
+              head_of_account: String(context.hoa || '').trim(),
+              amount
+            });
+
+    request$.pipe(timeout(30000)).subscribe({
       next: (response) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
-        this.setActiveTab('recharge');
-        this.refreshWalletData();
 
-        const created = response?.wallet_transaction || null;
-        const walletTransactionId = String(created?.wallet_transaction_id || created?.walletTransactionId || '').trim();
-        const createdAt = String(created?.created_at || created?.createdAt || '').trim();
-        const statusText = String(created?.payment_status || created?.paymentStatus || 'success');
+        const billdeskUrl = String((response as any)?.billdeskUrl || (response as any)?.billdesk_url || '').trim();
+        const requestMsg = String((response as any)?.requestMsg || (response as any)?.request_msg || '').trim();
+        if (!billdeskUrl || !requestMsg) {
+          this.showErrorMessage('BillDesk initiation failed: missing gateway parameters.');
+          return;
+        }
 
-        this.router.navigate(['/dashboard/wallet-recharge/success'], {
-          queryParams: {
-            transactionId,
-            walletTransactionId: walletTransactionId || undefined,
-            walletType,
-            hoa: headOfAccount,
-            amount: Number(this.addMoneyAmount || 0),
-            status: statusText,
-            createdAt: createdAt || undefined
-          }
-        });
+        this.submitToBillDesk(billdeskUrl, requestMsg);
       },
       error: (err) => {
         Swal.close();
-        console.error('Wallet recharge credit failed:', err);
+        console.error('BillDesk initiate failed:', err);
+
+        const retrySecondsFromServer = this.extractRetryAfterSeconds(err);
+        if (retrySecondsFromServer > 0) {
+          // Close the underlying Payment Details modal so the reminder renders on top.
+          this.closeUnifiedAddMoneyView();
+          this.showBilldeskPendingRetryPopup(retrySecondsFromServer);
+          this.refreshWalletData();
+          return;
+        }
+
+        if (String(err?.name || '').toLowerCase() === 'timeouterror') {
+          this.showErrorMessage('BillDesk initiation timed out. Please check server/network and try again.');
+          this.refreshWalletData();
+          return;
+        }
         const errorMessage =
           err?.error?.detail ||
           err?.error?.error ||
@@ -2358,9 +2801,111 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     });
   }
 
+  private submitToBillDesk(url: string, requestMsg: string): void {
+    if (!this.isBrowser) {
+      this.showErrorMessage('Unable to redirect: browser environment not available.');
+      return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'msg';
+    input.value = requestMsg;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  }
+
   private mapAddMoneyWalletTypeToApi(walletType: AddMoneyWalletType): string {
     if (walletType === 'education') return 'education_cess';
     return walletType;
+  }
+
+  private getBilldeskPendingRetryAfterSeconds(): number {
+    const nowMs = Date.now();
+    const lockMs = 15 * 60 * 1000;
+
+    let remainingFromServer = 0;
+    const serverUntilMs = this.billdeskRetryLockUntil?.getTime() || 0;
+    if (serverUntilMs > nowMs) {
+      remainingFromServer = Math.ceil((serverUntilMs - nowMs) / 1000);
+    }
+
+    const rows = Array.isArray(this.rechargeData) ? this.rechargeData : [];
+    let remainingFromWallet = 0;
+    for (const row of rows) {
+      const status = String((row as any)?.status || '').toLowerCase();
+      if (!status.includes('pending')) continue;
+
+      const created = (row as any)?.date instanceof Date ? (row as any).date : new Date((row as any)?.date || '');
+      const createdMs = created instanceof Date && !Number.isNaN(created.getTime()) ? created.getTime() : 0;
+      if (!createdMs) continue;
+
+      const lockUntil = createdMs + lockMs;
+      const remaining = Math.ceil((lockUntil - nowMs) / 1000);
+      if (remaining > remainingFromWallet) remainingFromWallet = remaining;
+    }
+
+    return Math.max(0, remainingFromServer, remainingFromWallet);
+  }
+
+  private extractRetryAfterSeconds(err: any): number {
+    const httpStatus = Number(err?.status || 0);
+    if (httpStatus !== 409) return 0;
+
+    const raw =
+      err?.error?.retry_after_seconds ||
+      err?.error?.retryAfterSeconds ||
+      err?.error?.retry_after ||
+      err?.error?.retryAfter ||
+      0;
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  }
+
+  private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
+    const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
+    this.billdeskRetryLockUntil = new Date(Date.now() + totalSeconds * 1000);
+
+    const format = (seconds: number) => {
+      const s = Math.max(0, Math.floor(seconds));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    let interval: any;
+    Swal.fire({
+      icon: 'info',
+      title: 'Payment Pending',
+      html:
+        `<div style="text-align:left">` +
+        `<div>BillDesk payment is still pending.</div>` +
+        `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
+        `</div>`,
+      confirmButtonText: 'Cancel',
+      showConfirmButton: true,
+      allowOutsideClick: false,
+      timer: totalSeconds * 1000,
+      timerProgressBar: true,
+      didOpen: () => {
+        const container = Swal.getHtmlContainer();
+        const countdownEl = container ? (container.querySelector('b') as HTMLElement | null) : null;
+        interval = setInterval(() => {
+          const left = Swal.getTimerLeft();
+          if (left === null || left === undefined) return;
+          if (countdownEl) countdownEl.textContent = format(Math.ceil(left / 1000));
+        }, 250);
+      },
+      willClose: () => {
+        if (interval) clearInterval(interval);
+      }
+    });
   }
 
   downloadDetails(): void {
@@ -2552,17 +3097,34 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   // Hologram payment methods
   canPayHologram(item: HologramItem): boolean {
+    const paymentDetails: any = (item as any)?.paymentDetails || (item as any)?.payment_details || null;
+    const paidAt = paymentDetails?.paid_at || paymentDetails?.paidAt || (item as any)?.paymentDate || null;
+    if (paidAt) return false;
+
+    const paymentStatusToken = String((item as any)?.paymentStatus || (item as any)?.payment_status || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+    if (paymentStatusToken.includes('success') || paymentStatusToken.includes('paid') || paymentStatusToken.includes('completed')) {
+      return false;
+    }
+
+    // Backend sometimes appends extra words to the approved status (eg "APPROVED BY COMMISSIONER - PAYMENT PENDING"),
+    // so treat it as payable when the normalized token CONTAINS an approved marker, not only when it equals it.
     const token = String(item?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const payableTokens = new Set([
-      'approvedbycommissioner',
-      'approvedbyjointcommissioner'
-    ]);
-    return payableTokens.has(token);
+    if (!token) return false;
+
+    return (
+      token.includes('approvedbycommissioner') ||
+      token.includes('commissionerapproved') ||
+      token.includes('approvedbyjointcommissioner') ||
+      token.includes('jointcommissionerapproved')
+    );
   }
 
   payHologramItem(item: HologramItem): void {
     // Check if there are multiple types for the same reference number
-    const sameRefItems = this.hologramData.filter(h => h.referenceNo === item.referenceNo);
+    const refKey = String(item?.referenceNo || '').trim().toUpperCase();
+    const sameRefItems = this.hologramData.filter(h => String(h?.referenceNo || '').trim().toUpperCase() === refKey);
 
     if (sameRefItems.length > 1) {
       // Multiple types exist - check if all are ready for payment
@@ -2667,13 +3229,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   // Calculate total payment amount for all types under same reference
   getTotalPaymentForRef(refNo: string): number {
-    const sameRefItems = this.hologramData.filter(item => item.referenceNo === refNo);
+    const refKey = String(refNo || '').trim().toUpperCase();
+    const sameRefItems = this.hologramData.filter(item => String(item?.referenceNo || '').trim().toUpperCase() === refKey);
     return sameRefItems.reduce((total, item) => total + item.hologramFee, 0);
   }
 
   // Get total quantity for all types under same reference
   getTotalQuantityForRef(refNo: string): number {
-    const sameRefItems = this.hologramData.filter(item => item.referenceNo === refNo);
+    const refKey = String(refNo || '').trim().toUpperCase();
+    const sameRefItems = this.hologramData.filter(item => String(item?.referenceNo || '').trim().toUpperCase() === refKey);
     return sameRefItems.reduce((total, item) => total + item.totalQuantity, 0);
   }
 
@@ -2732,7 +3296,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const item = row?.hologramItem;
     if (!item) return;
     const id = String(item.id || '').trim();
-    const amount = Number(item.hologramFee || 0);
+    const amount = Number(row?.amount ?? item.hologramFee ?? 0);
     if (!id || !Number.isFinite(amount) || amount <= 0) return;
 
     this.pendingWalletPaymentContext = {
@@ -2754,6 +3318,15 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     return this.hologramData.some(item => String(item?.referenceNo || '').trim().toUpperCase() === ref);
   }
 
+  private hasPayableHologramForReference(refNo: string): boolean {
+    const ref = String(refNo || '').trim().toUpperCase();
+    if (!ref) return false;
+    return this.hologramData.some(item => {
+      const itemRef = String(item?.referenceNo || '').trim().toUpperCase();
+      return itemRef === ref && this.canPayHologram(item);
+    });
+  }
+
   private getHologramTabRows(): HologramTabRow[] {
     const historyRows = this.getPaymentTransactionsFor('hologram');
     const historyByRef = new Map<string, HistoryItem>();
@@ -2768,25 +3341,45 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     const rows: HologramTabRow[] = [];
     const seenRefs = new Set<string>();
+    const deepLinkRefKey = this.getPendingHologramDeepLinkRef().trim().toUpperCase();
 
+    const itemsByRef = new Map<string, HologramItem[]>();
     for (const item of this.hologramData) {
       const ref = String(item?.referenceNo || '').trim();
       if (!ref) continue;
       const refKey = ref.toUpperCase();
+      const existing = itemsByRef.get(refKey) || [];
+      existing.push(item);
+      itemsByRef.set(refKey, existing);
+    }
+
+    for (const [refKey, items] of itemsByRef.entries()) {
+      if (!items.length) continue;
+      const ref = String(items[0]?.referenceNo || '').trim();
+      if (!ref) continue;
+
       const history = historyByRef.get(refKey);
-      const canPay = this.canPayHologram(item);
-      const isPaid = !canPay;
-      const dateTime = history?.dateTime || item.paymentDate || (item as any).createdAt || (item as any).date || '';
-      const status = history?.status || (isPaid ? 'Payment Successful' : 'Pending');
-      const type = history?.type || (isPaid ? 'Wallet Utilization' : 'Pending Payment');
-      const amount = Number(history?.amount ?? item.hologramFee ?? 0);
-      const txnId = history?.txnId || history?.reference || '-';
+      const historyStatus = String(history?.status || '').toLowerCase();
+      const historyIsSuccessful = !!history && (
+        historyStatus.includes('success') ||
+        historyStatus.includes('paid') ||
+        historyStatus.includes('completed')
+      );
+
+      const anyPayable = items.some(i => this.canPayHologram(i));
+      const canPay = (anyPayable || (!!deepLinkRefKey && refKey === deepLinkRefKey)) && !historyIsSuccessful;
+      const dateTime = history?.dateTime || (items[0] as any).paymentDate || (items[0] as any).createdAt || (items[0] as any).date || '';
+      const status = canPay ? 'Pending' : (history?.status || 'Payment Successful');
+      const type = canPay ? 'Pending Payment' : (history?.type || 'Wallet Utilization');
+      const pendingAmount = items.reduce((sum, i) => sum + Number(i?.hologramFee || 0), 0);
+      const amount = Number(canPay ? pendingAmount : (history?.amount ?? pendingAmount ?? 0));
+      const txnId = canPay ? '-' : (history?.txnId || history?.reference || '-');
 
       rows.push({
-        id: history?.id || String(item.id || ref),
+        id: history?.id || String((items[0] as any)?.id || ref),
         txnId,
         type,
-        paymentFor: history?.paymentFor || 'Hologram Procurement',
+        paymentFor: 'Hologram Procurement',
         amount,
         reference: ref,
         status,
@@ -2794,8 +3387,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         licenseeId: history?.licenseeId || this.activeLicenseeId || '-',
         userId: history?.userId || '-',
         canPay,
-        procurementId: String(item.id || ''),
-        hologramItem: item
+        procurementId: String((items[0] as any)?.id || ''),
+        hologramItem: items[0]
       });
       seenRefs.add(refKey);
     }
@@ -2803,7 +3396,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     for (const row of historyRows) {
       const ref = String(row?.reference || '').trim().toUpperCase();
       if (ref && seenRefs.has(ref)) continue;
-      rows.push({ ...row });
+      rows.push({ ...row, paymentFor: 'Hologram Procurement' });
     }
 
     return rows.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
@@ -2949,16 +3542,21 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private getRechargeRowsForCurrentView(): RechargeItem[] {
     const rows = [...this.rechargeData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    // "Others" (license fee + security deposit): show every recharge here so the tab is not empty;
-    // detailed splits stay under License Fee / Security Deposit tabs.
+    // "Others" (license fee + security deposit): show only license fee + security deposit recharges.
+    // Excise/education/hologram wallet recharges belong to "Wallets" view only.
     if (this.walletViewMode === 'others') {
-      return rows;
+      return rows.filter((row) =>
+        this.isOtherWalletType(
+          String(row.walletType || '').trim(),
+          String(row.hoa || '').trim()
+        )
+      );
     }
     // "Wallets" (brewery/distillery): fee/deposit wallets are not part of this view — hide those recharges.
     return rows.filter((row) => {
       const wt =
-        String(row.walletType || '').toLowerCase() ||
-        this.inferWalletTypeFromHoa(String(row.hoa || '').trim());
+        this.normalizeWalletTypeKey(row.walletType) ||
+        this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(row.hoa || '').trim()));
       return wt !== 'license_fee' && wt !== 'security_deposit';
     });
   }
@@ -2983,14 +3581,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private resolveWalletTypeForRow(row: { walletType?: string; hoa?: string } | null | undefined): string {
-    const rawType = String(row?.walletType || '').trim().toLowerCase();
+    const rawType = this.normalizeWalletTypeKey(row?.walletType);
     if (rawType) return rawType;
     const hoa = String(row?.hoa || '').trim();
-    return this.inferWalletTypeFromHoa(hoa);
+    return this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(hoa));
   }
 
   private isOtherWalletType(walletTypeRaw: string, hoaRaw: string): boolean {
-    const type = String(walletTypeRaw || '').trim().toLowerCase() || this.inferWalletTypeFromHoa(String(hoaRaw || '').trim());
+    const type =
+      this.normalizeWalletTypeKey(walletTypeRaw) ||
+      this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(String(hoaRaw || '').trim()));
     return type === 'security_deposit' || type === 'license_fee';
   }
 

@@ -132,9 +132,21 @@
                     </select>
                 </div>
 
+                <!-- Year Filter -->
+                <div class="compact-filter">
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.year" (change)="applyFilters()"
+                        title="Filter by year">
+                        <option value="">All Years</option>
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                    </select>
+                </div>
+
                 <!-- Clear Button -->
                 <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()"
-                    *ngIf="filters.dateFrom || filters.month || filters.status || filters.hologramType"
+                    *ngIf="filters.dateFrom || filters.month || filters.year || filters.status || filters.hologramType"
                     title="Clear all filters">
                     <i class="bi bi-x-circle"></i>
                     Clear
@@ -143,7 +155,7 @@
 
             <!-- Filter Results Summary -->
             <div class="filter-results-compact mt-2"
-                *ngIf="filters.dateFrom || filters.month || filters.status || filters.hologramType">
+                *ngIf="filters.dateFrom || filters.month || filters.year || filters.status || filters.hologramType">
                 <small class="text-info">
                     <i class="bi bi-info-circle me-1"></i>
                     Showing <strong>{{ filteredRequests.length }}</strong> of <strong>{{ hologramRequests.length
@@ -151,6 +163,7 @@
                     <span *ngIf="filters.dateFrom" class="filter-tag">Date: {{ filters.dateFrom | date:'dd MMM yyyy'
                         }}</span>
                     <span *ngIf="filters.month" class="filter-tag">Month: {{ getMonthLabel(filters.month) }}</span>
+                    <span *ngIf="filters.year" class="filter-tag">Year: {{ filters.year }}</span>
                     <span *ngIf="filters.status" class="filter-tag">Status: {{ filters.status }}</span>
                     <span *ngIf="filters.hologramType" class="filter-tag">Hologram: {{ filters.hologramType }}</span>
                 </small>
@@ -322,11 +335,11 @@
                         <i class="bi bi-file-earmark-x"></i>
                     </div>
                     <h5 class="empty-title">
-                        {{ (filters.dateFrom || filters.month || filters.status || filters.hologramType) ?
+                        {{ (filters.dateFrom || filters.month || filters.year || filters.status || filters.hologramType) ?
                         'No Matching Requests Found' : 'No Hologram Requests Found' }}
                     </h5>
                     <p class="empty-message">
-                        {{ (filters.dateFrom || filters.month || filters.status || filters.hologramType) ?
+                        {{ (filters.dateFrom || filters.month || filters.year || filters.status || filters.hologramType) ?
                         'No requests match your current filter criteria. Try adjusting your filters or clear them to see
                         all requests.' :
                         'No hologram requests have been submitted yet.' }}
@@ -416,29 +429,19 @@
         </div>
 
         <div class="hologram-available-sidebar-body">
-            <button type="button" class="hologram-available-item local"
-                (click)="onHologramTypeCardClick('LOCAL'); toggleHologramAvailableSidebar()"
-                [class.active]="isHologramTypeCardActive('LOCAL')">
+            <div class="hologram-available-item local">
                 <span class="item-label">Local</span>
                 <span class="item-value">{{ getAvailableHologramsByType('LOCAL') | number }}</span>
-            </button>
+            </div>
 
-            <button type="button" class="hologram-available-item export"
-                (click)="onHologramTypeCardClick('EXPORT'); toggleHologramAvailableSidebar()"
-                [class.active]="isHologramTypeCardActive('EXPORT')">
+            <div class="hologram-available-item export">
                 <span class="item-label">Export</span>
                 <span class="item-value">{{ getAvailableHologramsByType('EXPORT') | number }}</span>
-            </button>
+            </div>
 
-            <button type="button" class="hologram-available-item defence"
-                (click)="onHologramTypeCardClick('DEFENCE'); toggleHologramAvailableSidebar()"
-                [class.active]="isHologramTypeCardActive('DEFENCE')">
+            <div class="hologram-available-item defence">
                 <span class="item-label">Defence</span>
                 <span class="item-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</span>
-            </button>
-
-            <div class="hologram-available-footer-note">
-                <small class="text-muted">Click a type to filter the table.</small>
             </div>
         </div>
     </div>

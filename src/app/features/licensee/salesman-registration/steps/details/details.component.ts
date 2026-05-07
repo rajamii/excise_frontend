@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, forkJoin, of } from 'rxjs';
+import { takeUntil, catchError } from 'rxjs/operators';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { FormUtils } from '../../../../../shared/utils/capitalize.util';
 import { MaterialModule } from '../../../../../shared/material.module';
@@ -9,6 +9,7 @@ import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../core/mod
 import { DatePipe } from '@angular/common';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../../../../core/services/account.service';
+import { MasterService } from '../../../../../core/services/master.service';
 
 @Component({
   selector: 'app-details',
@@ -44,17 +45,25 @@ export class DetailsComponent implements OnInit, OnDestroy {
   };
 
   displayedColumns: string[] = ['serialNo', 'docType', 'upload', 'view'];
+  private readonly genderMap: Record<string, string> = {
+    m: 'Male',
+    male: 'Male',
+    f: 'Female',
+    female: 'Female'
+  };
+
   documents = [
     { key: 'passPhoto', name: 'Passport Size Photo', format: 'png, jpg, jpeg', accept: '.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' },
-    { key: 'aadhaarCard', name: 'Aadhaar card', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' },
-    { key: 'residentialCertificate', name: 'Sikkim Subject Certificate/ Certificate of Identification / Residential Certificate', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' },
-    { key: 'dateofBirthProof', name: 'Date of Birth proof', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' }
+    { key: 'aadhaarCard', name: 'Aadhaar card', format: 'pdf, png, jpg, jpeg', accept: '.pdf,.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' },
+    { key: 'residentialCertificate', name: 'Sikkim Subject Certificate/ Certificate of Identification / Residential Certificate', format: 'pdf, png, jpg, jpeg', accept: '.pdf,.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' },
+    { key: 'dateofBirthProof', name: 'Date of Birth proof', format: 'pdf, png, jpg, jpeg', accept: '.pdf,.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' }
   ];
 
   constructor(
     private fb: FormBuilder,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private accountService: AccountService,
+    private masterService: MasterService,
     private datePipe: DatePipe,
     private cdr: ChangeDetectorRef
   ) {
@@ -86,8 +95,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
     FormUtils.capitalize(this.detailsForm.get('pan')!, this.destroy$);
     this.loadSavedDocuments();
 
-    // ✅ AUTO-FILL from user profile
-    this.autoFillFromUserProfile();
+    this.autoFillFromProfiles();
   }
 
   ngOnDestroy() {
@@ -99,100 +107,123 @@ export class DetailsComponent implements OnInit, OnDestroy {
   /**
    * ✅ Auto-fill salesman/barman details from logged-in user profile
    */
-  private autoFillFromUserProfile(): void {
-    // Check if form already has data from session storage
-    const sessionData = sessionStorage.getItem('personalDetails');
-    if (sessionData) {
-      console.log('📋 Salesman/Barman details already in session, skipping auto-fill');
-      return;
-    }
+  private autoFillFromProfiles(): void {
+    forkJoin({
+      userProfile: this.fetchUserProfile(),
+      licenseeProfile: this.masterService.getMyLicenseeProfile().pipe(catchError(() => of(null)))
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ userProfile, licenseeProfile }) => {
+          this.fillFormWithProfiles(userProfile, licenseeProfile);
+        },
+        error: (error) => {
+          console.error('❌ Failed to auto-fill salesman/barman details:', error);
+        }
+      });
+  }
 
-    // Try to get user profile from memory first
-    let userProfile = this.accountService.getCurrentUser();
+  private fetchUserProfile() {
+    let cached = this.accountService.getUserProfileSync() || this.accountService.getCurrentUser();
 
-    if (!userProfile) {
+    if (!cached) {
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
         try {
-          userProfile = JSON.parse(storedUser);
-          console.log('✅ User profile loaded from localStorage for salesman/barman');
-        } catch (e) {
-          console.error('❌ Failed to parse stored user profile:', e);
-          return;
+          cached = JSON.parse(storedUser);
+        } catch (error) {
+          console.error('❌ Failed to parse stored user profile:', error);
         }
       }
     }
 
-    if (userProfile) {
-      console.log('✅ Auto-filling salesman/barman details with profile:', userProfile);
-      this.fillFormWithProfile(userProfile);
-    } else {
-      // Fetch from backend as last resort
-      console.log('⚠️ No user profile in memory or localStorage, fetching from backend...');
-      this.accountService.identity(true).subscribe({
-        next: (profile) => {
-          if (profile) {
-            console.log('✅ User profile fetched from backend');
-            this.fillFormWithProfile(profile);
-          }
-        },
-        error: (err) => {
-          console.error('❌ Failed to fetch user profile:', err);
-        }
-      });
-    }
+    return cached
+      ? of(cached)
+      : this.accountService.identity(true).pipe(catchError(() => of(null)));
   }
 
-  /**
-   * Fill form with user profile data
-   */
-  private fillFormWithProfile(profile: any): void {
-    console.log('🔍 Filling salesman/barman details form with profile data:', profile);
-
+  private fillFormWithProfiles(userProfile: any, licenseeProfile: any): void {
     const fillData: any = {};
 
-    // Map firstName
-    if (profile.firstName || profile.first_name) {
-      fillData.firstName = profile.firstName || profile.first_name;
+    if (userProfile) {
+      if (!this.detailsForm.get('firstName')?.value && (userProfile.firstName || userProfile.first_name)) {
+        fillData.firstName = userProfile.firstName || userProfile.first_name;
+      }
+
+      if (!this.detailsForm.get('middleName')?.value && (userProfile.middleName || userProfile.middle_name)) {
+        fillData.middleName = userProfile.middleName || userProfile.middle_name;
+      }
+
+      if (!this.detailsForm.get('lastName')?.value && (userProfile.lastName || userProfile.last_name)) {
+        fillData.lastName = userProfile.lastName || userProfile.last_name;
+      }
+
+      if (!this.detailsForm.get('mobileNumber')?.value && (userProfile.phoneNumber || userProfile.phone_number)) {
+        fillData.mobileNumber = userProfile.phoneNumber || userProfile.phone_number;
+      }
+
+      if (!this.detailsForm.get('emailId')?.value && userProfile.email) {
+        fillData.emailId = userProfile.email;
+      }
+
+      if (!this.detailsForm.get('address')?.value && userProfile.address) {
+        fillData.address = userProfile.address;
+      }
     }
 
-    // Map middleName
-    if (profile.middleName || profile.middle_name) {
-      fillData.middleName = profile.middleName || profile.middle_name;
+    if (licenseeProfile) {
+      if (!this.detailsForm.get('fatherHusbandName')?.value && licenseeProfile.fatherName) {
+        fillData.fatherHusbandName = licenseeProfile.fatherName;
+      }
+
+      if (!this.detailsForm.get('dob')?.value && licenseeProfile.dob) {
+        fillData.dob = new Date(licenseeProfile.dob);
+      }
+
+      if (!this.detailsForm.get('gender')?.value) {
+        const mappedGender = this.mapGender(licenseeProfile.genderDisplay || licenseeProfile.gender);
+        if (mappedGender) {
+          fillData.gender = mappedGender;
+        }
+      }
+
+      if (!this.detailsForm.get('nationality')?.value && licenseeProfile.nationality) {
+        fillData.nationality = this.mapNationality(licenseeProfile.nationality);
+      }
+
+      if (!this.detailsForm.get('pan')?.value && licenseeProfile.panNumber) {
+        fillData.pan = String(licenseeProfile.panNumber).toUpperCase();
+      }
     }
 
-    // Map lastName
-    if (profile.lastName || profile.last_name) {
-      fillData.lastName = profile.lastName || profile.last_name;
+    if (!this.detailsForm.get('nationality')?.value && !fillData.nationality) {
+      fillData.nationality = 'Indian';
     }
 
-    // Map phone number
-    if (profile.phoneNumber || profile.phone_number) {
-      fillData.mobileNumber = profile.phoneNumber || profile.phone_number;
+    if (Object.keys(fillData).length === 0) {
+      return;
     }
 
-    // Map email
-    if (profile.email) {
-      fillData.emailId = profile.email;
-    }
-
-    // Map address
-    if (profile.address) {
-      fillData.address = profile.address;
-    }
-
-    // Default nationality to Indian
-    fillData.nationality = 'Indian';
-
-    console.log('📝 Salesman/Barman details data to be filled:', fillData);
-
-    // Patch the form with the data
     this.detailsForm.patchValue(fillData, { emitEvent: true });
 
-    console.log('✅ Salesman/Barman details auto-filled from user profile');
+    Object.keys(fillData).forEach((key) => {
+      const control = this.detailsForm.get(key);
+      control?.markAsDirty();
+      control?.markAsTouched();
+      control?.updateValueAndValidity();
+    });
 
-    // Trigger change detection
     this.cdr.detectChanges();
+  }
+
+  private mapGender(value: unknown): string | null {
+    const normalized = String(value || '').trim().toLowerCase();
+    return this.genderMap[normalized] || null;
+  }
+
+  private mapNationality(value: unknown): string {
+    const normalized = String(value || '').trim();
+    return this.nationalities.includes(normalized) ? normalized : 'Indian';
   }
 
   get modeofOperation() {
@@ -309,6 +340,8 @@ export class DetailsComponent implements OnInit, OnDestroy {
       doc.file = null;
       doc.fileUrl = '';
     });
+
+    this.autoFillFromProfiles();
   }
 
   proceedToNext() {
