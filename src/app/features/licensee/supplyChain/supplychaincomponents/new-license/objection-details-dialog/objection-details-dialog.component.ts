@@ -57,6 +57,10 @@ export class ObjectionDetailsDialogComponent implements OnInit {
     return (this.objections || []).filter(o => o && !o.isResolved);
   }
 
+  get resolved(): Objection[] {
+    return (this.objections || []).filter(o => o && !!o.isResolved);
+  }
+
   label(fieldName: string): string {
     return String(fieldName || '')
       .replace(/[_\-]+/g, ' ')
@@ -69,4 +73,3 @@ export class ObjectionDetailsDialogComponent implements OnInit {
       .join(' ');
   }
 }
-

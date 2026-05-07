@@ -8,27 +8,47 @@
     </div>
   } @else if (error) {
     <div class="error">{{ error }}</div>
-  } @else if (unresolved.length === 0) {
-    <div class="empty">No unresolved objections found.</div>
+  } @else if (unresolved.length === 0 && resolved.length === 0) {
+    <div class="empty">No objections found.</div>
   } @else {
-    <div class="list">
-      @for (obj of unresolved; track obj) {
-        <div class="item">
-          <div class="top">
-            <div class="field">{{ label(obj.fieldName) }}</div>
-            <div class="meta">
-              @if (obj.raisedByName) { <span>By: {{ obj.raisedByName }}</span> }
-              @if (obj.raisedAt) { <span>On: {{ obj.raisedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
+    @if (unresolved.length > 0) {
+      <div class="section-title">Unresolved</div>
+      <div class="list">
+        @for (obj of unresolved; track obj) {
+          <div class="item">
+            <div class="top">
+              <div class="field">{{ label(obj.fieldName) }}</div>
+              <div class="meta">
+                @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
+                @if (obj.raisedAt) { <span>On: {{ obj.raisedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
+              </div>
             </div>
+            <div class="remark">{{ obj.remarks }}</div>
           </div>
-          <div class="remark">{{ obj.remarks }}</div>
-        </div>
-      }
-    </div>
+        }
+      </div>
+    }
+
+    @if (resolved.length > 0) {
+      <div class="section-title">Resolved</div>
+      <div class="list">
+        @for (obj of resolved; track obj) {
+          <div class="item resolved">
+            <div class="top">
+              <div class="field">{{ label(obj.fieldName) }}</div>
+              <div class="meta">
+                @if (obj.resolvedByName) { <span>Resolved by: {{ obj.resolvedByName }}</span> }
+                @if (obj.resolvedAt) { <span>On: {{ obj.resolvedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
+              </div>
+            </div>
+            <div class="remark">{{ obj.remarks }}</div>
+          </div>
+        }
+      </div>
+    }
   }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="close()">Close</button>
 </mat-dialog-actions>
-
