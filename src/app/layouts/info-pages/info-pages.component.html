@@ -37,7 +37,7 @@
         @for (hod of hods; track hod) {
           <mat-card class="hod">
             <mat-card-content>
-              <img [src]="hod.image" alt="{{ hod.name }}">
+              <img [src]="getImageUrl(hod.image)" alt="{{ hod.name }}">
               <div class="description">
                 <h6>{{ hod.name }}</h6>
                 {{ hod.title }}
@@ -55,21 +55,17 @@
       <mat-card-header>Excise Secretaries / Principal Secretaries</mat-card-header>
       <mat-card-content class = "card-container">
         <mat-table [dataSource]="commissionerData">
-          <ng-container matColumnDef="slNo">
-            <mat-header-cell *matHeaderCellDef> Sl No. </mat-header-cell>
-            <mat-cell *matCellDef="let com"> {{com.slNo}} </mat-cell>
-          </ng-container>
           <ng-container matColumnDef="name">
             <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
             <mat-cell *matCellDef="let com"> {{com.name}} </mat-cell>
           </ng-container>
-          <ng-container matColumnDef="fromDate">
-            <mat-header-cell *matHeaderCellDef> From Date </mat-header-cell>
-            <mat-cell *matCellDef="let com"> {{com.fromDate}} </mat-cell>
+          <ng-container matColumnDef="designation">
+            <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.designation}} </mat-cell>
           </ng-container>
-          <ng-container matColumnDef="toDate">
-            <mat-header-cell *matHeaderCellDef> To Date </mat-header-cell>
-            <mat-cell *matCellDef="let com"> {{com.toDate}} </mat-cell>
+          <ng-container matColumnDef="email">
+            <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.email}} </mat-cell>
           </ng-container>
           <mat-header-row *matHeaderRowDef="commissionerColumns"></mat-header-row>
           <mat-row *matRowDef="let row; columns: commissionerColumns;"></mat-row>

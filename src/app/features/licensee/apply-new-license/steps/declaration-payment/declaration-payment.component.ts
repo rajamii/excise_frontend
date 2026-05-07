@@ -275,10 +275,21 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   get shouldShowMemberDetails(): boolean {
-    const applicantData = this.getParsedSession<ApplicantDeclarationData>('applicantDetailsData');
-    const modeOfOperation = String(applicantData?.mode_of_operation ?? applicantData?.modeOfOperation ?? '').trim();
+    const modeOfOperation = this.selectedModeOfOperation;
 
     return modeOfOperation === 'Salesman' || modeOfOperation === 'Barman';
+  }
+
+  get memberDetailsSectionTitle(): string {
+    const modeOfOperation = this.selectedModeOfOperation;
+    return modeOfOperation === 'Salesman' || modeOfOperation === 'Barman'
+      ? `${modeOfOperation} Details`
+      : 'Member Details';
+  }
+
+  private get selectedModeOfOperation(): string {
+    const applicantData = this.getParsedSession<ApplicantDeclarationData>('applicantDetailsData');
+    return String(applicantData?.mode_of_operation ?? applicantData?.modeOfOperation ?? '').trim();
   }
 
   get selectLicenseData() {
@@ -309,9 +320,18 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     const docs = this.licenseAppService.getAllSiteDocuments();
     return Array.from(docs.entries()).map(([key, file]) => ({
       key,
-      label: this.uploadedDocumentLabels[key] ?? FormDataBuilder.toTitleCase(key),
+      label: this.getUploadedDocumentLabel(key),
       fileName: file.name
     }));
+  }
+
+  private getUploadedDocumentLabel(key: string): string {
+    const label = this.uploadedDocumentLabels[key] ?? FormDataBuilder.toTitleCase(key);
+    const role = this.selectedModeOfOperation;
+
+    return key.startsWith('member_') && (role === 'Salesman' || role === 'Barman')
+      ? label.replace(/^Member/, role)
+      : label;
   }
 
   get displaySections() {

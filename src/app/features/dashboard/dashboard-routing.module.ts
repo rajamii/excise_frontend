@@ -128,6 +128,58 @@ const routes: Routes = [
         data: { requiredPermission: 'master.roads.view' }
       },
       {
+        path: 'admin/about-us',
+        redirectTo: 'admin/about-us/heads-of-organisations',
+        pathMatch: 'full'
+      },
+      {
+        path: 'admin/about-us/heads-of-organisations',
+        loadComponent: () =>
+          import('../admin/master/about-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], aboutUsCategory: 'headsOfOrganisations' }
+      },
+      {
+        path: 'admin/about-us/excise-secretaries',
+        loadComponent: () =>
+          import('../admin/master/about-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], aboutUsCategory: 'exciseSecretaries' }
+      },
+      {
+        path: 'admin/contact-us',
+        redirectTo: 'admin/contact-us/nodal-officer',
+        pathMatch: 'full'
+      },
+      {
+        path: 'admin/contact-us/nodal-officer',
+        loadComponent: () =>
+          import('../admin/master/contact-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], contactUsCategory: 'nodalOfficer' }
+      },
+      {
+        path: 'admin/contact-us/public-information-officers',
+        loadComponent: () =>
+          import('../admin/master/contact-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], contactUsCategory: 'publicInformationOfficer' }
+      },
+      {
+        path: 'admin/contact-us/directorate-district-officials',
+        loadComponent: () =>
+          import('../admin/master/contact-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], contactUsCategory: 'directorateAndDistrictOfficials' }
+      },
+      {
+        path: 'admin/contact-us/grievance-redressal-officer',
+        loadComponent: () =>
+          import('../admin/master/contact-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], contactUsCategory: 'grievanceRedressalOfficer' }
+      },
+      {
         path: 'admin/oic',
         loadComponent: () =>
           import('../admin/master/oic/list/list.component').then((m) => m.ListComponent),
@@ -147,6 +199,8 @@ const routes: Routes = [
       { path: 'license-subcategories', redirectTo: 'admin/license-subcategories', pathMatch: 'full' },
       { path: 'license-terms', redirectTo: 'admin/license-terms', pathMatch: 'full' },
       { path: 'roads', redirectTo: 'admin/roads', pathMatch: 'full' },
+      { path: 'about-us', redirectTo: 'admin/about-us', pathMatch: 'full' },
+      { path: 'contact-us', redirectTo: 'admin/contact-us', pathMatch: 'full' },
       { path: 'oic', redirectTo: 'admin/oic', pathMatch: 'full' }
     ]
   }

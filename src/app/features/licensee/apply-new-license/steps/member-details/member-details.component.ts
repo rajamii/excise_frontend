@@ -130,7 +130,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       aadhaar: new FormControl(storedValues.aadhaar ?? '', [Validators.required, Validators.pattern(PatternConstants.AADHAAR_NUMBER)]),
       mobileNumber: new FormControl(storedValues.mobileNumber ?? storedValues.member_mobile_number ?? '', [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
       emailId: new FormControl(storedValues.emailId ?? storedValues.member_email ?? '', [Validators.pattern(PatternConstants.EMAIL)]),
-      sikkimSubject: new FormControl(Boolean(storedValues.sikkimSubject ?? storedValues.sikkim_subject), [Validators.requiredTrue])
+      sikkimSubject: new FormControl(Boolean(storedValues.sikkimSubject ?? storedValues.sikkim_subject))
     });
 
     this.memberDetailsForm.valueChanges
@@ -369,6 +369,8 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     this.memberDetailsForm.markAllAsTouched();
     if (!this.areDocumentsUploaded()) {
       alert('Please upload all required documents before proceeding.');
+    } else {
+      alert('Please complete all required fields before proceeding.');
     }
   }
 

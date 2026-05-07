@@ -17,7 +17,7 @@
   </mat-step>
 
   @if (shouldShowMemberDetailsStep) {
-    <mat-step label="Member Details">
+    <mat-step [label]="memberDetailsStepLabel">
       <app-member-details (back)="stepper.previous()" (next)="stepper.next()"></app-member-details>
     </mat-step>
   }

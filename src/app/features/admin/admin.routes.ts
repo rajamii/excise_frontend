@@ -169,6 +169,88 @@ const routes: Routes = [
               requiredPermission: 'master.roads.view',
             },
           },
+          {
+            path: 'about-us',
+            redirectTo: 'about-us/heads-of-organisations',
+            pathMatch: 'full'
+          },
+          {
+            path: 'about-us/heads-of-organisations',
+            loadComponent: () =>
+              import('./master/about-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              aboutUsCategory: 'headsOfOrganisations',
+            },
+          },
+          {
+            path: 'about-us/excise-secretaries',
+            loadComponent: () =>
+              import('./master/about-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              aboutUsCategory: 'exciseSecretaries',
+            },
+          },
+          {
+            path: 'contact-us',
+            redirectTo: 'contact-us/nodal-officer',
+            pathMatch: 'full'
+          },
+          {
+            path: 'contact-us/nodal-officer',
+            loadComponent: () =>
+              import('./master/contact-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              contactUsCategory: 'nodalOfficer',
+            },
+          },
+          {
+            path: 'contact-us/public-information-officers',
+            loadComponent: () =>
+              import('./master/contact-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              contactUsCategory: 'publicInformationOfficer',
+            },
+          },
+          {
+            path: 'contact-us/directorate-district-officials',
+            loadComponent: () =>
+              import('./master/contact-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              contactUsCategory: 'directorateAndDistrictOfficials',
+            },
+          },
+          {
+            path: 'contact-us/grievance-redressal-officer',
+            loadComponent: () =>
+              import('./master/contact-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              contactUsCategory: 'grievanceRedressalOfficer',
+            },
+          },
         ]
       },
     ],

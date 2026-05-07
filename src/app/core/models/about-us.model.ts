@@ -1,0 +1,13 @@
+export class HeadOfOrganisation {
+  id?: number;
+  name!: string;
+  title!: string;
+  image!: string | File;
+}
+
+export class ExciseSecretary {
+  id?: number;
+  name!: string;
+  designation!: string;
+  email!: string;
+}
