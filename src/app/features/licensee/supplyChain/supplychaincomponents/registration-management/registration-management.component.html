@@ -188,8 +188,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of filteredRows; let i = index">
-              <td>{{ i + 1 }}</td>
+            <tr *ngFor="let row of pagedRows; let i = index">
+              <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
               <td class="fw-semibold">{{ row.applicationId }}</td>
               <td>{{ row.submittedOn }}</td>
               <td *ngIf="currentSection === 'salesman-barman-registration'">
@@ -224,6 +224,39 @@
             </tr>
           </tbody>
         </table>
+
+        <div class="pagination-bar" *ngIf="filteredRows.length > 0">
+          <div class="page-summary">
+            Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }}
+          </div>
+
+          <div class="page-controls">
+            <div class="page-size">
+              <span class="page-size-label">Page size</span>
+              <select
+                class="form-select form-select-sm page-size-select"
+                [(ngModel)]="pageSize"
+                (ngModelChange)="onPageSizeChange()"
+              >
+                <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+              </select>
+            </div>
+
+            <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0">
+              Prev
+            </button>
+            <span class="page-indicator" *ngIf="totalPages > 0">
+              Page {{ pageIndex + 1 }} / {{ totalPages }}
+            </span>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              (click)="nextPage()"
+              [disabled]="totalPages === 0 || pageIndex >= totalPages - 1"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="loading-state" *ngIf="isLoading">Loading entries...</div>

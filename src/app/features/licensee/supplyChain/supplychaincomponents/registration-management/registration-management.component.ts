@@ -37,6 +37,10 @@ export class RegistrationManagementComponent implements OnInit {
 
   activeCardFilter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected' | '' = '';
 
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize = 5;
+  pageIndex = 0;
+
   allRows: Array<{
     id: string;
     applicationId: string;
@@ -159,6 +163,45 @@ export class RegistrationManagementComponent implements OnInit {
 
       return matchesStatus && matchesSearch && matchesMonth && matchesDate && matchesCompany;
     });
+
+    // Reset pagination whenever filters change.
+    this.pageIndex = 0;
+  }
+
+  get totalPages(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.ceil(this.filteredRows.length / this.pageSize);
+  }
+
+  get pageStart(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return this.pageIndex * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    if (this.filteredRows.length === 0) return 0;
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.filteredRows.length);
+  }
+
+  get pagedRows(): typeof this.filteredRows {
+    if (this.filteredRows.length === 0) return [];
+    const start = this.pageIndex * this.pageSize;
+    return this.filteredRows.slice(start, start + this.pageSize);
+  }
+
+  onPageSizeChange(): void {
+    this.pageIndex = 0;
+  }
+
+  prevPage(): void {
+    if (this.pageIndex <= 0) return;
+    this.pageIndex -= 1;
+  }
+
+  nextPage(): void {
+    if (this.totalPages === 0) return;
+    if (this.pageIndex >= this.totalPages - 1) return;
+    this.pageIndex += 1;
   }
 
   clearFilters(): void {
