@@ -3,25 +3,79 @@
     padding: 20px;
     gap: 40px;
   }
-  
+
+  // ── Base step header (upcoming / not yet reached) ──────────────────────────
   .mat-step-header {
-    background-color: #DADADA;
-    border-radius: 4px;
+    background-color: #f1f3f8;
+    border-radius: 8px;
     margin: 0 4px;
-    
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    border: 1.5px solid #e2e6f0;
+
     &.cdk-keyboard-focused,
     &.cdk-program-focused,
     &:hover {
-      background-color: #c5c5c5;
+      background-color: #e2e6f0;
+    }
+
+    .mat-step-label {
+      color: #8a94a6;
+      font-weight: 500;
+      font-size: 0.82rem;
     }
   }
-  
-  .mat-step-icon-selected,
+
+  // ── Active / current step → blue ───────────────────────────────────────────
+  .mat-step-header[aria-selected="true"] {
+    background-color: #dde4f7 !important;
+    border-color: #1c2b78 !important;
+    box-shadow: 0 2px 8px rgba(28, 43, 120, 0.15);
+
+    .mat-step-label {
+      color: #1c2b78 !important;
+      font-weight: 700;
+    }
+  }
+
+  // ── Completed step → green (header contains a done/edit icon) ─────────────
+  .mat-step-header:has(.mat-step-icon-state-done),
+  .mat-step-header:has(.mat-step-icon-state-edit) {
+    background-color: #dcfce7 !important;   // green-100
+    border-color: #16a34a !important;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
+
+    .mat-step-label {
+      color: #15803d !important;            // green-700
+      font-weight: 600;
+    }
+  }
+
+  // ── Step icon colours ───────────────────────────────────────────────────────
+
+  // Completed → solid green
   .mat-step-icon-state-done,
   .mat-step-icon-state-edit {
-    background-color: #1C2B78 !important;
+    background-color: #16a34a !important;
+    color: #fff !important;
   }
-  
+
+  // Active → brand blue
+  .mat-step-icon-selected {
+    background-color: #1c2b78 !important;
+    color: #fff !important;
+  }
+
+  // Upcoming → muted grey
+  .mat-step-icon:not(.mat-step-icon-selected):not(.mat-step-icon-state-done):not(.mat-step-icon-state-edit) {
+    background-color: #9ca3af !important;
+    color: #fff !important;
+  }
+
+  // ── Connector line ──────────────────────────────────────────────────────────
+  .mat-stepper-horizontal-line {
+    border-top-color: #d1d5db;
+  }
+
   .mat-horizontal-content-container {
     padding: 0;
     overflow: visible;
