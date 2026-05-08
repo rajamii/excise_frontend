@@ -1288,6 +1288,15 @@
   </div>
 </div>
 
+<app-unified-add-money-modal
+  [context]="modalContext"
+  [transactionId]="currentTxnId"
+  [amount]="paymentAmount"
+  (amountChange)="paymentAmount = $event"
+  (proceed)="onProceedPayment($event)"
+  (close)="closeAddMoneyModal()">
+</app-unified-add-money-modal>
+
 
 
 
