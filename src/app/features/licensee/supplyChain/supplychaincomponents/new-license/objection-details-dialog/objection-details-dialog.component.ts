@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UnifiedDashboardService } from '../../../../../../core/services/unified-dashboard.service';
 import { Objection } from '../../../../../../core/models/license-application.model';
+import { environment } from '../../../../../../../environments/environment';
+import { DocumentPreviewDialogComponent } from '../../../../../../shared/components/document-preview-dialog/document-preview-dialog.component';
 
 export interface ObjectionDetailsDialogData {
   applicationId: string;
@@ -25,6 +27,7 @@ export class ObjectionDetailsDialogComponent implements OnInit {
 
   constructor(
     private unifiedService: UnifiedDashboardService,
+    private dialog: MatDialog,
     private dialogRef: MatDialogRef<ObjectionDetailsDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: ObjectionDetailsDialogData
   ) {}
@@ -71,5 +74,35 @@ export class ObjectionDetailsDialogComponent implements OnInit {
       .filter(Boolean)
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
+  }
+
+  isDocumentValue(value: string | null | undefined): boolean {
+    const v = String(value || '').trim().toLowerCase();
+    if (!v) return false;
+    if (v.startsWith('data:image/')) return true;
+    return /\.(png|jpe?g|webp|gif|bmp|svg|pdf)(\?.*)?$/.test(v);
+  }
+
+  toMediaUrl(value: string | null | undefined): string {
+    const v = String(value || '').trim();
+    if (!v) return '';
+    if (/^https?:\/\//i.test(v) || v.startsWith('data:')) return v;
+
+    const base = String((environment as any)?.apiBaseUrl || '').replace(/\/+$/, '');
+    const cleaned = v.replace(/^\/+/, '');
+    const alreadyMedia = cleaned.toLowerCase().startsWith('media/');
+    const path = alreadyMedia ? cleaned : `media/${cleaned}`;
+    if (!base) return `/${path}`;
+    return `${base}/${path}`;
+  }
+
+  previewDocument(label: string, value: string | null | undefined): void {
+    if (!this.isDocumentValue(value)) return;
+    const url = this.toMediaUrl(value);
+    this.dialog.open(DocumentPreviewDialogComponent, {
+      width: 'min(920px, 95vw)',
+      maxWidth: '95vw',
+      data: { url }
+    });
   }
 }

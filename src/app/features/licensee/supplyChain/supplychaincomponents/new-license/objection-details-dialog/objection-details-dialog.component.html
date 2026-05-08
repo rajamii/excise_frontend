@@ -28,7 +28,20 @@
               <div class="changes one">
                 <div class="change">
                   <div class="label">Current</div>
-                  <div class="value">{{ obj.beforeContent }}</div>
+                  <div class="value">
+                    <span class="text">{{ obj.beforeContent }}</span>
+                    @if (isDocumentValue(obj.beforeContent)) {
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="eye"
+                        (click)="previewDocument(label(obj.fieldName) + ' (Current)', obj.beforeContent)"
+                        title="Preview document"
+                      >
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                    }
+                  </div>
                 </div>
               </div>
             }
@@ -58,11 +71,37 @@
               <div class="changes">
                 <div class="change">
                   <div class="label">Before</div>
-                  <div class="value">{{ obj.beforeContent || '-' }}</div>
+                  <div class="value">
+                    <span class="text">{{ obj.beforeContent || '-' }}</span>
+                    @if (isDocumentValue(obj.beforeContent)) {
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="eye"
+                        (click)="previewDocument(label(obj.fieldName) + ' (Before)', obj.beforeContent)"
+                        title="Preview document"
+                      >
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                    }
+                  </div>
                 </div>
                 <div class="change">
                   <div class="label">After</div>
-                  <div class="value">{{ obj.afterContent || '-' }}</div>
+                  <div class="value">
+                    <span class="text">{{ obj.afterContent || '-' }}</span>
+                    @if (isDocumentValue(obj.afterContent)) {
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="eye"
+                        (click)="previewDocument(label(obj.fieldName) + ' (After)', obj.afterContent)"
+                        title="Preview document"
+                      >
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                    }
+                  </div>
                 </div>
               </div>
             }
