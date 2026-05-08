@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { MatDialog } from '@angular/material/dialog';
 import { ObjectionDialogComponent, ObjectionDialogResult } from '../components/objection-dialog/objection-dialog.component';
+import { RejectionRemarksDialogComponent } from '../components/rejection-remarks-dialog/rejection-remarks-dialog.component';
 
 // Import existing services
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
@@ -117,6 +118,8 @@ export class UnifiedActionsService {
         return this.handleEditAction(item, itemType);
       case 'RAISE_OBJECTION':
         return this.handleRaiseObjectionAction(item, itemType);
+      case 'VIEW_REMARK':
+        return this.handleViewRemarkAction(item, itemType);
 
       default:
         return of({
@@ -309,8 +312,12 @@ export class UnifiedActionsService {
     const hasInlineReason = !!item && Object.prototype.hasOwnProperty.call(item, '__rejectReason');
     const inlineReason = String(item?.__rejectReason ?? item?.rejectReason ?? '').trim();
     const reason = hasInlineReason
-      ? (inlineReason || 'Rejected')
-      : (prompt('Enter rejection reason (optional):') || 'Rejected');
+      ? inlineReason
+      : String(prompt('Enter rejection remark (required):') || '').trim();
+
+    if (!reason) {
+      return of({ success: false, message: 'Rejection cancelled (remark is required).' });
+    }
 
     switch (itemType) {
       case 'requisition':
@@ -347,7 +354,7 @@ export class UnifiedActionsService {
       case 'company-registration':
       case 'company-collaboration':
       case 'salesman-barman-registration':
-        return this.executeWorkflowAdvance(item, 'reject', reason);
+        return this.executeWorkflowReject(item, reason);
 
       default:
         return of({
@@ -355,6 +362,46 @@ export class UnifiedActionsService {
           message: `Rejection not implemented for ${itemType}`
         });
     }
+  }
+
+  private handleViewRemarkAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
+      return of({ success: false, message: `View remark not implemented for ${itemType}` });
+    }
+
+    const applicationId = this.getWorkflowApplicationId(item);
+    if (!applicationId) {
+      return of({ success: false, message: 'Application ID is missing for view remark' });
+    }
+
+    return this.http.get<any[]>(
+      `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/rejections/`,
+      { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    ).pipe(
+      map((res: any) => Array.isArray(res) ? res : []),
+      map((rejections: any[]) => {
+        if (!rejections.length) {
+          return { success: false, message: 'No rejection remarks found for this application.' };
+        }
+
+        this.dialog.open(RejectionRemarksDialogComponent, {
+          width: 'min(920px, 96vw)',
+          maxWidth: '96vw',
+          data: {
+            applicationId,
+            referenceNo: item?.referenceNo ?? item?.refNo ?? applicationId,
+            rejections
+          }
+        });
+
+        return { success: true, message: 'Loaded rejection remarks.', data: rejections };
+      }),
+      catchError((error) => of({
+        success: false,
+        message: error?.error?.detail || 'Failed to load rejection remarks',
+        data: error
+      }))
+    );
   }
 
   private handleForwardAction(item: any, itemType: string, options?: ActionExecutionOptions): Observable<ActionResult> {
@@ -1018,6 +1065,43 @@ export class UnifiedActionsService {
       catchError((error) => of({
         success: false,
         message: error?.error?.detail || 'Failed to fetch next stages'
+      }))
+    );
+  }
+
+  private executeWorkflowReject(
+    item: any,
+    remarks: string
+  ): Observable<ActionResult> {
+    const applicationId = this.getWorkflowApplicationId(item);
+    if (!applicationId) {
+      return of({ success: false, message: 'Application ID is missing for workflow rejection' });
+    }
+
+    return this.fetchWorkflowNextStages(applicationId).pipe(
+      switchMap((stages: any[]) => {
+        const target = this.pickWorkflowStage(stages, 'reject');
+        if (!target?.id) {
+          return of({ success: false, message: 'No rejection stage available from current stage' });
+        }
+
+        return this.http.post<any>(
+          `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/reject/`,
+          { target_stage_id: target.id, remarks },
+          { headers: new HttpHeaders({ Accept: 'application/json' }) }
+        ).pipe(
+          map(() => ({ success: true, message: `REJECT action completed successfully` })),
+          catchError((error) => of({
+            success: false,
+            message: error?.error?.detail || `Failed to reject application`,
+            data: error
+          }))
+        );
+      }),
+      catchError((error) => of({
+        success: false,
+        message: error?.error?.detail || 'Failed to fetch next stages',
+        data: error
       }))
     );
   }

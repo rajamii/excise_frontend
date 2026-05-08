@@ -285,6 +285,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'FORWARD',
       'RAISE_OBJECTION',
       'REJECT',
+      'VIEW_REMARK',
       'REQUEST_CANCELLATION',
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
@@ -303,6 +304,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'FORWARD',
       'RAISE_OBJECTION',
       'REJECT',
+      'VIEW_REMARK',
       'REQUEST_CANCELLATION',
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
@@ -1333,7 +1335,7 @@ private getTransitRejectSummary(): {
   }
 
   private getFilteredConfigs(): ActionButtonConfig[] {
-    const include = this.normalizeActionList(this.includeActions);
+    let include = this.normalizeActionList(this.includeActions);
     const exclude = this.normalizeActionList(this.excludeActions);
 
     console.log('🔧 UNIFIED BUTTONS: getFilteredConfigs ->', {
@@ -1345,6 +1347,29 @@ private getTransitRejectSummary(): {
     });
 
     let result = [...this.availableActionConfigs];
+
+    const stageNameForRemark = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    const isRejected = stageNameForRemark.includes('reject');
+    const canShowViewRemark = isRejected && ['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(String(this.itemType || ''));
+    if (canShowViewRemark && !result.some(config => this.normalizeActionName(config.action) === 'VIEW_REMARK')) {
+      result.push({
+        action: 'VIEW_REMARK',
+        label: 'View Remark',
+        icon: 'comment',
+        color: 'info',
+        tooltip: 'View rejection remarks'
+      });
+    }
+
+    if (canShowViewRemark && include.length && !include.includes('VIEW_REMARK')) {
+      include = [...include, 'VIEW_REMARK'];
+    }
 
     // If includeActions specifies VIEW but backend didn't return it, add a safe fallback.
     if (include.includes('VIEW') && !result.some(config => config.action === 'VIEW')) {
