@@ -142,19 +142,15 @@ export class ObjectionDialogComponent implements OnInit {
     }
 
     const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
-    const path = valueStr.startsWith('/') ? valueStr : `/${valueStr}`;
+    const cleaned = valueStr.replace(/^\/+/, '');
+    const alreadyMedia = cleaned.toLowerCase().startsWith('media/');
+    const path = `/${alreadyMedia ? cleaned : `media/${cleaned}`}`;
     return `${base}${path}`;
   }
 
   openPreview(value: unknown): void {
     const url = this.getFileUrl(value);
     if (!url || url === '#') return;
-
-    // Match "Uploaded Documents" behavior: PDFs (and other docs) open in a new tab.
-    if (!this.isImagePath(value)) {
-      window.open(url, '_blank', 'noopener');
-      return;
-    }
 
     this.dialog.open(DocumentPreviewDialogComponent, {
       width: 'min(980px, 95vw)',
