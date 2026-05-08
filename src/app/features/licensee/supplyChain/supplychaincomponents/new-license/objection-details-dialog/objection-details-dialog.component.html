@@ -24,6 +24,14 @@
               </div>
             </div>
             <div class="remark">{{ obj.remarks }}</div>
+            @if (obj.beforeContent) {
+              <div class="changes one">
+                <div class="change">
+                  <div class="label">Current</div>
+                  <div class="value">{{ obj.beforeContent }}</div>
+                </div>
+              </div>
+            }
           </div>
         }
       </div>
@@ -40,11 +48,24 @@
                 <span class="badge bg-info text-dark ms-2">UPDATED</span>
               </div>
               <div class="meta">
-                @if (obj.resolvedByName) { <span>Resolved by: {{ obj.resolvedByName }}</span> }
+                @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
+                @if (obj.resolvedByName) { <span>Updated by: {{ obj.resolvedByName }}</span> }
                 @if (obj.resolvedAt) { <span>On: {{ obj.resolvedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
               </div>
             </div>
             <div class="remark">{{ obj.remarks }}</div>
+            @if (obj.beforeContent || obj.afterContent) {
+              <div class="changes">
+                <div class="change">
+                  <div class="label">Before</div>
+                  <div class="value">{{ obj.beforeContent || '-' }}</div>
+                </div>
+                <div class="change">
+                  <div class="label">After</div>
+                  <div class="value">{{ obj.afterContent || '-' }}</div>
+                </div>
+              </div>
+            }
           </div>
         }
       </div>

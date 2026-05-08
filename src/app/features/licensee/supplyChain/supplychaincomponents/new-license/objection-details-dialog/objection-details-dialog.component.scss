@@ -51,6 +51,37 @@
   white-space: pre-wrap;
 }
 
+.changes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.changes.one {
+  grid-template-columns: 1fr;
+}
+
+.change {
+  border-radius: 10px;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.02);
+  min-width: 0;
+}
+
+.change .label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.62);
+  margin-bottom: 6px;
+}
+
+.change .value {
+  color: rgba(0, 0, 0, 0.82);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .error {
   padding: 10px 12px;
   border-radius: 10px;

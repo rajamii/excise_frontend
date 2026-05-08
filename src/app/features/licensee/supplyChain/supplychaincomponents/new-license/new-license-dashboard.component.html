@@ -143,9 +143,8 @@
                 </span>
                 <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
                   <span
-                    *ngFor="let fieldName of (row.updatedObjectionFields?.length ? row.updatedObjectionFields : [''])"
                     class="badge bg-info text-dark ms-2"
-                    [title]="fieldName ? ('Updated field: ' + fieldName) : 'Updated'"
+                    [title]="row.updatedObjectionFields?.length ? ('Updated fields: ' + (row.updatedObjectionFields ?? []).join(', ')) : 'Updated'"
                   >
                     UPDATED
                   </span>
