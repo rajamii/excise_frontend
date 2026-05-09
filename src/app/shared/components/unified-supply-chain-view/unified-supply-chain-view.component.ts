@@ -876,11 +876,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     private loadObjectionsForCurrentApplication(): void {
-        if (this.applicationType !== 'new-license') {
-            this.objections = [];
-            this.rebuildObjectionIndex();
-            return;
-        }
         const appId = String(this.applicationData?.referenceNo || this.applicationData?.id || '').trim();
         if (!appId) {
             this.objections = [];
@@ -935,6 +930,17 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         };
         const key = byLabel[String(label || '').trim()] || '';
         return key ? this.objectionStateForField(key) : 'none';
+    }
+
+    objectionStateForAny(fields: string[]): 'none' | 'unresolved' | 'resolved' {
+        const list = Array.isArray(fields) ? fields : [];
+        let hasResolved = false;
+        for (const f of list) {
+            const state = this.objectionStateForField(String(f || ''));
+            if (state === 'unresolved') return 'unresolved';
+            if (state === 'resolved') hasResolved = true;
+        }
+        return hasResolved ? 'resolved' : 'none';
     }
 
     private addComputedFields(mappedData: UnifiedApplicationData, apiData: any, config: ServiceConfig): void {
