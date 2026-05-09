@@ -353,20 +353,24 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return Number(this.pendingBadgeCounts?.[key] || 0);
   }
 
-  /** Total pending badge count across all Bulk Spirit sub-sections */
+  /** Total pending badge count across all Bulk Spirit sub-sections visible to the current user */
   getBulkSpiritTotalBadge(): number {
-    return ['requisition', 'revalidation', 'cancellation']
-      .reduce((sum, s) => sum + this.getPendingCount(s), 0);
+    const sections = this.officerSectionItems
+      .filter(item => item.group === 'Bulk Spirit' && this.shouldShowOfficerSectionItem(item))
+      .map(item => item.section);
+    // For licensee users the officer items aren't used — fall back to fixed list
+    const keys = sections.length > 0 ? sections : ['requisition', 'revalidation', 'cancellation'];
+    return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
 
-  /** Total pending badge count across all Hologram sub-sections */
+  /** Total pending badge count across all Hologram sub-sections visible to the current user */
   getHologramTotalBadge(): number {
-    return [
-      'hologram', 'hologram-request', 'hologram-daily-entry',
-      'monthly-hologram-statement', 'hologram-inventory',
-      'itcell-hologram', 'hologram-register', 'oic-hologram-requests',
-      'commissioner-hologram-working-records'
-    ].reduce((sum, s) => sum + this.getPendingCount(s), 0);
+    const sections = this.officerSectionItems
+      .filter(item => item.group === 'Hologram' && this.shouldShowOfficerSectionItem(item))
+      .map(item => item.section);
+    // For licensee users fall back to the two licensee-facing hologram sections
+    const keys = sections.length > 0 ? sections : ['hologram', 'hologram-request'];
+    return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
 
   private refreshSidebarBadges(force = false): void {
