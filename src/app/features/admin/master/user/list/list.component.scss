@@ -187,7 +187,102 @@ mat-card {
   font-weight: 700;
 }
 
-// ── Table scroll wrapper (only the table scrolls horizontally) ────────────────
+// ── Search group (right side of filter bar) ───────────────────────────────────
+.search-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.search-field-select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.18s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+
+  &:focus {
+    border-color: #1C2B78;
+    box-shadow: 0 0 0 3px rgba(28,43,120,0.1);
+  }
+}
+
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .search-icon {
+    position: absolute;
+    left: 9px;
+    font-size: 17px;
+    height: 17px;
+    width: 17px;
+    color: #9ca3af;
+    pointer-events: none;
+  }
+}
+
+.search-input {
+  height: 36px;
+  width: 220px;
+  padding: 0 32px 0 32px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+
+  &::placeholder {
+    color: #b0b7c3;
+  }
+
+  &:focus {
+    border-color: #1C2B78;
+    box-shadow: 0 0 0 3px rgba(28,43,120,0.1);
+  }
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #9ca3af;
+  border-radius: 50%;
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+
+  mat-icon {
+    font-size: 15px;
+    height: 15px;
+    width: 15px;
+  }
+
+  &:hover {
+    color: #374151;
+    background: #f3f4f6;
+  }
+}
+
+
 .table-scroll-wrapper {
   width: 100%;
   overflow-x: auto;

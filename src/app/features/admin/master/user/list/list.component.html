@@ -40,6 +40,26 @@
           Licensee Users
           <span class="role-filter-count">{{ licenseeCount }}</span>
         </button>
+
+        <!-- Search — pushed to the right -->
+        <div class="search-group">
+          <select class="search-field-select" [(ngModel)]="searchField" (ngModelChange)="onSearchChange()">
+            <option *ngFor="let opt of searchFieldOptions" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+          <div class="search-input-wrap">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input
+              class="search-input"
+              type="text"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchChange()"
+              [placeholder]="'Search by ' + getSearchFieldLabel()"
+            />
+            <button *ngIf="searchQuery" class="search-clear-btn" (click)="searchQuery = ''; onSearchChange()" matTooltip="Clear search">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- ===== ACTIVE USERS ===== -->

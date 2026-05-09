@@ -21,6 +21,17 @@ export class ListComponent implements OnInit {
   /** Sub-filter: 'all' | 'licensee' | 'admin' */
   roleFilter: 'all' | 'licensee' | 'admin' = 'all';
 
+  /** Search */
+  searchField: 'fullName' | 'username' | 'phoneNumber' | 'email' = 'fullName';
+  searchQuery = '';
+
+  readonly searchFieldOptions: { value: 'fullName' | 'username' | 'phoneNumber' | 'email'; label: string }[] = [
+    { value: 'fullName',     label: 'Full Name'    },
+    { value: 'username',     label: 'Username'     },
+    { value: 'phoneNumber',  label: 'Phone Number' },
+    { value: 'email',        label: 'Email ID'     },
+  ];
+
   displayedColumns: string[] = [
     'fullName',
     'username', 'phoneNumber', 'email',
@@ -53,11 +64,38 @@ export class ListComponent implements OnInit {
   }
 
   get activeUsers(): Account[] {
-    return this._applyRoleFilter(this.allUsers.filter(u => u.isActive !== false));
+    return this._applySearch(this._applyRoleFilter(this.allUsers.filter(u => u.isActive !== false)));
   }
 
   get deactivatedUsers(): Account[] {
-    return this._applyRoleFilter(this.allUsers.filter(u => u.isActive === false));
+    return this._applySearch(this._applyRoleFilter(this.allUsers.filter(u => u.isActive === false)));
+  }
+
+  private _applySearch(users: Account[]): Account[] {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(u => {
+      switch (this.searchField) {
+        case 'fullName':    return this.getFullName(u).toLowerCase().includes(q);
+        case 'username':    return (u.username || '').toLowerCase().includes(q);
+        case 'phoneNumber': return (u.phoneNumber || '').toLowerCase().includes(q);
+        case 'email':       return (u.email || '').toLowerCase().includes(q);
+        default:            return true;
+      }
+    });
+  }
+
+  onSearchChange(): void {
+    this.activePageIndex = 0;
+    this.deactivatedPageIndex = 0;
+  }
+
+  get searchFieldLabel(): string {
+    return this.searchFieldOptions.find(o => o.value === this.searchField)?.label ?? '';
+  }
+
+  getSearchFieldLabel(): string {
+    return this.searchFieldOptions.find(o => o.value === this.searchField)?.label ?? '';
   }
 
   private _applyRoleFilter(users: Account[]): Account[] {
@@ -141,6 +179,7 @@ export class ListComponent implements OnInit {
     this.activeTab = tab;
     this.activePageIndex = 0;
     this.deactivatedPageIndex = 0;
+    this.searchQuery = '';
   }
 
   onPageSizeChange(): void {
