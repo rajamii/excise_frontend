@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,7 @@ import { FormDataUtil } from '../../../../../../shared/utils/form-data.util';
 import { environment } from '../../../../../../../environments/environment';
 import { UnifiedDashboardService } from '../../../../../../core/services/unified-dashboard.service';
 import { LicenseApplicationService } from '../../../../../../core/services/license-application.service';
+import { PatternConstants } from '../../../../../../shared/constants/pattern.constants';
 
 export interface ResolveObjectionsDialogData {
   applicationId: string;
@@ -84,7 +85,7 @@ export class ResolveObjectionsDialogComponent implements OnInit {
             group[obj.fieldName] = new FormControl<File | null>(null, { validators: [Validators.required] });
           } else {
             // Force licensee to provide a corrected value explicitly (don't auto-fill with current value).
-            group[obj.fieldName] = new FormControl<any>('', { validators: [Validators.required] });
+            group[obj.fieldName] = new FormControl<any>('', { validators: this.validatorsForField(obj.fieldName) });
           }
         }
 
@@ -297,5 +298,78 @@ export class ResolveObjectionsDialogComponent implements OnInit {
     if (camelVal !== undefined && camelVal !== null) return camelVal;
 
     return null;
+  }
+
+  inputTypeFor(fieldName: string): string {
+    const key = String(fieldName || '').toLowerCase();
+    if (key.includes('email')) return 'email';
+    if (key.includes('mobile') || key.includes('phone')) return 'tel';
+    if (key.includes('aadhaar') || key.includes('aadhar')) return 'tel';
+    if (key.includes('pan')) return 'text';
+    if (key.includes('pin')) return 'tel';
+    return 'text';
+  }
+
+  errorText(fieldName: string): string {
+    const ctrl = this.form.get(fieldName);
+    if (!ctrl) return 'Invalid value';
+    if (ctrl.hasError('required')) return 'Required';
+    if (ctrl.hasError('pattern')) return 'Invalid format';
+    if (ctrl.hasError('email')) return 'Invalid email';
+    return 'Invalid value';
+  }
+
+  private validatorsForField(fieldName: string): ValidatorFn[] {
+    const raw = String(fieldName || '').trim();
+    const key = raw.toLowerCase();
+    const validators: ValidatorFn[] = [Validators.required];
+
+    // Common, cross-module patterns (best-effort mapping).
+    if (key.includes('email')) {
+      validators.push(Validators.pattern(PatternConstants.EMAIL));
+      return validators;
+    }
+
+    if (key.endsWith('pan') || key.includes('_pan') || key.includes('pan_')) {
+      validators.push(Validators.pattern(PatternConstants.PAN));
+      return validators;
+    }
+
+    if (key.includes('aadhaar') || key.includes('aadhar')) {
+      validators.push(Validators.pattern(PatternConstants.AADHAAR_NUMBER));
+      return validators;
+    }
+
+    if (key.includes('mobile') || key.includes('phone')) {
+      validators.push(Validators.pattern(PatternConstants.MOBILE));
+      return validators;
+    }
+
+    if (key.includes('pin') || key.includes('pincode')) {
+      validators.push(Validators.pattern(PatternConstants.PINCODE));
+      return validators;
+    }
+
+    if (key.includes('cin')) {
+      validators.push(Validators.pattern(PatternConstants.CIN));
+      return validators;
+    }
+
+    if (key.includes('url') || key.includes('website')) {
+      validators.push(Validators.pattern(PatternConstants.WEBSITE));
+      return validators;
+    }
+
+    if (key.includes('address')) {
+      validators.push(Validators.pattern(PatternConstants.ADDRESS));
+      return validators;
+    }
+
+    if (key.includes('name')) {
+      validators.push(Validators.pattern(PatternConstants.NAME));
+      return validators;
+    }
+
+    return validators;
   }
 }

@@ -92,6 +92,7 @@ export class RegistrationManagementComponent implements OnInit {
   private simplifyStageForLicensee(stageValue: string, statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'): string {
     if (statusGroup === 'approved') return 'Approved';
     if (statusGroup === 'rejected') return 'Rejected';
+    if (statusGroup === 'objection') return 'Objection';
 
     const raw = String(stageValue || '').toLowerCase();
     if (raw.includes('approve')) return 'Approved';
@@ -585,10 +586,15 @@ export class RegistrationManagementComponent implements OnInit {
         this.companyOptions = this.getCompanyOptions(this.allRows);
 
         // Default to "Pending" filter for licensees only when there are pending items.
-        // If no pending items exist, show all applications (no filter).
+        // Objection has higher priority than pending.
+        // If no objection/pending items exist, show all applications (no filter).
         if (this.isLicenseeUser() && this.activeCardFilter === '') {
+          const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
-          if (pendingCount > 0) {
+          if (objectionCount > 0) {
+            this.activeCardFilter = 'objection';
+            this.statusFilter = 'objection';
+          } else if (pendingCount > 0) {
             this.activeCardFilter = 'pending';
             this.statusFilter = 'pending';
           }

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import { Objection } from '../../../../../core/models/license-application.model';
 import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
+import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 
 export interface SalesmanBarmanResolveObjectionsDialogData {
   applicationId: string;
@@ -52,30 +53,39 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
           No unresolved objections found.
         </div>
 
-        <form *ngIf="unresolvedObjections.length" [formGroup]="form" class="sb-form">
-          <div class="sb-field" *ngFor="let obj of unresolvedObjections">
-            <div class="sb-field-header">
-              <div class="sb-field-name">{{ label(obj.fieldName) }}</div>
-              <div class="sb-field-remark">{{ obj.remarks }}</div>
-            </div>
-
-            <mat-form-field appearance="outline" class="w-100">
-              <mat-label>Corrected Value</mat-label>
-              <input matInput [formControlName]="obj.fieldName" />
-              <mat-error *ngIf="form.get(obj.fieldName)?.invalid">Required</mat-error>
-            </mat-form-field>
-          </div>
-        </form>
-      </ng-container>
-    </div>
-
-    <div mat-dialog-actions align="end">
-      <button mat-button type="button" (click)="close()">Cancel</button>
-      <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="isLoading">
-        Submit
-      </button>
-    </div>
-  `,
+         <form *ngIf="unresolvedObjections.length" [formGroup]="form" class="sb-form">
+           <div class="sb-field" *ngFor="let obj of unresolvedObjections">
+             <div class="sb-field-header">
+               <div class="sb-field-name">{{ label(obj.fieldName) }}</div>
+               <div class="sb-field-remark">{{ obj.remarks }}</div>
+             </div>
+ 
+             <mat-form-field appearance="outline" class="w-100">
+               <mat-label>Corrected Value</mat-label>
+               <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+               <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
+                 {{ errorText(obj.fieldName) }}
+               </mat-error>
+             </mat-form-field>
+           </div>
+         </form>
+       </ng-container>
+     </div>
+ 
+     <div mat-dialog-actions align="end">
+       <button mat-button type="button" (click)="close()">Cancel</button>
+       <button
+         *ngIf="unresolvedObjections.length"
+         mat-raised-button
+         color="primary"
+         type="button"
+         (click)="submit()"
+         [disabled]="isSubmitDisabled"
+       >
+         Submit
+       </button>
+     </div>
+   `,
   styles: [`
     .sb-resolve-content { min-width: min(920px, 92vw); }
     .sb-loading { display:flex; align-items:center; padding: 8px 0; }
@@ -121,7 +131,7 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
 
         const group: Record<string, FormControl<any>> = {};
         for (const obj of this.unresolvedObjections) {
-          group[obj.fieldName] = new FormControl<any>('', { validators: [Validators.required] });
+          group[obj.fieldName] = new FormControl<any>('', { validators: this.validatorsForField(obj.fieldName) });
         }
         this.form = new FormGroup(group);
         this.isLoading = false;
@@ -156,6 +166,110 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
     this.dialogRef.close(false);
   }
 
+  get isSubmitDisabled(): boolean {
+    if (this.isLoading) return true;
+    if (!this.unresolvedObjections.length) return true;
+    if (!this.form || this.form.invalid) return true;
+    return !this.allCorrectedValuesProvidedAndChanged();
+  }
+
+  private allCorrectedValuesProvidedAndChanged(): boolean {
+    for (const obj of this.unresolvedObjections) {
+      const ctrl = this.form.get(obj.fieldName) as FormControl<any> | null;
+      const corrected = String(ctrl?.value ?? '').trim();
+      if (!corrected) return false;
+
+      const original = this.originalValueFor(obj);
+      if (corrected === original) return false;
+    }
+    return true;
+  }
+
+  private originalValueFor(obj: Objection): string {
+    const before = String((obj as any)?.beforeContent ?? '').trim();
+    if (before) return before;
+
+    const fromApp = this.pickValue(obj.fieldName, this.application);
+    return String(fromApp ?? '').trim();
+  }
+
+  private pickValue(fieldName: string, source: any): any {
+    if (!source) return null;
+    const key = String(fieldName || '').trim();
+    if (!key) return null;
+    if (Object.prototype.hasOwnProperty.call(source, key)) return source[key];
+
+    const snake = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(source, snake)) return source[snake];
+
+    const lower = key.toLowerCase();
+    const matchKey = Object.keys(source).find(k => String(k || '').toLowerCase() === lower);
+    if (matchKey) return source[matchKey];
+
+    return null;
+  }
+
+  inputTypeFor(fieldName: string): string {
+    const key = String(fieldName || '').toLowerCase();
+    if (key.includes('email')) return 'email';
+    if (key.includes('mobile') || key.includes('phone')) return 'tel';
+    if (key.includes('aadhaar') || key.includes('aadhar')) return 'tel';
+    if (key.includes('pan')) return 'text';
+    return 'text';
+  }
+
+  errorText(fieldName: string): string {
+    const ctrl = this.form.get(fieldName);
+    if (!ctrl) return 'Invalid value';
+    if (ctrl.hasError('required')) return 'Required';
+    if (ctrl.hasError('pattern')) return 'Invalid format';
+    if (ctrl.hasError('email')) return 'Invalid email';
+    return 'Invalid value';
+  }
+
+  private validatorsForField(fieldName: string): ValidatorFn[] {
+    const key = String(fieldName || '').trim();
+    const lower = key.toLowerCase();
+    const validators: ValidatorFn[] = [Validators.required];
+
+    if (lower === 'firstname' || lower === 'middlename' || lower === 'lastname' || lower === 'fatherhusbandname' || lower === 'father_husband_name') {
+      validators.push(Validators.pattern(PatternConstants.NAME));
+      return validators;
+    }
+
+    if (lower === 'pan') {
+      validators.push(Validators.pattern(PatternConstants.PAN));
+      return validators;
+    }
+
+    if (lower === 'aadhaar' || lower === 'aadhar') {
+      validators.push(Validators.pattern(PatternConstants.AADHAAR_NUMBER));
+      return validators;
+    }
+
+    if (lower === 'mobilenumber' || lower === 'mobile_number') {
+      validators.push(Validators.pattern(PatternConstants.MOBILE));
+      return validators;
+    }
+
+    if (lower === 'emailid' || lower === 'email_id' || lower.includes('email')) {
+      validators.push(Validators.pattern(PatternConstants.EMAIL));
+      return validators;
+    }
+
+    if (lower === 'address') {
+      validators.push(Validators.pattern(PatternConstants.ADDRESS));
+      return validators;
+    }
+
+    if (lower === 'pincode' || lower === 'pin_code') {
+      validators.push(Validators.pattern(PatternConstants.PINCODE));
+      return validators;
+    }
+
+    return validators;
+  }
+
   submit(): void {
     const appId = String(this.data?.applicationId || '').trim();
     if (!appId) return;
@@ -168,6 +282,12 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       void Swal.fire('Required', 'Please fill all objection fields.', 'warning');
+      return;
+    }
+
+    if (!this.allCorrectedValuesProvidedAndChanged()) {
+      this.form.markAllAsTouched();
+      void Swal.fire('Update Required', 'Please correct every objected field (value must be changed from before/current).', 'warning');
       return;
     }
 
@@ -192,4 +312,3 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
     });
   }
 }
-

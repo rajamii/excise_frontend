@@ -43,15 +43,18 @@
             <div class="file-row">
               <input type="file" (change)="onFileSelected(obj.fieldName, $event)" />
             </div>
-          } @else {
-            <mat-form-field appearance="outline" class="field-input">
-              <mat-label>Correct Value</mat-label>
-              <input matInput [formControlName]="obj.fieldName" />
-            </mat-form-field>
-          }
-        </div>
-      }
-    </form>
+           } @else {
+             <mat-form-field appearance="outline" class="field-input">
+               <mat-label>Correct Value</mat-label>
+               <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+               <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
+                 {{ errorText(obj.fieldName) }}
+               </mat-error>
+             </mat-form-field>
+           }
+         </div>
+       }
+     </form>
   }
 </mat-dialog-content>
 
