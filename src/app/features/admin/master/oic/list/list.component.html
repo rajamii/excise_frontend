@@ -18,7 +18,7 @@
       </div>
 
       <div class="table-shell" *ngIf="!isLoading">
-        <mat-table [dataSource]="officers" class="oic-table">
+        <mat-table [dataSource]="pagedOfficers" class="oic-table">
           <ng-container matColumnDef="name">
             <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
             <mat-cell *matCellDef="let row">{{ row.name }}</mat-cell>
@@ -81,6 +81,26 @@
           <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
           <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
         </mat-table>
+
+        <!-- Pagination bar -->
+        <div class="pagination-bar" *ngIf="officers.length > 0">
+          <div class="pagination-info">
+            Showing {{ pageIndex * pageSize + 1 }}–{{ pageEnd() }} of {{ officers.length }}
+          </div>
+          <div class="pagination-controls">
+            <span class="page-size-label">Rows per page:</span>
+            <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+              <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+            </select>
+            <button class="page-btn" (click)="pageIndex = pageIndex - 1" [disabled]="pageIndex === 0">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <span class="page-indicator">{{ pageIndex + 1 }} / {{ totalPages }}</span>
+            <button class="page-btn" (click)="pageIndex = pageIndex + 1" [disabled]="pageIndex >= totalPages - 1">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="empty-state" *ngIf="!isLoading && officers.length === 0">

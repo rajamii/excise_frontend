@@ -16,7 +16,6 @@ import { AdminService } from '../../../admin.service';
 })
 export class ListComponent implements OnInit {
 
-  /** 'active' shows is_active=true users; 'deactivated' shows is_active=false */
   activeTab: 'active' | 'deactivated' = 'active';
 
   displayedColumns: string[] = [
@@ -37,12 +36,36 @@ export class ListComponent implements OnInit {
 
   allUsers: Account[] = [];
 
+  // Pagination
+  pageSize = 10;
+  pageSizeOptions = [5, 10, 20, 50];
+  activePageIndex = 0;
+  deactivatedPageIndex = 0;
+
   get activeUsers(): Account[] {
     return this.allUsers.filter(u => u.isActive !== false);
   }
 
   get deactivatedUsers(): Account[] {
     return this.allUsers.filter(u => u.isActive === false);
+  }
+
+  get pagedActiveUsers(): Account[] {
+    const start = this.activePageIndex * this.pageSize;
+    return this.activeUsers.slice(start, start + this.pageSize);
+  }
+
+  get pagedDeactivatedUsers(): Account[] {
+    const start = this.deactivatedPageIndex * this.pageSize;
+    return this.deactivatedUsers.slice(start, start + this.pageSize);
+  }
+
+  get activeTotalPages(): number {
+    return Math.max(1, Math.ceil(this.activeUsers.length / this.pageSize));
+  }
+
+  get deactivatedTotalPages(): number {
+    return Math.max(1, Math.ceil(this.deactivatedUsers.length / this.pageSize));
   }
 
   constructor(
@@ -67,6 +90,8 @@ export class ListComponent implements OnInit {
     this.userService.getUsers().subscribe({
       next: (data) => {
         this.allUsers = Array.isArray(data) ? data : [data];
+        this.activePageIndex = 0;
+        this.deactivatedPageIndex = 0;
       },
       error: (err) => console.error('Failed to fetch users:', err)
     });
@@ -74,6 +99,11 @@ export class ListComponent implements OnInit {
 
   switchTab(tab: 'active' | 'deactivated'): void {
     this.activeTab = tab;
+  }
+
+  onPageSizeChange(): void {
+    this.activePageIndex = 0;
+    this.deactivatedPageIndex = 0;
   }
 
   onAdd(): void {
@@ -93,7 +123,6 @@ export class ListComponent implements OnInit {
     });
   }
 
-  /** Deactivate an active user (sets is_active=false, preserves all data) */
   onDelete(user: Account): void {
     Swal.fire({
       title: 'Deactivate User?',
@@ -118,7 +147,6 @@ export class ListComponent implements OnInit {
     });
   }
 
-  /** Activate a deactivated user directly from the Deactivated tab */
   onActivate(user: Account): void {
     Swal.fire({
       title: 'Activate User?',
@@ -143,7 +171,6 @@ export class ListComponent implements OnInit {
     });
   }
 
-  /** Toggle is_active from the Active tab slide-toggle */
   onToggleActive(user: Account): void {
     const action = user.isActive ? 'deactivate' : 'activate';
     const actionPast = user.isActive ? 'deactivated' : 'activated';
@@ -175,7 +202,17 @@ export class ListComponent implements OnInit {
     const idx = this.allUsers.findIndex(u => u.id === id);
     if (idx !== -1) {
       this.allUsers[idx] = { ...this.allUsers[idx], isActive };
-      this.allUsers = [...this.allUsers]; // trigger change detection
+      this.allUsers = [...this.allUsers];
+      this.activePageIndex = 0;
+      this.deactivatedPageIndex = 0;
     }
+  }
+
+  activePageEnd(): number {
+    return Math.min((this.activePageIndex + 1) * this.pageSize, this.activeUsers.length);
+  }
+
+  deactivatedPageEnd(): number {
+    return Math.min((this.deactivatedPageIndex + 1) * this.pageSize, this.deactivatedUsers.length);
   }
 }
