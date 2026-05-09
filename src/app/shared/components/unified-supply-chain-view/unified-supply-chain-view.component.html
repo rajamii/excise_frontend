@@ -1369,9 +1369,20 @@
                                     <td class="fw-semibold bg-light">License Category</td>
                                     <td>{{ applicationData.license_category_name || applicationData.licenseCategoryName || applicationData.license_category || 'Not available' }}</td>
                                 </tr>
-                                <tr>
+                                <!-- Show License ID row only if license_id_display is available -->
+                                <tr *ngIf="applicationData['license_id_display'] || applicationData['licenseIdDisplay']">
+                                    <td class="fw-semibold bg-light">License No</td>
+                                    <td>{{ applicationData['license_id_display'] || applicationData['licenseIdDisplay'] }}</td>
+                                </tr>
+                                <!-- Show New License Application ID row only if available -->
+                                <tr *ngIf="applicationData['new_license_application_id'] || applicationData['newLicenseApplicationId']">
+                                    <td class="fw-semibold bg-light">New License Application No</td>
+                                    <td>{{ applicationData['new_license_application_id'] || applicationData['newLicenseApplicationId'] }}</td>
+                                </tr>
+                                <!-- Fallback: show "Not available" only if BOTH are missing -->
+                                <tr *ngIf="!applicationData['license_id_display'] && !applicationData['licenseIdDisplay'] && !applicationData['new_license_application_id'] && !applicationData['newLicenseApplicationId']">
                                     <td class="fw-semibold bg-light">License</td>
-                                    <td>{{ applicationData.license || 'Not available' }}</td>
+                                    <td>Not available</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Submitted On</td>
