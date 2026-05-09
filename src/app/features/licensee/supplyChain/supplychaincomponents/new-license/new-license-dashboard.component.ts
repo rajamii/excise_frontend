@@ -132,11 +132,17 @@ export class NewLicenseDashboardComponent implements OnInit {
         };
         this.allRows = this.flattenGroupedData(grouped);
 
-        // Default to "Pending" filter for licensees only when there are pending items.
-        // If no pending items exist, show all applications (no filter).
-        if (this.isLicenseeUser() && this.activeSummaryFilter === '') {
+        // Default to "Pending" filter for all users (admin + licensee) when there are pending items.
+        // Objection has higher priority than pending.
+        // If no objection/pending items exist, show all applications (no filter).
+        if (this.activeSummaryFilter === '') {
+          const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
-          this.activeSummaryFilter = pendingCount > 0 ? 'pending' : '';
+          if (objectionCount > 0) {
+            this.activeSummaryFilter = 'objection';
+          } else if (pendingCount > 0) {
+            this.activeSummaryFilter = 'pending';
+          }
         }
 
         this.applyFilters();
