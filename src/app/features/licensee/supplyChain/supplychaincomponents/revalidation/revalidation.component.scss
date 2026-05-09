@@ -407,25 +407,62 @@
                 display: inline-flex;
                 align-items: center;
                 gap: 0.25rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border: 1px solid transparent;
+                transition: all 0.2s ease;
 
-                &.status-expired {
-                  background: #fee2e2;
-                  color: #991b1b;
+                // Stage 47 — Approved By Commissioner
+                &.status-approved {
+                  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                  color: #155724;
+                  border-color: #c3e6cb;
+                  &::after { content: ' ✓'; font-size: 0.7rem; }
                 }
 
-                &.status-invalid {
-                  background: #fef3c7;
+                // Stage 48 — Rejected By Commissioner
+                &.status-rejected {
+                  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+                  color: #721c24;
+                  border-color: #f5c6cb;
+                  &::after { content: ' ✕'; font-size: 0.7rem; }
+                }
+
+                // Stage 63 — Forwarded To Commissioner (in-transit, blue/indigo)
+                &.status-forwarded {
+                  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+                  color: #1e3a8a;
+                  border-color: #bfdbfe;
+                  &::after { content: ' →'; font-size: 0.7rem; }
+                }
+
+                // Stage 64 — IMPORT PERMIT EXTENDS 45 DAYS (action required, orange)
+                &.status-extended {
+                  background: linear-gradient(135deg, #fff3cd 0%, #fde68a 100%);
                   color: #92400e;
+                  border-color: #fde68a;
+                  &::after { content: ' ⏱'; font-size: 0.7rem; }
                 }
 
+                // Expired / Invalid
+                &.status-expired {
+                  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+                  color: #6b7280;
+                  border-color: #d1d5db;
+                }
+
+                // Pending (submitted, waiting)
                 &.status-pending {
-                  background: #dbeafe;
-                  color: #1e40af;
+                  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+                  color: #0c5460;
+                  border-color: #bee5eb;
                 }
 
+                // Default fallback
                 &.status-default {
-                  background: #f3f4f6;
+                  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
                   color: #374151;
+                  border-color: #d1d5db;
                 }
               }
             }

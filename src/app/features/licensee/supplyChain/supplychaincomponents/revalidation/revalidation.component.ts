@@ -769,4 +769,33 @@ export class RevalidationComponent implements OnInit {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
+  /**
+   * Returns the CSS modifier class for the status badge based on stage ID and status name.
+   * Stage IDs: 47 = Approved By Commissioner, 48 = Rejected By Commissioner,
+   *            63 = Forwarded To Commissioner, 64 = IMPORT PERMIT EXTENDS 45 DAYS
+   */
+  getStatusBadgeClass(item: TableData): string {
+    const stageId = Number(item?.currentStage ?? -1);
+    const status = this.normalizeToken(item?.status);
+
+    // Match by stage ID first (most reliable)
+    if (stageId === 47) return 'status-approved';
+    if (stageId === 48) return 'status-rejected';
+    if (stageId === 63) return 'status-forwarded';
+    if (stageId === 64) return 'status-extended';
+
+    // Fallback: match by status name keywords
+    if (status.includes('approvedbycommissioner') || status.includes('approvedcommissioner')) return 'status-approved';
+    if (status.includes('rejectedbycommissioner') || status.includes('rejectedcommissioner')) return 'status-rejected';
+    if (status.includes('forwardedtocommissioner') || status.includes('forwardedcommissioner')) return 'status-forwarded';
+    if (status.includes('importpermitextends') || status.includes('extends45')) return 'status-extended';
+    if (status.includes('approv') || status.includes('issued')) return 'status-approved';
+    if (status.includes('reject') || status.includes('cancel')) return 'status-rejected';
+    if (status.includes('invalid') || status.includes('expire')) return 'status-expired';
+    if (status.includes('pending')) return 'status-pending';
+    if (status.includes('forward') || status.includes('submit') || status.includes('review') || status.includes('process')) return 'status-forwarded';
+
+    return 'status-default';
+  }
+
 }

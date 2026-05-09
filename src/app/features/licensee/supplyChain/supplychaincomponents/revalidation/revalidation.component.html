@@ -166,10 +166,7 @@
                 <span class="company-name">{{ getCompanyDisplayName(item) }}</span>
               </td>
               <td class="status">
-                <span
-                  class="status-badge status-{{ item.status.toLowerCase().includes('expired') ? 'expired' : 
-                                                      item.status.toLowerCase().includes('invalid') ? 'invalid' : 
-                                                      item.status.toLowerCase().includes('pending') ? 'pending' : 'default' }}">
+                <span class="status-badge {{ getStatusBadgeClass(item) }}">
                   {{ item.status }}
                 </span>
               </td>
