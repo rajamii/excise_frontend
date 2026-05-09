@@ -229,6 +229,12 @@ export class HologramdetailsComponent implements OnInit {
         this.applyFilters();
         this.updatePagination();
         console.log('Loaded hologram records from backend:', this.hologramRecords);
+
+        // Auto-select Pending if there are pending records and no filter is already active
+        if (!this.activeStatusCategory && this.getProcurementCountByCategory('PENDING') > 0) {
+          this.activeStatusCategory = 'PENDING';
+          this.applyFilters();
+        }
       },
       error: (err) => {
         console.error('Error loading holograms:', err);
