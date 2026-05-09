@@ -12,6 +12,7 @@ export interface WorkflowRejectionEntry {
   stage?: { id?: number; name?: string } | string | null;
   rejected_by?: { full_name?: string; username?: string; role?: any } | any;
   rejectedBy?: any;
+  rejectedByName?: string | null;
   [key: string]: any;
 }
 
@@ -19,6 +20,7 @@ export interface RejectionRemarksDialogData {
   applicationId: string;
   referenceNo?: string;
   rejections: WorkflowRejectionEntry[];
+  viewerContext?: 'licensee' | 'admin';
 }
 
 @Component({
@@ -33,7 +35,7 @@ export interface RejectionRemarksDialogData {
           <div class="rr-heading">Rejection Remarks</div>
           <div class="rr-sub">
             <span *ngIf="data.referenceNo">Ref: {{ data.referenceNo }}</span>
-            <span class="rr-sep" *ngIf="data.referenceNo">•</span>
+            <span class="rr-sep" *ngIf="data.referenceNo">â€¢</span>
             <span>App ID: {{ data.applicationId }}</span>
           </div>
         </div>
@@ -64,7 +66,7 @@ export interface RejectionRemarksDialogData {
         </div>
         <div class="rr-remarks">
           <div class="rr-label">Remark</div>
-          <div class="rr-remark-text">{{ (r.remarks || '').trim() || '—' }}</div>
+          <div class="rr-remark-text">{{ (r.remarks || '').trim() || 'â€”' }}</div>
         </div>
       </div>
     </div>
@@ -143,22 +145,29 @@ export class RejectionRemarksDialogComponent {
 
   getStageName(rejection: WorkflowRejectionEntry): string {
     const stage = (rejection.stage ?? null) as any;
-    if (stage && typeof stage === 'object') return String(stage?.name ?? '').trim() || '—';
-    return String(stage ?? '').trim() || '—';
+    if (stage && typeof stage === 'object') return String(stage?.name ?? '').trim() || 'â€”';
+    return String(stage ?? '').trim() || 'â€”';
   }
 
   getRejectedByDisplay(rejection: WorkflowRejectionEntry): string {
+    if (this.data?.viewerContext === 'licensee') {
+      return 'Administrator';
+    }
+
+    const explicitName = String((rejection as any)?.rejectedByName ?? '').trim();
+    if (explicitName) return explicitName;
+
     const user = (rejection.rejected_by ?? rejection.rejectedBy ?? null) as any;
     const fullName = String(user?.full_name ?? user?.fullName ?? '').trim();
     if (fullName) return fullName;
     const username = String(user?.username ?? '').trim();
-    return username || '—';
+    return username || 'â€”';
   }
 
   getRejectedOnDisplay(rejection: WorkflowRejectionEntry): string {
     const raw = rejection.rejected_on ?? rejection.rejectedOn ?? '';
     const text = String(raw || '').trim();
-    if (!text) return '—';
+    if (!text) return 'â€”';
     const date = new Date(text);
     if (Number.isNaN(date.getTime())) return text;
     return date.toLocaleString('en-IN');

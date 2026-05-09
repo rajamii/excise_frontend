@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { MatDialog } from '@angular/material/dialog';
 import { ObjectionDialogComponent, ObjectionDialogResult } from '../components/objection-dialog/objection-dialog.component';
-import { RejectionRemarksDialogComponent } from '../components/rejection-remarks-dialog/rejection-remarks-dialog.component';
+import { RejectionRemarksDialogComponent } from '../components/rejection-remarks-dialog';
 
 // Import existing services
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
@@ -390,7 +390,14 @@ export class UnifiedActionsService {
           data: {
             applicationId,
             referenceNo: item?.referenceNo ?? item?.refNo ?? applicationId,
-            rejections
+            rejections,
+            viewerContext: (() => {
+              const roleName = String(localStorage.getItem('role') ?? '').trim().toLowerCase();
+              if (roleName) return roleName === 'licensee' ? 'licensee' : 'admin';
+              const roleId = String(localStorage.getItem('role_id') ?? '').trim();
+              if (roleId) return roleId === '2' ? 'licensee' : 'admin';
+              return 'admin';
+            })()
           }
         });
 
