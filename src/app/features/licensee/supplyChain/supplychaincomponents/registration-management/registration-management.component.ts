@@ -81,15 +81,22 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
-  /** Returns true when the licensee needs to take action on this row (awaiting payment or objection). */
+  /** Returns true when the current user needs to take action on this row. */
   needsLicenseeAction(row: { statusGroup: string; currentStageRaw: string }): boolean {
-    if (!this.isLicenseeUser()) return false;
-    const stage = String(row.currentStageRaw || '').toLowerCase();
     const group = String(row.statusGroup || '').toLowerCase();
-    return group === 'objection' ||
-      (stage.includes('payment') && stage.includes('await')) ||
-      stage === 'awaiting_payment' ||
-      stage === 'awaiting payment';
+    const stage = String(row.currentStageRaw || '').toLowerCase();
+
+    if (this.isLicenseeUser()) {
+      // Licensee: only flag awaiting payment or objection
+      return group === 'objection' ||
+        (stage.includes('payment') && stage.includes('await')) ||
+        stage === 'awaiting_payment' ||
+        stage === 'awaiting payment';
+    }
+
+    // Admin/officer: flag only pending rows (needs processing by officer).
+    // Objection rows are waiting for the licensee to respond — not the officer's action.
+    return group === 'pending';
   }
 
   isLicenseeUser(): boolean {

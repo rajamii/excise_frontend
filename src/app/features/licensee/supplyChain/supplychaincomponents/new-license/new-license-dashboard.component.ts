@@ -104,16 +104,21 @@ export class NewLicenseDashboardComponent implements OnInit {
     return this.roleService.isLicenseeRole();
   }
 
-  /** Returns true when the licensee needs to take action on this row (awaiting payment or objection). */
+  /** Returns true when the current user needs to take action on this row. */
   needsLicenseeAction(row: NewLicenseItem): boolean {
-    if (!this.isLicenseeUser()) return false;
-    if (row.statusGroup === 'objection') return true;
-    if (row.canPayNow) return true;  // application fee unpaid
-    // license fee payment stage
-    const stage = String(row.currentStageRaw || '').toLowerCase();
-    return (stage.includes('payment') && stage.includes('await')) ||
-      stage === 'awaiting_payment' ||
-      stage === 'awaiting payment';
+    if (this.isLicenseeUser()) {
+      // Licensee: flag awaiting payment (app fee or license fee) or objection
+      if (row.statusGroup === 'objection') return true;
+      if (row.canPayNow) return true;
+      const stage = String(row.currentStageRaw || '').toLowerCase();
+      return (stage.includes('payment') && stage.includes('await')) ||
+        stage === 'awaiting_payment' ||
+        stage === 'awaiting payment';
+    }
+
+    // Admin/officer: flag only pending rows (needs processing by officer).
+    // Objection rows are waiting for the licensee to respond — not the officer's action.
+    return row.statusGroup === 'pending';
   }
 
   loadData(): void {
