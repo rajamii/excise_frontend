@@ -54,20 +54,24 @@
                 [class.group-expanded]="bulkSpiritExpanded">
                 <mat-icon class="nav-icon">water_drop</mat-icon>
                 <span class="nav-text">Bulk Spirit</span>
+                <span class="nav-badge nav-badge--group" *ngIf="!bulkSpiritExpanded && getBulkSpiritTotalBadge() > 0">{{ getBulkSpiritTotalBadge() }}</span>
                 <mat-icon class="nav-chevron">{{ bulkSpiritExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="bulkSpiritExpanded">
                 <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Requisition</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('requisition') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub" *ngIf="!isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
                   <mat-icon class="nav-icon">refresh</mat-icon>
                   <span class="nav-text">Revalidation</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('revalidation') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
                   <mat-icon class="nav-icon">cancel</mat-icon>
                   <span class="nav-text">Cancellation</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('cancellation') as cnt">{{ cnt }}</span>
                 </button>
               </ng-container>
             </ng-container>
@@ -85,28 +89,34 @@
                 [class.group-expanded]="hologramExpanded">
                 <mat-icon class="nav-icon">qr_code_2</mat-icon>
                 <span class="nav-text">Hologram</span>
+                <span class="nav-badge nav-badge--group" *ngIf="!hologramExpanded && getHologramTotalBadge() > 0">{{ getHologramTotalBadge() }}</span>
                 <mat-icon class="nav-chevron">{{ hologramExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="hologramExpanded">
                 <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
                   <mat-icon class="nav-icon">qr_code</mat-icon>
                   <span class="nav-text">New Procurement</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
                   <mat-icon class="nav-icon">add_box</mat-icon>
                   <span class="nav-text">Request</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram-request') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">today</mat-icon>
                   <span class="nav-text">Daily Entry</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram-daily-entry') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('monthly-hologram-statement')" [class.active]="isDashboardSectionActive('monthly-hologram-statement')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Monthly Statement</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('monthly-hologram-statement') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-inventory')" [class.active]="isDashboardSectionActive('hologram-inventory')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">inventory_2</mat-icon>
                   <span class="nav-text">Inventory</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram-inventory') as cnt">{{ cnt }}</span>
                 </button>
               </ng-container>
             </ng-container>
@@ -190,6 +200,7 @@
                 [class.active]="isGroupExpanded(item.group!) && false">
                 <mat-icon class="nav-icon">{{ getGroupIcon(item.group!) }}</mat-icon>
                 <span class="nav-text">{{ item.group }}</span>
+                <span class="nav-badge nav-badge--group" *ngIf="!isGroupExpanded(item.group!) && getGroupTotalBadge(item.group!) > 0">{{ getGroupTotalBadge(item.group!) }}</span>
                 <mat-icon class="nav-chevron">{{ isGroupExpanded(item.group!) ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <button

@@ -88,18 +88,36 @@ export class SidebarPendingBadgeService {
         return this.fetchDashboardCount(`${this.apiBase}/license_application/dashboard-counts/`, audience);
 
       case 'requisition':
+        if (audience === 'licensee') {
+          return this.enaRequisitionService.getRequisitions().pipe(
+            map((response) => this.toArray(response)),
+            map((items) => this.countLicenseePendingItems(items))
+          );
+        }
         return this.enaRequisitionService.getRequisitions().pipe(
           map((response) => this.toArray(response)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
         );
 
       case 'revalidation':
+        if (audience === 'licensee') {
+          return this.supplyChainService.getRevalidationData().pipe(
+            map((items) => this.toArray(items)),
+            map((items) => this.countLicenseePendingItems(items))
+          );
+        }
         return this.supplyChainService.getRevalidationData().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
         );
 
       case 'cancellation':
+        if (audience === 'licensee') {
+          return this.supplyChainService.getCancellationData().pipe(
+            map((items) => this.toArray(items)),
+            map((items) => this.countLicenseePendingItems(items))
+          );
+        }
         return this.supplyChainService.getCancellationData().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP']))
@@ -113,9 +131,27 @@ export class SidebarPendingBadgeService {
 
       // Hologram procurement workflow (used by IT cell / commissioner depending on role config)
       case 'hologram':
+        if (audience === 'licensee') {
+          return this.hologramService.getProcurements().pipe(
+            map((items) => this.toArray(items)),
+            map((items) => this.countLicenseePendingItems(items))
+          );
+        }
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countActionable(items, ['VERIFY', 'FORWARD', 'APPROVE', 'REJECT']))
+        );
+
+      case 'hologram-request':
+        return this.hologramService.getRequests().pipe(
+          map((items) => this.toArray(items)),
+          map((items) => audience === 'licensee'
+            ? this.countLicenseePendingItems(items)
+            : items.filter((x) => {
+                const category = this.mapHologramRequestToCategory(x);
+                return category === 'PENDING' && !this.isUsageDatePast(x);
+              }).length
+          )
         );
 
       // OIC hologram procurement register view (carton assignment / arrival confirmations).
@@ -256,6 +292,25 @@ export class SidebarPendingBadgeService {
 
   private normalizeStageToken(value: any): string {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  /** Count items that are in a non-final, non-draft state for a licensee's own view.
+   *  Shows items that are submitted/pending/under-process (i.e. awaiting officer action). */
+  private countLicenseePendingItems(items: any[]): number {
+    return (items || []).filter((item) => {
+      const raw = String(
+        item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Count anything that is in-flight: pending, submitted, forwarded, underprocess, inreview
+      // Exclude final states: approved, rejected, cancelled, draft
+      if (!raw) return false;
+      if (raw.includes('approved') || raw.includes('rejected') ||
+          raw.includes('cancelled') || raw.includes('draft')) return false;
+      return raw.includes('pending') || raw.includes('submit') ||
+             raw.includes('forward') || raw.includes('underprocess') ||
+             raw.includes('inreview') || raw.includes('review') ||
+             raw.includes('process') || raw.includes('verify');
+    }).length;
   }
 
   private countOicHologramProcurementPending(items: any[]): number {

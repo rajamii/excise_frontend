@@ -353,6 +353,22 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return Number(this.pendingBadgeCounts?.[key] || 0);
   }
 
+  /** Total pending badge count across all Bulk Spirit sub-sections */
+  getBulkSpiritTotalBadge(): number {
+    return ['requisition', 'revalidation', 'cancellation']
+      .reduce((sum, s) => sum + this.getPendingCount(s), 0);
+  }
+
+  /** Total pending badge count across all Hologram sub-sections */
+  getHologramTotalBadge(): number {
+    return [
+      'hologram', 'hologram-request', 'hologram-daily-entry',
+      'monthly-hologram-statement', 'hologram-inventory',
+      'itcell-hologram', 'hologram-register', 'oic-hologram-requests',
+      'commissioner-hologram-working-records'
+    ].reduce((sum, s) => sum + this.getPendingCount(s), 0);
+  }
+
   private refreshSidebarBadges(force = false): void {
     if (this.isSiteAdminUser()) {
       if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
@@ -362,9 +378,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
 
-    // For licensee users, show payment-pending badges on New License and Salesman/Barman nav items.
+    // For licensee users, show payment-pending badges on New License, Salesman/Barman,
+    // and supply chain nav items (Bulk Spirit + Hologram sub-sections).
     if (this.isLicenseeUser()) {
-      const licenseeSections = ['new-license', 'salesman-barman-registration'];
+      const licenseeSections = [
+        'new-license', 'salesman-barman-registration',
+        'requisition', 'revalidation', 'cancellation',
+        'hologram', 'hologram-request'
+      ];
       this.sidebarPendingBadgeService
         .refresh(licenseeSections, force, { audience: 'licensee' })
         .pipe(takeUntil(this.destroy$))
@@ -845,6 +866,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (group === 'Bulk Spirit') return 'water_drop';
     if (group === 'Hologram') return 'qr_code_2';
     return 'folder';
+  }
+
+  /** Total pending badge for a named group — used on the collapsed group header for all user types */
+  getGroupTotalBadge(group: string): number {
+    if (group === 'Bulk Spirit') return this.getBulkSpiritTotalBadge();
+    if (group === 'Hologram') return this.getHologramTotalBadge();
+    return 0;
   }
 
   // Check if user is licensee/supply chain
