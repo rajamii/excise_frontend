@@ -59,6 +59,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  /** Whether the Bulk Spirit group is expanded in the sidebar (default: closed) */
+  bulkSpiritExpanded = false;
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
@@ -77,6 +79,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     section: string;
     label: string;
     icon: string;
+    group?: string;
     hideForSiteAdmin?: boolean;
     hideForPermitSection?: boolean;
     hideForItCell?: boolean;
@@ -86,21 +89,23 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
-    { section: 'requisition', label: 'Bulk Spirit Requisition', icon: 'description' },
-    { section: 'revalidation', label: 'Bulk Spirit Revalidation', icon: 'refresh', hideForPermitSection: true },
-    { section: 'cancellation', label: 'Bulk Spirit Cancellation', icon: 'cancel', hideForPermitSection: true },
-    { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
-    { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
-    { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
+    { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
+    { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit', hideForPermitSection: true },
+    { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit', hideForPermitSection: true },
     { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
-    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
-    { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
-        { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
-    { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
-    { section: 'hologram-register', label: 'Hologram Procurement', icon: 'qr_code', hideForCommissioner: true },
-    { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', showOnlyForOic: true },
-    { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', hideForCommissioner: true },
+    { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
+    // ── Hologram group (all hologram items consecutive so the header renders correctly) ──
+    { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true },
+    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true, hideForCommissioner: true },
+    { section: 'hologram-register', label: 'Hologram Procurement', icon: 'qr_code', group: 'Hologram', hideForCommissioner: true },
+    { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', group: 'Hologram', showOnlyForOic: true },
+    { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', group: 'Hologram', hideForCommissioner: true },
+    { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description', group: 'Hologram' },
+    { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', group: 'Hologram', showOnlyForOic: true },
+    { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', group: 'Hologram', showOnlyForCommissioner: true },
+    { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
+    // ── Other ──
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
     { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
@@ -528,8 +533,22 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
+  private readonly bulkSpiritSections = new Set(['requisition', 'revalidation', 'cancellation']);
+  private readonly hologramSections = new Set([
+    'hologram', 'hologram-request', 'hologram-daily-entry',
+    'monthly-hologram-statement', 'hologram-inventory',
+    'itcell-hologram', 'hologram-register', 'oic-hologram-requests',
+    'commissioner-hologram-working-records'
+  ]);
+
+  /** Whether the Hologram group is expanded in the sidebar (default: closed) */
+  hologramExpanded = false;
+
   // Navigate to specific supply chain section
   navigateToSupplyChain(section: string): void {
+    // Auto-collapse groups when navigating away from their sub-items
+    if (!this.bulkSpiritSections.has(section)) this.bulkSpiritExpanded = false;
+    if (!this.hologramSections.has(section)) this.hologramExpanded = false;
     this.router.navigate(['/dashboard'], { 
       queryParams: { section: section } 
     });
@@ -540,6 +559,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isLicenseeUser() && !this.showManufacturingWalletNav) {
       return;
     }
+    // Wallet is not a bulk spirit or hologram section — collapse both groups
+    this.bulkSpiritExpanded = false;
+    this.hologramExpanded = false;
 
     const walletView: 'wallets' | 'others' =
       this.isLicenseeUser() && !this.hasBreweryOrDistilleryWalletViews ? 'others' : 'wallets';
@@ -555,6 +577,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   navigateToLicenseeRegistration(type: 'company' | 'collaboration' | 'salesman-barman' | 'label'): void {
+    // Registration sections are not bulk spirit or hologram — collapse both groups
+    this.bulkSpiritExpanded = false;
+    this.hologramExpanded = false;
     const sectionMap: Record<'company' | 'collaboration' | 'salesman-barman' | 'label', string> = {
       company: 'company-registration',
       collaboration: 'company-collaboration',
@@ -571,8 +596,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Navigate to role-specific sections
   navigateToSection(section: string): void {
-    // For all officer roles, navigate to dashboard with section parameter
-    // This keeps the unified layout and sidebar open
+    // Auto-collapse groups when navigating away from their sub-items
+    if (!this.bulkSpiritSections.has(section)) this.bulkSpiritExpanded = false;
+    if (!this.hologramSections.has(section)) this.hologramExpanded = false;
     
   if (section === 'hologram-inventory') {
       // Open hologram inventory as a full page (not inside the dashboard section card)
@@ -784,6 +810,41 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   getSidebarLabel(section: string, fallbackLabel?: string): string {
     return this.sidebarSectionLabels[section] || fallbackLabel || section;
+  }
+
+  /**
+   * Returns true when the item at `index` is the first item of its group in the array.
+   * The header is shown if this is the first item of the group AND at least one item
+   * in the group is accessible to the current user.
+   */
+  isFirstInGroup(index: number): boolean {
+    const item = this.officerSectionItems[index];
+    if (!item?.group) return false;
+    // Must be the first occurrence of this group in the array
+    for (let i = 0; i < index; i++) {
+      if (this.officerSectionItems[i].group === item.group) return false;
+    }
+    // At least one item in the group must be accessible
+    return this.officerSectionItems.some(
+      it => it.group === item.group && this.canAccessSection(it.section)
+    );
+  }
+
+  isGroupExpanded(group: string): boolean {
+    if (group === 'Bulk Spirit') return this.bulkSpiritExpanded;
+    if (group === 'Hologram') return this.hologramExpanded;
+    return true;
+  }
+
+  toggleGroup(group: string): void {
+    if (group === 'Bulk Spirit') this.bulkSpiritExpanded = !this.bulkSpiritExpanded;
+    else if (group === 'Hologram') this.hologramExpanded = !this.hologramExpanded;
+  }
+
+  getGroupIcon(group: string): string {
+    if (group === 'Bulk Spirit') return 'water_drop';
+    if (group === 'Hologram') return 'qr_code_2';
+    return 'folder';
   }
 
   // Check if user is licensee/supply chain
