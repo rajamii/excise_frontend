@@ -96,15 +96,15 @@
                   <mat-icon class="nav-icon">add_box</mat-icon>
                   <span class="nav-text">Request</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')">
+                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">today</mat-icon>
                   <span class="nav-text">Daily Entry</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('monthly-hologram-statement')" [class.active]="isDashboardSectionActive('monthly-hologram-statement')">
+                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('monthly-hologram-statement')" [class.active]="isDashboardSectionActive('monthly-hologram-statement')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Monthly Statement</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-inventory')" [class.active]="isDashboardSectionActive('hologram-inventory')">
+                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-inventory')" [class.active]="isDashboardSectionActive('hologram-inventory')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">inventory_2</mat-icon>
                   <span class="nav-text">Inventory</span>
                 </button>

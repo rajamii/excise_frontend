@@ -284,23 +284,68 @@
     width: 100% !important;
     text-align: left !important;
 
-  // Sub-items (inside a group) get left indent
+  // Sub-items (inside a group) get left indent + visual hierarchy
   &.nav-item--sub {
-    padding-left: 36px !important;
+    padding-left: 44px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
     font-size: 13px !important;
     color: #4b5563 !important;
+    background: #f8fafc !important;
+    border-left: 3px solid #e2e8f0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    position: relative !important;
+
+    // Small dot indicator before the text
+    &::before {
+      content: '' !important;
+      position: absolute !important;
+      left: 26px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 5px !important;
+      height: 5px !important;
+      border-radius: 50% !important;
+      background: #cbd5e1 !important;
+      transition: background 0.2s !important;
+    }
 
     // Selected sub-item: teal/green accent — clearly different from the parent blue
     &.active {
       background: #d1fae5 !important;
       color: #065f46 !important;
-      border-left: 4px solid #10b981 !important;
+      border-left: 3px solid #10b981 !important;
       font-weight: 600 !important;
+
+      &::before {
+        background: #10b981 !important;
+      }
     }
 
     &:hover:not(.active) {
       background: #f0fdf4 !important;
       color: #065f46 !important;
+      border-left-color: #6ee7b7 !important;
+
+      &::before {
+        background: #6ee7b7 !important;
+      }
+    }
+  }
+
+  // Group header button — highlighted when expanded
+  &.bulk-spirit-nav-item.group-expanded {
+    background: #eff6ff !important;
+    color: #1e40af !important;
+    border-left: 4px solid #3b82f6 !important;
+    font-weight: 600 !important;
+
+    .nav-icon {
+      color: #1e40af !important;
+    }
+
+    .nav-chevron {
+      color: #3b82f6 !important;
     }
   }
 
