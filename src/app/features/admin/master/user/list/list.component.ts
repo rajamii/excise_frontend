@@ -22,7 +22,7 @@ export class ListComponent implements OnInit {
   roleFilter: 'all' | 'licensee' | 'admin' = 'all';
 
   displayedColumns: string[] = [
-    'firstName', 'middleName', 'lastName',
+    'fullName',
     'username', 'phoneNumber', 'email',
     'district', 'subdivision',
     'role', 'createdBy',
@@ -30,7 +30,7 @@ export class ListComponent implements OnInit {
   ];
 
   deactivatedColumns: string[] = [
-    'firstName', 'middleName', 'lastName',
+    'fullName',
     'username', 'phoneNumber', 'email',
     'district', 'subdivision',
     'role', 'createdBy',
@@ -110,6 +110,13 @@ export class ListComponent implements OnInit {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
       .trim();
+  }
+
+  getFullName(u: Account): string {
+    return [u.firstName, u.middleName, u.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || '-';
   }
 
   loadUsers(): void {

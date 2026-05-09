@@ -172,6 +172,19 @@ mat-card {
   mat-table {
     width: 140%;
 
+    // OIC-style header: light blue-grey background with dark blue text
+    mat-header-row {
+      background-color: #f4f7ff;
+    }
+
+    mat-header-cell {
+      color: #223561 !important;
+      font-weight: 700;
+      font-size: 13px;
+      background-color: #f4f7ff;
+      border-bottom: 1px solid #d9e2f5;
+    }
+
     .email-column {
       min-width: 250px;
       max-width: 400px;
