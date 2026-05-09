@@ -331,16 +331,29 @@
       }
     }
 
-    &.edited-requests {
-      --summary-accent-start: #ef5350;
-      --summary-accent-end: #e53935;
+    &.rejected-requests {
+      --summary-accent-start: #ef4444;
+      --summary-accent-end: #dc2626;
 
       .card-icon {
-        background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       }
 
       .card-value {
-        color: #ef5350;
+        color: #dc2626;
+      }
+    }
+
+    &.edited-requests {
+      --summary-accent-start: #7c3aed;
+      --summary-accent-end: #6d28d9;
+
+      .card-icon {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      }
+
+      .card-value {
+        color: #7c3aed;
       }
     }
   }

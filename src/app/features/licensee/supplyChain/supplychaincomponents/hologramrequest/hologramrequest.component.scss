@@ -174,14 +174,14 @@
     }
 
     &.under-process-requests {
-      --summary-accent-start: #6f42c1;
-      --summary-accent-end: #5a32a3;
+      --summary-accent-start: #f59e0b;
+      --summary-accent-end: #d97706;
       .card-icon {
-        background: linear-gradient(135deg, #6f42c1, #5a32a3);
+        background: linear-gradient(135deg, #f59e0b, #d97706);
       }
 
       .card-value {
-        color: #6f42c1;
+        color: #d97706;
       }
     }
   }

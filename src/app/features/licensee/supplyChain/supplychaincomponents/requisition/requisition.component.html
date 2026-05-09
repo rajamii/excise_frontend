@@ -77,16 +77,6 @@
       </div>
     </div>
 
-    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0" *ngIf="!isCommissioner()"
-      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
-      <div class="card-icon">
-        <i class="bi bi-gear"></i>
-      </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('UNDER_PROCESS') }}</h3>
-        <p class="card-label">Under Process</p>
-      </div>
-    </div>
   </div>
 </div>
 
