@@ -71,7 +71,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     revalidation: 'Bulk Spirit Revalidation',
     cancellation: 'Bulk Spirit Cancellation',
     transit: 'Transit Permit',
-    hologram: 'New Hologram Procurement'
+    hologram: 'New Procurement'
   };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
@@ -96,14 +96,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
     { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
     // ── Hologram group (all hologram items consecutive so the header renders correctly) ──
-    { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true },
-    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true, hideForCommissioner: true },
-    { section: 'hologram-register', label: 'Hologram Procurement', icon: 'qr_code', group: 'Hologram', hideForCommissioner: true },
-    { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', group: 'Hologram', showOnlyForOic: true },
-    { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', group: 'Hologram', hideForCommissioner: true },
-    { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description', group: 'Hologram' },
-    { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', group: 'Hologram', showOnlyForOic: true },
-    { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', group: 'Hologram', showOnlyForCommissioner: true },
+    { section: 'hologram', label: 'New Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true },
+    { section: 'itcell-hologram', label: 'Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true, hideForCommissioner: true },
+    { section: 'hologram-register', label: 'Procurement', icon: 'qr_code', group: 'Hologram', hideForCommissioner: true },
+    { section: 'oic-hologram-requests', label: 'Requests', icon: 'description', group: 'Hologram', showOnlyForOic: true },
+    { section: 'hologram-daily-entry', label: 'Daily Entry', icon: 'today', group: 'Hologram', hideForCommissioner: true },
+    { section: 'monthly-hologram-statement', label: 'Monthly Statement', icon: 'description', group: 'Hologram' },
+    { section: 'hologram-inventory', label: 'Inventory', icon: 'inventory_2', group: 'Hologram', showOnlyForOic: true },
+    { section: 'commissioner-hologram-working-records', label: 'Working Records', icon: 'fact_check', group: 'Hologram', showOnlyForCommissioner: true },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     // ── Other ──
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
