@@ -904,3 +904,21 @@
     opacity: 0.8;
   }
 }
+
+// Yellow row highlight for licensee when payment is required (stage 78 — Approved by Commissioner)
+.row-action-required {
+  background-color: #fffbeb !important;
+
+  &:hover {
+    background-color: #fef3c7 !important;
+  }
+
+  td {
+    border-top: 1px solid #fcd34d !important;
+    border-bottom: 1px solid #fcd34d !important;
+
+    &:first-child {
+      border-left: 3px solid #f59e0b !important;
+    }
+  }
+}

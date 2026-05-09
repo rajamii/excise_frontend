@@ -598,6 +598,26 @@ export class HologramprocurementComponent implements OnInit {
     );
   }
 
+  /**
+   * Returns true when the item is at stage 78 "Approved by Commissioner" and
+   * the current user is a licensee who needs to make payment.
+   * Clears once payment is made (stage moves to Payment Completed / Cartoon Assigned).
+   */
+  isApprovedByCommissioner(item: HologramRow): boolean {
+    if (!this.roleService.isLicenseeRole()) return false;
+
+    // Match by stage ID (most reliable)
+    const stageId = Number((item as any).current_stage ?? (item as any).currentStage ?? (item as any).stage_id ?? -1);
+    if (stageId === 78) return true;
+
+    const status = String(item.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Exclude post-payment stages — payment already done
+    if (status.includes('paymentcompleted') || status.includes('cartoonassigned') || status.includes('cartonassigned')) {
+      return false;
+    }
+    return status.includes('approvedbycommissioner') || status.includes('commissionerapproved');
+  }
+
   navigateToWalletRecharge(item: HologramRow, event?: Event): void {
     event?.preventDefault();
     event?.stopPropagation();
@@ -634,8 +654,11 @@ export class HologramprocurementComponent implements OnInit {
   getPaymentStatusClass(item: HologramRow): string {
     const status = (item.status || '').toLowerCase();
 
-    if (status.includes('payment completed') || status.includes('cartoon assigned')) {
+    if (status.includes('payment completed') || status.includes('cartoon assigned') || status.includes('carton assigned')) {
       return 'bg-success-subtle text-success';
+    } else if (this.isApprovedByCommissioner(item)) {
+      // Stage 78 — payment required by licensee → amber/yellow to draw attention
+      return 'bg-warning-subtle text-warning fw-semibold';
     } else if (status.includes('approved')) {
       return 'bg-primary-subtle text-primary';
     } else if (status.includes('pending') || status.includes('submitted') || status.includes('under')) {

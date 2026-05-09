@@ -163,7 +163,7 @@
           track item.refNo + '_' + (item.procurementType || 'Unknown');
           let i = $index
           ) {
-          <tr class="register-row" [class.edited-row]="item.editedByCommissioner">
+          <tr class="register-row" [class.edited-row]="item.editedByCommissioner" [class.row-action-required]="isApprovedByCommissioner(item)">
             <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td class="ref-number">
               <div class="d-flex align-items-center gap-2">

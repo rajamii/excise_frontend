@@ -134,7 +134,7 @@ export class SidebarPendingBadgeService {
         if (audience === 'licensee') {
           return this.hologramService.getProcurements().pipe(
             map((items) => this.toArray(items)),
-            map((items) => this.countLicenseePendingItems(items))
+            map((items) => this.countHologramAwaitingPayment(items))
           );
         }
         return this.hologramService.getProcurements().pipe(
@@ -346,6 +346,33 @@ export class SidebarPendingBadgeService {
 
       // Fallback: match by status/stage name containing "approved commissioner"
       return combined.includes('approvedcommissioner');
+    }).length;
+  }
+
+  /**
+   * Count hologram procurement items that require payment from the licensee.
+   * Only stage 78 "Approved by Commissioner" triggers the badge.
+   * Clears once payment is made (Payment Completed / Cartoon Assigned).
+   */
+  private countHologramAwaitingPayment(items: any[]): number {
+    return (items || []).filter((item) => {
+      const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const stageName = String(
+        item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const combined = `${status} ${stageName}`;
+
+      // Exclude post-payment stages
+      if (combined.includes('paymentcompleted') || combined.includes('cartoonassigned') || combined.includes('cartonassigned')) {
+        return false;
+      }
+
+      // Match by stage ID (most reliable)
+      const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
+      if (stageId === 78) return true;
+
+      // Fallback: match by status/stage name
+      return combined.includes('approvedbycommissioner') || combined.includes('commissionerapproved');
     }).length;
   }
 

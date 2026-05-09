@@ -368,8 +368,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Hologram' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, no action-required badge on hologram sections
-    if (this.isLicenseeUser()) return 0;
+    // For licensee users, only hologram procurement has an actionable badge (payment at stage 78)
+    if (this.isLicenseeUser()) {
+      return this.getPendingCount('hologram');
+    }
     const keys = sections.length > 0 ? sections : ['hologram', 'hologram-request'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
@@ -388,7 +390,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isLicenseeUser()) {
       const licenseeSections = [
         'new-license', 'salesman-barman-registration',
-        'requisition'
+        'requisition', 'hologram'
       ];
       this.sidebarPendingBadgeService
         .refresh(licenseeSections, force, { audience: 'licensee' })
