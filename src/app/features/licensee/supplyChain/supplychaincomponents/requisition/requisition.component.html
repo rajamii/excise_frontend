@@ -176,7 +176,7 @@
         </thead>
         <tbody>
           @for (item of getPaged(); track item.referenceNo; let i = $index) {
-          <tr class="register-row" [class.row-action-required]="isApprovedCommissionerAwaitingPayment(item)">
+          <tr class="register-row" [class.row-action-required]="!isCommissioner() && !isPermitSection() && isApprovedCommissionerAwaitingPayment(item)">
             <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td class="ref-number">
               <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -197,7 +197,7 @@
             </td>
             <td class="status">
               <span
-                class="status-badge status-{{ isApprovedCommissionerAwaitingPayment(item) ? 'pending' :
+                class="status-badge status-{{ (!isCommissioner() && !isPermitSection() && isApprovedCommissionerAwaitingPayment(item)) ? 'pending' :
                                               item.status.toLowerCase().includes('approved') ? 'approved' : 
                                               item.status.toLowerCase().includes('pending') ? 'pending' :
                                               item.status.toLowerCase().includes('rejected') ? 'rejected' :
