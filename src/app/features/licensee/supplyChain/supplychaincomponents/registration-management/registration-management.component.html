@@ -208,22 +208,38 @@
                   {{ row.currentStage }}
                 </span>
               </td>
-              <td>
-                <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
-                  <i class="bi bi-eye-fill"></i>
-                </button>
-                <button
-                  *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
-                  class="btn btn-link p-0 action-timeline ms-2"
-                  title="View Timeline"
-                  (click)="viewTimeline(row)"
-                >
-                  <i class="bi bi-clock-history"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+               <td>
+                 <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
+                   <i class="bi bi-eye-fill"></i>
+                 </button>
+                 <button
+                   *ngIf="isLicenseeUser() && currentSection === 'salesman-barman-registration' && row.statusGroup === 'objection'"
+                   class="btn btn-link p-0 action-fix ms-2"
+                   title="Fix Objections"
+                   (click)="fixObjections(row)"
+                 >
+                   <i class="bi bi-wrench-adjustable"></i>
+                 </button>
+                  <button
+                    *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration' && row.hasObjectionHistory"
+                    class="btn btn-link p-0 action-eye ms-2"
+                    title="View Objection Details"
+                    (click)="viewObjectionDetails(row)"
+                  >
+                    <i class="bi bi-info-circle-fill"></i>
+                  </button>
+                 <button
+                   *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
+                   class="btn btn-link p-0 action-timeline ms-2"
+                   title="View Timeline"
+                   (click)="viewTimeline(row)"
+                 >
+                   <i class="bi bi-clock-history"></i>
+                 </button>
+               </td>
+             </tr>
+           </tbody>
+         </table>
 
         <div class="pagination-bar" *ngIf="filteredRows.length > 0">
           <div class="page-summary">
