@@ -197,9 +197,55 @@ export class HologramprocurementComponent implements OnInit {
     this.loadHolograms();
   }
 
+  /** True when the current user is a licensee (not an admin). */
+  private isLicenseeUser(): boolean {
+    return this.roleService.isLicenseeRole();
+  }
+
+  /** True when the current user is a commissioner-level admin. */
+  private isCommissionerUser(): boolean {
+    return this.roleService.hasAnyRoleByName(['commissioner', 'joint_commissioner', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+  }
+
+  /** True when the current user is a permit-section admin. */
+  private isPermitSectionUser(): boolean {
+    return this.roleService.hasAnyRoleByName(['permit-section', 'permit section', 'permit_section']);
+  }
+
+  /** True when the current user is an IT-cell admin. */
+  private isItCellUser(): boolean {
+    return this.roleService.hasAnyRoleByName(['it-cell', 'it_cell', 'itcell']);
+  }
+
+  /**
+   * Visibility rule for admin users:
+   * - Show the record if the admin has actions to take (allowedActions non-empty) — it's their turn.
+   * - Show the record if it has already passed through their stage (historical) — they already acted.
+   * - Hide the record if it hasn't reached their stage yet.
+   * Licensee users always see all their own records.
+   */
+  isVisibleToCurrentAdmin(item: HologramRow): boolean {
+    // Licensee sees everything (scoped by backend to their own records)
+    if (this.isLicenseeUser()) return true;
+
+    const actions = item.allowedActions || item.allowed_actions || [];
+    if ((actions as string[]).length > 0) return true;
+
+    // Historical: record has already passed through this admin's stage
+    const combined = `${String(item.status ?? '')} ${String((item as any).currentStageName ?? '')}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (this.isCommissionerUser() && combined.includes('commissioner')) return true;
+    if (this.isPermitSectionUser() && combined.includes('permitsection')) return true;
+    if (this.isItCellUser() && combined.includes('itcell')) return true;
+
+    return false;
+  }
+
   // Filter methods
   applyHologramFilters(): void {
     this.summaryHologramData = this.hologramList.filter(item => {
+      // Admin visibility: only show records at or past this admin's stage
+      if (!this.isVisibleToCurrentAdmin(item)) return false;
+
       let matchesDate = true;
       let matchesMonth = true;
       let matchesYear = true;
