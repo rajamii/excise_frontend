@@ -215,11 +215,11 @@
                  </button>
                  <button
                    *ngIf="isLicenseeUser() && currentSection === 'salesman-barman-registration' && row.statusGroup === 'objection'"
-                   class="btn btn-link p-0 action-fix ms-2"
-                   title="Fix Objections"
+                   class="btn btn-sm btn-fix-objection ms-2"
+                   title="Resolve Objections"
                    (click)="fixObjections(row)"
                  >
-                   <i class="bi bi-wrench-adjustable"></i>
+                   <i class="bi bi-tools me-1"></i>Fix
                  </button>
                   <button
                     *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration' && row.hasObjectionHistory"
