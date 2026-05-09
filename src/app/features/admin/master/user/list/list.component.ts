@@ -45,6 +45,13 @@ export class ListComponent implements OnInit {
   activePageIndex = 0;
   deactivatedPageIndex = 0;
 
+  /** Users for the current tab (before role filter) — used for filter counts. */
+  get tabBaseUsers(): Account[] {
+    return this.activeTab === 'active'
+      ? this.allUsers.filter(u => u.isActive !== false)
+      : this.allUsers.filter(u => u.isActive === false);
+  }
+
   get activeUsers(): Account[] {
     return this._applyRoleFilter(this.allUsers.filter(u => u.isActive !== false));
   }
@@ -63,11 +70,11 @@ export class ListComponent implements OnInit {
   }
 
   get licenseeCount(): number {
-    return this.allUsers.filter(u => String(u.role?.name || '').trim().toLowerCase() === 'licensee').length;
+    return this.tabBaseUsers.filter(u => String(u.role?.name || '').trim().toLowerCase() === 'licensee').length;
   }
 
   get adminCount(): number {
-    return this.allUsers.filter(u => String(u.role?.name || '').trim().toLowerCase() !== 'licensee').length;
+    return this.tabBaseUsers.filter(u => String(u.role?.name || '').trim().toLowerCase() !== 'licensee').length;
   }
 
   setRoleFilter(filter: 'all' | 'licensee' | 'admin'): void {

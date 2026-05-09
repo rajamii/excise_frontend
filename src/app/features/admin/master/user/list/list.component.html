@@ -28,7 +28,7 @@
         <span class="role-filter-label">Filter by:</span>
         <button class="role-filter-btn" [class.role-filter-btn--active]="roleFilter === 'all'" (click)="setRoleFilter('all')">
           All Users
-          <span class="role-filter-count">{{ allUsers.length }}</span>
+          <span class="role-filter-count">{{ tabBaseUsers.length }}</span>
         </button>
         <button class="role-filter-btn role-filter-btn--admin" [class.role-filter-btn--active]="roleFilter === 'admin'" (click)="setRoleFilter('admin')">
           <mat-icon>admin_panel_settings</mat-icon>
