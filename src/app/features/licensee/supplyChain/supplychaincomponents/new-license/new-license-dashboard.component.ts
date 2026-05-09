@@ -104,6 +104,18 @@ export class NewLicenseDashboardComponent implements OnInit {
     return this.roleService.isLicenseeRole();
   }
 
+  /** Returns true when the licensee needs to take action on this row (awaiting payment or objection). */
+  needsLicenseeAction(row: NewLicenseItem): boolean {
+    if (!this.isLicenseeUser()) return false;
+    if (row.statusGroup === 'objection') return true;
+    if (row.canPayNow) return true;  // application fee unpaid
+    // license fee payment stage
+    const stage = String(row.currentStageRaw || '').toLowerCase();
+    return (stage.includes('payment') && stage.includes('await')) ||
+      stage === 'awaiting_payment' ||
+      stage === 'awaiting payment';
+  }
+
   loadData(): void {
     this.isLoading = true;
     this.error = null;

@@ -81,12 +81,23 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
-  isAdminUser(): boolean {
-    return this.roleService.isAdminRole();
+  /** Returns true when the licensee needs to take action on this row (awaiting payment or objection). */
+  needsLicenseeAction(row: { statusGroup: string; currentStageRaw: string }): boolean {
+    if (!this.isLicenseeUser()) return false;
+    const stage = String(row.currentStageRaw || '').toLowerCase();
+    const group = String(row.statusGroup || '').toLowerCase();
+    return group === 'objection' ||
+      (stage.includes('payment') && stage.includes('await')) ||
+      stage === 'awaiting_payment' ||
+      stage === 'awaiting payment';
   }
 
   isLicenseeUser(): boolean {
     return this.roleService.isLicenseeRole();
+  }
+
+  isAdminUser(): boolean {
+    return this.roleService.isAdminRole();
   }
 
   private simplifyStageForLicensee(stageValue: string, statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'): string {

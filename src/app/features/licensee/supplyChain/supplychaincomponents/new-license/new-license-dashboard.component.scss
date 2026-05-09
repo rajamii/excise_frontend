@@ -388,3 +388,18 @@ table {
     transform: translateY(0);
   }
 }
+
+// ─── Action-required row highlight ───────────────────────────────────────────
+
+tr.row-needs-action {
+  background-color: #fffbeb !important;
+  border-left: 3px solid #f59e0b !important;
+
+  td {
+    background-color: #fffbeb !important;
+  }
+
+  &:hover td {
+    background-color: #fef3c7 !important;
+  }
+}
