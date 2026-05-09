@@ -585,10 +585,10 @@ export class RegistrationManagementComponent implements OnInit {
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.companyOptions = this.getCompanyOptions(this.allRows);
 
-        // Default to "Pending" filter for licensees only when there are pending items.
-        // Objection has higher priority than pending.
+        // Default to "Pending" filter for admin users viewing salesman-barman,
+        // and for licensees. Objection has higher priority than pending.
         // If no objection/pending items exist, show all applications (no filter).
-        if (this.isLicenseeUser() && this.activeCardFilter === '') {
+        if (this.activeCardFilter === '') {
           const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
           if (objectionCount > 0) {
