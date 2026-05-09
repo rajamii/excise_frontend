@@ -358,7 +358,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Bulk Spirit' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users the officer items aren't used — fall back to fixed list
+    // For licensee users, no action-required badge on supply chain sections
+    if (this.isLicenseeUser()) return 0;
     const keys = sections.length > 0 ? sections : ['requisition', 'revalidation', 'cancellation'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
@@ -368,7 +369,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Hologram' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users fall back to the two licensee-facing hologram sections
+    // For licensee users, no action-required badge on hologram sections
+    if (this.isLicenseeUser()) return 0;
     const keys = sections.length > 0 ? sections : ['hologram', 'hologram-request'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
@@ -386,9 +388,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // and supply chain nav items (Bulk Spirit + Hologram sub-sections).
     if (this.isLicenseeUser()) {
       const licenseeSections = [
-        'new-license', 'salesman-barman-registration',
-        'requisition', 'revalidation', 'cancellation',
-        'hologram', 'hologram-request'
+        'new-license', 'salesman-barman-registration'
       ];
       this.sidebarPendingBadgeService
         .refresh(licenseeSections, force, { audience: 'licensee' })

@@ -2501,7 +2501,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isPendingSummaryStatus(item: TableData): boolean {
-    return this.isPendingLikeStatus(item) && !this.isUnderProcessLikeStatus(item) && !this.isCancellationLikeStatus(item);
+    // For licensee view: anything in-flight (pending OR under process) counts as Pending,
+    // since the licensee has no action to take — they're just waiting.
+    return this.isPendingLikeStatus(item) && !this.isCancellationLikeStatus(item);
   }
 
   private toBooleanFlag(value: any, fallback?: boolean): boolean | undefined {
