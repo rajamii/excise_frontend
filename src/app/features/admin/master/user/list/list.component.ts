@@ -18,6 +18,9 @@ export class ListComponent implements OnInit {
 
   activeTab: 'active' | 'deactivated' = 'active';
 
+  /** Sub-filter: 'all' | 'licensee' | 'admin' */
+  roleFilter: 'all' | 'licensee' | 'admin' = 'all';
+
   displayedColumns: string[] = [
     'firstName', 'middleName', 'lastName',
     'username', 'phoneNumber', 'email',
@@ -43,11 +46,34 @@ export class ListComponent implements OnInit {
   deactivatedPageIndex = 0;
 
   get activeUsers(): Account[] {
-    return this.allUsers.filter(u => u.isActive !== false);
+    return this._applyRoleFilter(this.allUsers.filter(u => u.isActive !== false));
   }
 
   get deactivatedUsers(): Account[] {
-    return this.allUsers.filter(u => u.isActive === false);
+    return this._applyRoleFilter(this.allUsers.filter(u => u.isActive === false));
+  }
+
+  private _applyRoleFilter(users: Account[]): Account[] {
+    if (this.roleFilter === 'all') return users;
+    if (this.roleFilter === 'licensee') {
+      return users.filter(u => String(u.role?.name || '').trim().toLowerCase() === 'licensee');
+    }
+    // 'admin' = everyone who is NOT a licensee
+    return users.filter(u => String(u.role?.name || '').trim().toLowerCase() !== 'licensee');
+  }
+
+  get licenseeCount(): number {
+    return this.allUsers.filter(u => String(u.role?.name || '').trim().toLowerCase() === 'licensee').length;
+  }
+
+  get adminCount(): number {
+    return this.allUsers.filter(u => String(u.role?.name || '').trim().toLowerCase() !== 'licensee').length;
+  }
+
+  setRoleFilter(filter: 'all' | 'licensee' | 'admin'): void {
+    this.roleFilter = filter;
+    this.activePageIndex = 0;
+    this.deactivatedPageIndex = 0;
   }
 
   get pagedActiveUsers(): Account[] {
@@ -99,6 +125,8 @@ export class ListComponent implements OnInit {
 
   switchTab(tab: 'active' | 'deactivated'): void {
     this.activeTab = tab;
+    this.activePageIndex = 0;
+    this.deactivatedPageIndex = 0;
   }
 
   onPageSizeChange(): void {

@@ -23,6 +23,25 @@
         </button>
       </div>
 
+      <!-- Role sub-filter -->
+      <div class="role-filter-bar">
+        <span class="role-filter-label">Filter by:</span>
+        <button class="role-filter-btn" [class.role-filter-btn--active]="roleFilter === 'all'" (click)="setRoleFilter('all')">
+          All Users
+          <span class="role-filter-count">{{ allUsers.length }}</span>
+        </button>
+        <button class="role-filter-btn role-filter-btn--admin" [class.role-filter-btn--active]="roleFilter === 'admin'" (click)="setRoleFilter('admin')">
+          <mat-icon>admin_panel_settings</mat-icon>
+          Admin Users
+          <span class="role-filter-count">{{ adminCount }}</span>
+        </button>
+        <button class="role-filter-btn role-filter-btn--licensee" [class.role-filter-btn--active]="roleFilter === 'licensee'" (click)="setRoleFilter('licensee')">
+          <mat-icon>badge</mat-icon>
+          Licensee Users
+          <span class="role-filter-count">{{ licenseeCount }}</span>
+        </button>
+      </div>
+
       <!-- ===== ACTIVE USERS ===== -->
       <ng-container *ngIf="activeTab === 'active'">
         <!-- Scrollable table wrapper only -->

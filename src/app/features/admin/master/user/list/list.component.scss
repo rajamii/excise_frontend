@@ -84,6 +84,86 @@ mat-card {
   }
 }
 
+// ── Role sub-filter bar ───────────────────────────────────────────────────────
+.role-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid #e8ecf5;
+  margin-bottom: 12px;
+}
+
+.role-filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-right: 4px;
+}
+
+.role-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border: 1px solid #d0d7e8;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #444;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  mat-icon {
+    font-size: 15px;
+    height: 15px;
+    width: 15px;
+  }
+
+  &:hover {
+    background: #f0f3ff;
+    border-color: #1C2B78;
+    color: #1C2B78;
+  }
+
+  &--active {
+    background: #1C2B78;
+    border-color: #1C2B78;
+    color: #fff;
+
+    .role-filter-count {
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+    }
+  }
+
+  &--admin.role-filter-btn--active {
+    background: #1565c0;
+    border-color: #1565c0;
+  }
+
+  &--licensee.role-filter-btn--active {
+    background: #2e7d32;
+    border-color: #2e7d32;
+  }
+}
+
+.role-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #e8ecf5;
+  color: #333;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 // ── Table scroll wrapper (only the table scrolls horizontally) ────────────────
 .table-scroll-wrapper {
   width: 100%;
