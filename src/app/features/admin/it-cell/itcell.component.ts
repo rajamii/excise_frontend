@@ -141,19 +141,12 @@ export class ITCELLComponent implements OnInit {
     if (this.initialSummaryAutoSelected) return;
     this.initialSummaryAutoSelected = true;
 
-    // Don't override if user already selected a status.
     const selected = String(this.statusFilter || '').trim();
     if (selected && selected.toLowerCase() !== 'all') return;
 
-    // This screen uses "Submitted" / "Under IT Cell Review" as the pending-like buckets.
-    const preferred =
-      (this.getStatusCount('Submitted') > 0 && 'Submitted') ||
-      (this.getStatusCount('Under IT Cell Review') > 0 && 'Under IT Cell Review') ||
-      '';
-
-    if (preferred) {
-      this.statusFilter = preferred;
-      this.activeSummaryFilter = preferred;
+    if (this.getStatusCount('Pending') > 0) {
+      this.statusFilter = 'Pending';
+      this.activeSummaryFilter = 'Pending';
       this.applyFilters();
     }
   }
@@ -202,6 +195,8 @@ export class ITCELLComponent implements OnInit {
         filtered = filtered.filter(item => this.isApprovedLikeStatus(item));
       } else if (filter === 'edited') {
         filtered = filtered.filter(item => Boolean(item?.editedByCommissioner));
+      } else if (filter === 'pending') {
+        filtered = filtered.filter(item => this.isPendingLikeStatus(item));
       } else {
         filtered = filtered.filter(item => item.status === this.statusFilter);
       }
@@ -398,6 +393,10 @@ export class ITCELLComponent implements OnInit {
     if (filter === 'approved') {
       return this.summaryHologramData.filter(h => this.isApprovedLikeStatus(h)).length;
     }
+    // "Pending" = Submitted + Under IT Cell Review (anything still actionable by IT Cell)
+    if (filter === 'pending') {
+      return this.summaryHologramData.filter(h => this.isPendingLikeStatus(h)).length;
+    }
     return this.summaryHologramData.filter(h => h.status === status).length;
   }
 
@@ -485,6 +484,19 @@ export class ITCELLComponent implements OnInit {
     const token = this.normalizeStageToken(item?.status);
     const isCartoonAssigned = token.includes('cartoonassigned') || token.includes('cartonassigned');
     return token.includes('approved') || isCartoonAssigned;
+  }
+
+  /** Pending = Submitted OR Under IT Cell Review — anything still actionable by IT Cell */
+  private isPendingLikeStatus(item: any): boolean {
+    if (this.isApprovedLikeStatus(item)) return false;
+    const token = this.normalizeStageToken(item?.status);
+    return (
+      token.includes('submit') ||
+      token.includes('underitcellreview') ||
+      token.includes('itcellreview') ||
+      token.includes('pending') ||
+      token.includes('review')
+    );
   }
 
   closeModal(): void {

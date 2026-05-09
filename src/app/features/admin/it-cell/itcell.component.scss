@@ -1,5 +1,23 @@
 // IT Cell Component - Clean Professional Design
 
+// Summary Cards Grid
+.hologram-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  width: 100%;
+  padding: 0 1.5rem;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 1rem;
+  }
+}
+
 // Summary Cards
 .summary-card {
   --summary-accent-start: #1C2B78;
@@ -370,11 +388,22 @@
 // Responsive Design
 @media (max-width: 768px) {
   .summary-card {
-    text-align: center;
-    flex-direction: column;
-    
+    padding: 1rem;
+
     .card-icon {
-      margin: 0 auto 1rem;
+      width: 40px;
+      height: 40px;
+      font-size: 1rem;
+    }
+
+    .card-content {
+      .card-value {
+        font-size: 1.4rem;
+      }
+
+      .card-label {
+        font-size: 0.8rem;
+      }
     }
   }
 }
