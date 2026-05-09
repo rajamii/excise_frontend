@@ -495,6 +495,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.summaryRequisitionData = this.requisitionData.filter(item => {
+      // Admin visibility: only show records at or past this admin's stage
+      if (!this.isVisibleToCurrentAdmin(item)) return false;
+
       let matches = true;
 
       const submissionDate =
@@ -574,6 +577,29 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   isPermitSection(): boolean {
     return this.accountService.hasAnyRole(['permit-section', 'permit section', 'permit_section', 'Permit Section']);
+  }
+
+  /**
+   * Visibility rule for admin users:
+   * - Show the record if the admin has actions to take (allowedActions non-empty) — it's their turn.
+   * - Show the record if it has already passed through their stage (historical) — they already acted.
+   * - Hide the record if it hasn't reached their stage yet.
+   * Licensee users always see all their own records.
+   */
+  isVisibleToCurrentAdmin(item: TableData): boolean {
+    // Licensee sees everything (scoped by backend to their own records)
+    if (!this.isCommissioner() && !this.isPermitSection()) return true;
+
+    // If the backend says there are actions to take → it's this admin's turn
+    if ((item.allowedActions?.length ?? 0) > 0) return true;
+
+    // If the record has already passed through this admin's stage → show for history
+    const combined = `${String(item.status ?? '')} ${String(item.currentStageName ?? '')}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (this.isCommissioner() && combined.includes('commissioner')) return true;
+    if (this.isPermitSection() && combined.includes('permitsection')) return true;
+
+    // Record hasn't reached this admin's stage yet → hide it
+    return false;
   }
 
   approveRequisition(item: TableData): void {
