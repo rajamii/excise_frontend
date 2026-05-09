@@ -303,11 +303,11 @@
       left: 26px !important;
       top: 50% !important;
       transform: translateY(-50%) !important;
-      width: 5px !important;
-      height: 5px !important;
+      width: 6px !important;
+      height: 6px !important;
       border-radius: 50% !important;
-      background: #cbd5e1 !important;
-      transition: background 0.2s !important;
+      background: #10b981 !important;
+      transition: background 0.2s, transform 0.2s !important;
     }
 
     // Selected sub-item: teal/green accent — clearly different from the parent blue
