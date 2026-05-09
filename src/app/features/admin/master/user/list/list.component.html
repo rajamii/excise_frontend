@@ -8,10 +8,25 @@
     </mat-card-header>
 
     <mat-card-content>
-      <div class="table-container">
-        <mat-table [dataSource]="users"><!-- Bind user data to table -->
 
-          <!-- Basic info columns -->
+      <!-- Tab buttons -->
+      <div class="user-tabs">
+        <button class="tab-btn" [class.tab-btn--active]="activeTab === 'active'" (click)="switchTab('active')">
+          <mat-icon>people</mat-icon>
+          Active Users
+          <span class="tab-count">{{ activeUsers.length }}</span>
+        </button>
+        <button class="tab-btn tab-btn--deactivated" [class.tab-btn--active]="activeTab === 'deactivated'" (click)="switchTab('deactivated')">
+          <mat-icon>person_off</mat-icon>
+          Deactivated Users
+          <span class="tab-count tab-count--warn">{{ deactivatedUsers.length }}</span>
+        </button>
+      </div>
+
+      <!-- ===== ACTIVE USERS TABLE ===== -->
+      <div class="table-container" *ngIf="activeTab === 'active'">
+        <mat-table [dataSource]="activeUsers">
+
           <ng-container matColumnDef="firstName">
             <mat-header-cell *matHeaderCellDef> First Name </mat-header-cell>
             <mat-cell *matCellDef="let u"> {{ u.firstName }} </mat-cell>
@@ -27,7 +42,6 @@
             <mat-cell *matCellDef="let u"> {{ u.lastName }} </mat-cell>
           </ng-container>
 
-          <!-- Login & contact -->
           <ng-container matColumnDef="username">
             <mat-header-cell *matHeaderCellDef> Username </mat-header-cell>
             <mat-cell *matCellDef="let u"> {{ u.username }} </mat-cell>
@@ -43,18 +57,16 @@
             <mat-cell *matCellDef="let u" class="email-column"> {{ u.email }} </mat-cell>
           </ng-container>
 
-          <!-- Location -->
           <ng-container matColumnDef="district">
             <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.district.district }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ u.district?.district || '-' }} </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="subdivision">
             <mat-header-cell *matHeaderCellDef> Subdivision </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.subdivision.subdivision }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ u.subdivision?.subdivision || '-' }} </mat-cell>
           </ng-container>
 
-          <!-- Role & creator (with formatting) -->
           <ng-container matColumnDef="role">
             <mat-header-cell *matHeaderCellDef> Role </mat-header-cell>
             <mat-cell *matCellDef="let u"> {{ toTitleCase(u.role?.name || '') || '-' }} </mat-cell>
@@ -62,27 +74,122 @@
 
           <ng-container matColumnDef="createdBy">
             <mat-header-cell *matHeaderCellDef> Created By </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.createdBy ?? "-" }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ u.createdBy ?? '-' }} </mat-cell>
           </ng-container>
 
-          <!-- Action buttons (edit/delete) -->
+          <ng-container matColumnDef="isActive">
+            <mat-header-cell *matHeaderCellDef> Active </mat-header-cell>
+            <mat-cell *matCellDef="let u">
+              <mat-slide-toggle
+                [checked]="u.isActive"
+                color="primary"
+                (change)="onToggleActive(u)"
+                matTooltip="Active — click to deactivate">
+              </mat-slide-toggle>
+            </mat-cell>
+          </ng-container>
+
           <ng-container matColumnDef="actions">
             <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
             <mat-cell *matCellDef="let u">
-              <button mat-icon-button color="primary" (click)="onEdit(u)">
+              <button mat-icon-button color="primary" (click)="onEdit(u)" matTooltip="Edit user">
                 <mat-icon>edit</mat-icon>
               </button>
-              <button mat-icon-button color="warn" (click)="onDelete(u)">
-                <mat-icon>delete</mat-icon>
+              <button mat-icon-button color="warn" (click)="onDelete(u)" matTooltip="Deactivate user">
+                <mat-icon>person_off</mat-icon>
               </button>
             </mat-cell>
           </ng-container>
 
-          <!-- Header and data row bindings -->
           <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
           <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
         </mat-table>
+
+        <div class="empty-state" *ngIf="activeUsers.length === 0">
+          <mat-icon>people_outline</mat-icon>
+          <p>No active users found.</p>
+        </div>
       </div>
+
+      <!-- ===== DEACTIVATED USERS TABLE ===== -->
+      <div class="table-container" *ngIf="activeTab === 'deactivated'">
+        <div class="deactivated-banner">
+          <mat-icon>info</mat-icon>
+          These users are deactivated and cannot log in. Click <strong>Activate</strong> to restore their access.
+        </div>
+
+        <mat-table [dataSource]="deactivatedUsers">
+
+          <ng-container matColumnDef="firstName">
+            <mat-header-cell *matHeaderCellDef> First Name </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.firstName }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="middleName">
+            <mat-header-cell *matHeaderCellDef> Middle Name </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.middleName }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="lastName">
+            <mat-header-cell *matHeaderCellDef> Last Name </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.lastName }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="username">
+            <mat-header-cell *matHeaderCellDef> Username </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.username }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="phoneNumber">
+            <mat-header-cell *matHeaderCellDef> Phone </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.phoneNumber }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="email">
+            <mat-header-cell *matHeaderCellDef class="email-column"> Email </mat-header-cell>
+            <mat-cell *matCellDef="let u" class="email-column"> {{ u.email }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="district">
+            <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.district?.district || '-' }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="subdivision">
+            <mat-header-cell *matHeaderCellDef> Subdivision </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.subdivision?.subdivision || '-' }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="role">
+            <mat-header-cell *matHeaderCellDef> Role </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ toTitleCase(u.role?.name || '') || '-' }} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="createdBy">
+            <mat-header-cell *matHeaderCellDef> Created By </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.createdBy ?? '-' }} </mat-cell>
+          </ng-container>
+
+          <!-- Activate button column -->
+          <ng-container matColumnDef="activateAction">
+            <mat-header-cell *matHeaderCellDef> Action </mat-header-cell>
+            <mat-cell *matCellDef="let u">
+              <button mat-raised-button color="primary" (click)="onActivate(u)" matTooltip="Restore login access">
+                <mat-icon>how_to_reg</mat-icon> Activate
+              </button>
+            </mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="deactivatedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: deactivatedColumns;" class="deactivated-row"></mat-row>
+        </mat-table>
+
+        <div class="empty-state" *ngIf="deactivatedUsers.length === 0">
+          <mat-icon>check_circle_outline</mat-icon>
+          <p>No deactivated users.</p>
+        </div>
+      </div>
+
     </mat-card-content>
   </mat-card>
 </div>

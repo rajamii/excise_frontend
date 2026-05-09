@@ -15,22 +15,35 @@ import { AdminService } from '../../../admin.service';
   styleUrls: ['./list.component.scss']
 })
 export class ListComponent implements OnInit {
-  private readonly blockedUsersStorageKey = 'frontend_blocked_users';
+
+  /** 'active' shows is_active=true users; 'deactivated' shows is_active=false */
+  activeTab: 'active' | 'deactivated' = 'active';
+
   displayedColumns: string[] = [
-    'firstName',
-    'middleName',
-    'lastName',
-    'username',
-    'phoneNumber',
-    'email',
-    'district',
-    'subdivision',
-    'role',
-    'createdBy',
-    'actions'
+    'firstName', 'middleName', 'lastName',
+    'username', 'phoneNumber', 'email',
+    'district', 'subdivision',
+    'role', 'createdBy',
+    'isActive', 'actions'
   ];
 
-  users: Account[] = [];
+  deactivatedColumns: string[] = [
+    'firstName', 'middleName', 'lastName',
+    'username', 'phoneNumber', 'email',
+    'district', 'subdivision',
+    'role', 'createdBy',
+    'activateAction'
+  ];
+
+  allUsers: Account[] = [];
+
+  get activeUsers(): Account[] {
+    return this.allUsers.filter(u => u.isActive !== false);
+  }
+
+  get deactivatedUsers(): Account[] {
+    return this.allUsers.filter(u => u.isActive === false);
+  }
 
   constructor(
     private userService: UserService,
@@ -50,90 +63,119 @@ export class ListComponent implements OnInit {
       .trim();
   }
 
-  private persistBlockedUser(user: Account): void {
-    try {
-      const existingRaw = localStorage.getItem(this.blockedUsersStorageKey);
-      const existing = existingRaw ? JSON.parse(existingRaw) : [];
-      const normalized = Array.isArray(existing) ? existing : [];
-      const next = normalized.filter((entry: any) => Number(entry?.id) !== Number(user.id));
-      next.push({
-        id: user.id || null,
-        username: String(user.username || '').trim().toLowerCase(),
-        phoneNumber: String(user.phoneNumber || '').trim(),
-        email: String(user.email || '').trim().toLowerCase(),
-        blockedAt: new Date().toISOString()
-      });
-      localStorage.setItem(this.blockedUsersStorageKey, JSON.stringify(next));
-    } catch (error) {
-      console.warn('Failed to persist blocked user list:', error);
-    }
-  }
-
-  // Fetch user list from backend
   loadUsers(): void {
     this.userService.getUsers().subscribe({
-      // If single object is returned instead of array, wrap it
       next: (data) => {
-        this.users = Array.isArray(data) ? data : [data];
-        console.log(data);
+        this.allUsers = Array.isArray(data) ? data : [data];
       },
       error: (err) => console.error('Failed to fetch users:', err)
     });
   }
 
-  // Open Add User dialog
-  onAdd(): void {
-    const dialogRef = this.dialog.open(ManageComponent, {
-      width: '500px',
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result === true) this.loadUsers(); // Reload if saved
-    });
+  switchTab(tab: 'active' | 'deactivated'): void {
+    this.activeTab = tab;
   }
 
-  // Open Edit dialog with existing user data
-  onEdit(user: Account): void {
-    const dialogRef = this.dialog.open(ManageComponent, {
-      width: '500px',
-      data: { ...user } // Spread to avoid direct mutation
-    });
-
+  onAdd(): void {
+    const dialogRef = this.dialog.open(ManageComponent, { width: '500px' });
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) this.loadUsers();
     });
   }
 
-  // Confirm and delete user
+  onEdit(user: Account): void {
+    const dialogRef = this.dialog.open(ManageComponent, {
+      width: '500px',
+      data: { ...user }
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) this.loadUsers();
+    });
+  }
+
+  /** Deactivate an active user (sets is_active=false, preserves all data) */
   onDelete(user: Account): void {
     Swal.fire({
-      title: 'Are you sure?',
-      text: `Do you want to delete user ${user.username}?`,
+      title: 'Deactivate User?',
+      text: `This will deactivate ${user.username}. They will not be able to log in until reactivated. All data is preserved.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, delete',
+      confirmButtonText: 'Yes, deactivate',
       cancelButtonText: 'Cancel'
     }).then(result => {
-      // FIXED: Use user.id (number) instead of user.username (string)
       if (result.isConfirmed && user.id) {
         this.adminService.deleteUser(user.id).subscribe({
           next: () => {
-            this.persistBlockedUser(user);
-            Swal.fire('Deleted!', 'User has been deleted.', 'success');
-            this.loadUsers(); // Refresh after deletion
+            this._updateUserInList(user.id!, false);
+            Swal.fire('Deactivated!', 'User has been deactivated and can no longer log in.', 'success');
           },
           error: (err) => {
-            console.error('Delete failed:', err);
-            if (err?.status >= 500) {
-              this.persistBlockedUser(user);
-              this.users = this.users.filter(existingUser => existingUser.id !== user.id);
-              Swal.fire('Deleted!', 'User removed from the current list.', 'success');
-              return;
-            }
-            Swal.fire('Error', 'Failed to delete user.', 'error');
+            console.error('Deactivate failed:', err);
+            Swal.fire('Error', 'Failed to deactivate user.', 'error');
           }
         });
       }
     });
+  }
+
+  /** Activate a deactivated user directly from the Deactivated tab */
+  onActivate(user: Account): void {
+    Swal.fire({
+      title: 'Activate User?',
+      text: `This will re-enable login for ${user.username}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, activate',
+      cancelButtonText: 'Cancel'
+    }).then(result => {
+      if (result.isConfirmed && user.id) {
+        this.userService.toggleUserActive(user.id).subscribe({
+          next: (res) => {
+            this._updateUserInList(user.id!, res.is_active);
+            Swal.fire('Activated!', `${user.username} can now log in again.`, 'success');
+          },
+          error: (err) => {
+            console.error('Activate failed:', err);
+            Swal.fire('Error', 'Failed to activate user.', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  /** Toggle is_active from the Active tab slide-toggle */
+  onToggleActive(user: Account): void {
+    const action = user.isActive ? 'deactivate' : 'activate';
+    const actionPast = user.isActive ? 'deactivated' : 'activated';
+
+    Swal.fire({
+      title: `${user.isActive ? 'Deactivate' : 'Activate'} User?`,
+      text: `Are you sure you want to ${action} ${user.username}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: `Yes, ${action}`,
+      cancelButtonText: 'Cancel'
+    }).then(result => {
+      if (result.isConfirmed && user.id) {
+        this.userService.toggleUserActive(user.id).subscribe({
+          next: (res) => {
+            this._updateUserInList(user.id!, res.is_active);
+            Swal.fire('Done!', `User has been ${actionPast}.`, 'success');
+          },
+          error: (err) => {
+            console.error('Toggle failed:', err);
+            Swal.fire('Error', `Failed to ${action} user.`, 'error');
+          }
+        });
+      }
+    });
+  }
+
+  private _updateUserInList(id: number, isActive: boolean): void {
+    const idx = this.allUsers.findIndex(u => u.id === id);
+    if (idx !== -1) {
+      this.allUsers[idx] = { ...this.allUsers[idx], isActive };
+      this.allUsers = [...this.allUsers]; // trigger change detection
+    }
   }
 }
