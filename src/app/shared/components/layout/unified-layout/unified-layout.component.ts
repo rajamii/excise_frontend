@@ -366,7 +366,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isLicenseeUser()) {
       const licenseeSections = ['new-license', 'salesman-barman-registration'];
       this.sidebarPendingBadgeService
-        .refresh(licenseeSections, force)
+        .refresh(licenseeSections, force, { audience: 'licensee' })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (counts) => {

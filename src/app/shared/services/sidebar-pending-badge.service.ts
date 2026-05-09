@@ -9,6 +9,7 @@ import { HologramDataService } from '../../features/licensee/supplyChain/service
 import { environment } from '../../../environments/environment';
 
 type PendingCountsBySection = Record<string, number>;
+type BadgeAudience = 'licensee' | 'officer';
 
 @Injectable({ providedIn: 'root' })
 export class SidebarPendingBadgeService {
@@ -24,9 +25,14 @@ export class SidebarPendingBadgeService {
     private hologramService: HologramDataService
   ) {}
 
-  refresh(sections: string[], force = false): Observable<PendingCountsBySection> {
+  refresh(
+    sections: string[],
+    force = false,
+    options?: { audience?: BadgeAudience }
+  ): Observable<PendingCountsBySection> {
     const normalized = this.normalizeSections(sections);
-    const key = normalized.join('|');
+    const audience: BadgeAudience = options?.audience ?? 'officer';
+    const key = `${audience}:${normalized.join('|')}`;
 
     if (!force && key === this.lastKey && Date.now() - this.lastFetchMs < 15_000) {
       return of(this.lastCounts);
@@ -34,7 +40,7 @@ export class SidebarPendingBadgeService {
 
     const tasks: Record<string, Observable<number>> = {};
     for (const section of normalized) {
-      tasks[section] = this.fetchPendingCount(section).pipe(catchError(() => of(0)));
+      tasks[section] = this.fetchPendingCount(section, audience).pipe(catchError(() => of(0)));
     }
 
     return forkJoin(tasks).pipe(
@@ -55,21 +61,31 @@ export class SidebarPendingBadgeService {
     return Array.from(unique).sort();
   }
 
-  private fetchPendingCount(section: string): Observable<number> {
+  private fetchPendingCount(section: string, audience: BadgeAudience): Observable<number> {
     switch (section) {
       case 'new-license':
-        return this.fetchDashboardPending(`${this.apiBase}/new_license_application/dashboard-counts/`);
+        if (audience === 'licensee') {
+          return this.fetchLicenseeActionableFromListByStatus(`${this.apiBase}/new_license_application/list-by-status/`).pipe(
+            catchError(() => this.fetchDashboardCount(`${this.apiBase}/new_license_application/dashboard-counts/`, audience))
+          );
+        }
+        return this.fetchDashboardCount(`${this.apiBase}/new_license_application/dashboard-counts/`, audience);
 
       case 'salesman-barman-registration':
       case 'salesman-barman':
-        return this.fetchDashboardPending(`${this.apiBase}/salesman_barman/dashboard-counts/`);
+        if (audience === 'licensee') {
+          return this.fetchLicenseeActionableFromListByStatus(`${this.apiBase}/salesman_barman/list-by-status/`).pipe(
+            catchError(() => this.fetchDashboardCount(`${this.apiBase}/salesman_barman/dashboard-counts/`, audience))
+          );
+        }
+        return this.fetchDashboardCount(`${this.apiBase}/salesman_barman/dashboard-counts/`, audience);
 
       case 'company-registration':
-        return this.fetchDashboardPending(`${this.apiBase}/company-registration/dashboard-counts/`);
+        return this.fetchDashboardCount(`${this.apiBase}/company-registration/dashboard-counts/`, audience);
 
       case 'license-renewal':
       case 'license-renewal-application':
-        return this.fetchDashboardPending(`${this.apiBase}/license_application/dashboard-counts/`);
+        return this.fetchDashboardCount(`${this.apiBase}/license_application/dashboard-counts/`, audience);
 
       case 'requisition':
         return this.enaRequisitionService.getRequisitions().pipe(
@@ -145,9 +161,51 @@ export class SidebarPendingBadgeService {
     }
   }
 
-  private fetchDashboardPending(url: string): Observable<number> {
+  private fetchLicenseeActionableFromListByStatus(url: string): Observable<number> {
     return this.http.get<any>(url).pipe(
-      map((counts) => Number(counts?.pending || 0)),
+      map((payload) => {
+        const objection = this.toArray(payload?.objection).length;
+        const pending = this.toArray(payload?.pending);
+        const awaitingPayment = pending.filter((x) => this.isAwaitingPaymentStage(x)).length;
+        return objection + awaitingPayment;
+      }),
+      catchError(() => of(0))
+    );
+  }
+
+  private isAwaitingPaymentStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+        item?.currentStageName ??
+        item?.current_stage ??
+        item?.currentStage ??
+        item?.status ??
+        ''
+    ).toLowerCase();
+    const normalized = stage.replace(/[^a-z0-9]/g, '');
+    return normalized === 'awaitingpayment' || (normalized.includes('awaiting') && normalized.includes('payment'));
+  }
+
+  private fetchDashboardCount(url: string, audience: BadgeAudience): Observable<number> {
+    return this.http.get<any>(url).pipe(
+      map((counts) => {
+        const pending = Number(counts?.pending || 0);
+        if (audience !== 'licensee') return pending;
+
+        const objection = Number(counts?.objection || 0);
+        const awaitingPayment = Number(
+          counts?.awaitingPayment ??
+            counts?.awaiting_payment ??
+            counts?.paymentPending ??
+            counts?.payment_pending ??
+            0
+        );
+
+        // Licensee badge should reflect only actionable items:
+        // - awaiting payment
+        // - objections to be resolved
+        return awaitingPayment + objection;
+      }),
       catchError(() => of(0))
     );
   }
