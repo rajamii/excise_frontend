@@ -91,7 +91,7 @@ export class SidebarPendingBadgeService {
         if (audience === 'licensee') {
           return this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
-            map((items) => this.countLicenseePendingItems(items))
+            map((items) => this.countRequisitionAwaitingPayment(items))
           );
         }
         return this.enaRequisitionService.getRequisitions().pipe(
@@ -310,6 +310,42 @@ export class SidebarPendingBadgeService {
              raw.includes('forward') || raw.includes('underprocess') ||
              raw.includes('inreview') || raw.includes('review') ||
              raw.includes('process') || raw.includes('verify');
+    }).length;
+  }
+
+  /**
+   * Count requisition items that require payment from the licensee.
+   * Only stage 29 "Approved Commissioner" triggers the badge — the licensee
+   * must make payment at this stage before the permit is issued.
+   * Once payment is made the item moves to a post-payment stage (forwarded payslip,
+   * approved payslip, etc.) and the badge must be cleared.
+   */
+  private countRequisitionAwaitingPayment(items: any[]): number {
+    return (items || []).filter((item) => {
+      const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const stageName = String(
+        item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const combined = `${status} ${stageName}`;
+
+      // Exclude anything that has already moved past payment
+      const postPaymentMarkers = ['forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted', 'paymentdone', 'permitsection'];
+      if (postPaymentMarkers.some(m => combined.includes(m))) return false;
+
+      // Exclude if a payment reference already exists
+      const hasPaymentRef = Boolean(
+        item?.payment_id || item?.paymentId ||
+        item?.payment_date || item?.paymentDate ||
+        item?.transaction_id || item?.transactionId
+      );
+      if (hasPaymentRef) return false;
+
+      // Match by stage ID (most reliable)
+      const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
+      if (stageId === 29) return true;
+
+      // Fallback: match by status/stage name containing "approved commissioner"
+      return combined.includes('approvedcommissioner');
     }).length;
   }
 

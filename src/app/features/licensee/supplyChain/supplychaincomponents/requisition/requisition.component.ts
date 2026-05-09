@@ -2425,10 +2425,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
-  private isApprovedCommissionerAwaitingPayment(item: TableData): boolean {
+  isApprovedCommissionerAwaitingPayment(item: TableData): boolean {
     const status = this.normalizeStageToken(item?.status);
     const stage = this.normalizeStageToken(item?.currentStageName);
     const combined = `${status} ${stage}`;
+
+    // Once payment is made the item moves to a post-payment stage — no longer actionable
+    const postPaymentMarkers = ['forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted', 'paymentdone', 'permitsection'];
+    if (postPaymentMarkers.some(m => combined.includes(m))) return false;
+
+    // Also clear if a payment reference exists on the item
+    if (item?.paymentId || item?.paymentDate) return false;
+
     // Business rule: "APPROVED COMMISSIONER" still needs payment, so keep it in Pending.
     return combined.includes('approvedcommissioner');
   }

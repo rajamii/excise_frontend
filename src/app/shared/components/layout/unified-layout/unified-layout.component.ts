@@ -358,9 +358,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Bulk Spirit' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, no action-required badge on supply chain sections
-    if (this.isLicenseeUser()) return 0;
-    const keys = sections.length > 0 ? sections : ['requisition', 'revalidation', 'cancellation'];
+    // For licensee users, only requisition has an actionable badge (payment at Approved Commissioner stage)
+    const keys = sections.length > 0 ? sections : (this.isLicenseeUser() ? ['requisition'] : ['requisition', 'revalidation', 'cancellation']);
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
 
@@ -388,7 +387,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // and supply chain nav items (Bulk Spirit + Hologram sub-sections).
     if (this.isLicenseeUser()) {
       const licenseeSections = [
-        'new-license', 'salesman-barman-registration'
+        'new-license', 'salesman-barman-registration',
+        'requisition'
       ];
       this.sidebarPendingBadgeService
         .refresh(licenseeSections, force, { audience: 'licensee' })
