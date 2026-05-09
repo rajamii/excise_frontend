@@ -67,9 +67,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
-    requisition: 'Bulk Spirit Requisition',
-    revalidation: 'Bulk Spirit Revalidation',
-    cancellation: 'Bulk Spirit Cancellation',
+    requisition: 'Requisition',
+    revalidation: 'Revalidation',
+    cancellation: 'Cancellation',
     transit: 'Transit Permit',
     hologram: 'New Procurement'
   };
