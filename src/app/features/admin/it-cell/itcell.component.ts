@@ -374,15 +374,41 @@ export class ITCELLComponent implements OnInit {
   }
 
   getStatusClass(status: string): string {
-    if (status === 'Payment Completed' || status === 'Heading for Carton Assignment') {
-      return 'bg-success-subtle text-success';
-    } else if (status === 'Forwarded to Commissioner' || status === 'Hologram Verified') {
-      return 'bg-info-subtle text-info';
-    } else if (status === 'Submitted') {
-      return 'bg-warning-subtle text-warning';
-    } else {
-      return 'bg-primary-subtle text-primary';
+    const token = this.normalizeStageToken(status);
+
+    // Stage 681 — Cartoon/Carton Assigned (final fulfillment)
+    if (token.includes('cartoonassigned') || token.includes('cartonassigned')) {
+      return 'status-badge-cartoon-assigned';
     }
+    // Stage 680 — Payment Completed
+    if (token.includes('paymentcompleted')) {
+      return 'status-badge-payment-completed';
+    }
+    // Stage 678 — Approved by Commissioner
+    if (token.includes('approvedbycommissioner') || (token.includes('approved') && token.includes('commissioner'))) {
+      return 'status-badge-approved-commissioner';
+    }
+    // Stage 679 — Rejected by Commissioner
+    if (token.includes('rejectedbycommissioner') || (token.includes('rejected') && token.includes('commissioner'))) {
+      return 'status-badge-rejected';
+    }
+    // Stage 677 — Forwarded to Commissioner
+    if (token.includes('forwardedtocommissioner') || (token.includes('forwarded') && token.includes('commissioner'))) {
+      return 'status-badge-forwarded';
+    }
+    // Stage 676 — Under IT Cell Review
+    if (token.includes('underitcellreview') || token.includes('itcellreview')) {
+      return 'status-badge-under-review';
+    }
+    // Stage 75 — Submitted HP
+    if (token.includes('submittedhp') || token.includes('submitted')) {
+      return 'status-badge-submitted';
+    }
+    // Generic approved fallback
+    if (token.includes('approved')) return 'status-badge-approved-commissioner';
+    if (token.includes('rejected')) return 'status-badge-rejected';
+
+    return 'status-badge-default';
   }
 
   getStatusCount(status: string): number {
