@@ -134,14 +134,41 @@
             </td>
              <td>{{ row.applicantName }}</td>
              <td>{{ row.establishmentName }}</td>
-             <td>
+              <td>
                 <span class="status-badge {{ row.statusGroup }}">
                   {{ row.currentStage }}
                 </span>
-              </td>
-             <td>
-              <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
-                <i class="bi bi-eye-fill"></i>
+                <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
+                  ACTION REQUIRED
+                </span>
+                <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
+                  <span
+                    class="badge bg-info text-dark ms-2"
+                    [title]="row.updatedObjectionFields?.length ? ('Updated fields: ' + (row.updatedObjectionFields ?? []).join(', ')) : 'Updated'"
+                  >
+                    UPDATED
+                  </span>
+                </ng-container>
+                </td>
+              <td>
+                <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              <button
+                *ngIf="isLicenseeUser() && row.statusGroup === 'objection'"
+                class="btn btn-sm btn-outline-warning me-2"
+                title="Resolve Objections"
+                (click)="resolveObjections(row)"
+              >
+                <i class="bi bi-tools me-1"></i>Fix
+              </button>
+              <button
+                *ngIf="!isLicenseeUser() && row.hasObjectionHistory"
+                class="btn btn-link p-0 action-eye me-2"
+                title="View Objection Details"
+                (click)="viewObjectionDetails(row)"
+              >
+                <i class="bi bi-info-circle-fill"></i>
               </button>
               <button
                 *ngIf="row.canPayNow"

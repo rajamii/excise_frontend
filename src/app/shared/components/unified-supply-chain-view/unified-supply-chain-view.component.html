@@ -72,7 +72,11 @@
                             <p><strong>Current Status:</strong></p>
                             <span [ngClass]="getStatusBadgeClass(getCurrentStatusToken())" class="d-block mt-1">
                                 {{ getCurrentStatusText() }}
-                            </span>
+                             </span>
+                             <div class="mt-2" *ngIf="isNewLicense() && hasAnyUnresolvedObjections()">
+                                 <span class="badge bg-danger">Objection</span>
+                                 <span class="badge bg-light text-dark ms-2">{{ unresolvedObjectionCount() }} pending</span>
+                             </div>
                             <p class="mt-2" *ngIf="!isSalesmanBarmanRegistration()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
                     </div>
@@ -623,7 +627,13 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light">Applicant Name</td>
-                                    <td>{{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}</td>
+                                    <td>
+                                        {{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('applicant_name')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Father/Husband Name</td>
@@ -1382,7 +1392,13 @@
                             <span>Click to View</span>
                         </div>
                     </div>
-                    <div class="doc-item__label">{{ doc.label }}</div>
+                    <div class="doc-item__label">
+                        {{ doc.label }}
+                        <ng-container [ngSwitch]="objectionStateForDocLabel(doc.label)">
+                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                        </ng-container>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,0 +1,112 @@
+.content {
+  width: min(760px, 92vw);
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 2px;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.field {
+  font-weight: 700;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.62);
+  text-align: right;
+}
+
+.remark {
+  color: rgba(0, 0, 0, 0.78);
+  background: rgba(255, 193, 7, 0.12);
+  padding: 10px 12px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+}
+
+.changes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.changes.one {
+  grid-template-columns: 1fr;
+}
+
+.change {
+  border-radius: 10px;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.02);
+  min-width: 0;
+}
+
+.change .label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.62);
+  margin-bottom: 6px;
+}
+
+.change .value {
+  color: rgba(0, 0, 0, 0.82);
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.change .value .text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.change .value .eye {
+  flex: 0 0 auto;
+  margin-top: -6px;
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(183, 28, 28, 0.08);
+  color: rgba(183, 28, 28, 0.95);
+}
+
+.empty {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.72);
+}
+

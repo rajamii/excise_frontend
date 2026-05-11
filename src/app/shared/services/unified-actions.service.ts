@@ -4,6 +4,8 @@ import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { MatDialog } from '@angular/material/dialog';
+import { ObjectionDialogComponent, ObjectionDialogResult } from '../components/objection-dialog/objection-dialog.component';
 
 // Import existing services
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
@@ -30,6 +32,7 @@ export class UnifiedActionsService {
   constructor(
     private router: Router,
     private http: HttpClient,
+    private dialog: MatDialog,
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService
@@ -959,12 +962,21 @@ export class UnifiedActionsService {
       return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
     }
 
-    const reason = prompt('Enter objection remarks (required):');
-    if (!reason || !reason.trim()) {
-      return of({ success: false, message: 'Objection remarks are required' });
-    }
-
-    return this.executeWorkflowObjection(item, reason.trim());
+    return this.dialog.open(ObjectionDialogComponent, {
+      width: 'min(1150px, 96vw)',
+      maxWidth: '96vw',
+      data: {
+        application: item,
+        title: 'Raise Objection'
+      }
+    }).afterClosed().pipe(
+      switchMap((result: ObjectionDialogResult | null | undefined) => {
+        if (!result?.objections?.length) {
+          return of({ success: false, message: 'Objection cancelled' });
+        }
+        return this.executeWorkflowObjection(item, result.objections, result.generalRemarks);
+      })
+    );
   }
 
   private executeWorkflowAdvance(
@@ -1010,10 +1022,27 @@ export class UnifiedActionsService {
     );
   }
 
-  private executeWorkflowObjection(item: any, remarks: string): Observable<ActionResult> {
+  private executeWorkflowObjection(
+    item: any,
+    objections: { field: string; remarks: string }[],
+    generalRemarks?: string
+  ): Observable<ActionResult> {
     const applicationId = this.getWorkflowApplicationId(item);
     if (!applicationId) {
       return of({ success: false, message: 'Application ID is missing for objection' });
+    }
+
+    const safeObjections = Array.isArray(objections)
+      ? objections
+          .map(o => ({
+            field: String((o as any)?.field || (o as any)?.field_name || '').trim(),
+            remarks: String((o as any)?.remarks || '').trim()
+          }))
+          .filter(o => !!o.field && !!o.remarks)
+      : [];
+
+    if (!safeObjections.length) {
+      return of({ success: false, message: 'Please select at least one field and enter remarks' });
     }
 
     return this.fetchWorkflowNextStages(applicationId).pipe(
@@ -1027,11 +1056,8 @@ export class UnifiedActionsService {
           `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/raise-objection/`,
           {
             target_stage_id: target.id,
-            objections: [{
-              field_name: 'general',
-              remarks
-            }],
-            remarks
+            objections: safeObjections,
+            remarks: (generalRemarks || '').trim() || 'Objections raised'
           }
         ).pipe(
           map(() => ({ success: true, message: 'Objection raised successfully' })),
@@ -1087,8 +1113,6 @@ export class UnifiedActionsService {
       const condition = getCondition(stage);
       return condition?.['is_reverted'] === true
         || condition?.['isReverted'] === true
-        || condition?.['has_objections'] === true
-        || condition?.['hasObjections'] === true
         || condition?.['objections_resolved'] === true
         || condition?.['objectionsResolved'] === true;
     };
@@ -1102,7 +1126,12 @@ export class UnifiedActionsService {
     const isObjectionLike = (stage: any) => {
       const action = String(stage?.action || '').toUpperCase().trim();
       const name = String(stage?.name || '').toLowerCase();
-      return action === 'RAISE_OBJECTION' || action === 'OBJECTION' || name.includes('objection');
+      const condition = getCondition(stage);
+      return condition?.['has_objections'] === true
+        || condition?.['hasObjections'] === true
+        || action === 'RAISE_OBJECTION'
+        || action === 'OBJECTION'
+        || name.includes('objection');
     };
 
     const byAction = (expected: string) =>
