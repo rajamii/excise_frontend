@@ -304,6 +304,40 @@ export class ObjectionDialogComponent implements OnInit {
     return candidates.sort((a, b) => a.label.localeCompare(b.label));
   }
 
+  /** Returns true only when the form has at least one valid entry to submit
+   *  AND no row is in an incomplete state (remark filled but checkbox unticked). */
+  get canSubmit(): boolean {
+    if (this.candidates.length === 0) {
+      // No field candidates — require general remarks
+      return String(this.form.get('generalRemarks')?.value || '').trim().length > 0;
+    }
+
+    let hasValidRow = false;
+
+    for (let idx = 0; idx < this.candidates.length; idx++) {
+      const row = this.rows.at(idx) as FormGroup;
+      const selected = !!row.get('selected')?.value;
+      const remarks = String(row.get('remarks')?.value || '').trim();
+
+      // Incomplete: remark entered but checkbox not ticked — block submission
+      if (!selected && remarks.length > 0) {
+        return false;
+      }
+
+      // Incomplete: checkbox ticked but no remark — block submission
+      if (selected && remarks.length === 0) {
+        return false;
+      }
+
+      if (selected && remarks.length > 0) {
+        hasValidRow = true;
+      }
+    }
+
+    // Must have at least one fully valid row
+    return hasValidRow;
+  }
+
   onCancel(): void {
     this.dialogRef.close(null);
   }
