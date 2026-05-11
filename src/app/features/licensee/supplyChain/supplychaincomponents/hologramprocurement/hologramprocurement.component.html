@@ -4,8 +4,8 @@
 <!-- Hologram Register Header -->
 <div class="hologram-register-header">
   <!-- Summary Cards -->
-  <div class="row g-3 mb-4 justify-content-center">
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+  <div class="row g-3 mb-4">
+    <div class="col">
       <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
         (click)="onSummaryCardClick('ALL')" [class.active]="!hologramStatusFilter">
         <div class="card-icon">
@@ -13,11 +13,11 @@
         </div>
         <div class="card-content">
           <h3 class="card-value">{{ summaryHologramData.length }}</h3>
-          <p class="card-label">Total Holograms</p>
+          <p class="card-label">Total Applications</p>
         </div>
       </div>
     </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="col">
       <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
         (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
         <div class="card-icon">
@@ -29,19 +29,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-      <div class="summary-card submitted-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('SUBMITTED')" [class.active]="activeSummaryFilter === 'SUBMITTED'">
-        <div class="card-icon">
-          <i class="bi bi-check-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getHologramStatusCount('SUBMITTED') }}</h3>
-          <p class="card-label">Submitted</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="col">
       <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
         (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
         <div class="card-icon">
@@ -53,19 +41,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-      <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
-        (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
-        <div class="card-icon">
-          <i class="bi bi-gear"></i>
-        </div>
-        <div class="card-content">
-          <h3 class="card-value">{{ getHologramStatusCount('UNDER_PROCESS') }}</h3>
-          <p class="card-label">Under Process</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+    <div class="col">
       <div class="summary-card edited-requests summary-card-clickable" role="button" tabindex="0"
         (click)="onSummaryCardClick('EDITED')" [class.active]="activeSummaryFilter === 'EDITED'">
         <div class="card-icon">
@@ -74,6 +50,18 @@
         <div class="card-content">
           <h3 class="card-value">{{ getHologramStatusCount('EDITED') }}</h3>
           <p class="card-label">Edited</p>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+        <div class="card-icon">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getHologramStatusCount('REJECTED') }}</h3>
+          <p class="card-label">Rejected</p>
         </div>
       </div>
     </div>
@@ -175,7 +163,7 @@
           track item.refNo + '_' + (item.procurementType || 'Unknown');
           let i = $index
           ) {
-          <tr class="register-row" [class.edited-row]="item.editedByCommissioner">
+          <tr class="register-row" [class.edited-row]="item.editedByCommissioner" [class.row-action-required]="isApprovedByCommissioner(item)">
             <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td class="ref-number">
               <div class="d-flex align-items-center gap-2">

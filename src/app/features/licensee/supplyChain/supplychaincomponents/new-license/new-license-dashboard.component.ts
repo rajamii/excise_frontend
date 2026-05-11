@@ -104,6 +104,23 @@ export class NewLicenseDashboardComponent implements OnInit {
     return this.roleService.isLicenseeRole();
   }
 
+  /** Returns true when the current user needs to take action on this row. */
+  needsLicenseeAction(row: NewLicenseItem): boolean {
+    if (this.isLicenseeUser()) {
+      // Licensee: flag awaiting payment (app fee or license fee) or objection
+      if (row.statusGroup === 'objection') return true;
+      if (row.canPayNow) return true;
+      const stage = String(row.currentStageRaw || '').toLowerCase();
+      return (stage.includes('payment') && stage.includes('await')) ||
+        stage === 'awaiting_payment' ||
+        stage === 'awaiting payment';
+    }
+
+    // Admin/officer: flag only pending rows (needs processing by officer).
+    // Objection rows are waiting for the licensee to respond — not the officer's action.
+    return row.statusGroup === 'pending';
+  }
+
   loadData(): void {
     this.isLoading = true;
     this.error = null;
@@ -132,11 +149,17 @@ export class NewLicenseDashboardComponent implements OnInit {
         };
         this.allRows = this.flattenGroupedData(grouped);
 
-        // Default to "Pending" filter for licensees only when there are pending items.
-        // If no pending items exist, show all applications (no filter).
-        if (this.isLicenseeUser() && this.activeSummaryFilter === '') {
+        // Default to "Pending" filter for all users (admin + licensee) when there are pending items.
+        // Objection has higher priority than pending.
+        // If no objection/pending items exist, show all applications (no filter).
+        if (this.activeSummaryFilter === '') {
+          const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
-          this.activeSummaryFilter = pendingCount > 0 ? 'pending' : '';
+          if (objectionCount > 0) {
+            this.activeSummaryFilter = 'objection';
+          } else if (pendingCount > 0) {
+            this.activeSummaryFilter = 'pending';
+          }
         }
 
         this.applyFilters();

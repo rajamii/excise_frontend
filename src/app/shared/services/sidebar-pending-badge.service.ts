@@ -9,6 +9,7 @@ import { HologramDataService } from '../../features/licensee/supplyChain/service
 import { environment } from '../../../environments/environment';
 
 type PendingCountsBySection = Record<string, number>;
+type BadgeAudience = 'licensee' | 'officer';
 
 @Injectable({ providedIn: 'root' })
 export class SidebarPendingBadgeService {
@@ -24,9 +25,14 @@ export class SidebarPendingBadgeService {
     private hologramService: HologramDataService
   ) {}
 
-  refresh(sections: string[], force = false): Observable<PendingCountsBySection> {
+  refresh(
+    sections: string[],
+    force = false,
+    options?: { audience?: BadgeAudience }
+  ): Observable<PendingCountsBySection> {
     const normalized = this.normalizeSections(sections);
-    const key = normalized.join('|');
+    const audience: BadgeAudience = options?.audience ?? 'officer';
+    const key = `${audience}:${normalized.join('|')}`;
 
     if (!force && key === this.lastKey && Date.now() - this.lastFetchMs < 15_000) {
       return of(this.lastCounts);
@@ -34,7 +40,7 @@ export class SidebarPendingBadgeService {
 
     const tasks: Record<string, Observable<number>> = {};
     for (const section of normalized) {
-      tasks[section] = this.fetchPendingCount(section).pipe(catchError(() => of(0)));
+      tasks[section] = this.fetchPendingCount(section, audience).pipe(catchError(() => of(0)));
     }
 
     return forkJoin(tasks).pipe(
@@ -55,35 +61,63 @@ export class SidebarPendingBadgeService {
     return Array.from(unique).sort();
   }
 
-  private fetchPendingCount(section: string): Observable<number> {
+  private fetchPendingCount(section: string, audience: BadgeAudience): Observable<number> {
     switch (section) {
       case 'new-license':
-        return this.fetchDashboardPending(`${this.apiBase}/new_license_application/dashboard-counts/`);
+        if (audience === 'licensee') {
+          return this.fetchLicenseeActionableFromListByStatus(`${this.apiBase}/new_license_application/list-by-status/`).pipe(
+            catchError(() => this.fetchDashboardCount(`${this.apiBase}/new_license_application/dashboard-counts/`, audience))
+          );
+        }
+        return this.fetchDashboardCount(`${this.apiBase}/new_license_application/dashboard-counts/`, audience);
 
       case 'salesman-barman-registration':
       case 'salesman-barman':
-        return this.fetchDashboardPending(`${this.apiBase}/salesman_barman/dashboard-counts/`);
+        if (audience === 'licensee') {
+          return this.fetchLicenseeActionableFromListByStatus(`${this.apiBase}/salesman_barman/list-by-status/`).pipe(
+            catchError(() => this.fetchDashboardCount(`${this.apiBase}/salesman_barman/dashboard-counts/`, audience))
+          );
+        }
+        return this.fetchDashboardCount(`${this.apiBase}/salesman_barman/dashboard-counts/`, audience);
 
       case 'company-registration':
-        return this.fetchDashboardPending(`${this.apiBase}/company-registration/dashboard-counts/`);
+        return this.fetchDashboardCount(`${this.apiBase}/company-registration/dashboard-counts/`, audience);
 
       case 'license-renewal':
       case 'license-renewal-application':
-        return this.fetchDashboardPending(`${this.apiBase}/license_application/dashboard-counts/`);
+        return this.fetchDashboardCount(`${this.apiBase}/license_application/dashboard-counts/`, audience);
 
       case 'requisition':
+        if (audience === 'licensee') {
+          return this.enaRequisitionService.getRequisitions().pipe(
+            map((response) => this.toArray(response)),
+            map((items) => this.countRequisitionAwaitingPayment(items))
+          );
+        }
         return this.enaRequisitionService.getRequisitions().pipe(
           map((response) => this.toArray(response)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
         );
 
       case 'revalidation':
+        if (audience === 'licensee') {
+          return this.supplyChainService.getRevalidationData().pipe(
+            map((items) => this.toArray(items)),
+            map((items) => this.countLicenseePendingItems(items))
+          );
+        }
         return this.supplyChainService.getRevalidationData().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
         );
 
       case 'cancellation':
+        if (audience === 'licensee') {
+          return this.supplyChainService.getCancellationData().pipe(
+            map((items) => this.toArray(items)),
+            map((items) => this.countLicenseePendingItems(items))
+          );
+        }
         return this.supplyChainService.getCancellationData().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP']))
@@ -97,9 +131,27 @@ export class SidebarPendingBadgeService {
 
       // Hologram procurement workflow (used by IT cell / commissioner depending on role config)
       case 'hologram':
+        if (audience === 'licensee') {
+          return this.hologramService.getProcurements().pipe(
+            map((items) => this.toArray(items)),
+            map((items) => this.countHologramAwaitingPayment(items))
+          );
+        }
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countActionable(items, ['VERIFY', 'FORWARD', 'APPROVE', 'REJECT']))
+        );
+
+      case 'hologram-request':
+        return this.hologramService.getRequests().pipe(
+          map((items) => this.toArray(items)),
+          map((items) => audience === 'licensee'
+            ? this.countLicenseePendingItems(items)
+            : items.filter((x) => {
+                const category = this.mapHologramRequestToCategory(x);
+                return category === 'PENDING' && !this.isUsageDatePast(x);
+              }).length
+          )
         );
 
       // OIC hologram procurement register view (carton assignment / arrival confirmations).
@@ -145,9 +197,51 @@ export class SidebarPendingBadgeService {
     }
   }
 
-  private fetchDashboardPending(url: string): Observable<number> {
+  private fetchLicenseeActionableFromListByStatus(url: string): Observable<number> {
     return this.http.get<any>(url).pipe(
-      map((counts) => Number(counts?.pending || 0)),
+      map((payload) => {
+        const objection = this.toArray(payload?.objection).length;
+        const pending = this.toArray(payload?.pending);
+        const awaitingPayment = pending.filter((x) => this.isAwaitingPaymentStage(x)).length;
+        return objection + awaitingPayment;
+      }),
+      catchError(() => of(0))
+    );
+  }
+
+  private isAwaitingPaymentStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+        item?.currentStageName ??
+        item?.current_stage ??
+        item?.currentStage ??
+        item?.status ??
+        ''
+    ).toLowerCase();
+    const normalized = stage.replace(/[^a-z0-9]/g, '');
+    return normalized === 'awaitingpayment' || (normalized.includes('awaiting') && normalized.includes('payment'));
+  }
+
+  private fetchDashboardCount(url: string, audience: BadgeAudience): Observable<number> {
+    return this.http.get<any>(url).pipe(
+      map((counts) => {
+        const pending = Number(counts?.pending || 0);
+        if (audience !== 'licensee') return pending;
+
+        const objection = Number(counts?.objection || 0);
+        const awaitingPayment = Number(
+          counts?.awaitingPayment ??
+            counts?.awaiting_payment ??
+            counts?.paymentPending ??
+            counts?.payment_pending ??
+            0
+        );
+
+        // Licensee badge should reflect only actionable items:
+        // - awaiting payment
+        // - objections to be resolved
+        return awaitingPayment + objection;
+      }),
       catchError(() => of(0))
     );
   }
@@ -198,6 +292,88 @@ export class SidebarPendingBadgeService {
 
   private normalizeStageToken(value: any): string {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  /** Count items that are in a non-final, non-draft state for a licensee's own view.
+   *  Shows items that are submitted/pending/under-process (i.e. awaiting officer action). */
+  private countLicenseePendingItems(items: any[]): number {
+    return (items || []).filter((item) => {
+      const raw = String(
+        item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Count anything that is in-flight: pending, submitted, forwarded, underprocess, inreview
+      // Exclude final states: approved, rejected, cancelled, draft
+      if (!raw) return false;
+      if (raw.includes('approved') || raw.includes('rejected') ||
+          raw.includes('cancelled') || raw.includes('draft')) return false;
+      return raw.includes('pending') || raw.includes('submit') ||
+             raw.includes('forward') || raw.includes('underprocess') ||
+             raw.includes('inreview') || raw.includes('review') ||
+             raw.includes('process') || raw.includes('verify');
+    }).length;
+  }
+
+  /**
+   * Count requisition items that require payment from the licensee.
+   * Only stage 29 "Approved Commissioner" triggers the badge — the licensee
+   * must make payment at this stage before the permit is issued.
+   * Once payment is made the item moves to a post-payment stage (forwarded payslip,
+   * approved payslip, etc.) and the badge must be cleared.
+   */
+  private countRequisitionAwaitingPayment(items: any[]): number {
+    return (items || []).filter((item) => {
+      const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const stageName = String(
+        item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const combined = `${status} ${stageName}`;
+
+      // Exclude anything that has already moved past payment
+      const postPaymentMarkers = ['forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted', 'paymentdone', 'permitsection'];
+      if (postPaymentMarkers.some(m => combined.includes(m))) return false;
+
+      // Exclude if a payment reference already exists
+      const hasPaymentRef = Boolean(
+        item?.payment_id || item?.paymentId ||
+        item?.payment_date || item?.paymentDate ||
+        item?.transaction_id || item?.transactionId
+      );
+      if (hasPaymentRef) return false;
+
+      // Match by stage ID (most reliable)
+      const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
+      if (stageId === 29) return true;
+
+      // Fallback: match by status/stage name containing "approved commissioner"
+      return combined.includes('approvedcommissioner');
+    }).length;
+  }
+
+  /**
+   * Count hologram procurement items that require payment from the licensee.
+   * Only stage 78 "Approved by Commissioner" triggers the badge.
+   * Clears once payment is made (Payment Completed / Cartoon Assigned).
+   */
+  private countHologramAwaitingPayment(items: any[]): number {
+    return (items || []).filter((item) => {
+      const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const stageName = String(
+        item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const combined = `${status} ${stageName}`;
+
+      // Exclude post-payment stages
+      if (combined.includes('paymentcompleted') || combined.includes('cartoonassigned') || combined.includes('cartonassigned')) {
+        return false;
+      }
+
+      // Match by stage ID (most reliable)
+      const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
+      if (stageId === 78) return true;
+
+      // Fallback: match by status/stage name
+      return combined.includes('approvedbycommissioner') || combined.includes('commissionerapproved');
+    }).length;
   }
 
   private countOicHologramProcurementPending(items: any[]): number {

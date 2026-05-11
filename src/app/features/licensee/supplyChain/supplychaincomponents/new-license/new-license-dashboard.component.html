@@ -116,7 +116,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of pagedRows; let i = index">
+          <tr *ngFor="let row of pagedRows; let i = index"
+              [class.row-needs-action]="needsLicenseeAction(row)">
             <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
             <td class="fw-semibold">{{ row.applicationId }}</td>
             <td>{{ row.submittedOn }}</td>
@@ -156,7 +157,7 @@
                 </button>
               <button
                 *ngIf="isLicenseeUser() && row.statusGroup === 'objection'"
-                class="btn btn-sm btn-outline-warning me-2"
+                class="btn btn-sm btn-fix-objection me-2"
                 title="Resolve Objections"
                 (click)="resolveObjections(row)"
               >

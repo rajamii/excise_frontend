@@ -285,6 +285,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'FORWARD',
       'RAISE_OBJECTION',
       'REJECT',
+      'VIEW_REMARK',
       'REQUEST_CANCELLATION',
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
@@ -303,6 +304,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'FORWARD',
       'RAISE_OBJECTION',
       'REJECT',
+      'VIEW_REMARK',
       'REQUEST_CANCELLATION',
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
@@ -1333,7 +1335,7 @@ private getTransitRejectSummary(): {
   }
 
   private getFilteredConfigs(): ActionButtonConfig[] {
-    const include = this.normalizeActionList(this.includeActions);
+    let include = this.normalizeActionList(this.includeActions);
     const exclude = this.normalizeActionList(this.excludeActions);
 
     console.log('🔧 UNIFIED BUTTONS: getFilteredConfigs ->', {
@@ -1345,6 +1347,29 @@ private getTransitRejectSummary(): {
     });
 
     let result = [...this.availableActionConfigs];
+
+    const stageNameForRemark = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    const isRejected = stageNameForRemark.includes('reject');
+    const canShowViewRemark = isRejected && ['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(String(this.itemType || ''));
+    if (canShowViewRemark && !result.some(config => this.normalizeActionName(config.action) === 'VIEW_REMARK')) {
+      result.push({
+        action: 'VIEW_REMARK',
+        label: 'View Remark',
+        icon: 'comment',
+        color: 'info',
+        tooltip: 'View rejection remarks'
+      });
+    }
+
+    if (canShowViewRemark && include.length && !include.includes('VIEW_REMARK')) {
+      include = [...include, 'VIEW_REMARK'];
+    }
 
     // If includeActions specifies VIEW but backend didn't return it, add a safe fallback.
     if (include.includes('VIEW') && !result.some(config => config.action === 'VIEW')) {
@@ -1458,8 +1483,10 @@ private getTransitRejectSummary(): {
 
     // Salesman/Barman: once application is routed to awaiting payment for licensee,
     // show Make Payment (registration fee from license fee wallet).
+    // Also remove any workflow-level PAY action to avoid duplicate payment buttons.
     if (this.isAwaitingSalesmanBarmanPaymentForLicensee()) {
       result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
       if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
         result.unshift({
           action: 'MAKE_PAYMENT',
@@ -1468,6 +1495,38 @@ private getTransitRejectSummary(): {
           color: 'primary',
           tooltip: 'Pay registration fee from license fee wallet'
         });
+      }
+    }
+
+    // Salesman/Barman awaiting payment: always remove the raw PAY workflow action
+    // when a MAKE_PAYMENT button is already present, to prevent duplicate payment buttons.
+    // Also: if stage is awaiting_payment for salesman-barman licensee context but
+    // isAwaitingSalesmanBarmanPaymentForLicensee() returned false (e.g. JWT check edge case),
+    // still inject MAKE_PAYMENT and remove PAY.
+    if (this.itemType === 'salesman-barman-registration' && this.context === 'licensee') {
+      const stageName = String(
+        this.item?.['current_stage_name'] ??
+        this.item?.['currentStageName'] ??
+        this.item?.['current_stage'] ??
+        this.item?.status ??
+        ''
+      ).toLowerCase();
+      const isAtPaymentStage = stageName.includes('awaiting_payment') ||
+        (stageName.includes('awaiting') && stageName.includes('payment'));
+
+      if (isAtPaymentStage) {
+        // Remove PAY — MAKE_PAYMENT is the correct button for licensees
+        result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
+        // Ensure MAKE_PAYMENT is present
+        if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+          result.unshift({
+            action: 'MAKE_PAYMENT',
+            label: 'Make Payment',
+            icon: 'payment',
+            color: 'primary',
+            tooltip: 'Pay registration fee from license fee wallet'
+          });
+        }
       }
     }
 
