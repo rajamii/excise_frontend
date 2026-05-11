@@ -3,7 +3,7 @@ export const environment = {
     apiBaseUrl: 'https://sems.sikkim.gov.in',
 
 
-    //apiBaseUrl: 'http://10.182.154.196:8000',
+    // apiBaseUrl: 'http://10.182.154.196:8000',
 
 
     // apiBaseUrl: 'http://127.0.0.1:8000',
@@ -12,7 +12,7 @@ export const environment = {
 
     payment: {
         billdeskGatewayUrl: 'https://uat1.billdesk.com/pgidsk/PGIMerchantPayment',
-        callbackUrl: 'http://localhost:4200/dashboard/wallet-recharge/success',
-        cancelUrl: 'http://localhost:4200/payment/cancel',
+        callbackUrl: 'https://sems.sikkim.gov.in/dashboard/wallet-recharge/success',
+        cancelUrl: 'https://sems.sikkim.gov.in/payment/cancel',
     },
 };
