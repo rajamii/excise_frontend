@@ -1,0 +1,22 @@
+<div class="header" mat-dialog-title>
+  <div class="title">Document Preview</div>
+  <div class="actions">
+    <button mat-stroked-button type="button" (click)="openInNewTab()">
+      <mat-icon>open_in_new</mat-icon>
+      Open
+    </button>
+    <button mat-icon-button type="button" aria-label="Close" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+
+<mat-dialog-content class="content">
+  @if (isImage) {
+    <img class="image" [src]="url" alt="Preview" />
+  } @else {
+    <div class="fallback">
+      Preview is not available here. Use <b>Open</b> to view/download.
+    </div>
+  }
+</mat-dialog-content>

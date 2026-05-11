@@ -310,9 +310,6 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
             this.fetchObjections();
           }
 
-          this.buildDisplaySections();
-          this.fetchObjections();
-
           this.isLoading = false;
         },
         error: (err) => {
@@ -587,7 +584,34 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
               this.dialogRef.close(true);
             });
           },
-          error: () => Swal.fire('Error', 'Error updating application.', 'error')
+          error: (err) => {
+            const status = Number(err?.status || 0);
+            const raw = err?.error;
+            const message = String(err?.message || '');
+
+            if (status === 0 || message.toLowerCase().includes('failed to fetch')) {
+              // Usually CORS / network / DNS / server down / blocked request.
+              Swal.fire('Error', 'Network error while submitting corrections (Failed to fetch). Please check API connectivity / CORS and login session, then retry.', 'error');
+              return;
+            }
+
+            if (typeof raw === 'string' && raw.trim().startsWith('<')) {
+              // Backend returned an HTML error page (403/CSRF/login/proxy).
+              const hint = status === 403
+                ? 'Not authorized (403). Please login again, then retry.'
+                : 'Request blocked. Please login again, then retry.';
+              Swal.fire('Error', hint, 'error');
+              return;
+            }
+
+            const msg =
+              raw?.detail ||
+              raw?.message ||
+              (typeof raw === 'string' ? raw : '') ||
+              err?.message ||
+              'Failed to submit corrections.';
+            Swal.fire('Error', String(msg), 'error');
+          }
         });
       }
     });

@@ -394,3 +394,43 @@
     white-space: nowrap;
   }
 }
+
+// ─── Action-required row highlight ───────────────────────────────────────────
+
+tr.row-needs-action {
+  background-color: #fffbeb !important;
+  border-left: 3px solid #f59e0b !important;
+
+  td {
+    background-color: #fffbeb !important;
+  }
+
+  &:hover td {
+    background-color: #fef3c7 !important;
+  }
+}
+
+// ─── Fix objection button — stands out against yellow row bg ─────────────────
+
+.btn-fix-objection {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35) !important;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important;
+
+  &:hover {
+    background: #b91c1c !important;
+    box-shadow: 0 4px 10px rgba(185, 28, 28, 0.45) !important;
+    transform: translateY(-1px) !important;
+    color: #ffffff !important;
+  }
+
+  &:active {
+    transform: translateY(0) !important;
+  }
+}

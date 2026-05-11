@@ -18,6 +18,28 @@ export class ListComponent implements OnInit {
   // List of roles
   roles: Role[] = [];
 
+  // Pagination
+  pageSize = 10;
+  pageSizeOptions = [5, 10, 20, 50];
+  pageIndex = 0;
+
+  get pagedRoles(): Role[] {
+    const start = this.pageIndex * this.pageSize;
+    return this.roles.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.roles.length / this.pageSize));
+  }
+
+  pageEnd(): number {
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.roles.length);
+  }
+
+  onPageSizeChange(): void {
+    this.pageIndex = 0;
+  }
+
   // Table columns
   displayedColumns: string[] = [
     'name',
@@ -45,6 +67,7 @@ export class ListComponent implements OnInit {
     this.userService.getRoles().subscribe({
       next: (data) => {
         this.roles = [...data].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+        this.pageIndex = 0;
       },
       error: () => Swal.fire('Error', 'Failed to load roles.', 'error')
     });

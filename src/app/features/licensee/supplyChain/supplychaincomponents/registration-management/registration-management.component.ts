@@ -9,6 +9,8 @@ import { catchError, map } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
 import { RoleService } from '../../../../../core/services/role.service';
 import { ApplicationMovementComponent } from '../../../../licensee/licensee-dashboard/application-table/application-movement/application-movement.component';
+import { ObjectionDetailsDialogComponent } from '../new-license/objection-details-dialog/objection-details-dialog.component';
+import { SalesmanBarmanResolveObjectionsDialogComponent } from './salesman-barman-resolve-objections-dialog.component';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -52,6 +54,8 @@ export class RegistrationManagementComponent implements OnInit {
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+    hasObjectionHistory?: boolean;
+    hasObjectionUpdate?: boolean;
   }> = [];
   filteredRows = [...this.allRows];
   stageFilterOptions: string[] = [];
@@ -77,17 +81,36 @@ export class RegistrationManagementComponent implements OnInit {
     });
   }
 
-  isAdminUser(): boolean {
-    return this.roleService.isAdminRole();
+  /** Returns true when the current user needs to take action on this row. */
+  needsLicenseeAction(row: { statusGroup: string; currentStageRaw: string }): boolean {
+    const group = String(row.statusGroup || '').toLowerCase();
+    const stage = String(row.currentStageRaw || '').toLowerCase();
+
+    if (this.isLicenseeUser()) {
+      // Licensee: only flag awaiting payment or objection
+      return group === 'objection' ||
+        (stage.includes('payment') && stage.includes('await')) ||
+        stage === 'awaiting_payment' ||
+        stage === 'awaiting payment';
+    }
+
+    // Admin/officer: flag only pending rows (needs processing by officer).
+    // Objection rows are waiting for the licensee to respond — not the officer's action.
+    return group === 'pending';
   }
 
   isLicenseeUser(): boolean {
     return this.roleService.isLicenseeRole();
   }
 
+  isAdminUser(): boolean {
+    return this.roleService.isAdminRole();
+  }
+
   private simplifyStageForLicensee(stageValue: string, statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'): string {
     if (statusGroup === 'approved') return 'Approved';
     if (statusGroup === 'rejected') return 'Rejected';
+    if (statusGroup === 'objection') return 'Objection';
 
     const raw = String(stageValue || '').toLowerCase();
     if (raw.includes('approve')) return 'Approved';
@@ -265,6 +288,41 @@ export class RegistrationManagementComponent implements OnInit {
       error: (err: any) => {
         const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
         void Swal.fire('Error', String(msg), 'error');
+      }
+    });
+  }
+
+  viewObjectionDetails(row: { id: string; applicationId: string; statusGroup?: string; hasObjectionHistory?: boolean }): void {
+    if (!this.isAdminUser()) return;
+    if (this.currentSection !== 'salesman-barman-registration') return;
+    const hasHistory = Boolean((row as any)?.hasObjectionHistory) || String((row as any)?.statusGroup || '').toLowerCase() === 'objection';
+    if (!hasHistory) return;
+
+    const applicationId = String(row.applicationId || row.id || '').trim();
+    if (!applicationId) return;
+
+    this.dialog.open(ObjectionDetailsDialogComponent, {
+      width: 'min(980px, 96vw)',
+      maxWidth: '96vw',
+      data: { applicationId }
+    });
+  }
+
+  fixObjections(row: { id: string; applicationId: string; statusGroup?: string }): void {
+    if (!this.isLicenseeUser()) return;
+    if (this.currentSection !== 'salesman-barman-registration') return;
+    if (String((row as any)?.statusGroup || '').toLowerCase() !== 'objection') return;
+
+    const applicationId = String(row.applicationId || row.id || '').trim();
+    if (!applicationId) return;
+
+    this.dialog.open(SalesmanBarmanResolveObjectionsDialogComponent, {
+      width: 'min(1020px, 96vw)',
+      maxWidth: '96vw',
+      data: { applicationId }
+    }).afterClosed().subscribe((ok) => {
+      if (ok) {
+        this.loadSalesmanBarmanData();
       }
     });
   }
@@ -528,10 +586,10 @@ export class RegistrationManagementComponent implements OnInit {
     forkJoin({
       counts: this.http
         .get<any>(`${this.salesmanApiBase}/dashboard-counts/`)
-        .pipe(catchError(() => of({ approved: 0, pending: 0, rejected: 0 }))),
+        .pipe(catchError(() => of({ approved: 0, pending: 0, rejected: 0, objection: 0 }))),
       grouped: this.http
         .get<any>(`${this.salesmanApiBase}/list-by-status/`)
-        .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [] })))
+        .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [], objection: [] })))
     }).subscribe({
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenSalesmanGroupedData(grouped);
@@ -545,11 +603,16 @@ export class RegistrationManagementComponent implements OnInit {
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.companyOptions = this.getCompanyOptions(this.allRows);
 
-        // Default to "Pending" filter for licensees only when there are pending items.
-        // If no pending items exist, show all applications (no filter).
-        if (this.isLicenseeUser() && this.activeCardFilter === '') {
+        // Default to "Pending" filter for admin users viewing salesman-barman,
+        // and for licensees. Objection has higher priority than pending.
+        // If no objection/pending items exist, show all applications (no filter).
+        if (this.activeCardFilter === '') {
+          const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
-          if (pendingCount > 0) {
+          if (objectionCount > 0) {
+            this.activeCardFilter = 'objection';
+            this.statusFilter = 'objection';
+          } else if (pendingCount > 0) {
             this.activeCardFilter = 'pending';
             this.statusFilter = 'pending';
           }
@@ -576,6 +639,8 @@ export class RegistrationManagementComponent implements OnInit {
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+    hasObjectionHistory?: boolean;
+    hasObjectionUpdate?: boolean;
   }> {
     const mapGroup = (
       items: any[] | undefined,
@@ -597,6 +662,15 @@ export class RegistrationManagementComponent implements OnInit {
         const computedStage = this.isLicenseeUser()
           ? this.simplifyStageForLicensee(rawStage, statusGroup)
           : this.formatStageName(rawStage);
+
+        const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
+        const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
+        const hasHistoryFromTxn = transactions.some((t: any) => /objection/i.test(txnText(t)));
+        const hasUpdateFromTxn = transactions.some((t: any) => /resolve|correct|update/i.test(txnText(t)) && /objection/i.test(txnText(t)));
+        const hasObjectionHistory = statusGroup === 'objection' ||
+          Boolean(item?.has_objection_history ?? item?.hasObjectionHistory ?? item?.has_objection ?? item?.hasObjection ?? item?.has_objections ?? item?.hasObjections) ||
+          hasHistoryFromTxn;
+        const hasObjectionUpdate = Boolean(item?.has_objection_update ?? item?.hasObjectionUpdate) || hasUpdateFromTxn;
 
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
@@ -623,7 +697,9 @@ export class RegistrationManagementComponent implements OnInit {
           companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),
           currentStage: computedStage,
           currentStageRaw: rawStage,
-          statusGroup
+          statusGroup,
+          hasObjectionHistory,
+          hasObjectionUpdate
         };
       });
     };

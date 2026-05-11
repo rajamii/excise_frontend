@@ -9,7 +9,7 @@
 
     <mat-card-content>
       <div class="table-container">
-        <mat-table [dataSource]="roles">
+        <mat-table [dataSource]="pagedRoles">
 
           <!-- Role ID -->
           <ng-container matColumnDef="name">
@@ -94,6 +94,26 @@
           <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
           <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
         </mat-table>
+
+        <!-- Pagination bar -->
+        <div class="pagination-bar" *ngIf="roles.length > 0">
+          <div class="pagination-info">
+            Showing {{ pageIndex * pageSize + 1 }}–{{ pageEnd() }} of {{ roles.length }}
+          </div>
+          <div class="pagination-controls">
+            <span class="page-size-label">Rows per page:</span>
+            <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+              <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+            </select>
+            <button class="page-btn" (click)="pageIndex = pageIndex - 1" [disabled]="pageIndex === 0">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <span class="page-indicator">{{ pageIndex + 1 }} / {{ totalPages }}</span>
+            <button class="page-btn" (click)="pageIndex = pageIndex + 1" [disabled]="pageIndex >= totalPages - 1">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>

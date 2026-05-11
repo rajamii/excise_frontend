@@ -141,6 +141,8 @@ export interface Objection {
   application?: string;
   fieldName: string;
   remarks: string;
+  beforeContent?: string | null;
+  afterContent?: string | null;
   raisedBy?: string;
   raisedByName?: string;
   raisedAt?: string;

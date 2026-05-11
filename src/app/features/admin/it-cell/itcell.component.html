@@ -9,65 +9,55 @@
 
 
       <!-- Summary Cards -->
-      <div class="row g-3 mb-4 justify-content-center">
-        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-          <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
-            (click)="onSummaryCardClick('All')" [class.active]="!activeSummaryFilter">
-            <div class="card-icon">
-              <i class="bi bi-list-ul"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ summaryHologramData.length }}</h3>
-              <p class="card-label">Total Applications</p>
-            </div>
+      <div class="hologram-summary-grid mb-4">
+        <div class="summary-card total-requests summary-card-clickable" role="button" tabindex="0"
+          (click)="onSummaryCardClick('All')" [class.active]="!activeSummaryFilter">
+          <div class="card-icon">
+            <i class="bi bi-list-ul"></i>
+          </div>
+          <div class="card-content">
+            <h3 class="card-value">{{ summaryHologramData.length }}</h3>
+            <p class="card-label">Total Applications</p>
           </div>
         </div>
-        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-          <div class="summary-card under-review-requests summary-card-clickable" role="button" tabindex="0"
-            (click)="onSummaryCardClick('Under IT Cell Review')" [class.active]="activeSummaryFilter === 'Under IT Cell Review'">
-            <div class="card-icon">
-              <i class="bi bi-clock-history"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getStatusCount('Under IT Cell Review') }}</h3>
-              <p class="card-label">Under Review</p>
-            </div>
+        <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+          (click)="onSummaryCardClick('Pending')" [class.active]="activeSummaryFilter === 'Pending'">
+          <div class="card-icon">
+            <i class="bi bi-clock"></i>
+          </div>
+          <div class="card-content">
+            <h3 class="card-value">{{ getStatusCount('Pending') }}</h3>
+            <p class="card-label">Pending</p>
           </div>
         </div>
-        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-          <div class="summary-card forwarded-requests summary-card-clickable" role="button" tabindex="0"
-            (click)="onSummaryCardClick('Forwarded to Commissioner')" [class.active]="activeSummaryFilter === 'Forwarded to Commissioner'">
-            <div class="card-icon">
-              <i class="bi bi-arrow-right-circle"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getStatusCount('Forwarded to Commissioner') }}</h3>
-              <p class="card-label">Forwarded</p>
-            </div>
+        <div class="summary-card forwarded-requests summary-card-clickable" role="button" tabindex="0"
+          (click)="onSummaryCardClick('Forwarded to Commissioner')" [class.active]="activeSummaryFilter === 'Forwarded to Commissioner'">
+          <div class="card-icon">
+            <i class="bi bi-arrow-right-circle"></i>
+          </div>
+          <div class="card-content">
+            <h3 class="card-value">{{ getStatusCount('Forwarded to Commissioner') }}</h3>
+            <p class="card-label">Forwarded</p>
           </div>
         </div>
-        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-          <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
-            (click)="onSummaryCardClick('Approved')" [class.active]="activeSummaryFilter === 'Approved'">
-            <div class="card-icon">
-              <i class="bi bi-check-circle"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getStatusCount('Approved') }}</h3>
-              <p class="card-label">Approved</p>
-            </div>
+        <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+          (click)="onSummaryCardClick('Approved')" [class.active]="activeSummaryFilter === 'Approved'">
+          <div class="card-icon">
+            <i class="bi bi-check-circle"></i>
+          </div>
+          <div class="card-content">
+            <h3 class="card-value">{{ getStatusCount('Approved') }}</h3>
+            <p class="card-label">Approved</p>
           </div>
         </div>
-        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-          <div class="summary-card edited-requests summary-card-clickable" role="button" tabindex="0"
-            (click)="onSummaryCardClick('Edited')" [class.active]="activeSummaryFilter === 'Edited'">
-            <div class="card-icon">
-              <i class="bi bi-pencil-square"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getStatusCount('Edited') }}</h3>
-              <p class="card-label">Edited</p>
-            </div>
+        <div class="summary-card edited-requests summary-card-clickable" role="button" tabindex="0"
+          (click)="onSummaryCardClick('Edited')" [class.active]="activeSummaryFilter === 'Edited'">
+          <div class="card-icon">
+            <i class="bi bi-pencil-square"></i>
+          </div>
+          <div class="card-content">
+            <h3 class="card-value">{{ getStatusCount('Edited') }}</h3>
+            <p class="card-label">Edited</p>
           </div>
         </div>
       </div>

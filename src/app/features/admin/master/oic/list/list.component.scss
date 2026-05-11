@@ -138,3 +138,75 @@ mat-card.oic-card mat-card-header.oic-card-header {
     min-width: 860px;
   }
 }
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 4px;
+  border-top: 1px solid #d9e2f5;
+  margin-top: 4px;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: #45557f;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-size-label {
+  font-size: 13px;
+  color: #45557f;
+}
+
+.page-size-select {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: #f4f7ff;
+    border-color: #28358a;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+  }
+}
+
+.page-indicator {
+  font-size: 13px;
+  color: #223561;
+  min-width: 50px;
+  text-align: center;
+}

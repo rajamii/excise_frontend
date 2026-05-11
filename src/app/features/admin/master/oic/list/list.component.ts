@@ -28,6 +28,28 @@ export class ListComponent implements OnInit {
   officers: OICOfficerRecord[] = [];
   isLoading = false;
 
+  // Pagination
+  pageSize = 10;
+  pageSizeOptions = [5, 10, 20, 50];
+  pageIndex = 0;
+
+  get pagedOfficers(): OICOfficerRecord[] {
+    const start = this.pageIndex * this.pageSize;
+    return this.officers.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.officers.length / this.pageSize));
+  }
+
+  pageEnd(): number {
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.officers.length);
+  }
+
+  onPageSizeChange(): void {
+    this.pageIndex = 0;
+  }
+
   constructor(
     private adminService: AdminService,
     private dialog: MatDialog
@@ -42,6 +64,7 @@ export class ListComponent implements OnInit {
     this.adminService.getOICOfficers().subscribe({
       next: (rows) => {
         this.officers = Array.isArray(rows) ? rows : [];
+        this.pageIndex = 0;
         this.isLoading = false;
       },
       error: (error) => {

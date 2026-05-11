@@ -331,16 +331,29 @@
       }
     }
 
-    &.edited-requests {
-      --summary-accent-start: #ef5350;
-      --summary-accent-end: #e53935;
+    &.rejected-requests {
+      --summary-accent-start: #ef4444;
+      --summary-accent-end: #dc2626;
 
       .card-icon {
-        background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       }
 
       .card-value {
-        color: #ef5350;
+        color: #dc2626;
+      }
+    }
+
+    &.edited-requests {
+      --summary-accent-start: #7c3aed;
+      --summary-accent-end: #6d28d9;
+
+      .card-icon {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      }
+
+      .card-value {
+        color: #7c3aed;
       }
     }
   }
@@ -889,5 +902,23 @@
   }
   50% {
     opacity: 0.8;
+  }
+}
+
+// Yellow row highlight for licensee when payment is required (stage 78 — Approved by Commissioner)
+.row-action-required {
+  background-color: #fffbeb !important;
+
+  &:hover {
+    background-color: #fef3c7 !important;
+  }
+
+  td {
+    border-top: 1px solid #fcd34d !important;
+    border-bottom: 1px solid #fcd34d !important;
+
+    &:first-child {
+      border-left: 3px solid #f59e0b !important;
+    }
   }
 }

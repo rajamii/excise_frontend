@@ -188,7 +188,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of pagedRows; let i = index">
+            <tr *ngFor="let row of pagedRows; let i = index"
+                [class.row-needs-action]="needsLicenseeAction(row)">
               <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
               <td class="fw-semibold">{{ row.applicationId }}</td>
               <td>{{ row.submittedOn }}</td>
@@ -208,22 +209,38 @@
                   {{ row.currentStage }}
                 </span>
               </td>
-              <td>
-                <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
-                  <i class="bi bi-eye-fill"></i>
-                </button>
-                <button
-                  *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
-                  class="btn btn-link p-0 action-timeline ms-2"
-                  title="View Timeline"
-                  (click)="viewTimeline(row)"
-                >
-                  <i class="bi bi-clock-history"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+               <td>
+                 <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
+                   <i class="bi bi-eye-fill"></i>
+                 </button>
+                 <button
+                   *ngIf="isLicenseeUser() && currentSection === 'salesman-barman-registration' && row.statusGroup === 'objection'"
+                   class="btn btn-sm btn-fix-objection ms-2"
+                   title="Resolve Objections"
+                   (click)="fixObjections(row)"
+                 >
+                   <i class="bi bi-tools me-1"></i>Fix
+                 </button>
+                  <button
+                    *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration' && row.hasObjectionHistory"
+                    class="btn btn-link p-0 action-eye ms-2"
+                    title="View Objection Details"
+                    (click)="viewObjectionDetails(row)"
+                  >
+                    <i class="bi bi-info-circle-fill"></i>
+                  </button>
+                 <button
+                   *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
+                   class="btn btn-link p-0 action-timeline ms-2"
+                   title="View Timeline"
+                   (click)="viewTimeline(row)"
+                 >
+                   <i class="bi bi-clock-history"></i>
+                 </button>
+               </td>
+             </tr>
+           </tbody>
+         </table>
 
         <div class="pagination-bar" *ngIf="filteredRows.length > 0">
           <div class="page-summary">

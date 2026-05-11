@@ -259,6 +259,16 @@
     > .wallet-nav-item {
       order: 3;
     }
+
+    // Bulk Spirit toggle button — sits right after Wallet (order 3.5 → 4)
+    > .bulk-spirit-nav-item {
+      order: 4;
+    }
+
+    // Sub-items inside the Bulk Spirit group
+    > ng-container {
+      order: 4;
+    }
   }
 
   .nav-item {
@@ -273,6 +283,138 @@
     background: transparent !important;
     width: 100% !important;
     text-align: left !important;
+
+  // Sub-items (inside a group) get left indent + visual hierarchy
+  &.nav-item--sub {
+    padding-left: 44px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    font-size: 13px !important;
+    color: #4b5563 !important;
+    background: #f8fafc !important;
+    border-left: 3px solid #e2e8f0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    position: relative !important;
+
+    // Small dot indicator before the text
+    &::before {
+      content: '' !important;
+      position: absolute !important;
+      left: 26px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 6px !important;
+      height: 6px !important;
+      border-radius: 50% !important;
+      background: #10b981 !important;
+      transition: background 0.2s, transform 0.2s !important;
+    }
+
+    // Selected sub-item: teal/green accent — clearly different from the parent blue
+    &.active {
+      background: #d1fae5 !important;
+      color: #065f46 !important;
+      border-left: 3px solid #10b981 !important;
+      font-weight: 600 !important;
+
+      &::before {
+        background: #10b981 !important;
+      }
+    }
+
+    &:hover:not(.active) {
+      background: #f0fdf4 !important;
+      color: #065f46 !important;
+      border-left-color: #6ee7b7 !important;
+
+      &::before {
+        background: #6ee7b7 !important;
+      }
+    }
+  }
+
+  // Group header button — highlighted when expanded
+  &.bulk-spirit-nav-item.group-expanded {
+    background: #eff6ff !important;
+    color: #1e40af !important;
+    border-left: 4px solid #3b82f6 !important;
+    font-weight: 600 !important;
+
+    .nav-icon {
+      color: #1e40af !important;
+    }
+
+    .nav-chevron {
+      color: #3b82f6 !important;
+    }
+  }
+
+  // Chevron icon inside a nav-item (for collapsible groups)
+  .nav-chevron {
+    font-size: 18px !important;
+    height: 18px !important;
+    width: 18px !important;
+    color: #9ca3af;
+    margin-left: auto;
+    transition: transform 0.2s;
+  }
+
+  // ── Group header ────────────────────────────────────────────────────────────
+  .nav-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px 6px;
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7280;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    pointer-events: none;
+    user-select: none;
+
+    .nav-group-icon {
+      font-size: 14px;
+      height: 14px;
+      width: 14px;
+      color: #9ca3af;
+    }
+
+    .nav-group-label {
+      flex: 1;
+    }
+
+    .nav-group-chevron {
+      font-size: 16px;
+      height: 16px;
+      width: 16px;
+      color: #9ca3af;
+      transition: transform 0.2s;
+    }
+
+    &--clickable {
+      pointer-events: auto;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.15s;
+
+      &:hover {
+        background: #f3f4f6 !important;
+        color: #374151 !important;
+
+        .nav-group-icon,
+        .nav-group-chevron {
+          color: #374151;
+        }
+      }
+    }
+  }
     transition: all 0.2s ease !important;
     cursor: pointer !important;
     border-bottom: 1px solid #f3f4f6 !important;
@@ -314,6 +456,19 @@
       background: #f59e0b !important;
       color: #111827 !important;
       box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06) !important;
+
+      // Group header badge — slightly larger, sits between nav-text and chevron
+      &--group {
+        min-width: 24px !important;
+        height: 20px !important;
+        font-size: 11px !important;
+        background: #f59e0b !important;
+        color: #111827 !important;
+        box-shadow: 0 2px 6px rgba(245, 158, 11, 0.45) !important;
+        margin-left: auto !important;
+        margin-right: 6px !important;
+        flex-shrink: 0 !important;
+      }
     }
   }
 }

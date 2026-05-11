@@ -252,6 +252,29 @@
           </div>
         </mat-card>
 
+        <!-- Objection Stat Card -->
+        <mat-card class="stat-card objection" *ngIf="shouldShowStatCard('objection')">
+          <div class="card-header">
+            <div class="circle-icon orange-bg">
+              <mat-icon>error_outline</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('objection') > 0"
+              [class.negative]="getStatTrend('objection') < 0">
+              <mat-icon>{{ getStatTrend('objection') > 0 ? 'trending_up' : getStatTrend('objection') < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(getStatTrend('objection')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.objection || 0 }}</div>
+            <div class="label">Objection</div>
+            <div class="sub-info">{{ getStatSubInfo('objection') }}</div>
+          </div>
+          <div class="card-footer">
+            <button mat-button color="primary" (click)="showTable('objection')">View All →</button>
+          </div>
+        </mat-card>
+
         <!-- Approved Stat Card -->
         <mat-card class="stat-card approved" *ngIf="shouldShowStatCard('approved')">
           <div class="card-header">
@@ -430,6 +453,21 @@
         <mat-card-content>
           <app-application-table [dataSource]="pendingDataSource" [displayedColumns]="displayedColumns"
             [tableType]="'pending'" (view)="viewApplication($event)" (payment)="onPaymentConfirmed($event)">
+          </app-application-table>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Objection Table Card -->
+      <mat-card *ngIf="activeTable === 'objection'">
+        <mat-card-header>
+          <button mat-icon-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-card-title>Objection Applications</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-application-table [dataSource]="objectionDataSource" [displayedColumns]="displayedColumns"
+            [tableType]="'objection'" (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
