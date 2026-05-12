@@ -1697,8 +1697,8 @@
             </div>
         </div>
         <div class="site-enquiry-modal-footer" *ngIf="canRevertSiteEnquiryReport()">
-            <button type="button" class="btn btn-outline-warning" (click)="revertSiteEnquiryReportFromModal(); $event.stopPropagation()">
-                <i class="bi bi-arrow-counterclockwise me-1"></i>Revert Back
+            <button type="button" class="btn site-enquiry-revert-btn" (click)="revertSiteEnquiryReportFromModal(); $event.stopPropagation()">
+                <i class="bi bi-arrow-counterclockwise me-2"></i>Revert Back
             </button>
         </div>
     </div>

@@ -1310,6 +1310,44 @@
     gap: 12px;
 }
 
+.site-enquiry-revert-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #fff;
+    background: linear-gradient(135deg, #e65c00 0%, #f9a825 100%);
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(230, 92, 0, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+
+    i {
+        font-size: 1rem;
+    }
+
+    &:hover {
+        filter: brightness(1.08);
+        box-shadow: 0 5px 16px rgba(230, 92, 0, 0.45);
+        transform: translateY(-1px);
+        color: #fff;
+    }
+
+    &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(230, 92, 0, 0.3);
+        filter: brightness(0.96);
+    }
+
+    &:focus-visible {
+        outline: 3px solid rgba(249, 168, 37, 0.6);
+        outline-offset: 2px;
+    }
+}
+
 .site-enquiry-report-state {
     min-height: 180px;
     display: flex;
