@@ -318,6 +318,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.loadOptimisticPaymentsFromStorage();
     this.loadPendingPaymentContextFromStorage();
     this.initializeWalletContextAndLoadData();
+    // Wallet summary/recharge/history are loaded via `initializeWalletContextAndLoadData()`, but
+    // module-specific lists (hologram procurements, cancellation, etc.) must be fetched separately.
+    // Without this, the Hologram tab stays empty and "Pay Now" never appears.
+    this.refreshModuleTabData();
 
     // Get query parameters
     this.route.queryParams.subscribe(params => {
@@ -364,6 +368,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // Only default to hologram if no tab is specified or if tab is hologram
         if (!params['tab'] || params['tab'] === 'hologram') {
           this.setActiveTab('hologram');
+          // Deep-link intent is "pay this now" - do not hide rows by month filter.
+          this.tabFilters = { ...this.tabFilters, month: '' };
 
           // Optionally highlight or scroll to the specific hologram item
           setTimeout(() => {
@@ -396,6 +402,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // also retries once data is available.
         this.persistPendingHologramDeepLinkRef(this.pendingHologramAutoPayRefNo);
         this.tryBuildHologramPendingContextFromRefNo(this.pendingHologramAutoPayRefNo, this.pendingHologramAutoPayType);
+        // Ensure procurements are loaded/refreshed after we capture the deep-link intent,
+        // so the Hologram tab can immediately show the pending row + "Pay Now" CTA.
+        this.loadHologramDataFromApi();
 
         // If a pending context already exists (e.g., restored from storage) but is missing the reference,
         // update it immediately so the "Reference" column does not show '-'.
@@ -1153,9 +1162,17 @@ private initializeWalletContextAndLoadData(): void {
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
         console.log('Fetched Hologram Procurements for Payment:', data);
-        this.hologramData = (data || [])
-          .filter(item => this.isForActiveLicense(item))
-          .map(item => {
+        // IMPORTANT:
+        // - For licensee users, the backend already scopes procurements to the logged-in user.
+        // - Many deployments do NOT include `licensee_id` / `user_id` fields in procurement rows
+        //   (often they only have numeric `licensee` ids), so client-side filtering via
+        //   `isForActiveLicense()` can incorrectly hide all rows and the Hologram tab stays empty.
+        // Keep filtering only when an explicit `licenseeId` was requested via query param (admin-style view).
+        const explicitLicenseeId = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
+        const procurements = (data || []) as any[];
+        const filtered = explicitLicenseeId ? procurements.filter(item => this.isForActiveLicense(item)) : procurements;
+
+        this.hologramData = filtered.map(item => {
             const localQty = Number(
               (item as any).requested_local_qty ??
               (item as any).requestedLocalQty ??
@@ -1219,8 +1236,7 @@ private initializeWalletContextAndLoadData(): void {
               paymentDetails,
               paymentStatus: normalizedStatus
             } as HologramItem;
-          })
-          .filter(item => !!item.referenceNo);
+          }).filter(item => !!item.referenceNo);
 
         if (this.pendingHologramAutoPayRefNo) {
           this.tryBuildHologramPendingContextFromRefNo(
@@ -3581,14 +3597,21 @@ private initializeWalletContextAndLoadData(): void {
 
       // Date filters
       const rowDate = row.dateTime || row.date || '';
-      const dateStr = rowDate ? new Date(rowDate).toISOString().split('T')[0] : '';
+      let dateStr = '';
+      if (rowDate) {
+        const parsed = new Date(rowDate);
+        if (!Number.isNaN(parsed.getTime())) {
+          dateStr = parsed.toISOString().split('T')[0];
+        }
+      }
 
       // Month filter
-      const monthOk = f.month ? (dateStr && dateStr.substring(0, 7) === f.month) : true;
+      // If row date is not parseable, do not hide it (important for pending items).
+      const monthOk = f.month ? (!dateStr || dateStr.substring(0, 7) === f.month) : true;
 
       // Date range filter
-      const afterFrom = f.from ? dateStr >= f.from : true;
-      const beforeTo = f.to ? dateStr <= f.to : true;
+      const afterFrom = f.from ? (!dateStr || dateStr >= f.from) : true;
+      const beforeTo = f.to ? (!dateStr || dateStr <= f.to) : true;
 
       // Type filter
       const rowType = String(row.type || row.transactionType || '');
