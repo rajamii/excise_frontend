@@ -1503,7 +1503,9 @@ private getTransitRejectSummary(): {
     // Also: if stage is awaiting_payment for salesman-barman licensee context but
     // isAwaitingSalesmanBarmanPaymentForLicensee() returned false (e.g. JWT check edge case),
     // still inject MAKE_PAYMENT and remove PAY.
-    if (this.itemType === 'salesman-barman-registration' && this.context === 'licensee') {
+    // NOTE: isCurrentUserLicensee() is required here — the URL source param can be 'licensee'
+    // even when a commissioner opens the link, so we must verify the actual logged-in role.
+    if (this.itemType === 'salesman-barman-registration' && this.context === 'licensee' && this.isCurrentUserLicensee()) {
       const stageName = String(
         this.item?.['current_stage_name'] ??
         this.item?.['currentStageName'] ??
