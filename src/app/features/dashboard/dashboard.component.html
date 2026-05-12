@@ -167,80 +167,116 @@
 
         <!-- Officer Activity section -->
         <div *ngIf="selectedSupplyChainSection === 'officer-activity'" class="officer-activity-section">
-          <div class="section-header">
-            <h3>
-              <mat-icon>assignment</mat-icon>
-              {{ activitySectionTitle }}
-            </h3>
-            <div class="section-actions">
-              <button mat-stroked-button color="primary" type="button" (click)="loadUserActivities()">
-                Refresh
-              </button>
+
+          <!-- Header -->
+          <div class="act-header">
+            <div class="act-header__left">
+              <mat-icon class="act-header__icon-mat">verified_user</mat-icon>
+              <div>
+                <div class="act-header__title">{{ activitySectionTitle }}</div>
+                <div class="act-header__sub">Session and action history</div>
+              </div>
             </div>
+            <button class="act-refresh-btn" type="button" (click)="loadUserActivities()" [disabled]="userActivityLoading">
+              <mat-icon [class.act-spin]="userActivityLoading">refresh</mat-icon>
+              Refresh
+            </button>
           </div>
 
-          <div class="activity-filters" *ngIf="!isLicenseeUser()">
-            <mat-form-field appearance="outline" class="filter-field">
-              <mat-label>User ID (optional)</mat-label>
-              <input matInput [(ngModel)]="activityFilterUserId" placeholder="e.g. 12">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="filter-field">
-              <mat-label>Activity Type (optional)</mat-label>
-              <input matInput [(ngModel)]="activityFilterType" placeholder="e.g. USR_UPD, LOGIN">
-            </mat-form-field>
-
-            <button mat-flat-button color="primary" type="button" (click)="loadUserActivities()">Apply</button>
+          <!-- Admin filters -->
+          <div class="act-filters" *ngIf="!isLicenseeUser()">
+            <div class="act-filter-field">
+              <label>User ID</label>
+              <input type="text" [(ngModel)]="activityFilterUserId" placeholder="e.g. 12" />
+            </div>
+            <div class="act-filter-field">
+              <label>Activity Type</label>
+              <input type="text" [(ngModel)]="activityFilterType" placeholder="LOGIN, LOGOUT, USR_UPD…" />
+            </div>
+            <button class="act-apply-btn" type="button" (click)="loadUserActivities()">Apply</button>
           </div>
 
-          <div class="activity-status" *ngIf="userActivityLoading">
-            <mat-spinner diameter="28"></mat-spinner>
-            <span>Loading activity...</span>
+          <!-- Loading -->
+          <div class="act-loading" *ngIf="userActivityLoading">
+            <div class="act-loading__spinner"></div>
+            <span>Loading activity log…</span>
           </div>
 
-          <div class="activity-error" *ngIf="!userActivityLoading && userActivityError">
+          <!-- Error -->
+          <div class="act-error" *ngIf="!userActivityLoading && userActivityError">
+            <mat-icon>warning</mat-icon>
             {{ userActivityError }}
           </div>
 
-          <div class="activity-table-wrap" *ngIf="!userActivityLoading && !userActivityError">
-            <div class="activity-empty" *ngIf="!userActivities?.length">
-              No activity found.
-            </div>
-            <div class="table-responsive" *ngIf="userActivities?.length">
-              <table class="table table-hover table-striped">
-                <thead>
-                  <tr>
-                    <th>Date & Time</th>
-                    <th>Action</th>
-                    <th>User</th>
-                    <th>Target</th>
-                    <th>IP</th>
-                    <th>Device</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let row of userActivities">
-                    <td>{{ row?.timestamp | date:'dd/MM/yyyy, h:mm a' }}</td>
-                    <td>
-                      <span class="badge" [ngClass]="getActivityBadgeClass(row)">
-                        {{ getActivityActionLabel(row) }}
-                      </span>
-                    </td>
-                    <td>{{ row?.username || row?.email || '-' }}</td>
-                    <td>{{ row?.target_username || row?.target_email || '-' }}</td>
-                    <td>{{ row?.ip_address || '-' }}</td>
-                    <td class="truncate" [title]="row?.user_agent || ''">{{ getDeviceLabel(row?.user_agent) }}</td>
-                    <td>
-                      <div class="details-lines">
-                        <div class="details-line" *ngFor="let line of getActivityDetailLines(row)">{{ line }}</div>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <!-- Empty -->
+          <div class="act-empty" *ngIf="!userActivityLoading && !userActivityError && !userActivities?.length">
+            <mat-icon>inbox</mat-icon>
+            <span>No activity records found.</span>
           </div>
+
+          <!-- Table -->
+          <div class="act-table-wrap" *ngIf="!userActivityLoading && !userActivityError && userActivities?.length">
+            <table class="act-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date &amp; Time</th>
+                  <th>Action</th>
+                  <th>IP Address</th>
+                  <th>Browser / OS</th>
+                  <th>Session Duration</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of userActivities; let i = index"
+                    [class.act-row--login]="isLoginActivity(row)"
+                    [class.act-row--logout]="isLogoutActivity(row)"
+                    [class.act-row--warn]="isWarnActivity(row)"
+                    [class.act-row--info]="isInfoActivity(row)">
+
+                  <td class="act-td-num">{{ i + 1 }}</td>
+
+                  <td class="act-td-time" style="white-space:nowrap">
+                    {{ row?.timestamp | date:'dd MMM yyyy' }}<br>
+                    <span class="act-time-sub">{{ row?.timestamp | date:'h:mm a' }}</span>
+                  </td>
+
+                  <td class="act-td-badge">
+                    <span class="act-badge" [ngClass]="getActivityBadgeClass(row)">
+                      {{ getActivityActionLabel(row) }}
+                    </span>
+                  </td>
+
+                  <td class="act-td-ip">
+                    <span *ngIf="row?.ip_address && row?.ip_address !== 'null' && row?.ip_address !== null; else dash">
+                      {{ row?.ip_address }}
+                    </span>
+                  </td>
+
+                  <td class="act-td-ua">
+                    <span *ngIf="row?.user_agent; else dash" [title]="row?.user_agent">
+                      {{ getShortUserAgent(row?.user_agent) }}
+                    </span>
+                  </td>
+
+                  <td class="act-td-session">
+                    <span class="act-session-chip" *ngIf="getSessionDuration(row) as dur; else dash">
+                      <mat-icon>hourglass_empty</mat-icon>{{ dur }}
+                    </span>
+                  </td>
+
+                  <td class="act-td-detail">
+                    <span *ngIf="getActivitySummaryLine(row) as detail; else dash">{{ detail }}</span>
+                  </td>
+
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #dash><span class="act-dash">—</span></ng-template>
+
         </div>
 
         <!-- System Monitoring section -->

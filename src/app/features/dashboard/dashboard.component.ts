@@ -396,41 +396,77 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getActivityActionLabel(row: any): string {
+    // Check both the raw code and the display value (API may return either)
     const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim();
-    if (display) {
-      // Normalize common ones for consistency
-      if (code === 'LOGIN') return 'Login';
-      if (code === 'LOGOUT') return 'Logout';
-      return display;
-    }
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
 
-    const map: Record<string, string> = {
-      REG: 'Registration',
-      LOGIN: 'Login',
-      LOGOUT: 'Logout',
-      PASS_RESET: 'Password Reset',
-      USR_UPD: 'User Update',
-      USR_DEL: 'User Delete'
-    };
-    return map[code] || (code || 'Activity');
+    if (code === 'LOGIN'  || display === 'login')          return 'Login';
+    if (code === 'LOGOUT' || display === 'logout')         return 'Logout';
+    if (code === 'REG'    || display.includes('registr'))  return 'Registration';
+    if (code === 'PASS_RESET' || display.includes('password')) return 'Password Reset';
+    if (code === 'USR_UPD'   || display.includes('update'))    return 'User Update';
+    if (code === 'USR_DEL'   || display.includes('delet'))     return 'User Delete';
+
+    // Fallback: use display value if available, else code
+    return (row?.activity_type_display || code || 'Activity');
   }
 
   getActivityBadgeClass(row: any): string {
     const code = String(row?.activity_type || '').trim().toUpperCase();
-    if (code === 'LOGIN') return 'bg-success';
-    if (code === 'LOGOUT') return 'bg-secondary';
-    if (code === 'PASS_RESET') return 'bg-warning text-dark';
-    if (code === 'USR_DEL') return 'bg-danger';
-    if (code === 'USR_UPD') return 'bg-primary';
-    if (code === 'REG') return 'bg-info text-dark';
-    return 'bg-primary';
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+
+    if (code === 'LOGIN'  || display === 'login')          return 'act-badge--login';
+    if (code === 'LOGOUT' || display === 'logout')         return 'act-badge--logout';
+    if (code === 'PASS_RESET' || display.includes('password')) return 'act-badge--warn';
+    if (code === 'USR_DEL'   || display.includes('delet'))     return 'act-badge--danger';
+    if (code === 'USR_UPD'   || display.includes('update'))    return 'act-badge--update';
+    if (code === 'REG'    || display.includes('registr'))  return 'act-badge--reg';
+    return 'act-badge--default';
   }
 
-  getDeviceLabel(userAgent: any): string {
-    const ua = String(userAgent || '').trim();
-    if (!ua) return '-';
+  getActivityIcon(row: any): string {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
 
+    if (code === 'LOGIN'  || display === 'login')   return 'login';
+    if (code === 'LOGOUT' || display === 'logout')  return 'logout';
+    if (code === 'PASS_RESET' || display.includes('password')) return 'key';
+    if (code === 'USR_DEL'   || display.includes('delet'))     return 'person_remove';
+    if (code === 'USR_UPD'   || display.includes('update'))    return 'manage_accounts';
+    if (code === 'REG'    || display.includes('registr'))      return 'person_add';
+    return 'radio_button_checked';
+  }
+
+  isLoginActivity(row: any): boolean {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    return code === 'LOGIN' || display === 'login';
+  }
+
+  isLogoutActivity(row: any): boolean {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    return code === 'LOGOUT' || display === 'logout';
+  }
+
+  isWarnActivity(row: any): boolean {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    return code === 'PASS_RESET' || code === 'USR_DEL' ||
+           display.includes('password') || display.includes('delet');
+  }
+
+  isInfoActivity(row: any): boolean {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    return code === 'REG' || code === 'USR_UPD' ||
+           display.includes('registr') || display.includes('update');
+  }
+
+  /** Returns first ~70 chars of user agent — browser + OS only, no full UA string */
+  getShortUserAgent(userAgent: any): string {
+    const ua = String(userAgent || '').trim();
+    if (!ua) return '';
     const lower = ua.toLowerCase();
     const browser =
       lower.includes('edg/') ? 'Edge' :
@@ -438,81 +474,92 @@ export class DashboardComponent implements OnInit, OnDestroy {
       lower.includes('firefox/') ? 'Firefox' :
       lower.includes('safari/') && !lower.includes('chrome/') ? 'Safari' :
       'Browser';
-
     const os =
       lower.includes('windows') ? 'Windows' :
       lower.includes('android') ? 'Android' :
-      lower.includes('iphone') || lower.includes('ipad') || lower.includes('ios') ? 'iOS' :
+      lower.includes('iphone') || lower.includes('ipad') ? 'iOS' :
       lower.includes('mac os') || lower.includes('macintosh') ? 'macOS' :
-      lower.includes('linux') ? 'Linux' :
-      '';
-
-    return os ? `${browser} (${os})` : browser;
+      lower.includes('linux') ? 'Linux' : '';
+    return os ? `${browser} / ${os}` : browser;
   }
 
-  getActivityDetailLines(row: any): string[] {
-    const lines: string[] = [];
+  /**
+   * For LOGIN rows: find the next LOGOUT by the same user and compute duration.
+   * Returns a human-readable string like "2h 14m" or null if no matching logout found.
+   */
+  getSessionDuration(row: any): string | null {
     const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const isLogin = code === 'LOGIN' || display === 'login';
+    if (!isLogin) return null;
+
+    const userId = row?.user_id;
+    const loginTime = row?.timestamp ? new Date(row.timestamp).getTime() : null;
+    if (!loginTime || !userId) return null;
+
+    const idx = this.userActivities.indexOf(row);
+    if (idx < 0) return null;
+
+    for (let j = idx + 1; j < this.userActivities.length; j++) {
+      const candidate = this.userActivities[j];
+      const cCode = String(candidate?.activity_type || '').trim().toUpperCase();
+      const cDisplay = String(candidate?.activity_type_display || '').trim().toLowerCase();
+      const isLogout = cCode === 'LOGOUT' || cDisplay === 'logout';
+      if (!isLogout) continue;
+      if (candidate?.user_id !== userId) continue;
+      const logoutTime = candidate?.timestamp ? new Date(candidate.timestamp).getTime() : null;
+      if (!logoutTime || logoutTime > loginTime) continue;
+      const diffMs = loginTime - logoutTime;
+      if (diffMs <= 0) continue;
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return '< 1 min';
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    }
+    return null;
+  }
+
+  /** Single compact summary line for the detail area */
+  getActivitySummaryLine(row: any): string {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim().toLowerCase();
     const meta = (row?.metadata && typeof row.metadata === 'object') ? row.metadata : {};
 
-    const target =
-      String(row?.target_username || row?.target_email || meta?.target_username || meta?.targetUsername || '').trim();
+    const isLogin  = code === 'LOGIN'  || display === 'login';
+    const isLogout = code === 'LOGOUT' || display === 'logout';
+    const isReg    = code === 'REG'    || display.includes('registr');
 
-    if (code === 'LOGIN') {
-      lines.push('User logged in.');
-      return lines;
+    if (isLogin) {
+      const method = String(meta?.auth_method ?? meta?.authMethod ?? meta?.method ?? '').trim();
+      return method ? `Auth method: ${method}` : 'Session started';
     }
-    if (code === 'LOGOUT') {
-      lines.push('User logged out.');
-      return lines;
+    if (isLogout) {
+      const method = String(meta?.method ?? meta?.logout_method ?? meta?.logoutMethod ?? '').trim();
+      return method ? `Logout method: ${method}` : 'Session ended';
     }
-
-    if (code === 'USR_UPD') {
-      const updatedFields = meta?.updated_fields ?? meta?.updatedFields ?? meta?.fields;
-      if (Array.isArray(updatedFields) && updatedFields.length) {
-        lines.push(`Updated fields: ${updatedFields.map((v: any) => String(v)).join(', ')}`);
+    if (isReg) {
+      const src = String(meta?.initial_source ?? meta?.initialSource ?? '').trim();
+      const method = String(meta?.registration_method ?? meta?.registrationMethod ?? meta?.method ?? '').trim();
+      const parts = [method && `via ${method}`, src && `source: ${src}`].filter(Boolean);
+      return parts.length ? parts.join(', ') : 'Account registered';
+    }
+    if (code === 'PASS_RESET' || display.includes('password')) return 'Password reset completed';
+    if (code === 'USR_UPD' || display.includes('update')) {
+      const fields = meta?.updated_fields ?? meta?.updatedFields ?? meta?.fields;
+      if (Array.isArray(fields) && fields.length) {
+        return `Updated: ${fields.slice(0, 3).map((v: any) => String(v)).join(', ')}${fields.length > 3 ? '…' : ''}`;
       }
-      if (target) {
-        lines.push(`Target user: ${target}`);
-      }
-      return lines.length ? lines : ['User profile updated.'];
+      return 'Profile updated';
     }
+    if (code === 'USR_DEL' || display.includes('delet')) return 'Account deleted';
 
-    if (code === 'USR_DEL') {
-      if (target) {
-        lines.push(`Deleted user: ${target}`);
-      }
-      return lines.length ? lines : ['User deleted.'];
+    // Fallback: render all metadata key-value pairs compactly
+    const entries = Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined && v !== '');
+    if (entries.length) {
+      return entries.slice(0, 3).map(([k, v]) => `${this.humanizeKey(k)}: ${String(v).slice(0, 40)}`).join(' · ');
     }
-
-    if (code === 'REG') {
-      const method = String(meta?.registrationMethod ?? meta?.registration_method ?? meta?.method ?? '').trim();
-      if (method) {
-        lines.push(`Registration method: ${method}`);
-      }
-      return lines.length ? lines : ['User registered.'];
-    }
-
-    if (code === 'PASS_RESET') {
-      return ['Password reset requested/completed.'];
-    }
-
-    // Fallback: render key info from metadata, but NOT raw JSON.
-    const entries = Object.entries(meta || {})
-      .filter(([_, v]) => v !== null && v !== undefined && v !== '');
-
-    for (const [key, value] of entries.slice(0, 4)) {
-      if (Array.isArray(value)) {
-        lines.push(`${this.humanizeKey(key)}: ${value.map(v => String(v)).join(', ')}`);
-      } else if (typeof value === 'object') {
-        // Skip nested objects in compact view
-        continue;
-      } else {
-        lines.push(`${this.humanizeKey(key)}: ${String(value)}`);
-      }
-    }
-
-    return lines.length ? lines : ['-'];
+    return '';
   }
 
   private humanizeKey(key: string): string {
