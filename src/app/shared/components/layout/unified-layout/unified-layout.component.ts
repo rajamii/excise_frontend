@@ -1247,6 +1247,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   canAccessSection(section: string): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
 
+    // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).
+    if (section === 'officer-activity') {
+      return true;
+    }
+
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
       return false;
     }

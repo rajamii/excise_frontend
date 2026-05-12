@@ -167,16 +167,78 @@
 
         <!-- Officer Activity section -->
         <div *ngIf="selectedSupplyChainSection === 'officer-activity'" class="officer-activity-section">
-          <div class="officer-activity-placeholder">
-            <div class="placeholder-card">
-              <div class="placeholder-icon-wrap">
-                <mat-icon>construction</mat-icon>
-              </div>
-              <h3>Under Development</h3>
-              <p>
-                The Officer Activity module is currently under development and will be available very soon.
-              </p>
-              <span class="placeholder-note">Thank you for your patience.</span>
+          <div class="section-header">
+            <h3>
+              <mat-icon>assignment</mat-icon>
+              {{ activitySectionTitle }}
+            </h3>
+            <div class="section-actions">
+              <button mat-stroked-button color="primary" type="button" (click)="loadUserActivities()">
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <div class="activity-filters" *ngIf="!isLicenseeUser()">
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>User ID (optional)</mat-label>
+              <input matInput [(ngModel)]="activityFilterUserId" placeholder="e.g. 12">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Activity Type (optional)</mat-label>
+              <input matInput [(ngModel)]="activityFilterType" placeholder="e.g. USR_UPD, LOGIN">
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" type="button" (click)="loadUserActivities()">Apply</button>
+          </div>
+
+          <div class="activity-status" *ngIf="userActivityLoading">
+            <mat-spinner diameter="28"></mat-spinner>
+            <span>Loading activity...</span>
+          </div>
+
+          <div class="activity-error" *ngIf="!userActivityLoading && userActivityError">
+            {{ userActivityError }}
+          </div>
+
+          <div class="activity-table-wrap" *ngIf="!userActivityLoading && !userActivityError">
+            <div class="activity-empty" *ngIf="!userActivities?.length">
+              No activity found.
+            </div>
+            <div class="table-responsive" *ngIf="userActivities?.length">
+              <table class="table table-hover table-striped">
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Action</th>
+                    <th>User</th>
+                    <th>Target</th>
+                    <th>IP</th>
+                    <th>Device</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of userActivities">
+                    <td>{{ row?.timestamp | date:'dd/MM/yyyy, h:mm a' }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="getActivityBadgeClass(row)">
+                        {{ getActivityActionLabel(row) }}
+                      </span>
+                    </td>
+                    <td>{{ row?.username || row?.email || '-' }}</td>
+                    <td>{{ row?.target_username || row?.target_email || '-' }}</td>
+                    <td>{{ row?.ip_address || '-' }}</td>
+                    <td class="truncate" [title]="row?.user_agent || ''">{{ getDeviceLabel(row?.user_agent) }}</td>
+                    <td>
+                      <div class="details-lines">
+                        <div class="details-line" *ngFor="let line of getActivityDetailLines(row)">{{ line }}</div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

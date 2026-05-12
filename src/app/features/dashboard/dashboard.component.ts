@@ -1,14 +1,16 @@
 import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval } from 'rxjs';
 
@@ -73,6 +75,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     NgIf,
     NgFor,
     NgClass,
@@ -82,6 +85,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     MatCardModule,
     MatSelectModule,
     MatFormFieldModule,
+    MatInputModule,
     MatTabsModule,
     MatBadgeModule,
     MatProgressSpinnerModule,
@@ -175,6 +179,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   performanceMetrics: any[] = [];
   customStats: any[] = [];
   quickActions: any[] = [];
+
+  // User activity log (Officer Activity / License Activity)
+  userActivities: any[] = [];
+  userActivityLoading = false;
+  userActivityError: string | null = null;
+  userActivityLimit = 200;
+  activityFilterType = '';
+  activityFilterUserId = '';
 
   now = new Date();
   greetingText = 'Welcome';
@@ -333,12 +345,184 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.tryRedirectHologramOverview();
         }
 
+        if (this.selectedSupplyChainSection === 'officer-activity') {
+          this.loadUserActivities();
+        }
+
         // Navigating back to /dashboard (clearing section) should always reload stats.
         if (!this.selectedSupplyChainSection) {
           this.activeTable = 'approved';
           this.loadDashboardData();
         }
       });
+  }
+
+  get activitySectionTitle(): string {
+    return this.isLicenseeUser() ? 'License Activity' : 'Officer Activity';
+  }
+
+  loadUserActivities(): void {
+    if (!this.currentUser) {
+      return;
+    }
+
+    this.userActivityLoading = true;
+    this.userActivityError = null;
+
+    let params = new HttpParams().set('limit', String(Number(this.userActivityLimit) || 200));
+    const type = String(this.activityFilterType || '').trim();
+    if (type) {
+      params = params.set('type', type);
+    }
+
+    // Only admins/officers can filter other users; licensee always gets their own activity from backend.
+    const userId = String(this.activityFilterUserId || '').trim();
+    if (!this.isLicenseeUser() && userId) {
+      params = params.set('user_id', userId);
+    }
+
+    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/logs/activities/`, { params })
+      .pipe(
+        finalize(() => (this.userActivityLoading = false)),
+        catchError((err) => {
+          this.userActivityError = err?.error?.detail || 'Failed to load activity log.';
+          this.userActivities = [];
+          return of([]);
+        })
+      )
+      .subscribe((rows: any[]) => {
+        this.userActivities = Array.isArray(rows) ? rows : [];
+      });
+  }
+
+  getActivityActionLabel(row: any): string {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const display = String(row?.activity_type_display || '').trim();
+    if (display) {
+      // Normalize common ones for consistency
+      if (code === 'LOGIN') return 'Login';
+      if (code === 'LOGOUT') return 'Logout';
+      return display;
+    }
+
+    const map: Record<string, string> = {
+      REG: 'Registration',
+      LOGIN: 'Login',
+      LOGOUT: 'Logout',
+      PASS_RESET: 'Password Reset',
+      USR_UPD: 'User Update',
+      USR_DEL: 'User Delete'
+    };
+    return map[code] || (code || 'Activity');
+  }
+
+  getActivityBadgeClass(row: any): string {
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    if (code === 'LOGIN') return 'bg-success';
+    if (code === 'LOGOUT') return 'bg-secondary';
+    if (code === 'PASS_RESET') return 'bg-warning text-dark';
+    if (code === 'USR_DEL') return 'bg-danger';
+    if (code === 'USR_UPD') return 'bg-primary';
+    if (code === 'REG') return 'bg-info text-dark';
+    return 'bg-primary';
+  }
+
+  getDeviceLabel(userAgent: any): string {
+    const ua = String(userAgent || '').trim();
+    if (!ua) return '-';
+
+    const lower = ua.toLowerCase();
+    const browser =
+      lower.includes('edg/') ? 'Edge' :
+      lower.includes('chrome/') ? 'Chrome' :
+      lower.includes('firefox/') ? 'Firefox' :
+      lower.includes('safari/') && !lower.includes('chrome/') ? 'Safari' :
+      'Browser';
+
+    const os =
+      lower.includes('windows') ? 'Windows' :
+      lower.includes('android') ? 'Android' :
+      lower.includes('iphone') || lower.includes('ipad') || lower.includes('ios') ? 'iOS' :
+      lower.includes('mac os') || lower.includes('macintosh') ? 'macOS' :
+      lower.includes('linux') ? 'Linux' :
+      '';
+
+    return os ? `${browser} (${os})` : browser;
+  }
+
+  getActivityDetailLines(row: any): string[] {
+    const lines: string[] = [];
+    const code = String(row?.activity_type || '').trim().toUpperCase();
+    const meta = (row?.metadata && typeof row.metadata === 'object') ? row.metadata : {};
+
+    const target =
+      String(row?.target_username || row?.target_email || meta?.target_username || meta?.targetUsername || '').trim();
+
+    if (code === 'LOGIN') {
+      lines.push('User logged in.');
+      return lines;
+    }
+    if (code === 'LOGOUT') {
+      lines.push('User logged out.');
+      return lines;
+    }
+
+    if (code === 'USR_UPD') {
+      const updatedFields = meta?.updated_fields ?? meta?.updatedFields ?? meta?.fields;
+      if (Array.isArray(updatedFields) && updatedFields.length) {
+        lines.push(`Updated fields: ${updatedFields.map((v: any) => String(v)).join(', ')}`);
+      }
+      if (target) {
+        lines.push(`Target user: ${target}`);
+      }
+      return lines.length ? lines : ['User profile updated.'];
+    }
+
+    if (code === 'USR_DEL') {
+      if (target) {
+        lines.push(`Deleted user: ${target}`);
+      }
+      return lines.length ? lines : ['User deleted.'];
+    }
+
+    if (code === 'REG') {
+      const method = String(meta?.registrationMethod ?? meta?.registration_method ?? meta?.method ?? '').trim();
+      if (method) {
+        lines.push(`Registration method: ${method}`);
+      }
+      return lines.length ? lines : ['User registered.'];
+    }
+
+    if (code === 'PASS_RESET') {
+      return ['Password reset requested/completed.'];
+    }
+
+    // Fallback: render key info from metadata, but NOT raw JSON.
+    const entries = Object.entries(meta || {})
+      .filter(([_, v]) => v !== null && v !== undefined && v !== '');
+
+    for (const [key, value] of entries.slice(0, 4)) {
+      if (Array.isArray(value)) {
+        lines.push(`${this.humanizeKey(key)}: ${value.map(v => String(v)).join(', ')}`);
+      } else if (typeof value === 'object') {
+        // Skip nested objects in compact view
+        continue;
+      } else {
+        lines.push(`${this.humanizeKey(key)}: ${String(value)}`);
+      }
+    }
+
+    return lines.length ? lines : ['-'];
+  }
+
+  private humanizeKey(key: string): string {
+    return String(key || '')
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .trim()
+      .split(/\s+/)
+      .map(w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+      .join(' ');
   }
 
   private readWalletViewFromParams(params: any): 'wallets' | 'others' {
@@ -1100,6 +1284,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Get supply chain section title
   getSupplyChainSectionTitle(): string {
+    if (this.selectedSupplyChainSection === 'officer-activity') {
+      return this.isLicenseeUser() ? 'License Activity' : 'Officer Activity';
+    }
     const titles: { [key: string]: string } = {
       // Common sections
       'requisition': 'Requisition Management',

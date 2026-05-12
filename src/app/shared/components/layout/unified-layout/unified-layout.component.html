@@ -126,6 +126,11 @@
               <span class="nav-text">Stock Inventory</span>
             </button>
 
+            <button class="nav-item" (click)="navigateToSupplyChain('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
+              <mat-icon class="nav-icon">assignment</mat-icon>
+              <span class="nav-text">License Activity</span>
+            </button>
+
             <!-- Register - Expandable
             <div class="nav-expandable">
               <mat-expansion-panel class="nav-panel" hideToggle>
