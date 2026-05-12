@@ -1440,6 +1440,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return;
         }
 
+        if (action === 'FORWARD' && this.isCurrentStageSiteEnquiry()) {
+            const applicationId = this.getWorkflowApplicationId(event.item);
+            if (!applicationId) {
+                this.snackBar.open('Application ID not found for site enquiry.', 'Close', { duration: 4000 });
+                return;
+            }
+            this.openSiteEnquiryAndProcessAction(event.item, context, applicationId, 'FORWARD');
+            return;
+        }
+
         if (action === 'UPDATE_ARRIVAL') {
             this.navigateToRequisitionArrivalUpdate(event.item);
             return;
@@ -2471,42 +2481,151 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     private openSiteEnquiryAndApprove(item: any, context: UserContext, applicationId: string): void {
+        this.openSiteEnquiryAndProcessAction(item, context, applicationId, 'APPROVE');
+    }
+
+    private openSiteEnquiryAndProcessAction(
+        item: any,
+        context: UserContext,
+        applicationId: string,
+        nextAction: 'APPROVE' | 'FORWARD'
+    ): void {
+        const isRevertedReport = (report: any): boolean => {
+            if (!report) return false;
+            const rawFlag =
+                report?.is_reverted ??
+                report?.isReverted ??
+                report?.site_enquiry_is_reverted ??
+                report?.siteEnquiryIsReverted ??
+                report?.siteEnquiryReverted;
+            if (rawFlag === true) return true;
+            if (typeof rawFlag === 'string' && rawFlag.trim().toLowerCase() === 'true') return true;
+            const remarks = String(report?.reverted_remarks ?? report?.revertedRemarks ?? '').trim();
+            return remarks.length > 0;
+        };
+
         const submitSiteEnquiry$ =
             this.applicationType === 'new-license'
                 ? (formData: FormData) => this.licenseApplicationService.submitNewLicenseSiteEnquiryData(applicationId, formData)
                 : (formData: FormData) => this.licenseApplicationService.submitSiteEnquiryData(applicationId, formData);
 
-        const dialogRef = this.dialog.open(SiteEnquiryFormDialogComponent, {
-            width: '980px',
-            maxWidth: '98vw',
-            disableClose: true,
-            data: { applicationId }
-        });
-
-        dialogRef.afterClosed().subscribe((result: { formData: FormData } | null) => {
-            if (!result?.formData) {
-                return;
-            }
-
-            submitSiteEnquiry$(result.formData).subscribe({
-                next: () => {
-                    this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
-                        successMessage: 'Site enquiry submitted and application approved.',
-                        failureMessage: 'Approval failed after site enquiry submit.'
-                    });
-                },
-                error: (error: any) => {
-                    const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.', 'site enquiry');
-                    if (String(message).toLowerCase().includes('already submitted')) {
-                        this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
-                            successMessage: 'Existing site enquiry found. Application approved.',
-                            failureMessage: 'Approval failed.'
-                        });
-                        return;
-                    }
-                    this.snackBar.open(message, 'Close', { duration: 4500 });
-                }
+        const openDialog = (existingReport: any | null) => {
+            const dialogRef = this.dialog.open(SiteEnquiryFormDialogComponent, {
+                width: '980px',
+                maxWidth: '98vw',
+                disableClose: true,
+                data: { applicationId, existingReport }
             });
+
+            dialogRef.afterClosed().subscribe((result: { formData: FormData } | null) => {
+                if (!result?.formData) {
+                    return;
+                }
+
+                submitSiteEnquiry$(result.formData).subscribe({
+                    next: () => {
+                        if (nextAction === 'APPROVE') {
+                            this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                                successMessage: 'Site enquiry submitted and application approved.',
+                                failureMessage: 'Approval failed after site enquiry submit.'
+                            });
+                            return;
+                        }
+
+                        this.unifiedActionsService.executeAction('FORWARD', item, this.applicationType, context).subscribe({
+                            next: (result: any) => {
+                                const isSuccess = result?.success !== false;
+                                if (isSuccess) {
+                                    this.snackBar.open(result?.message || 'Site enquiry submitted and forwarded.', 'Close', { duration: 3500 });
+                                    const currentId = this.applicationData?.id?.toString() || '';
+                                    const currentRef = this.applicationData?.referenceNo || '';
+                                    this.loadApplicationData(currentRef, currentId);
+                                    return;
+                                }
+                                this.snackBar.open(result?.message || 'Forward failed after site enquiry submit.', 'Close', { duration: 4500 });
+                            },
+                            error: (error: any) => {
+                                this.snackBar.open(
+                                    this.extractHttpErrorMessage(error, 'Forward failed after site enquiry submit.'),
+                                    'Close',
+                                    { duration: 4500 }
+                                );
+                            }
+                        });
+                    },
+                    error: (error: any) => {
+                        const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.', 'site enquiry');
+                        if (String(message).toLowerCase().includes('already submitted')) {
+                            if (nextAction === 'APPROVE') {
+                                this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                                    successMessage: 'Existing site enquiry found. Application approved.',
+                                    failureMessage: 'Approval failed.'
+                                });
+                                return;
+                            }
+
+                            this.unifiedActionsService.executeAction('FORWARD', item, this.applicationType, context).subscribe({
+                                next: (result: any) => {
+                                    const isSuccess = result?.success !== false;
+                                    if (isSuccess) {
+                                        this.snackBar.open(result?.message || 'Application forwarded.', 'Close', { duration: 3500 });
+                                        const currentId = this.applicationData?.id?.toString() || '';
+                                        const currentRef = this.applicationData?.referenceNo || '';
+                                        this.loadApplicationData(currentRef, currentId);
+                                        return;
+                                    }
+                                    this.snackBar.open(result?.message || 'Forward failed.', 'Close', { duration: 4500 });
+                                },
+                                error: (err: any) => {
+                                    this.snackBar.open(this.extractHttpErrorMessage(err, 'Forward failed.'), 'Close', { duration: 4500 });
+                                }
+                            });
+                            return;
+                        }
+                        this.snackBar.open(message, 'Close', { duration: 4500 });
+                    }
+                });
+            });
+        };
+
+        // If already submitted, allow editing only when JC has reverted it.
+        this.licenseApplicationService.getSiteEnquiryReport(applicationId).subscribe({
+            next: (report: any) => {
+                if (isRevertedReport(report)) {
+                    openDialog(report);
+                    return;
+                }
+
+                // Existing non-reverted report: proceed approval without reopening the form.
+                if (nextAction === 'APPROVE') {
+                    this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                        successMessage: 'Existing site enquiry found. Application approved.',
+                        failureMessage: 'Approval failed.'
+                    });
+                    return;
+                }
+
+                this.unifiedActionsService.executeAction('FORWARD', item, this.applicationType, context).subscribe({
+                    next: (result: any) => {
+                        const isSuccess = result?.success !== false;
+                        if (isSuccess) {
+                            this.snackBar.open(result?.message || 'Application forwarded.', 'Close', { duration: 3500 });
+                            const currentId = this.applicationData?.id?.toString() || '';
+                            const currentRef = this.applicationData?.referenceNo || '';
+                            this.loadApplicationData(currentRef, currentId);
+                            return;
+                        }
+                        this.snackBar.open(result?.message || 'Forward failed.', 'Close', { duration: 4500 });
+                    },
+                    error: (error: any) => {
+                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Forward failed.'), 'Close', { duration: 4500 });
+                    }
+                });
+            },
+            error: () => {
+                // No report yet (or cannot load): open fresh form.
+                openDialog(null);
+            }
         });
     }
 
@@ -2547,7 +2666,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     private buildSiteEnquiryReportEntries(report: Record<string, any>): SiteEnquiryReportField[] {
-        const hiddenKeys = new Set(['content_type']);
+        const hiddenKeys = new Set(['content_type', 'is_reverted', 'reverted_remarks', 'reverted_at']);
 
         return Object.entries(report || {})
             .filter(([key]) => !hiddenKeys.has(key))
@@ -2718,6 +2837,58 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     canViewSiteEnquiryReport(): boolean {
         return this.isNewLicense() && this.roleService.hasRole(9) && this.isPendingAtJointCommissionerStage();
+    }
+
+    canRevertSiteEnquiryReport(): boolean {
+        if (!this.canViewSiteEnquiryReport()) {
+            return false;
+        }
+        if (this.siteEnquiryReportLoading || !!this.siteEnquiryReportError) {
+            return false;
+        }
+        return !!this.siteEnquiryReport;
+    }
+
+    revertSiteEnquiryReportFromModal(): void {
+        const applicationId = this.getCurrentApplicationId();
+        if (!applicationId) {
+            this.snackBar.open('Application reference not found for site enquiry report.', 'Close', { duration: 4000 });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Revert Site Enquiry Report',
+            input: 'textarea',
+            inputLabel: 'Remarks (required)',
+            inputPlaceholder: 'Enter remarks for Site Enquiry Officer...',
+            inputAttributes: { 'aria-label': 'Revert remarks' },
+            showCancelButton: true,
+            confirmButtonText: 'Revert Back',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            inputValidator: (value) => {
+                const text = String(value || '').trim();
+                if (!text) return 'Remarks are required.';
+                if (text.length < 3) return 'Please enter at least 3 characters.';
+                return null;
+            }
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            const remarks = String(result.value || '').trim();
+
+            this.licenseApplicationService.revertSiteEnquiryReport(applicationId, remarks).subscribe({
+                next: () => {
+                    this.snackBar.open('Site enquiry report reverted back to Site Enquiry Officer.', 'Close', { duration: 4500 });
+                    this.closeSiteEnquiryReportModal();
+                    const params = this.extractRouteParams();
+                    this.loadApplicationData(params.ref || '', params.id || '');
+                },
+                error: (error: any) => {
+                    const message = this.extractHttpErrorMessage(error, 'Failed to revert site enquiry report.', 'site enquiry revert');
+                    this.snackBar.open(message, 'Close', { duration: 5000 });
+                }
+            });
+        });
     }
 
     openSiteEnquiryReportModal(): void {

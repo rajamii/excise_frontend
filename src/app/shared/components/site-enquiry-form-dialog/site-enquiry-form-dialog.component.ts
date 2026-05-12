@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 
 interface SiteEnquiryDialogData {
   applicationId: string;
+  existingReport?: any | null;
 }
 
 @Component({
@@ -34,6 +35,11 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   readonly form: FormGroup;
   readonly applicationId: string;
   selectedFileName = '';
+  isReverted = false;
+  revertedRemarks = '';
+  existingShopImageUrl = '';
+  existingShopImageName = '';
+  private readonly existingReport: any | null;
 
   constructor(
     private fb: FormBuilder,
@@ -41,6 +47,7 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) data: SiteEnquiryDialogData
   ) {
     this.applicationId = data?.applicationId || '';
+    this.existingReport = data?.existingReport || null;
     this.form = this.fb.group({
       has_traditional_place: [null, Validators.required],
       traditional_place_distance: [''],
@@ -99,6 +106,108 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.captureCurrentLocation();
+    if (this.existingReport) {
+      this.prefillFromExistingReport(this.existingReport);
+    }
+  }
+
+  private prefillFromExistingReport(report: any): void {
+    const rawRevertFlag =
+      report?.is_reverted ??
+      report?.isReverted ??
+      report?.site_enquiry_is_reverted ??
+      report?.siteEnquiryIsReverted ??
+      report?.siteEnquiryReverted;
+
+    this.isReverted =
+      rawRevertFlag === true ||
+      (typeof rawRevertFlag === 'string' && rawRevertFlag.trim().toLowerCase() === 'true');
+
+    this.revertedRemarks = String(report?.reverted_remarks ?? report?.revertedRemarks ?? '').trim();
+
+    const booleanKeys = new Set([
+      'has_traditional_place',
+      'has_educational_institution',
+      'has_hospital',
+      'has_taxi_stand',
+      'is_interconnected_with_shops',
+      'has_excise_shops_nearby',
+      'is_on_highway',
+      'is_shop_size_correct',
+      'has_id_proof',
+      'has_age_proof',
+      'has_noc_from_landlord',
+      'has_ownership_proof',
+      'has_trade_license',
+      'proposes_barman_or_salesman',
+      'worker_docs_valid',
+      'license_recommendation'
+    ]);
+
+    const numberKeys = new Set([
+      'traditional_place_distance',
+      'educational_institution_distance',
+      'hospital_distance',
+      'taxi_stand_distance',
+      'nearby_excise_shop_count',
+      'latitude',
+      'longitude'
+    ]);
+
+    const coerceValue = (key: string, value: any): any => {
+      if (booleanKeys.has(key)) {
+        if (value === true || value === false) return value;
+        if (typeof value === 'string') {
+          const v = value.trim().toLowerCase();
+          if (v === 'true') return true;
+          if (v === 'false') return false;
+        }
+        return Boolean(value);
+      }
+
+      if (numberKeys.has(key)) {
+        if (value === null || value === undefined || value === '') return value;
+        const n = typeof value === 'number' ? value : Number(String(value));
+        return Number.isFinite(n) ? n : value;
+      }
+
+      return value;
+    };
+
+    const rawDoc = report?.shop_image_document;
+    if (rawDoc) {
+      this.existingShopImageUrl = String(rawDoc);
+      const last = this.existingShopImageUrl.split('/').pop() || '';
+      this.existingShopImageName = decodeURIComponent(last.split('?')[0] || '');
+      this.selectedFileName = this.existingShopImageName || this.selectedFileName;
+      const docCtrl = this.form.get('shop_image_document');
+      docCtrl?.clearValidators();
+      docCtrl?.updateValueAndValidity({ emitEvent: false });
+    }
+
+    const patch: Record<string, any> = {};
+
+    const snakeToCamel = (key: string): string =>
+      String(key || '').replace(/_([a-z0-9])/g, (_, chr: string) => chr.toUpperCase());
+
+    const getReportValue = (key: string): any => {
+      if (!report || typeof report !== 'object') return undefined;
+      if (Object.prototype.hasOwnProperty.call(report, key)) return report[key];
+      const camelKey = snakeToCamel(key);
+      if (Object.prototype.hasOwnProperty.call(report, camelKey)) return report[camelKey];
+      const compactKey = String(key).replace(/_/g, '');
+      if (Object.prototype.hasOwnProperty.call(report, compactKey)) return report[compactKey];
+      return undefined;
+    };
+
+    Object.keys(this.form.controls).forEach((key) => {
+      if (key === 'shop_image_document') return;
+      const raw = getReportValue(key);
+      if (raw === undefined || raw === null) return;
+      patch[key] = coerceValue(key, raw);
+    });
+
+    this.form.patchValue(patch, { emitEvent: false });
   }
 
   onFileSelected(event: Event): void {

@@ -27,6 +27,7 @@ interface NewLicenseCounts {
 interface NewLicenseItem {
   id: string;
   applicationId: string;
+  siteEnquiryIsReverted?: boolean;
   applicantName: string;
   establishmentName: string;
   submittedOn: string;
@@ -495,10 +496,14 @@ export class NewLicenseDashboardComponent implements OnInit {
         const hasObjectionUpdate = transactions.some((t: any) => /resolve|correct|update/i.test(txnText(t)) && /objection/i.test(txnText(t)));
 
         const updatedObjectionFields = this.computeUpdatedObjectionFields(item);
+        const siteEnquiryIsReverted = Boolean(
+          (item?.site_enquiry_is_reverted ?? item?.siteEnquiryIsReverted ?? item?.siteEnquiryReverted) || false
+        );
 
         return ({
           id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
           applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
+          siteEnquiryIsReverted,
           applicantName: this.getApplicantName(item),
           establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
           submittedOn,

@@ -694,6 +694,13 @@ export class LicenseApplicationService {
     return this.http.get(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`);
   }
 
+  revertSiteEnquiryReport(applicationId: string, remarks: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/revert/`, {
+      remarks: remarks || ''
+    });
+  }
+
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(
