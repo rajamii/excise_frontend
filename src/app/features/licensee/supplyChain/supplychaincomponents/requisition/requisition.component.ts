@@ -1207,9 +1207,35 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
 
     const tankerDetails: TankerArrivalEntry[] = tankerDetailsList.map((item: any) => ({
+      permit_no: String(item?.permit_no ?? item?.permitNo ?? '').trim() || undefined,
       tanker_no: String(item?.tanker_no ?? item?.tankerNo ?? ''),
       bulk_liter: Number(item?.bulk_liter ?? item?.bulkLiter ?? 0) || 0
     }));
+
+    const requisitionTotalQty = Number(
+      row?.requisition_total_quantity ??
+      row?.requisitionTotalQuantity ??
+      row?.requested_total_quantity ??
+      row?.requestedTotalQuantity ??
+      row?.requisition?.totalbl ??
+      0
+    ) || 0;
+    const requisitionPermitCount = Number(
+      row?.requisition_number_of_permits ??
+      row?.requisitionNumberOfPermits ??
+      row?.requisition?.requisiton_number_of_permits ??
+      row?.requisition?.requisition_number_of_permits ??
+      0
+    ) || 0;
+    const permitsInThisEntry = Array.from(
+      new Set(
+        tankerDetails
+          .map((t) => String(t?.permit_no || '').trim())
+          .filter((t) => Boolean(t))
+      )
+    );
+    const perPermitQty = requisitionPermitCount > 0 ? (requisitionTotalQty / requisitionPermitCount) : requisitionTotalQty;
+    const requestedQtyForEntry = permitsInThisEntry.length > 0 ? (perPermitQty * permitsInThisEntry.length) : requisitionTotalQty;
 
     return {
       id: Number(row?.id ?? 0) || 0,
@@ -1240,14 +1266,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         row?.createdAt ??
         ''
       ),
-      requestedTotalQuantity: Number(
-        row?.requisition_total_quantity ??
-        row?.requisitionTotalQuantity ??
-        row?.requested_total_quantity ??
-        row?.requestedTotalQuantity ??
-        row?.requisition?.totalbl ??
-        0
-      ) || 0,
+      // Show requested qty for the permit(s) in this arrival entry, not the whole requisition reference.
+      requestedTotalQuantity: requestedQtyForEntry,
       distilleryName: String(
         row?.distillery_name ??
         row?.distilleryName ??
