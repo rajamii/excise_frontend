@@ -1593,9 +1593,11 @@
                             <div class="status-label">
                               <strong>{{ range.status }}</strong>
                             </div>
+                            @if (range.status !== 'AVAILABLE' && range.description && !range.description.toLowerCase().startsWith('allocated for request')) {
                             <div class="status-description text-muted">
                               {{ range.description }}
                             </div>
+                            }
                           </div>
                         </div>
                         <div class="col-md-4">

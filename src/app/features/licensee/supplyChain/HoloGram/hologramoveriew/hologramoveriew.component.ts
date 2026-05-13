@@ -1314,9 +1314,17 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     if (!range) return null;
 
     const statusRaw = (range.status || '').toString().toUpperCase().trim();
-    const status = (['AVAILABLE', 'USED', 'DAMAGED'].includes(statusRaw)
-      ? statusRaw
-      : 'AVAILABLE') as 'AVAILABLE' | 'USED' | 'DAMAGED';
+    // IMPORTANT:
+    // - Backend may send `IN_USE` for ranges already allocated to a request.
+    // - These must not be displayed as `AVAILABLE` (server mismatch observed when unknown
+    //   statuses were coerced to AVAILABLE).
+    if (statusRaw === 'IN_USE') {
+      return null;
+    }
+    if (!['AVAILABLE', 'USED', 'DAMAGED'].includes(statusRaw)) {
+      return null;
+    }
+    const status = statusRaw as 'AVAILABLE' | 'USED' | 'DAMAGED';
 
     const fromSerial = (range.fromSerial ?? range.from_serial ?? '').toString();
     const toSerial = (range.toSerial ?? range.to_serial ?? '').toString();
