@@ -143,7 +143,7 @@ interface HistoryBrandDetail {
   serialRanges: string;
   qtyUsed: number;
   qtyDamaged: number;
-  qtyLeftover: number;
+  qtyLeftover: number | null;
 }
 
 interface ChartFilters {
@@ -896,28 +896,29 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         console.log('📊 Grouped by request:', groupedByRequest.size, 'requests');
 
         // Transform to HistoryHologram format (one row per request)
-        this.historyData = Array.from(groupedByRequest.entries()).map(([refNo, requestEntries]) => {
-          // Collect data from all entries for this request
-          const cartoonNumbers: string[] = [];
-          const serialRanges: string[] = [];
-          let totalQty = 0;
-          let totalUsed = 0;
-          let totalDamaged = 0;
-          let brandName = 'N/A';
-          let bottleSize = 'N/A';
-          let usageDate = '';
-          let approvalStatus = 'PENDING';
-          let approvedAt = '';
+          this.historyData = Array.from(groupedByRequest.entries()).map(([refNo, requestEntries]) => {
+            // Collect data from all entries for this request
+            const cartoonNumbers: string[] = [];
+            const serialRanges: string[] = [];
+            let totalQty = 0;
+            let totalUsed = 0;
+            let totalDamaged = 0;
+            const allocatedByCarton = new Map<string, number>();
+            let brandName = 'N/A';
+            let bottleSize = 'N/A';
+            let usageDate = '';
+            let approvalStatus = 'PENDING';
+            let approvedAt = '';
           let approvedBy = 'Pending';
           let hologramType = 'LOCAL';
 
-          requestEntries.forEach((entry: any) => {
-            // Carton number from roll_range or cartoon_number
-            const cartoonNumber = entry.cartoon_number || entry.cartoonNumber ||
-              entry.roll_range || entry.rollRange || 'N/A';
-            if (cartoonNumber && cartoonNumber !== 'N/A' && !cartoonNumbers.includes(cartoonNumber)) {
-              cartoonNumbers.push(cartoonNumber);
-            }
+            requestEntries.forEach((entry: any) => {
+              // Carton number from roll_range or cartoon_number
+              const cartoonNumber = entry.cartoon_number || entry.cartoonNumber ||
+                entry.roll_range || entry.rollRange || 'N/A';
+              if (cartoonNumber && cartoonNumber !== 'N/A' && !cartoonNumbers.includes(cartoonNumber)) {
+                cartoonNumbers.push(cartoonNumber);
+              }
 
             // Serial ranges from issued_ranges (JSON array)
             const issuedRanges = entry.issued_ranges || entry.issuedRanges || [];
@@ -953,8 +954,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
               });
             }
 
-            // Accumulate quantities
-            totalQty += entry.hologram_qty || entry.hologramQty || 0;
+            // Allocation quantity: Daily register entries can repeat the same request allocation
+            // for multiple brands; de-duplicate by carton number to avoid double counting.
+            const allocatedQtyRaw = Number(entry.hologram_qty ?? entry.hologramQty ?? 0);
+            if (allocatedQtyRaw > 0 && cartoonNumber && cartoonNumber !== 'N/A') {
+              const existing = allocatedByCarton.get(cartoonNumber) || 0;
+              allocatedByCarton.set(cartoonNumber, Math.max(existing, allocatedQtyRaw));
+            }
             totalUsed += entry.issued_qty || entry.issuedQty || 0;
             totalDamaged += entry.wastage_qty || entry.wastageQty || 0;
 
@@ -993,12 +999,21 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             }
           });
 
+          if (allocatedByCarton.size > 0) {
+            totalQty = Array.from(allocatedByCarton.values()).reduce((sum, qty) => sum + qty, 0);
+          } else {
+            // Fallback: when carton number is missing, use the maximum allocation qty seen.
+            const allocationCandidates = requestEntries
+              .map((e: any) => Number(e?.hologram_qty ?? e?.hologramQty ?? 0))
+              .filter((n: number) => Number.isFinite(n) && n > 0);
+            totalQty = allocationCandidates.length > 0 ? Math.max(...allocationCandidates) : 0;
+          }
+
           // Calculate leftover: total allocated - used - damaged
           const qtyLeftover = totalQty - totalUsed - totalDamaged;
           const brandDetailsList: HistoryBrandDetail[] = requestEntries.map((entry: any) => {
             const issuedQty = Number(entry.issued_qty || entry.issuedQty || 0);
             const damagedQty = Number(entry.wastage_qty || entry.wastageQty || 0);
-            const allocatedQty = Number(entry.hologram_qty || entry.hologramQty || 0);
 
             const issuedRanges = entry.issued_ranges || entry.issuedRanges || [];
             const wastageRanges = entry.wastage_ranges || entry.wastageRanges || [];
@@ -1026,7 +1041,9 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
               serialRanges,
               qtyUsed: issuedQty,
               qtyDamaged: damagedQty,
-              qtyLeftover: Math.max(0, allocatedQty - issuedQty - damagedQty)
+              // Leftover is meaningful at the request/roll allocation level; showing it per
+              // brand can be misleading (and was previously double-counted).
+              qtyLeftover: null
             };
           });
 
