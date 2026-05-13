@@ -141,6 +141,8 @@ interface HistoryBrandDetail {
   bottleSize: string;
   cartonNumber: string;
   serialRanges: string;
+  usedRanges?: string;
+  damagedRanges?: string;
   qtyUsed: number;
   qtyDamaged: number;
   qtyLeftover: number | null;
@@ -1039,6 +1041,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
               bottleSize: entry.bottle_size || entry.bottleSize || 'N/A',
               cartonNumber: entry.cartoon_number || entry.cartoonNumber || entry.roll_range || entry.rollRange || 'N/A',
               serialRanges,
+              usedRanges: issuedRangeText || 'N/A',
+              damagedRanges: wastageRangeText || 'N/A',
               qtyUsed: issuedQty,
               qtyDamaged: damagedQty,
               // Leftover is meaningful at the request/roll allocation level; showing it per
