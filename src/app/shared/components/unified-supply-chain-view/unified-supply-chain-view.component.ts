@@ -738,14 +738,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         detailObservable.subscribe({
             next: (data: any) => {
                 if (data) {
-                    this.mapApplicationData(data, config);
+                    this.enrichTransitProductsIfNeeded(data, (enriched) => {
+                        this.mapApplicationData(enriched, config);
+                        this.isLoading = false;
+                    });
                 } else {
                     this.loadByReference(config, refNo);
+                    this.isLoading = false;
                 }
-                this.isLoading = false;
             },
             error: (error: any) => {
                 this.loadByReference(config, refNo);
+                this.isLoading = false;
             }
         });
     }
@@ -766,16 +770,65 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 const foundItem = this.findItemByReference(items, refNo, config.fieldMappings.referenceNo);
 
                 if (foundItem) {
-                    this.mapApplicationData(foundItem, config);
+                    this.enrichTransitProductsIfNeeded(foundItem, (enriched) => {
+                        this.mapApplicationData(enriched, config);
+                        this.isLoading = false;
+                    });
                 } else {
                     this.errorMessage = `${this.applicationType} not found in available data.`;
+                    this.isLoading = false;
                 }
-                this.isLoading = false;
             },
             error: (err: any) => {
                 this.errorMessage = `Could not load ${this.applicationType} details from server.`;
                 this.isLoading = false;
             }
+        });
+    }
+
+    private enrichTransitProductsIfNeeded(apiData: any, done: (enriched: any) => void): void {
+        if (this.applicationType !== 'transit') {
+            done(apiData);
+            return;
+        }
+
+        if (!apiData) {
+            done(apiData);
+            return;
+        }
+
+        const existingProducts = this.extractFieldValue(apiData, [
+            'products',
+            'transit_products',
+            'transitProducts',
+            'product_list',
+            'productList',
+        ]);
+        if (Array.isArray(existingProducts) && existingProducts.length > 0) {
+            done(apiData);
+            return;
+        }
+
+        const billNo =
+            this.extractFieldValue(apiData, ['billNo', 'bill_no', 'ourRefNo', 'our_ref_no', 'referenceNo', 'reference_no']) ||
+            '';
+        const billNoToken = String(billNo || '').trim();
+        if (!billNoToken) {
+            done(apiData);
+            return;
+        }
+
+        // Transit permits can be stored as multiple rows with the same `bill_no` (one row per brand).
+        // When loading a single row by `id`, fetch the full set and attach as `products` for the UI.
+        this.supplyChainService.getTransitPermits(billNoToken).subscribe({
+            next: (rows: any[]) => {
+                if (Array.isArray(rows) && rows.length > 0) {
+                    done({ ...apiData, products: rows });
+                } else {
+                    done(apiData);
+                }
+            },
+            error: () => done(apiData),
         });
     }
 
@@ -1138,21 +1191,122 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 mappedData['exciseDuty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalExciseDuty', 'total_excise_duty']));
                 mappedData['additionalExcise'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalAdditionalExcise', 'total_additional_excise']));
 
-                const transitProduct = {
-                    id: mappedData.id,
-                    brand: mappedData['brand'],
-                    sizeML: mappedData['sizeML'],
-                    bottleType: mappedData['bottleType'],
-                    liquorType: mappedData['permitType'],
-                    brandOwner: mappedData['brandOwner'],
-                    manufacturingUnit: mappedData['manufacturingUnit'],
-                    cases: mappedData['quantity'],
-                    educationCess: mappedData['educationCess'],
-                    exciseDuty: mappedData['exciseDuty'],
-                    additionalExcise: mappedData['additionalExcise'],
-                    totalAmount: mappedData['brAmount']
-                };
-                mappedData['transitProducts'] = [transitProduct];
+                const rawTransitProducts = this.extractFieldValue(apiData, [
+                    'products',
+                    'transit_products',
+                    'transitProducts',
+                    'product_list',
+                    'productList',
+                ]);
+
+                if (Array.isArray(rawTransitProducts) && rawTransitProducts.length > 0) {
+                    const normalizedProducts = rawTransitProducts
+                        .map((p: any, index: number) => {
+                            if (!p) return null;
+
+                            const brand = this.extractFieldValue(p, ['brand', 'brand_name', 'brandName']);
+                            const sizeML = this.parseNumericValue(
+                                this.extractFieldValue(p, ['sizeML', 'size_ml', 'sizeMl', 'ml', 'size'])
+                            );
+                            const bottleType = this.extractFieldValue(p, ['bottleType', 'bottle_type']);
+                            const liquorType = this.extractFieldValue(p, ['liquorType', 'liquor_type', 'permitType', 'permit_type', 'type']);
+                            const brandOwner = this.extractFieldValue(p, ['brandOwner', 'brand_owner', 'brandOwnerName', 'brand_owner_name']);
+                            const manufacturingUnit = this.extractFieldValue(p, ['manufacturingUnit', 'manufacturing_unit', 'manufacturingUnitName', 'manufacturing_unit_name']);
+                            const cases = this.parseNumericValue(
+                                this.extractFieldValue(p, ['cases', 'case', 'quantity', 'qty', 'no_of_cases', 'noOfCases'])
+                            );
+
+                            // Per-case charges (best-effort); fallback to request totals if missing.
+                            const educationCessPerCase = this.parseNumericValue(
+                                this.extractFieldValue(p, [
+                                    'educationCess',
+                                    'education_cess',
+                                    'education_cess_per_case',
+                                    'educationCessPerCase',
+                                    'education_cess_rs_per_case',
+                                ]),
+                                this.parseNumericValue(mappedData['educationCess'])
+                            );
+                            const exciseDutyPerCase = this.parseNumericValue(
+                                this.extractFieldValue(p, [
+                                    'exciseDuty',
+                                    'excise_duty',
+                                    'excise_duty_per_case',
+                                    'exciseDutyPerCase',
+                                    'excise_duty_rs_per_case',
+                                ]),
+                                this.parseNumericValue(mappedData['exciseDuty'])
+                            );
+                            const additionalExcisePerCase = this.parseNumericValue(
+                                this.extractFieldValue(p, [
+                                    'additionalExcise',
+                                    'additional_excise',
+                                    'additional_excise_per_case',
+                                    'additionalExcisePerCase',
+                                    'additional_excise_duty_rs_per_case',
+                                    'additional_excise_duty_per_case',
+                                ]),
+                                this.parseNumericValue(mappedData['additionalExcise'])
+                            );
+
+                            const totalAmount = this.parseNumericValue(
+                                this.extractFieldValue(p, ['totalAmount', 'total_amount', 'amount', 'brAmount', 'br_amount']),
+                                (educationCessPerCase + exciseDutyPerCase + additionalExcisePerCase) * (cases || 0)
+                            );
+
+                            return {
+                                id:
+                                    this.parseNumericValue(this.extractFieldValue(p, ['id']), Number(mappedData.id) || 0) ||
+                                    (Number(mappedData.id) || 0) * 1000 + index,
+                                brand,
+                                sizeML,
+                                bottleType,
+                                liquorType: liquorType || mappedData['permitType'],
+                                brandOwner,
+                                manufacturingUnit,
+                                cases,
+                                educationCess: educationCessPerCase,
+                                exciseDuty: exciseDutyPerCase,
+                                additionalExcise: additionalExcisePerCase,
+                                totalAmount,
+                            };
+                        })
+                        .filter(Boolean);
+
+                    mappedData['transitProducts'] = normalizedProducts;
+
+                    const totalCases = normalizedProducts.reduce((sum: number, p: any) => sum + (Number(p?.cases || 0) || 0), 0);
+                    mappedData['quantity'] = totalCases;
+                    mappedData['educationCess'] = normalizedProducts.reduce(
+                        (sum: number, p: any) => sum + (Number(p?.educationCess || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        0
+                    );
+                    mappedData['exciseDuty'] = normalizedProducts.reduce(
+                        (sum: number, p: any) => sum + (Number(p?.exciseDuty || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        0
+                    );
+                    mappedData['additionalExcise'] = normalizedProducts.reduce(
+                        (sum: number, p: any) => sum + (Number(p?.additionalExcise || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        0
+                    );
+                    mappedData['brAmount'] = normalizedProducts.reduce((sum: number, p: any) => sum + (Number(p?.totalAmount || 0) || 0), 0);
+                } else {
+                    const transitProduct = {
+                        id: mappedData.id,
+                        brand: mappedData['brand'],
+                        sizeML: mappedData['sizeML'],
+                        bottleType: mappedData['bottleType'],
+                        liquorType: mappedData['permitType'],
+                        brandOwner: mappedData['brandOwner'],
+                        manufacturingUnit: mappedData['manufacturingUnit'],
+                        cases: mappedData['quantity'],
+                        educationCess: mappedData['educationCess'],
+                        exciseDuty: mappedData['exciseDuty'],
+                        additionalExcise: mappedData['additionalExcise'],
+                        totalAmount: mappedData['brAmount']
+                    };
+                    mappedData['transitProducts'] = [transitProduct];
+                }
 
                 // Approved / Cancelled by OIC — from serializer method fields
                 mappedData['approvedByDisplay'] = this.extractFieldValue(apiData, ['approvedByDisplay', 'approved_by_display']) || '';
