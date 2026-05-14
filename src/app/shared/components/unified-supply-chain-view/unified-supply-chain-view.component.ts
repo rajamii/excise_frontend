@@ -3145,6 +3145,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     shouldShowSupplyOrderLetterButton(): boolean {
+        const source = this.route.snapshot.queryParamMap.get('source') || '';
+        // Supply Order Letter is handled by the IT Cell dashboard modal — hide it in the unified view
+        if (source === 'itcell' || source === 'it-cell') return false;
         return this.isHologram() && this.getUserContext() === USER_CONTEXTS.IT_CELL && this.isHologramPaymentCompleted();
     }
 
