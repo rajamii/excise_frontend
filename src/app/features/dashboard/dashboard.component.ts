@@ -184,9 +184,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
   userActivities: any[] = [];
   userActivityLoading = false;
   userActivityError: string | null = null;
-  userActivityLimit = 200;
+  userActivityLimit = 500;
   activityFilterType = '';
   activityFilterUserId = '';
+  activityFilterMonth = '';       // YYYY-MM
+  activityFilterDate = '';        // YYYY-MM-DD
+  activityFilterAction = '';      // '' | 'LOGIN' | 'LOGOUT'
+
+  // Pagination
+  activityPage = 1;
+  activityPageSize = 10;
+  activityTotalCount = 0;
+
+  get activityTotalPages(): number {
+    return Math.max(1, Math.ceil(this.activityTotalCount / this.activityPageSize));
+  }
+
+  get activityPagedRows(): any[] {
+    const start = (this.activityPage - 1) * this.activityPageSize;
+    return this.userActivities.slice(start, start + this.activityPageSize);
+  }
+
+  get activityPageNumbers(): number[] {
+    const total = this.activityTotalPages;
+    const current = this.activityPage;
+    const delta = 2;
+    const pages: number[] = [];
+    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  activityGoToPage(page: number): void {
+    if (page < 1 || page > this.activityTotalPages) return;
+    this.activityPage = page;
+  }
 
   now = new Date();
   greetingText = 'Welcome';
@@ -368,11 +401,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.userActivityLoading = true;
     this.userActivityError = null;
+    this.activityPage = 1; // reset to first page on every fresh load
 
-    let params = new HttpParams().set('limit', String(Number(this.userActivityLimit) || 200));
+    let params = new HttpParams().set('limit', String(Number(this.userActivityLimit) || 500));
+
     const type = String(this.activityFilterType || '').trim();
     if (type) {
       params = params.set('type', type);
+    }
+
+    // Login / Logout quick filter
+    const action = String(this.activityFilterAction || '').trim();
+    if (action) {
+      params = params.set('action', action);
+    }
+
+    // Month filter (YYYY-MM)
+    const month = String(this.activityFilterMonth || '').trim();
+    if (month) {
+      params = params.set('month', month);
+    }
+
+    // Specific date filter (YYYY-MM-DD) — takes precedence over month if both set
+    const date = String(this.activityFilterDate || '').trim();
+    if (date) {
+      params = params.set('date', date);
     }
 
     // Only admins/officers can filter other users; licensee always gets their own activity from backend.
@@ -387,11 +440,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         catchError((err) => {
           this.userActivityError = err?.error?.detail || 'Failed to load activity log.';
           this.userActivities = [];
+          this.activityTotalCount = 0;
           return of([]);
         })
       )
       .subscribe((rows: any[]) => {
         this.userActivities = Array.isArray(rows) ? rows : [];
+        this.activityTotalCount = this.userActivities.length;
       });
   }
 

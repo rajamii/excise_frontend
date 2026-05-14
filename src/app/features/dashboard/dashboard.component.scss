@@ -1787,6 +1787,32 @@ mat-card-content {
 
 @keyframes act-spin { to { transform: rotate(360deg); } }
 
+// ── Activity Refresh Button (global — lives in section-header) ──────────
+.act-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 18px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #fff;
+    background: #1c2b78;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 6px rgba(28, 43, 120, 0.25);
+
+    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+    mat-icon.act-spin { animation: act-spin 0.75s linear infinite; }
+
+    &:hover:not([disabled]) {
+        background: #2e4bbd;
+        box-shadow: 0 4px 10px rgba(28, 43, 120, 0.35);
+    }
+    &[disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
 .officer-activity-section {
     padding: 24px 28px 36px;
     background: #fff;
@@ -1827,31 +1853,6 @@ mat-card-content {
         }
     }
 
-    .act-refresh-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 7px 16px;
-        font-size: 0.84rem;
-        font-weight: 600;
-        color: #1c2b78;
-        background: #fff;
-        border: 1.5px solid #c5d0e8;
-        border-radius: 7px;
-        cursor: pointer;
-        transition: background 0.15s, color 0.15s, border-color 0.15s;
-
-        mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
-        mat-icon.act-spin { animation: act-spin 0.75s linear infinite; }
-
-        &:hover:not([disabled]) {
-            background: #1c2b78;
-            color: #fff;
-            border-color: #1c2b78;
-        }
-        &[disabled] { opacity: 0.5; cursor: not-allowed; }
-    }
-
     // ── Filters ─────────────────────────────────────────────
     .act-filters {
         display: flex;
@@ -1861,16 +1862,16 @@ mat-card-content {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        padding: 14px 18px;
+        padding: 12px 16px;
         margin-bottom: 20px;
+        width: 100%;
     }
 
     .act-filter-field {
         display: flex;
         flex-direction: column;
         gap: 4px;
-        flex: 1;
-        min-width: 160px;
+        flex: 0 0 auto;           // don't grow
 
         label {
             font-size: 0.72rem;
@@ -1881,10 +1882,11 @@ mat-card-content {
         }
 
         input {
-            padding: 7px 11px;
+            width: 150px;
+            padding: 6px 10px;
             border: 1.5px solid #d1d9e8;
             border-radius: 7px;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: #1e293b;
             outline: none;
             background: #fff;
@@ -1902,6 +1904,123 @@ mat-card-content {
         font-weight: 600;
         cursor: pointer;
         &:hover { background: #2e4bbd; }
+    }
+
+    .act-clear-btn {
+        padding: 6px 14px;
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 7px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+        transition: background 0.15s, box-shadow 0.15s;
+        &:hover { background: #dc2626; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35); }
+    }
+
+    .act-filter-select,
+    .act-filter-month {
+        width: 150px;
+        padding: 6px 10px;
+        border: 1.5px solid #d1d9e8;
+        border-radius: 7px;
+        font-size: 0.82rem;
+        color: #1e293b;
+        outline: none;
+        background: #fff;
+        cursor: pointer;
+        &:focus { border-color: #1c2b78; }
+    }
+
+    .act-filters--admin {
+        margin-top: -10px;
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    // ── Pagination ───────────────────────────────────────────
+    .act-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 12px 16px;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+
+        &__info {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        &__controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+    }
+
+    .act-page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        padding: 0 6px;
+        border: 1.5px solid #d1d9e8;
+        border-radius: 7px;
+        background: #fff;
+        color: #334155;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
+
+        &:hover:not([disabled]) {
+            background: #1c2b78;
+            color: #fff;
+            border-color: #1c2b78;
+        }
+
+        &--active {
+            background: #1c2b78;
+            color: #fff;
+            border-color: #1c2b78;
+        }
+
+        &[disabled] {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        &--num { min-width: 34px; }
+    }
+
+    .act-page-size {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 8px;
+        font-size: 0.8rem;
+        color: #64748b;
+
+        select {
+            padding: 4px 8px;
+            border: 1.5px solid #d1d9e8;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            color: #1e293b;
+            background: #fff;
+            cursor: pointer;
+            &:focus { outline: none; border-color: #1c2b78; }
+        }
     }
 
     // ── States ───────────────────────────────────────────────
