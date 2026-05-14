@@ -673,7 +673,7 @@
           <!-- Letter preview header (modal only, NOT inside print area) -->
           <div *ngIf="!supplyOrderLetterLoading && !supplyOrderLetterError && supplyOrderLetterModel"
             class="d-flex align-items-center gap-3 border-bottom border-dark pb-2 mb-3">
-            <img src="/assets/fav-icon.png" alt="Logo" style="width:56px;height:56px;object-fit:contain;flex-shrink:0;" />
+            <img src="/assets/fav-icon.png" alt="Logo" style="width:56px;height:56px;object-fit:contain;flex-shrink:0;filter:brightness(0) saturate(100%);" />
             <div>
               <div style="font-weight:800;font-size:1.2rem;letter-spacing:0.5px;">EXCISE DEPARTMENT</div>
               <div style="font-weight:700;font-size:0.85rem;color:#374151;">GOVERNMENT OF SIKKIM</div>
@@ -749,7 +749,7 @@
 
           <!-- Signature Section (modal preview only, outside print area) -->
           <div *ngIf="!supplyOrderLetterLoading && !supplyOrderLetterError && supplyOrderLetterModel"
-            class="d-flex justify-content-between align-items-end mt-4 pb-2">
+            class="d-flex justify-content-between align-items-end pb-2" style="margin-top:60px;">
             <div style="font-size:13px;">Thanking you.</div>
             <div class="text-center" style="font-size:11px;line-height:1.5;">
               <div style="border-top:1px solid #1a1a2e;width:140px;margin:0 auto 4px auto;"></div>

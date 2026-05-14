@@ -539,6 +539,7 @@ export class ITCELLComponent implements OnInit {
       height: 72px;
       object-fit: contain;
       flex-shrink: 0;
+      filter: brightness(0) saturate(100%);
     }
     .print-header-text {
       text-align: center;
@@ -596,7 +597,7 @@ export class ITCELLComponent implements OnInit {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-top: 36px;
+      margin-top: 70px;
       padding-bottom: 8px;
     }
     .thanking-you {
