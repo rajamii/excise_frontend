@@ -612,8 +612,12 @@ export class ITCELLComponent implements OnInit {
     /* To block */
     .to-block { margin-bottom: 14px; line-height: 1.7; }
     .ms-3 { margin-left: 16px; }
-    /* Subject */
-    .fw-semibold { font-weight: 700; }
+    /* Subject spacing */
+    .subject-line {
+      font-weight: 800;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
     .mt-4 { margin-top: 16px; }
     .mt-3 { margin-top: 12px; }
     .mb-2 { margin-bottom: 8px; }
@@ -622,7 +626,7 @@ export class ITCELLComponent implements OnInit {
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 12px;
+      margin-top: 14px;
     }
     th, td {
       border: 1px solid #1a1a2e;
@@ -703,7 +707,6 @@ export class ITCELLComponent implements OnInit {
         <div class="thanking-you">Thanking you.</div>
         <div class="signature-block">
           <div class="sig-line"></div>
-          <div class="sig-name">IT Cell</div>
           <div>Information Technology (IT) Cell</div>
           <div>Excise Department, HQ</div>
           <div>Gangtok</div>
@@ -816,6 +819,7 @@ export class ITCELLComponent implements OnInit {
       toPost: String(supplier?.post || 'The General Manager'),
       toCompany: String(supplier?.company_name || (supplier as any)?.companyName || (supplier as any)?.name || ''),
       toAddressLines,
+      toState: String(supplier?.state || '').trim(),
       manufacturingUnit,
       localQty: fmt(localQtyNum),
       exportQty: fmt(exportQtyNum),
