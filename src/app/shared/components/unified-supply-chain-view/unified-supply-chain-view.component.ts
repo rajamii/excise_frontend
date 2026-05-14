@@ -3140,8 +3140,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     private isHologramPaymentCompleted(): boolean {
         if (!this.applicationData) return false;
-        const token = String((this.applicationData as any)?.currentStageName || (this.applicationData as any)?.current_stage_name || '').toLowerCase();
-        return token.includes('payment') && token.includes('completed');
+        const stageName = String(
+            (this.applicationData as any)?.currentStageName ||
+            (this.applicationData as any)?.current_stage_name ||
+            ''
+        ).toLowerCase().trim();
+        const paymentStatus = String(
+            (this.applicationData as any)?.paymentStatus ||
+            (this.applicationData as any)?.payment_status ||
+            ''
+        ).toLowerCase().trim();
+        // Only true when licensee has completed payment (stage "Payment Completed")
+        return (
+            stageName === 'payment completed' ||
+            paymentStatus === 'completed' ||
+            stageName.includes('carton assigned') ||
+            stageName.includes('arrived')
+        );
     }
 
     shouldShowSupplyOrderLetterButton(): boolean {

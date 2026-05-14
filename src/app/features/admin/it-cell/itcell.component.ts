@@ -829,15 +829,14 @@ export class ITCELLComponent implements OnInit {
   }
 
   isPaymentCompleted(hologram: any): boolean {
-    const paymentStatus = String(hologram?.paymentStatus || '').toLowerCase();
-    const stageStatus = String(hologram?.status || '').toLowerCase();
+    const paymentStatus = String(hologram?.paymentStatus || hologram?.payment_status || '').toLowerCase();
+    const stageStatus = String(hologram?.status || hologram?.current_stage_name || '').toLowerCase();
+    // Only show Supply Order Letter button when payment is actually completed (stage 80)
     return (
-      paymentStatus.includes('completed') ||
-      paymentStatus.includes('paid') ||
-      paymentStatus.includes('success') ||
-      stageStatus.includes('payment completed') ||
+      paymentStatus === 'completed' ||
+      stageStatus === 'payment completed' ||
       stageStatus.includes('carton assigned') ||
-      stageStatus.includes('forwarded to commissioner')
+      stageStatus.includes('arrived')
     );
   }
 
