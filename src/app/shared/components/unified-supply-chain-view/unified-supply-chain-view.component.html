@@ -589,7 +589,7 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light detail-label-cell">Company</td>
-                                    <td>{{ hologramSupplierDetails.company_name || '—' }}</td>
+                                    <td>{{ hologramSupplierDetails.company_name || hologramSupplierDetails.companyName || hologramSupplierDetails.name || '—' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light detail-label-cell">Post</td>
@@ -1525,7 +1525,7 @@
                             <i class="bi bi-clipboard2-data me-2"></i>View Site Enquiry Report
                         </button>
 
-                        <button class="btn btn-primary btn-lg application-footer-actions__print" type="button" *ngIf="!isHologram()" (click)="printApplication()">
+                        <button class="btn btn-primary btn-lg application-footer-actions__print" type="button" (click)="printApplication()">
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
                     </div>
