@@ -246,17 +246,20 @@
                     <span class="act-badge" [ngClass]="getActivityBadgeClass(row)">
                       {{ getActivityActionLabel(row) }}
                     </span>
+                    <div class="act-time-sub" style="margin-top:4px" *ngIf="row?.activity_type || row?.activityType">
+                      {{ row?.activity_type || row?.activityType }}
+                    </div>
                   </td>
 
-                  <td class="act-td-ip">
-                    <span *ngIf="row?.ip_address && row?.ip_address !== 'null' && row?.ip_address !== null; else dash">
-                      {{ row?.ip_address }}
-                    </span>
-                  </td>
-
+                   <td class="act-td-ip">
+                     <span *ngIf="(row?.ip_address || row?.ipAddress) && (row?.ip_address || row?.ipAddress) !== 'null'; else dash">
+                       {{ row?.ip_address || row?.ipAddress }}
+                     </span>
+                   </td>
+ 
                   <td class="act-td-ua">
-                    <span *ngIf="row?.user_agent; else dash" [title]="row?.user_agent">
-                      {{ getShortUserAgent(row?.user_agent) }}
+                    <span *ngIf="row?.user_agent || row?.userAgent; else dash" [title]="row?.user_agent || row?.userAgent">
+                      {{ getShortUserAgent(row?.user_agent || row?.userAgent) }}
                     </span>
                   </td>
 

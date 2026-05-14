@@ -395,10 +395,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  private getActivityCode(row: any): string {
+    return String(row?.activity_type || row?.activityType || '').trim().toUpperCase();
+  }
+
+  private getActivityDisplay(row: any): string {
+    return String(row?.activity_type_display || row?.activityTypeDisplay || '').trim().toLowerCase();
+  }
+
+  private getRowTimestampMs(row: any): number | null {
+    const raw = row?.timestamp || row?.created_at || row?.createdAt;
+    if (!raw) return null;
+    const t = new Date(raw).getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+
   getActivityActionLabel(row: any): string {
     // Check both the raw code and the display value (API may return either)
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
 
     if (code === 'LOGIN'  || display === 'login')          return 'Login';
     if (code === 'LOGOUT' || display === 'logout')         return 'Logout';
@@ -408,12 +423,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (code === 'USR_DEL'   || display.includes('delet'))     return 'User Delete';
 
     // Fallback: use display value if available, else code
-    return (row?.activity_type_display || code || 'Activity');
+    return (row?.activity_type_display || row?.activityTypeDisplay || code || 'Activity');
   }
 
   getActivityBadgeClass(row: any): string {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
 
     if (code === 'LOGIN'  || display === 'login')          return 'act-badge--login';
     if (code === 'LOGOUT' || display === 'logout')         return 'act-badge--logout';
@@ -425,8 +440,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getActivityIcon(row: any): string {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
 
     if (code === 'LOGIN'  || display === 'login')   return 'login';
     if (code === 'LOGOUT' || display === 'logout')  return 'logout';
@@ -438,27 +453,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   isLoginActivity(row: any): boolean {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
     return code === 'LOGIN' || display === 'login';
   }
 
   isLogoutActivity(row: any): boolean {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
     return code === 'LOGOUT' || display === 'logout';
   }
 
   isWarnActivity(row: any): boolean {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
     return code === 'PASS_RESET' || code === 'USR_DEL' ||
            display.includes('password') || display.includes('delet');
   }
 
   isInfoActivity(row: any): boolean {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
     return code === 'REG' || code === 'USR_UPD' ||
            display.includes('registr') || display.includes('update');
   }
@@ -488,42 +503,53 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Returns a human-readable string like "2h 14m" or null if no matching logout found.
    */
   getSessionDuration(row: any): string | null {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
     const isLogin = code === 'LOGIN' || display === 'login';
     if (!isLogin) return null;
 
     const userId = row?.user_id;
-    const loginTime = row?.timestamp ? new Date(row.timestamp).getTime() : null;
+    const loginTime = this.getRowTimestampMs(row);
     if (!loginTime || !userId) return null;
 
     const idx = this.userActivities.indexOf(row);
     if (idx < 0) return null;
 
-    for (let j = idx + 1; j < this.userActivities.length; j++) {
-      const candidate = this.userActivities[j];
-      const cCode = String(candidate?.activity_type || '').trim().toUpperCase();
-      const cDisplay = String(candidate?.activity_type_display || '').trim().toLowerCase();
-      const isLogout = cCode === 'LOGOUT' || cDisplay === 'logout';
-      if (!isLogout) continue;
-      if (candidate?.user_id !== userId) continue;
-      const logoutTime = candidate?.timestamp ? new Date(candidate.timestamp).getTime() : null;
-      if (!logoutTime || logoutTime > loginTime) continue;
-      const diffMs = loginTime - logoutTime;
-      if (diffMs <= 0) continue;
-      const mins = Math.floor(diffMs / 60000);
-      if (mins < 1) return '< 1 min';
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return h > 0 ? `${h}h ${m}m` : `${m}m`;
-    }
+    const ts0 = this.getRowTimestampMs(this.userActivities[0]);
+    const ts1 = this.getRowTimestampMs(this.userActivities[1]);
+    const isDescending = ts0 !== null && ts1 !== null ? ts0 >= ts1 : true;
+
+    const scan = (from: number, to: number, step: number): string | null => {
+      for (let j = from; j !== to; j += step) {
+        const candidate = this.userActivities[j];
+        const cCode = this.getActivityCode(candidate);
+        const cDisplay = this.getActivityDisplay(candidate);
+        const isLogout = cCode === 'LOGOUT' || cDisplay === 'logout';
+        if (!isLogout) continue;
+        if (candidate?.user_id !== userId) continue;
+        const logoutTime = this.getRowTimestampMs(candidate);
+        if (!logoutTime) continue;
+        if (logoutTime <= loginTime) continue;
+        const diffMs = logoutTime - loginTime;
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return '< 1 min';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return h > 0 ? `${h}h ${m}m` : `${m}m`;
+      }
+      return null;
+    };
+
+    // Most likely ordering is DESC (latest first): logout row is before login row.
+    const duration = isDescending ? scan(idx - 1, -1, -1) : scan(idx + 1, this.userActivities.length, 1);
+    if (duration) return duration;
     return null;
   }
 
   /** Single compact summary line for the detail area */
   getActivitySummaryLine(row: any): string {
-    const code = String(row?.activity_type || '').trim().toUpperCase();
-    const display = String(row?.activity_type_display || '').trim().toLowerCase();
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
     const meta = (row?.metadata && typeof row.metadata === 'object') ? row.metadata : {};
 
     const isLogin  = code === 'LOGIN'  || display === 'login';
