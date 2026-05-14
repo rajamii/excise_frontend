@@ -498,3 +498,38 @@
   }
   .no-print { display: none !important; }
 }
+
+// ── Supply Order Letter Button ──
+.supply-order-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #fef3c7;
+  border: 1.5px solid #d97706;
+  color: #92400e;
+  box-shadow: 0 1px 3px rgba(180, 83, 9, 0.18);
+  transition: all 0.18s ease;
+
+  i {
+    font-size: 1rem;
+  }
+
+  &:hover {
+    background: #fde68a;
+    border-color: #b45309;
+    color: #78350f;
+    box-shadow: 0 3px 8px rgba(180, 83, 9, 0.28);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: #fcd34d;
+    border-color: #92400e;
+    box-shadow: none;
+  }
+}

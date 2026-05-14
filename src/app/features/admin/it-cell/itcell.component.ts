@@ -520,6 +520,52 @@ export class ITCELLComponent implements OnInit {
       display: flex;
       flex-direction: column;
       min-height: calc(297mm - 20mm);
+      position: relative;
+      overflow: hidden;
+    }
+    /* Watermark — repeating diagonal "EXCISE DEPARTMENT" text */
+    .letter-page-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 60px,
+        transparent 60px
+      );
+      background-repeat: repeat;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .watermark-layer {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .watermark-layer span {
+      display: inline-block;
+      width: 200px;
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(26, 26, 46, 0.07);
+      white-space: nowrap;
+      margin: 22px 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      user-select: none;
+    }
+    /* Ensure all content sits above watermark */
+    .print-header,
+    .letter-body,
+    .print-footer {
+      position: relative;
+      z-index: 1;
     }
     .letter-body {
       padding: 16px 24px 20px 24px;
@@ -664,9 +710,15 @@ export class ITCELLComponent implements OnInit {
         </div>
       </div>`;
 
+    // Build repeating watermark spans (enough to fill an A4 page)
+    const wmText = 'EXCISE DEPARTMENT';
+    const wmSpans = Array(80).fill(`<span>${wmText}</span>`).join('');
+    const watermark = `<div class="watermark-layer">${wmSpans}</div>`;
+
     return `
       <div class="letter-page-wrapper">
         <div class="letter-page-box">
+          ${watermark}
           ${header}
           <div class="letter-body">
             ${innerHtml}
