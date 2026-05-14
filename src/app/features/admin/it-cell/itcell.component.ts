@@ -506,35 +506,51 @@ export class ITCELLComponent implements OnInit {
       padding: 0;
       background: #fff;
     }
-    /* Wrapper centers the box and creates visible white space on left & right */
+    /* Wrapper: creates visible white space on left & right so border is seen */
     .letter-page-wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
       padding: 0 14mm;
       min-height: calc(297mm - 20mm);
     }
     /* The actual bordered letter box */
     .letter-page-box {
       border: 2px solid #1a1a2e;
-      padding: 20px 24px 28px 24px;
+      padding: 0 0 0 0;
       width: 100%;
       background: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(297mm - 20mm);
     }
-    /* Header */
-    .supply-letter-header {
+    .letter-body {
+      padding: 16px 24px 20px 24px;
+      flex: 1;
+    }
+    /* ── HEADER ── */
+    .print-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 14px 24px 10px 24px;
+      border-bottom: 2px solid #1a1a2e;
+    }
+    .print-header-logo {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .print-header-text {
       text-align: center;
-      border-bottom: 2px solid #111827;
-      padding-bottom: 10px;
-      margin-bottom: 16px;
     }
-    .supply-letter-title {
+    .print-header-title {
       font-weight: 800;
+      font-size: 22px;
       letter-spacing: 0.5px;
-      font-size: 20px;
       text-transform: uppercase;
+      line-height: 1.2;
     }
-    .supply-letter-subtitle {
+    .print-header-subtitle {
       font-weight: 700;
       font-size: 13px;
       color: #374151;
@@ -544,9 +560,10 @@ export class ITCELLComponent implements OnInit {
       display: flex;
       justify-content: space-between;
       margin-bottom: 14px;
+      margin-top: 14px;
     }
     /* To block */
-    .to-block { margin-bottom: 14px; line-height: 1.6; }
+    .to-block { margin-bottom: 14px; line-height: 1.7; }
     .ms-3 { margin-left: 16px; }
     /* Subject */
     .fw-semibold { font-weight: 700; }
@@ -561,7 +578,7 @@ export class ITCELLComponent implements OnInit {
       margin-top: 12px;
     }
     th, td {
-      border: 1px solid #111827;
+      border: 1px solid #1a1a2e;
       padding: 7px 10px;
       font-size: 12px;
     }
@@ -573,15 +590,90 @@ export class ITCELLComponent implements OnInit {
     .text-end { text-align: right; }
     .text-center { text-align: center; }
     /* Footer note */
-    .footer-note { margin-top: 18px; font-size: 11px; }
-    /* Hide Angular-specific classes that may bleed in */
+    .footer-note { margin-top: 18px; font-size: 11px; font-weight: 600; }
+    /* ── SIGNATURE SECTION ── */
+    .signature-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 36px;
+      padding-bottom: 8px;
+    }
+    .thanking-you {
+      font-size: 13px;
+    }
+    .signature-block {
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .signature-block .sig-line {
+      border-top: 1px solid #1a1a2e;
+      width: 140px;
+      margin: 0 auto 4px auto;
+    }
+    .signature-block .sig-name {
+      font-weight: 700;
+      font-size: 12px;
+    }
+    /* ── FOOTER BAR ── */
+    .print-footer {
+      border-top: 2px solid #1a1a2e;
+      padding: 8px 24px;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #374151;
+    }
+    /* Bootstrap utility classes that may appear in innerHTML */
     .d-flex { display: flex; }
     .justify-content-between { justify-content: space-between; }
     `;
   }
 
-  private wrapInPageBox(innerHtml: string): string {
-    return `<div class="letter-page-wrapper"><div class="letter-page-box">${innerHtml}</div></div>`;
+  private wrapInPageBox(innerHtml: string, model: any): string {
+    const logoUrl = '/assets/fav-icon.png';
+    const refNo = model?.refNo || '';
+    const dated = model?.dated || '';
+
+    const header = `
+      <div class="print-header">
+        <img class="print-header-logo" src="${logoUrl}" alt="Excise Dept Logo" />
+        <div class="print-header-text">
+          <div class="print-header-title">Excise Department</div>
+          <div class="print-header-subtitle">Government of Sikkim</div>
+        </div>
+      </div>`;
+
+    const footer = `
+      <div class="print-footer">
+        Excise Headquarters, M. G. Marg, Gangtok &ndash; 737 101<br>
+        E-mail: excise.dept@sikkim.gov.in &nbsp;|&nbsp; Tel: 03592-203963
+      </div>`;
+
+    const signatureSection = `
+      <div class="signature-section">
+        <div class="thanking-you">Thanking you.</div>
+        <div class="signature-block">
+          <div class="sig-line"></div>
+          <div class="sig-name">IT Cell</div>
+          <div>Information Technology (IT) Cell</div>
+          <div>Excise Department, HQ</div>
+          <div>Gangtok</div>
+        </div>
+      </div>`;
+
+    return `
+      <div class="letter-page-wrapper">
+        <div class="letter-page-box">
+          ${header}
+          <div class="letter-body">
+            ${innerHtml}
+            ${signatureSection}
+          </div>
+          ${footer}
+        </div>
+      </div>`;
   }
 
   printSupplyOrderLetter(): void {
@@ -596,7 +688,7 @@ export class ITCELLComponent implements OnInit {
   <style>${this.getPrintStyles()}</style>
 </head>
 <body>
-  ${this.wrapInPageBox(printArea.innerHTML)}
+  ${this.wrapInPageBox(printArea.innerHTML, this.supplyOrderLetterModel)}
 </body>
 </html>`;
 
@@ -631,7 +723,7 @@ export class ITCELLComponent implements OnInit {
   <title>Supply Order Letter</title>
   <style>${this.getPrintStyles()}</style>
 </head>
-<body>${this.wrapInPageBox(content)}</body>
+<body>${this.wrapInPageBox(content, this.supplyOrderLetterModel)}</body>
 </html>`);
     doc.close();
 
