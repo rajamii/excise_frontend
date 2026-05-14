@@ -3,7 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { MatDialog } from '@angular/material/dialog';
@@ -366,7 +366,7 @@ interface PendingNewLicenseFeeApproval {
 @Component({
     selector: 'app-unified-supply-chain-view',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, UnifiedActionButtonsComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, UnifiedActionButtonsComponent],
     templateUrl: './unified-supply-chain-view.component.html',
     styleUrls: ['./unified-supply-chain-view.component.scss']
 })
@@ -377,6 +377,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     errorMessage = '';
     objections: Objection[] = [];
     private objectionIndex = new Map<string, { hasUnresolved: boolean; hasResolved: boolean }>();
+
+    // Hologram supply order letter (IT Cell after payment)
+    supplyOrderLetterOpen = false;
+    supplyOrderLetterModel: any | null = null;
+    private pendingOpenSupplyLetter = false;
+
+    get hologramSupplierDetails(): any | null {
+        const data: any = this.applicationData as any;
+        return (data?.supplier_details || data?.supplierDetails) || null;
+    }
 
     // Uploaded documents modal state
     docsModalOpen = false;
@@ -695,6 +705,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const params = this.extractRouteParams();
         if (params.ref || params.id) {
             this.applicationType = params.type;
+            this.pendingOpenSupplyLetter = Boolean(params.openSupplyLetter);
             this.loadApplicationData(params.ref || '', params.id || '');
         } else {
             this.goBack();
@@ -705,8 +716,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const type = this.route.snapshot.queryParamMap.get('type') as ApplicationType || 'requisition';
         const ref = this.route.snapshot.paramMap.get('ref') || this.route.snapshot.queryParamMap.get('ref');
         const id = this.route.snapshot.queryParamMap.get('id');
+        const openSupplyLetter = String(this.route.snapshot.queryParamMap.get('openSupplyLetter') || '').trim();
 
-        return { type, ref, id };
+        return { type, ref, id, openSupplyLetter };
     }
 
     private loadApplicationData(refNo: string, id: string): void {
@@ -907,6 +919,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.calculateNewLicenseUploads();
         this.loadObjectionsForCurrentApplication();
         this.loadWorkflowActions();
+
+        if (this.pendingOpenSupplyLetter) {
+            this.pendingOpenSupplyLetter = false;
+            if (this.shouldShowSupplyOrderLetterButton()) {
+                // Open on next tick so bindings settle (modal uses model computed from applicationData).
+                setTimeout(() => this.openSupplyOrderLetter(), 0);
+            }
+        }
     }
 
     private canonicalFieldName(value: unknown): string {
@@ -3116,6 +3136,118 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 openArrival: '1'
             }
         });
+    }
+
+    private isHologramPaymentCompleted(): boolean {
+        if (!this.applicationData) return false;
+        const token = String((this.applicationData as any)?.currentStageName || (this.applicationData as any)?.current_stage_name || '').toLowerCase();
+        return token.includes('payment') && token.includes('completed');
+    }
+
+    shouldShowSupplyOrderLetterButton(): boolean {
+        return this.isHologram() && this.getUserContext() === USER_CONTEXTS.IT_CELL && this.isHologramPaymentCompleted();
+    }
+
+    openSupplyOrderLetter(): void {
+        if (!this.applicationData) return;
+        this.supplyOrderLetterModel = this.buildSupplyOrderLetterModel();
+        this.supplyOrderLetterOpen = true;
+        this.cdr.detectChanges();
+        setTimeout(() => {
+            const el = document.getElementById('supplyOrderLetterSection');
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    }
+
+    closeSupplyOrderLetter(): void {
+        this.supplyOrderLetterOpen = false;
+        this.cdr.detectChanges();
+    }
+
+    printSupplyOrderLetter(): void {
+        const letterEl = document.getElementById('supplyOrderLetterPrintArea');
+        if (!letterEl) return;
+
+        const html = `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Supply Order Letter</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
+    .supply-letter { background: #fff; }
+    .supply-letter-header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 10px; }
+    .supply-letter-title { font-weight: 800; letter-spacing: 0.5px; font-size: 22px; }
+    .supply-letter-subtitle { font-weight: 700; color: #374151; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #111827; padding: 8px; font-size: 12px; }
+    thead th { background: #f3f4f6; }
+    .text-end { text-align: right; }
+    .fw-semibold { font-weight: 700; }
+    .mt-3 { margin-top: 12px; }
+    .mt-4 { margin-top: 16px; }
+    .ms-3 { margin-left: 12px; }
+    .small { font-size: 11px; }
+    .d-flex { display: flex; }
+    .justify-content-between { justify-content: space-between; }
+  </style>
+</head>
+<body>
+  ${letterEl.outerHTML}
+  <script>
+    window.onload = function () { window.print(); window.close(); };
+  </script>
+</body>
+</html>`;
+
+        const win = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
+        if (!win) return;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+    }
+
+    private formatNumberIndian(value: any): string {
+        const num = Number(value || 0) || 0;
+        return num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
+    private buildSupplyOrderLetterModel(): any | null {
+        const supplier = this.hologramSupplierDetails;
+        if (!supplier) return null;
+
+        const refNo = String((this.applicationData as any)?.referenceNo || (this.applicationData as any)?.refNo || (this.applicationData as any)?.ref_no || '').trim();
+        const datedRaw = (this.applicationData as any)?.submissionDate || (this.applicationData as any)?.date || '';
+        const dated = datedRaw ? new Date(datedRaw).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+
+        const localQty = this.formatNumberIndian((this.applicationData as any)?.localQty ?? (this.applicationData as any)?.local_qty ?? 0);
+        const exportQty = this.formatNumberIndian((this.applicationData as any)?.exportQty ?? (this.applicationData as any)?.export_qty ?? 0);
+        const defenceQty = this.formatNumberIndian((this.applicationData as any)?.defenceQty ?? (this.applicationData as any)?.defence_qty ?? 0);
+        const totalQtyNum =
+            Number((this.applicationData as any)?.localQty ?? (this.applicationData as any)?.local_qty ?? 0) +
+            Number((this.applicationData as any)?.exportQty ?? (this.applicationData as any)?.export_qty ?? 0) +
+            Number((this.applicationData as any)?.defenceQty ?? (this.applicationData as any)?.defence_qty ?? 0);
+        const totalQty = this.formatNumberIndian(totalQtyNum);
+
+        const manufacturingUnit = String((this.applicationData as any)?.distilleryName || (this.applicationData as any)?.manufacturingUnit || (this.applicationData as any)?.manufacturing_unit || '').trim();
+
+        const addressText = String(supplier?.address || '').trim();
+        const toAddressLines = addressText ? addressText.split(/\r?\n/).map((x: string) => x.trim()).filter(Boolean) : [];
+
+        return {
+            refNo,
+            dated,
+            toPost: String(supplier?.post || 'The General Manager'),
+            toCompany: String(supplier?.company_name || supplier?.companyName || supplier?.name || ''),
+            toAddressLines,
+            manufacturingUnit,
+            localQty,
+            exportQty,
+            defenceQty,
+            totalQty,
+        };
     }
 
     // Type check methods for template

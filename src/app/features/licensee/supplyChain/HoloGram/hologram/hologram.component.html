@@ -23,8 +23,19 @@
                   <input type="date" class="form-control" [(ngModel)]="formData.date" [min]="todayDate" [max]="todayDate" required>
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label">Company</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.companyName" readonly>
+                  <label class="form-label">Supplier Company</label>
+                  <select
+                    class="form-select"
+                    [(ngModel)]="formData.supplierId"
+                    (ngModelChange)="onSupplierChange()"
+                    [disabled]="suppliersLoading"
+                    required>
+                    <option [ngValue]="null">Select supplier company</option>
+                    <option *ngFor="let s of suppliers" [ngValue]="s.id">{{ s.company_name || s.companyName || s.name }}</option>
+                  </select>
+                  <div class="text-muted small mt-1" *ngIf="suppliersLoading">Loading supplier companies...</div>
+                  <div class="text-danger small mt-1" *ngIf="!suppliersLoading && suppliersLoadError">{{ suppliersLoadError }}</div>
+                  <div class="text-warning small mt-1" *ngIf="!suppliersLoading && !suppliersLoadError && suppliers.length === 0">No supplier companies found.</div>
                 </div>
               </div>
 
@@ -152,7 +163,7 @@
             <div class="section-header">Applicant Details</div>
             <div class="applicant-info">
               <div class="info-row">
-                <label class="info-label">Company Name:</label>
+                <label class="info-label">Supplier Company:</label>
                 <div class="info-value company-name">{{ submittedData?.companyName }}</div>
               </div>
             </div>
@@ -414,7 +425,7 @@
                 <span class="value">{{ formData.date | date:'dd/MM/yyyy' }}</span>
               </div>
               <div class="info-item">
-                <span class="label">Company:</span>
+                <span class="label">Supplier:</span>
                 <span class="value">{{ formData.companyName }}</span>
               </div>
             </div>

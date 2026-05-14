@@ -582,6 +582,32 @@
                     </div>
                 </div>
 
+                <div class="section-card mb-4" *ngIf="isHologram() && hologramSupplierDetails">
+                    <h5 class="section-title">Supplier Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Company</td>
+                                    <td>{{ hologramSupplierDetails.company_name || '—' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Post</td>
+                                    <td>{{ hologramSupplierDetails.post || '—' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Address</td>
+                                    <td>{{ hologramSupplierDetails.address || '—' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">State</td>
+                                    <td>{{ hologramSupplierDetails.state || '—' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="section-card mb-4">
                     <h5 class="section-title">Status & Additional Information</h5>
                     <div class="table-responsive">
@@ -608,6 +634,12 @@
                     </div>
                 </div>
 
+                <div class="no-print d-flex justify-content-center mt-3" *ngIf="shouldShowSupplyOrderLetterButton()">
+                    <button type="button" class="btn btn-primary" (click)="openSupplyOrderLetter()">
+                        Supply Order Letter
+                    </button>
+                </div>
+
                 <div class="no-print d-flex justify-content-center mt-3">
                     <app-unified-action-buttons
                         [item]="applicationData"
@@ -619,6 +651,87 @@
                     </app-unified-action-buttons>
                 </div>
                 }
+
+                <!-- Supply Order Letter (Inline) -->
+                <div class="section-card mb-4" id="supplyOrderLetterSection" *ngIf="supplyOrderLetterOpen">
+                    <div class="d-flex justify-content-between align-items-center no-print">
+                        <h5 class="section-title mb-0">Supply Order Letter</h5>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary" (click)="printSupplyOrderLetter()">Print</button>
+                            <button type="button" class="btn btn-secondary" (click)="closeSupplyOrderLetter()">Close</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-3" *ngIf="supplyOrderLetterModel; else noLetterInline">
+                        <div id="supplyOrderLetterPrintArea" class="supply-letter">
+                            <div class="supply-letter-header">
+                                <div class="supply-letter-title">EXCISE DEPARTMENT</div>
+                                <div class="supply-letter-subtitle">GOVERNMENT OF SIKKIM</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-3">
+                                <div>No. {{ supplyOrderLetterModel.refNo }}</div>
+                                <div>Dated: {{ supplyOrderLetterModel.dated }}</div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div>To,</div>
+                                <div class="ms-3">{{ supplyOrderLetterModel.toPost }}</div>
+                                <div class="ms-3">{{ supplyOrderLetterModel.toCompany }}</div>
+                                <div class="ms-3" *ngFor="let ln of supplyOrderLetterModel.toAddressLines">{{ ln }}</div>
+                            </div>
+
+                            <div class="mt-4 fw-semibold">Subject: Supply of Hologram</div>
+
+                            <div class="mt-3">
+                                Kindly arrange to Supply {{ supplyOrderLetterModel.totalQty }} no's of Hologram to {{ supplyOrderLetterModel.manufacturingUnit }}.
+                            </div>
+
+                            <div class="mt-3">Details with regard to Number of Holograms are as under:-</div>
+
+                            <table class="table table-bordered mt-3 supply-letter-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 90px;">Sl No.</th>
+                                        <th>SERIES</th>
+                                        <th style="width: 220px;">QUANTITY</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>Local</td>
+                                        <td class="text-end">{{ supplyOrderLetterModel.localQty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2</td>
+                                        <td>Export</td>
+                                        <td class="text-end">{{ supplyOrderLetterModel.exportQty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3</td>
+                                        <td>Defence</td>
+                                        <td class="text-end">{{ supplyOrderLetterModel.defenceQty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="fw-semibold text-center">TOTAL</td>
+                                        <td class="text-end fw-semibold">{{ supplyOrderLetterModel.totalQty }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="mt-4 small">
+                                *Dispatch Report may kindly be forwarded to above mentioned Email Address.
+                            </div>
+                        </div>
+                    </div>
+
+                    <ng-template #noLetterInline>
+                        <div class="alert alert-warning mb-0">
+                            Supplier is not set for this procurement. Please ask the licensee to select supplier while submitting procurement.
+                        </div>
+                    </ng-template>
+                </div>
                 @if (isNewLicense()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Applicant Information</h5>

@@ -456,6 +456,18 @@ export class ITCELLComponent implements OnInit {
     });
   }
 
+  openSupplyOrderLetter(hologram: any): void {
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        ref: hologram.refNo,
+        id: hologram.id,
+        type: 'hologram',
+        source: 'itcell',
+        openSupplyLetter: '1',
+      }
+    });
+  }
+
   isPaymentCompleted(hologram: any): boolean {
     const paymentStatus = String(hologram?.paymentStatus || '').toLowerCase();
     const stageStatus = String(hologram?.status || '').toLowerCase();

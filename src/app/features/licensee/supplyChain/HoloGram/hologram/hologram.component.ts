@@ -2,15 +2,13 @@ import { Component, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { HologramDataService, HologramProcurement } from '../../services/hologram-data.service';
-import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
-import { environment } from '../../../../../../environments/environment';
+import { HologramDataService, HologramProcurement, HologramSupplier } from '../../services/hologram-data.service';
 
 interface HologramFormData {
   refNo: string;
   date: string;
-  companyName: string;
+  companyName: string; // supplier display name (legacy key used across template/print)
+  supplierId: number | null;
   localQtyLakh: number | null;
   exportQtyLakh: number | null;
   defenceQtyLakh: number | null;
@@ -49,13 +47,17 @@ export class HologramComponent {
 
 
   private hologramService = inject(HologramDataService);
-  private supplyChainProfileService = inject(SupplyChainProfileService);
-  private http = inject(HttpClient);
+
+  suppliers: HologramSupplier[] = [];
+  suppliersLoading = false;
+  selectedSupplier: HologramSupplier | null = null;
+  suppliersLoadError = '';
 
   formData: HologramFormData = {
     refNo: '',
     date: '',
     companyName: '',
+    supplierId: null,
     // Prefill sample data so the user can see how inputs look
     localQtyLakh: 0,
     exportQtyLakh: 0,
@@ -68,7 +70,7 @@ export class HologramComponent {
     this.isBrowser = isPlatformBrowser(platformId);
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
-    this.loadLicenseeEstablishmentName();
+    this.loadSuppliers();
     this.loadInitialReferenceNumber();
 
     // If a ref is provided, load and show its preview
@@ -136,71 +138,35 @@ export class HologramComponent {
     });
   }
 
-  private loadLicenseeEstablishmentName(): void {
-    this.supplyChainProfileService.getProfile().subscribe({
-      next: (response) => {
-        const profile = response?.data as any;
-        let establishmentName = String(
-          profile?.manufacturingUnitName ||
-          profile?.manufacturing_unit_name ||
-          ''
-        ).trim();
-
-        // Fallback: Try to get from license if profile doesn't have it
-        if (!establishmentName) {
-          // Try to get from user's license
-          this.http.get<any>(`${environment.apiBaseUrl}/masters/license/me/`).subscribe({
-            next: (licenses: any[]) => {
-              if (licenses && licenses.length > 0) {
-                const license = licenses[0];
-                establishmentName = String(
-                  license?.establishment_name ||
-                  license?.establishmentName ||
-                  license?.licensee_name ||
-                  license?.licenseeName ||
-                  'Manufacturing Unit'
-                ).trim();
-                
-                if (establishmentName) {
-                  this.formData.companyName = establishmentName;
-                }
-              }
-            },
-            error: () => {
-              // If all fails, use a default
-              this.formData.companyName = 'Manufacturing Unit';
-            }
-          });
-        } else {
-          this.formData.companyName = establishmentName;
+  private loadSuppliers(): void {
+    this.suppliersLoading = true;
+    this.suppliersLoadError = '';
+    this.hologramService.getHologramSuppliers(true).subscribe({
+      next: (resp) => {
+        console.log('📦 Supplier master response:', resp);
+        this.suppliers = Array.isArray(resp?.data) ? resp.data : [];
+        console.log('✅ Supplier master list:', this.suppliers);
+        if (!this.formData.supplierId && this.suppliers.length > 0) {
+          const first = this.suppliers[0];
+          this.formData.supplierId = Number(first.id);
+          this.selectedSupplier = first;
+          this.formData.companyName = String(first.company_name || '').trim();
         }
+        this.suppliersLoading = false;
       },
       error: () => {
-        // Fallback: Try to get from license
-        this.http.get<any>(`${environment.apiBaseUrl}/masters/license/me/`).subscribe({
-          next: (licenses: any[]) => {
-            if (licenses && licenses.length > 0) {
-              const license = licenses[0];
-              const establishmentName = String(
-                license?.establishment_name ||
-                license?.establishmentName ||
-                license?.licensee_name ||
-                license?.licenseeName ||
-                'Manufacturing Unit'
-              ).trim();
-              
-              if (establishmentName) {
-                this.formData.companyName = establishmentName;
-              }
-            }
-          },
-          error: () => {
-            // Keep field empty if all fetches fail
-            this.formData.companyName = 'Manufacturing Unit';
-          }
-        });
+        this.suppliers = [];
+        this.suppliersLoadError = 'Could not load supplier companies.';
+        this.suppliersLoading = false;
       }
     });
+  }
+
+  onSupplierChange(): void {
+    const supplierId = Number(this.formData.supplierId || 0) || null;
+    this.formData.supplierId = supplierId;
+    this.selectedSupplier = supplierId ? (this.suppliers.find(s => Number(s?.id) === supplierId) || null) : null;
+    this.formData.companyName = this.selectedSupplier ? String(this.selectedSupplier.company_name || '').trim() : '';
   }
 
   clearForm(): void {
@@ -210,6 +176,7 @@ export class HologramComponent {
       refNo: '',
       date: today.toISOString().split('T')[0],
       companyName: this.formData.companyName,
+      supplierId: this.formData.supplierId,
       localQtyLakh: null,
       exportQtyLakh: null,
       defenceQtyLakh: null
@@ -334,8 +301,8 @@ export class HologramComponent {
       this.errorMessage = 'Please select date';
       return false;
     }
-    if (!this.formData.companyName?.trim()) {
-      this.errorMessage = 'Establishment name is not available in your licensee profile';
+    if (!this.formData.supplierId) {
+      this.errorMessage = 'Please select supplier company';
       return false;
     }
 
@@ -394,16 +361,17 @@ export class HologramComponent {
       export_qty: this.formData.exportQtyLakh || 0,
       defence_qty: this.formData.defenceQtyLakh || 0,
     };
+    if (this.formData.supplierId) {
+      payload.supplier = this.formData.supplierId;
+    }
 
     this.hologramService.createProcurement(payload).subscribe({
       next: (res) => {
         const anyRes = res as any;
         const responseRefNo = String(anyRes?.refNo || anyRes?.ref_no || this.formData.refNo).trim();
         const responseCompanyName = String(
-          anyRes?.licenseeName ||
-          anyRes?.licensee_name ||
-          anyRes?.manufacturingUnit ||
-          anyRes?.manufacturing_unit ||
+          anyRes?.supplier_details?.company_name ||
+          anyRes?.supplierDetails?.company_name ||
           this.formData.companyName
         ).trim();
 

@@ -198,6 +198,11 @@
                     <button class="btn btn-sm itcell-view-btn" (click)="viewApplication(hologram)" title="View Application">
                       <i class="bi bi-eye-fill"></i>
                     </button>
+                    @if (isPaymentCompleted(hologram)) {
+                    <button class="btn btn-sm btn-primary" (click)="openSupplyOrderLetter(hologram)" title="Supply Order Letter">
+                      <i class="bi bi-file-earmark-text"></i>
+                    </button>
+                    }
                   </div>
                 </td>
               </tr>
