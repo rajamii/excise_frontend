@@ -494,6 +494,96 @@ export class ITCELLComponent implements OnInit {
     this.supplyOrderLetterError = '';
   }
 
+  private getPrintStyles(): string {
+    return `
+    @page { size: A4; margin: 10mm 8mm 10mm 8mm; }
+    * { box-sizing: border-box; }
+    html, body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      color: #111827;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+    /* Wrapper centers the box and creates visible white space on left & right */
+    .letter-page-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 0 14mm;
+      min-height: calc(297mm - 20mm);
+    }
+    /* The actual bordered letter box */
+    .letter-page-box {
+      border: 2px solid #1a1a2e;
+      padding: 20px 24px 28px 24px;
+      width: 100%;
+      background: #fff;
+    }
+    /* Header */
+    .supply-letter-header {
+      text-align: center;
+      border-bottom: 2px solid #111827;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+    .supply-letter-title {
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      font-size: 20px;
+      text-transform: uppercase;
+    }
+    .supply-letter-subtitle {
+      font-weight: 700;
+      font-size: 13px;
+      color: #374151;
+    }
+    /* Ref & Date row */
+    .ref-date-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    /* To block */
+    .to-block { margin-bottom: 14px; line-height: 1.6; }
+    .ms-3 { margin-left: 16px; }
+    /* Subject */
+    .fw-semibold { font-weight: 700; }
+    .mt-4 { margin-top: 16px; }
+    .mt-3 { margin-top: 12px; }
+    .mb-2 { margin-bottom: 8px; }
+    .mb-3 { margin-bottom: 12px; }
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      border: 1px solid #111827;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+    thead th {
+      background: #f3f4f6;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .text-end { text-align: right; }
+    .text-center { text-align: center; }
+    /* Footer note */
+    .footer-note { margin-top: 18px; font-size: 11px; }
+    /* Hide Angular-specific classes that may bleed in */
+    .d-flex { display: flex; }
+    .justify-content-between { justify-content: space-between; }
+    `;
+  }
+
+  private wrapInPageBox(innerHtml: string): string {
+    return `<div class="letter-page-wrapper"><div class="letter-page-box">${innerHtml}</div></div>`;
+  }
+
   printSupplyOrderLetter(): void {
     const printArea = document.getElementById('itcellSupplyOrderPrintArea');
     if (!printArea) return;
@@ -503,34 +593,15 @@ export class ITCELLComponent implements OnInit {
 <head>
   <meta charset="utf-8">
   <title>Supply Order Letter</title>
-  <style>
-    @page { size: A4; margin: 18mm; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #111827; margin: 0; padding: 0; }
-    .supply-letter-header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 10px; margin-bottom: 16px; }
-    .supply-letter-title { font-weight: 800; letter-spacing: 0.5px; font-size: 22px; }
-    .supply-letter-subtitle { font-weight: 700; color: #374151; font-size: 14px; }
-    .ref-date-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
-    .to-block { margin-bottom: 16px; }
-    .to-block .indent { margin-left: 16px; }
-    .subject { font-weight: 700; margin-bottom: 12px; }
-    .body-text { margin-bottom: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { border: 1px solid #111827; padding: 8px 10px; font-size: 12px; }
-    thead th { background: #f3f4f6; font-weight: 700; }
-    .text-right { text-align: right; }
-    .text-center { text-align: center; }
-    .fw-bold { font-weight: 700; }
-    .footer-note { margin-top: 20px; font-size: 11px; }
-  </style>
+  <style>${this.getPrintStyles()}</style>
 </head>
 <body>
-  ${printArea.innerHTML}
+  ${this.wrapInPageBox(printArea.innerHTML)}
 </body>
 </html>`;
 
     const win = window.open('', '_blank');
     if (!win) {
-      // Fallback: use iframe-based print if popup is blocked
       this.printViaIframe(printArea.innerHTML);
       return;
     }
@@ -558,27 +629,9 @@ export class ITCELLComponent implements OnInit {
 <head>
   <meta charset="utf-8">
   <title>Supply Order Letter</title>
-  <style>
-    @page { size: A4; margin: 18mm; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #111827; margin: 0; padding: 0; }
-    .supply-letter-header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 10px; margin-bottom: 16px; }
-    .supply-letter-title { font-weight: 800; letter-spacing: 0.5px; font-size: 22px; }
-    .supply-letter-subtitle { font-weight: 700; color: #374151; font-size: 14px; }
-    .ref-date-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
-    .to-block { margin-bottom: 16px; }
-    .to-block .indent { margin-left: 16px; }
-    .subject { font-weight: 700; margin-bottom: 12px; }
-    .body-text { margin-bottom: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { border: 1px solid #111827; padding: 8px 10px; font-size: 12px; }
-    thead th { background: #f3f4f6; font-weight: 700; }
-    .text-right { text-align: right; }
-    .text-center { text-align: center; }
-    .fw-bold { font-weight: 700; }
-    .footer-note { margin-top: 20px; font-size: 11px; }
-  </style>
+  <style>${this.getPrintStyles()}</style>
 </head>
-<body>${content}</body>
+<body>${this.wrapInPageBox(content)}</body>
 </html>`);
     doc.close();
 
