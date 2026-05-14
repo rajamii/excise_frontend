@@ -201,8 +201,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   get activityPagedRows(): any[] {
-    const start = (this.activityPage - 1) * this.activityPageSize;
-    return this.userActivities.slice(start, start + this.activityPageSize);
+    const start = (this.activityPage - 1) * Number(this.activityPageSize);
+    return this.userActivities.slice(start, start + Number(this.activityPageSize));
   }
 
   get activityPageNumbers(): number[] {
@@ -554,51 +554,86 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * For LOGIN rows: find the next LOGOUT by the same user and compute duration.
-   * Returns a human-readable string like "2h 14m" or null if no matching logout found.
+   * Session duration:
+   * - LOGOUT row → find the nearest LOGIN in the full list (same user, within 24h), show |diff|
+   * - LOGIN row  → find the nearest LOGOUT after it (same user, within 24h), show diff
+   *
+   * Uses loose equality for user_id to handle int/string mismatches from the API.
+   * Falls back to ignoring user_id when only one user's data is present (licensee view).
    */
   getSessionDuration(row: any): string | null {
-    const code = this.getActivityCode(row);
+    const code    = this.getActivityCode(row);
     const display = this.getActivityDisplay(row);
-    const isLogin = code === 'LOGIN' || display === 'login';
-    if (!isLogin) return null;
+    const isLogin  = code === 'LOGIN'  || display === 'login';
+    const isLogout = code === 'LOGOUT' || display === 'logout';
 
-    const userId = row?.user_id;
-    const loginTime = this.getRowTimestampMs(row);
-    if (!loginTime || !userId) return null;
+    if (!isLogin && !isLogout) return null;
 
-    const idx = this.userActivities.indexOf(row);
-    if (idx < 0) return null;
+    const rowTimeMs = this.getRowTimestampMs(row);
+    if (!rowTimeMs) return null;
 
-    const ts0 = this.getRowTimestampMs(this.userActivities[0]);
-    const ts1 = this.getRowTimestampMs(this.userActivities[1]);
-    const isDescending = ts0 !== null && ts1 !== null ? ts0 >= ts1 : true;
+    // Use loose equality — API may return user_id as int, stored as number, but coerce to string for safety
+    const userId = row?.user_id != null ? String(row.user_id) : null;
 
-    const scan = (from: number, to: number, step: number): string | null => {
-      for (let j = from; j !== to; j += step) {
-        const candidate = this.userActivities[j];
-        const cCode = this.getActivityCode(candidate);
-        const cDisplay = this.getActivityDisplay(candidate);
-        const isLogout = cCode === 'LOGOUT' || cDisplay === 'logout';
-        if (!isLogout) continue;
-        if (candidate?.user_id !== userId) continue;
-        const logoutTime = this.getRowTimestampMs(candidate);
-        if (!logoutTime) continue;
-        if (logoutTime <= loginTime) continue;
-        const diffMs = logoutTime - loginTime;
-        const mins = Math.floor(diffMs / 60000);
-        if (mins < 1) return '< 1 min';
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return h > 0 ? `${h}h ${m}m` : `${m}m`;
-      }
-      return null;
+    const sameUser = (candidate: any): boolean => {
+      if (!userId) return true; // no user_id on row — match all (single-user view)
+      const cId = candidate?.user_id != null ? String(candidate.user_id) : null;
+      if (!cId) return true;
+      return cId === userId;
     };
 
-    // Most likely ordering is DESC (latest first): logout row is before login row.
-    const duration = isDescending ? scan(idx - 1, -1, -1) : scan(idx + 1, this.userActivities.length, 1);
-    if (duration) return duration;
-    return null;
+    const formatDiff = (ms: number): string => {
+      const absMs = Math.abs(ms);
+      const mins  = Math.floor(absMs / 60000);
+      if (mins < 1) return '< 1 min';
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    };
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+    if (isLogout) {
+      // Find the nearest LOGIN by the same user — closest absolute time within 24h window.
+      let bestDiff: number | null = null;
+
+      for (const candidate of this.userActivities) {
+        if (!candidate || candidate === row) continue;
+        if (!sameUser(candidate)) continue;
+        const cCode    = this.getActivityCode(candidate);
+        const cDisplay = this.getActivityDisplay(candidate);
+        if (cCode !== 'LOGIN' && cDisplay !== 'login') continue;
+        const loginTime = this.getRowTimestampMs(candidate);
+        if (!loginTime) continue;
+        const diff = Math.abs(rowTimeMs - loginTime);
+        if (diff > WINDOW_MS) continue;
+        if (bestDiff === null || diff < bestDiff) {
+          bestDiff = diff;
+        }
+      }
+
+      return bestDiff !== null ? formatDiff(bestDiff) : null;
+    }
+
+    // LOGIN row: find the nearest LOGOUT for the same user within 24h.
+    let bestDiff: number | null = null;
+
+    for (const candidate of this.userActivities) {
+      if (!candidate || candidate === row) continue;
+      if (!sameUser(candidate)) continue;
+      const cCode    = this.getActivityCode(candidate);
+      const cDisplay = this.getActivityDisplay(candidate);
+      if (cCode !== 'LOGOUT' && cDisplay !== 'logout') continue;
+      const logoutTime = this.getRowTimestampMs(candidate);
+      if (!logoutTime) continue;
+      const diff = Math.abs(logoutTime - rowTimeMs);
+      if (diff > WINDOW_MS) continue;
+      if (bestDiff === null || diff < bestDiff) {
+        bestDiff = diff;
+      }
+    }
+
+    return bestDiff !== null ? formatDiff(bestDiff) : null;
   }
 
   /** Single compact summary line for the detail area */
