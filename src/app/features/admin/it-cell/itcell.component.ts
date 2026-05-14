@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HologramDataService } from '../../licensee/supplyChain/services/hologram-data.service';
 import { AccountService } from '../../../core/services/account.service';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
+import { HologramSupplier } from '../../licensee/supplyChain/services/hologram-data.service';
 
 @Component({
   selector: 'app-itcell',
@@ -30,6 +31,12 @@ export class ITCELLComponent implements OnInit {
   // Modal state
   showHologramModal = false;
   selectedHologram: any | null = null;
+
+  // Supply Order Letter modal state
+  showSupplyOrderModal = false;
+  supplyOrderLetterModel: any | null = null;
+  supplyOrderLetterLoading = false;
+  supplyOrderLetterError = '';
 
   // Filters
   selectedMonth: string = '';
@@ -457,15 +464,166 @@ export class ITCELLComponent implements OnInit {
   }
 
   openSupplyOrderLetter(hologram: any): void {
-    this.router.navigate(['/supply-chain-view'], {
-      queryParams: {
-        ref: hologram.refNo,
-        id: hologram.id,
-        type: 'hologram',
-        source: 'itcell',
-        openSupplyLetter: '1',
+    this.showSupplyOrderModal = true;
+    this.supplyOrderLetterModel = null;
+    this.supplyOrderLetterError = '';
+    this.supplyOrderLetterLoading = true;
+
+    // Fetch full procurement details (includes supplier_details) then build the letter model
+    this.hologramService.getProcurement(hologram.id).subscribe({
+      next: (procurement: any) => {
+        const supplier = procurement?.supplier_details || procurement?.supplierDetails || null;
+        if (!supplier) {
+          this.supplyOrderLetterError = 'Supplier is not set for this procurement. Please ask the licensee to select a supplier while submitting the procurement.';
+          this.supplyOrderLetterLoading = false;
+          return;
+        }
+        this.supplyOrderLetterModel = this.buildSupplyOrderLetterModel(procurement, supplier);
+        this.supplyOrderLetterLoading = false;
+      },
+      error: () => {
+        this.supplyOrderLetterError = 'Failed to load procurement details. Please try again.';
+        this.supplyOrderLetterLoading = false;
       }
     });
+  }
+
+  closeSupplyOrderModal(): void {
+    this.showSupplyOrderModal = false;
+    this.supplyOrderLetterModel = null;
+    this.supplyOrderLetterError = '';
+  }
+
+  printSupplyOrderLetter(): void {
+    const printArea = document.getElementById('itcellSupplyOrderPrintArea');
+    if (!printArea) return;
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Supply Order Letter</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #111827; margin: 0; padding: 0; }
+    .supply-letter-header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 10px; margin-bottom: 16px; }
+    .supply-letter-title { font-weight: 800; letter-spacing: 0.5px; font-size: 22px; }
+    .supply-letter-subtitle { font-weight: 700; color: #374151; font-size: 14px; }
+    .ref-date-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .to-block { margin-bottom: 16px; }
+    .to-block .indent { margin-left: 16px; }
+    .subject { font-weight: 700; margin-bottom: 12px; }
+    .body-text { margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #111827; padding: 8px 10px; font-size: 12px; }
+    thead th { background: #f3f4f6; font-weight: 700; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .fw-bold { font-weight: 700; }
+    .footer-note { margin-top: 20px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  ${printArea.innerHTML}
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      // Fallback: use iframe-based print if popup is blocked
+      this.printViaIframe(printArea.innerHTML);
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  }
+
+  private printViaIframe(content: string): void {
+    const existingFrame = document.getElementById('itcellPrintFrame');
+    if (existingFrame) existingFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'itcellPrintFrame';
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Supply Order Letter</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #111827; margin: 0; padding: 0; }
+    .supply-letter-header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 10px; margin-bottom: 16px; }
+    .supply-letter-title { font-weight: 800; letter-spacing: 0.5px; font-size: 22px; }
+    .supply-letter-subtitle { font-weight: 700; color: #374151; font-size: 14px; }
+    .ref-date-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .to-block { margin-bottom: 16px; }
+    .to-block .indent { margin-left: 16px; }
+    .subject { font-weight: 700; margin-bottom: 12px; }
+    .body-text { margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #111827; padding: 8px 10px; font-size: 12px; }
+    thead th { background: #f3f4f6; font-weight: 700; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .fw-bold { font-weight: 700; }
+    .footer-note { margin-top: 20px; font-size: 11px; }
+  </style>
+</head>
+<body>${content}</body>
+</html>`);
+    doc.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => iframe.remove(), 2000);
+    };
+  }
+
+  private buildSupplyOrderLetterModel(procurement: any, supplier: HologramSupplier): any {
+    const refNo = String(procurement?.refNo || procurement?.ref_no || procurement?.referenceNo || '').trim();
+    const datedRaw = procurement?.submissionDate || procurement?.date || '';
+    const dated = datedRaw
+      ? new Date(datedRaw).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const localQtyNum = Number(procurement?.localQty ?? procurement?.local_qty ?? 0);
+    const exportQtyNum = Number(procurement?.exportQty ?? procurement?.export_qty ?? 0);
+    const defenceQtyNum = Number(procurement?.defenceQty ?? procurement?.defence_qty ?? 0);
+    const totalQtyNum = localQtyNum + exportQtyNum + defenceQtyNum;
+
+    const fmt = (n: number) => n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+    const manufacturingUnit = String(
+      procurement?.licenseeName || procurement?.manufacturingUnit || procurement?.manufacturing_unit || ''
+    ).trim();
+
+    const addressText = String(supplier?.address || '').trim();
+    const toAddressLines = addressText
+      ? addressText.split(/\r?\n/).map((x: string) => x.trim()).filter(Boolean)
+      : [];
+
+    return {
+      refNo,
+      dated,
+      toPost: String(supplier?.post || 'The General Manager'),
+      toCompany: String(supplier?.company_name || (supplier as any)?.companyName || (supplier as any)?.name || ''),
+      toAddressLines,
+      manufacturingUnit,
+      localQty: fmt(localQtyNum),
+      exportQty: fmt(exportQtyNum),
+      defenceQty: fmt(defenceQtyNum),
+      totalQty: fmt(totalQtyNum),
+    };
   }
 
   isPaymentCompleted(hologram: any): boolean {
