@@ -107,10 +107,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     // ── Other ──
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
-    { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
     { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
     { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
     { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForOic: true },
+    { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
   ];
 
   constructor(
