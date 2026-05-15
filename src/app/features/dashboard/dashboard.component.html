@@ -217,18 +217,7 @@
           </div>
 
           <!-- Admin-only filters -->
-          <div class="act-filters act-filters--admin" *ngIf="!isLicenseeUser()">
-            <div class="act-filter-field">
-              <label>User ID</label>
-              <input type="text" [(ngModel)]="activityFilterUserId"
-                     (ngModelChange)="loadUserActivities()" placeholder="e.g. 12" />
-            </div>
-            <div class="act-filter-field">
-              <label>Activity Type</label>
-              <input type="text" [(ngModel)]="activityFilterType"
-                     (ngModelChange)="loadUserActivities()" placeholder="USR_UPD, PASS_RESET…" />
-            </div>
-          </div>
+      
 
           <!-- Loading -->
           <div class="act-loading" *ngIf="userActivityLoading">
