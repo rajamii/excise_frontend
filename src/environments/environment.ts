@@ -12,7 +12,10 @@ export const environment = {
 
     payment: {
         billdeskGatewayUrl: 'https://uat1.billdesk.com/pgidsk/PGIMerchantPayment',
-        callbackUrl: 'https://sems.sikkim.gov.in/dashboard/wallet-recharge/success',
-        cancelUrl: 'https://sems.sikkim.gov.in/payment/cancel',
+        // BillDesk must POST its payment response to a backend endpoint (not an Angular route),
+        // otherwise the callback fails (often seen as an Nginx/404/405 error) and wallets won't be credited.
+        // Django route: /transactional/payment-gateway/billdesk/response/
+        callbackUrl: 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/',
+        cancelUrl: 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/',
     },
 };

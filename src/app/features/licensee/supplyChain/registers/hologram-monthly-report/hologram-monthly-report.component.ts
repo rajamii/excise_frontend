@@ -197,7 +197,7 @@ export class HologramMonthlyReportComponent implements OnInit {
             .toPromise()
             .catch(() => null)
         : Promise.resolve(null)
-    ]).then(([dailyEntries, rollsDetails, procurementPayload, commissionerOverview]: [any, any, any, any]) => {
+    ]).then(async ([dailyEntries, rollsDetails, procurementPayload, commissionerOverview]: [any, any, any, any]) => {
       let dailyRows = this.extractRows(dailyEntries);
       const rollsArray = this.extractRows(rollsDetails);
       const procurementRows = this.extractRows(procurementPayload);
@@ -359,13 +359,73 @@ export class HologramMonthlyReportComponent implements OnInit {
       // Use roll history if daily register has no approved entries
       const finalUtilized = totalUtilized > 0 ? totalUtilized : totalUtilizedFromRolls;
       const finalWastage = totalWastage > 0 ? totalWastage : totalWastageFromRolls;
-      const openingStock = this.computeOpeningStockForMonth(
-        monthKey,
-        dailyRows || [],
-        rollsArray || [],
-        procurementRows || [],
-        commissionerOverviewEntries || []
-      );
+
+      // For commissioner mode, fetch the previous month's closing balance from the backend
+      // generate_report endpoint, which correctly aggregates all historical rolls and usage
+      // across all licensees. Client-side computation is unreliable here because getRollsDetails()
+      // is scoped to the logged-in user and returns no data for the commissioner.
+      const getPrevMonthOpeningStock = async (): Promise<number> => {
+        if (!this.commissionerMode) {
+          return this.computeOpeningStockForMonth(
+            monthKey,
+            dailyRows || [],
+            rollsArray || [],
+            procurementRows || [],
+            commissionerOverviewEntries || []
+          );
+        }
+
+        // Compute previous month/year
+        const monthNum = parseInt(monthKey.split('-')[1], 10);
+        const yearNum = parseInt(monthKey.split('-')[0], 10);
+        const prevMonthNum = monthNum === 1 ? 12 : monthNum - 1;
+        const prevYearNum = monthNum === 1 ? yearNum - 1 : yearNum;
+        const prevMonthCode = this.getMonthCode(prevMonthNum);
+
+        // Build query params
+        const params: Record<string, string> = {
+          month: prevMonthCode,
+          year: prevYearNum.toString(),
+          hologram_type: this.selectedHologramType,
+        };
+        if (this.selectedManufacturingUnit) {
+          // Try to resolve licensee_id from the selected unit name
+          const matchedUnit = (this.manufacturingUnits || []).find(
+            (u: any) => {
+              const name = typeof u === 'string' ? u : (u?.name || u?.manufacturingUnitName || '');
+              return name === this.selectedManufacturingUnit;
+            }
+          ) as any;
+          const licId = matchedUnit && typeof matchedUnit === 'object'
+            ? (matchedUnit?.licenseeId || matchedUnit?.licensee_id || matchedUnit?.id || '')
+            : '';
+          if (licId) {
+            params['licensee_id'] = String(licId);
+          }
+        }
+
+        const queryString = Object.entries(params)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+          .join('&');
+
+        try {
+          const prevReport = await this.http
+            .get<any>(`${this.hologramApiBase}/monthly-report/generate_report/?${queryString}`)
+            .toPromise();
+          return Number(prevReport?.overviewSummary?.closingBalance ?? 0);
+        } catch {
+          // Fallback to client-side computation if the API call fails
+          return this.computeOpeningStockForMonth(
+            monthKey,
+            dailyRows || [],
+            rollsArray || [],
+            procurementRows || [],
+            commissionerOverviewEntries || []
+          );
+        }
+      };
+
+      const openingStock = await getPrevMonthOpeningStock();
       
       // Set overview summary
       this.overviewSummary = {
@@ -2642,33 +2702,63 @@ export class HologramMonthlyReportComponent implements OnInit {
       }
     }
 
-    // Commissioner fallback: when rolls/procurement are unavailable for prior months,
-    // use dashboard overview monthly quantity so previous month closing carries forward
-    // as opening balance for the selected month.
-    for (const overviewEntry of commissionerOverviewEntries || []) {
-      const entryMonthKey = this.getMonthKeyFromAnyDate(
-        overviewEntry?.usageDate || overviewEntry?.submissionDate || ''
-      );
-      if (!entryMonthKey || entryMonthKey >= monthKey) {
-        continue;
+    // Commissioner fallback: when rolls/procurement data is unavailable for prior months,
+    // derive the opening stock by computing a running balance from the earliest known month
+    // using the daily rows (which already contain correct issued_qty / wastage_qty).
+    // NOTE: Do NOT use overviewEntry.quantity as arrivals — that field is the requested
+    // allocation quantity, not the received stock, and would produce incorrect opening balances.
+    if (this.commissionerMode && arrivalByMonth.size === 0) {
+      // Collect all prior daily rows sorted by month
+      const priorRowsAll = (dailyRows || []).filter((entry: any) => {
+        const entryDate = entry.usage_date || entry.usageDate || '';
+        const entryMonthKey = this.getMonthKeyFromAnyDate(entryDate);
+        const entryType = (entry.hologram_type || entry.hologramType || 'LOCAL').toString().toUpperCase();
+        const approvalStatus = entry.approval_status || entry.approvalStatus || '';
+        return (
+          !!entryMonthKey &&
+          entryMonthKey < monthKey &&
+          entryType === this.selectedHologramType &&
+          this.matchesApprovalStatus(approvalStatus) &&
+          this.matchesSelectedManufacturingUnit(entry)
+        );
+      });
+
+      // Group by month and compute a running closing balance across all prior months.
+      // Opening of the first known month is 0 (no earlier data available).
+      const monthsWithData = Array.from(
+        new Set(priorRowsAll.map((e: any) => {
+          const d = e.usage_date || e.usageDate || '';
+          return this.getMonthKeyFromAnyDate(d);
+        }))
+      ).sort();
+
+      let runningBalance = 0;
+      for (const mk of monthsWithData) {
+        const monthRows = priorRowsAll.filter((e: any) => {
+          const d = e.usage_date || e.usageDate || '';
+          return this.getMonthKeyFromAnyDate(d) === mk;
+        });
+        // For commissioner mode, arrivals for each prior month come from the request quantity
+        // on the overview entries (one arrival per approved request in that month).
+        const monthArrivals = (commissionerOverviewEntries || []).reduce((sum: number, oe: any) => {
+          const oeMonthKey = this.getMonthKeyFromAnyDate(oe?.usageDate || oe?.submissionDate || '');
+          const oeType = String(oe?.hologramType || 'LOCAL').toUpperCase();
+          if (oeMonthKey !== mk || oeType !== this.selectedHologramType) return sum;
+          if (!this.matchesSelectedManufacturingUnit(oe)) return sum;
+          return sum + Number(oe?.quantity || 0);
+        }, 0);
+
+        const monthUtilized = monthRows.reduce(
+          (sum: number, e: any) => sum + Number(e.issued_qty || e.issuedQty || 0), 0
+        );
+        const monthWastage = monthRows.reduce(
+          (sum: number, e: any) => sum + Number(e.wastage_qty || e.wastageQty || 0), 0
+        );
+        runningBalance = runningBalance + monthArrivals - monthUtilized - monthWastage;
+        if (runningBalance < 0) runningBalance = 0;
       }
 
-      const entryType = String(overviewEntry?.hologramType || 'LOCAL').toUpperCase();
-      if (entryType !== this.selectedHologramType) {
-        continue;
-      }
-      if (!this.matchesSelectedManufacturingUnit(overviewEntry)) {
-        continue;
-      }
-
-      const qty = Number(overviewEntry?.quantity || 0);
-      if (qty <= 0) {
-        continue;
-      }
-
-      if (!arrivalByMonth.has(entryMonthKey)) {
-        arrivalByMonth.set(entryMonthKey, qty);
-      }
+      return runningBalance;
     }
 
     const priorArrivals = Array.from(arrivalByMonth.values()).reduce((sum, qty) => sum + qty, 0);

@@ -2580,13 +2580,21 @@ private initializeWalletContextAndLoadData(): void {
       moduleLabel = 'Manufacturing';
     } else if (walletType === 'excise') {
       walletLabel = 'Excise Duty';
-      hoa = '0039-800-02';
       modalWalletType = 'excise';
+      hoa = String(this.walletHoaByType?.excise || '').trim();
+    } else if (walletType === 'education_cess' || walletType === 'education') {
+      walletLabel = 'Education Cess Wallet';
+      modalWalletType = 'education';
+      hoa = String(this.walletHoaByType?.education || '').trim();
+    } else if (walletType === 'hologram') {
+      walletLabel = 'Hologram Wallet';
+      modalWalletType = 'hologram';
+      hoa = String(this.walletHoaByType?.hologram || '').trim();
     } else {
       console.warn(`Unsupported wallet type "${walletType}", defaulting to excise.`);
       walletLabel = 'Excise Duty';
-      hoa = '0039-800-02';
       modalWalletType = 'excise';
+      hoa = String(this.walletHoaByType?.excise || '').trim();
     }
 
     this.modalContext = { walletType: modalWalletType , moduleLabel, walletLabel, hoa };
@@ -2662,6 +2670,8 @@ private initializeWalletContextAndLoadData(): void {
         transaction_id: this.currentTxnId,
         amount: amount,
         wallet_type: type,
+        licensee_id: licenseeId,
+        payer_id: licenseeId,
         head_of_account: this.modalContext.hoa,
       });
     }
@@ -2844,15 +2854,6 @@ private initializeWalletContextAndLoadData(): void {
       return;
     }
 
-    // For non-security_deposit and non-license_fee, HOA is mandatory.
-    if (context.walletType !== 'license_fee' && context.walletType !== 'security_deposit') {
-      const headOfAccount = String(context.hoa || '').trim();
-      if (!headOfAccount) {
-        this.showErrorMessage('Unable to proceed: Head Of Account not found.');
-        return;
-      }
-    }
-
     Swal.fire({
       title: 'Redirecting to BillDesk',
       text: 'Preparing payment request...',
@@ -2880,16 +2881,42 @@ private initializeWalletContextAndLoadData(): void {
             payment_module_code: LICENSE_RENEWAL_MODULE_CODE
           })
           : this.paymentIntegrationService.initiateBilldeskWalletRecharge({
-            transaction_id: transactionId,
-            wallet_type: walletType,
-            head_of_account: String(context.hoa || '').trim(),
-            amount
-          });
+             transaction_id: transactionId,
+             wallet_type: walletType,
+             licensee_id: licenseeId,
+             payer_id: licenseeId,
+             head_of_account: String(context.hoa || '').trim(),
+             amount
+           });
 
     request$.pipe(timeout(30000)).subscribe({
       next: (response) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
+
+        const merchantId = String((response as any)?.merchantId || (response as any)?.merchant_id || '').trim();
+        const bdOrderId = String((response as any)?.bdOrderId || (response as any)?.bd_order_id || '').trim();
+        const authToken = String((response as any)?.authToken || (response as any)?.auth_token || '').trim();
+
+        // Prefer BillDesk Web SDK when possible so we get a responseHandler callback in the SPA.
+        if (merchantId && bdOrderId && authToken) {
+          this.paymentIntegrationService.launchBillDeskSDK(response as any, (txn: any) => {
+            const isSuccess = txn && String(txn.auth_status || '').trim() === '0300';
+            this.router.navigate(['/dashboard/wallet-recharge/success'], {
+              queryParams: {
+                transactionId: String((response as any)?.transaction_id || (response as any)?.transactionId || this.addMoneyTransactionId || '').trim(),
+                walletType: context.walletType,
+                hoa: String(context.hoa || '').trim(),
+                amount,
+                status: isSuccess ? 'success' : 'failed',
+                createdAt: new Date().toISOString()
+              }
+            });
+            // Refresh wallet after callback (server should have credited on success).
+            setTimeout(() => this.refreshWalletData(), 800);
+          });
+          return;
+        }
 
         const billdeskUrl = String((response as any)?.billdeskUrl || (response as any)?.billdesk_url || '').trim();
         const requestMsg = String((response as any)?.requestMsg || (response as any)?.request_msg || '').trim();
@@ -2938,6 +2965,7 @@ private initializeWalletContextAndLoadData(): void {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = url;
+    form.target = 'billdeskChildWindow';
 
     const input = document.createElement('input');
     input.type = 'hidden';
@@ -2946,6 +2974,13 @@ private initializeWalletContextAndLoadData(): void {
 
     form.appendChild(input);
     document.body.appendChild(form);
+
+    try {
+      // Ensure the payment runs in a child window so the SPA doesn't get replaced/closed by gateway pages.
+      window.open('', 'billdeskChildWindow', 'noopener,noreferrer');
+    } catch {
+      // ignore; form submit will still work (may reuse same tab depending on browser policy)
+    }
     form.submit();
   }
 
