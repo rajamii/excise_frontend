@@ -158,12 +158,12 @@
 
 /* Status-based Row Colors */
 .table-row.low-stock-row {
-  background-color: #fff8e1 !important;
-  border-left: 4px solid #ff9800;
+  background-color: #ecfdf5 !important;
+  border-left: 4px solid #10b981;
 }
 
 .table-row.low-stock-row:hover {
-  background-color: #fff3c4 !important;
+  background-color: #d1fae5 !important;
 }
 
 .table-row.out-stock-row {
@@ -295,7 +295,7 @@
 
 .pack-size-item.in-stock {
   border-color: #10b981;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #d1fae5 100%);
 }
 
 .pack-size-item.in-stock::before {
@@ -303,12 +303,12 @@
 }
 
 .pack-size-item.low-stock {
-  border-color: #f59e0b;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #10b981;
+  background: linear-gradient(135deg, #ffffff 0%, #d1fae5 100%);
 }
 
 .pack-size-item.low-stock::before {
-  background: linear-gradient(90deg, #f59e0b, #d97706);
+  background: linear-gradient(90deg, #10b981, #059669);
 }
 
 .pack-size-item.out-of-stock {

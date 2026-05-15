@@ -245,7 +245,7 @@
             <td class="pack-sizes-cell">
               <div class="pack-sizes-grid">
                 <div *ngFor="let packSize of getPackSizeKeys(brand.packSizes)" class="pack-size-item"
-                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK'"
+                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK' || brand.packSizes[packSize].status === 'OVERSTOCKED'"
                   [class.low-stock]="brand.packSizes[packSize].status === 'LOW_STOCK'"
                   [class.out-of-stock]="brand.packSizes[packSize].status === 'OUT_OF_STOCK'">
                   <div class="pack-size-header">
