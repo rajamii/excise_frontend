@@ -404,6 +404,177 @@
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
 }
 
+.cases-cell {
+  text-align: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  min-width: 220px;
+}
+
+.cases-grid {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 6px 2px;
+  scroll-snap-type: x proximity;
+}
+
+.case-item {
+  flex: 0 0 180px;
+  position: relative;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  padding: 12px 12px 10px;
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+.case-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+.case-item.in-stock {
+  border: 2px solid #10b981;
+  box-shadow:
+    0 2px 10px rgba(16, 185, 129, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.case-item.low-stock {
+  border: 2px solid #f59e0b;
+  box-shadow:
+    0 2px 10px rgba(245, 158, 11, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.case-item.out-of-stock {
+  border: 2px solid #ef4444;
+  box-shadow:
+    0 2px 10px rgba(239, 68, 68, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.case-item.in-stock::before {
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 82% 80%, rgba(14, 165, 233, 0.06) 0%, transparent 55%);
+}
+
+.case-item.low-stock::before {
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(245, 158, 11, 0.14) 0%, transparent 55%),
+    radial-gradient(circle at 82% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 55%);
+}
+
+.case-item.out-of-stock::before {
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(239, 68, 68, 0.14) 0%, transparent 55%),
+    radial-gradient(circle at 82% 80%, rgba(14, 165, 233, 0.05) 0%, transparent 55%);
+}
+
+.case-item-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.ml-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.case-item.in-stock .ml-pill {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.case-item.low-stock .ml-pill {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
+}
+
+.case-item.out-of-stock .ml-pill {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+}
+
+.cases-info,
+.cases-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+.cases-number {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.cases-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #64748b;
+}
+
+.case-rule {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #334155;
+  padding: 7px 8px;
+  border-radius: 10px;
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.case-item.case-missing .ml-pill {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  box-shadow: 0 2px 6px rgba(100, 116, 139, 0.2);
+}
+
+.case-item.case-missing .cases-number {
+  color: #94a3b8;
+}
+
+.case-item.case-missing .case-rule {
+  color: #64748b;
+  background: rgba(248, 250, 252, 0.9);
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

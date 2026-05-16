@@ -213,7 +213,7 @@
             <th>Pack Sizes & Stock</th>
             <th>Total Utilized</th>
             <th>Total Stock</th>
-            <th>Overall Status</th>
+            <th>Number of Cases</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -280,15 +280,41 @@
               </div>
             </td>
 
-            <!-- Overall Status -->
-            <td class="status-cell">
-              <span class="status-badge" [class]="'badge-' + getStatusColor(brand.overallStatus)">
-                <i class="bi" [class.bi-check-circle]="brand.overallStatus === 'IN_STOCK'"
-                  [class.bi-exclamation-triangle]="brand.overallStatus === 'LOW_STOCK'"
-                  [class.bi-x-circle]="brand.overallStatus === 'OUT_OF_STOCK'"
-                  [class.bi-arrow-up]="brand.overallStatus === 'OVERSTOCKED'"></i>
-                {{ brand.overallStatus.replace('_', ' ') }}
-              </span>
+            <!-- Number of Cases (dynamic from brand_ml_in_cases) -->
+            <td class="cases-cell">
+              <div class="cases-grid">
+                <div *ngFor="let packSize of getPackSizeKeys(brand.packSizes)" class="case-item"
+                  [class.case-missing]="!getPiecesInCase(packSize)"
+                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK' || brand.packSizes[packSize].status === 'OVERSTOCKED'"
+                  [class.low-stock]="brand.packSizes[packSize].status === 'LOW_STOCK'"
+                  [class.out-of-stock]="brand.packSizes[packSize].status === 'OUT_OF_STOCK'">
+                  <div class="case-item-header">
+                    <span class="ml-pill">{{ packSize }}ml</span>
+                  </div>
+                  <ng-container *ngIf="getPiecesInCase(packSize) as piecesInCase; else noCaseConfig">
+                    <div class="cases-info">
+                      <div class="cases-number">
+                        ≈ {{ getCasesForUnits(brand.packSizes[packSize].currentStock, packSize) | number:'1.0-0' }}
+                      </div>
+                      <div class="cases-label">cases</div>
+                      <div class="case-rule">
+                        <i class="bi bi-box-seam"></i>
+                        1 case = {{ piecesInCase | number }} bottles
+                      </div>
+                    </div>
+                  </ng-container>
+                  <ng-template #noCaseConfig>
+                    <div class="cases-missing">
+                      <div class="cases-number">--</div>
+                      <div class="cases-label">cases</div>
+                      <div class="case-rule">
+                        <i class="bi bi-info-circle"></i>
+                        ML config missing
+                      </div>
+                    </div>
+                  </ng-template>
+                </div>
+              </div>
             </td>
 
             <!-- Actions -->

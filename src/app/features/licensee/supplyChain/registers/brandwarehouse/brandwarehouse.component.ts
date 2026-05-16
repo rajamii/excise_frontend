@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { BrandWarehouseService, BrandWarehouseUtilization } from '../../services/brand-warehouse.service';
 import { ProductionService, ProductionBatch } from '../../services/production.service';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
+import { SupplyChainService } from '../../services/supplychain.service';
 
 interface TransitPermitDetail {
   utilizationId?: number;
@@ -108,6 +109,9 @@ export class BrandwarehouseComponent implements OnInit {
   filteredStocks: GroupedBrandStock[] = [];
   paginatedStocks: GroupedBrandStock[] = [];
   newlyUpdatedStocks: GroupedBrandStock[] = [];
+
+  // Master config: ml -> pieces per case (from brand_ml_in_cases)
+  private mlPiecesInCase: Record<number, number> = {};
   timelineMonthOptions: { value: string; label: string }[] = [];
   selectedTimelineMonth: string = 'ALL';
   timelinePageSizeOptions: number[] = [5, 10, 15];
@@ -228,11 +232,48 @@ export class BrandwarehouseComponent implements OnInit {
   constructor(
     private brandWarehouseService: BrandWarehouseService,
     private productionService: ProductionService,
-    private supplyChainProfileService: SupplyChainProfileService
+    private supplyChainProfileService: SupplyChainProfileService,
+    private supplyChainService: SupplyChainService
   ) { }
 
   ngOnInit(): void {
+    this.loadMlInCasesConfig();
     this.resolveCurrentDistilleryAndLoad();
+  }
+
+  private loadMlInCasesConfig(): void {
+    this.supplyChainService.getBrandMlInCases().subscribe({
+      next: (rows: any[]) => {
+        const nextMap: Record<number, number> = {};
+        (rows || []).forEach((row: any) => {
+          const mlRaw = row?.ml ?? row?.capacity_size ?? row?.capacitySize ?? row?.pack_size ?? row?.packSize;
+          const piecesRaw = row?.pieces_in_case ?? row?.piecesInCase ?? row?.pieces_per_case ?? row?.bottles_per_case ?? row?.bottlesPerCase;
+          const ml = parseInt(String(mlRaw ?? '').replace(/[^\d]/g, ''), 10);
+          const pieces = parseInt(String(piecesRaw ?? '').replace(/[^\d]/g, ''), 10);
+          if (Number.isFinite(ml) && ml > 0 && Number.isFinite(pieces) && pieces > 0) {
+            nextMap[ml] = pieces;
+          }
+        });
+        this.mlPiecesInCase = nextMap;
+      },
+      error: (error: unknown) => {
+        console.error('Error loading brand_ml_in_cases config:', error);
+        this.mlPiecesInCase = {};
+      }
+    });
+  }
+
+  getPiecesInCase(ml: number): number | null {
+    const pieces = this.mlPiecesInCase?.[Number(ml)];
+    return Number.isFinite(pieces) && pieces > 0 ? pieces : null;
+  }
+
+  getCasesForUnits(units: number, ml: number): number | null {
+    const normalizedUnits = Number(units);
+    if (!Number.isFinite(normalizedUnits) || normalizedUnits < 0) return null;
+    const piecesInCase = this.getPiecesInCase(ml);
+    if (!piecesInCase) return null;
+    return Math.floor(normalizedUnits / piecesInCase);
   }
 
   private resolveCurrentDistilleryAndLoad(): void {
