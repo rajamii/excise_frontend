@@ -358,17 +358,28 @@
 
           </div>
 
-          <!-- Right Section with User Info -->
-          <div class="nav-right">
-            <div class="top-user-info" (click)="openUserProfile()">
-              <div class="top-user-avatar">
-                <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
-              </div>
-              <div class="top-user-details">
-                <span class="top-user-name">{{ userName || 'License User' }}</span>
+           <!-- Right Section with User Info -->
+           <div class="nav-right">
+             <div class="top-user-info" (click)="openUserProfile()">
+              <button
+                *ngIf="isLicenseeUser() && selectedLicenseDisplay"
+                type="button"
+                class="top-license-chip"
+                (click)="$event.stopPropagation(); openLicenseNumbersPopup()"
+                title="View license numbers"
+              >
+                <mat-icon class="chip-icon">badge</mat-icon>
+                <span class="chip-text">{{ selectedLicenseDisplay }}</span>
+                <mat-icon class="chip-caret">expand_more</mat-icon>
+              </button>
+                <div class="top-user-avatar">
+                  <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
+                </div>
+                <div class="top-user-details">
+                  <span class="top-user-name">{{ userName || 'License User' }}</span>
+                </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
 

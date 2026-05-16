@@ -64,6 +64,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
+
+  myLicenses: any[] = [];
+  selectedLicenseGroupKey = '';
   // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
   readonly sidebarSectionLabels: Record<string, string> = {
@@ -944,6 +947,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }).subscribe({
       next: ({ licenses, approvedPayload, allApplications }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
+        this.myLicenses = licenseRows;
+        this.ensureSelectedLicenseGroup();
         const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
         const allRows = Array.isArray(allApplications) ? allApplications : [];
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
@@ -964,9 +969,163 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.showBreweryOrDistilleryMenus = false;
         this.hasBreweryOrDistilleryWalletViews = false;
         this.showManufacturingWalletNav = false;
+        this.myLicenses = [];
+        this.selectedLicenseGroupKey = '';
         this.triggerUiRefresh();
       }
     });
+  }
+
+  private ensureSelectedLicenseGroup(): void {
+    const groups = this.getLicenseGroups();
+    if (groups.length === 0) {
+      this.selectedLicenseGroupKey = '';
+      return;
+    }
+    if (this.selectedLicenseGroupKey && groups.some((g) => g.key === this.selectedLicenseGroupKey)) {
+      return;
+    }
+    const preferred = groups.find((g) => g.items.some((x) => Boolean(x?.is_active ?? x?.isActive)));
+    this.selectedLicenseGroupKey = (preferred || groups[0]).key;
+  }
+
+  get selectedLicenseDisplay(): string {
+    const group = this.getLicenseGroups().find((g) => g.key === this.selectedLicenseGroupKey);
+    if (!group) return '';
+    const active = group.items.find((x) => Boolean(x?.is_active ?? x?.isActive));
+    const best = active || group.items[0];
+    return String(best?.license_id || best?.licenseId || '').trim();
+  }
+
+  openLicenseNumbersPopup(): void {
+    if (!this.isLicenseeUser()) return;
+
+    const groups = this.getLicenseGroups();
+    if (groups.length === 0) {
+      void Swal.fire('License Number', 'No license number is available yet.', 'info');
+      return;
+    }
+
+    const selectHtml = groups.length > 1
+      ? `
+        <div class="license-popup__row">
+          <label class="license-popup__label" for="licenseGroup">Select license</label>
+          <select id="licenseGroup" class="license-popup__select">
+            ${groups.map((g) => `<option value="${this.escapeHtml(g.key)}">${this.escapeHtml(g.label)}</option>`).join('')}
+          </select>
+        </div>
+      `
+      : '';
+
+    void Swal.fire({
+      title: 'License Numbers',
+      html: `
+        <div class="license-popup">
+          ${selectHtml}
+          <div id="licenseGroupLabel" class="license-popup__group-label"></div>
+          <div id="licenseList" class="license-popup__list"></div>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Close',
+      didOpen: () => {
+        const selectEl = document.getElementById('licenseGroup') as HTMLSelectElement | null;
+        const initialKey = groups.some((g) => g.key === this.selectedLicenseGroupKey) ? this.selectedLicenseGroupKey : groups[0].key;
+        if (selectEl) {
+          selectEl.value = initialKey;
+          selectEl.addEventListener('change', () => {
+            this.renderLicensePopupList(groups, selectEl.value);
+          });
+        }
+        this.renderLicensePopupList(groups, initialKey);
+      }
+    });
+  }
+
+  private renderLicensePopupList(groups: Array<{ key: string; label: string; items: any[] }>, groupKey: string): void {
+    const labelEl = document.getElementById('licenseGroupLabel');
+    const target = document.getElementById('licenseList');
+    if (!target) return;
+
+    const group = groups.find((g) => g.key === groupKey) || groups[0];
+    this.selectedLicenseGroupKey = group.key;
+    if (labelEl) {
+      labelEl.textContent = group.label || 'License';
+    }
+
+    const ids = group.items
+      .map((x) => String(x?.license_id || x?.licenseId || '').trim())
+      .filter(Boolean)
+      .sort((a, b) => this.compareLicenseIdsDesc(a, b));
+
+    const html = ids.length
+      ? `<ul class="license-popup__ul">${ids.map((id) => `<li><code>${this.escapeHtml(id)}</code></li>`).join('')}</ul>`
+      : `<div class="license-popup__empty">No license number found for this selection.</div>`;
+
+    target.innerHTML = html;
+    this.triggerUiRefresh();
+  }
+
+  private getLicenseGroups(): Array<{ key: string; label: string; items: any[] }> {
+    const rows = Array.isArray(this.myLicenses) ? this.myLicenses : [];
+    if (rows.length === 0) return [];
+
+    const toText = (v: any) => String(v ?? '').trim();
+    const byKey = new Map<string, { key: string; label: string; items: any[] }>();
+
+    for (const row of rows) {
+      const category = toText(row?.license_category || row?.licenseCategory);
+      const subCategory = toText(row?.license_sub_category || row?.licenseSubCategory);
+      const appType = toText(row?.application_type || row?.applicationType);
+      const labelParts = [category, subCategory].filter(Boolean);
+      const label = labelParts.length ? labelParts.join(' • ') : (appType || 'License');
+      const key = `${label}__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}__${appType}`;
+
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.items.push(row);
+      } else {
+        byKey.set(key, { key, label, items: [row] });
+      }
+    }
+
+    const groups = Array.from(byKey.values());
+    for (const g of groups) {
+      g.items = g.items
+        .filter((x) => String(x?.license_id || x?.licenseId || '').trim())
+        .sort((a, b) => this.compareLicenseIdsDesc(
+          String(a?.license_id || a?.licenseId || ''),
+          String(b?.license_id || b?.licenseId || '')
+        ));
+    }
+
+    return groups.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  private compareLicenseIdsDesc(a: string, b: string): number {
+    const ax = this.parseLicenseIdSortKey(a);
+    const bx = this.parseLicenseIdSortKey(b);
+    if (ax.yearStart !== bx.yearStart) return bx.yearStart - ax.yearStart;
+    if (ax.serial !== bx.serial) return bx.serial - ax.serial;
+    return String(b).localeCompare(String(a));
+  }
+
+  private parseLicenseIdSortKey(id: string): { yearStart: number; serial: number } {
+    const text = String(id || '');
+    const fy = /\/(\d{4})-(\d{2})\//.exec(text);
+    const yearStart = fy ? Number(fy[1]) : 0;
+    const serialMatch = /\/(\d+)\s*$/.exec(text);
+    const serial = serialMatch ? Number(serialMatch[1]) : 0;
+    return { yearStart, serial };
+  }
+
+  private escapeHtml(text: string): string {
+    return String(text || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private applySubtypeMenuRules(rows: any[]): void {

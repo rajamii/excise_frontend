@@ -28,6 +28,8 @@ interface NewLicenseItem {
   id: string;
   applicationId: string;
   siteEnquiryIsReverted?: boolean;
+  isApproved?: boolean;
+  licenseNumber?: string;
   applicantName: string;
   establishmentName: string;
   submittedOn: string;
@@ -94,6 +96,17 @@ export class NewLicenseDashboardComponent implements OnInit {
   dateFilter = '';
   monthFilter = '';
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
+
+  get approvedLicenseNumbers(): string[] {
+    if (!this.isLicenseeUser()) return [];
+
+    const numbers = this.allRows
+      .filter((r) => r?.statusGroup === 'approved' && Boolean(r?.isApproved))
+      .map((r) => String(r?.licenseNumber || '').trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(numbers));
+  }
 
   
 
@@ -258,6 +271,22 @@ export class NewLicenseDashboardComponent implements OnInit {
     if (this.totalPages === 0) return;
     if (this.pageIndex >= this.totalPages - 1) return;
     this.pageIndex += 1;
+  }
+
+  showApprovedLicenseNumbers(): void {
+    const items = this.approvedLicenseNumbers;
+    if (items.length === 0) {
+      void Swal.fire('License Number', 'No approved license number is available yet.', 'info');
+      return;
+    }
+
+    const list = items.map((x) => `<li><code>${this.escapeHtml(x)}</code></li>`).join('');
+    void Swal.fire({
+      title: 'Approved License Number',
+      html: `<div style="text-align:left"><ul style="padding-left: 1.25rem; margin:0">${list}</ul></div>`,
+      icon: 'info',
+      confirmButtonText: 'Close'
+    });
   }
 
   clearFilters(): void {
@@ -500,10 +529,16 @@ export class NewLicenseDashboardComponent implements OnInit {
           (item?.site_enquiry_is_reverted ?? item?.siteEnquiryIsReverted ?? item?.siteEnquiryReverted) || false
         );
 
+        const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
+        const isApproved = Boolean(item?.is_approved ?? item?.isApproved ?? statusGroup === 'approved');
+        const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
+
         return ({
-          id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
-          applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
+          id: applicationId,
+          applicationId,
           siteEnquiryIsReverted,
+          isApproved,
+          licenseNumber,
           applicantName: this.getApplicantName(item),
           establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
           submittedOn,
@@ -735,6 +770,25 @@ export class NewLicenseDashboardComponent implements OnInit {
       else if (row?.statusGroup === 'rejected') next.rejected += 1;
     }
     return next;
+  }
+
+  private deriveNewLicenseNaNumber(applicationId: string, item: any): string {
+    const direct = String(item?.license_id || item?.licenseId || item?.license_number || item?.licenseNumber || '').trim();
+    if (direct) return direct;
+
+    const id = String(applicationId || '').trim();
+    if (id.startsWith('NA/')) return id;
+    if (id.startsWith('NLI/')) return `NA/${id.slice(4)}`;
+    return '';
+  }
+
+  private escapeHtml(text: string): string {
+    return String(text || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private syncActiveSummaryFilter(): void {
