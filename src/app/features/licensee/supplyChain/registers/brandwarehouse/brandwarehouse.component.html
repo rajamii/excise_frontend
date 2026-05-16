@@ -33,17 +33,6 @@
         </div>
       </div>
 
-      <!-- Total Capacity -->
-      <div class="overview-card capacity-card">
-        <div class="card-icon">
-          <i class="bi bi-cup-straw"></i>
-        </div>
-        <div class="card-content">
-          <h3>{{ warehouseOverview.totalCapacity | number }}</h3>
-          <p>Total Capacity (Bottles)</p>
-        </div>
-      </div>
-
       <!-- Current Stock -->
       <div class="overview-card stock-card">
         <div class="card-icon">
@@ -55,49 +44,32 @@
         </div>
       </div>
 
-      <!-- Today's Production -->
+      <!-- This Month's Production -->
       <div class="overview-card production-card">
         <div class="card-icon">
           <i class="bi bi-plus-circle"></i>
         </div>
         <div class="card-content">
           <h3>{{ warehouseOverview.todayProduction | number }}</h3>
-          <p>Today's Production</p>
+          <p>This Month's Production</p>
         </div>
       </div>
 
-      <!-- Today's Consumption -->
+      <!-- This Month's Consumption -->
       <div class="overview-card consumption-card">
         <div class="card-icon">
           <i class="bi bi-dash-circle"></i>
         </div>
         <div class="card-content">
           <h3>{{ warehouseOverview.todayConsumption | number }}</h3>
-          <p>Today's Consumption</p>
+          <p>This Month's Consumption</p>
         </div>
       </div>
 
-      <!-- Low Stock Alerts -->
-      <div class="overview-card alert-card low-stock">
-        <div class="card-icon">
-          <i class="bi bi-exclamation-triangle"></i>
-        </div>
-        <div class="card-content">
-          <h3>{{ warehouseOverview.lowStockAlerts }}</h3>
-          <p>Low Stock Alerts</p>
-        </div>
-      </div>
 
-      <!-- Out of Stock -->
-      <div class="overview-card alert-card out-stock">
-        <div class="card-icon">
-          <i class="bi bi-x-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3>{{ warehouseOverview.outOfStockAlerts }}</h3>
-          <p>Out of Stock</p>
-        </div>
-      </div>
+      <!-- Low Stock Alerts and Out of Stock removed -->
+
+
     </div>
   </div>
 
@@ -191,17 +163,6 @@
     </div>
   </div>
 
-  <!-- Results Summary -->
-  <div class="results-summary">
-    <div class="summary-info">
-      <span class="results-count">
-        Showing {{ paginatedStocks.length }} of {{ filteredStocks.length }} brands
-      </span>
-      <span class="total-stock">
-        Total Stock: {{ getTotalStock() | number }} units
-      </span>
-    </div>
-  </div>
 
   <!-- Warehouse Table -->
   <div class="warehouse-table-container">

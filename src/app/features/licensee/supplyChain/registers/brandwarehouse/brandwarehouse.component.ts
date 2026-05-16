@@ -344,17 +344,7 @@ export class BrandwarehouseComponent implements OnInit {
   loadWarehouseData(): void {
     this.isLoading = true;
 
-    // Load overview first
-    this.brandWarehouseService.getWarehouseOverview(this.buildApiFilters()).subscribe({
-      next: (overview) => {
-        this.warehouseOverview = overview;
-      },
-      error: (error) => {
-        console.error('Error loading overview:', error);
-      }
-    });
-
-    // Load brand warehouses with distillery filter
+    // Load brand warehouses — overview is derived from this same data
     this.brandWarehouseService.getGroupedBrandWarehouses(this.buildApiFilters()).subscribe({
       next: (data) => {
         console.log('🔍 Received grouped data from service:', data);
@@ -363,9 +353,12 @@ export class BrandwarehouseComponent implements OnInit {
           console.log('📋 Sample brand:', data[0]);
         }
 
-        // Filter to show only current distillery's brands
         this.groupedBrandStocks = this.filterByCurrentDistillery(data);
         console.log('✅ After distillery filtering:', this.groupedBrandStocks.length);
+
+        // Build overview from loaded data, then patch production/consumption
+        this.calculateOverview();
+        this.loadTodayProductionAndConsumption();
 
         this.applyFilters();
         this.isLoading = false;
@@ -373,10 +366,52 @@ export class BrandwarehouseComponent implements OnInit {
       error: (error) => {
         console.error('Error loading warehouse data:', error);
         this.isLoading = false;
-        // Fall back to sample data on error
         this.initializeSampleData();
         this.calculateOverview();
+        this.loadTodayProductionAndConsumption();
         this.applyFilters();
+      }
+    });
+  }
+
+  /**
+   * Load this month's production and consumption totals.
+   * "Today" often has no data since hologram entries use past usage_date
+   * and transit permits are raised on varying dates, so month-to-date
+   * gives consistently meaningful numbers.
+   */
+  private loadTodayProductionAndConsumption(): void {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      .toISOString().slice(0, 10); // YYYY-MM-01
+    const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // Month-to-date production via brand-warehouse production-summary
+    const daysIntoMonth = now.getDate(); // 1-31
+    this.brandWarehouseService.getMonthlyProductionTotal(daysIntoMonth).subscribe({
+      next: (monthProd) => {
+        console.log('🏭 Monthly production total:', monthProd);
+        this.warehouseOverview = { ...this.warehouseOverview, todayProduction: monthProd };
+      },
+      error: (err) => {
+        console.error('❌ Error loading production summary:', err);
+      }
+    });
+
+    // Month-to-date consumption via utilizations filtered to this month
+    this.brandWarehouseService.getUtilizations({
+      date_from: monthStart,
+      date_to: todayStr
+    }).subscribe({
+      next: (utilizations) => {
+        const monthConsumption = (utilizations || []).reduce((sum: number, u: any) => {
+          const qty = u.quantity ?? u.total_bottles ?? 0;
+          return sum + (Number(qty) || 0);
+        }, 0);
+        this.warehouseOverview = { ...this.warehouseOverview, todayConsumption: monthConsumption };
+      },
+      error: (err) => {
+        console.error('Error loading consumption:', err);
       }
     });
   }

@@ -540,6 +540,32 @@ export class BrandWarehouseService {
     }
 
     /**
+     * Get monthly production total from production-summary endpoint
+     */
+    getMonthlyProductionTotal(days: number): Observable<number> {
+        const params = new HttpParams().set('days', days.toString());
+        return this.http.get<any>(
+            `${this.baseUrl}/production-summary/`,
+            { params }
+        ).pipe(
+            map((res: any) => {
+                // API returns camelCase keys via response renderer
+                const val =
+                    res?.summary?.monthProduction ??
+                    res?.summary?.month_production ??
+                    res?.summary?.totalQuantity ??
+                    res?.summary?.total_quantity ??
+                    0;
+                return Number(val) || 0;
+            }),
+            catchError((err) => {
+                console.error('getMonthlyProductionTotal error:', err);
+                return of(0);
+            })
+        );
+    }
+
+    /**
      * Get arrivals (stock additions) for a brand warehouse
      */
     getArrivals(brandWarehouseId: number, filters?: { limit?: number; days?: number }): Observable<any[]> {
