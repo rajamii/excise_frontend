@@ -211,9 +211,9 @@
           <tr class="table-header">
             <th>Brand Details</th>
             <th>Pack Sizes & Stock</th>
+            <th>Number of Cases</th>
             <th>Total Utilized</th>
             <th>Total Stock</th>
-            <th>Number of Cases</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -261,25 +261,6 @@
               </div>
             </td>
 
-            <!-- Total Utilized -->
-            <td class="utilized-cell">
-              <div class="utilized-info">
-                <div class="utilized-number">{{ brand.totalUtilized | number }}</div>
-                <div class="utilized-label">units utilized</div>
-              </div>
-            </td>
-
-            <!-- Total Stock -->
-            <td class="total-stock-cell">
-              <div class="total-info">
-                <div class="total-number">{{ brand.totalStock | number }}</div>
-                <div class="total-label">total units</div>
-                <div class="capacity-info">
-                  <small>of {{ brand.totalCapacity | number }} capacity</small>
-                </div>
-              </div>
-            </td>
-
             <!-- Number of Cases (dynamic from brand_ml_in_cases) -->
             <td class="cases-cell">
               <div class="cases-grid">
@@ -313,6 +294,25 @@
                       </div>
                     </div>
                   </ng-template>
+                </div>
+              </div>
+            </td>
+
+            <!-- Total Utilized -->
+            <td class="utilized-cell">
+              <div class="utilized-info">
+                <div class="utilized-number">{{ brand.totalUtilized | number }}</div>
+                <div class="utilized-label">units utilized</div>
+              </div>
+            </td>
+
+            <!-- Total Stock -->
+            <td class="total-stock-cell">
+              <div class="total-info">
+                <div class="total-number">{{ brand.totalStock | number }}</div>
+                <div class="total-label">total units</div>
+                <div class="capacity-info">
+                  <small>of {{ brand.totalCapacity | number }} capacity</small>
                 </div>
               </div>
             </td>
