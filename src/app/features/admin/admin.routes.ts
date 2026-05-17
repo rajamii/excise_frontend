@@ -170,6 +170,15 @@ const routes: Routes = [
             },
           },
           {
+            path: 'hologram-suppliers',
+            loadComponent: () =>
+              import('./master/hologram-supplier/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'about-us',
             redirectTo: 'about-us/heads-of-organisations',
             pathMatch: 'full'

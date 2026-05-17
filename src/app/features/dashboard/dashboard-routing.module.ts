@@ -128,6 +128,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.roads.view' }
       },
       {
+        path: 'admin/hologram-suppliers',
+        loadComponent: () =>
+          import('../admin/master/hologram-supplier/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/about-us',
         redirectTo: 'admin/about-us/heads-of-organisations',
         pathMatch: 'full'
@@ -199,6 +206,7 @@ const routes: Routes = [
       { path: 'license-subcategories', redirectTo: 'admin/license-subcategories', pathMatch: 'full' },
       { path: 'license-terms', redirectTo: 'admin/license-terms', pathMatch: 'full' },
       { path: 'roads', redirectTo: 'admin/roads', pathMatch: 'full' },
+      { path: 'hologram-suppliers', redirectTo: 'admin/hologram-suppliers', pathMatch: 'full' },
       { path: 'about-us', redirectTo: 'admin/about-us', pathMatch: 'full' },
       { path: 'contact-us', redirectTo: 'admin/contact-us', pathMatch: 'full' },
       { path: 'oic', redirectTo: 'admin/oic', pathMatch: 'full' }

@@ -13,6 +13,7 @@ import { LicenseSubcategory } from '../../core/models/license-subcategory.model'
 import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
 import { LicenseFormTermsResponse } from './master/license-terms/license-terms.model';
+import { HologramSupplier } from '../../core/models/hologram-supplier.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -64,6 +65,7 @@ export class AdminService {
   private readonly mastersUrl = `${this.baseUrl}/masters/core`;
   private readonly licenseMastersUrl = `${this.baseUrl}/masters/license`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
+  private readonly supplyChainUrl = `${this.baseUrl}/masters/supply_chain`;
 
   constructor(private http: HttpClient) { }
 
@@ -308,6 +310,23 @@ export class AdminService {
   // Deletes a road by ID
   deleteRoad(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/roads/${id}/delete/`);
+  }
+
+  // ========================== HOLOGRAM SUPPLIER MANAGEMENT ==========================
+
+  // Adds a new hologram supplier
+  addHologramSupplier(supplier: HologramSupplier): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/hologram-suppliers/create/`, supplier);
+  }
+
+  // Updates an existing hologram supplier by ID
+  updateHologramSupplier(id: number, changes: Partial<HologramSupplier>): Observable<HologramSupplier> {
+    return this.http.put<HologramSupplier>(`${this.supplyChainUrl}/hologram-suppliers/${id}/update/`, changes);
+  }
+
+  // Deletes a hologram supplier by ID
+  deleteHologramSupplier(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/hologram-suppliers/${id}/delete/`);
   }
 
   // ========================== LICENSE TERMS (LEGACY CODES) ==========================

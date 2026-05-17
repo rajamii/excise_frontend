@@ -271,6 +271,10 @@
                 <mat-icon class="nav-icon">route</mat-icon>
                 <span class="nav-text">Road</span>
               </a>
+              <a routerLink="/dashboard/admin/hologram-suppliers" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Hologram Suppliers</span>
+              </a>
               <div class="nav-expandable">
                 <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/about-us')" [class.active]="isAdminRouteActive('/dashboard/admin/about-us')">
                   <mat-expansion-panel-header class="panel-header">

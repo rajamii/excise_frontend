@@ -44,6 +44,7 @@ export class MasterService {
   private readonly LOCATION_CATEGORY_URL = `${this.BASE_URL}/location-categories`;
   private readonly LOCATION_SUBCATEGORY_URL = `${this.BASE_URL}/location-subcategories`;
   private readonly WARD_URL = `${this.BASE_URL}/wards`;
+  private readonly HOLOGRAM_SUPPLIER_URL = `${environment.apiBaseUrl}/masters/supply_chain/hologram-suppliers`;
 
   constructor(private http: HttpClient) {
 
@@ -501,5 +502,29 @@ export class MasterService {
 
   deleteWard(id: number): Observable<any> {
     return this.http.delete(`${this.WARD_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // HOLOGRAM SUPPLIER ENDPOINTS
+  // =========================================================================
+
+  getHologramSuppliers(): Observable<any> {
+    return this.http.get(`${this.HOLOGRAM_SUPPLIER_URL}/`);
+  }
+
+  getHologramSupplier(id: number): Observable<any> {
+    return this.http.get(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/`);
+  }
+
+  createHologramSupplier(data: any): Observable<any> {
+    return this.http.post(`${this.HOLOGRAM_SUPPLIER_URL}/create/`, data);
+  }
+
+  updateHologramSupplier(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/update/`, data);
+  }
+
+  deleteHologramSupplier(id: number): Observable<any> {
+    return this.http.delete(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/delete/`);
   }
 }
