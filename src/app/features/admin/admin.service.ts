@@ -12,6 +12,7 @@ import { Role } from '../../core/models/role.model';
 import { LicenseSubcategory } from '../../core/models/license-subcategory.model';
 import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
+import { Notification } from '../../core/models/notification.model';
 import { LicenseFormTermsResponse } from './master/license-terms/license-terms.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
@@ -62,6 +63,7 @@ export interface CreateOICOfficerPayload {
 export class AdminService {
   private readonly baseUrl = environment.apiBaseUrl;
   private readonly mastersUrl = `${this.baseUrl}/masters/core`;
+  private readonly mastersBaseUrl = `${this.baseUrl}/masters`;
   private readonly licenseMastersUrl = `${this.baseUrl}/masters/license`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
 
@@ -308,6 +310,23 @@ export class AdminService {
   // Deletes a road by ID
   deleteRoad(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/roads/${id}/delete/`);
+  }
+
+  // ========================== NOTIFICATION MANAGEMENT ==========================
+
+  // Adds a new notification
+  addNotification(notification: FormData | Notification): Observable<any> {
+    return this.http.post(`${this.mastersBaseUrl}/notification/create/`, notification);
+  }
+
+  // Updates an existing notification by ID
+  updateNotification(id: number, changes: FormData | Partial<Notification>): Observable<Notification> {
+    return this.http.put<Notification>(`${this.mastersBaseUrl}/notification/update/${id}/`, changes);
+  }
+
+  // Deletes a notification by ID
+  deleteNotification(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersBaseUrl}/notification/delete/${id}/`);
   }
 
   // ========================== LICENSE TERMS (LEGACY CODES) ==========================

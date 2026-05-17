@@ -1041,6 +1041,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       '/dashboard/admin/license-titles',
       '/dashboard/admin/license-subcategories',
       '/dashboard/admin/roads',
+      '/dashboard/admin/notifications',
       '/dashboard/admin/oic'
     ];
 

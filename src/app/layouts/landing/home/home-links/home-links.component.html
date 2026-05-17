@@ -39,19 +39,36 @@
           <mat-radio-button value="all">All</mat-radio-button>
         </mat-radio-group>
         <table mat-table [dataSource]="filteredNotifications" class="mat-elevation-z8">
-          >
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef> Date </th>
-            <td mat-cell *matCellDef="let notification"> {{ notification.date }} </td>
+            <td mat-cell *matCellDef="let notification"> {{ notification.notificationDate | date: 'dd/MM/yyyy' }} </td>
           </ng-container>
           <ng-container matColumnDef="subject">
             <th mat-header-cell *matHeaderCellDef> Subject </th>
             <td mat-cell *matCellDef="let notification"> {{ notification.subject }} </td>
           </ng-container>
+          <ng-container matColumnDef="view">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let notification">
+              <button
+                mat-icon-button
+                title="View notification"
+                aria-label="View notification"
+                (click)="viewFile(notification)"
+                [disabled]="!notification.notificationFileUrl">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </ng-container>
           <ng-container matColumnDef="download">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let notification">
-              <button mat-icon-button (click)="downloadFile(notification)">
+              <button
+                mat-icon-button
+                title="Download notification"
+                aria-label="Download notification"
+                (click)="downloadFile(notification)"
+                [disabled]="!notification.notificationFileDownloadUrl && !notification.notificationFileUrl">
                 <mat-icon>download</mat-icon>
               </button>
             </td>

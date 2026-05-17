@@ -2,14 +2,13 @@
 @if (loaded) {
 <mat-sidenav-container
   class="mat-elevation-z8"
-  style="padding: 0; min-height: 800px"
 >
   <!-- Side Navigation Panel -->
   <mat-sidenav #sidenav mode="side" [opened]="false">
     <!-- Sidenav Header with Close Button -->
     <div class="sidenav-header">
       <button mat-icon-button (click)="snavToggle(sidenav)" color="primary">
-        <mat-icon style="font-size: 27px">close</mat-icon>
+        <mat-icon class="nav-toggle-icon">close</mat-icon>
       </button>
     </div>
     <!-- Sidebar content -->
@@ -84,6 +83,9 @@
         <mat-list-item routerLink="roads" routerLinkActive="active-link">
           <span class="nav-header-cus">Road</span>
         </mat-list-item>
+        <mat-list-item routerLink="notifications" routerLinkActive="active-link">
+          <span class="nav-header-cus">Notification</span>
+        </mat-list-item>
         <mat-list-item routerLink="supplychain" routerLinkActive="active-link">
           <span class="nav-header-cus">Apply Supply Chain</span>
         </mat-list-item>
@@ -101,7 +103,7 @@
         (click)="snavToggle(sidenav)"
         color="primary"
       >
-        <mat-icon style="font-size: 27px">menu</mat-icon>
+        <mat-icon class="nav-toggle-icon">menu</mat-icon>
       </button>
     </div>
     <!-- Outlet for routed components -->

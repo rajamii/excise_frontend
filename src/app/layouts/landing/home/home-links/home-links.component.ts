@@ -1,11 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { ActivatedRoute } from '@angular/router';
+import { MasterService } from '../../../../core/services/master.service';
 
 interface Notification {
-  date: string;
+  notificationDate: string;
   subject: string;
   category: string;
+  notificationFileUrl?: string | null;
+  notificationFileDownloadUrl?: string | null;
 }
 
 @Component({
@@ -18,24 +21,20 @@ export class HomeLinksComponent implements OnInit{
   page: string | null= '';
   selectedCategory: string = 'all';
 
-  notifications: Notification[] = [
-    { date: '26/09/1974', subject: 'Circular Regarding Settlement of Excise License for the Year 2025-2026', category: 'circular' },
-    { date: '26/09/1974', subject: 'DRY DAY NOTIFIATION - 2025', category: 'circular' },
-    { date: '14/08/2024', subject: 'Gazette No 394 - Suspension on issue of New Foreign Liquor Retail License', category: 'act' },
-    { date: '08/02/2024', subject: 'Notification No 01/Excise - License Renewal for FY 2024-25', category: 'rule' },
-    { date: '01/12/2023', subject: 'Notification No 31/Ex - License Fees and others', category: 'act' },
-    { date: '20/05/2023', subject: 'Notification No 25/Excise - Departmental Promotional Committee Members', category: 'rule' },
-  ];
+  notifications: Notification[] = [];
 
-  displayedColumns: string[] = ['date', 'subject', 'download'];
+  displayedColumns: string[] = ['date', 'subject', 'view', 'download'];
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       this.page = params.get('page');
+      if (this.page === 'notifications') {
+        this.loadNotifications();
+      }
     });
   }
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private route: ActivatedRoute, private masterService: MasterService) {}
 
   get filteredNotifications(): Notification[] {
     if (this.selectedCategory === 'all') {
@@ -45,7 +44,21 @@ export class HomeLinksComponent implements OnInit{
   }
 
   downloadFile(notification: Notification) {
-    alert(`Downloading file: ${notification.subject}`);
+    const downloadUrl = notification.notificationFileDownloadUrl || notification.notificationFileUrl;
+    if (!downloadUrl) return;
+    window.location.href = downloadUrl;
+  }
+
+  viewFile(notification: Notification) {
+    if (!notification.notificationFileUrl) return;
+    window.open(notification.notificationFileUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  loadNotifications(): void {
+    this.masterService.getPublicNotifications().subscribe({
+      next: (data) => this.notifications = Array.isArray(data) ? data : [],
+      error: () => this.notifications = []
+    });
   }
   
   raidsColumns: string[] = ['photo', 'caption'];

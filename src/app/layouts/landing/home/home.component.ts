@@ -2,6 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { MasterService } from '../../../core/services/master.service';
+
+interface HomeNotification {
+  title: string;
+  date: string;
+  link: string;
+}
 
 @Component({
   selector: 'app-home',
@@ -13,43 +20,17 @@ export class HomeComponent implements OnInit{
   selectedLink: string = '';
   markdownContent: string = '';
 
-  notifications = [
-    {
-      title: 'Circular Regarding Settlement of Excise License',
-      date: '04/02/2025',
-      link: 'https://example.com'
-    },
-    {
-      title: 'DRY DAY NOTIFICATION',
-      date: '23/12/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'Office order no 226/Excise dated 11/09/2024 regarding Grievance cell',
-      date: '11/09/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'Gazette No 394 regarding suspension on issue of New Foreign Liquor Retail License',
-      date: '14/08/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'Notification No 01/Excise regarding License Renewal for FY 2024-25',
-      date: '08/02/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'DRY DAY NOTIFICATION 2024',
-      date: '08/01/2024',
-      link: 'https://example.com'
-    }
-  ];
+  notifications: HomeNotification[] = [];
 
-  constructor(private router: Router, private http: HttpClient) {}
+  constructor(
+    private router: Router,
+    private http: HttpClient,
+    private masterService: MasterService
+  ) {}
 
   ngOnInit(): void {
     this.loadMarkdown();
+    this.loadNotifications();
   }
 
   loadMarkdown(): void {
@@ -61,8 +42,30 @@ export class HomeComponent implements OnInit{
   }
 
   navigateToExternal(url: string) {
+    if (!url) return;
     window.location.href = url;
   }  
+
+  loadNotifications(): void {
+    this.masterService.getPublicNotifications(6).subscribe({
+      next: (data) => {
+        const list = Array.isArray(data) ? data : [];
+        this.notifications = list.map((notification: any) => ({
+          title: notification.subject,
+          date: this.formatDate(notification.notificationDate),
+          link: notification.notificationFileUrl || ''
+        }));
+      },
+      error: () => this.notifications = []
+    });
+  }
+
+  private formatDate(value: string): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('en-GB');
+  }
 
   navigateTo(page: string) {
     this.router.navigate(['/home', page]);

@@ -10,13 +10,13 @@
   <mat-card class = "revenue-receipts grid-card">
     <mat-card-header>Revenue Receipts</mat-card-header>
     <mat-card-content class = "card-container">
-      <img src = "assets/images/main/revenue-receipts/revenue_receipts.png">
+      <img src="assets/images/main/revenue-receipts/revenue_receipts.png" alt="Revenue receipts chart">
     </mat-card-content>
   </mat-card>
 
   <mat-card class = "preventive-raids grid-card">
     <mat-card-header>Preventive Raids</mat-card-header>
-    <img src="assets/images/main/preventive-raids/preventive-raids.jpg">
+    <img src="assets/images/main/preventive-raids/preventive-raids.jpg" alt="Preventive raid activity">
     <mat-card-content class = "card-container">
       <h6 cCardTitle>Total Raids From 1st January, 2020</h6>
       <div class="description">
@@ -49,6 +49,9 @@
               <div class="date">{{ note.date }}</div>
             </div>
           }
+          @if (notifications.length === 0) {
+            <div class="notification">No notifications available</div>
+          }
         </div>
       </div>
       <button matButton="filled" (click)="navigateTo('notifications')">View All</button>
@@ -70,11 +73,10 @@
         </div>
       </div>
       <div class="map-container">
-        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3544.5308785306825!2d88.61010607523964!3d27.327866776402193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39e6a514e4a99e41%3A0x8800d2a3beee4886!2sSikkim%20Excise%20Department!5e0!3m2!1sen!2sin!4v1739085170837!5m2!1sen!2sin" 
-          style="border:0;" 
-          allowfullscreen="" 
-          loading="lazy" 
-          referrerpolicy="no-referrer-when-downgrade">
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3544.5308785306825!2d88.61010607523964!3d27.327866776402193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39e6a514e4a99e41%3A0x8800d2a3beee4886!2sSikkim%20Excise%20Department!5e0!3m2!1sen!2sin!4v1739085170837!5m2!1sen!2sin"
+          title="Sikkim Excise Department location map"
+          allowfullscreen=""
+          loading="lazy">
         </iframe>
       </div>
     </mat-card-content>
@@ -84,7 +86,8 @@
     <mat-card-header>Videos</mat-card-header>
     <mat-card-content class = "card-container">
       <iframe
-        src="https://www.youtube.com/embed/yQF2wpLHcjg?si=ZOliGnG5WNkRamQ7" do-not-allow="autoplay">
+        src="https://www.youtube.com/embed/yQF2wpLHcjg?si=ZOliGnG5WNkRamQ7"
+        title="Excise Department video">
       </iframe>
     </mat-card-content>
   </mat-card>

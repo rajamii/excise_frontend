@@ -78,6 +78,7 @@
             border-radius: 1rem;
             font-size: 0.875rem;
             font-weight: 500;
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.3);
             width: fit-content;
@@ -101,6 +102,7 @@
             border-radius: 50%;
             width: 3rem;
             height: 3rem;
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
@@ -123,6 +125,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 255, 255, 0.3);
 
@@ -214,6 +217,7 @@
     animation: welcomeFadeIn 420ms ease-out, welcomeGradientShift 14s ease-in-out infinite;
     box-shadow: 0 18px 50px rgba(28, 43, 120, 0.28);
     border: 1px solid rgba(255, 255, 255, 0.22);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     isolation: isolate;
     animation: welcomeFadeIn 420ms ease-out;
@@ -299,6 +303,7 @@
         background: rgba(255, 255, 255, 0.16);
         border: 1px solid rgba(255, 255, 255, 0.26);
         font-weight: 700;
+        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
         max-width: 100%;
         overflow: hidden;
@@ -582,6 +587,7 @@
         cursor: pointer;
         position: relative;
         overflow: hidden;
+        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
 
         &::before {
@@ -1634,7 +1640,7 @@ mat-card-content {
         overflow: visible;
         max-height: none;
         height: auto;
-        min-height: auto;
+        min-height: 0;
     }
 
     .section-content.hologram-overview-content app-hologramoveriew {
@@ -1644,7 +1650,7 @@ mat-card-content {
     }
 
     .section-content.hologram-overview-content ::ng-deep app-hologramoveriew .hologram-overview-container {
-        min-height: auto;
+        min-height: 0;
     }
 }
 
