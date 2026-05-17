@@ -328,6 +328,12 @@
                   </div>
                 </mat-expansion-panel>
               </div>
+
+              <!-- Officer Activity — last item for site admin -->
+              <button class="nav-item" (click)="navigateToSection('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
+                <mat-icon class="nav-icon">assignment</mat-icon>
+                <span class="nav-text">Officer Activity</span>
+              </button>
             </div>
           </div>
         </div>
