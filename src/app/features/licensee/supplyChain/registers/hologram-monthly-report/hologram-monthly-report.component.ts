@@ -332,8 +332,21 @@ export class HologramMonthlyReportComponent implements OnInit {
         sum + (e.issued_qty || e.issuedQty || 0), 0);
       const totalWastage = effectiveEntries.reduce((sum: number, e: any) => 
         sum + (e.wastage_qty || e.wastageQty || 0), 0);
-      const freshArrival = effectiveArrivals.reduce((sum: number, a: any) => 
-        sum + (a.total_count || a.totalCount || 0), 0);
+      // IMPORTANT:
+      // "Fresh Arrival" must always be calculated from the originally received serial ranges,
+      // not from a mutable roll.total_count that changes after utilization/damage.
+      const arrivalsByRefForTotals = new Map<string, any[]>();
+      effectiveArrivals.forEach((arrival: any) => {
+        const refNo = arrival.procurement_ref || arrival.procurementRef || arrival.ref_no || arrival.refNo || 'UNKNOWN';
+        if (!arrivalsByRefForTotals.has(refNo)) {
+          arrivalsByRefForTotals.set(refNo, []);
+        }
+        arrivalsByRefForTotals.get(refNo)!.push(arrival);
+      });
+      const freshArrival = Array.from(arrivalsByRefForTotals.values()).reduce((sum, group) => {
+        const aggregated = this.aggregateArrivalGroup(group);
+        return sum + aggregated.total;
+      }, 0);
       
       // ALSO get utilization from roll usage history (this is the approved data)
       let totalUtilizedFromRolls = 0;
@@ -431,7 +444,7 @@ export class HologramMonthlyReportComponent implements OnInit {
       this.overviewSummary = {
         openingStock: openingStock,
         totalArrivals: freshArrival,
-        arrivalCount: effectiveArrivals.length,
+        arrivalCount: arrivalsByRefForTotals.size,
         totalUtilized: finalUtilized,
         utilizationCount: effectiveEntries.filter((e: any) => (e.issued_qty || e.issuedQty || 0) > 0).length,
         totalWastage: finalWastage,
@@ -475,8 +488,9 @@ export class HologramMonthlyReportComponent implements OnInit {
         const receivedDate = firstRoll.received_date || firstRoll.receivedDate || '';
         const preciseTime = new Date(receivedDate).getTime();
         
-        // Calculate total for this procurement
-        const totalAmount = rollsGroup.reduce((sum, roll) => sum + (roll.total_count || roll.totalCount || 0), 0);
+        // Calculate total for this procurement from serial ranges (not mutable roll.total_count)
+        const aggregated = this.aggregateArrivalGroup(rollsGroup);
+        const totalAmount = aggregated.total;
         
         console.log(`📦 Procurement ${refNo}: ${rollsGroup.length} rolls, total=${totalAmount}, date=${receivedDate}`);
         
@@ -493,7 +507,9 @@ export class HologramMonthlyReportComponent implements OnInit {
             ref_no: refNo,
             refNo: refNo,
             // Store all rolls for carton ranges display
-            allRolls: rollsGroup
+            allRolls: rollsGroup,
+            // Store normalized carton ranges to ensure stable qty display
+            cartonRangesNormalized: aggregated.ranges
           }
         });
       });
@@ -599,39 +615,22 @@ export class HologramMonthlyReportComponent implements OnInit {
             quantity: number;
           }> = [];
           
-          // Get all rolls from this grouped arrival
-          const allRolls = arrival.allRolls || [arrival];
-          
-          allRolls.forEach((roll: any) => {
-            // Check for carton_details in the roll data
-            const cartonDetails = roll.carton_details || roll.cartonDetails || roll.cartoons || roll.cartoon_details || [];
-            
-            if (Array.isArray(cartonDetails) && cartonDetails.length > 0) {
-              cartonDetails.forEach((carton: any) => {
-                cartonRanges.push({
-                  cartoonNumber: this.resolveArrivalRollLabel(carton),
-                  fromSerial: carton.fromSerial || carton.from_serial || '',
-                  toSerial: carton.toSerial || carton.to_serial || '',
-                  quantity: carton.quantity || carton.totalCount || 0
-                });
+          const normalizedRanges = Array.isArray(arrival.cartonRangesNormalized) ? arrival.cartonRangesNormalized : null;
+          if (normalizedRanges && normalizedRanges.length > 0) {
+            normalizedRanges.forEach((r: any) => {
+              cartonRanges.push({
+                cartoonNumber: String(r.cartoonNumber || r.rollNumber || r.cartonNumber || '').trim(),
+                fromSerial: String(r.fromSerial || '').trim(),
+                toSerial: String(r.toSerial || '').trim(),
+                quantity: Number(r.quantity || 0)
               });
-            } else {
-              // Fallback: If no carton_details, use the roll itself as a carton
-              const singleCarton = roll.carton_number || roll.cartonNumber || roll.cartoon_number;
-              if (singleCarton) {
-                cartonRanges.push({
-                  cartoonNumber: this.resolveArrivalRollLabel({
-                    rollNumber: roll.rollNumber || roll.roll_number,
-                    cartoonNumber: roll.cartoonNumber || roll.cartoon_number,
-                    carton_number: roll.carton_number || roll.cartonNumber
-                  }),
-                  fromSerial: roll.from_serial || roll.fromSerial || '',
-                  toSerial: roll.to_serial || roll.toSerial || '',
-                  quantity: roll.total_count || roll.totalCount || 0
-                });
-              }
-            }
-          });
+            });
+          } else {
+            // Backward-compatible fallback: derive ranges from the rolls themselves
+            const allRolls = arrival.allRolls || [arrival];
+            const aggregatedFallback = this.aggregateArrivalGroup(allRolls);
+            aggregatedFallback.ranges.forEach((r) => cartonRanges.push(r));
+          }
           
           // Sort carton ranges by fromSerial number to maintain entry order (a, b, c)
           cartonRanges.sort((a, b) => {
@@ -3126,6 +3125,91 @@ export class HologramMonthlyReportComponent implements OnInit {
     ].join(' ');
 
     return categoryTokens.includes('brew') || categoryTokens.includes('distill');
+  }
+
+  private normalizeArrivalQuantity(fromSerial: string, toSerial: string, rawQty: any): number {
+    let quantity = Number(rawQty ?? 0);
+    if (!quantity && fromSerial && toSerial) {
+      const fromNo = Number(String(fromSerial).replace(/\D/g, ''));
+      const toNo = Number(String(toSerial).replace(/\D/g, ''));
+      if (Number.isFinite(fromNo) && Number.isFinite(toNo) && toNo >= fromNo) {
+        quantity = (toNo - fromNo) + 1;
+      }
+    }
+    return Number.isFinite(quantity) ? quantity : 0;
+  }
+
+  private extractArrivalCartonRanges(source: any): Array<{
+    cartoonNumber: string;
+    fromSerial: string;
+    toSerial: string;
+    quantity: number;
+  }> {
+    const ranges: Array<{ cartoonNumber: string; fromSerial: string; toSerial: string; quantity: number }> = [];
+    if (!source || typeof source !== 'object') {
+      return ranges;
+    }
+
+    const cartonDetails =
+      source?.carton_details ||
+      source?.cartonDetails ||
+      source?.cartoons ||
+      source?.cartoon_details ||
+      [];
+
+    if (Array.isArray(cartonDetails) && cartonDetails.length > 0) {
+      cartonDetails.forEach((carton: any) => {
+        const fromSerial = String(carton?.fromSerial || carton?.from_serial || carton?.from || '').trim();
+        const toSerial = String(carton?.toSerial || carton?.to_serial || carton?.to || '').trim();
+        const rawQty = carton?.quantity ?? carton?.qty ?? carton?.totalCount ?? carton?.total_count ?? 0;
+        const quantity = this.normalizeArrivalQuantity(fromSerial, toSerial, rawQty);
+        const cartoonNumber = this.resolveArrivalRollLabel(carton);
+        if (cartoonNumber || fromSerial || toSerial || quantity > 0) {
+          ranges.push({ cartoonNumber, fromSerial, toSerial, quantity });
+        }
+      });
+      return ranges;
+    }
+
+    const cartoonNumber = this.resolveArrivalRollLabel({
+      rollNumber: source?.rollNumber || source?.roll_number,
+      cartoonNumber: source?.cartoonNumber || source?.cartoon_number,
+      carton_number: source?.carton_number || source?.cartonNumber
+    });
+    const fromSerial = String(source?.from_serial || source?.fromSerial || source?.from || '').trim();
+    const toSerial = String(source?.to_serial || source?.toSerial || source?.to || '').trim();
+    const rawQty = source?.quantity ?? source?.qty ?? source?.total_count ?? source?.totalCount ?? 0;
+    const quantity = this.normalizeArrivalQuantity(fromSerial, toSerial, rawQty);
+    if (cartoonNumber || fromSerial || toSerial || quantity > 0) {
+      ranges.push({ cartoonNumber, fromSerial, toSerial, quantity });
+    }
+
+    return ranges;
+  }
+
+  private aggregateArrivalGroup(rolls: any[]): {
+    ranges: Array<{ cartoonNumber: string; fromSerial: string; toSerial: string; quantity: number }>;
+    total: number;
+  } {
+    const dedup = new Map<string, { cartoonNumber: string; fromSerial: string; toSerial: string; quantity: number }>();
+
+    (rolls || []).forEach((roll) => {
+      this.extractArrivalCartonRanges(roll).forEach((r) => {
+        const key = `${r.cartoonNumber}|${r.fromSerial}|${r.toSerial}`;
+        if (!dedup.has(key)) {
+          dedup.set(key, r);
+          return;
+        }
+        const existing = dedup.get(key)!;
+        if (!existing.quantity && r.quantity) {
+          dedup.set(key, r);
+        }
+      });
+    });
+
+    const ranges = Array.from(dedup.values());
+    const total = ranges.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
+    return { ranges, total: Number.isFinite(total) ? total : 0 };
   }
 
   private extractLicenseeName(row: any): string {
