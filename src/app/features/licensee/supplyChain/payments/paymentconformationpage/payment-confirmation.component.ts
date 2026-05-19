@@ -1024,14 +1024,26 @@ private initializeWalletContextAndLoadData(): void {
 
   private resolvePaymentForType(row: any): string {
     const sourceModule = String(this.pickAny(row, ['source_module', 'sourceModule'], '')).toLowerCase();
+    const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '') || '').trim();
+    const walletTypeRaw = this.normalizeWalletTypeKey(this.pickAny(row, ['wallet_type', 'walletType'], ''));
+    const walletType = walletTypeRaw || this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(hoa));
     const txnId = String(this.pickAny(row, ['transaction_id', 'transactionId'], '')).toUpperCase();
     const reference = String(this.pickAny(row, ['reference_no', 'referenceNo'], '')).toUpperCase();
 
+    // Prefer explicit wallet type when available (fixes license/security utilization rows
+    // incorrectly showing "Wallet Recharge" in those tabs).
+    if (walletType === 'license_fee') {
+      return 'Licensee Fee Paid';
+    }
+    if (walletType === 'security_deposit') {
+      return 'Security Fee Paid';
+    }
+
     if (sourceModule.includes('security') && sourceModule.includes('deposit')) {
-      return 'Security Deposit';
+      return 'Security Paid';
     }
     if (sourceModule.includes('license') && sourceModule.includes('fee')) {
-      return 'License Fee';
+      return 'Licensee Fee';
     }
     if (sourceModule.includes('hologram_procurement') || txnId.startsWith('HGP-')) {
       return 'Hologram Procurement';
@@ -1257,7 +1269,46 @@ private initializeWalletContextAndLoadData(): void {
     }
 
     const context = this.pendingWalletPaymentContext;
-    if (!context || context.tab !== 'hologram') return;
+    if (!context) return;
+
+    // License fee / security deposit: clear the synthetic "Pending Payment" row after we observe a
+    // successful debit/utilization for the same reference *and* wallet type in wallet history.
+    if (context.tab === 'license_fee' || context.tab === 'security_deposit') {
+      const ref = String(context.referenceNo || '').trim().toUpperCase();
+      if (!ref) return;
+
+      const walletType = String(context.tab).trim().toLowerCase();
+      const hasMatchingPaidTxn = this.historyData.some((txn) => {
+        const txnRef = String(txn?.reference || '').trim().toUpperCase();
+        if (txnRef !== ref) return false;
+
+        const status = String(txn?.status || '').toLowerCase();
+        const isSuccessful = status.includes('success') || status.includes('paid') || status.includes('completed');
+        if (!isSuccessful) return false;
+
+        const type = String(txn?.type || '').toLowerCase();
+        const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+        if (!isDebitLike) return false;
+
+        const txnWalletType = String((txn as any)?.walletType || '').trim().toLowerCase();
+        if (txnWalletType) return txnWalletType === walletType;
+
+        // Fallback for older payloads where walletType isn't available.
+        const paymentFor = String(txn?.paymentFor || '').toLowerCase();
+        if (walletType === 'license_fee') return paymentFor.includes('license');
+        if (walletType === 'security_deposit') return paymentFor.includes('security');
+        return false;
+      });
+
+      if (hasMatchingPaidTxn) {
+        this.pendingWalletPaymentContext = null;
+        this.hasHandledPendingWalletPayment = true;
+        this.clearPendingPaymentContextFromStorage();
+      }
+      return;
+    }
+
+    if (context.tab !== 'hologram') return;
 
     const ref = String(context.referenceNo || '').trim().toUpperCase();
     if (!ref) return;
