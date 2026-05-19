@@ -135,6 +135,25 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/bulk-spirit',
+        redirectTo: 'admin/bulk-spirit/ena-bulk-spirit',
+        pathMatch: 'full'
+      },
+      {
+        path: 'admin/bulk-spirit/ena-bulk-spirit',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/ena-bulk-spirit/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/bulk-spirit/distillery-details',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/distillery-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/about-us',
         redirectTo: 'admin/about-us/heads-of-organisations',
         pathMatch: 'full'

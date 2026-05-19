@@ -14,6 +14,9 @@ import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
 import { LicenseFormTermsResponse } from './master/license-terms/license-terms.model';
 import { HologramSupplier } from '../../core/models/hologram-supplier.model';
+import { EnaBulkSpiritType } from '../../core/models/ena-bulk-spirit.model';
+import { EnaDistilleryDetail } from '../../core/models/ena-distillery.model';
+import { ActiveLicense } from '../../core/models/active-license.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -346,5 +349,35 @@ export class AdminService {
         terms,
       }
     );
+  }
+
+  // ========================== BULK SPIRIT (ENA) MANAGEMENT ==========================
+
+  getActiveLicenses(): Observable<ActiveLicense[]> {
+    return this.http.get<ActiveLicense[]>(`${this.licenseMastersUrl}/active/`);
+  }
+
+  addEnaBulkSpiritType(payload: EnaBulkSpiritType): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/bulk-spirit/bulk-spirit-types/create/`, payload);
+  }
+
+  updateEnaBulkSpiritType(id: number, changes: Partial<EnaBulkSpiritType>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/bulk-spirit/bulk-spirit-types/${id}/update/`, changes);
+  }
+
+  deleteEnaBulkSpiritType(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/bulk-spirit/bulk-spirit-types/${id}/delete/`);
+  }
+
+  addEnaDistilleryDetail(payload: EnaDistilleryDetail): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/ena-distillery-types/create/`, payload);
+  }
+
+  updateEnaDistilleryDetail(id: number, changes: Partial<EnaDistilleryDetail>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/ena-distillery-types/${id}/update/`, changes);
+  }
+
+  deleteEnaDistilleryDetail(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/ena-distillery-types/${id}/delete/`);
   }
 }

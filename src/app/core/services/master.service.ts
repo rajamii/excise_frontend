@@ -45,6 +45,8 @@ export class MasterService {
   private readonly LOCATION_SUBCATEGORY_URL = `${this.BASE_URL}/location-subcategories`;
   private readonly WARD_URL = `${this.BASE_URL}/wards`;
   private readonly HOLOGRAM_SUPPLIER_URL = `${environment.apiBaseUrl}/masters/supply_chain/hologram-suppliers`;
+  private readonly BULK_SPIRIT_URL = `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit`;
+  private readonly ENA_DISTILLERY_URL = `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types`;
 
   constructor(private http: HttpClient) {
 
@@ -526,5 +528,17 @@ export class MasterService {
 
   deleteHologramSupplier(id: number): Observable<any> {
     return this.http.delete(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // BULK SPIRIT (ENA) ENDPOINTS
+  // =========================================================================
+
+  getEnaBulkSpiritTypes(): Observable<any> {
+    return this.http.get(`${this.BULK_SPIRIT_URL}/bulk-spirit-types/`);
+  }
+
+  getEnaDistilleries(): Observable<any> {
+    return this.http.get(`${this.ENA_DISTILLERY_URL}/`);
   }
 }
