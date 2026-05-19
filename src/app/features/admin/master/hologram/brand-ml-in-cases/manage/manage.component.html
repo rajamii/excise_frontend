@@ -1,0 +1,23 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Brand ML in Cases</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>ML</mat-label>
+        <input matInput type="number" name="ml" required [(ngModel)]="row.ml" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Pieces in Case</mat-label>
+        <input matInput type="number" name="piecesInCase" required [(ngModel)]="row.piecesInCase" />
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>
+

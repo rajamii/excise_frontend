@@ -277,6 +277,33 @@
               </a>
 
               <div class="nav-expandable">
+                <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/hologram')" [class.active]="isAdminRouteActive('/dashboard/admin/hologram')">
+                  <mat-expansion-panel-header class="panel-header">
+                    <mat-panel-title class="panel-title">
+                      <mat-icon class="nav-icon">qr_code</mat-icon>
+                      <span class="nav-text">Hologram</span>
+                      <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
+
+                  <div class="panel-content">
+                    <a routerLink="/dashboard/admin/hologram/transit-permit-distributor-data" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">local_shipping</mat-icon>
+                      <span class="sub-text">Transit Permit Distributor Data</span>
+                    </a>
+                    <a routerLink="/dashboard/admin/hologram/brand-ml-in-cases" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">inventory_2</mat-icon>
+                      <span class="sub-text">Brand ML in Cases</span>
+                    </a>
+                    <a routerLink="/dashboard/admin/hologram/master-bottle-type" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
+                      <mat-icon class="sub-icon">category</mat-icon>
+                      <span class="sub-text">Master Bottle Type</span>
+                    </a>
+                  </div>
+                </mat-expansion-panel>
+              </div>
+
+              <div class="nav-expandable">
                 <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/bulk-spirit')" [class.active]="isAdminRouteActive('/dashboard/admin/bulk-spirit')">
                   <mat-expansion-panel-header class="panel-header">
                     <mat-panel-title class="panel-title">

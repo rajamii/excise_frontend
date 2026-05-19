@@ -1,0 +1,22 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Master Bottle Type</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Bottle Type</mat-label>
+        <input matInput name="bottleType" required [(ngModel)]="row.bottleType" />
+      </mat-form-field>
+
+      <div class="active-toggle">
+        <mat-slide-toggle name="isActive" [(ngModel)]="row.isActive">Active</mat-slide-toggle>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>
+

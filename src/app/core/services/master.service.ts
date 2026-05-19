@@ -47,6 +47,9 @@ export class MasterService {
   private readonly HOLOGRAM_SUPPLIER_URL = `${environment.apiBaseUrl}/masters/supply_chain/hologram-suppliers`;
   private readonly BULK_SPIRIT_URL = `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit`;
   private readonly ENA_DISTILLERY_URL = `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types`;
+  private readonly TRANSIT_PERMIT_URL = `${environment.apiBaseUrl}/masters/supply_chain/transit-permit`;
+  private readonly DISTRIBUTOR_DATA_URL = `${environment.apiBaseUrl}/masters/supply_chain/distributor-data`;
+  private readonly LIQUOR_DATA_URL = `${environment.apiBaseUrl}/masters/supply_chain/liquor-data`;
 
   constructor(private http: HttpClient) {
 
@@ -528,6 +531,23 @@ export class MasterService {
 
   deleteHologramSupplier(id: number): Observable<any> {
     return this.http.delete(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // HOLOGRAM (TRANSIT PERMIT) MASTER ENDPOINTS
+  // =========================================================================
+
+  getTransitPermitDistributorData(): Observable<any> {
+    return this.http.get(`${this.DISTRIBUTOR_DATA_URL}/`);
+  }
+
+  getBrandMlInCases(): Observable<any> {
+    return this.http.get(`${this.TRANSIT_PERMIT_URL}/brand-ml-in-cases/`);
+  }
+
+  getMasterBottleTypes(activeOnly = false): Observable<any> {
+    const activeFlag = activeOnly ? 'true' : 'false';
+    return this.http.get(`${this.LIQUOR_DATA_URL}/bottle-types/?active_only=${activeFlag}`);
   }
 
   // =========================================================================

@@ -1,0 +1,52 @@
+<div class="container-fluid">
+  <mat-card>
+    <mat-card-header class="page-card-header">
+      <div class="page-title">Master Bottle Type</div>
+      <button matButton="filled" (click)="onAdd()">
+        <mat-icon>add</mat-icon> Add
+      </button>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="table-container">
+        <mat-table [dataSource]="rows">
+          <ng-container matColumnDef="bottleType">
+            <mat-header-cell *matHeaderCellDef>Bottle Type</mat-header-cell>
+            <mat-cell *matCellDef="let item">{{ item.bottleType }}</mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="isActive">
+            <mat-header-cell *matHeaderCellDef>Active</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              @if (item.isActive) {
+                <mat-icon style="color: green">check_circle</mat-icon>
+              } @else {
+                <mat-icon style="color: red">cancel</mat-icon>
+              }
+            </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              <button matIconButton color="primary" (click)="onEdit(item)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton color="warn" (click)="onDelete(item)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+        </mat-table>
+
+        @if (rows.length === 0) {
+          <div class="no-data">No bottle types found.</div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+

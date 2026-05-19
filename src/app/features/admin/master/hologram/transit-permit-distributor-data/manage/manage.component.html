@@ -1,0 +1,39 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} Transit Permit Distributor Data
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>License</mat-label>
+        <mat-select name="licenseId" [(ngModel)]="row.licenseId" required>
+          @for (lic of licenses; track lic.id) {
+            <mat-option [value]="lic.id">{{ lic.id }} - {{ lic.establishmentName }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Distributor Name</mat-label>
+        <input matInput name="distributorName" required [(ngModel)]="row.distributorName" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Manufacturing Unit</mat-label>
+        <input matInput name="manufacturingUnit" [(ngModel)]="row.manufacturingUnit" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Depot Address</mat-label>
+        <textarea matInput name="depoAddress" rows="3" [(ngModel)]="row.depoAddress"></textarea>
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>
+

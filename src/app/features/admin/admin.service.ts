@@ -17,6 +17,9 @@ import { HologramSupplier } from '../../core/models/hologram-supplier.model';
 import { EnaBulkSpiritType } from '../../core/models/ena-bulk-spirit.model';
 import { EnaDistilleryDetail } from '../../core/models/ena-distillery.model';
 import { ActiveLicense } from '../../core/models/active-license.model';
+import { TransitPermitDistributorData } from '../../core/models/transit-permit-distributor-data.model';
+import { BrandMlInCases } from '../../core/models/brand-ml-in-cases.model';
+import { MasterBottleType } from '../../core/models/master-bottle-type.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -330,6 +333,44 @@ export class AdminService {
   // Deletes a hologram supplier by ID
   deleteHologramSupplier(id: number): Observable<any> {
     return this.http.delete(`${this.supplyChainUrl}/hologram-suppliers/${id}/delete/`);
+  }
+
+  // ========================== HOLOGRAM (TRANSIT PERMIT) MASTERS ==========================
+
+  addTransitPermitDistributorData(payload: TransitPermitDistributorData): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/distributor-data/`, payload);
+  }
+
+  updateTransitPermitDistributorData(id: number, changes: Partial<TransitPermitDistributorData>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/distributor-data/${id}/`, changes);
+  }
+
+  deleteTransitPermitDistributorData(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/distributor-data/${id}/`);
+  }
+
+  addBrandMlInCases(payload: BrandMlInCases): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/transit-permit/brand-ml-in-cases/`, payload);
+  }
+
+  updateBrandMlInCases(id: number, changes: Partial<BrandMlInCases>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/transit-permit/brand-ml-in-cases/${id}/`, changes);
+  }
+
+  deleteBrandMlInCases(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/transit-permit/brand-ml-in-cases/${id}/`);
+  }
+
+  addMasterBottleType(payload: MasterBottleType): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/liquor-data/bottle-types/create/`, payload);
+  }
+
+  updateMasterBottleType(id: number, changes: Partial<MasterBottleType>): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/liquor-data/bottle-types/${id}/`, changes);
+  }
+
+  deleteMasterBottleType(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/liquor-data/bottle-types/${id}/`);
   }
 
   // ========================== LICENSE TERMS (LEGACY CODES) ==========================

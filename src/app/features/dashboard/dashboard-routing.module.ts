@@ -135,6 +135,32 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/hologram',
+        redirectTo: 'admin/hologram/transit-permit-distributor-data',
+        pathMatch: 'full'
+      },
+      {
+        path: 'admin/hologram/transit-permit-distributor-data',
+        loadComponent: () =>
+          import('../admin/master/hologram/transit-permit-distributor-data/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/hologram/brand-ml-in-cases',
+        loadComponent: () =>
+          import('../admin/master/hologram/brand-ml-in-cases/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/hologram/master-bottle-type',
+        loadComponent: () =>
+          import('../admin/master/hologram/master-bottle-type/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/bulk-spirit',
         redirectTo: 'admin/bulk-spirit/ena-bulk-spirit',
         pathMatch: 'full'
