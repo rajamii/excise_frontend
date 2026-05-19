@@ -154,6 +154,20 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/bulk-spirit/ena-purpose-details',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/ena-purpose-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/bulk-spirit/check-post-details',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/check-post-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/about-us',
         redirectTo: 'admin/about-us/heads-of-organisations',
         pathMatch: 'full'

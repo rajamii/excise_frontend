@@ -1,0 +1,38 @@
+<div class="page">
+  <div class="page-header">
+    <h2>ENA Purpose Details</h2>
+    <button mat-raised-button color="primary" (click)="onAdd()">Add</button>
+  </div>
+
+  <div class="table-wrap">
+    <table mat-table [dataSource]="rows" class="mat-elevation-z2 full-width">
+
+      <ng-container matColumnDef="purposeName">
+        <th mat-header-cell *matHeaderCellDef>Purpose Name</th>
+        <td mat-cell *matCellDef="let row">{{ row.purposeName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="isActive">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-stroked-button
+            [color]="row.isActive ? 'primary' : 'warn'"
+            (click)="onToggleActive(row)">
+            {{ row.isActive ? 'Active' : 'Inactive' }}
+          </button>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-button color="primary" (click)="onEdit(row)">Edit</button>
+          <button mat-button color="warn" (click)="onDelete(row)">Delete</button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+</div>

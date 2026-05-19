@@ -380,4 +380,48 @@ export class AdminService {
   deleteEnaDistilleryDetail(id: number): Observable<any> {
     return this.http.delete(`${this.supplyChainUrl}/ena-distillery-types/${id}/delete/`);
   }
+
+  // ========================== ENA PURPOSE DETAILS MANAGEMENT ==========================
+
+  getEnaPurposeDetails(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.supplyChainUrl}/purposes/admin/purposes/`);
+  }
+
+  addEnaPurposeDetail(payload: { purpose_name: string }): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/purposes/admin/purposes/create/`, payload);
+  }
+
+  updateEnaPurposeDetail(id: number, changes: { purpose_name: string }): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/purposes/admin/purposes/${id}/update/`, changes);
+  }
+
+  deleteEnaPurposeDetail(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/purposes/admin/purposes/${id}/delete/`);
+  }
+
+  toggleEnaPurposeActive(id: number): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/purposes/admin/purposes/${id}/toggle-active/`, {});
+  }
+
+  // ========================== CHECK POST DETAILS MANAGEMENT ==========================
+
+  getCheckPostDetails(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.supplyChainUrl}/checkposts/admin/checkposts/`);
+  }
+
+  addCheckPostDetail(payload: { check_post_name: string }): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/checkposts/admin/checkposts/create/`, payload);
+  }
+
+  updateCheckPostDetail(id: number, changes: { check_post_name: string }): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/update/`, changes);
+  }
+
+  deleteCheckPostDetail(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/delete/`);
+  }
+
+  toggleCheckPostActive(id: number): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/toggle-active/`, {});
+  }
 }
