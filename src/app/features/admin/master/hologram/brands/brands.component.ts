@@ -5,6 +5,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { BrandWarehouse, BrandWarehouseService } from '../../../../licensee/supplyChain/services/brand-warehouse.service';
 import { MasterService } from '../../../../../core/services/master.service';
 import { AdminService } from '../../../admin.service';
+import { ActiveLicense } from '../../../../../core/models/active-license.model';
 import { StockManageComponent } from './stock-manage/stock-manage.component';
 import { PriceManageComponent } from './price-manage/price-manage.component';
 
@@ -29,6 +30,9 @@ export class BrandsComponent implements OnInit {
   brands: MasterBrandRow[] = [];
   sizes: LiquorCategoryRow[] = [];
 
+  /** license_id → establishmentName */
+  private licenseNameMap = new Map<string, string>();
+
   // ── Search filter ──────────────────────────────────────────────────────────
   searchField: 'license_id' | 'brand_name' | 'capacity_size' = 'license_id';
   searchQuery = '';
@@ -43,9 +47,20 @@ export class BrandsComponent implements OnInit {
     const q = this.searchQuery.trim().toLowerCase();
     if (!q) return this.allRows;
     return this.allRows.filter(r => {
+      // For license search, match against both the ID and the resolved name
+      if (this.searchField === 'license_id') {
+        const id = String(r.license_id ?? '').toLowerCase();
+        const name = this.getLicenseName(r.license_id).toLowerCase();
+        return id.includes(q) || name.includes(q);
+      }
       const val = String((r as any)[this.searchField] ?? '').toLowerCase();
       return val.includes(q);
     });
+  }
+
+  getLicenseName(licenseId?: string | null): string {
+    if (!licenseId) return '—';
+    return this.licenseNameMap.get(licenseId.trim()) || licenseId;
   }
 
   getSearchFieldLabel(): string {
@@ -66,8 +81,25 @@ export class BrandsComponent implements OnInit {
   }
 
   private loadAll(): void {
+    this.loadLicenseNames();
     this.loadRows();
     this.loadMasters();
+  }
+
+  private loadLicenseNames(): void {
+    this.adminService.getActiveLicenses().subscribe({
+      next: (licenses: ActiveLicense[]) => {
+        this.licenseNameMap.clear();
+        (Array.isArray(licenses) ? licenses : []).forEach(l => {
+          const id = String(l.id || l.licenseeId || '').trim();
+          if (id) this.licenseNameMap.set(id, l.establishmentName || id);
+          // Also map licenseeId alias if different from id
+          const lid = String(l.licenseeId || '').trim();
+          if (lid && lid !== id) this.licenseNameMap.set(lid, l.establishmentName || lid);
+        });
+      },
+      error: () => {},
+    });
   }
 
   loadRows(): void {

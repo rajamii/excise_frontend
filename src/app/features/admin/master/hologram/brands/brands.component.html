@@ -41,7 +41,9 @@
             <mat-table [dataSource]="rows">
               <ng-container matColumnDef="licenseId">
                 <mat-header-cell *matHeaderCellDef>License</mat-header-cell>
-                <mat-cell *matCellDef="let item">{{ item.license_id || '—' }}</mat-cell>
+                <mat-cell *matCellDef="let item" [matTooltip]="item.license_id || ''" matTooltipPosition="above">
+                  {{ getLicenseName(item.license_id) }}
+                </mat-cell>
               </ng-container>
 
               <ng-container matColumnDef="brandName">
@@ -86,7 +88,9 @@
             <mat-table [dataSource]="rows">
               <ng-container matColumnDef="licenseId">
                 <mat-header-cell *matHeaderCellDef>License</mat-header-cell>
-                <mat-cell *matCellDef="let item">{{ item.license_id || '—' }}</mat-cell>
+                <mat-cell *matCellDef="let item" [matTooltip]="item.license_id || ''" matTooltipPosition="above">
+                  {{ getLicenseName(item.license_id) }}
+                </mat-cell>
               </ng-container>
 
               <ng-container matColumnDef="brandName">

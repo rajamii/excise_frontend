@@ -5,6 +5,7 @@ import { MaterialModule } from '../../../../../../shared/material.module';
 import { TransitPermitDistributorData } from '../../../../../../core/models/transit-permit-distributor-data.model';
 import { MasterService } from '../../../../../../core/services/master.service';
 import { AdminService } from '../../../../admin.service';
+import { ActiveLicense } from '../../../../../../core/models/active-license.model';
 import { ManageComponent } from '../manage/manage.component';
 
 @Component({
@@ -18,6 +19,9 @@ export class ListComponent implements OnInit {
   displayedColumns: string[] = ['licenseId', 'distributorName', 'manufacturingUnit', 'depoAddress', 'actions'];
   rows: TransitPermitDistributorData[] = [];
 
+  /** license_id → establishmentName */
+  private licenseNameMap = new Map<string, string>();
+
   constructor(
     private masterService: MasterService,
     private adminService: AdminService,
@@ -25,7 +29,28 @@ export class ListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadLicenseNames();
     this.load();
+  }
+
+  private loadLicenseNames(): void {
+    this.adminService.getActiveLicenses().subscribe({
+      next: (licenses: ActiveLicense[]) => {
+        this.licenseNameMap.clear();
+        (Array.isArray(licenses) ? licenses : []).forEach(l => {
+          const id = String(l.id || l.licenseeId || '').trim();
+          if (id) this.licenseNameMap.set(id, l.establishmentName || id);
+          const lid = String(l.licenseeId || '').trim();
+          if (lid && lid !== id) this.licenseNameMap.set(lid, l.establishmentName || lid);
+        });
+      },
+      error: () => {},
+    });
+  }
+
+  getLicenseName(licenseId?: string | null): string {
+    if (!licenseId) return '—';
+    return this.licenseNameMap.get(licenseId.trim()) || licenseId;
   }
 
   load(): void {
@@ -59,7 +84,6 @@ export class ListComponent implements OnInit {
       Swal.fire('Error', 'Invalid record.', 'error');
       return;
     }
-
     Swal.fire({
       title: 'Are you sure?',
       text: `Delete distributor "${row.distributorName || ''}"?`,
