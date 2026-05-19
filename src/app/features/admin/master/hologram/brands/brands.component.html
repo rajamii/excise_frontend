@@ -8,6 +8,33 @@
     </mat-card-header>
 
     <mat-card-content>
+
+      <!-- Search filter bar -->
+      <div class="search-bar">
+        <div class="search-group">
+          <select class="search-field-select" [(ngModel)]="searchField" (ngModelChange)="onSearchChange()">
+            @for (opt of searchFieldOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          <div class="search-input-wrap">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input
+              class="search-input"
+              type="text"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchChange()"
+              [placeholder]="'Search by ' + getSearchFieldLabel()"
+            />
+            @if (searchQuery) {
+              <button class="search-clear-btn" (click)="searchQuery = ''; onSearchChange()" matTooltip="Clear">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
       <mat-tab-group>
         <mat-tab label="Stock">
           <div class="table-container">

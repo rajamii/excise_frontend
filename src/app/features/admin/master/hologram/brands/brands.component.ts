@@ -21,21 +21,38 @@ type LiquorCategoryRow = { id: number; sizeMl: number };
 export class BrandsComponent implements OnInit {
   stockColumns: string[] = ['licenseId', 'brandName', 'sizeMl', 'currentStock', 'actions'];
   priceColumns: string[] = [
-    'licenseId',
-    'brandName',
-    'sizeMl',
-    'exFactory',
-    'exciseDuty',
-    'eduCess',
-    'addlDuty',
-    'addl125',
-    'mrp',
-    'actions',
+    'licenseId', 'brandName', 'sizeMl',
+    'exFactory', 'exciseDuty', 'eduCess', 'addlDuty', 'addl125', 'mrp', 'actions',
   ];
 
-  rows: BrandWarehouse[] = [];
+  allRows: BrandWarehouse[] = [];
   brands: MasterBrandRow[] = [];
   sizes: LiquorCategoryRow[] = [];
+
+  // ── Search filter ──────────────────────────────────────────────────────────
+  searchField: 'license_id' | 'brand_name' | 'capacity_size' = 'license_id';
+  searchQuery = '';
+
+  readonly searchFieldOptions: { value: 'license_id' | 'brand_name' | 'capacity_size'; label: string }[] = [
+    { value: 'license_id',    label: 'License'   },
+    { value: 'brand_name',    label: 'Brand'     },
+    { value: 'capacity_size', label: 'Size (ml)' },
+  ];
+
+  get rows(): BrandWarehouse[] {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.allRows;
+    return this.allRows.filter(r => {
+      const val = String((r as any)[this.searchField] ?? '').toLowerCase();
+      return val.includes(q);
+    });
+  }
+
+  getSearchFieldLabel(): string {
+    return this.searchFieldOptions.find(o => o.value === this.searchField)?.label ?? '';
+  }
+
+  onSearchChange(): void { /* triggers getter re-evaluation automatically */ }
 
   constructor(
     private brandWarehouseService: BrandWarehouseService,
@@ -55,7 +72,7 @@ export class BrandsComponent implements OnInit {
 
   loadRows(): void {
     this.brandWarehouseService.getBrandWarehouses().subscribe({
-      next: (data) => (this.rows = Array.isArray(data) ? data : []),
+      next: (data) => (this.allRows = Array.isArray(data) ? data : []),
       error: () => Swal.fire('Error', 'Failed to load brands.', 'error'),
     });
   }
@@ -65,12 +82,8 @@ export class BrandsComponent implements OnInit {
       next: (resp: any) => {
         const data = resp?.data || resp?.results || [];
         this.brands = Array.isArray(data)
-          ? data
-              .map((x: any) => ({
-                id: Number(x.id),
-                brandName: String(x.brandName ?? x.brand_name ?? '').trim(),
-              }))
-              .filter((x: any) => x.id && x.brandName)
+          ? data.map((x: any) => ({ id: Number(x.id), brandName: String(x.brandName ?? x.brand_name ?? '').trim() }))
+               .filter((x: any) => x.id && x.brandName)
           : [];
       },
       error: () => (this.brands = []),
@@ -80,12 +93,8 @@ export class BrandsComponent implements OnInit {
       next: (resp: any) => {
         const data = resp?.data || resp?.results || [];
         this.sizes = Array.isArray(data)
-          ? data
-              .map((x: any) => ({
-                id: Number(x.id),
-                sizeMl: Number(x.sizeMl ?? x.size_ml ?? 0),
-              }))
-              .filter((x: any) => x.sizeMl > 0)
+          ? data.map((x: any) => ({ id: Number(x.id), sizeMl: Number(x.sizeMl ?? x.size_ml ?? 0) }))
+               .filter((x: any) => x.sizeMl > 0)
           : [];
       },
       error: () => (this.sizes = []),
@@ -98,10 +107,7 @@ export class BrandsComponent implements OnInit {
       data: { brands: this.brands, sizes: this.sizes },
     });
     dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadRows();
-        this.loadMasters();
-      }
+      if (result) { this.loadRows(); this.loadMasters(); }
     });
   }
 
@@ -111,19 +117,12 @@ export class BrandsComponent implements OnInit {
       data: { row: { ...row }, brands: this.brands, sizes: this.sizes },
     });
     dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadRows();
-        this.loadMasters();
-      }
+      if (result) { this.loadRows(); this.loadMasters(); }
     });
   }
 
   onDelete(row: BrandWarehouse): void {
-    if (row?.id === undefined) {
-      Swal.fire('Error', 'Invalid row.', 'error');
-      return;
-    }
-
+    if (row?.id === undefined) { Swal.fire('Error', 'Invalid row.', 'error'); return; }
     Swal.fire({
       title: 'Are you sure?',
       text: `Delete "${row.brand_name || ''}" (${row.capacity_size} ml)?`,
@@ -133,10 +132,7 @@ export class BrandsComponent implements OnInit {
     }).then((result) => {
       if (!result.isConfirmed) return;
       this.brandWarehouseService.deleteBrandWarehouse(row.id as number).subscribe({
-        next: () => {
-          Swal.fire('Deleted!', 'Row deleted successfully.', 'success');
-          this.loadRows();
-        },
+        next: () => { Swal.fire('Deleted!', 'Row deleted successfully.', 'success'); this.loadRows(); },
         error: () => Swal.fire('Error', 'Failed to delete row.', 'error'),
       });
     });
@@ -147,8 +143,6 @@ export class BrandsComponent implements OnInit {
       width: '760px',
       data: { row: { ...row } },
     });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) this.loadRows();
-    });
+    dialogRef.afterClosed().subscribe((result) => { if (result) this.loadRows(); });
   }
 }
