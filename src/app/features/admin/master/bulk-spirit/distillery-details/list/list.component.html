@@ -28,7 +28,9 @@
 
           <ng-container matColumnDef="licenseeId">
             <mat-header-cell *matHeaderCellDef>Assigned License</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.licenseeId || '-' }}</mat-cell>
+            <mat-cell *matCellDef="let row" [matTooltip]="row.licenseeId || ''" matTooltipPosition="above">
+              {{ getLicenseName(row.licenseeId) }}
+            </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="actions">

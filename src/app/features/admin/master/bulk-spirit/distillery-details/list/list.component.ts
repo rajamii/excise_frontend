@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { MasterService } from '../../../../../../core/services/master.service';
 import { AdminService } from '../../../../admin.service';
+import { ActiveLicense } from '../../../../../../core/models/active-license.model';
 import { EnaDistilleryDetail } from '../../../../../../core/models/ena-distillery.model';
 import { ManageComponent } from '../manage/manage.component';
 
@@ -18,6 +19,8 @@ export class ListComponent implements OnInit {
   displayedColumns: string[] = ['distilleryName', 'distilleryState', 'viaRoute', 'licenseeId', 'actions'];
   rows: EnaDistilleryDetail[] = [];
 
+  private licenseNameMap = new Map<string, string>();
+
   constructor(
     private masterService: MasterService,
     private adminService: AdminService,
@@ -25,7 +28,28 @@ export class ListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadLicenseNames();
     this.loadRows();
+  }
+
+  private loadLicenseNames(): void {
+    this.adminService.getActiveLicenses().subscribe({
+      next: (licenses: ActiveLicense[]) => {
+        this.licenseNameMap.clear();
+        (Array.isArray(licenses) ? licenses : []).forEach(l => {
+          const id = String(l.id || l.licenseeId || '').trim();
+          if (id) this.licenseNameMap.set(id, l.establishmentName || id);
+          const lid = String(l.licenseeId || '').trim();
+          if (lid && lid !== id) this.licenseNameMap.set(lid, l.establishmentName || lid);
+        });
+      },
+      error: () => {},
+    });
+  }
+
+  getLicenseName(licenseeId?: string | null): string {
+    if (!licenseeId) return '-';
+    return this.licenseNameMap.get(licenseeId.trim()) || licenseeId;
   }
 
   loadRows(): void {
@@ -69,7 +93,6 @@ export class ListComponent implements OnInit {
       Swal.fire('Error', 'Invalid distillery record.', 'error');
       return;
     }
-
     Swal.fire({
       title: 'Are you sure?',
       text: `Delete "${row.distilleryName}"?`,
