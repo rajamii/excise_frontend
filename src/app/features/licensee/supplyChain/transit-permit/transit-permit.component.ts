@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -131,6 +131,9 @@ export class TransitPermitComponent implements OnInit {
 
   // Sidebar toggle state - Default to open
   isMlInfoSidebarExpanded: boolean = true;
+  mlBodyHasMoreBelow = false;
+
+  @ViewChild('mlSidebarBody') mlSidebarBodyRef?: ElementRef<HTMLDivElement>;
 
 
   private isBrowser = false;
@@ -1482,25 +1485,46 @@ export class TransitPermitComponent implements OnInit {
 
   toggleMlInfoSidebar(): void {
     this.isMlInfoSidebarExpanded = !this.isMlInfoSidebarExpanded;
+    if (this.isMlInfoSidebarExpanded) {
+      this.checkMlBodyScroll();
+    }
   }
 
   // Calculate dynamic height based on content - More compact
+  onMlBodyScroll(event: Event): void {
+    const el = event.target as HTMLDivElement;
+    // Has more content below if not scrolled to the bottom (with 4px tolerance)
+    this.mlBodyHasMoreBelow = el.scrollTop + el.clientHeight < el.scrollHeight - 4;
+  }
+
+  scrollMlBodyDown(): void {
+    const el = this.mlSidebarBodyRef?.nativeElement;
+    if (el) {
+      el.scrollBy({ top: 120, behavior: 'smooth' });
+    }
+  }
+
+  /** Re-check scroll indicator after sidebar opens or data loads */
+  private checkMlBodyScroll(): void {
+    setTimeout(() => {
+      const el = this.mlSidebarBodyRef?.nativeElement;
+      if (el) {
+        this.mlBodyHasMoreBelow = el.scrollHeight > el.clientHeight + 4;
+      }
+    }, 100);
+  }
+
   calculateSidebarHeight(): string {
     if (!this.mlPerCaseData || this.mlPerCaseData.length === 0) {
       return 'auto';
     }
 
-    // Reduced base height for header and footer
-    const baseHeight = 100; // Header (50px) + Footer (50px) - more compact
-
-    // Reduced height per item (card + margin)
-    const itemHeight = 90; // Each card is approximately 90px including margin - more compact
-
-    // Calculate total height
+    const baseHeight = 120; // Header (~60px) + Footer (~60px)
+    const itemHeight = 90;  // Each card including margin
     const totalHeight = baseHeight + (this.mlPerCaseData.length * itemHeight);
 
-    // Ensure it doesn't exceed 85% of viewport height (reduced from 90%)
-    const maxHeight = window.innerHeight * 0.85;
+    // Cap at 75vh so the body scrollbar kicks in on small screens
+    const maxHeight = window.innerHeight * 0.75;
 
     return Math.min(totalHeight, maxHeight) + 'px';
   }

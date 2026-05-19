@@ -508,7 +508,7 @@
       </div>
     </div>
 
-    <div class="ml-info-sidebar-body">
+    <div class="ml-info-sidebar-body" #mlSidebarBody (scroll)="onMlBodyScroll($event)">
       <div class="ml-info-sidebar-item" *ngFor="let item of mlPerCaseData; let i = index">
         <div class="item-card">
           <div class="item-header">
@@ -553,6 +553,12 @@
           <div class="item-decoration" [style.animation-delay.ms]="i * 100"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Scroll-more indicator: shown when body has more content below -->
+    <div class="ml-scroll-indicator" *ngIf="mlBodyHasMoreBelow" (click)="scrollMlBodyDown()">
+      <i class="bi bi-chevron-double-down"></i>
+      <span>more</span>
     </div>
 
     <div class="ml-info-sidebar-footer">
