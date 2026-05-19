@@ -1,0 +1,49 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">Edit Prices</h2>
+
+  <div class="meta">
+    <div><strong>License:</strong> {{ row.license_id || '—' }}</div>
+    <div><strong>Brand:</strong> {{ row.brand_name || '—' }}</div>
+    <div><strong>Size:</strong> {{ row.capacity_size || 0 }} ml</div>
+  </div>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Ex-Factory Price (Rs/Case)</mat-label>
+        <input matInput type="number" name="exFactory" [(ngModel)]="row.ex_factory_price_rs_per_case" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Excise Duty (Rs/Case)</mat-label>
+        <input matInput type="number" name="exciseDuty" [(ngModel)]="row.excise_duty_rs_per_case" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Education Cess (Rs/Case)</mat-label>
+        <input matInput type="number" name="eduCess" [(ngModel)]="row.education_cess_rs_per_case" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Additional Excise Duty (Rs/Case)</mat-label>
+        <input matInput type="number" name="addlDuty" [(ngModel)]="row.additional_excise_duty_rs_per_case" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Additional Excise Duty 12.5% (Rs/Case)</mat-label>
+        <input matInput type="number" name="addl125" [(ngModel)]="row.additional_excise_duty_12_5_percent_rs_per_case" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>MRP (Rs/Bottle)</mat-label>
+        <input matInput type="number" name="mrp" [(ngModel)]="row.mrp_rs_per_bottle" />
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>
+

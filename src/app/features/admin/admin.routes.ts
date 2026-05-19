@@ -211,6 +211,13 @@ const routes: Routes = [
             data: { authorities: ['site_admin'] },
           },
           {
+            path: 'hologram/brands',
+            loadComponent: () =>
+              import('./master/hologram/brands/brands.component').then((m) => m.BrandsComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'about-us',
             redirectTo: 'about-us/heads-of-organisations',
             pathMatch: 'full'

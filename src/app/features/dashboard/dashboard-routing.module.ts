@@ -161,6 +161,13 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/hologram/brands',
+        loadComponent: () =>
+          import('../admin/master/hologram/brands/brands.component').then((m) => m.BrandsComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/bulk-spirit',
         redirectTo: 'admin/bulk-spirit/ena-bulk-spirit',
         pathMatch: 'full'

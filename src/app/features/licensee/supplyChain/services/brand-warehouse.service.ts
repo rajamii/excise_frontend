@@ -34,6 +34,12 @@ export interface BrandWarehouse {
     brand_name?: string;
     current_stock: number;
     capacity_size: number;
+    ex_factory_price_rs_per_case?: number;
+    excise_duty_rs_per_case?: number;
+    education_cess_rs_per_case?: number;
+    additional_excise_duty_rs_per_case?: number;
+    additional_excise_duty_12_5_percent_rs_per_case?: number;
+    mrp_rs_per_bottle?: number;
     total_capacity?: number;
     status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'OVERSTOCKED';
     liquor_data?: number;
@@ -267,6 +273,12 @@ export class BrandWarehouseService {
                     brand_name: brand.brandName || brand.brand_name || '',
                     current_stock: brand.currentStock || brand.current_stock || 0,
                     capacity_size: brand.capacitySize || brand.capacity_size || 0,
+                    ex_factory_price_rs_per_case: Number(brand.exFactoryPriceRsPerCase ?? brand.ex_factory_price_rs_per_case ?? 0),
+                    excise_duty_rs_per_case: Number(brand.exciseDutyRsPerCase ?? brand.excise_duty_rs_per_case ?? 0),
+                    education_cess_rs_per_case: Number(brand.educationCessRsPerCase ?? brand.education_cess_rs_per_case ?? 0),
+                    additional_excise_duty_rs_per_case: Number(brand.additionalExciseDutyRsPerCase ?? brand.additional_excise_duty_rs_per_case ?? 0),
+                    additional_excise_duty_12_5_percent_rs_per_case: Number(brand.additionalExciseDuty125PercentRsPerCase ?? brand.additional_excise_duty_12_5_percent_rs_per_case ?? 0),
+                    mrp_rs_per_bottle: Number(brand.mrpRsPerBottle ?? brand.mrp_rs_per_bottle ?? 0),
                     total_capacity: brand.totalCapacity || brand.total_capacity || 0,
                     status: brand.status || 'OUT_OF_STOCK',
                     liquor_data: brand.liquorData || brand.liquor_data || null,

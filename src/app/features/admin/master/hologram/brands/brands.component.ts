@@ -1,0 +1,154 @@
+import { Component, OnInit } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import Swal from 'sweetalert2';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { BrandWarehouse, BrandWarehouseService } from '../../../../licensee/supplyChain/services/brand-warehouse.service';
+import { MasterService } from '../../../../../core/services/master.service';
+import { AdminService } from '../../../admin.service';
+import { StockManageComponent } from './stock-manage/stock-manage.component';
+import { PriceManageComponent } from './price-manage/price-manage.component';
+
+type MasterBrandRow = { id: number; brandName: string };
+type LiquorCategoryRow = { id: number; sizeMl: number };
+
+@Component({
+  selector: 'app-hologram-brands',
+  standalone: true,
+  imports: [MaterialModule],
+  templateUrl: './brands.component.html',
+  styleUrl: './brands.component.scss',
+})
+export class BrandsComponent implements OnInit {
+  stockColumns: string[] = ['licenseId', 'brandName', 'sizeMl', 'currentStock', 'actions'];
+  priceColumns: string[] = [
+    'licenseId',
+    'brandName',
+    'sizeMl',
+    'exFactory',
+    'exciseDuty',
+    'eduCess',
+    'addlDuty',
+    'addl125',
+    'mrp',
+    'actions',
+  ];
+
+  rows: BrandWarehouse[] = [];
+  brands: MasterBrandRow[] = [];
+  sizes: LiquorCategoryRow[] = [];
+
+  constructor(
+    private brandWarehouseService: BrandWarehouseService,
+    private masterService: MasterService,
+    private adminService: AdminService,
+    private dialog: MatDialog
+  ) {}
+
+  ngOnInit(): void {
+    this.loadAll();
+  }
+
+  private loadAll(): void {
+    this.loadRows();
+    this.loadMasters();
+  }
+
+  loadRows(): void {
+    this.brandWarehouseService.getBrandWarehouses().subscribe({
+      next: (data) => (this.rows = Array.isArray(data) ? data : []),
+      error: () => Swal.fire('Error', 'Failed to load brands.', 'error'),
+    });
+  }
+
+  private loadMasters(): void {
+    this.masterService.getMasterBrands().subscribe({
+      next: (resp: any) => {
+        const data = resp?.data || resp?.results || [];
+        this.brands = Array.isArray(data)
+          ? data
+              .map((x: any) => ({
+                id: Number(x.id),
+                brandName: String(x.brandName ?? x.brand_name ?? '').trim(),
+              }))
+              .filter((x: any) => x.id && x.brandName)
+          : [];
+      },
+      error: () => (this.brands = []),
+    });
+
+    this.masterService.getLiquorCategories(false).subscribe({
+      next: (resp: any) => {
+        const data = resp?.data || resp?.results || [];
+        this.sizes = Array.isArray(data)
+          ? data
+              .map((x: any) => ({
+                id: Number(x.id),
+                sizeMl: Number(x.sizeMl ?? x.size_ml ?? 0),
+              }))
+              .filter((x: any) => x.sizeMl > 0)
+          : [];
+      },
+      error: () => (this.sizes = []),
+    });
+  }
+
+  onAddStock(): void {
+    const dialogRef = this.dialog.open(StockManageComponent, {
+      width: '720px',
+      data: { brands: this.brands, sizes: this.sizes },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.loadRows();
+        this.loadMasters();
+      }
+    });
+  }
+
+  onEditStock(row: BrandWarehouse): void {
+    const dialogRef = this.dialog.open(StockManageComponent, {
+      width: '720px',
+      data: { row: { ...row }, brands: this.brands, sizes: this.sizes },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.loadRows();
+        this.loadMasters();
+      }
+    });
+  }
+
+  onDelete(row: BrandWarehouse): void {
+    if (row?.id === undefined) {
+      Swal.fire('Error', 'Invalid row.', 'error');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete "${row.brand_name || ''}" (${row.capacity_size} ml)?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      this.brandWarehouseService.deleteBrandWarehouse(row.id as number).subscribe({
+        next: () => {
+          Swal.fire('Deleted!', 'Row deleted successfully.', 'success');
+          this.loadRows();
+        },
+        error: () => Swal.fire('Error', 'Failed to delete row.', 'error'),
+      });
+    });
+  }
+
+  onEditPrices(row: BrandWarehouse): void {
+    const dialogRef = this.dialog.open(PriceManageComponent, {
+      width: '760px',
+      data: { row: { ...row } },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) this.loadRows();
+    });
+  }
+}

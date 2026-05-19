@@ -550,6 +550,21 @@ export class MasterService {
     return this.http.get(`${this.LIQUOR_DATA_URL}/bottle-types/?active_only=${activeFlag}`);
   }
 
+  getMasterBrands(q = ''): Observable<any> {
+    const query = String(q || '').trim();
+    const suffix = query ? `?q=${encodeURIComponent(query)}` : '';
+    return this.http.get(`${this.LIQUOR_DATA_URL}/master-brands/${suffix}`);
+  }
+
+  getLiquorCategories(includeZero = false): Observable<any> {
+    const flag = includeZero ? 'true' : 'false';
+    return this.http.get(`${this.LIQUOR_DATA_URL}/liquor-categories/?include_zero=${flag}`);
+  }
+
+  createMasterBrand(payload: { brandName: string; factoryId?: number | null; liquorTypeId?: number | null }): Observable<any> {
+    return this.http.post(`${this.LIQUOR_DATA_URL}/master-brands/create/`, payload);
+  }
+
   // =========================================================================
   // BULK SPIRIT (ENA) ENDPOINTS
   // =========================================================================

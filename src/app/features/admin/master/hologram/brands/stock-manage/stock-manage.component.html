@@ -1,0 +1,94 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Brand Warehouse (Stock)</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- License -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>License *</mat-label>
+        <mat-select name="licenseId" [(ngModel)]="row.license_id" required>
+          @for (lic of manufacturingLicenses; track lic.id) {
+            <mat-option [value]="lic.id">{{ lic.id }} - {{ lic.establishmentName }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Brand name (free text) -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Brand *</mat-label>
+        <input matInput name="brandName" [(ngModel)]="brandName" placeholder="Type brand name" required />
+      </mat-form-field>
+
+      <!-- Size (ml) free input -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Size (ml) *</mat-label>
+        <input matInput type="number" name="sizeMl" [(ngModel)]="sizeMl" min="1" placeholder="e.g. 750" required />
+      </mat-form-field>
+
+      <!-- Pieces in Case (updates brand_ml_in_cases) -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Pieces in Case *</mat-label>
+        <input matInput type="number" name="piecesInCase" [(ngModel)]="piecesInCase" min="1" placeholder="e.g. 12" required />
+      </mat-form-field>
+
+      <!-- Stock Available -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Stock Available *</mat-label>
+        <input matInput type="number" name="currentStock" required
+          [(ngModel)]="row.current_stock" min="0" />
+      </mat-form-field>
+
+      <mat-divider class="section-divider"></mat-divider>
+      <p class="section-label">Pricing Details</p>
+
+      <!-- Ex-Factory Price -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Ex-Factory / Case (Rs)</mat-label>
+        <input matInput type="number" name="exFactory"
+          [(ngModel)]="row.ex_factory_price_rs_per_case" min="0" />
+      </mat-form-field>
+
+      <!-- Excise Duty -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Excise Duty / Case (Rs)</mat-label>
+        <input matInput type="number" name="exciseDuty"
+          [(ngModel)]="row.excise_duty_rs_per_case" min="0" />
+      </mat-form-field>
+
+      <!-- Education Cess -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Edu. Cess / Case (Rs)</mat-label>
+        <input matInput type="number" name="eduCess"
+          [(ngModel)]="row.education_cess_rs_per_case" min="0" />
+      </mat-form-field>
+
+      <!-- Additional Excise Duty -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Addl. Duty / Case (Rs)</mat-label>
+        <input matInput type="number" name="addlDuty"
+          [(ngModel)]="row.additional_excise_duty_rs_per_case" min="0" />
+      </mat-form-field>
+
+      <!-- Additional Excise Duty 12.5% -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Addl. Duty 12.5% / Case (Rs)</mat-label>
+        <input matInput type="number" name="addl125"
+          [(ngModel)]="row.additional_excise_duty_12_5_percent_rs_per_case" min="0" />
+      </mat-form-field>
+
+      <!-- MRP per Bottle -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>MRP / Bottle (Rs)</mat-label>
+        <input matInput type="number" name="mrp"
+          [(ngModel)]="row.mrp_rs_per_bottle" min="0" />
+      </mat-form-field>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>
