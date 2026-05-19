@@ -15,7 +15,7 @@ import { ManageComponent } from '../manage/manage.component';
   styleUrl: './list.component.scss',
 })
 export class ListComponent implements OnInit {
-  displayedColumns: string[] = ['distilleryName', 'distilleryState', 'licenseeId', 'actions'];
+  displayedColumns: string[] = ['distilleryName', 'distilleryState', 'viaRoute', 'licenseeId', 'actions'];
   rows: EnaDistilleryDetail[] = [];
 
   constructor(
@@ -72,7 +72,7 @@ export class ListComponent implements OnInit {
 
     Swal.fire({
       title: 'Are you sure?',
-      text: `Delete distillery "${row.distilleryName}"?`,
+      text: `Delete "${row.distilleryName}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Delete',
@@ -80,7 +80,7 @@ export class ListComponent implements OnInit {
       if (!result.isConfirmed) return;
       this.adminService.deleteEnaDistilleryDetail(row.id as number).subscribe({
         next: () => {
-          Swal.fire('Deleted!', 'Distillery deleted successfully.', 'success');
+          Swal.fire('Deleted!', 'Record deleted successfully.', 'success');
           this.loadRows();
         },
         error: () => Swal.fire('Error', 'Failed to delete distillery.', 'error'),

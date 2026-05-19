@@ -1,8 +1,8 @@
-<h2 mat-dialog-title>{{ isEditMode ? 'Edit Distillery Details' : 'Add Distillery Details' }}</h2>
+<h2 mat-dialog-title>{{ isEditMode ? 'Edit Lifted From Details' : 'Add Lifted From Details' }}</h2>
 
 <div mat-dialog-content class="form">
   <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Distillery Name</mat-label>
+    <mat-label>Lifted From (Name)</mat-label>
     <input matInput [(ngModel)]="row.distilleryName" />
   </mat-form-field>
 
@@ -17,8 +17,8 @@
   </mat-form-field>
 
   <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Via Route</mat-label>
-    <textarea matInput rows="2" [(ngModel)]="row.viaRoute"></textarea>
+    <mat-label>Route</mat-label>
+    <textarea matInput rows="2" [(ngModel)]="row.viaRoute" placeholder="e.g. Gangtok - Siliguri Highway via Rangpo"></textarea>
   </mat-form-field>
 
   <mat-form-field appearance="outline" class="full-width">

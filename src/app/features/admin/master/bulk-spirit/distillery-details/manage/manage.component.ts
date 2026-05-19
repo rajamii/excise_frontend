@@ -52,12 +52,12 @@ export class ManageComponent implements OnInit {
 
   onSave(): void {
     if (!this.row.distilleryName?.trim() || !this.row.distilleryState?.trim()) {
-      Swal.fire('Validation', 'Distillery name and state are required.', 'warning');
+      Swal.fire('Validation', 'Lifted From name and state are required.', 'warning');
       return;
     }
 
     Swal.fire({
-      title: this.isEditMode ? 'Update distillery?' : 'Add distillery?',
+      title: this.isEditMode ? 'Update lifted from details?' : 'Add lifted from details?',
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: this.isEditMode ? 'Update' : 'Save',
@@ -82,7 +82,7 @@ export class ManageComponent implements OnInit {
           Swal.fire('Success', this.isEditMode ? 'Updated successfully.' : 'Added successfully.', 'success');
           this.dialogRef.close(true);
         },
-        error: () => Swal.fire('Error', 'Failed to save distillery details.', 'error'),
+        error: () => Swal.fire('Error', 'Failed to save lifted from details.', 'error'),
       });
     });
   }
