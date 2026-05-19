@@ -19,12 +19,12 @@
           <ng-container matColumnDef="isActive">
             <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
             <mat-cell *matCellDef="let row">
-              <button mat-stroked-button
-                [style.color]="row.isActive ? '#1C2B78' : '#d32f2f'"
-                [style.border-color]="row.isActive ? '#1C2B78' : '#d32f2f'"
-                (click)="onToggleActive(row)">
-                {{ row.isActive ? 'Active' : 'Inactive' }}
-              </button>
+              <mat-slide-toggle
+                [checked]="row.isActive"
+                color="primary"
+                (change)="onToggleActive(row)"
+                [matTooltip]="row.isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'">
+              </mat-slide-toggle>
             </mat-cell>
           </ng-container>
 
