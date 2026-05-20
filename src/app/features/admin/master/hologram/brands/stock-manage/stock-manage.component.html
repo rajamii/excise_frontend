@@ -9,7 +9,7 @@
 
       <!-- License -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>License *</mat-label>
+        <mat-label>License</mat-label>
         <mat-select name="licenseId" [(ngModel)]="row.license_id" required>
           @for (lic of manufacturingLicenses; track lic.id) {
             <mat-option [value]="lic.id">{{ lic.id }} - {{ lic.establishmentName }}</mat-option>
@@ -19,25 +19,25 @@
 
       <!-- Brand name (free text) -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Brand *</mat-label>
+        <mat-label>Brand</mat-label>
         <input matInput name="brandName" [(ngModel)]="brandName" placeholder="Type brand name" required />
       </mat-form-field>
 
       <!-- Size (ml) free input -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Size (ml) *</mat-label>
+        <mat-label>Size (ml)</mat-label>
         <input matInput type="number" name="sizeMl" [(ngModel)]="sizeMl" min="1" placeholder="e.g. 750" required />
       </mat-form-field>
 
       <!-- Pieces in Case (updates brand_ml_in_cases) -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Pieces in Case *</mat-label>
+        <mat-label>Pieces in Case</mat-label>
         <input matInput type="number" name="piecesInCase" [(ngModel)]="piecesInCase" min="1" placeholder="e.g. 12" required />
       </mat-form-field>
 
       <!-- Stock Available -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Stock Available *</mat-label>
+        <mat-label>Stock Available</mat-label>
         <input matInput type="number" name="currentStock" required
           [(ngModel)]="row.current_stock" min="0" />
       </mat-form-field>
