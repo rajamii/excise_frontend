@@ -61,6 +61,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   showBreweryOrDistilleryMenus = false;
   /** Whether the Bulk Spirit group is expanded in the sidebar (default: closed) */
   bulkSpiritExpanded = false;
+  adminHologramExpanded = false;
+  adminBulkSpiritExpanded = false;
+  adminAboutUsExpanded = false;
+  adminContactUsExpanded = false;
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;

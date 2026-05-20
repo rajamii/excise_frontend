@@ -276,121 +276,101 @@
                 <span class="nav-text">Hologram Suppliers</span>
               </a>
 
-              <div class="nav-expandable">
-                <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/hologram')" [class.active]="isAdminRouteActive('/dashboard/admin/hologram')">
-                  <mat-expansion-panel-header class="panel-header">
-                    <mat-panel-title class="panel-title">
-                      <mat-icon class="nav-icon">qr_code</mat-icon>
-                      <span class="nav-text">Hologram</span>
-                      <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
-                    </mat-panel-title>
-                  </mat-expansion-panel-header>
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminHologramExpanded = !adminHologramExpanded"
+                [class.active]="adminHologramExpanded || isAdminRouteActive('/dashboard/admin/hologram')"
+                [class.group-expanded]="adminHologramExpanded">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Hologram</span>
+                <mat-icon class="nav-chevron">{{ adminHologramExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminHologramExpanded">
+                <a routerLink="/dashboard/admin/hologram/transit-permit-distributor-data" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">local_shipping</mat-icon>
+                  <span class="nav-text">Transit Permit Distributor Data</span>
+                </a>
+                <a routerLink="/dashboard/admin/hologram/brand-ml-in-cases" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">inventory_2</mat-icon>
+                  <span class="nav-text">Brand ML in Cases</span>
+                </a>
+                <a routerLink="/dashboard/admin/hologram/master-bottle-type" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">category</mat-icon>
+                  <span class="nav-text">Master Bottle Type</span>
+                </a>
+                <a routerLink="/dashboard/admin/hologram/brands" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">inventory</mat-icon>
+                  <span class="nav-text">Brands</span>
+                </a>
+              </ng-container>
 
-                  <div class="panel-content">
-                    <a routerLink="/dashboard/admin/hologram/transit-permit-distributor-data" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">local_shipping</mat-icon>
-                      <span class="sub-text">Transit Permit Distributor Data</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/hologram/brand-ml-in-cases" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">inventory_2</mat-icon>
-                      <span class="sub-text">Brand ML in Cases</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/hologram/master-bottle-type" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">category</mat-icon>
-                      <span class="sub-text">Master Bottle Type</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/hologram/brands" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">inventory</mat-icon>
-                      <span class="sub-text">Brands</span>
-                    </a>
-                  </div>
-                </mat-expansion-panel>
-              </div>
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminBulkSpiritExpanded = !adminBulkSpiritExpanded"
+                [class.active]="adminBulkSpiritExpanded || isAdminRouteActive('/dashboard/admin/bulk-spirit')"
+                [class.group-expanded]="adminBulkSpiritExpanded">
+                <mat-icon class="nav-icon">local_bar</mat-icon>
+                <span class="nav-text">Bulk Spirit</span>
+                <mat-icon class="nav-chevron">{{ adminBulkSpiritExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminBulkSpiritExpanded">
+                <a routerLink="/dashboard/admin/bulk-spirit/ena-bulk-spirit" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">list</mat-icon>
+                  <span class="nav-text">ENA Bulk Spirit Details</span>
+                </a>
+                <a routerLink="/dashboard/admin/bulk-spirit/distillery-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">factory</mat-icon>
+                  <span class="nav-text">Lifted From Details</span>
+                </a>
+                <a routerLink="/dashboard/admin/bulk-spirit/ena-purpose-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">assignment</mat-icon>
+                  <span class="nav-text">ENA Purpose Details</span>
+                </a>
+                <a routerLink="/dashboard/admin/bulk-spirit/check-post-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">location_on</mat-icon>
+                  <span class="nav-text">Check Post Details</span>
+                </a>
+              </ng-container>
 
-              <div class="nav-expandable">
-                <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/bulk-spirit')" [class.active]="isAdminRouteActive('/dashboard/admin/bulk-spirit')">
-                  <mat-expansion-panel-header class="panel-header">
-                    <mat-panel-title class="panel-title">
-                      <mat-icon class="nav-icon">local_bar</mat-icon>
-                      <span class="nav-text">Bulk Spirit</span>
-                      <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
-                    </mat-panel-title>
-                  </mat-expansion-panel-header>
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminAboutUsExpanded = !adminAboutUsExpanded"
+                [class.active]="adminAboutUsExpanded || isAdminRouteActive('/dashboard/admin/about-us')"
+                [class.group-expanded]="adminAboutUsExpanded">
+                <mat-icon class="nav-icon">info</mat-icon>
+                <span class="nav-text">About Us</span>
+                <mat-icon class="nav-chevron">{{ adminAboutUsExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminAboutUsExpanded">
+                <a routerLink="/dashboard/admin/about-us/heads-of-organisations" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">account_balance</mat-icon>
+                  <span class="nav-text">Heads of Organisations</span>
+                </a>
+                <a routerLink="/dashboard/admin/about-us/excise-secretaries" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">supervisor_account</mat-icon>
+                  <span class="nav-text">Excise Secretaries</span>
+                </a>
+              </ng-container>
 
-                  <div class="panel-content">
-                    <a routerLink="/dashboard/admin/bulk-spirit/ena-bulk-spirit" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">list</mat-icon>
-                      <span class="sub-text">ENA Bulk Spirit Details</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/bulk-spirit/distillery-details" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">factory</mat-icon>
-                      <span class="sub-text">Lifted From Details</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/bulk-spirit/ena-purpose-details" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">assignment</mat-icon>
-                      <span class="sub-text">ENA Purpose Details</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/bulk-spirit/check-post-details" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">location_on</mat-icon>
-                      <span class="sub-text">Check Post Details</span>
-                    </a>
-                  </div>
-                </mat-expansion-panel>
-              </div>
-
-              <div class="nav-expandable">
-                <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/about-us')" [class.active]="isAdminRouteActive('/dashboard/admin/about-us')">
-                  <mat-expansion-panel-header class="panel-header">
-                    <mat-panel-title class="panel-title">
-                      <mat-icon class="nav-icon">info</mat-icon>
-                      <span class="nav-text">About Us</span>
-                      <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
-                    </mat-panel-title>
-                  </mat-expansion-panel-header>
-
-                  <div class="panel-content">
-                    <a routerLink="/dashboard/admin/about-us/heads-of-organisations" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">account_balance</mat-icon>
-                      <span class="sub-text">Heads of Organisations</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/about-us/excise-secretaries" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">supervisor_account</mat-icon>
-                      <span class="sub-text">Excise Secretaries</span>
-                    </a>
-                  </div>
-                </mat-expansion-panel>
-              </div>
-
-              <div class="nav-expandable">
-                <mat-expansion-panel class="nav-panel" hideToggle [expanded]="isAdminRouteActive('/dashboard/admin/contact-us')" [class.active]="isAdminRouteActive('/dashboard/admin/contact-us')">
-                  <mat-expansion-panel-header class="panel-header">
-                    <mat-panel-title class="panel-title">
-                      <mat-icon class="nav-icon">contact_mail</mat-icon>
-                      <span class="nav-text">Contact Us</span>
-                      <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
-                    </mat-panel-title>
-                  </mat-expansion-panel-header>
-
-                  <div class="panel-content">
-                    <a routerLink="/dashboard/admin/contact-us/nodal-officer" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">person</mat-icon>
-                      <span class="sub-text">Website Nodal Officer</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/contact-us/public-information-officers" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">groups</mat-icon>
-                      <span class="sub-text">Public Information Officers</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/contact-us/directorate-district-officials" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">account_balance</mat-icon>
-                      <span class="sub-text">Directorate &amp; District Officials</span>
-                    </a>
-                    <a routerLink="/dashboard/admin/contact-us/grievance-redressal-officer" routerLinkActive="active" class="sub-nav-item" (click)="closeSidenav()">
-                      <mat-icon class="sub-icon">support_agent</mat-icon>
-                      <span class="sub-text">Grievance Redressal Officer</span>
-                    </a>
-                  </div>
-                </mat-expansion-panel>
-              </div>
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminContactUsExpanded = !adminContactUsExpanded"
+                [class.active]="adminContactUsExpanded || isAdminRouteActive('/dashboard/admin/contact-us')"
+                [class.group-expanded]="adminContactUsExpanded">
+                <mat-icon class="nav-icon">contact_mail</mat-icon>
+                <span class="nav-text">Contact Us</span>
+                <mat-icon class="nav-chevron">{{ adminContactUsExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminContactUsExpanded">
+                <a routerLink="/dashboard/admin/contact-us/nodal-officer" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">person</mat-icon>
+                  <span class="nav-text">Website Nodal Officer</span>
+                </a>
+                <a routerLink="/dashboard/admin/contact-us/public-information-officers" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">groups</mat-icon>
+                  <span class="nav-text">Public Information Officers</span>
+                </a>
+                <a routerLink="/dashboard/admin/contact-us/directorate-district-officials" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">account_balance</mat-icon>
+                  <span class="nav-text">Directorate &amp; District Officials</span>
+                </a>
+                <a routerLink="/dashboard/admin/contact-us/grievance-redressal-officer" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">support_agent</mat-icon>
+                  <span class="nav-text">Grievance Redressal Officer</span>
+                </a>
+              </ng-container>
 
               <!-- Officer Activity — last item for site admin -->
               <button class="nav-item" (click)="navigateToSection('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
