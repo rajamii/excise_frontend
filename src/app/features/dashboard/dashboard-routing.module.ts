@@ -154,6 +154,13 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/brand-ml-in-cases',
+        loadComponent: () =>
+          import('../admin/master/hologram/brand-ml-in-cases/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/hologram/master-bottle-type',
         loadComponent: () =>
           import('../admin/master/hologram/master-bottle-type/list/list.component').then((m) => m.ListComponent),
@@ -273,6 +280,7 @@ const routes: Routes = [
       { path: 'license-terms', redirectTo: 'admin/license-terms', pathMatch: 'full' },
       { path: 'roads', redirectTo: 'admin/roads', pathMatch: 'full' },
       { path: 'hologram-suppliers', redirectTo: 'admin/hologram-suppliers', pathMatch: 'full' },
+      { path: 'brand-ml-in-cases', redirectTo: 'admin/brand-ml-in-cases', pathMatch: 'full' },
       { path: 'about-us', redirectTo: 'admin/about-us', pathMatch: 'full' },
       { path: 'contact-us', redirectTo: 'admin/contact-us', pathMatch: 'full' },
       { path: 'oic', redirectTo: 'admin/oic', pathMatch: 'full' }
