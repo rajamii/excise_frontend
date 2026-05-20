@@ -1,36 +1,44 @@
-<h2 mat-dialog-title>{{ isEditMode ? 'Edit ENA Bulk Spirit Type' : 'Add ENA Bulk Spirit Type' }}</h2>
+<div class="dialog-wrapper">
+  <h2 mat-dialog-title>
+    <mat-icon class="title-icon">water_drop</mat-icon>
+    {{ isEditMode ? 'Edit ENA Bulk Spirit Type' : 'Add ENA Bulk Spirit Type' }}
+  </h2>
 
-<div mat-dialog-content class="form">
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Bulk Spirit Type</mat-label>
-    <input matInput [(ngModel)]="row.bulkSpiritKindType" />
-  </mat-form-field>
+  <div mat-dialog-content class="form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Bulk Spirit Type</mat-label>
+      <input matInput [(ngModel)]="row.bulkSpiritKindType" />
+    </mat-form-field>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Strength</mat-label>
-    <input matInput [(ngModel)]="row.strength" />
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Strength</mat-label>
+      <input matInput [(ngModel)]="row.strength" />
+    </mat-form-field>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Price / BL</mat-label>
-    <input matInput type="number" [(ngModel)]="row.priceBl" />
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Price / BL</mat-label>
+      <input matInput type="number" [(ngModel)]="row.priceBl" />
+    </mat-form-field>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Assign License</mat-label>
-    <mat-select [(ngModel)]="row.licenseId">
-      <mat-option [value]="null">Unassigned</mat-option>
-      <mat-option *ngFor="let lic of licenses" [value]="lic.licenseeId">
-        {{ lic.establishmentName }} ({{ lic.licenseeId }})
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Assign License</mat-label>
+      <mat-select [(ngModel)]="row.licenseId">
+        <mat-option [value]="null">Unassigned</mat-option>
+        <mat-option *ngFor="let lic of licenses" [value]="lic.licenseeId">
+          {{ lic.establishmentName }} ({{ lic.licenseeId }})
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button class="btn-cancel" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+      Cancel
+    </button>
+    <button class="btn-save" (click)="onSave()">
+      <mat-icon>save</mat-icon>
+      {{ isEditMode ? 'Update' : 'Save' }}
+    </button>
+  </div>
 </div>
-
-<div mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Cancel</button>
-  <button mat-raised-button color="primary" (click)="onSave()">
-    {{ isEditMode ? 'Update' : 'Save' }}
-  </button>
-</div>
-

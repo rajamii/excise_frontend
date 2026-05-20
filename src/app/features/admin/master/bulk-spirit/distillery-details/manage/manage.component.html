@@ -1,41 +1,49 @@
-<h2 mat-dialog-title>{{ isEditMode ? 'Edit Lifted From Details' : 'Add Lifted From Details' }}</h2>
+<div class="dialog-wrapper">
+  <h2 mat-dialog-title>
+    <mat-icon class="title-icon">factory</mat-icon>
+    {{ isEditMode ? 'Edit Lifted From Details' : 'Add Lifted From Details' }}
+  </h2>
 
-<div mat-dialog-content class="form">
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Lifted From (Name)</mat-label>
-    <input matInput [(ngModel)]="row.distilleryName" />
-  </mat-form-field>
+  <div mat-dialog-content class="form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Lifted From (Name)</mat-label>
+      <input matInput [(ngModel)]="row.distilleryName" />
+    </mat-form-field>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Address</mat-label>
-    <textarea matInput rows="2" [(ngModel)]="row.distilleryAddress"></textarea>
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Address</mat-label>
+      <textarea matInput rows="2" [(ngModel)]="row.distilleryAddress"></textarea>
+    </mat-form-field>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>State</mat-label>
-    <input matInput [(ngModel)]="row.distilleryState" />
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>State</mat-label>
+      <input matInput [(ngModel)]="row.distilleryState" />
+    </mat-form-field>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Route</mat-label>
-    <textarea matInput rows="2" [(ngModel)]="row.viaRoute" placeholder="e.g. Gangtok - Siliguri Highway via Rangpo"></textarea>
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Route</mat-label>
+      <textarea matInput rows="2" [(ngModel)]="row.viaRoute" placeholder="e.g. Gangtok - Siliguri Highway via Rangpo"></textarea>
+    </mat-form-field>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Assign License</mat-label>
-    <mat-select [(ngModel)]="row.licenseeId">
-      <mat-option [value]="null">Unassigned</mat-option>
-      <mat-option *ngFor="let lic of licenses" [value]="lic.licenseeId">
-        {{ lic.establishmentName }} ({{ lic.licenseeId }})
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Assign License</mat-label>
+      <mat-select [(ngModel)]="row.licenseeId">
+        <mat-option [value]="null">Unassigned</mat-option>
+        <mat-option *ngFor="let lic of licenses" [value]="lic.licenseeId">
+          {{ lic.establishmentName }} ({{ lic.licenseeId }})
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button class="btn-cancel" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+      Cancel
+    </button>
+    <button class="btn-save" (click)="onSave()">
+      <mat-icon>save</mat-icon>
+      {{ isEditMode ? 'Update' : 'Save' }}
+    </button>
+  </div>
 </div>
-
-<div mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Cancel</button>
-  <button mat-raised-button color="primary" (click)="onSave()">
-    {{ isEditMode ? 'Update' : 'Save' }}
-  </button>
-</div>
-
