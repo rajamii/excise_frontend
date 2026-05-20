@@ -36,7 +36,11 @@
       </div>
 
       <mat-tab-group>
-        <mat-tab label="Stock">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon style="font-size:18px;height:18px;width:18px;margin-right:6px;vertical-align:middle;">inventory_2</mat-icon>
+            Stock
+          </ng-template>
           <div class="table-container">
             <mat-table [dataSource]="rows">
               <ng-container matColumnDef="licenseId">
@@ -53,7 +57,9 @@
 
               <ng-container matColumnDef="sizeMl">
                 <mat-header-cell *matHeaderCellDef>Size (ml)</mat-header-cell>
-                <mat-cell *matCellDef="let item">{{ item.capacity_size || 0 }}</mat-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="ml-chip">{{ item.capacity_size || 0 }} ml</span>
+                </mat-cell>
               </ng-container>
 
               <ng-container matColumnDef="currentStock">
@@ -83,7 +89,11 @@
           </div>
         </mat-tab>
 
-        <mat-tab label="Prices">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon style="font-size:18px;height:18px;width:18px;margin-right:6px;vertical-align:middle;">sell</mat-icon>
+            Prices
+          </ng-template>
           <div class="table-container">
             <mat-table [dataSource]="rows">
               <ng-container matColumnDef="licenseId">
@@ -100,7 +110,9 @@
 
               <ng-container matColumnDef="sizeMl">
                 <mat-header-cell *matHeaderCellDef>Size (ml)</mat-header-cell>
-                <mat-cell *matCellDef="let item">{{ item.capacity_size || 0 }}</mat-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="ml-chip">{{ item.capacity_size || 0 }} ml</span>
+                </mat-cell>
               </ng-container>
 
               <ng-container matColumnDef="exFactory">

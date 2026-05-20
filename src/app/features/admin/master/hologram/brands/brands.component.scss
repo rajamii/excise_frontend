@@ -41,6 +41,74 @@ mat-card {
   }
 }
 
+// ── Tab Group ─────────────────────────────────────────────────────────────────
+::ng-deep .mat-mdc-tab-group {
+  // Tab header bar background
+  .mat-mdc-tab-header {
+    background: #f0f4ff;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 2px solid #d0d9f5;
+    padding: 0 8px;
+  }
+
+  // Individual tab label
+  .mat-mdc-tab {
+    min-width: 130px;
+    height: 48px;
+    opacity: 1;
+
+    .mdc-tab__text-label {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #5a6a9a;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    // Active tab
+    &.mdc-tab--active .mdc-tab__text-label {
+      color: #1c2b78;
+      font-weight: 700;
+    }
+
+    // Hover
+    &:hover:not(.mdc-tab--active) .mdc-tab__text-label {
+      color: #1c2b78;
+    }
+  }
+
+  // Active ink bar (underline)
+  .mdc-tab-indicator__content--underline {
+    border-color: #1c2b78;
+    border-top-width: 3px;
+    border-radius: 3px 3px 0 0;
+  }
+
+  // Tab body padding
+  .mat-mdc-tab-body-content {
+    padding-top: 16px;
+  }
+}
+
+// ── ML Size Chip ──────────────────────────────────────────────────────────────
+.ml-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1c2b78 0%, #3b5bdb 100%);
+  box-shadow: 0 2px 6px rgba(28, 43, 120, 0.30);
+  white-space: nowrap;
+  min-width: 52px;
+  text-align: center;
+}
+
 // ── Search bar ────────────────────────────────────────────────────────────────
 .search-bar {
   display: flex;
