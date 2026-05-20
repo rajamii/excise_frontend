@@ -1,5 +1,8 @@
 <div class="container-fluid">
-  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Master Bottle Type</h2>
+  <h2 mat-dialog-title align="center">
+    <mat-icon style="font-size:20px;height:20px;width:20px;vertical-align:middle;margin-right:6px;">liquor</mat-icon>
+    {{ isEditMode ? 'Edit' : 'Add' }} Master Bottle Type
+  </h2>
 
   <form #form="ngForm">
     <mat-dialog-content>
@@ -14,9 +17,14 @@
     </mat-dialog-content>
 
     <mat-dialog-actions align="center">
-      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
-      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">
+        <mat-icon style="font-size:16px;height:16px;width:16px;margin-right:4px;">save</mat-icon>
+        Save
+      </button>
+      <button matButton="filled" color="warn" (click)="onCancel()">
+        <mat-icon style="font-size:16px;height:16px;width:16px;margin-right:4px;">close</mat-icon>
+        Cancel
+      </button>
     </mat-dialog-actions>
   </form>
 </div>
-
