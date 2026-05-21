@@ -15,8 +15,8 @@ export class SbiEPayComponent implements OnInit {
   amount: number = 0;
   
   // Dummy values based on user requirements and standard mockup
-  walletTransactionId = 'BILLDESKEX1779345750775500025';
-  exciseTransactionId = 'EXCISEDUTYEX9827463920194837261';
+  walletTransactionId = 'SBI1779345750775500025';
+  exciseTransactionId = 'SBIEXCISEDUTYEX9827463920194837261';
   
   headOfAccountWallet = '0039-00-105-45-01';
   headOfAccountExcise = '0039-00-106-01-01';
