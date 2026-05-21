@@ -279,6 +279,10 @@
                 <mat-icon class="nav-icon">qr_code</mat-icon>
                 <span class="nav-text">Hologram Suppliers</span>
               </a>
+              <a routerLink="/dashboard/admin/sbi-e-pay" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+                <mat-icon class="nav-icon">payment</mat-icon>
+                <span class="nav-text">SBI ePAY</span>
+              </a>
 
               <button class="nav-item bulk-spirit-nav-item" (click)="adminHologramExpanded = !adminHologramExpanded"
                 [class.active]="adminHologramExpanded || isAdminRouteActive('/dashboard/admin/hologram')"
