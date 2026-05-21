@@ -1,10 +1,18 @@
 // Forwarding Letter Component Styles
-$requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='rgba(22,88,58,0.055)'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E");
+$requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E");
 
 .forwarding-letter-container {
   background: #f8f9fa;
   min-height: 100vh;
   padding: 20px;
+}
+
+// Chrome/Edge can repaint SVG watermark layers on mouse move when there are many stacked pages.
+// Keep watermark for print, but disable it for permit copies on screen to avoid flicker.
+@media screen {
+  .permit-copy::before {
+    display: none;
+  }
 }
 
 .header-actions {
@@ -22,15 +30,34 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   border: 2px solid black;
   padding: 15px;
   background: white;
-  background-image: $requisition-watermark;
-  background-repeat: repeat;
-  background-position: top center;
-  background-size: 330px 160px;
+  position: relative;
+  overflow: hidden;
   width: 100%;
   max-width: 198mm;
   margin: 0 auto 30px auto;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
+  isolation: isolate;
+  contain: layout paint;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: $requisition-watermark;
+    background-repeat: repeat;
+    background-position: top center;
+    background-size: 330px 160px;
+    background-color: #fff;
+    opacity: 1;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 
   &:last-child {
     margin-bottom: 0;
@@ -44,10 +71,6 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     margin: 0 auto 5mm auto;
     padding: 15px 11px 16px;
     page-break-inside: avoid;
-    background-image: $requisition-watermark !important;
-    background-repeat: repeat !important;
-    background-position: top center !important;
-    background-size: 330px 160px !important;
     overflow: hidden;
 
     &:last-child {
@@ -297,7 +320,10 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   .main {
     padding: 10px;
     border-width: 1px;
-    background-size: 280px 130px;
+
+    &::before {
+      background-size: 280px 130px;
+    }
   }
 
   .letter-header {
@@ -322,9 +348,9 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 
 @media (max-width: 576px) {
-  .main,
-  .permit-copy {
-  background-size: 220px 110px;
+  .main::before,
+  .permit-copy::before {
+    background-size: 220px 110px;
   }
 
   .letter-content {
@@ -369,15 +395,33 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   margin: 16px auto;
   padding: 16px 10px 12px;
   background: white;
-  background-image: $requisition-watermark;
-  background-repeat: repeat;
-  background-position: top center;
-  background-size: 330px 160px;
+  position: relative;
   width: 100%;
   max-width: 200mm;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
   overflow: hidden;
+  isolation: isolate;
+  contain: layout paint;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: $requisition-watermark;
+    background-repeat: repeat;
+    background-position: top center;
+    background-size: 330px 160px;
+    background-color: #fff;
+    opacity: 1;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 
   &.main-permit {
     border-color: #1976d2;
@@ -392,10 +436,6 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     margin: 0 auto;
     page-break-inside: avoid;
     page-break-before: always;
-    background-image: $requisition-watermark !important;
-    background-repeat: repeat !important;
-    background-position: top center !important;
-    background-size: 330px 160px !important;
     padding: 10px 6px 8px;
 
     &.last-copy {

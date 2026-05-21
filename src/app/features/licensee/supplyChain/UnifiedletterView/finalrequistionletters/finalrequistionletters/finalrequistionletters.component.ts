@@ -14,6 +14,11 @@ interface ForwardingLetterData {
   permitFrom: string;
   permitDate: string;
   issuedTo: string;
+  productName: string;
+  totalBLDisplay: string;
+  strengthFrom: string;
+  strengthTo: string;
+  importFrom: string;
 }
 
 interface SecondLetterData {
@@ -34,9 +39,10 @@ interface ThirdLetterData {
   permitFrom: string;
   permitDated: string;
   issuedTo: string;
-  importTo: string;
-  strength: string;
-  strengthValue: string;
+  totalBLDisplay: string;
+  productName: string;
+  strengthFrom: string;
+  strengthTo: string;
   importFrom: string;
   viaRoute: string;
 }
@@ -82,6 +88,11 @@ export class FinalrequistionlettersComponent implements OnInit {
     permitFrom: "",
     permitDate: "",
     issuedTo: "",
+    productName: "Grain ENA",
+    totalBLDisplay: "",
+    strengthFrom: "",
+    strengthTo: "",
+    importFrom: "",
   };
 
   secondLetterData: SecondLetterData = {
@@ -102,9 +113,10 @@ export class FinalrequistionlettersComponent implements OnInit {
     permitFrom: "",
     permitDated: "",
     issuedTo: "",
-    importTo: "",
-    strength: "",
-    strengthValue: "",
+    totalBLDisplay: "",
+    productName: "Grain ENA",
+    strengthFrom: "",
+    strengthTo: "",
     importFrom: "",
     viaRoute: "",
   };
@@ -265,6 +277,9 @@ export class FinalrequistionlettersComponent implements OnInit {
     const permitRaw = this.pickValue(row, ["details_permits_number", "detailsPermitsNumber"], "");
     const permitDisplay = this.formatPermitRange(permitRaw);
     const permitTokens = this.splitPermitTokens(permitRaw);
+    const numberOfPermits =
+      permitTokens.length ||
+      Number(this.pickValue(row, ["requisiton_number_of_permits", "number_of_permits", "numberOfPermits"], 1));
     const issuedTo = establishmentName || "-";
     const liftedFromDistilleryName = this.pickValue(
       row,
@@ -302,6 +317,13 @@ export class FinalrequistionlettersComponent implements OnInit {
         ? ""
         : liftedFrom;
 
+    const productName =
+      this.pickValue(row, ["bulk_spirit_type", "bulkSpiritType"], "").trim() || "Grain ENA";
+    const totalBLRaw = this.pickValue(row, ["totalbl", "totalBL", "total_bl"], "");
+    const totalBLDisplay = this.formatTotalBLWithBreakdown(totalBLRaw, numberOfPermits);
+    const strengthRaw = this.pickValue(row, ["strength"], "");
+    const strengthRange = this.parseStrengthRange(strengthRaw);
+
     this.letterData = {
       letterNo: refNo,
       letterDate: requisitionDate,
@@ -309,6 +331,11 @@ export class FinalrequistionlettersComponent implements OnInit {
       permitFrom: permitDisplay,
       permitDate: approvalDate,
       issuedTo,
+      productName,
+      totalBLDisplay,
+      strengthFrom: strengthRange.from,
+      strengthTo: strengthRange.to,
+      importFrom: thirdLetterImportFrom,
     };
 
     this.secondLetterData = {
@@ -334,9 +361,10 @@ export class FinalrequistionlettersComponent implements OnInit {
       permitFrom: permitDisplay,
       permitDated: approvalDate,
       issuedTo,
-      importTo: this.pickValue(row, ["totalbl"], ""),
-      strength: this.pickValue(row, ["strength"], ""),
-      strengthValue: this.pickValue(row, ["bulk_spirit_type", "bulkSpiritType"], ""),
+      totalBLDisplay,
+      productName,
+      strengthFrom: strengthRange.from,
+      strengthTo: strengthRange.to,
       importFrom: thirdLetterImportFrom,
       viaRoute,
     };
@@ -350,14 +378,57 @@ export class FinalrequistionlettersComponent implements OnInit {
       importDistilleryAddress,
       importFrom: state,
       branchPurpose: this.pickValue(row, ["branch_purpose", "branchPurpose"], ""),
-      displayTotalENA: this.pickValue(row, ["totalbl"], ""),
-      strengthTo: this.pickValue(row, ["strength"], ""),
+      displayTotalENA: this.formatIndianNumber(totalBLRaw),
+      strengthFrom: strengthRange.from,
+      strengthTo: strengthRange.to,
       route: this.pickValue(row, ["via_route", "viaRoute"], ""),
       branchAddress2: this.pickValue(row, ["check_post_name", "checkPostName"], ""),
       numberOfPermits:
-        permitTokens.length ||
-        Number(this.pickValue(row, ["requisiton_number_of_permits", "number_of_permits", "numberOfPermits"], 1)),
+        numberOfPermits,
     };
+  }
+
+  private formatIndianNumber(value: any, fallback: string = ""): string {
+    const raw = String(value ?? "").trim();
+    if (!raw) return fallback;
+    const parsed = Number(raw.toString().replace(/,/g, ""));
+    if (!Number.isFinite(parsed)) return raw;
+    try {
+      return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(parsed);
+    } catch {
+      return String(Math.round(parsed));
+    }
+  }
+
+  private formatTotalBLWithBreakdown(totalBL: any, numberOfPermits: number): string {
+    const total = Number(String(totalBL ?? "").trim().replace(/,/g, ""));
+    const permits = Number.isFinite(numberOfPermits) && numberOfPermits > 0 ? Math.floor(numberOfPermits) : 0;
+    if (!Number.isFinite(total) || total <= 0) return "";
+
+    const totalFormatted = this.formatIndianNumber(total);
+    if (!permits) return `${totalFormatted} BL`;
+
+    const perPermit = total / permits;
+    const perPermitRounded = Math.round(perPermit);
+    const perPermitFormatted = this.formatIndianNumber(perPermitRounded);
+    return `${totalFormatted} BL (${perPermitFormatted} x ${permits})`;
+  }
+
+  private parseStrengthRange(value: any): { from: string; to: string } {
+    const raw = String(value ?? "").trim();
+    if (!raw) return { from: "", to: "" };
+
+    // Common patterns: "167 to 169", "167° to 169° Proof", "167-169 Proof"
+    const match = raw.match(/(\d+(?:\.\d+)?)\s*(?:°|o)?\s*(?:to|-)\s*(\d+(?:\.\d+)?)/i);
+    if (match) {
+      return { from: match[1], to: match[2] };
+    }
+
+    const single = raw.match(/(\d+(?:\.\d+)?)/);
+    if (single) {
+      return { from: single[1], to: single[1] };
+    }
+    return { from: raw, to: raw };
   }
 
   private resolveIssuedToName(row: any, meEstablishmentName: string): Observable<string> {
@@ -510,7 +581,36 @@ export class FinalrequistionlettersComponent implements OnInit {
     const tokens = this.splitPermitTokens(value);
     if (tokens.length === 0) return "";
     if (tokens.length === 1) return tokens[0];
-    return `${tokens[0]} to ${tokens[tokens.length - 1]}`;
+
+    const numeric = tokens
+      .map((t) => {
+        const n = Number(String(t).trim().replace(/[^0-9]/g, ""));
+        return Number.isFinite(n) ? n : NaN;
+      })
+      .filter((n) => Number.isFinite(n)) as number[];
+
+    // If we can’t confidently parse the list, fall back to the old behavior.
+    if (numeric.length !== tokens.length) {
+      return `${tokens[0]} to ${tokens[tokens.length - 1]}`;
+    }
+
+    numeric.sort((a, b) => a - b);
+    const ranges: Array<{ start: number; end: number }> = [];
+    for (const n of numeric) {
+      const last = ranges[ranges.length - 1];
+      if (!last) {
+        ranges.push({ start: n, end: n });
+        continue;
+      }
+      if (n === last.end || n === last.end + 1) {
+        last.end = n;
+        continue;
+      }
+      ranges.push({ start: n, end: n });
+    }
+
+    const parts = ranges.map((r) => (r.start === r.end ? `${r.start}` : `${r.start} to ${r.end}`));
+    return parts.join(" & ");
   }
 
   private composeFromText(name: string, address: string, fallbackState: string): string {
