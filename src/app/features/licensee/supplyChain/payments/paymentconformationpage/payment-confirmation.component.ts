@@ -1055,6 +1055,8 @@ private initializeWalletContextAndLoadData(): void {
       return 'Revalidation';
     }
     if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
+      if (txnId.includes('ADDITIONAL_EXCISE')) return 'Transit - Additional Excise';
+      if (txnId.includes('EXCISE_DUTY')) return 'Transit - Excise Duty';
       return 'Transit';
     }
     if (sourceModule.includes('requisition') || txnId.startsWith('REQ-') || reference.startsWith('NHP/') || reference.startsWith('REQ/')) {
