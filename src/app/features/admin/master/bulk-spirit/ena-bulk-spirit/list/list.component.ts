@@ -6,6 +6,7 @@ import { MasterService } from '../../../../../../core/services/master.service';
 import { AdminService } from '../../../../admin.service';
 import { EnaBulkSpiritType } from '../../../../../../core/models/ena-bulk-spirit.model';
 import { ManageComponent } from '../manage/manage.component';
+import { ActiveLicense } from '../../../../../../core/models/active-license.model';
 
 @Component({
   selector: 'app-ena-bulk-spirit-list',
@@ -17,6 +18,7 @@ import { ManageComponent } from '../manage/manage.component';
 export class ListComponent implements OnInit {
   displayedColumns: string[] = ['bulkSpiritKindType', 'strength', 'priceBl', 'licenseId', 'actions'];
   rows: EnaBulkSpiritType[] = [];
+  licenseNameMap = new Map<string, string>();
 
   constructor(
     private masterService: MasterService,
@@ -25,7 +27,28 @@ export class ListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadLicenseNames();
     this.loadRows();
+  }
+
+  private loadLicenseNames(): void {
+    this.adminService.getActiveLicenses().subscribe({
+      next: (licenses: ActiveLicense[]) => {
+        this.licenseNameMap.clear();
+        (Array.isArray(licenses) ? licenses : []).forEach(l => {
+          const id = String(l.id || l.licenseeId || '').trim();
+          if (id) this.licenseNameMap.set(id, l.establishmentName || id);
+          const lid = String(l.licenseeId || '').trim();
+          if (lid && lid !== id) this.licenseNameMap.set(lid, l.establishmentName || lid);
+        });
+      },
+      error: () => {},
+    });
+  }
+
+  getLicenseName(licenseId?: string | null): string {
+    if (!licenseId) return '—';
+    return this.licenseNameMap.get(licenseId.trim()) || licenseId;
   }
 
   loadRows(): void {

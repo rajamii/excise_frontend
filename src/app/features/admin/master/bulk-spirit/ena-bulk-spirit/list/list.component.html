@@ -28,7 +28,13 @@
 
           <ng-container matColumnDef="licenseId">
             <mat-header-cell *matHeaderCellDef>Assigned License</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.licenseId || '-' }}</mat-cell>
+            <mat-cell *matCellDef="let row">
+              @if (row.licenseId) {
+                <span class="license-name">{{ getLicenseName(row.licenseId) }}</span>
+              } @else {
+                <span>—</span>
+              }
+            </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="actions">
