@@ -23,16 +23,20 @@
         <input matInput name="brandName" [(ngModel)]="brandName" placeholder="Type brand name" required />
       </mat-form-field>
 
-      <!-- Size (ml) free input -->
+      <!-- Size (ml) select dropdown -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Size (ml)</mat-label>
-        <input matInput type="number" name="sizeMl" [(ngModel)]="sizeMl" min="1" placeholder="e.g. 750" required />
+        <mat-select name="sizeMl" [(ngModel)]="sizeMl" (ngModelChange)="onSizeMlChange($event)" required>
+          @for (item of brandMlInCasesList; track item.ml) {
+            <mat-option [value]="item.ml">{{ item.ml }} ml</mat-option>
+          }
+        </mat-select>
       </mat-form-field>
 
-      <!-- Pieces in Case (updates brand_ml_in_cases) -->
+      <!-- Pieces in Case (read-only, populated automatically) -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Pieces in Case</mat-label>
-        <input matInput type="number" name="piecesInCase" [(ngModel)]="piecesInCase" min="1" placeholder="e.g. 12" required />
+        <input matInput type="number" name="piecesInCase" [(ngModel)]="piecesInCase" readonly required />
       </mat-form-field>
 
       <!-- Stock Available -->

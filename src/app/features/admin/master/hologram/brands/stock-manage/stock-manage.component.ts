@@ -43,6 +43,7 @@ export class StockManageComponent implements OnInit {
   brands: MasterBrandRow[] = [];
   sizes: LiquorCategoryRow[] = [];
   isEditMode = false;
+  brandMlInCasesList: any[] = [];
 
   // Brand/size are free-text / numeric inputs (no dropdowns)
   brandName = '';
@@ -92,17 +93,29 @@ export class StockManageComponent implements OnInit {
       },
     });
 
-    // Default pieces-in-case lookup based on existing ml
-    const ml = Number(this.sizeMl || 0);
-    if (ml > 0 && this.piecesInCase == null) {
-      this.masterService.getBrandMlInCases().subscribe({
-        next: (data: any) => {
-          const rows = Array.isArray(data) ? data : [];
-          const found = rows.find((x: any) => Number(x.ml) === ml);
-          if (found) this.piecesInCase = Number(found.piecesInCase ?? found.pieces_in_case ?? 0) || null;
-        },
-        error: () => {},
-      });
+    // Load brand-ml-in-cases list for dropdown and lookup piecesInCase
+    this.masterService.getBrandMlInCases().subscribe({
+      next: (data: any) => {
+        this.brandMlInCasesList = Array.isArray(data) ? data : [];
+        const ml = Number(this.sizeMl || 0);
+        if (ml > 0 && this.piecesInCase == null) {
+          const found = this.brandMlInCasesList.find((x: any) => Number(x.ml) === ml);
+          if (found) {
+            this.piecesInCase = Number(found.piecesInCase ?? found.pieces_in_case ?? 0) || null;
+          }
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  onSizeMlChange(value: number): void {
+    this.sizeMl = value;
+    const found = this.brandMlInCasesList.find((x: any) => Number(x.ml) === Number(value));
+    if (found) {
+      this.piecesInCase = Number(found.piecesInCase ?? found.pieces_in_case ?? 0) || null;
+    } else {
+      this.piecesInCase = null;
     }
   }
 
