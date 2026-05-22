@@ -143,6 +143,7 @@ export class FinalrequistionlettersComponent implements OnInit {
   };
 
   copyNames: string[] = ["ORIGINAL", "DUPLICATE", "TRIPLICATE", "QUADRUPLICATE"];
+  permitCopies: any[] = [];
 
   // Dynamic back button properties
   backButtonText: string = "Back to Dashboard";
@@ -386,6 +387,7 @@ export class FinalrequistionlettersComponent implements OnInit {
       numberOfPermits:
         numberOfPermits,
     };
+    this.permitCopies = this.generatePermitCopies();
   }
 
   private formatIndianNumber(value: any, fallback: string = ""): string {

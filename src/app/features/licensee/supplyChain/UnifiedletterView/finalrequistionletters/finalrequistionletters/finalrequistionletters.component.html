@@ -217,7 +217,7 @@
 
   <!-- Import Permit Copies -->
   <div class="permit-copies-container">
-    <div *ngFor="let permit of generatePermitCopies(); let i = index" 
+    <div *ngFor="let permit of permitCopies; let i = index" 
          class="permit-copy" 
          [class.last-copy]="permit.isLastCopy"
          [class.main-permit]="permit.isMainPermit">
