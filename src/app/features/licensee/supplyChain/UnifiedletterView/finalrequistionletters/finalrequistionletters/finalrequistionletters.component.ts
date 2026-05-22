@@ -832,6 +832,75 @@ export class FinalrequistionlettersComponent implements OnInit {
             strong {
               font-weight: bold;
             }
+            .new-letter-header {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: space-between !important;
+              border-bottom: 2px solid #002d62 !important;
+              padding-bottom: 6px !important;
+              margin-bottom: 12px !important;
+              width: 100% !important;
+              background: white !important;
+            }
+            .new-letter-header .header-logo-left img,
+            .new-letter-header .header-logo-right img {
+              height: 55px !important;
+              width: auto !important;
+              display: block !important;
+            }
+            .new-letter-header .header-text-center {
+              text-align: center !important;
+              flex-grow: 1 !important;
+              padding: 0 10px !important;
+            }
+            .new-letter-header .header-text-center .dept-title {
+              font-size: 16px !important;
+              font-weight: 800 !important;
+              color: #0d3b66 !important;
+              text-transform: uppercase !important;
+              margin-bottom: 2px !important;
+            }
+            .new-letter-header .header-text-center .gov-title {
+              font-size: 12px !important;
+              font-weight: 700 !important;
+              color: #444 !important;
+              text-transform: uppercase !important;
+            }
+            .new-letter-footer {
+              border-top: 1.5px solid #ccc !important;
+              padding-top: 8px !important;
+              margin-top: 25px !important;
+              text-align: center !important;
+              width: 100% !important;
+              box-sizing: border-box !important;
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: center !important;
+              gap: 4px !important;
+            }
+            .new-letter-footer .footer-address {
+              font-size: 11px !important;
+              font-weight: bold !important;
+              color: #444 !important;
+              margin-bottom: 2px !important;
+            }
+            .new-letter-footer .footer-contacts {
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: center !important;
+              gap: 4px !important;
+            }
+            .new-letter-footer .footer-contact-item {
+              display: flex !important;
+              align-items: center !important;
+              gap: 4px !important;
+              font-size: 9.5px !important;
+              color: #555 !important;
+            }
+            .new-letter-footer .footer-contact-item i {
+              font-size: 11px !important;
+              color: #0d3b66 !important;
+            }
             .main,
             .permit-copy {
               page-break-before: auto !important;
