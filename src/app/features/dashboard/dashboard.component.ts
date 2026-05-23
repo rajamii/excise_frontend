@@ -156,6 +156,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   };
 
   supplyChainPendingCounts: Record<string, number> = {};
+  oicActionPendingCounts: Record<string, number> = {};
 
   selectedMetricsPeriod: 'today' | 'week' | 'month' | 'quarter' = 'week';
 
@@ -838,8 +839,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return Number(this.supplyChainPendingCounts?.[key] || 0);
   }
 
+  getOicPendingCount(section: string): number {
+    const key = String(section || '').trim().toLowerCase();
+    return Number(this.oicActionPendingCounts?.[key] || 0);
+  }
+
   getSupplyChainPendingTotal(): number {
     return this.getSupplyChainPendingCount('requisition') + this.getSupplyChainPendingCount('hologram');
+  }
+
+  isOicUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || 0);
+    if (roleId === 7) return true;
+
+    const roleName = String(this.currentUser?.role?.name || this.currentUser?.role?.displayName || '').toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('officerincharge') || normalized === 'oic' || normalized === 'offcierincharge';
   }
 
   private refreshSupplyChainPendingCounts(force = false): void {
@@ -860,15 +875,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private refreshOicActionPendingCount(force = false): void {
-    if (Number(this.currentUser?.roleId || 0) !== 7) {
+    if (!this.isOicUser()) {
+      this.oicActionPendingCounts = {};
       return;
     }
 
     // OIC dashboard "Pending" should reflect only items where the user has an action
     // (align with sidebar badges), not all in-flight applications.
-    // For OIC, the primary actionable workload reflected in the sidebar badge is Transit Applications.
-    // Keep the dashboard Pending card aligned with that badge.
-    const sections = ['transit-applications'];
+    // Include Daily Hologram Entry so OIC remembers to complete the daily register.
+    const sections = ['transit-applications', 'hologram-daily-entry'];
     this.sidebarPendingBadgeService
       .refresh(sections, force, { audience: 'officer', mode: 'full' })
       .pipe(
@@ -876,6 +891,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         catchError(() => of({} as Record<string, number>))
       )
       .subscribe((counts) => {
+        this.oicActionPendingCounts = counts || {};
         const total = Object.values(counts || {}).reduce((sum, v) => sum + Number(v || 0), 0);
         this.dashboardCounts = { ...this.dashboardCounts, pending: total };
       });

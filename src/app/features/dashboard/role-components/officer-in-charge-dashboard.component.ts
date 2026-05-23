@@ -9,6 +9,7 @@ import { DashboardStatisticsComponent } from '../../../shared/components/dashboa
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
 import { HologramDataService } from '../../licensee/supplyChain/services/hologram-data.service';
+import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
 
 type HologramRequestCategory = 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED';
 
@@ -223,6 +224,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   private unifiedActionsService = inject(UnifiedActionsService);
   private hologramService = inject(HologramDataService);
   private enaRequisitionService = inject(EnaRequisitionService);
+  private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
 
   // Data properties
   allApplications: OfficerData[] = [];
@@ -237,6 +239,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   };
   private hologramProcurementPendingCount = 0;
   private blDetailsPendingCount = 0;
+  private dailyEntryPendingCount = 0;
 
   // Pagination
   currentPage: number = 1;
@@ -250,6 +253,18 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     this.loadHologramRequestsCounts();
     this.loadHologramProcurementPendingCount();
     this.loadBlDetailsPendingCount();
+    this.loadDailyEntryPendingCount();
+  }
+
+  private loadDailyEntryPendingCount(): void {
+    this.sidebarPendingBadgeService.refresh(['hologram-daily-entry'], false, { audience: 'officer', mode: 'full' }).subscribe({
+      next: (counts: any) => {
+        this.dailyEntryPendingCount = counts['hologram-daily-entry'] || 0;
+      },
+      error: () => {
+        this.dailyEntryPendingCount = 0;
+      }
+    });
   }
 
   openHologramRequests(): void {
@@ -311,9 +326,14 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   // Dashboard statistics methods
   getDashboardStatistics() {
     const hologramPending = (this.hologramRequestCounts.PENDING || 0);
-    // For OIC, "Transit Applications" badge is driven by the filtered list itself (termination/monitoring queue),
-    // not always by allowed_actions from backend (which can be missing on some environments).
-    const transitPending = Array.isArray(this.allApplications) ? this.allApplications.length : 0;
+    // For OIC, "Transit Applications" pending should not include finalized ones.
+    const transitPending = Array.isArray(this.allApplications) 
+      ? this.allApplications.filter(app => {
+          const s = (app.status || '').toLowerCase();
+          return !s.includes('approved') && !s.includes('issued') && !s.includes('terminated') && !s.includes('cancelled');
+        }).length 
+      : 0;
+
     return {
       applied: 0,
       pending: transitPending +
@@ -321,7 +341,8 @@ export class OfficerInChargeDashboardComponent implements OnInit {
         (this.hologramProcurementPendingCount || 0) +
         (this.blDetailsPendingCount || 0),
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('ISSUED'),
-      rejected: this.getStatusCount('TERMINATED') + this.getStatusCount('CANCELLED')
+      rejected: this.getStatusCount('TERMINATED') + this.getStatusCount('CANCELLED'),
+      dailyEntry: this.dailyEntryPendingCount
     };
   }
 

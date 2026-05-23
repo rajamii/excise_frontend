@@ -7,6 +7,7 @@ interface StatisticsData {
   pending: number;
   approved: number;
   rejected: number;
+  dailyEntry?: number;
 }
 
 interface FilterOption {
@@ -59,6 +60,16 @@ interface FilterOption {
           <div class="stat-content">
             <div class="stat-number">{{ statistics.rejected }}</div>
             <div class="stat-label">REJECTED</div>
+          </div>
+        </div>
+
+        <div class="stat-card daily-entry" *ngIf="statistics.dailyEntry !== undefined">
+          <div class="stat-icon">
+            <i class="bi bi-calendar-check"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ statistics.dailyEntry }}</div>
+            <div class="stat-label">DAILY ENTRY</div>
           </div>
         </div>
       </div>
@@ -117,6 +128,10 @@ interface FilterOption {
 
     .stat-card.rejected .stat-icon {
       background: #ef4444; /* Red */
+    }
+
+    .stat-card.daily-entry .stat-icon {
+      background: #8b5cf6; /* Purple */
     }
 
     .stat-content {

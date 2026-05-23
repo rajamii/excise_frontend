@@ -155,6 +155,38 @@ export class SidebarPendingBadgeService {
           )
         );
 
+      // OIC daily hologram register: pending means allocated requests that still have no daily-register entries saved.
+      case 'hologram-daily-entry':
+        if (mode === 'light') return of(0);
+        if (audience === 'licensee') return of(0);
+        return forkJoin({
+          requests: this.hologramService.getRequests().pipe(map((items) => this.toArray(items))),
+          dailyRegister: this.hologramService.getDailyRegisterEntries().pipe(map((items) => this.toArray(items)))
+        }).pipe(
+          map(({ requests, dailyRegister }) => {
+            const savedRefSet = new Set<string>();
+            for (const entry of dailyRegister) {
+              const refNo = String(entry?.reference_no ?? entry?.referenceNo ?? '').trim();
+              if (refNo) savedRefSet.add(refNo.toUpperCase());
+            }
+
+            // Only requests that have been allocated (status in-use / approved / completed) are actionable for Daily Entry.
+            const actionableStatuses = new Set(['IN_USE', 'APPROVED', 'COMPLETED']);
+            let pending = 0;
+            for (const req of requests) {
+              const status = String(req?.status ?? '')
+                .toUpperCase()
+                .replace(/\s+/g, '_');
+              if (!actionableStatuses.has(status)) continue;
+
+              const reqRef = String(req?.ref_no ?? req?.refNo ?? req?.reference_no ?? req?.referenceNo ?? '').trim();
+              if (!reqRef) continue;
+              if (!savedRefSet.has(reqRef.toUpperCase())) pending += 1;
+            }
+            return pending;
+          })
+        );
+
       // OIC hologram procurement register view (carton assignment / arrival confirmations).
       case 'hologram-register':
         if (mode === 'light') return of(0);
