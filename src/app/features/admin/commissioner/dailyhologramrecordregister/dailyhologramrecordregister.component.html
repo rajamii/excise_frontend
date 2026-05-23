@@ -446,6 +446,12 @@
                   <strong style="color: #2d3748;">{{ savedTime }}</strong>
                 </div>
               </div>
+              <div class="col-md-6" *ngIf="getLateByTime(selectedEntry) as lateBy">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                  <small class="text-muted d-block mb-1" style="font-size: 11px;">Late By</small>
+                  <strong class="text-danger">{{ lateBy }}</strong>
+                </div>
+              </div>
             </div>
           </div>
         </div>

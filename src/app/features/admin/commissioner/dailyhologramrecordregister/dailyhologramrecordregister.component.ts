@@ -148,7 +148,24 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   }
 
   private updateApprovalDeadlineBreaches(now: Date = new Date()): void {
-    const breaches = (this.dailyRegisterEntries || []).filter((entry) => this.isApprovalUpdateOverdue(entry, now));
+    let dismissed: string[] = [];
+    try {
+      let stored = localStorage.getItem('dismissedOverdueHolograms');
+      if (!stored) {
+        const match = document.cookie.match(new RegExp('(^| )dismissedOverdueHolograms=([^;]+)'));
+        if (match) stored = decodeURIComponent(match[2]);
+      }
+      if (stored) {
+        dismissed = JSON.parse(stored);
+        if (!localStorage.getItem('dismissedOverdueHolograms')) {
+          localStorage.setItem('dismissedOverdueHolograms', stored);
+        }
+      }
+    } catch (e) {}
+
+    const breaches = (this.dailyRegisterEntries || []).filter((entry) => {
+      return this.isApprovalUpdateOverdue(entry, now) && !dismissed.includes(entry.referenceNo);
+    });
 
     this.approvalDeadlineBreaches = breaches;
     // SLA rule for this screen: deadline is always 5:00 PM IST.
@@ -609,6 +626,26 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
 
   dismissApprovalDeadlineBreachAlert(): void {
     this.showApprovalDeadlineBreachAlert = false;
+
+    try {
+      let stored = localStorage.getItem('dismissedOverdueHolograms');
+      if (!stored) {
+        const match = document.cookie.match(new RegExp('(^| )dismissedOverdueHolograms=([^;]+)'));
+        if (match) stored = decodeURIComponent(match[2]);
+      }
+      const dismissed: string[] = stored ? JSON.parse(stored) : [];
+      this.approvalDeadlineBreaches.forEach(b => {
+        if (!dismissed.includes(b.referenceNo)) dismissed.push(b.referenceNo);
+      });
+      const newVal = JSON.stringify(dismissed);
+      localStorage.setItem('dismissedOverdueHolograms', newVal);
+      
+      const d = new Date();
+      d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
+      document.cookie = "dismissedOverdueHolograms=" + encodeURIComponent(newVal) + ";expires=" + d.toUTCString() + ";path=/";
+    } catch (e) {
+      console.error('Failed to save dismissed holograms', e);
+    }
   }
 
   isSlaBreached(entry: DailyRegisterEntry): boolean {
@@ -904,7 +941,7 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     return rollRange ? 1 : 0;
   }
 
-  getEntrySavedTime(entry: DailyRegisterEntry): string | null {
+  private getLatestSavedDate(entry: DailyRegisterEntry): Date | null {
     const dates: Date[] = [];
     const brands = Array.isArray((entry as any)?.brandsEntered) ? (entry as any).brandsEntered : [];
     for (const b of brands) {
@@ -931,12 +968,58 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     }
 
     if (dates.length === 0) {
-      // Last resort: show raw string if we can't parse anything.
-      return completionTimeRaw || null;
+      return null;
     }
 
-    const latest = dates.reduce((max, d) => (d.getTime() > max.getTime() ? d : max), dates[0]);
-    return latest.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    return dates.reduce((max, d) => (d.getTime() > max.getTime() ? d : max), dates[0]);
+  }
+
+  getEntrySavedTime(entry: DailyRegisterEntry): string | null {
+    const latest = this.getLatestSavedDate(entry);
+    if (latest) {
+      return latest.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }
+    const completionTimeRaw = String((entry as any)?.completionTime ?? '').trim();
+    return completionTimeRaw || null;
+  }
+
+  getLateByTime(entry: DailyRegisterEntry): string | null {
+    try {
+      if (entry.status !== 'COMPLETED') {
+        return null;
+      }
+      
+      const deadline = this.getEntryDeadlineAt5Pm(entry);
+      if (!deadline) {
+        return null;
+      }
+
+      const saved = this.getLatestSavedDate(entry);
+      if (!saved) {
+        return null;
+      }
+
+      const diffMs = saved.getTime() - deadline.getTime();
+      if (diffMs <= 0) {
+        return null;
+      }
+
+      const totalMinutes = Math.floor(diffMs / (1000 * 60));
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      
+      if (hours === 0 && minutes === 0) {
+        return '< 1m';
+      } else if (hours > 0 && minutes > 0) {
+        return `${hours}h ${minutes}m`;
+      } else if (hours > 0) {
+        return `${hours}h`;
+      } else {
+        return `${minutes}m`;
+      }
+    } catch (e) {
+      return null;
+    }
   }
 
   private extractHms(value: any): { hour: number; minute: number; second: number } | null {
