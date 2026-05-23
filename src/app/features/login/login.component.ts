@@ -713,7 +713,7 @@ export class LoginComponent extends BaseComponent {
       otpId: this.otpIndex,
     };
 
-    this.authService.verifyOtp(requestData).subscribe({
+    this.authService.verifyOtp(requestData, { loadProfile: false }).subscribe({
       next: (res: any) => {
         this.clearLoginErrors();
         this.handleAuthResponse(res);

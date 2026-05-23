@@ -18,12 +18,22 @@
       <div class="circle-icon yellow-bg">
         <img src="assets/images/dashboard/pending.png" alt="Pending Icon">
       </div>
-      <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
+      <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) + getSupplyChainPendingTotal() }}</div>
       <div class="label">Pending</div>
       <!-- Show breakdown if there are awaiting payment items -->
       @if (dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) {
         <div class="sub-label">
           <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+        </div>
+      }
+      @if (getSupplyChainPendingTotal() > 0) {
+        <div class="sub-label">
+          @if (getSupplyChainPendingCount('requisition') > 0) {
+            <span class="payment-count">{{ getSupplyChainPendingCount('requisition') }} requisition payment pending</span>
+          }
+          @if (getSupplyChainPendingCount('hologram') > 0) {
+            <span class="payment-count">{{ getSupplyChainPendingCount('hologram') }} hologram payment pending</span>
+          }
         </div>
       }
     </mat-card>

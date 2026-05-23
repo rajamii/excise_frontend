@@ -1,11 +1,10 @@
 import { inject, isDevMode, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
 import { AccountService } from '../services/account.service';
+import { DashboardConfigService } from '../services/dashboard-config.service';
 import { StateStorageService } from './state-storage.service';
 
 /**
@@ -20,9 +19,8 @@ export const UserRouteAccessService: CanActivateFn = (
   const accountService = inject(AccountService);
   const router = inject(Router);
   const stateStorageService = inject(StateStorageService);
-  const http = inject(HttpClient);
+  const dashboardConfigService = inject(DashboardConfigService);
   const platformId = inject(PLATFORM_ID);
-  const dashboardConfigUrl = `${environment.apiBaseUrl}/auth/roles/dashboard-config/current/`;
 
   if (!isPlatformBrowser(platformId)) {
     return true;
@@ -87,7 +85,7 @@ export const UserRouteAccessService: CanActivateFn = (
         return of(true);
       }
 
-      return http.get<any>(dashboardConfigUrl).pipe(
+      return dashboardConfigService.getCurrentUserDashboardConfigCached().pipe(
         map(config => {
           const dbPermissions = Array.isArray(config?.permissions) ? (config.permissions as string[]) : [];
           return dbPermissions.includes(requiredPermission);

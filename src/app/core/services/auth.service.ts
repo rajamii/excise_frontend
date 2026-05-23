@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, tap, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
@@ -179,10 +179,14 @@ export class AuthService {
   /**
    * ✅ Verify OTP and load user profile
    */
-  verifyOtp(data: { phoneNumber: string; otp: string; otpId: string }): Observable<any> {
+  verifyOtp(
+    data: { phoneNumber: string; otp: string; otpId: string },
+    options?: { loadProfile?: boolean }
+  ): Observable<any> {
     if (this.isBlockedByPhone(String(data?.phoneNumber || ''))) {
       return this.blockedUserError();
     }
+    const loadProfile = options?.loadProfile !== false;
     const formData = FormDataUtil.buildFormData(data);
     return this.http.post(`${this.baseUrl}/otp/login/`, formData).pipe(
       tap((response: any) => {
@@ -192,17 +196,11 @@ export class AuthService {
           console.log('✅ OTP login successful, tokens saved');
         }
       }),
-      // ✅ Load user profile after OTP login
       switchMap((response: any) => {
-        console.log('✅ OTP login successful, loading user profile...');
-        return this.accountService.identity(true).pipe(
-          tap(() => console.log('✅ User profile loaded after OTP login')),
-          catchError(err => {
-            console.warn('⚠️ OTP login successful but failed to load profile:', err);
-            return throwError(() => err);
-          }),
-          switchMap(() => [response])
-        );
+        if (!loadProfile) {
+          return of(response);
+        }
+        return this.accountService.identity(true).pipe(switchMap(() => [response]));
       }),
       catchError(error => throwError(() => error))
     );

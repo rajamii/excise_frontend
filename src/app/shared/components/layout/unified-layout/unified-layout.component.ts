@@ -17,6 +17,8 @@ import Swal from 'sweetalert2';
 import { RoleService } from '../../../../core/services/role.service';
 import { User } from '../../../../core/models/dashboard.models';
 import { AccountService } from '../../../../core/services/account.service';
+import { DashboardConfigService } from '../../../../core/services/dashboard-config.service';
+import { LicenseMeService } from '../../../../core/services/license-me.service';
 import { environment } from '../../../../../environments/environment';
 import { SidebarPendingBadgeService } from '../../../services/sidebar-pending-badge.service';
 import {
@@ -47,7 +49,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
-  private readonly dashboardConfigApiBase = `${environment.apiBaseUrl}/auth/roles/dashboard-config`;
+  private badgeRefreshReady = false;
+  private badgeRefreshQueued = false;
   
   @ViewChild('sidenav') sidenav?: MatSidenav;
 
@@ -73,6 +76,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   selectedLicenseGroupKey = '';
   // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
+  private lastMenuAccessUserKey: string | null = null;
   readonly sidebarSectionLabels: Record<string, string> = {
     requisition: 'Requisition',
     revalidation: 'Revalidation',
@@ -123,6 +127,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   constructor(
     private roleService: RoleService,
     private accountService: AccountService,
+    private dashboardConfigService: DashboardConfigService,
+    private licenseMeService: LicenseMeService,
     private router: Router,
     private dialog: MatDialog,
     private http: HttpClient,
@@ -167,7 +173,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       console.log('✅ Found cached user in role service:', cachedUser);
       this.currentUser = cachedUser;
       this.setupInitialSidebarState();
-      this.loadLicenseeMenuAccess();
+      // Avoid double-fetching menu access; auth-state subscription below will rehydrate menus.
       this.loaded = true;
     }
 
@@ -249,8 +255,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
 
     // Hydrate permissions from DB config so new roles work without frontend code changes.
-    this.http
-      .get<any>(`${this.dashboardConfigApiBase}/current/`)
+    this.dashboardConfigService
+      .getCurrentUserDashboardConfigCached()
       .pipe(
         catchError((error) => {
           console.warn('Could not load dashboard-config/current for role permissions:', error);
@@ -281,7 +287,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         this.roleService.setCurrentUser(dbBackedUser);
         this.currentUser = dbBackedUser;
-        this.refreshSidebarBadges(true);
+        // Avoid duplicate badge API calls during login:
+        // the sidenav can be opened before DB-backed config/permissions are hydrated.
+        // Queue a single refresh and run it once config is ready.
+        this.badgeRefreshReady = true;
+        if (this.isSidenavOpen && this.badgeRefreshQueued) {
+          this.badgeRefreshQueued = false;
+          this.refreshSidebarBadges(false, 'full');
+        }
       });
   }
 
@@ -315,8 +328,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   // Method to toggle the sidebar (sidenav) - Fixed to properly track state
   snavToggle(sidenav: any) {
     sidenav.toggle();
-    // Update our state to match the actual sidenav state
-    this.isSidenavOpen = !this.isSidenavOpen;
+    // State is updated by onSidenavStateChange.
     console.log('🔍 Sidebar toggled - new state:', this.isSidenavOpen);
   }
 
@@ -325,7 +337,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isSidenavOpen = isOpen;
 
     if (isOpen) {
-      this.refreshSidebarBadges();
+      if (!this.badgeRefreshReady) {
+        this.badgeRefreshQueued = true;
+        return;
+      }
+      this.refreshSidebarBadges(false, 'full');
     }
     console.log('🔍 Sidebar state changed:', isOpen);
   }
@@ -351,7 +367,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       this.sidenav?.open();
     } finally {
       this.isSidenavOpen = true;
-      this.refreshSidebarBadges();
     }
   }
 
@@ -383,7 +398,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
 
-  private refreshSidebarBadges(force = false): void {
+  private refreshSidebarBadges(force = false, mode: 'light' | 'full' = 'light'): void {
     if (this.isSiteAdminUser()) {
       if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
         this.pendingBadgeCounts = {};
@@ -395,12 +410,32 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // For licensee users, show payment-pending badges on New License, Salesman/Barman,
     // and supply chain nav items (Bulk Spirit + Hologram sub-sections).
     if (this.isLicenseeUser()) {
-      const licenseeSections = [
-        'new-license', 'salesman-barman-registration',
-        'requisition', 'hologram'
-      ];
+      const hasDbRoute = (pattern: RegExp): boolean => {
+        for (const route of this.dbNavigationRoutes) {
+          if (pattern.test(String(route || ''))) return true;
+        }
+        return false;
+      };
+
+      const licenseeSections: string[] = [];
+      if (hasDbRoute(/new[_-]?license|new_license_application/)) {
+        licenseeSections.push('new-license');
+      }
+      if (hasDbRoute(/salesman|barman|salesman[_-]?barman|salesman_barman/)) {
+        licenseeSections.push('salesman-barman-registration');
+      }
+      // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
+      // Ensure Requisition payment-pending badge still loads in that case.
+      if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {
+        licenseeSections.push('requisition');
+      }
+      // Brewery/distillery licensees can see hologram-related menus; load badge even if routes are missing.
+      if (this.showBreweryOrDistilleryMenus || hasDbRoute(/hologram/)) {
+        licenseeSections.push('hologram');
+      }
+
       this.sidebarPendingBadgeService
-        .refresh(licenseeSections, force, { audience: 'licensee' })
+        .refresh(licenseeSections, force, { audience: 'licensee', mode })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (counts) => {
@@ -425,7 +460,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     this.sidebarPendingBadgeService
-      .refresh(sections, force)
+      .refresh(sections, force, { mode })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (counts) => {
@@ -929,43 +964,20 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.hasBreweryOrDistilleryWalletViews = false;
     this.showManufacturingWalletNav = false;
 
-    forkJoin({
-      licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
-        catchError((error) => {
-          console.error('Failed to read /masters/license/me/:', error);
-          return of([]);
-        })
-      ),
-      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(
-        catchError((error) => {
-          console.error('Failed to read /transactional/new_license_application/list-by-status/:', error);
-          return of({ approved: [] });
-        })
-      ),
-      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(
-        catchError((error) => {
-          console.error('Failed to read /transactional/new_license_application/list/:', error);
-          return of([]);
-        })
-      )
-    }).subscribe({
-      next: ({ licenses, approvedPayload, allApplications }) => {
+    const key = String(this.currentUser?.username || this.user?.username || this.user?.login || '').trim() || null;
+    if (key && this.lastMenuAccessUserKey === key && this.myLicenses.length) {
+      return;
+    }
+    this.lastMenuAccessUserKey = key;
+
+    this.licenseMeService.getMyLicenses().subscribe({
+      next: (licenses) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
         this.myLicenses = licenseRows;
         this.ensureSelectedLicenseGroup();
-        const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
-        const allRows = Array.isArray(allApplications) ? allApplications : [];
-        const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
-        const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
-        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
 
-        console.log('Menu data sources:', {
-          licenses: licenseRows.length,
-          approvedByStatus: approvedRows.length,
-          approvedFromList: approvedFromAll.length
-        });
-
-        this.applySubtypeMenuRules(combinedRows);
+        // Avoid heavy application list APIs during login; derive menu visibility from issued licenses.
+        this.applySubtypeMenuRules(licenseRows);
       },
       error: (error) => {
         console.error('Failed to evaluate menu access from combined sources:', error);
@@ -1171,44 +1183,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private computeWalletNavVisible(rows: any[]): boolean {
     const list = Array.isArray(rows) ? rows : [];
 
-    // Index applications by application_id so we can validate license rows (NA/...) against their source stage.
-    const appsById = new Map<string, any>();
     for (const item of list) {
-      const appId = String(item?.application_id ?? item?.applicationId ?? item?.pk ?? '').trim();
-      if (appId) {
-        appsById.set(appId, item);
-      }
-    }
-
-    const isNewLicenseDerivedLicenseRow = (item: any): boolean => {
-      const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim().toUpperCase();
-      return srcId.startsWith('NLI/');
-    };
-
-    for (const item of list) {
-      const hasLicenseId = !!(item?.license_id ?? item?.licenseId);
-
-      // Application rows: use stage-based eligibility directly.
-      const appId = String(item?.application_id ?? item?.applicationId ?? '').trim();
-      if (appId && !hasLicenseId) {
-        if (isLicenseeWalletNavEligible(item)) {
-          return true;
-        }
-        continue;
-      }
-
-      // License rows: always allow existing licensees, but for new-license-derived licenses (source_object_id=NLI/...),
-      // require that the source application is Commissioner-approved.
-      if (hasLicenseId) {
-        if (!isNewLicenseDerivedLicenseRow(item)) {
-          return true;
-        }
-
-        const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim();
-        const srcApp = srcId ? appsById.get(srcId) : undefined;
-        if (srcApp && isLicenseeWalletNavEligible(srcApp)) {
-          return true;
-        }
+      // Wallet becomes visible for licensees when:
+      // - an issued license exists (license_id), OR
+      // - an application reaches awaiting_payment / approved with required selections.
+      if (isLicenseeWalletNavEligible(item)) {
+        return true;
       }
     }
 
@@ -1520,4 +1500,3 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return roleName || 'User';
   }
 }
-

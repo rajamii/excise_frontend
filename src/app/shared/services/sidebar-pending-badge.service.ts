@@ -10,6 +10,7 @@ import { environment } from '../../../environments/environment';
 
 type PendingCountsBySection = Record<string, number>;
 type BadgeAudience = 'licensee' | 'officer';
+type BadgeMode = 'light' | 'full';
 
 @Injectable({ providedIn: 'root' })
 export class SidebarPendingBadgeService {
@@ -28,10 +29,11 @@ export class SidebarPendingBadgeService {
   refresh(
     sections: string[],
     force = false,
-    options?: { audience?: BadgeAudience }
+    options?: { audience?: BadgeAudience; mode?: BadgeMode }
   ): Observable<PendingCountsBySection> {
     const normalized = this.normalizeSections(sections);
     const audience: BadgeAudience = options?.audience ?? 'officer';
+    const mode: BadgeMode = options?.mode ?? 'light';
     const key = `${audience}:${normalized.join('|')}`;
 
     if (!force && key === this.lastKey && Date.now() - this.lastFetchMs < 15_000) {
@@ -40,7 +42,7 @@ export class SidebarPendingBadgeService {
 
     const tasks: Record<string, Observable<number>> = {};
     for (const section of normalized) {
-      tasks[section] = this.fetchPendingCount(section, audience).pipe(catchError(() => of(0)));
+      tasks[section] = this.fetchPendingCount(section, audience, mode).pipe(catchError(() => of(0)));
     }
 
     return forkJoin(tasks).pipe(
@@ -61,33 +63,27 @@ export class SidebarPendingBadgeService {
     return Array.from(unique).sort();
   }
 
-  private fetchPendingCount(section: string, audience: BadgeAudience): Observable<number> {
+  private fetchPendingCount(section: string, audience: BadgeAudience, mode: BadgeMode): Observable<number> {
     switch (section) {
       case 'new-license':
-        if (audience === 'licensee') {
-          return this.fetchLicenseeActionableFromListByStatus(`${this.apiBase}/new_license_application/list-by-status/`).pipe(
-            catchError(() => this.fetchDashboardCount(`${this.apiBase}/new_license_application/dashboard-counts/`, audience))
-          );
-        }
         return this.fetchDashboardCount(`${this.apiBase}/new_license_application/dashboard-counts/`, audience);
 
       case 'salesman-barman-registration':
       case 'salesman-barman':
-        if (audience === 'licensee') {
-          return this.fetchLicenseeActionableFromListByStatus(`${this.apiBase}/salesman_barman/list-by-status/`).pipe(
-            catchError(() => this.fetchDashboardCount(`${this.apiBase}/salesman_barman/dashboard-counts/`, audience))
-          );
-        }
         return this.fetchDashboardCount(`${this.apiBase}/salesman_barman/dashboard-counts/`, audience);
 
       case 'company-registration':
         return this.fetchDashboardCount(`${this.apiBase}/company-registration/dashboard-counts/`, audience);
+
+      case 'company-collaboration':
+        return this.fetchDashboardCount(`${this.apiBase}/company-collaboration/dashboard-counts/`, audience);
 
       case 'license-renewal':
       case 'license-renewal-application':
         return this.fetchDashboardCount(`${this.apiBase}/license_application/dashboard-counts/`, audience);
 
       case 'requisition':
+        if (mode === 'light') return of(0);
         if (audience === 'licensee') {
           return this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
@@ -100,6 +96,7 @@ export class SidebarPendingBadgeService {
         );
 
       case 'revalidation':
+        if (mode === 'light') return of(0);
         if (audience === 'licensee') {
           return this.supplyChainService.getRevalidationData().pipe(
             map((items) => this.toArray(items)),
@@ -112,6 +109,7 @@ export class SidebarPendingBadgeService {
         );
 
       case 'cancellation':
+        if (mode === 'light') return of(0);
         if (audience === 'licensee') {
           return this.supplyChainService.getCancellationData().pipe(
             map((items) => this.toArray(items)),
@@ -124,6 +122,7 @@ export class SidebarPendingBadgeService {
         );
 
       case 'transit-applications':
+        if (mode === 'light') return of(0);
         return this.supplyChainService.getTransitPermits().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL']))
@@ -131,6 +130,7 @@ export class SidebarPendingBadgeService {
 
       // Hologram procurement workflow (used by IT cell / commissioner depending on role config)
       case 'hologram':
+        if (mode === 'light') return of(0);
         if (audience === 'licensee') {
           return this.hologramService.getProcurements().pipe(
             map((items) => this.toArray(items)),
@@ -143,6 +143,7 @@ export class SidebarPendingBadgeService {
         );
 
       case 'hologram-request':
+        if (mode === 'light') return of(0);
         return this.hologramService.getRequests().pipe(
           map((items) => this.toArray(items)),
           map((items) => audience === 'licensee'
@@ -156,12 +157,14 @@ export class SidebarPendingBadgeService {
 
       // OIC hologram procurement register view (carton assignment / arrival confirmations).
       case 'hologram-register':
+        if (mode === 'light') return of(0);
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.countOicHologramProcurementPending(items))
         );
 
       case 'itcell-hologram':
+        if (mode === 'light') return of(0);
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items).filter((x) => this.requiresItCellReview(String(x?.status || '')))),
           map((items) => this.countActionable(items, ['VERIFY', 'FORWARD', 'REJECT', 'APPROVE']))
@@ -169,6 +172,7 @@ export class SidebarPendingBadgeService {
 
       // OIC hologram requests page (badge should show anything not finalized)
       case 'oic-hologram-requests':
+        if (mode === 'light') return of(0);
         return this.hologramService.getRequests().pipe(
           map((items) => this.toArray(items)),
           map((items) =>
@@ -186,6 +190,7 @@ export class SidebarPendingBadgeService {
         );
 
       case 'bl-details':
+        if (mode === 'light') return of(0);
         // ENA arrival bulk-liter submissions awaiting OIC review.
         return this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').pipe(
           map((response) => (Array.isArray(response?.data) ? response.data : [])),
@@ -274,10 +279,58 @@ export class SidebarPendingBadgeService {
 
   private countActionable(items: any[], actionableActions: string[]): number {
     const actionable = new Set(this.toUpperActions(actionableActions));
+    const isFinalish = (item: any): boolean => {
+      // Prefer explicit final-stage markers when available.
+      const explicitFinal =
+        item?.currentStageIsFinal ??
+        item?.current_stage_is_final ??
+        item?.isFinalStage ??
+        item?.is_final_stage ??
+        item?.isFinal ??
+        item?.is_final ??
+        null;
+      if (explicitFinal === true || explicitFinal === 1) return true;
+      if (typeof explicitFinal === 'string') {
+        const token = explicitFinal.trim().toLowerCase();
+        if (token === 'true' || token === '1' || token === 'yes' || token === 'y') return true;
+      }
+
+      const approvalStatusToken = this.normalizeStageToken(
+        item?.approval_status ?? item?.approvalStatus ?? item?.review_status ?? item?.reviewStatus ?? ''
+      );
+      if (approvalStatusToken === 'approved' || approvalStatusToken === 'rejected') {
+        return true;
+      }
+
+      const statusCodeToken = this.normalizeStageToken(item?.status_code ?? item?.statusCode ?? '');
+      // Transit permit workflow uses status codes like TRP_03 (approved), TRP_04 (cancelled/rejected).
+      if (statusCodeToken === 'approved' || statusCodeToken === 'rejected') {
+        return true;
+      }
+      if (statusCodeToken === 'trp03' || statusCodeToken === 'trp04') {
+        return true;
+      }
+
+      const statusToken = this.normalizeStageToken(
+        item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
+      );
+      if (!statusToken) return false;
+      return (
+        statusToken.includes('approved') ||
+        statusToken.includes('rejected') ||
+        statusToken.includes('cancelled') ||
+        statusToken.includes('canceled') ||
+        statusToken.includes('terminate') ||
+        statusToken.includes('terminated') ||
+        statusToken.includes('complete') ||
+        statusToken.includes('completed')
+      );
+    };
 
     const hasAnyActions = (items || []).some((item) => this.extractAllowedActions(item).length > 0);
     if (hasAnyActions) {
       return (items || []).filter((item) => {
+        if (isFinalish(item)) return false;
         const actions = this.extractAllowedActions(item);
         return actions.some((action) => actionable.has(action));
       }).length;
@@ -286,6 +339,7 @@ export class SidebarPendingBadgeService {
     // Fallback when backend doesn't return allowed actions consistently.
     return (items || []).filter((item) => {
       const statusText = String(item?.status || item?.current_stage_name || item?.currentStageName || '').toLowerCase();
+      if (isFinalish(item)) return false;
       return statusText.includes('pending') || statusText.includes('under') || statusText.includes('submitted');
     }).length;
   }

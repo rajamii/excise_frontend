@@ -6,10 +6,12 @@ import { MatTableDataSource } from '@angular/material/table';
 import { DashboardCount } from '../../../core/models/dashboard.model';
 import { ApplicationTableComponent } from './application-table/application-table.component';
 import { forkJoin, Subscription } from 'rxjs';
-import { finalize, filter } from 'rxjs/operators';
+import { finalize, filter, switchMap, catchError } from 'rxjs/operators';
 import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
 import { UnifiedApplication } from '../../../core/models/unified-application.model';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
+import { DashboardConfigService } from '../../../core/services/dashboard-config.service';
+import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -42,10 +44,14 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   activeTable: 'default' | 'applied' | 'pending' | 'rejected' = 'default';
 
   private routerSubscription?: Subscription;
+  private supplyChainSubscription?: Subscription;
+  supplyChainPendingCounts: Record<string, number> = {};
 
   constructor(
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private unifiedDashboardService: UnifiedDashboardService,
+    private dashboardConfigService: DashboardConfigService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService,
     private router: Router
   ) { }
 
@@ -111,16 +117,60 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
+    if (this.supplyChainSubscription) {
+      this.supplyChainSubscription.unsubscribe();
+    }
+  }
+
+  getSupplyChainPendingCount(section: string): number {
+    const key = String(section || '').trim().toLowerCase();
+    return Number(this.supplyChainPendingCounts?.[key] || 0);
+  }
+
+  getSupplyChainPendingTotal(): number {
+    return this.getSupplyChainPendingCount('requisition') + this.getSupplyChainPendingCount('hologram');
+  }
+
+  private refreshSupplyChainPendingCounts(): void {
+    if (this.supplyChainSubscription) {
+      this.supplyChainSubscription.unsubscribe();
+    }
+
+    this.supplyChainSubscription = this.sidebarPendingBadgeService
+      .refresh(['requisition', 'hologram'], false, { audience: 'licensee', mode: 'full' })
+      .subscribe({
+        next: (counts) => {
+          this.supplyChainPendingCounts = counts || {};
+        },
+        error: () => {
+          this.supplyChainPendingCounts = {};
+        }
+      });
   }
 
   loadDashboardData(): void {
     this.isLoading = true;
 
-    forkJoin({
-      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus()
-    })
-      .pipe(finalize(() => { this.isLoading = false; }))
+    this.dashboardConfigService
+      .getCurrentUserDashboardConfigCached()
+      .pipe(
+        switchMap((config) =>
+          forkJoin({
+            counts: this.unifiedDashboardService.getUnifiedDashboardCounts(config),
+            applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, config)
+          })
+        ),
+        catchError((error) => {
+          console.error('❌ Error loading dashboard config:', error);
+          return forkJoin({
+            counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
+            applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus()
+          });
+        }),
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
       .subscribe({
         next: (result) => {
           // DEDUPLICATE ALL APPLICATIONS FIRST
@@ -182,11 +232,15 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             approved: approvedWithoutRenewal, //  Only licenses without renewals
             rejected: filteredApplications.rejected
           });
+
+          // Include actionable supply-chain pending items on dashboard (e.g., requisition payment pending).
+          this.refreshSupplyChainPendingCounts();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
           this.dashboardCounts = { applied: 0, pending: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.clearDataSources();
+          this.supplyChainPendingCounts = {};
         }
       });
   }

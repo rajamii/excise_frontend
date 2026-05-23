@@ -12,12 +12,13 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { UnifiedDashboardService } from '../../core/services/unified-dashboard.service';
+import { LicenseMeService } from '../../core/services/license-me.service';
 import { UnifiedApplication } from '../../core/models/unified-application.model';
 import { DashboardCount } from '../../core/models/dashboard.model';
 import { MatTableDataSource } from '@angular/material/table';
@@ -25,6 +26,7 @@ import { ApplicationTableComponent } from '../licensee/licensee-dashboard/applic
 import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../core/services/account.service';
 import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
+import { SidebarPendingBadgeService } from '../../shared/services/sidebar-pending-badge.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
 import {
@@ -153,6 +155,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
+  supplyChainPendingCounts: Record<string, number> = {};
+
   selectedMetricsPeriod: 'today' | 'week' | 'month' | 'quarter' = 'week';
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -163,6 +167,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
   activeTable: 'default' | 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' = 'approved';
+  private applicationsLoaded = false;
+  private applicationsLoading = false;
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
@@ -172,6 +178,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private showBreweryOrDistilleryMenus = false;
   private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
+  private walletEligibilityResolved = false;
+  private walletEligibilityLoading = false;
 
   // Professional dashboard enhancements
   previousCounts: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
@@ -234,6 +242,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private accountService: AccountService,
     private hologramService: HologramDataService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService,
+    private licenseMeService: LicenseMeService,
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router
@@ -286,11 +296,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.currentUser = user;
           this.refreshWelcomeText();
           this.tryRedirectHologramOverview();
-
-          // If dashboard stats were loaded before we had role/user info, reload once the user is available.
-          if (!this.selectedSupplyChainSection && !this.shouldShowRoleSpecificDashboard()) {
-            this.loadDashboardStats();
-          }
         }
       });
   }
@@ -365,7 +370,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // Subscribe to query parameter changes
     this.route.queryParams
-      .pipe(takeUntil(this.destroy$))
+      .pipe(skip(1), takeUntil(this.destroy$))
       .subscribe(params => {
         const section = params['section'];
         this.selectedSupplyChainSection = section || null;
@@ -796,7 +801,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private proceedWithDashboardLoad() {
     // Load dashboard configuration
-    this.dashboardConfigService.getCurrentUserDashboardConfig()
+    this.dashboardConfigService.getCurrentUserDashboardConfigCached()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (config) => {
@@ -822,17 +827,95 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // If no specific section is selected, load dashboard stats
     if (!this.selectedSupplyChainSection) {
-      this.loadDashboardStats();
+      this.loadDashboardStatsLight();
     } else {
       this.isLoading = false; // Directly show the section
     }
   }
 
+  getSupplyChainPendingCount(section: string): number {
+    const key = String(section || '').trim().toLowerCase();
+    return Number(this.supplyChainPendingCounts?.[key] || 0);
+  }
+
+  getSupplyChainPendingTotal(): number {
+    return this.getSupplyChainPendingCount('requisition') + this.getSupplyChainPendingCount('hologram');
+  }
+
+  private refreshSupplyChainPendingCounts(force = false): void {
+    if (!this.isLicenseeUser()) {
+      this.supplyChainPendingCounts = {};
+      return;
+    }
+
+    this.sidebarPendingBadgeService
+      .refresh(['requisition', 'hologram'], force, { audience: 'licensee', mode: 'full' })
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(() => of({} as Record<string, number>))
+      )
+      .subscribe((counts) => {
+        this.supplyChainPendingCounts = counts || {};
+      });
+  }
+
+  private refreshOicActionPendingCount(force = false): void {
+    if (Number(this.currentUser?.roleId || 0) !== 7) {
+      return;
+    }
+
+    // OIC dashboard "Pending" should reflect only items where the user has an action
+    // (align with sidebar badges), not all in-flight applications.
+    // For OIC, the primary actionable workload reflected in the sidebar badge is Transit Applications.
+    // Keep the dashboard Pending card aligned with that badge.
+    const sections = ['transit-applications'];
+    this.sidebarPendingBadgeService
+      .refresh(sections, force, { audience: 'officer', mode: 'full' })
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(() => of({} as Record<string, number>))
+      )
+      .subscribe((counts) => {
+        const total = Object.values(counts || {}).reduce((sum, v) => sum + Number(v || 0), 0);
+        this.dashboardCounts = { ...this.dashboardCounts, pending: total };
+      });
+  }
+
+  private loadDashboardStatsLight() {
+    // Keep login fast: fetch only counts. Lists are fetched on-demand when user opens a table.
+    this.applicationsLoaded = false;
+    this.applicationsLoading = false;
+    this.clearDataSources();
+
+    this.unifiedDashboardService
+      .getUnifiedDashboardCounts(this.dashboardConfig)
+      .pipe(finalize(() => { this.isLoading = false; }))
+      .subscribe({
+        next: (counts) => {
+          this.dashboardCounts = {
+            applied: counts?.applied || 0,
+            pending: counts?.pending || 0,
+            objection: counts?.objection || 0,
+            approved: counts?.approved || 0,
+            rejected: counts?.rejected || 0,
+            awaitingPayment: 0
+          };
+          this.refreshSupplyChainPendingCounts();
+          this.refreshOicActionPendingCount();
+        },
+        error: (error) => {
+          console.error('❌ Error loading dashboard counts:', error);
+          this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
+          this.supplyChainPendingCounts = {};
+        }
+      });
+  }
+
   private loadDashboardStats() {
     // Use the unified dashboard service for all roles
     forkJoin({
-      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(),
+      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(this.dashboardConfig),
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, this.dashboardConfig),
       hologramProcurements: this.isLicenseeUser()
         ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
         : of([])
@@ -885,11 +968,80 @@ export class DashboardComponent implements OnInit, OnDestroy {
             approved: filteredApplications.approved,
             rejected: filteredApplications.rejected
           });
+
+          this.refreshSupplyChainPendingCounts();
+          this.refreshOicActionPendingCount();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
           this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.clearDataSources();
+          this.supplyChainPendingCounts = {};
+        }
+      });
+  }
+
+  private ensureApplicationsLoaded(forceRefresh = false): void {
+    if (this.applicationsLoading) return;
+    if (!forceRefresh && this.applicationsLoaded) return;
+
+    this.applicationsLoading = true;
+
+    forkJoin({
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
+      hologramProcurements: this.isLicenseeUser()
+        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        : of([])
+    })
+      .pipe(finalize(() => { this.applicationsLoading = false; }))
+      .subscribe({
+        next: (result) => {
+          this.applicationsLoaded = true;
+
+          const filteredApplications = {
+            applied: result.applications.applied || [],
+            pending: result.applications.pending || [],
+            objection: (result.applications as any).objection || [],
+            awaitingPayment: result.applications.awaitingPayment || [],
+            approved: result.applications.approved || [],
+            rejected: result.applications.rejected || []
+          };
+
+          const pendingBucket = [
+            ...filteredApplications.pending,
+            ...filteredApplications.awaitingPayment,
+            ...filteredApplications.applied
+          ];
+
+          this.dashboardCounts = {
+            ...this.dashboardCounts,
+            awaitingPayment: filteredApplications.awaitingPayment.length
+          };
+
+          if (this.isLicenseeUser()) {
+            const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
+            this.dashboardCounts = {
+              ...this.dashboardCounts,
+              pending: (this.dashboardCounts.pending || 0) + hologramCounts.pending,
+              approved: (this.dashboardCounts.approved || 0) + hologramCounts.approved,
+              rejected: (this.dashboardCounts.rejected || 0) + hologramCounts.rejected
+            };
+          }
+
+          this.updateDataSources({
+            applied: [],
+            pending: pendingBucket,
+            objection: filteredApplications.objection,
+            approved: filteredApplications.approved,
+            rejected: filteredApplications.rejected
+          });
+
+          this.refreshSupplyChainPendingCounts();
+        },
+        error: (error) => {
+          console.error('❌ Error loading dashboard applications:', error);
+          this.clearDataSources();
+          this.supplyChainPendingCounts = {};
         }
       });
   }
@@ -1048,6 +1200,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.licenseeMenuAccessResolved) {
       return;
     }
+    if (!this.walletEligibilityResolved) {
+      this.ensureLicenseeWalletEligibilityLoaded();
+      return;
+    }
     // Wallet becomes visible once the source application reaches `awaiting_payment`
     // (Awaiting License Fee Payment) or final approval.
     if (!this.showManufacturingWalletNav) {
@@ -1078,16 +1234,49 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.showBreweryOrDistilleryWalletViews = false;
     this.showManufacturingWalletNav = false;
 
+    // Keep login fast: derive initial menu visibility only from licenses.
+    // Wallet eligibility and application-derived menus are computed lazily when the user opens wallet.
+    this.walletEligibilityResolved = false;
+    this.walletEligibilityLoading = false;
+    this.licenseMeService
+      .getMyLicenses()
+      .subscribe({
+        next: (licenses) => {
+          const licenseRows = Array.isArray(licenses) ? licenses : [];
+          const menuRows = filterRowsForSupplyChainSidebarMenus(licenseRows);
+          const hasDistillery = menuRows.some((item) => this.isDistillery(item));
+          const hasBrewery = menuRows.some((item) => this.isBrewery(item));
+
+          this.showDistilleryMenus = hasDistillery;
+          this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+          this.showBreweryOrDistilleryWalletViews = hasDistillery || hasBrewery;
+          this.showManufacturingWalletNav = false;
+          this.licenseeMenuAccessResolved = true;
+          this.enforceSectionAccess();
+          this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
+        },
+        error: () => {
+          this.showDistilleryMenus = false;
+          this.showBreweryOrDistilleryMenus = false;
+          this.showBreweryOrDistilleryWalletViews = false;
+          this.showManufacturingWalletNav = false;
+          this.licenseeMenuAccessResolved = true;
+          this.enforceSectionAccess();
+        }
+      });
+  }
+
+  private ensureLicenseeWalletEligibilityLoaded(): void {
+    if (!this.isLicenseeUser()) return;
+    if (!this.licenseeMenuAccessResolved) return;
+    if (this.walletEligibilityResolved || this.walletEligibilityLoading) return;
+
+    this.walletEligibilityLoading = true;
+
     forkJoin({
-      licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
-        catchError(() => of([]))
-      ),
-      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(
-        catchError(() => of({ approved: [] }))
-      ),
-      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(
-        catchError(() => of([]))
-      )
+      licenses: this.licenseMeService.getMyLicenses(),
+      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(catchError(() => of({ approved: [] }))),
+      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(catchError(() => of([])))
     }).subscribe({
       next: ({ licenses, approvedPayload, allApplications }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
@@ -1096,26 +1285,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
         const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
         const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
-        const hasDistilleryAny = combinedRows.some((item) => this.isDistillery(item));
-        const hasBreweryAny = combinedRows.some((item) => this.isBrewery(item));
-        const menuRows = filterRowsForSupplyChainSidebarMenus(combinedRows);
-        const hasDistillery = menuRows.some((item) => this.isDistillery(item));
-        const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
-        this.showDistilleryMenus = hasDistillery;
-        this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
-        this.showBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
         this.showManufacturingWalletNav = this.computeWalletNavVisible(combinedRows);
-        this.licenseeMenuAccessResolved = true;
+        this.walletEligibilityResolved = true;
+        this.walletEligibilityLoading = false;
+
         this.enforceSectionAccess();
         this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
       },
       error: () => {
-        this.showDistilleryMenus = false;
-        this.showBreweryOrDistilleryMenus = false;
-        this.showBreweryOrDistilleryWalletViews = false;
         this.showManufacturingWalletNav = false;
-        this.licenseeMenuAccessResolved = true;
+        this.walletEligibilityResolved = true;
+        this.walletEligibilityLoading = false;
         this.enforceSectionAccess();
       }
     });
@@ -1264,6 +1445,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Professional dashboard methods (from licensee dashboard)
   showTable(table: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected') {
     this.activeTable = table;
+    // Load list-by-status APIs only when user opens a table.
+    this.ensureApplicationsLoaded(false);
   }
 
   goBack() {

@@ -398,12 +398,14 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
+            <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) + getSupplyChainPendingTotal() }}</div>
             <div class="label">Pending</div>
-            <div class="sub-info" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
-              <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+            <div class="sub-info" *ngIf="(dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) || getSupplyChainPendingTotal() > 0">
+              <span class="payment-count" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+              <span class="payment-count" *ngIf="getSupplyChainPendingCount('requisition') > 0">{{ getSupplyChainPendingCount('requisition') }} requisition payment pending</span>
+              <span class="payment-count" *ngIf="getSupplyChainPendingCount('hologram') > 0">{{ getSupplyChainPendingCount('hologram') }} hologram payment pending</span>
             </div>
-            <div class="sub-info" *ngIf="!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0">
+            <div class="sub-info" *ngIf="(!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0) && getSupplyChainPendingTotal() === 0">
               {{ getStatSubInfo('pending') }}
             </div>
           </div>
