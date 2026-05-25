@@ -30,6 +30,9 @@ export class BrandsComponent implements OnInit {
   brands: MasterBrandRow[] = [];
   sizes: LiquorCategoryRow[] = [];
 
+  currentPage = 0;
+  pageSize = 10;
+
   /** license_id → establishmentName */
   private licenseNameMap = new Map<string, string>();
 
@@ -58,6 +61,11 @@ export class BrandsComponent implements OnInit {
     });
   }
 
+  get pagedRows(): BrandWarehouse[] {
+    const startIndex = this.currentPage * this.pageSize;
+    return this.rows.slice(startIndex, startIndex + this.pageSize);
+  }
+
   getLicenseName(licenseId?: string | null): string {
     if (!licenseId) return '—';
     return this.licenseNameMap.get(licenseId.trim()) || licenseId;
@@ -67,7 +75,14 @@ export class BrandsComponent implements OnInit {
     return this.searchFieldOptions.find(o => o.value === this.searchField)?.label ?? '';
   }
 
-  onSearchChange(): void { /* triggers getter re-evaluation automatically */ }
+  onSearchChange(): void {
+    this.currentPage = 0;
+  }
+
+  onPageChange(event: any): void {
+    this.currentPage = event.pageIndex;
+    this.pageSize = event.pageSize;
+  }
 
   constructor(
     private brandWarehouseService: BrandWarehouseService,
@@ -104,7 +119,13 @@ export class BrandsComponent implements OnInit {
 
   loadRows(): void {
     this.brandWarehouseService.getBrandWarehouses().subscribe({
-      next: (data) => (this.allRows = Array.isArray(data) ? data : []),
+      next: (data) => {
+        this.allRows = Array.isArray(data) ? data : [];
+        const maxPage = Math.max(0, Math.ceil(this.rows.length / this.pageSize) - 1);
+        if (this.currentPage > maxPage) {
+          this.currentPage = maxPage;
+        }
+      },
       error: () => Swal.fire('Error', 'Failed to load brands.', 'error'),
     });
   }

@@ -42,7 +42,7 @@
             Stock
           </ng-template>
           <div class="table-container">
-            <mat-table [dataSource]="rows">
+            <mat-table [dataSource]="pagedRows">
               <ng-container matColumnDef="licenseId">
                 <mat-header-cell *matHeaderCellDef>License</mat-header-cell>
                 <mat-cell *matCellDef="let item" [matTooltip]="item.license_id || ''" matTooltipPosition="above">
@@ -86,6 +86,15 @@
             @if (rows.length === 0) {
               <div class="no-data">No brand warehouse rows found.</div>
             }
+
+            <mat-paginator
+              [length]="rows.length"
+              [pageIndex]="currentPage"
+              [pageSize]="pageSize"
+              [pageSizeOptions]="[10, 15, 30, 40]"
+              (page)="onPageChange($event)"
+              aria-label="Select page">
+            </mat-paginator>
           </div>
         </mat-tab>
 
@@ -95,7 +104,7 @@
             Prices
           </ng-template>
           <div class="table-container">
-            <mat-table [dataSource]="rows">
+            <mat-table [dataSource]="pagedRows">
               <ng-container matColumnDef="licenseId">
                 <mat-header-cell *matHeaderCellDef>License</mat-header-cell>
                 <mat-cell *matCellDef="let item" [matTooltip]="item.license_id || ''" matTooltipPosition="above">
@@ -157,6 +166,19 @@
               <mat-header-row *matHeaderRowDef="priceColumns"></mat-header-row>
               <mat-row *matRowDef="let row; columns: priceColumns"></mat-row>
             </mat-table>
+
+            @if (rows.length === 0) {
+              <div class="no-data">No brand warehouse rows found.</div>
+            }
+
+            <mat-paginator
+              [length]="rows.length"
+              [pageIndex]="currentPage"
+              [pageSize]="pageSize"
+              [pageSizeOptions]="[10, 15, 30, 40]"
+              (page)="onPageChange($event)"
+              aria-label="Select page">
+            </mat-paginator>
           </div>
         </mat-tab>
       </mat-tab-group>
