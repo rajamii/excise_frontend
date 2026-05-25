@@ -913,6 +913,11 @@ private initializeWalletContextAndLoadData(): void {
         this.isBreweryUser = true;
         if (hoa) {
           this.walletHoaByType.brewery = String(hoa);
+          // Backward compat: some UI actions still use walletType='excise' even for brewery users.
+          // Mirror the brewery HOA into the excise slot so the Payment Details modal auto-fills.
+          if (!String(this.walletHoaByType.excise || '').trim()) {
+            this.walletHoaByType.excise = String(hoa);
+          }
         }
       } else {
         this.exciseWalletBalance += balance;
