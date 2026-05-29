@@ -919,37 +919,92 @@ private getTransitRejectSummary(): {
       const baseLicenseFee = Math.max(0, licenseFee - additionalTotal);
       const baseSecurityFee = Math.max(0, securityFee - additionalTotal);
 
+      const feeRow = (label: string, amount: number, accent = false) => `
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    padding:10px 14px; border-radius:8px; margin-bottom:6px;
+                    background:${accent ? '#f0fdf8' : '#f9fafb'};
+                    border:1px solid ${accent ? '#6ee7c7' : '#e5e7eb'};">
+          <span style="color:#374151; font-size:14px;">${label}</span>
+          <span style="font-weight:700; color:${accent ? '#0d6e56' : '#111827'}; font-size:14px;">&#8377;${this.formatInr(amount)}</span>
+        </div>`;
+
       const breakdownHtml = hasAdditional
         ? `
-          <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
-          <div style="font-weight:600; margin-bottom:8px;">Breakup</div>
-          <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;">
-            <div>Base License Fee</div><div><b>&#8377;${this.formatInr(baseLicenseFee)}</b></div>
-          </div>
-          ${pachwaiSelected ? `<div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;"><div>Pachwai</div><div><b>&#8377;${this.formatInr(pachwaiFee)}</b></div></div>` : ''}
-          ${draughtSelected ? `<div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;"><div>Draught Beer</div><div><b>&#8377;${this.formatInr(draughtFee)}</b></div></div>` : ''}
-          <div style="font-size:12px; color:#6b7280;">
-            Additional charges are added to both License Fee and Security Deposit.
+          <div style="margin-top:16px; border-radius:10px; border:1px solid #d1fae5; overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#065f46,#059669); color:#fff; padding:8px 14px; font-size:13px; font-weight:600; letter-spacing:0.5px;">
+              &#9783; Fee Breakup
+            </div>
+            <div style="padding:10px 10px 4px;">
+              ${feeRow('Base License Fee', baseLicenseFee)}
+              ${pachwaiSelected ? feeRow('Pachwai (Additional)', pachwaiFee) : ''}
+              ${draughtSelected ? feeRow('Draught Beer (Additional)', draughtFee) : ''}
+            </div>
+            <div style="padding:6px 14px 10px; font-size:11.5px; color:#6b7280; font-style:italic;">
+              &#9432; Additional charges are applied to both License Fee and Security Deposit.
+            </div>
           </div>
         `
         : '';
+
       Swal.fire({
-        title: 'Proceed to Pay',
+        title: '',
         html: `
-          <div style="text-align:left;">
-            <div style="margin-bottom:8px;">License Fee: <b>₹${this.formatInr(licenseFee)}</b></div>
-            <div style="margin-bottom:8px;">Security Deposit: <b>₹${this.formatInr(securityFee)}</b></div>
-            <div>Total: <b>₹${this.formatInr(total)}</b></div>
-            ${breakdownHtml}
-            <div style="margin-top:10px; font-size:12px; color:#6b7280;">
-              You will be taken to Wallet → License Fee / Security Deposit tabs to complete payment.
+          <div style="font-family:'Segoe UI',sans-serif; text-align:left;">
+
+            <!-- Header -->
+            <div style="text-align:center; margin-bottom:20px;">
+              <div style="display:inline-flex; align-items:center; justify-content:center;
+                          width:52px; height:52px; border-radius:50%;
+                          background:linear-gradient(135deg,#065f46,#10b981); margin-bottom:10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
+                </svg>
+              </div>
+              <div style="font-size:20px; font-weight:700; color:#065f46; line-height:1.2;">Proceed to Pay</div>
+              <div style="font-size:12px; color:#6b7280; margin-top:4px;">Review your payment summary before proceeding</div>
             </div>
+
+            <!-- Fee Summary -->
+            <div style="border-radius:10px; border:1px solid #d1fae5; overflow:hidden; margin-bottom:12px;">
+              <div style="background:#ecfdf5; padding:8px 14px; font-size:12px; font-weight:600;
+                          color:#065f46; letter-spacing:0.6px; text-transform:uppercase;">
+                Payment Summary
+              </div>
+              <div style="padding:10px 10px 4px;">
+                ${feeRow('License Fee', licenseFee, true)}
+                ${feeRow('Security Deposit', securityFee, true)}
+              </div>
+              <!-- Total -->
+              <div style="display:flex; justify-content:space-between; align-items:center;
+                          padding:12px 14px; background:linear-gradient(135deg,#065f46,#10b981);
+                          border-top:1px solid #6ee7c7;">
+                <span style="color:#d1fae5; font-size:14px; font-weight:600;">Total Payable</span>
+                <span style="color:#ffffff; font-size:18px; font-weight:800;">&#8377;${this.formatInr(total)}</span>
+              </div>
+            </div>
+
+            ${breakdownHtml}
+
+            <!-- Info note -->
+            <div style="margin-top:12px; padding:10px 14px; background:#fffbeb; border:1px solid #fde68a;
+                        border-radius:8px; font-size:12px; color:#92400e; display:flex; gap:8px; align-items:flex-start;">
+              <span style="font-size:15px; flex-shrink:0;">&#9888;</span>
+              <span>You will be taken to <b>Wallet &rarr; License Fee / Security Deposit</b> tabs to complete payment.</span>
+            </div>
+
           </div>
         `,
-        icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Proceed',
-        cancelButtonText: 'Cancel'
+        confirmButtonText: '&#10003; &nbsp;Proceed',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#065f46',
+        cancelButtonColor: '#6b7280',
+        customClass: {
+          popup: 'swal-proceed-popup',
+          confirmButton: 'swal-proceed-confirm',
+          cancelButton: 'swal-proceed-cancel'
+        },
+        width: '480px'
       }).then((result) => {
         if (!result.isConfirmed) return;
         this.router.navigate(['/dashboard'], {

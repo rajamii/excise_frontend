@@ -770,3 +770,44 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 
 .docs-modal  { position: fixed !important; inset: 0 !important; z-index: 9001 !important; }
 .doc-viewer  { position: fixed !important; inset: 0 !important; z-index: 9101 !important; }
+
+// ── Proceed to Pay modal ────────────────────────────────────────────────────
+.swal2-popup.swal-proceed-popup {
+  border-radius: 16px !important;
+  padding: 28px 24px 24px !important;
+  box-shadow: 0 20px 60px rgba(6, 95, 70, 0.18) !important;
+  border: 1px solid #d1fae5 !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal2-html-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal2-actions {
+  margin-top: 20px !important;
+  gap: 12px !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal-proceed-confirm,
+.swal2-popup.swal-proceed-popup .swal-proceed-cancel {
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 10px 28px !important;
+  letter-spacing: 0.3px !important;
+  border: none !important;
+  transition: filter 0.2s ease, transform 0.15s ease !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal-proceed-confirm:hover {
+  filter: brightness(1.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal-proceed-cancel:hover {
+  filter: brightness(0.92) !important;
+  transform: translateY(-1px) !important;
+}
+// ────────────────────────────────────────────────────────────────────────────
