@@ -629,6 +629,11 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseUrl}/apply/draft/`, formData);
   }
 
+  forceSubmitNewLicenseApplication(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(String(applicationId || '').trim());
+    return this.http.post(`${this.newLicenseUrl}/force-submit/${encodedId}/`, {});
+  }
+
   private formatDate(value: any): string {
     if (value instanceof Date) {
       const year = value.getFullYear();

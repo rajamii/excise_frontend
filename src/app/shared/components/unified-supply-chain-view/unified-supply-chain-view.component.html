@@ -839,6 +839,14 @@
                                     <td>{{ applicationData.license_sub_category_name || applicationData.licenseSubCategoryName || 'Not available' }}</td>
                                 </tr>
                                 <tr>
+                                    <td class="fw-semibold bg-light">Pachwai</td>
+                                    <td>{{ asYesNo(getPachwaiSelected()) }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Draught Beer</td>
+                                    <td>{{ asYesNo(getDraughtBeerSelected()) }}</td>
+                                </tr>
+                                <tr>
                                     <td class="fw-semibold bg-light">Site District</td>
                                     <td>{{ applicationData.site_district_name || applicationData.siteDistrictName || 'Not available' }}</td>
                                 </tr>

@@ -3515,6 +3515,24 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return String(value).trim().length > 0;
     }
 
+    asYesNo(value: any): string {
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+        if (typeof value === 'number') return value !== 0 ? 'Yes' : 'No';
+        const text = String(value ?? '').trim().toLowerCase();
+        if (!text) return 'No';
+        return ['true', 'yes', '1'].includes(text) ? 'Yes' : 'No';
+    }
+
+    getPachwaiSelected(): any {
+        const data: any = this.applicationData as any;
+        return data?.pachwai ?? data?.pachwai_flag ?? data?.pachwai_selected;
+    }
+
+    getDraughtBeerSelected(): any {
+        const data: any = this.applicationData as any;
+        return data?.draught_beer ?? data?.draughtBeer ?? data?.draughtbeer;
+    }
+
     getFileUrl(value: unknown): string {
         if (!this.hasText(value)) return '#';
         const valueStr = String(value).trim();

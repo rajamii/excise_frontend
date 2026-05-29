@@ -10,6 +10,7 @@ import { ApplicationType } from '../../constants/application.constants';
 import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
 import { AccountService } from '../../../core/services/account.service';
 import Swal from 'sweetalert2';
+import { firstValueFrom } from 'rxjs';
 
 export interface ActionItem {
   id?: number | string;
@@ -749,6 +750,23 @@ private getTransitRejectSummary(): {
     }).format(this.toNumber(value));
   }
 
+  private toBool(value: any): boolean {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    const text = String(value ?? '').trim().toLowerCase();
+    return text === 'true' || text === 'yes' || text === '1';
+  }
+
+  private async getPaymentModuleFee(moduleCode: string, fallback: number): Promise<number> {
+    try {
+      const res: any = await firstValueFrom(this.paymentIntegrationService.getPaymentModule(String(moduleCode)));
+      const fee = this.toNumber(res?.license_fee ?? res?.licenseFee ?? res?.licenseFeeAmount ?? res?.amount ?? 0);
+      return Number.isFinite(fee) && fee > 0 ? fee : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
   private escapeHtml(value: string): string {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -885,8 +903,36 @@ private getTransitRejectSummary(): {
       return { licenseFee, securityFee, total: licenseFee + securityFee };
     };
 
-    const showProceedModal = (amountSource: any) => {
+    const showProceedModal = async (amountSource: any) => {
       const { licenseFee, securityFee, total } = resolveAmounts(amountSource);
+
+      const pachwaiSelected = this.toBool(amountSource?.pachwai ?? amountSource?.pachwai_flag ?? amountSource?.pachwai_selected);
+      const draughtSelected = this.toBool(amountSource?.draught_beer ?? amountSource?.draughtBeer ?? amountSource?.draughtbeer);
+
+      let pachwaiFee = 0;
+      let draughtFee = 0;
+      if (pachwaiSelected) pachwaiFee = await this.getPaymentModuleFee('NLI_ADD_PACHWAI', 3000);
+      if (draughtSelected) draughtFee = await this.getPaymentModuleFee('NLI_ADD_DRAUGHT_BEER', 5000);
+
+      const additionalTotal = (pachwaiFee || 0) + (draughtFee || 0);
+      const hasAdditional = additionalTotal > 0;
+      const baseLicenseFee = Math.max(0, licenseFee - additionalTotal);
+      const baseSecurityFee = Math.max(0, securityFee - additionalTotal);
+
+      const breakdownHtml = hasAdditional
+        ? `
+          <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
+          <div style="font-weight:600; margin-bottom:8px;">Breakup</div>
+          <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;">
+            <div>Base License Fee</div><div><b>&#8377;${this.formatInr(baseLicenseFee)}</b></div>
+          </div>
+          ${pachwaiSelected ? `<div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;"><div>Pachwai</div><div><b>&#8377;${this.formatInr(pachwaiFee)}</b></div></div>` : ''}
+          ${draughtSelected ? `<div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px;"><div>Draught Beer</div><div><b>&#8377;${this.formatInr(draughtFee)}</b></div></div>` : ''}
+          <div style="font-size:12px; color:#6b7280;">
+            Additional charges are added to both License Fee and Security Deposit.
+          </div>
+        `
+        : '';
       Swal.fire({
         title: 'Proceed to Pay',
         html: `
@@ -894,6 +940,7 @@ private getTransitRejectSummary(): {
             <div style="margin-bottom:8px;">License Fee: <b>₹${this.formatInr(licenseFee)}</b></div>
             <div style="margin-bottom:8px;">Security Deposit: <b>₹${this.formatInr(securityFee)}</b></div>
             <div>Total: <b>₹${this.formatInr(total)}</b></div>
+            ${breakdownHtml}
             <div style="margin-top:10px; font-size:12px; color:#6b7280;">
               You will be taken to Wallet → License Fee / Security Deposit tabs to complete payment.
             </div>
@@ -934,11 +981,11 @@ private getTransitRejectSummary(): {
     this.workflowActionService.getNewLicenseApplicationDetail(applicationId).subscribe({
       next: (detail: any) => {
         Swal.close();
-        showProceedModal(detail || this.item);
+        void showProceedModal(detail || this.item);
       },
       error: () => {
         Swal.close();
-        showProceedModal(this.item);
+        void showProceedModal(this.item);
       }
     });
   }

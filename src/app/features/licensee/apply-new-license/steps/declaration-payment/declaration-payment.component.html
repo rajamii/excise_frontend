@@ -247,6 +247,16 @@
           <span>Submit Application</span>
         }
       </button>
+      @if (canForceSubmit) {
+        <button
+          mat-stroked-button
+          color="warn"
+          (click)="forceSubmit()"
+          [disabled]="!declarationForm.valid || isSubmitting"
+          type="button">
+          <span>Force Submit Application</span>
+        </button>
+      }
     } @else {
       <button mat-flat-button color="primary" (click)="goToDashboard()">
         Go to Dashboard
