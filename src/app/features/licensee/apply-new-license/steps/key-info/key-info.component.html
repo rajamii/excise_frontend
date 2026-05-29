@@ -47,6 +47,20 @@
           }
         </mat-form-field>
 
+        @if (shouldShowAdditionalCharges()) {
+          <div class="radio-group-container">
+            <label class="field-label">Additional Charges</label>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <mat-checkbox formControlName="pachwai">
+                Pachwai (₹{{ pachwaiAmount() }})
+              </mat-checkbox>
+              <mat-checkbox formControlName="draughtBeer">
+                Draught Beer (₹{{ draughtBeerAmount() }})
+              </mat-checkbox>
+            </div>
+          </div>
+        }
+
         <!-- Name of the Business Premises -->
         <mat-form-field appearance="outline">
           <mat-label>Name of the Business Premises</mat-label>

@@ -358,6 +358,15 @@ export class LicenseApplicationService {
       if (keyInfoData.existing_site_license) {
         formData.append('existing_site_license', String(keyInfoData.existing_site_license));
       }
+
+      const pachwai = keyInfoData.pachwai ?? keyInfoData.pachwai_flag ?? keyInfoData.pachwai_selected;
+      if (typeof pachwai === 'boolean') {
+        formData.append('pachwai', pachwai ? 'true' : 'false');
+      }
+      const draughtBeer = keyInfoData.draught_beer ?? keyInfoData.draughtBeer;
+      if (typeof draughtBeer === 'boolean') {
+        formData.append('draught_beer', draughtBeer ? 'true' : 'false');
+      }
     }
 
     // ✅ 3. APPLICANT DETAILS
