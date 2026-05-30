@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { Router } from '@angular/router';
 import { environment } from '../../../../../../environments/environment';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { RoleService } from '../../../../../core/services/role.service';
@@ -45,6 +46,7 @@ interface GroupedRenewalResponse {
 })
 export class LicenseRenewalDashboardComponent implements OnInit {
   private http = inject(HttpClient);
+  private router = inject(Router);
   private roleService = inject(RoleService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
 
@@ -114,6 +116,18 @@ export class LicenseRenewalDashboardComponent implements OnInit {
     this.applyFilters();
   }
 
+  viewApplication(row: RenewalItem): void {
+    const id = row.id || row.applicationId;
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id,
+        ref: row.applicationId,
+        type: 'license-renewal',
+        source: this.getDetailViewSource()
+      }
+    });
+  }
+
   applyFilters(): void {
     const q = this.searchFilter.trim().toLowerCase();
     const rows = this.allRows.filter((row) => {
@@ -167,14 +181,16 @@ export class LicenseRenewalDashboardComponent implements OnInit {
       for (const raw of list || []) {
         const appId = String(raw?.application_id || raw?.applicationId || raw?.id || '').trim();
         if (!appId) continue;
+
+        const currentStageRaw = String(raw?.current_stage_name || raw?.currentStageName || raw?.current_stage || '').trim();
         output.push({
           id: appId,
           applicationId: appId,
-          applicantName: String(raw?.applicant_name || raw?.applicantName || '').trim() || '—',
-          oldLicenseId: String(raw?.old_license_id || raw?.oldLicenseId || '').trim() || '—',
-          submittedOn: String(raw?.created_at || raw?.submitted_at || raw?.submittedAt || '').trim(),
-          currentStage: String(raw?.current_stage_name || raw?.currentStageName || raw?.current_stage || '').trim() || '—',
-          currentStageRaw: String(raw?.current_stage_name || raw?.currentStageName || raw?.current_stage || '').trim() || '—',
+          applicantName: String(raw?.applicant_name || raw?.applicantName || '').trim() || '-',
+          oldLicenseId: String(raw?.old_license_id || raw?.oldLicenseId || '').trim() || '-',
+          submittedOn: this.formatDate(raw?.submitted_on || raw?.submittedOn || raw?.submitted_at || raw?.submittedAt || raw?.created_at || raw?.createdAt || raw?.updated_at || raw?.updatedAt),
+          currentStage: this.computeCurrentStageLabel(statusGroup, currentStageRaw),
+          currentStageRaw: currentStageRaw || '-',
           statusGroup,
           canView: true
         });
@@ -182,5 +198,46 @@ export class LicenseRenewalDashboardComponent implements OnInit {
     }
     return output;
   }
-}
 
+  private computeCurrentStageLabel(statusGroup: RenewalItem['statusGroup'], currentStageRaw: string): string {
+    if (this.isLicenseeUser()) {
+      if (statusGroup === 'approved') return 'Approved';
+      if (statusGroup === 'rejected') return 'Rejected';
+      if (statusGroup === 'objection') return 'Objection';
+      return 'Pending';
+    }
+    return this.formatStageName(currentStageRaw || statusGroup);
+  }
+
+  private getDetailViewSource(): string {
+    const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);
+    if (this.roleService.isLicenseeRole(roleId)) return 'licensee';
+    switch (roleId) {
+      case 5: return 'permit-section';
+      case 6: return 'itcell';
+      case 7: return 'officer-in-charge';
+      case 9:
+      case 10:
+        return 'commissioner-dashboard';
+      default:
+        return 'commissioner-dashboard';
+    }
+  }
+
+  private formatDate(value: any): string {
+    if (!value) return '-';
+    const date = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(date.getTime())) return String(value || '').trim() || '-';
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  private formatStageName(value: string): string {
+    const raw = String(value || '').trim();
+    if (!raw) return '-';
+    return raw
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+}

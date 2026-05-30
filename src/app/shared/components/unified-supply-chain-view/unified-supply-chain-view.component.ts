@@ -644,6 +644,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     brAmount: ['yearly_license_fee']
                 }
             },
+            'license-renewal': {
+                service: this,
+                listMethod: 'getLicenseRenewalApplications',
+                detailMethod: 'getLicenseRenewalApplicationById',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.LICENSE_RENEWAL],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no'],
+                    submissionDate: ['created_at', 'createdAt', 'submitted_at', 'submittedAt', 'submitted_on', 'submittedOn'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['establishment_name', 'establishmentName', 'applicant_name', 'applicantName'],
+                    brAmount: ['yearly_license_fee']
+                }
+            },
             'company-registration': {
                 service: this.companyRegistrationService,
                 listMethod: 'getCompanyList',
@@ -742,6 +759,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     private getNewLicenseApplicationById(id: string): Observable<any> {
         const encodedId = encodeURIComponent(id);
         return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encodedId}/`);
+    }
+
+    private getLicenseRenewalApplications(): Observable<any> {
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/list/`);
+    }
+
+    private getLicenseRenewalApplicationById(id: string): Observable<any> {
+        const encodedId = encodeURIComponent(id);
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/detail/${encodedId}/`);
     }
 
     private loadByIdWithFallback(config: ServiceConfig, id: string, refNo: string): void {
@@ -3274,7 +3300,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isCancellation(): boolean { return this.applicationType === 'cancellation'; }
     isTransit(): boolean { return this.applicationType === 'transit'; }
     isHologram(): boolean { return this.applicationType === 'hologram'; }
-    isNewLicense(): boolean { return this.applicationType === 'new-license'; }
+    isNewLicense(): boolean { return this.applicationType === 'new-license' || this.applicationType === 'license-renewal'; }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
@@ -3309,6 +3335,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'transit',
             'hologram',
             'new-license',
+            'license-renewal',
             'company-registration',
             'company-collaboration',
             'salesman-barman-registration'

@@ -29,6 +29,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   isLoading = false;
   private routerSub?: Subscription;
   private readonly renewalReminderTimerCode = 'LICENSE_RENEWAL_REMINDER_TIMER';
+  private activeRenewalLicenseIds = new Set<string>();
 
   constructor(
     public dialogRef: MatDialogRef<MyLicensesComponent>,
@@ -219,6 +220,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     this.unifiedDashboardService.getUnifiedApplicationsByStatus(true).subscribe({
       next: (result: any) => {
         const approvedApps = result.approved || [];
+        this.activeRenewalLicenseIds = this.collectActiveRenewalLicenseIds(result);
         
         // 🔍 DEBUG: Log the first approved app to see structure
         if (approvedApps.length > 0) {
@@ -361,6 +363,35 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         this.processRenewal(renewalId!, application.type);
       }
     });
+  }
+
+  canShowRenewButton(application: UnifiedApplication): boolean {
+    const licenseId = this.extractLicenseId(application.raw || {}, application);
+    if (!licenseId) return false;
+    return !this.activeRenewalLicenseIds.has(this.normalizeLicenseId(licenseId));
+  }
+
+  private collectActiveRenewalLicenseIds(result: any): Set<string> {
+    const ids = new Set<string>();
+    const activeGroups = [
+      ...(result?.applied || []),
+      ...(result?.pending || []),
+      ...(result?.objection || []),
+      ...(result?.awaitingPayment || [])
+    ];
+
+    for (const app of activeGroups) {
+      if (app?.type !== 'license-renewal') continue;
+      const raw = app.raw || {};
+      const oldLicenseId = String(raw?.old_license_id || raw?.oldLicenseId || '').trim();
+      if (oldLicenseId) ids.add(this.normalizeLicenseId(oldLicenseId));
+    }
+
+    return ids;
+  }
+
+  private normalizeLicenseId(value: string): string {
+    return String(value || '').trim().toUpperCase();
   }
 
   /**

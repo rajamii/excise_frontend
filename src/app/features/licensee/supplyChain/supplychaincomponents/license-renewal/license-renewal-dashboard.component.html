@@ -84,6 +84,7 @@
             <th>Applicant</th>
             <th>Old License</th>
             <th>Current Stage</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -97,6 +98,11 @@
               <span class="status-badge {{ row.statusGroup }}">
                 {{ row.currentStage }}
               </span>
+            </td>
+            <td>
+              <button *ngIf="row.canView" class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
+                <i class="bi bi-eye-fill"></i>
+              </button>
             </td>
           </tr>
         </tbody>
@@ -147,4 +153,3 @@
     </div>
   </div>
 </div>
-

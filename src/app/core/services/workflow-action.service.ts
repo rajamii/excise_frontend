@@ -31,6 +31,7 @@ export interface ApplicationWorkflowData {
     | 'hologram'
     | 'hologram-procurement'
     | 'new-license'
+    | 'license-renewal'
     | 'company-registration'
     | 'company-collaboration'
     | 'salesman-barman-registration'; // Changed to type to match component
@@ -127,6 +128,7 @@ export class WorkflowActionService {
           catchError(() => of([]))
         );
       case 'new-license':
+      case 'license-renewal':
       case 'company-registration':
       case 'company-collaboration':
       case 'salesman-barman-registration':
@@ -335,6 +337,7 @@ export class WorkflowActionService {
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${data.id}/perform_action/`;
         break;
       case 'new-license':
+      case 'license-renewal':
       case 'company-registration':
       case 'company-collaboration':
       case 'salesman-barman-registration':

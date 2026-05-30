@@ -1450,9 +1450,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
+    if (sectionRouteToken === 'license-renewal' && this.canAccessSection('new-license')) {
+      return true;
+    }
+
     const tokenMap: Record<string, string[]> = {
       'new-license': ['new_license', 'new-license', 'license_application', 'new_license_application'],
-      'license-renewal': ['license_renewal_application', 'license-renewal', 'license_renewal'],
+      'license-renewal': ['license_renewal_application', 'license-renewal', 'license_renewal', 'license_application', 'new_license_application'],
       'requisition': ['ena_requisition', 'requisition'],
       'revalidation': ['ena_revalidation', 'revalidation'],
       'cancellation': ['ena_cancellation', 'cancellation'],

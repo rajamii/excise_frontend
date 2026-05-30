@@ -27,7 +27,7 @@ export class UnifiedDashboardService {
   private cacheUserKey: string | null = null;
 
   private endpoints = {
-    renewal: `${this.baseUrl}/license_application`,
+    renewal: `${this.baseUrl}/license_renewal_application`,
     new: `${this.baseUrl}/new_license_application`,
     salesman: `${this.baseUrl}/salesman_barman`,
     company: `${this.baseUrl}/company-registration`

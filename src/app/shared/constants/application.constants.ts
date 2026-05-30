@@ -9,6 +9,7 @@ export const APPLICATION_TYPES = {
     TRANSIT: 'transit',
     HOLOGRAM: 'hologram',
     NEW_LICENSE: 'new-license',
+    LICENSE_RENEWAL: 'license-renewal',
     COMPANY_REGISTRATION: 'company-registration',
     COMPANY_COLLABORATION: 'company-collaboration',
     SALESMAN_BARMAN_REGISTRATION: 'salesman-barman-registration'
@@ -42,6 +43,7 @@ export const WORKFLOW_IDS = {
     [APPLICATION_TYPES.TRANSIT]: 8,      // Transit Permit
     [APPLICATION_TYPES.HOLOGRAM]: 7,     // Hologram Request
     [APPLICATION_TYPES.NEW_LICENSE]: 0,  // New License workflow id not required for view-only flow
+    [APPLICATION_TYPES.LICENSE_RENEWAL]: 0, // Renewal workflow id not required for view-only flow
     [APPLICATION_TYPES.COMPANY_REGISTRATION]: 0, // View-only detail flow
     [APPLICATION_TYPES.COMPANY_COLLABORATION]: 0, // View-only detail flow
     [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 0 // View-only detail flow
@@ -58,6 +60,7 @@ export const APPLICATION_TITLES = {
     [APPLICATION_TYPES.TRANSIT]: 'TRANSIT PERMIT APPLICATION',
     [APPLICATION_TYPES.HOLOGRAM]: 'HOLOGRAM PROCUREMENT APPLICATION',
     [APPLICATION_TYPES.NEW_LICENSE]: 'NEW LICENSE APPLICATION',
+    [APPLICATION_TYPES.LICENSE_RENEWAL]: 'LICENSE RENEWAL APPLICATION',
     [APPLICATION_TYPES.COMPANY_REGISTRATION]: 'COMPANY REGISTRATION',
     [APPLICATION_TYPES.COMPANY_COLLABORATION]: 'COMPANY COLLABORATION',
     [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 'SALESMAN/BARMAN REGISTRATION'
@@ -74,6 +77,7 @@ export const PAGE_TITLES = {
     [APPLICATION_TYPES.TRANSIT]: 'Transit Permit Details',
     [APPLICATION_TYPES.HOLOGRAM]: 'Hologram Procurement Application Details',
     [APPLICATION_TYPES.NEW_LICENSE]: 'New License Application Details',
+    [APPLICATION_TYPES.LICENSE_RENEWAL]: 'License Renewal Application Details',
     [APPLICATION_TYPES.COMPANY_REGISTRATION]: 'Company Registration Details',
     [APPLICATION_TYPES.COMPANY_COLLABORATION]: 'Company Collaboration Details',
     [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 'Salesman/Barman Registration Details'
