@@ -100,6 +100,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
+    { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit', hideForPermitSection: true },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit', hideForPermitSection: true },
@@ -420,6 +421,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       const licenseeSections: string[] = [];
       if (hasDbRoute(/new[_-]?license|new_license_application/)) {
         licenseeSections.push('new-license');
+      }
+      if (hasDbRoute(/license[_-]?renewal|license_renewal_application/)) {
+        licenseeSections.push('license-renewal');
       }
       if (hasDbRoute(/salesman|barman|salesman[_-]?barman|salesman_barman/)) {
         licenseeSections.push('salesman-barman-registration');
@@ -1405,11 +1409,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    if (this.isPermitSectionUser() && (section === 'new-license' || section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
+    if (this.isPermitSectionUser() && (section === 'new-license' || section === 'license-renewal' || section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
       return false;
     }
 
-    if (this.isItCellUser() && section === 'new-license') {
+    if (this.isItCellUser() && (section === 'new-license' || section === 'license-renewal')) {
       return false;
     }
 
@@ -1418,7 +1422,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
-    if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license' || section === 'hologram')) {
+    if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license' || section === 'license-renewal' || section === 'hologram')) {
       return false;
     }
 
@@ -1448,6 +1452,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     const tokenMap: Record<string, string[]> = {
       'new-license': ['new_license', 'new-license', 'license_application', 'new_license_application'],
+      'license-renewal': ['license_renewal_application', 'license-renewal', 'license_renewal'],
       'requisition': ['ena_requisition', 'requisition'],
       'revalidation': ['ena_revalidation', 'revalidation'],
       'cancellation': ['ena_cancellation', 'cancellation'],

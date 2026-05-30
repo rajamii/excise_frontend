@@ -59,10 +59,11 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   private renewLicenseUsingTimer(application: UnifiedApplication): void {
     const fallbackSeconds = 90 * 24 * 60 * 60;
     const summaryValidUpTo = this.extractValidUpToDate(application.raw || {});
+    const resolvedType = this.resolveApplicationType(application);
 
     const app$ = summaryValidUpTo
       ? of(application)
-      : this.unifiedDashboardService.getApplicationDetail(application.applicationId, application.type).pipe(
+      : this.unifiedDashboardService.getApplicationDetail(application.applicationId, resolvedType).pipe(
           catchError(() => of(application))
         );
 
@@ -128,10 +129,23 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           confirmButtonText: 'Yes, Renew License'
         }).then((result) => {
           if (result.isConfirmed) {
-            this.processRenewal(renewalId!, app.type);
+            this.processRenewal(renewalId!, this.resolveApplicationType(app));
           }
         });
       });
+  }
+
+  private resolveApplicationType(application: UnifiedApplication): UnifiedApplication['type'] {
+    const explicit = (application as any)?.type;
+    if (explicit === 'license-renewal' || explicit === 'new-license' || explicit === 'salesman-barman' || explicit === 'company-registration') {
+      return explicit;
+    }
+
+    const id = String((application as any)?.applicationId || '').trim();
+    if (id.startsWith('NLI/')) return 'new-license';
+    if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('SBM/')) return 'salesman-barman';
+    return 'new-license';
   }
 
   private extractValidUpToDate(raw: any): Date | null {
@@ -518,8 +532,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       console.log('🔄 Using License Renewal (old) endpoint');
       renewalObservable = this.licenseApplicationService.renewLicense(renewalId);
     } else if (type === 'new-license') {
-      console.log('🔄 Using New License renewal endpoint');
-      renewalObservable = this.licenseApplicationService.renewNewLicense(renewalId);
+      console.log('🔄 Using License Renewal Application (LRA) endpoint');
+      renewalObservable = this.licenseApplicationService.initiateLicenseRenewalApplication(renewalId);
     } else {
       Swal.fire({ 
         icon: 'info', 
@@ -533,11 +547,13 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       next: (response: any) => {
         console.log('✅ Renewal response:', response);
         
-        const newAppId = response.application?.application_id || 
-                        response.application?.applicationId || 
-                        response.applicationId ||
-                        response.application_id ||
-                        'N/A';
+        const newAppId =
+          response?.application?.application_id ||
+          response?.application?.applicationId ||
+          response?.applicationId ||
+          response?.application_id ||
+          response?.applicationId ||
+          'N/A';
         
         Swal.fire({ 
           icon: 'success', 
@@ -558,7 +574,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           if (result.isConfirmed) { 
             this.closeDialog();
             // ✅ FIXED: Navigate to the correct licensee dashboard route
-            this.router.navigate(['/licensee/dashboard']);
+            this.router.navigate(['/licensee/dashboard'], { queryParams: { section: 'license-renewal' } });
           } else {
             this.loadMyLicenses();
           }

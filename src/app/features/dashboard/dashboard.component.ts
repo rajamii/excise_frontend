@@ -47,6 +47,7 @@ import { ImportPermitComponent } from '../licensee/supplyChain/import-permit/imp
 import { Hologramrequestlevel1Component } from '../licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component';
 import { HologramComponent } from '../licensee/supplyChain/HoloGram/hologram/hologram.component';
 import { NewLicenseDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/new-license/new-license-dashboard.component';
+import { LicenseRenewalDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/license-renewal/license-renewal-dashboard.component';
 import { RegistrationManagementComponent } from '../licensee/supplyChain/supplychaincomponents/registration-management/registration-management.component';
 import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
@@ -105,6 +106,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     Hologramrequestlevel1Component,
     HologramComponent,
     NewLicenseDashboardComponent,
+    LicenseRenewalDashboardComponent,
     RegistrationManagementComponent,
     PaymentConfirmationComponent,
     // Officer-specific Components
