@@ -92,6 +92,14 @@ export class WorkflowActionService {
     );
   }
 
+  getLicenseRenewalApplicationDetail(applicationId: string): Observable<any> {
+    const encoded = encodeURIComponent(String(applicationId || '').trim());
+    if (!encoded) return of(null);
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/detail/${encoded}/`).pipe(
+      catchError(() => of(null))
+    );
+  }
+
 
   private fetchActionsFromBackend(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
     const id = data.id;

@@ -10,6 +10,7 @@ export class LicenseApplicationService {
 
   private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private readonly renewalLicenseUrl = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
   private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
   private readonly workflowUrl = `${environment.apiBaseUrl}/auth`;
 
@@ -884,6 +885,21 @@ export class LicenseApplicationService {
   payNewLicenseSecurityFee(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-security-fee/`, {});
+  }
+
+  getLicenseRenewalApplicationById(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.renewalLicenseUrl}/detail/${encodedId}/`);
+  }
+
+  payLicenseRenewalFee(applicationId: string, formData: FormData): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-license-fee/`, formData);
+  }
+
+  payLicenseRenewalSecurityFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-security-fee/`, {});
   }
 
   getNewLicenseDashboardCounts(): Observable<any> {

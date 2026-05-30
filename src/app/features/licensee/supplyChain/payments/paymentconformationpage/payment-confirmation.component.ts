@@ -1793,7 +1793,7 @@ private initializeWalletContextAndLoadData(): void {
   private syncPendingNewLicenseContextToActiveTab(): void {
     const ctx = this.pendingWalletPaymentContext;
     if (!ctx) return;
-    if (String(ctx.itemType || '').trim().toLowerCase() !== 'new-license') return;
+    if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
     if (!this.pendingNewLicenseApplicationId) {
       this.pendingNewLicenseApplicationId = String(ctx.id || '').trim();
     }
@@ -1842,6 +1842,11 @@ private initializeWalletContextAndLoadData(): void {
     return null;
   }
 
+  private isLicenseFeeWorkflowPaymentType(value: any): boolean {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'new-license' || normalized === 'license-renewal';
+  }
+
   private capturePendingWalletPaymentContext(params: any): void {
     const action = String(params?.['action'] || '').trim().toLowerCase();
     const isPaymentAction = action === 'pay' || action === 'makepayment';
@@ -1872,8 +1877,8 @@ private initializeWalletContextAndLoadData(): void {
       return;
     }
 
-    // New license flow: amount can be missing/0 in deep-link; we will resolve from backend.
-    if (type === 'new-license') {
+    // New license / renewal flow: amount can be missing/0 in deep-link; we will resolve from backend.
+    if (this.isLicenseFeeWorkflowPaymentType(type)) {
       this.pendingNewLicenseApplicationId = id;
       this.pendingNewLicenseReferenceNo = referenceNo;
       if (securityAmount > 0) {
@@ -1900,7 +1905,12 @@ private initializeWalletContextAndLoadData(): void {
     if (!applicationId) return;
     if (this.pendingNewLicenseLicenseFeeAmount > 0 && this.pendingNewLicenseSecurityFeeAmount > 0) return;
 
-    this.licenseApplicationService.getNewLicenseApplicationById(applicationId).pipe(
+    const contextType = String(this.pendingWalletPaymentContext?.itemType || '').trim().toLowerCase();
+    const detail$ = contextType === 'license-renewal' || applicationId.toUpperCase().startsWith('LRA/')
+      ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
+      : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
+
+    detail$.pipe(
       timeout(15000),
       catchError(() => of(null))
     ).subscribe((app: any) => {
@@ -1915,7 +1925,7 @@ private initializeWalletContextAndLoadData(): void {
       // If current pending context is for new-license and has 0 amount, update it.
       const ctx = this.pendingWalletPaymentContext;
       if (!ctx) return;
-      if (String(ctx.itemType || '').trim().toLowerCase() !== 'new-license') return;
+      if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
       if (ctx.amount > 0) return;
 
       const resolvedAmount = ctx.tab === 'security_deposit'
@@ -1936,7 +1946,7 @@ private initializeWalletContextAndLoadData(): void {
     // New license deep-link: show Pay Now row even if amount is still resolving.
     if ((tab === 'license_fee' || tab === 'security_deposit')
       && this.pendingWalletPaymentContext
-      && String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() === 'new-license'
+      && this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
       && this.pendingWalletPaymentContext.tab === tab
       && this.activeTab === tab) {
       return true;
@@ -2022,6 +2032,19 @@ private initializeWalletContextAndLoadData(): void {
           return;
         }
         Swal.fire('Fee Not Configured', 'License fee / security deposit amount is not available for this application.', 'error');
+      }
+      if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
+        this.ensurePendingNewLicenseAmountsResolved();
+        const resolvedAmount = context.tab === 'security_deposit'
+          ? this.pendingNewLicenseSecurityFeeAmount
+          : this.pendingNewLicenseLicenseFeeAmount;
+        if (resolvedAmount > 0) {
+          this.pendingWalletPaymentContext = { ...context, amount: resolvedAmount };
+          this.persistPendingPaymentContextToStorage();
+          setTimeout(() => this.openPendingWalletPaymentConfirmation(), 0);
+          return;
+        }
+        Swal.fire('Fee Not Configured', 'Renewal license fee / security deposit amount is not available for this application.', 'error');
       }
       this.resetPendingPaymentAttemptState();
       return;
@@ -2165,19 +2188,24 @@ private initializeWalletContextAndLoadData(): void {
     const typeToken = String(context?.itemType || '').trim().toLowerCase();
     const refToken = String(context?.referenceNo || '').trim().toUpperCase();
     const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/');
-    if (!isNewLicense) return;
+    const isRenewal = typeToken.includes('license-renewal') || refToken.startsWith('LRA/');
+    if (!isNewLicense && !isRenewal) return;
 
     const applicationId = String(this.pendingNewLicenseApplicationId || context?.id || '').trim();
     if (!applicationId) return;
 
-    const guardKey = `new_license_force_refresh_after_approval_${applicationId}`;
+    const guardKey = `${isRenewal ? 'license_renewal' : 'new_license'}_force_refresh_after_approval_${applicationId}`;
     try {
       if (sessionStorage.getItem(guardKey) === '1') return;
     } catch {
       // ignore storage errors
     }
 
-    this.licenseApplicationService.getNewLicenseApplicationById(applicationId).pipe(
+    const detail$ = isRenewal
+      ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
+      : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
+
+    detail$.pipe(
       timeout(15000),
       catchError(() => of(null))
     ).subscribe((app: any) => {
@@ -2376,8 +2404,14 @@ private initializeWalletContextAndLoadData(): void {
         if (String(context.itemType || '').trim().toLowerCase() === 'salesman-barman-registration') {
           return this.salesmanBarmanRegistrationService.payRegistrationLicenseFee(String(context.id));
         }
+        if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
+          return this.licenseApplicationService.payLicenseRenewalFee(String(context.id), new FormData());
+        }
         return this.licenseApplicationService.payNewLicenseFee(String(context.id), new FormData());
       case 'security_deposit':
+        if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
+          return this.licenseApplicationService.payLicenseRenewalSecurityFee(String(context.id));
+        }
         return this.licenseApplicationService.payNewLicenseSecurityFee(String(context.id));
       default:
         return of({});

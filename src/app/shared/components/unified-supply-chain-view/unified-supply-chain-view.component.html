@@ -1364,6 +1364,152 @@
                 </div>
                 }
 
+                @if (isRenewal()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Renewal & License Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Renewal Application No</td>
+                                    <td>{{ applicationData.referenceNo || applicationData['application_id'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Old License No</td>
+                                    <td>{{ applicationData['license_id_display'] || applicationData['old_license_id'] || applicationData['oldLicenseId'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Old License Issue Date</td>
+                                    <td>{{ (applicationData['old_license_issue_date'] | date: "dd-MM-yyyy") || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Old License Valid Up To</td>
+                                    <td>{{ (applicationData['old_license_valid_up_to'] | date: "dd-MM-yyyy") || (applicationData['valid_up_to'] | date: "dd-MM-yyyy") || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Type</td>
+                                    <td>{{ applicationData.license_type_name || applicationData.licenseTypeName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Category</td>
+                                    <td>{{ applicationData.license_category_name || applicationData.licenseCategoryName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Sub Category</td>
+                                    <td>{{ applicationData.license_sub_category_name || applicationData.licenseSubCategoryName || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Applicant & Establishment Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Establishment Name</td>
+                                    <td>{{ applicationData.establishment_name || applicationData.establishmentName || applicationData.applicant_name || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Applicant Name</td>
+                                    <td>{{ applicationData.applicant_name || applicationData.applicantName || applicationData['licensee_name'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Mobile / Email</td>
+                                    <td>{{ (applicationData.mobileNumber || applicationData.mobile_number || 'NA') + ' / ' + (applicationData.emailId || applicationData['email_id'] || applicationData.email || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN / Aadhaar</td>
+                                    <td>{{ (applicationData.pan || 'NA') + ' / ' + (applicationData.aadhaar || applicationData['aadhar'] || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Applicant Address</td>
+                                    <td>{{ applicationData.address || applicationData['applicant_address'] || applicationData['applicantAddress'] || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Site Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">District</td>
+                                    <td>{{ applicationData.site_district_name || applicationData.siteDistrictName || applicationData.excise_district || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Subdivision</td>
+                                    <td>{{ applicationData.site_subdivision_name || applicationData.siteSubdivisionName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Police Station</td>
+                                    <td>{{ applicationData.police_station_name || applicationData.policeStationName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Type</td>
+                                    <td>{{ applicationData.site_type || applicationData['siteType'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Road Name</td>
+                                    <td>{{ applicationData.road_name || applicationData.roadName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Pin Code</td>
+                                    <td>{{ applicationData.pin_code || applicationData.pinCode || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Construction Type</td>
+                                    <td>{{ applicationData.construction_type || applicationData.constructionType || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Length / Breadth</td>
+                                    <td>{{ (applicationData.length || 'NA') + ' / ' + (applicationData.breadth || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Owned</td>
+                                    <td>{{ applicationData.site_owned || applicationData.siteOwned || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">NOC Obtained</td>
+                                    <td>{{ applicationData.noc_obtained || applicationData.nocObtained || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Renewal Fee & Payment Status</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">License Fee</td>
+                                    <td>Rs {{ applicationData['license_fee_amount'] || applicationData['licenseFeeAmount'] || applicationData.yearly_license_fee || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Security Deposit</td>
+                                    <td>Rs {{ applicationData['security_fee_amount'] || applicationData['securityFeeAmount'] || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Fee Paid</td>
+                                    <td>{{ applicationData['is_license_fee_paid'] || applicationData['isLicenseFeePaid'] ? 'Yes' : 'No' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Security Fee Paid</td>
+                                    <td>{{ applicationData['is_security_fee_paid'] || applicationData['isSecurityFeePaid'] ? 'Yes' : 'No' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
                 @if (isSalesmanBarmanRegistration()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Salesman/Barman Applicant Information</h5>

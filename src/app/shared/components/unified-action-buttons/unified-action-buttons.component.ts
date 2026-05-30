@@ -846,6 +846,20 @@ private getTransitRejectSummary(): {
     return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
   }
 
+  private isAwaitingRenewalPaymentForLicensee(): boolean {
+    if (this.itemType !== 'license-renewal') return false;
+    if (this.context !== 'licensee') return false;
+    if (!this.isCurrentUserLicensee()) return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
   private isAwaitingSalesmanBarmanPaymentForLicensee(): boolean {
     if (this.itemType !== 'salesman-barman-registration') return false;
     if (this.context !== 'licensee') return false;
@@ -873,7 +887,12 @@ private getTransitRejectSummary(): {
   }
 
   private handleNewLicenseMakePaymentAction(): void {
-    if (!this.isAwaitingNewLicensePaymentForLicensee()) {
+    const isRenewal = this.itemType === 'license-renewal';
+    const isPaymentAllowed = isRenewal
+      ? this.isAwaitingRenewalPaymentForLicensee()
+      : this.isAwaitingNewLicensePaymentForLicensee();
+
+    if (!isPaymentAllowed) {
       Swal.fire('Not Available', 'Payment is only available when the application is awaiting license fee/security deposit payment.', 'info');
       return;
     }
@@ -1013,12 +1032,12 @@ private getTransitRejectSummary(): {
             action: 'pay',
             tab: 'license_fee',
             id: applicationId,
-            type: 'new-license',
+            type: isRenewal ? 'license-renewal' : 'new-license',
             ref: applicationId,
             referenceNo: applicationId,
             amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
             securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
-            source: 'new-license'
+            source: isRenewal ? 'license-renewal' : 'new-license'
           }
         });
       });
@@ -1033,7 +1052,11 @@ private getTransitRejectSummary(): {
       didOpen: () => Swal.showLoading()
     });
 
-    this.workflowActionService.getNewLicenseApplicationDetail(applicationId).subscribe({
+    const detail$ = isRenewal
+      ? this.workflowActionService.getLicenseRenewalApplicationDetail(applicationId)
+      : this.workflowActionService.getNewLicenseApplicationDetail(applicationId);
+
+    detail$.subscribe({
       next: (detail: any) => {
         Swal.close();
         void showProceedModal(detail || this.item);
@@ -1579,6 +1602,20 @@ private getTransitRejectSummary(): {
           icon: 'payment',
           color: 'primary',
           tooltip: 'Pay license fee and security deposit from wallet'
+        });
+      }
+    }
+
+    if (this.isAwaitingRenewalPaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay renewal license fee and security deposit from wallet'
         });
       }
     }
