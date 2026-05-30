@@ -293,6 +293,23 @@ export class UnifiedActionsService {
       case 'salesman-barman-registration':
         return this.executeWorkflowAdvance(item, 'approve', 'Approved', options?.workflowContextData);
 
+      case 'license-renewal':
+        return this.toActionResult(
+          this.http.post<any>(
+            `${environment.apiBaseUrl}/transactional/license_renewal_application/${encodeURIComponent(this.getWorkflowApplicationId(item))}/approve/`,
+            {
+              remarks: 'Approved',
+              context_data: {
+                action: 'APPROVE',
+                ...(options?.workflowContextData ?? {})
+              }
+            },
+            { headers: new HttpHeaders({ Accept: 'application/json' }) }
+          ),
+          'Renewal application approved successfully',
+          'Failed to approve renewal application'
+        );
+
       default:
         return of({
           success: false,
@@ -355,6 +372,17 @@ export class UnifiedActionsService {
       case 'company-collaboration':
       case 'salesman-barman-registration':
         return this.executeWorkflowReject(item, reason);
+
+      case 'license-renewal':
+        return this.toActionResult(
+          this.http.post<any>(
+            `${environment.apiBaseUrl}/transactional/license_renewal_application/${encodeURIComponent(this.getWorkflowApplicationId(item))}/reject/`,
+            { remarks: reason },
+            { headers: new HttpHeaders({ Accept: 'application/json' }) }
+          ),
+          'Renewal application rejected successfully',
+          'Failed to reject renewal application'
+        );
 
       default:
         return of({
@@ -1256,9 +1284,11 @@ export class UnifiedActionsService {
     }
 
     if (mode === 'approve') {
+      const approveAction = byAction('APPROVE');
+      const forwardAction = byAction('FORWARD');
       return (
-        byAction('APPROVE') ||
-        byAction('FORWARD') ||
+        (approveAction && !hasSpecialConditionalFlag(approveAction) ? approveAction : null) ||
+        (forwardAction && !hasSpecialConditionalFlag(forwardAction) ? forwardAction : null) ||
         byName('approved', (s) => !hasSpecialConditionalFlag(s)) ||
         byName('payment', (s) => !hasSpecialConditionalFlag(s)) ||
         firstSafeNonRejectStage()

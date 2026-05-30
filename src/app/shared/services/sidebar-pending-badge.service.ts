@@ -80,7 +80,7 @@ export class SidebarPendingBadgeService {
 
       case 'license-renewal':
       case 'license-renewal-application':
-        return this.fetchDashboardCount(`${this.apiBase}/license_application/dashboard-counts/`, audience);
+        return this.fetchDashboardCount(`${this.apiBase}/license_renewal_application/dashboard-counts/`, audience);
 
       case 'requisition':
         if (mode === 'light') return of(0);

@@ -119,7 +119,7 @@ export class UnifiedDashboardService {
   }
 
   getUnifiedDashboardCounts(config?: DashboardConfig): Observable<DashboardCount> {
-    const enabledTypes = this.inferEnabledTypesFromConfig(config);
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal']));
     const cacheKey = enabledTypes.slice().sort().join('|');
     if (this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
       return this.unifiedCountsCache$;
@@ -206,7 +206,7 @@ export class UnifiedDashboardService {
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-    const enabledTypes = this.inferEnabledTypesFromConfig(config);
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal']));
     const cacheKey = enabledTypes.slice().sort().join('|');
 
     if (!forceRefresh && this.unifiedAppsCache$ && this.unifiedAppsCacheKey === cacheKey) {

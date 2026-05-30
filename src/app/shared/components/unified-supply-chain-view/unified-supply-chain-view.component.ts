@@ -3300,7 +3300,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isCancellation(): boolean { return this.applicationType === 'cancellation'; }
     isTransit(): boolean { return this.applicationType === 'transit'; }
     isHologram(): boolean { return this.applicationType === 'hologram'; }
-    isNewLicense(): boolean { return this.applicationType === 'new-license' || this.applicationType === 'license-renewal'; }
+    isNewLicense(): boolean { return this.applicationType === 'new-license'; }
+    isRenewal(): boolean { return this.applicationType === 'license-renewal'; }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
