@@ -11,9 +11,10 @@ import { MatDialog } from '@angular/material/dialog';
 import { ViewApplicationComponent } from '../licensee-dashboard/application-table/view-application/view-application.component';
 import { PrintApplicationComponent } from '../licensee-dashboard/application-table/print-application/print-application.component';
 import { NavigationStart, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { of, Subscription } from 'rxjs';
+import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
 import Swal from 'sweetalert2';
+import { TimerConfig, TimerConfigService } from '../../../core/services/timer-config.service';
 
 @Component({
   selector: 'app-my-licenses',
@@ -27,12 +28,14 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   displayedColumns: string[] = ['slNo', 'applicationId', 'type', 'establishmentName', 'approvalDate', 'actions'];
   isLoading = false;
   private routerSub?: Subscription;
+  private readonly renewalReminderTimerCode = 'LICENSE_RENEWAL_REMINDER_TIMER';
 
   constructor(
     public dialogRef: MatDialogRef<MyLicensesComponent>,
     private unifiedDashboardService: UnifiedDashboardService,
     private licenseApplicationService: LicenseApplicationService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
+    private timerConfigService: TimerConfigService,
     private dialog: MatDialog,
     private router: Router
   ) { }
@@ -51,6 +54,150 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
+  }
+
+  private renewLicenseUsingTimer(application: UnifiedApplication): void {
+    const fallbackSeconds = 90 * 24 * 60 * 60;
+    const summaryValidUpTo = this.extractValidUpToDate(application.raw || {});
+
+    const app$ = summaryValidUpTo
+      ? of(application)
+      : this.unifiedDashboardService.getApplicationDetail(application.applicationId, application.type).pipe(
+          catchError(() => of(application))
+        );
+
+    app$
+      .pipe(
+        take(1),
+        switchMap((app) =>
+          this.timerConfigService.getTimerConfig(this.renewalReminderTimerCode, fallbackSeconds).pipe(
+            take(1),
+            map((timer) => ({ app, timer }))
+          )
+        )
+      )
+      .subscribe(({ app, timer }) => {
+        const raw = app.raw || {};
+        const validUpTo = this.extractValidUpToDate(raw) || summaryValidUpTo;
+
+        if (validUpTo && !this.isRenewalAllowed(validUpTo, timer)) {
+          const windowLabel = this.getTimerWindowLabel(timer);
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Renewal Request',
+            html: `
+              <p>Renewal not allowed yet. License valid until ${this.formatDDMMYYYY(validUpTo)}.</p>
+              <p>You can renew within the last ${windowLabel} or after expiry.</p>
+            `
+          });
+          return;
+        }
+
+        const renewalId = this.extractLicenseId(raw, app);
+        if (!renewalId) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Cannot Renew',
+            html: `
+              <p><strong>This license cannot be renewed yet.</strong></p>
+              <p>Possible reasons:</p>
+              <ul style="text-align: left; margin: 10px 20px;">
+                <li>The license has not been issued yet</li>
+                <li>The application is still under approval</li>
+                <li>License data is incomplete</li>
+              </ul>
+              <p style="margin-top: 10px;"><small>Application ID: ${app.applicationId}</small></p>
+            `
+          });
+          return;
+        }
+
+        Swal.fire({
+          title: 'Renew License?',
+          html: `
+            <div style="text-align: left; padding: 10px;">
+              <p>Are you sure you want to renew this license?</p>
+              <p><strong>License ID:</strong> ${renewalId}</p>
+              <p><strong>Type:</strong> ${this.getTypeLabel(app)}</p>
+            </div>
+          `,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Yes, Renew License'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.processRenewal(renewalId!, app.type);
+          }
+        });
+      });
+  }
+
+  private extractValidUpToDate(raw: any): Date | null {
+    const value =
+      raw?.valid_up_to ??
+      raw?.validUpTo ??
+      raw?.valid_upto ??
+      raw?.valid_until ??
+      raw?.validUntil ??
+      null;
+
+    if (!value) return null;
+    if (value instanceof Date) return value;
+
+    const str = String(value).trim();
+    if (!str) return null;
+
+    const dmY = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+    if (dmY) {
+      const dd = Number(dmY[1]);
+      const mm = Number(dmY[2]);
+      const yyyy = Number(dmY[3]);
+      const dt = new Date(yyyy, mm - 1, dd);
+      return Number.isFinite(dt.getTime()) ? dt : null;
+    }
+
+    const dt = new Date(str);
+    return Number.isFinite(dt.getTime()) ? dt : null;
+  }
+
+  private isRenewalAllowed(validUpTo: Date, timer: TimerConfig): boolean {
+    const validMs = validUpTo.getTime();
+    const now = Date.now();
+    if (!Number.isFinite(validMs)) return true;
+
+    const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
+    if (!windowMs) return true;
+
+    if (now > validMs) return true;
+
+    const eligibleFrom = validMs - windowMs;
+    return now >= eligibleFrom;
+  }
+
+  private formatDDMMYYYY(date: Date): string {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(date.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  private getTimerWindowLabel(timer: TimerConfig): string {
+    const unitRaw = String(timer?.delay_unit ?? '').toLowerCase().trim();
+    const value = Number(timer?.delay_value ?? 0);
+    if (Number.isFinite(value) && value > 0 && unitRaw) {
+      const unit = unitRaw.endsWith('s') ? unitRaw.slice(0, -1) : unitRaw;
+      return `${value} ${unit}${value === 1 ? '' : 's'}`;
+    }
+
+    const seconds = Math.max(0, Number(timer?.delay_seconds ?? 0) || 0);
+    if (!seconds) return '0 days';
+    if (seconds % (24 * 60 * 60) === 0) {
+      const days = seconds / (24 * 60 * 60);
+      return `${days} day${days === 1 ? '' : 's'}`;
+    }
+    return `${seconds} second${seconds === 1 ? '' : 's'}`;
   }
 
   loadMyLicenses(): void {
@@ -144,6 +291,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   }
 
   renewLicense(application: UnifiedApplication): void {
+    // Dynamic renewal eligibility window (from DB timer config).
+    // Falls back to 90 days if timer config is missing/unavailable.
+    this.renewLicenseUsingTimer(application);
+    return;
     const raw = application.raw || {};
     
     // 🔍 COMPREHENSIVE DEBUG LOGGING
