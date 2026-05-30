@@ -42,7 +42,7 @@
             </button>
 
             <!-- License Renewal Applications -->
-            <button class="nav-item new-license-nav-item" (click)="navigateToSupplyChain('license-renewal')" [class.active]="isDashboardSectionActive('license-renewal')">
+            <button class="nav-item license-renewal-nav-item" (click)="navigateToSupplyChain('license-renewal')" [class.active]="isDashboardSectionActive('license-renewal')">
               <mat-icon class="nav-icon">autorenew</mat-icon>
               <span class="nav-text">License Renewal</span>
               <span class="nav-badge" *ngIf="getPendingCount('license-renewal') as pending">{{ pending }}</span>

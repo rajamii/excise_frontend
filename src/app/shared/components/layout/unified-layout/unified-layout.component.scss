@@ -334,18 +334,22 @@
       order: 2;
     }
 
-    > .wallet-nav-item {
+    > .license-renewal-nav-item {
       order: 3;
+    }
+
+    > .wallet-nav-item {
+      order: 4;
     }
 
     // Bulk Spirit toggle button — sits right after Wallet (order 3.5 → 4)
     > .bulk-spirit-nav-item {
-      order: 4;
+      order: 5;
     }
 
     // Sub-items inside the Bulk Spirit group
     > ng-container {
-      order: 4;
+      order: 5;
     }
   }
 
