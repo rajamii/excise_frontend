@@ -23,11 +23,6 @@
             <mat-cell *matCellDef="let item">{{ item.distributorName || '—' }}</mat-cell>
           </ng-container>
 
-          <ng-container matColumnDef="manufacturingUnit">
-            <mat-header-cell *matHeaderCellDef>Manufacturing Unit</mat-header-cell>
-            <mat-cell *matCellDef="let item">{{ item.manufacturingUnit || '—' }}</mat-cell>
-          </ng-container>
-
           <ng-container matColumnDef="depoAddress">
             <mat-header-cell *matHeaderCellDef>Depot Address</mat-header-cell>
             <mat-cell *matCellDef="let item">{{ item.depoAddress || '—' }}</mat-cell>
@@ -56,4 +51,3 @@
     </mat-card-content>
   </mat-card>
 </div>
-

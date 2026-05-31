@@ -16,7 +16,7 @@ import { ManageComponent } from '../manage/manage.component';
   styleUrl: './list.component.scss',
 })
 export class ListComponent implements OnInit {
-  displayedColumns: string[] = ['licenseId', 'distributorName', 'manufacturingUnit', 'depoAddress', 'actions'];
+  displayedColumns: string[] = ['licenseId', 'distributorName', 'depoAddress', 'actions'];
   rows: TransitPermitDistributorData[] = [];
 
   /** license_id → establishmentName */
@@ -102,4 +102,3 @@ export class ListComponent implements OnInit {
     });
   }
 }
-
