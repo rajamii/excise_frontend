@@ -65,17 +65,17 @@
                 <mat-icon class="nav-chevron">{{ bulkSpiritExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="bulkSpiritExpanded">
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
+                <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Requisition</span>
                   <span class="nav-badge" *ngIf="getPendingCount('requisition') as cnt">{{ cnt }}</span>
                 </button>
-                <button class="nav-item nav-item--sub" *ngIf="!isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
+                <button class="nav-item nav-item--sub bulk-spirit-sub-item" *ngIf="!isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
                   <mat-icon class="nav-icon">refresh</mat-icon>
                   <span class="nav-text">Revalidation</span>
                   <span class="nav-badge" *ngIf="getPendingCount('revalidation') as cnt">{{ cnt }}</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
+                <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
                   <mat-icon class="nav-icon">cancel</mat-icon>
                   <span class="nav-text">Cancellation</span>
                   <span class="nav-badge" *ngIf="getPendingCount('cancellation') as cnt">{{ cnt }}</span>
@@ -84,14 +84,14 @@
             </ng-container>
 
             <!-- Brewery + Distillery common items -->
-            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('transit')" [class.active]="isDashboardSectionActive('transit')">
+            <button class="nav-item transit-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('transit')" [class.active]="isDashboardSectionActive('transit')">
               <mat-icon class="nav-icon">local_shipping</mat-icon>
               <span class="nav-text">{{ getSidebarLabel('transit') }}</span>
             </button>
 
             <!-- Hologram group -->
             <ng-container *ngIf="showBreweryOrDistilleryMenus">
-              <button class="nav-item bulk-spirit-nav-item" (click)="hologramExpanded = !hologramExpanded"
+              <button class="nav-item bulk-spirit-nav-item hologram-nav-item" (click)="hologramExpanded = !hologramExpanded"
                 [class.active]="hologramExpanded && (isDashboardSectionActive('hologram') || isDashboardSectionActive('hologram-request') || isDashboardSectionActive('hologram-daily-entry') || isDashboardSectionActive('monthly-hologram-statement') || isDashboardSectionActive('hologram-inventory'))"
                 [class.group-expanded]="hologramExpanded">
                 <mat-icon class="nav-icon">qr_code_2</mat-icon>
@@ -100,27 +100,27 @@
                 <mat-icon class="nav-chevron">{{ hologramExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="hologramExpanded">
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
                   <mat-icon class="nav-icon">qr_code</mat-icon>
                   <span class="nav-text">New Procurement</span>
                   <span class="nav-badge" *ngIf="getPendingCount('hologram') as cnt">{{ cnt }}</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
                   <mat-icon class="nav-icon">add_box</mat-icon>
                   <span class="nav-text">Request</span>
                   <span class="nav-badge" *ngIf="getPendingCount('hologram-request') as cnt">{{ cnt }}</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')" *ngIf="!isLicenseeUser()">
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">today</mat-icon>
                   <span class="nav-text">Daily Entry</span>
                   <span class="nav-badge" *ngIf="getPendingCount('hologram-daily-entry') as cnt">{{ cnt }}</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('monthly-hologram-statement')" [class.active]="isDashboardSectionActive('monthly-hologram-statement')" *ngIf="!isLicenseeUser()">
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('monthly-hologram-statement')" [class.active]="isDashboardSectionActive('monthly-hologram-statement')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Monthly Statement</span>
                   <span class="nav-badge" *ngIf="getPendingCount('monthly-hologram-statement') as cnt">{{ cnt }}</span>
                 </button>
-                <button class="nav-item nav-item--sub" (click)="navigateToSupplyChain('hologram-inventory')" [class.active]="isDashboardSectionActive('hologram-inventory')" *ngIf="!isLicenseeUser()">
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-inventory')" [class.active]="isDashboardSectionActive('hologram-inventory')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">inventory_2</mat-icon>
                   <span class="nav-text">Inventory</span>
                   <span class="nav-badge" *ngIf="getPendingCount('hologram-inventory') as cnt">{{ cnt }}</span>
@@ -128,7 +128,7 @@
               </ng-container>
             </ng-container>
 
-            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('stock-inventory')" [class.active]="isDashboardSectionActive('stock-inventory')">
+            <button class="nav-item stock-inventory-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('stock-inventory')" [class.active]="isDashboardSectionActive('stock-inventory')">
               <mat-icon class="nav-icon">inventory</mat-icon>
               <span class="nav-text">Stock Inventory</span>
             </button>
@@ -173,27 +173,27 @@
               </mat-expansion-panel>
             </div> -->
 
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('company')" [class.active]="isDashboardSectionActive('company-registration')">
+            <button class="nav-item company-registration-nav-item" (click)="navigateToLicenseeRegistration('company')" [class.active]="isDashboardSectionActive('company-registration')">
               <mat-icon class="nav-icon">apartment</mat-icon>
               <span class="nav-text">Company Registration</span>
             </button>
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
+            <button class="nav-item company-collaboration-nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
               <mat-icon class="nav-icon">groups</mat-icon>
               <span class="nav-text">Company Collaboration</span>
             </button>
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
+            <button class="nav-item salesman-barman-registration-nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
               <span class="nav-badge" *ngIf="getPendingCount('salesman-barman-registration') as pending">{{ pending }}</span>
             </button>
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
+            <button class="nav-item label-registration-nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
             "isDashboardSectionActive('label-registration')">
               <mat-icon class="nav-icon">label</mat-icon>
               <span class="nav-text">Label Registration</span>
             </button>
 
             <!-- License Activity — last item for licensees -->
-            <button class="nav-item" (click)="navigateToSupplyChain('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
+            <button class="nav-item license-activity-nav-item" (click)="navigateToSupplyChain('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
               <mat-icon class="nav-icon">assignment</mat-icon>
               <span class="nav-text">License Activity</span>
             </button>

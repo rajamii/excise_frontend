@@ -323,7 +323,8 @@
     flex-direction: column !important;
 
     > .nav-item {
-      order: 4;
+      // Default: keep unclassified items last.
+      order: 100;
     }
 
     > .dashboard-nav-item {
@@ -347,9 +348,44 @@
       order: 5;
     }
 
-    // Sub-items inside the Bulk Spirit group
-    > ng-container {
-      order: 5;
+    > .bulk-spirit-sub-item {
+      order: 6;
+    }
+
+    > .transit-nav-item {
+      order: 7;
+    }
+
+    > .hologram-nav-item {
+      order: 8;
+    }
+
+    > .hologram-sub-item {
+      order: 9;
+    }
+
+    > .stock-inventory-nav-item {
+      order: 10;
+    }
+
+    > .company-registration-nav-item {
+      order: 20;
+    }
+
+    > .company-collaboration-nav-item {
+      order: 21;
+    }
+
+    > .salesman-barman-registration-nav-item {
+      order: 22;
+    }
+
+    > .label-registration-nav-item {
+      order: 23;
+    }
+
+    > .license-activity-nav-item {
+      order: 30;
     }
   }
 
