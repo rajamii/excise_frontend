@@ -550,6 +550,10 @@ export class MasterService {
     return this.http.get(`${this.LIQUOR_DATA_URL}/bottle-types/?active_only=${activeFlag}`);
   }
 
+  getLiquorTypes(): Observable<any> {
+    return this.http.get(`${this.LIQUOR_DATA_URL}/liquor-types/`);
+  }
+
   getMasterBrands(q = ''): Observable<any> {
     const query = String(q || '').trim();
     const suffix = query ? `?q=${encodeURIComponent(query)}` : '';

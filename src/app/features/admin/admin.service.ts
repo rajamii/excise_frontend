@@ -373,6 +373,18 @@ export class AdminService {
     return this.http.delete(`${this.supplyChainUrl}/liquor-data/bottle-types/${id}/`);
   }
 
+  addMasterLiquorType(payload: { liquor_type: string }): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/liquor-data/liquor-types/`, payload);
+  }
+
+  updateMasterLiquorType(id: number, changes: { liquor_type: string }): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/liquor-data/liquor-types/${id}/`, changes);
+  }
+
+  deleteMasterLiquorType(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/liquor-data/liquor-types/${id}/`);
+  }
+
   // ========================== LICENSE TERMS (LEGACY CODES) ==========================
 
   getLicenseFormTerms(licenseeCatCode: number, licenseeScatCode: number): Observable<LicenseFormTermsResponse> {

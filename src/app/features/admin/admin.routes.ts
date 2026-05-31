@@ -220,6 +220,15 @@ const routes: Routes = [
             data: { authorities: ['site_admin'] },
           },
           {
+            path: 'hologram/master-liquor-type',
+            loadComponent: () =>
+              import('./master/hologram/master-liquor-type/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'hologram/brands',
             loadComponent: () =>
               import('./master/hologram/brands/brands.component').then((m) => m.BrandsComponent),

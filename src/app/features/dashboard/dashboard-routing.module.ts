@@ -168,6 +168,13 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/hologram/master-liquor-type',
+        loadComponent: () =>
+          import('../admin/master/hologram/master-liquor-type/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/hologram/brands',
         loadComponent: () =>
           import('../admin/master/hologram/brands/brands.component').then((m) => m.BrandsComponent),

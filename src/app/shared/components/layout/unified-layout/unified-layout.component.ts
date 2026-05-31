@@ -143,13 +143,26 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Initialize user info first
     this.initializeUserAndAuth();
 
+    // Auto-expand admin groups based on current route
+    const currentPath = this.router.url.split('?')[0];
+    if (currentPath.startsWith('/dashboard/admin/hologram')) {
+      this.adminHologramExpanded = true;
+    }
+    if (currentPath.startsWith('/dashboard/admin/bulk-spirit')) {
+      this.adminBulkSpiritExpanded = true;
+    }
+
     // Auto-close the sidebar after navigation from menu selections.
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntil(this.destroy$)
       )
-      .subscribe(() => {
+      .subscribe((event: any) => {
+        const path = (event.urlAfterRedirects || event.url || '').split('?')[0];
+        if (path.startsWith('/dashboard/admin/hologram')) {
+          this.adminHologramExpanded = true;
+        }
         if (this.isSidenavOpen) {
           this.closeSidenav();
         }
