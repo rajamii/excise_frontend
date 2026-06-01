@@ -700,7 +700,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.selectedSupplyChainSection !== 'wallet') {
       return 'wallets';
     }
-    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+    // Only force "others" when wallet eligibility is fully resolved and we know the user
+    // does not have access to the distillery/brewery wallet views. Otherwise, default to
+    // "wallets" for a friendlier first-load.
+    if (
+      this.isLicenseeUser() &&
+      this.licenseeMenuAccessResolved &&
+      this.walletEligibilityResolved &&
+      !this.showBreweryOrDistilleryWalletViews
+    ) {
       return 'others';
     }
     const value = String(params?.walletView || '').trim().toLowerCase();
@@ -717,7 +725,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.licenseeMenuAccessResolved) {
       return;
     }
-    if (this.showBreweryOrDistilleryWalletViews) {
+    if (!this.walletEligibilityResolved || this.showBreweryOrDistilleryWalletViews) {
       return;
     }
 
@@ -748,7 +756,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   setWalletViewMode(mode: 'wallets' | 'others'): void {
-    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+    if (
+      this.isLicenseeUser() &&
+      this.licenseeMenuAccessResolved &&
+      this.walletEligibilityResolved &&
+      !this.showBreweryOrDistilleryWalletViews
+    ) {
       mode = 'others';
     }
     if (!mode || this.walletViewMode === mode) return;
@@ -1798,7 +1811,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Open wallet dialog
   openWallet(): void {
     const walletView =
-      this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews
+      this.isLicenseeUser() &&
+      this.licenseeMenuAccessResolved &&
+      this.walletEligibilityResolved &&
+      !this.showBreweryOrDistilleryWalletViews
         ? 'others'
         : 'wallets';
     this.router.navigate(['/dashboard'], {
