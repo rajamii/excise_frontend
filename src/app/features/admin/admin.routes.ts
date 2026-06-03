@@ -317,6 +317,17 @@ const routes: Routes = [
               contactUsCategory: 'grievanceRedressalOfficer',
             },
           },
+          {
+            path: 'license-validity-period',
+            loadComponent: () =>
+              import('./master/license-validity-period/license-validity-period.component').then(
+                (m) => m.LicenseValidityPeriodComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+            },
+          },
         ]
       },
     ],

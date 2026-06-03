@@ -1,0 +1,217 @@
+<div class="lvp-wrapper">
+
+  <!-- Page Header -->
+  <div class="lvp-page-header">
+    <div class="lvp-page-header__icon">
+      <mat-icon>event_available</mat-icon>
+    </div>
+    <div>
+      <h2 class="lvp-page-header__title">License Validity Period</h2>
+      <p class="lvp-page-header__subtitle">Configure the exact date and time when licenses expire annually.</p>
+    </div>
+  </div>
+
+  <!-- Loading Skeleton -->
+  <div *ngIf="isLoading" class="lvp-card">
+    <div class="lvp-skeleton"></div>
+  </div>
+
+  <!-- Summary Table Card -->
+  <div *ngIf="!isLoading" class="lvp-card">
+
+    <!-- Card Title Bar -->
+    <div class="lvp-card__header">
+      <mat-icon class="lvp-card__header-icon">calendar_month</mat-icon>
+      <span class="lvp-card__header-title">Current Expiry Configuration</span>
+    </div>
+
+    <!-- Table -->
+    <div class="lvp-table-wrap">
+      <table class="lvp-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>
+              <mat-icon class="th-icon">calendar_today</mat-icon>
+              Renewal Month
+            </th>
+            <th>
+              <mat-icon class="th-icon">today</mat-icon>
+              Renewal Day
+            </th>
+            <th>
+              <mat-icon class="th-icon">schedule</mat-icon>
+              Renewal Time
+            </th>
+            <th>
+              <mat-icon class="th-icon">event</mat-icon>
+              Expiry Date Preview
+            </th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="lvp-table__index">1</td>
+            <td>
+              <span class="lvp-badge lvp-badge--month">
+                <mat-icon>calendar_month</mat-icon>
+                {{ getMonthName(config.renewalMonth) }}
+                <em>({{ config.renewalMonth }})</em>
+              </span>
+            </td>
+            <td>
+              <span class="lvp-badge lvp-badge--day">
+                <mat-icon>today</mat-icon>
+                {{ config.renewalDay | number:'2.0-0' }}
+                <em>{{ getDaySuffix(config.renewalDay) }}</em>
+              </span>
+            </td>
+            <td>
+              <span class="lvp-badge lvp-badge--time">
+                <mat-icon>schedule</mat-icon>
+                {{ config.renewalTime }}
+              </span>
+            </td>
+            <td>
+              <span class="lvp-badge lvp-badge--preview">
+                <mat-icon>event</mat-icon>
+                {{ getPreviewDate() }}
+              </span>
+            </td>
+            <td>
+              <button mat-raised-button color="accent" class="lvp-update-btn" (click)="openEditDialog()">
+                <mat-icon>edit</mat-icon>
+                Update
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer note -->
+    <div class="lvp-card__footer">
+      <mat-icon>info_outline</mat-icon>
+      <span>Changes apply globally to all license renewal cycles.</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─────────────── Edit Dialog Template ─────────────── -->
+<ng-template #editDialogTpl>
+  <div class="lvp-dialog">
+
+    <!-- Dialog Header -->
+    <div class="lvp-dialog__header">
+      <div class="lvp-dialog__header-icon">
+        <mat-icon>edit_calendar</mat-icon>
+      </div>
+      <div>
+        <h3 class="lvp-dialog__title">Update License Validity Period</h3>
+        <p class="lvp-dialog__subtitle">Adjust the expiry date and time for all licenses.</p>
+      </div>
+      <button mat-icon-button class="lvp-dialog__close" (click)="closeDialog()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- Dialog Body -->
+    <form #editForm="ngForm" class="lvp-dialog__body">
+
+      <!-- Month Row -->
+      <div class="lvp-dialog__field-group">
+        <div class="lvp-dialog__field-label">
+          <mat-icon>calendar_month</mat-icon>
+          Renewal Month
+        </div>
+        <mat-form-field appearance="outline" class="lvp-dialog__field">
+          <mat-label>Month (1 – 12)</mat-label>
+          <input matInput type="number" name="renewalMonth" required
+                 min="1" max="12"
+                 [(ngModel)]="editConfig.renewalMonth"
+                 #monthModel="ngModel" />
+          <mat-hint>January = 1 &nbsp;•&nbsp; December = 12</mat-hint>
+          <mat-error *ngIf="monthModel.errors?.['required']">Month is required</mat-error>
+          <mat-error *ngIf="monthModel.errors?.['min'] || monthModel.errors?.['max']">Must be between 1 and 12</mat-error>
+        </mat-form-field>
+        <div class="lvp-dialog__preview-chip" *ngIf="editConfig.renewalMonth >= 1 && editConfig.renewalMonth <= 12">
+          <mat-icon>check_circle</mat-icon>
+          {{ getMonthName(editConfig.renewalMonth) }}
+        </div>
+      </div>
+
+      <!-- Day Row -->
+      <div class="lvp-dialog__field-group">
+        <div class="lvp-dialog__field-label">
+          <mat-icon>today</mat-icon>
+          Renewal Day
+        </div>
+        <mat-form-field appearance="outline" class="lvp-dialog__field">
+          <mat-label>Day (1 – 31)</mat-label>
+          <input matInput type="number" name="renewalDay" required
+                 min="1" max="31"
+                 [(ngModel)]="editConfig.renewalDay"
+                 #dayModel="ngModel" />
+          <mat-hint>E.g. 31 for last day of month</mat-hint>
+          <mat-error *ngIf="dayModel.errors?.['required']">Day is required</mat-error>
+          <mat-error *ngIf="dayModel.errors?.['min'] || dayModel.errors?.['max']">Must be between 1 and 31</mat-error>
+        </mat-form-field>
+        <div class="lvp-dialog__preview-chip" *ngIf="editConfig.renewalDay >= 1 && editConfig.renewalDay <= 31">
+          <mat-icon>check_circle</mat-icon>
+          {{ editConfig.renewalDay }}{{ getDaySuffix(editConfig.renewalDay) }}
+        </div>
+      </div>
+
+      <!-- Time Row -->
+      <div class="lvp-dialog__field-group">
+        <div class="lvp-dialog__field-label">
+          <mat-icon>schedule</mat-icon>
+          Renewal Time
+        </div>
+        <mat-form-field appearance="outline" class="lvp-dialog__field">
+          <mat-label>Time (HH:mm:ss)</mat-label>
+          <input matInput type="time" step="1" name="renewalTime" required
+                 [(ngModel)]="editConfig.renewalTime"
+                 #timeModel="ngModel" />
+          <mat-hint>24-hour format &nbsp;•&nbsp; e.g. 23:59:59 for end of day</mat-hint>
+          <mat-error *ngIf="timeModel.errors?.['required']">Time is required</mat-error>
+        </mat-form-field>
+        <div class="lvp-dialog__preview-chip" *ngIf="editConfig.renewalTime">
+          <mat-icon>check_circle</mat-icon>
+          {{ editConfig.renewalTime }}
+        </div>
+      </div>
+
+      <!-- Summary Preview Banner -->
+      <div class="lvp-dialog__summary" *ngIf="editForm.valid">
+        <mat-icon>event_available</mat-icon>
+        <div>
+          <strong>Expiry Preview:</strong>
+          Licenses will expire on
+          <strong>{{ getMonthName(editConfig.renewalMonth) }} {{ editConfig.renewalDay }}{{ getDaySuffix(editConfig.renewalDay) }}</strong>
+          at
+          <strong>{{ editConfig.renewalTime }}</strong>
+          every year.
+        </div>
+      </div>
+
+    </form>
+
+    <!-- Dialog Actions -->
+    <div class="lvp-dialog__actions">
+      <button mat-stroked-button class="lvp-btn-cancel" (click)="closeDialog()">
+        <mat-icon>cancel</mat-icon> Cancel
+      </button>
+      <button mat-raised-button color="primary" class="lvp-btn-save"
+              [disabled]="editForm.invalid || isSaving"
+              (click)="onSave(editForm)">
+        <mat-spinner *ngIf="isSaving" diameter="18" style="margin-right:6px;"></mat-spinner>
+        <mat-icon *ngIf="!isSaving">save</mat-icon>
+        {{ isSaving ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+
+  </div>
+</ng-template>
