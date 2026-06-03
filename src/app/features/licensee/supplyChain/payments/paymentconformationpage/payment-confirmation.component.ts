@@ -211,8 +211,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     history: 1
   };
   private walletDataLoaded = false;
-  private cancellationDataLoaded = false;
-  private hologramDataLoaded = false;
   pendingWalletPaymentContext: PendingWalletPaymentContext | null = null;
   pendingWalletPaymentPreview: PendingWalletPaymentPreview | null = null;
   private hasHandledPendingWalletPayment = false;
@@ -240,7 +238,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private readonly hologramDeepLinkStorageKey = 'wallet.pending.hologram.ref';
   isBreweryUser = false;
   walletModuleLabel = 'Distillery';
-  private hasManufacturingWalletViewAccess = false;
   showRetryButton = false;
   showTransitPayment = false;
   selectedItem: PaymentItem | null = null;
@@ -467,14 +464,10 @@ private initializeWalletContextAndLoadData(): void {
       const rows = Array.isArray(licenses) ? licenses : [];
       // Find the specific row matching the session ID
       const activeRow = rows.find(r => (r.license_id || r.licenseId) === licenseeId);
-      this.hasManufacturingWalletViewAccess = rows.some((row) => {
-        const moduleType = this.resolveModuleTypeFromLicense(row);
-        return moduleType === 'brewery' || moduleType === 'distillery';
-      });
-       
+      
       const resolvedModuleType = this.resolveModuleTypeFromLicense(activeRow);
       this.applyResolvedModuleType(resolvedModuleType);
-       
+      
       this.loadWalletDataFromBackend(licenseeId);
   });
 }
@@ -486,8 +479,6 @@ private initializeWalletContextAndLoadData(): void {
 
   private loadWalletDataFromBackend(licenseeId: string): void {
     this.walletDataLoaded = false;
-    this.cancellationDataLoaded = false;
-    this.hologramDataLoaded = false;
     this.activeLicenseeId = licenseeId;
     this.exciseWalletBalance = 0;
     this.educationCessBalance = 0;
@@ -529,7 +520,7 @@ private initializeWalletContextAndLoadData(): void {
       this.applyWalletRecharge(response.recharge);
       this.applyWalletHistory(response.history);
       this.walletDataLoaded = true;
-      this.maybeFinalizeDefaultTabSelection();
+      this.applyLastPaidTabAsDefault();
     });
   }
 
@@ -760,8 +751,7 @@ private initializeWalletContextAndLoadData(): void {
 
     // Brewery/distillery use the full "Wallets" tabs; other manufacturing uses the same wallet page in "Others" mode.
     const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
-    const canUseWalletsView = isManufacturing || this.hasManufacturingWalletViewAccess;
-    if (!canUseWalletsView && this.walletViewMode !== 'others') {
+    if (!isManufacturing && this.walletViewMode !== 'others') {
       this.walletViewMode = 'others';
       const currentView = String(this.route.snapshot?.queryParams?.['walletView'] || '').trim().toLowerCase();
       if (currentView !== 'others') {
@@ -1274,14 +1264,8 @@ private initializeWalletContextAndLoadData(): void {
           );
         }
         this.syncPendingPaymentContextWithLatestData();
-        this.hologramDataLoaded = true;
-        this.maybeFinalizeDefaultTabSelection();
       },
-      error: (err) => {
-        console.error('Error fetching hologram payments:', err);
-        this.hologramDataLoaded = true;
-        this.maybeFinalizeDefaultTabSelection();
-      }
+      error: (err) => console.error('Error fetching hologram payments:', err)
     });
   }
 
@@ -1452,14 +1436,8 @@ private initializeWalletContextAndLoadData(): void {
         }
 
         this.syncMissingCancellationWalletDebits(allRows);
-        this.cancellationDataLoaded = true;
-        this.maybeFinalizeDefaultTabSelection();
       },
-      error: (err) => {
-        console.error('Error fetching cancellation data', err);
-        this.cancellationDataLoaded = true;
-        this.maybeFinalizeDefaultTabSelection();
-      }
+      error: (err) => console.error('Error fetching cancellation data', err)
     });
   }
 
@@ -3957,48 +3935,17 @@ private initializeWalletContextAndLoadData(): void {
     this.tableCurrentPageByTab[tab] = page;
   }
 
-  private maybeFinalizeDefaultTabSelection(): void {
+  private applyLastPaidTabAsDefault(): void {
     if (!this.autoSelectLastPaidTabOnLoad) {
       return;
     }
-    if (!this.walletDataLoaded) {
-      return;
-    }
-    // Wait for module lists so we can prefer pending-payment tabs when available.
-    if (!this.cancellationDataLoaded || !this.hologramDataLoaded) {
-      return;
-    }
 
-    if (!this.tryApplyPendingPaymentTabAsDefault()) {
-      const targetTab = this.getLastPaidModuleTab();
-      if (targetTab && this.canShowTab(targetTab)) {
-        this.activeTab = targetTab;
-      }
+    const targetTab = this.getLastPaidModuleTab();
+    if (targetTab && this.canShowTab(targetTab)) {
+      this.activeTab = targetTab;
     }
 
     this.autoSelectLastPaidTabOnLoad = false;
-  }
-
-  private tryApplyPendingPaymentTabAsDefault(): boolean {
-    const pendingTab = this.pendingWalletPaymentContext?.tab;
-    if (pendingTab && this.canShowTab(pendingTab)) {
-      this.activeTab = pendingTab;
-      return true;
-    }
-
-    if (this.walletViewMode === 'wallets') {
-      if (this.canShowTab('cancellation') && Array.isArray(this.cancellationData) && this.cancellationData.length > 0) {
-        this.activeTab = 'cancellation';
-        return true;
-      }
-
-      if (this.canShowTab('hologram') && this.getPendingHologramCount() > 0) {
-        this.activeTab = 'hologram';
-        return true;
-      }
-    }
-
-    return false;
   }
 
   private getLastPaidModuleTab(): 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | '' {
