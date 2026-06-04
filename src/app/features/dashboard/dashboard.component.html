@@ -518,44 +518,47 @@
            [class.rw-expired]="warning.isExpired"
            [class.rw-expiring]="!warning.isExpired">
 
-        <!-- Left accent column with icon -->
-        <div class="rw-left">
+        <!-- Icon section -->
+        <div class="rw-icon-section">
           <div class="rw-icon-wrap">
-            <mat-icon *ngIf="warning.isExpired">cancel</mat-icon>
-            <mat-icon *ngIf="!warning.isExpired">schedule</mat-icon>
+            <mat-icon *ngIf="warning.isExpired">gpp_bad</mat-icon>
+            <mat-icon *ngIf="!warning.isExpired">update</mat-icon>
           </div>
         </div>
 
+        <!-- Divider -->
+        <div class="rw-divider"></div>
+
         <!-- Body -->
         <div class="rw-body">
-          <div class="rw-badge-row">
-            <span class="rw-badge rw-badge--expired"   *ngIf="warning.isExpired">EXPIRED</span>
-            <span class="rw-badge rw-badge--expiring"  *ngIf="!warning.isExpired">RENEWAL OPEN</span>
-          </div>
-
           <ng-container *ngIf="warning.isExpired">
-            <h3 class="rw-title">License Expired</h3>
+            <span class="rw-badge rw-badge--expired">
+              <mat-icon>block</mat-icon> LICENSE EXPIRED
+            </span>
+            <h3 class="rw-title">Your license has expired</h3>
             <p class="rw-desc">
-              Your license <strong>{{ warning.licenseId }}</strong>
+              <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
-              has expired. Please renew to restore full access.
             </p>
             <p class="rw-meta">
               <mat-icon class="rw-meta-icon">event_busy</mat-icon>
-              Expired on <strong class="rw-date rw-date--expired">{{ warning.finalDateStr }}</strong>
+              Expired on&nbsp;<strong class="rw-date rw-date--expired">{{ warning.finalDateStr }}</strong>
+              &nbsp;— Please renew to restore full access.
             </p>
           </ng-container>
 
           <ng-container *ngIf="!warning.isExpired">
-            <h3 class="rw-title">License Renewal Reminder</h3>
+            <span class="rw-badge rw-badge--expiring">
+              <mat-icon>notifications_active</mat-icon> RENEWAL OPEN
+            </span>
+            <h3 class="rw-title">Your license is up for renewal</h3>
             <p class="rw-desc">
-              Your license <strong>{{ warning.licenseId }}</strong>
+              <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
-              is eligible for renewal. The renewal portal is currently open.
             </p>
             <p class="rw-meta">
               <mat-icon class="rw-meta-icon">event_available</mat-icon>
-              Renewal deadline: <strong class="rw-date rw-date--expiring">{{ warning.finalDateStr }}</strong>
+              Renewal portal is open. Deadline:&nbsp;<strong class="rw-date rw-date--expiring">{{ warning.finalDateStr }}</strong>
             </p>
           </ng-container>
         </div>
