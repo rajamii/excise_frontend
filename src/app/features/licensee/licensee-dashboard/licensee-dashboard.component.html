@@ -1,37 +1,6 @@
 <!-- licensee-dashboard.component.html -->
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
-  
-  <div style="background-color: black; color: lime; padding: 10px; margin-bottom: 20px; font-family: monospace; z-index: 9999;">
-    DEBUG INFO: {{ debugString || 'No debug info yet' }}
-  </div>
-
-  <!-- Renewal Warnings Section -->
-  @if (renewalWarnings && renewalWarnings.length > 0) {
-    <div class="renewal-warnings-container">
-      @for (warning of renewalWarnings; track warning.licenseId) {
-        <mat-card class="renewal-warning-card">
-          <div class="warning-icon">
-            <mat-icon color="warn">warning</mat-icon>
-          </div>
-          <div class="warning-content">
-            @if (warning.isExpired) {
-              <h3>License Expired</h3>
-              <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) has expired.</p>
-              <p>Please renew your license to experience what you were available before. The final date was <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
-            } @else {
-              <h3>License Renewal Reminder</h3>
-              <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) is eligible for renewal.</p>
-              <p>The renewal window is currently open. The final date for renewal is <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
-            }
-          </div>
-          <div class="warning-actions">
-            <button mat-raised-button color="warn" (click)="openMyLicensesForRenewal()">Renew Now</button>
-          </div>
-        </mat-card>
-      }
-    </div>
-  }
 
   <!-- Stats Container: This section displays all application stats (NOW 4 CARDS) -->
   <div class="stats-container" [class.loading]="isLoading">
@@ -87,6 +56,71 @@
       <div class="label">Rejected</div>
     </mat-card>
   </div>
+
+  <!-- Renewal Warnings Section - shown after the stats boxes -->
+  @if (renewalWarnings && renewalWarnings.length > 0) {
+    <div class="renewal-warnings-container">
+      @for (warning of renewalWarnings; track warning.licenseId) {
+        <div class="renewal-warning-card" [class.expired]="warning.isExpired" [class.expiring-soon]="!warning.isExpired">
+
+          <!-- Left accent strip + icon -->
+          <div class="warning-left">
+            <div class="warning-icon-wrap">
+              @if (warning.isExpired) {
+                <mat-icon>cancel</mat-icon>
+              } @else {
+                <mat-icon>schedule</mat-icon>
+              }
+            </div>
+          </div>
+
+          <!-- Main content -->
+          <div class="warning-body">
+            <div class="warning-badge">
+              @if (warning.isExpired) {
+                <span class="badge badge-expired">EXPIRED</span>
+              } @else {
+                <span class="badge badge-expiring">RENEWAL OPEN</span>
+              }
+            </div>
+
+            @if (warning.isExpired) {
+              <h3 class="warning-title">License Expired</h3>
+              <p class="warning-desc">
+                Your license <strong>{{ warning.licenseId }}</strong>
+                <span class="type-chip">{{ warning.type }}</span>
+                has expired. Please renew to restore full access.
+              </p>
+              <p class="warning-meta">
+                <mat-icon class="meta-icon">event_busy</mat-icon>
+                Expired on <strong class="highlight-date expired-date">{{ warning.finalDateStr }}</strong>
+              </p>
+            } @else {
+              <h3 class="warning-title">License Renewal Reminder</h3>
+              <p class="warning-desc">
+                Your license <strong>{{ warning.licenseId }}</strong>
+                <span class="type-chip">{{ warning.type }}</span>
+                is eligible for renewal. The renewal portal is currently open.
+              </p>
+              <p class="warning-meta">
+                <mat-icon class="meta-icon">event_available</mat-icon>
+                Renewal deadline: <strong class="highlight-date expiring-date">{{ warning.finalDateStr }}</strong>
+              </p>
+            }
+          </div>
+
+          <!-- Action -->
+          <div class="warning-actions">
+            <button class="renew-btn" [class.btn-expired]="warning.isExpired" [class.btn-expiring]="!warning.isExpired" (click)="openMyLicensesForRenewal()">
+              <mat-icon>autorenew</mat-icon>
+              Renew Now
+            </button>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
 
   <!-- Dashboard Tables Section -->
   <ng-container>

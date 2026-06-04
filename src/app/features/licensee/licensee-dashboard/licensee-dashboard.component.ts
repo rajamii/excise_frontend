@@ -40,7 +40,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   };
 
   isLoading = false;
-  debugString = '';
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
   pendingDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -168,8 +167,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
     private checkRenewalEligibility(approvedWithoutRenewal: UnifiedApplication[]): void {
       const fallbackSeconds = 90 * 24 * 60 * 60;
-      
-      this.debugString = `Checking ${approvedWithoutRenewal.length} apps. `;
 
       forkJoin({
         timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
@@ -177,7 +174,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       }).subscribe(({ timer, renewalConfig }) => {
         let newWarnings: any[] = [];
         const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
-        this.debugString += `windowMs=${windowMs}. `;
         if (!windowMs) return;
 
         approvedWithoutRenewal.forEach(app => {
@@ -199,25 +195,18 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
           }
 
           if (!validUpTo) {
-            this.debugString += `No validUpTo for ${app.applicationId}. `;
-            console.log('No validUpTo resolved for:', app.applicationId);
             return;
           }
 
           const validMs = validUpTo.getTime();
           const now = Date.now();
           const eligibleFrom = validMs - windowMs;
-          this.debugString += `App=${app.applicationId}, validMs=${validMs}, eligibleFrom=${eligibleFrom}, now=${now}. `;
-          console.log(`Checking ${app.applicationId}: validMs=${validMs} (${new Date(validMs).toISOString()}), eligibleFrom=${eligibleFrom} (${new Date(eligibleFrom).toISOString()}), now=${now} (${new Date(now).toISOString()})`);
 
           if (now >= eligibleFrom) {
             const licenseId = this.extractLicenseId(app);
-            this.debugString += `licenseId=${licenseId}. `;
-            console.log(`Extracted licenseId for ${app.applicationId}: ${licenseId}`);
             if (licenseId) {
               const finalDateStr = this.formatDDMMYYYY(validUpTo);
               const isExpired = now > validMs;
-              console.log(`Adding warning for ${licenseId}, isExpired=${isExpired}`);
               newWarnings.push({
                 licenseId,
                 type: this.getTypeLabel(app.type || ''),
@@ -226,16 +215,11 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
                 finalDateStr,
                 isExpired
               });
-            } else {
-              console.log(`Failed to extract licenseId for ${app.applicationId}, not adding warning.`);
             }
-          } else {
-             this.debugString += `Not eligible. `;
           }
         });
         
         this.renewalWarnings = newWarnings;
-        this.debugString += `Warnings=${newWarnings.length}. `;
         
         try {
           if (this.cdr) {

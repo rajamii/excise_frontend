@@ -149,7 +149,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   // Professional dashboard properties (from licensee dashboard)
-  debugString: string = '';
   renewalWarnings: any[] = [];
   dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
     applied: 0,
@@ -331,7 +330,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       let newWarnings: any[] = [];
       const windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
       if (!windowMs) {
-        this.debugString = `windowMs is 0 or undefined. Timer config: ${JSON.stringify(timer)}`;
         return;
       }
 
@@ -371,7 +369,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
       
       this.renewalWarnings = newWarnings;
-      this.debugString = `Licensee: true | Timer windowMs: ${windowMs} | Approved Apps: ${approvedWithoutRenewal.length} | Warnings found: ${newWarnings.length}`;
       try { if (this.cdr) this.cdr.detectChanges(); } catch (e) {}
     });
   }

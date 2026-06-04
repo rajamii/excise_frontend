@@ -357,34 +357,6 @@
       </div>
     </div>
 
-    <div style="background-color: black; color: lime; padding: 10px; margin-bottom: 20px; font-family: monospace; z-index: 9999;" *ngIf="debugString">
-      DEBUG INFO: {{ debugString }}
-    </div>
-
-    <!-- Renewal Warnings Section (Licensee Only) -->
-    <div class="renewal-warnings-container" *ngIf="renewalWarnings && renewalWarnings.length > 0">
-      <mat-card class="renewal-warning-card" *ngFor="let warning of renewalWarnings">
-        <div class="warning-icon">
-          <mat-icon color="warn">warning</mat-icon>
-        </div>
-        <div class="warning-content">
-          <ng-container *ngIf="warning.isExpired; else notExpired">
-            <h3>License Expired</h3>
-            <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) has expired.</p>
-            <p>Please renew your license to experience what you were available before. The final date was <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
-          </ng-container>
-          <ng-template #notExpired>
-            <h3>License Renewal Reminder</h3>
-            <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) is eligible for renewal.</p>
-            <p>The renewal window is currently open. The final date for renewal is <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
-          </ng-template>
-        </div>
-        <div class="warning-actions">
-          <button mat-raised-button color="warn" (click)="openMyLicensesForRenewal()">Renew Now</button>
-        </div>
-      </mat-card>
-    </div>
-
     <!-- Stats Container: Professional stats cards - Show when no supply chain section selected and not role-specific dashboard -->
     <div class="stats-container" *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
 
@@ -537,6 +509,68 @@
             <span class="view-all">{{ customStat.actionText }} →</span>
           </div>
         </mat-card>
+      </div>
+    </div>
+
+    <!-- Renewal Warnings Section (Licensee Only) - shown after stats boxes -->
+    <div class="renewal-warnings-container" *ngIf="renewalWarnings && renewalWarnings.length > 0 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      <div class="renewal-warning-card" *ngFor="let warning of renewalWarnings"
+           [class.rw-expired]="warning.isExpired"
+           [class.rw-expiring]="!warning.isExpired">
+
+        <!-- Left accent column with icon -->
+        <div class="rw-left">
+          <div class="rw-icon-wrap">
+            <mat-icon *ngIf="warning.isExpired">cancel</mat-icon>
+            <mat-icon *ngIf="!warning.isExpired">schedule</mat-icon>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="rw-body">
+          <div class="rw-badge-row">
+            <span class="rw-badge rw-badge--expired"   *ngIf="warning.isExpired">EXPIRED</span>
+            <span class="rw-badge rw-badge--expiring"  *ngIf="!warning.isExpired">RENEWAL OPEN</span>
+          </div>
+
+          <ng-container *ngIf="warning.isExpired">
+            <h3 class="rw-title">License Expired</h3>
+            <p class="rw-desc">
+              Your license <strong>{{ warning.licenseId }}</strong>
+              <span class="rw-type-chip">{{ warning.type }}</span>
+              has expired. Please renew to restore full access.
+            </p>
+            <p class="rw-meta">
+              <mat-icon class="rw-meta-icon">event_busy</mat-icon>
+              Expired on <strong class="rw-date rw-date--expired">{{ warning.finalDateStr }}</strong>
+            </p>
+          </ng-container>
+
+          <ng-container *ngIf="!warning.isExpired">
+            <h3 class="rw-title">License Renewal Reminder</h3>
+            <p class="rw-desc">
+              Your license <strong>{{ warning.licenseId }}</strong>
+              <span class="rw-type-chip">{{ warning.type }}</span>
+              is eligible for renewal. The renewal portal is currently open.
+            </p>
+            <p class="rw-meta">
+              <mat-icon class="rw-meta-icon">event_available</mat-icon>
+              Renewal deadline: <strong class="rw-date rw-date--expiring">{{ warning.finalDateStr }}</strong>
+            </p>
+          </ng-container>
+        </div>
+
+        <!-- Action -->
+        <div class="rw-actions">
+          <button class="rw-btn"
+                  [class.rw-btn--expired]="warning.isExpired"
+                  [class.rw-btn--expiring]="!warning.isExpired"
+                  (click)="openMyLicensesForRenewal()">
+            <mat-icon>autorenew</mat-icon>
+            Renew Now
+          </button>
+        </div>
+
       </div>
     </div>
 
