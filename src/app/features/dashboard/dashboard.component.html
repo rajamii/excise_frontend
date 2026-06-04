@@ -357,8 +357,37 @@
       </div>
     </div>
 
+    <div style="background-color: black; color: lime; padding: 10px; margin-bottom: 20px; font-family: monospace; z-index: 9999;" *ngIf="debugString">
+      DEBUG INFO: {{ debugString }}
+    </div>
+
+    <!-- Renewal Warnings Section (Licensee Only) -->
+    <div class="renewal-warnings-container" *ngIf="renewalWarnings && renewalWarnings.length > 0">
+      <mat-card class="renewal-warning-card" *ngFor="let warning of renewalWarnings">
+        <div class="warning-icon">
+          <mat-icon color="warn">warning</mat-icon>
+        </div>
+        <div class="warning-content">
+          <ng-container *ngIf="warning.isExpired; else notExpired">
+            <h3>License Expired</h3>
+            <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) has expired.</p>
+            <p>Please renew your license to experience what you were available before. The final date was <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
+          </ng-container>
+          <ng-template #notExpired>
+            <h3>License Renewal Reminder</h3>
+            <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) is eligible for renewal.</p>
+            <p>The renewal window is currently open. The final date for renewal is <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
+          </ng-template>
+        </div>
+        <div class="warning-actions">
+          <button mat-raised-button color="warn" (click)="openMyLicensesForRenewal()">Renew Now</button>
+        </div>
+      </mat-card>
+    </div>
+
     <!-- Stats Container: Professional stats cards - Show when no supply chain section selected and not role-specific dashboard -->
     <div class="stats-container" *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+
 
       <!-- Dynamic Stats Cards based on role -->
       <div class="stats-grid">

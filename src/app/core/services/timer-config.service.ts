@@ -42,14 +42,33 @@ export class TimerConfigService {
     const url = `${environment.apiBaseUrl}/masters/core/timer-config/`;
     const req = this.http.get<any>(url, { params: { code: normalized } }).pipe(
       map((res) => {
+        const delayValue = Number(res?.delay_value ?? res?.delayValue ?? 0);
+        const delayUnit = String(res?.delay_unit ?? res?.delayUnit ?? 'second').toLowerCase();
+        let calcSeconds = 0;
+
+        if (delayValue > 0) {
+          switch (delayUnit) {
+            case 'minute': calcSeconds = delayValue * 60; break;
+            case 'hour': calcSeconds = delayValue * 3600; break;
+            case 'day': calcSeconds = delayValue * 86400; break;
+            case 'week': calcSeconds = delayValue * 604800; break;
+            case 'month': calcSeconds = delayValue * 2592000; break; // 30 days
+            case 'year': calcSeconds = delayValue * 31536000; break; // 365 days
+            default: calcSeconds = delayValue; break; // second
+          }
+        }
+
         const delaySeconds = Number(res?.delay_seconds ?? res?.delaySeconds ?? 0);
         const delayMs = Number(res?.delay_ms ?? res?.delayMs ?? 0);
+        
         const resolvedSeconds =
-          Number.isFinite(delaySeconds) && delaySeconds > 0
-            ? delaySeconds
-            : Number.isFinite(delayMs) && delayMs > 0
-              ? Math.floor(delayMs / 1000)
-              : fallbackSeconds;
+          calcSeconds > 0 
+            ? calcSeconds
+            : Number.isFinite(delaySeconds) && delaySeconds > 0
+              ? delaySeconds
+              : Number.isFinite(delayMs) && delayMs > 0
+                ? Math.floor(delayMs / 1000)
+                : fallbackSeconds;
 
         return {
           code: String(res?.code ?? normalized),

@@ -435,3 +435,58 @@ mat-table {
         }
     }
 }
+// ========================================
+// RENEWAL WARNING STYLES
+// ========================================
+.renewal-warnings-container {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    .renewal-warning-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        background-color: #fff3cd;
+        border-left: 5px solid #ffc107;
+        padding: 16px 20px;
+        margin-top: 0;
+
+        .warning-icon {
+            margin-right: 20px;
+            mat-icon {
+                font-size: 36px;
+                width: 36px;
+                height: 36px;
+            }
+        }
+
+        .warning-content {
+            flex: 1;
+            
+            h3 {
+                margin: 0 0 5px 0;
+                font-size: 18px;
+                color: #856404;
+                font-weight: 600;
+            }
+
+            p {
+                margin: 0;
+                font-size: 14px;
+                color: #333;
+                line-height: 1.4;
+            }
+            
+            .highlight-date {
+                color: #d32f2f;
+                font-size: 15px;
+            }
+        }
+
+        .warning-actions {
+            margin-left: 20px;
+        }
+    }
+}

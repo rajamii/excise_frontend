@@ -5,13 +5,19 @@ import { MaterialModule } from '../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { DashboardCount } from '../../../core/models/dashboard.model';
 import { ApplicationTableComponent } from './application-table/application-table.component';
-import { forkJoin, Subscription } from 'rxjs';
-import { finalize, filter, switchMap, catchError } from 'rxjs/operators';
+import { forkJoin, Subscription, of } from 'rxjs';
+import { finalize, filter, switchMap, catchError, take } from 'rxjs/operators';
 import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
 import { UnifiedApplication } from '../../../core/models/unified-application.model';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { DashboardConfigService } from '../../../core/services/dashboard-config.service';
 import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
+import { TimerConfigService } from '../../../core/services/timer-config.service';
+import { environment } from '../../../../environments/environment';
+import { HttpClient } from '@angular/common/http';
+import { ChangeDetectorRef } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MyLicensesComponent } from '../my-licenses/my-licenses.component';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -34,6 +40,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   };
 
   isLoading = false;
+  debugString = '';
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
   pendingDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -42,6 +49,15 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
   activeTable: 'default' | 'applied' | 'pending' | 'rejected' = 'default';
+
+  renewalWarnings: {
+    licenseId: string,
+    type: string,
+    establishmentName: string,
+    validUpTo: Date,
+    finalDateStr: string,
+    isExpired: boolean
+  }[] = [];
 
   private routerSubscription?: Subscription;
   private supplyChainSubscription?: Subscription;
@@ -52,7 +68,11 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private unifiedDashboardService: UnifiedDashboardService,
     private dashboardConfigService: DashboardConfigService,
     private sidebarPendingBadgeService: SidebarPendingBadgeService,
-    private router: Router
+    private router: Router,
+    private http: HttpClient,
+    private timerConfigService: TimerConfigService,
+    private cdr: ChangeDetectorRef,
+    private dialog: MatDialog
   ) { }
 
   showTable(table: 'applied' | 'pending' | 'rejected') {
@@ -112,6 +132,120 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+    private formatDDMMYYYY(date: Date): string {
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const yyyy = date.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+
+    openMyLicensesForRenewal(): void {
+      this.dialog.open(MyLicensesComponent, {
+        width: '1200px',
+        maxHeight: '90vh'
+      });
+    }
+
+    private extractValidUpToDate(raw: any): Date | null {
+      const value = raw?.valid_up_to ?? raw?.validUpTo ?? raw?.valid_upto ?? raw?.valid_until ?? raw?.validUntil ?? null;
+      if (!value) return null;
+      
+      if (value instanceof Date) return value;
+      
+      const str = String(value).trim();
+      if (!str) return null;
+      
+      const dmY = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+      if (dmY) {
+        const dt = new Date(Number(dmY[3]), Number(dmY[2]) - 1, Number(dmY[1]), 23, 59, 59);
+        return Number.isFinite(dt.getTime()) ? dt : null;
+      }
+      
+      const dt = new Date(str);
+      return Number.isFinite(dt.getTime()) ? dt : null;
+    }
+
+    private checkRenewalEligibility(approvedWithoutRenewal: UnifiedApplication[]): void {
+      const fallbackSeconds = 90 * 24 * 60 * 60;
+      
+      this.debugString = `Checking ${approvedWithoutRenewal.length} apps. `;
+
+      forkJoin({
+        timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
+        renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
+      }).subscribe(({ timer, renewalConfig }) => {
+        let newWarnings: any[] = [];
+        const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
+        this.debugString += `windowMs=${windowMs}. `;
+        if (!windowMs) return;
+
+        approvedWithoutRenewal.forEach(app => {
+          const raw = app.raw || {};
+          let validUpTo = this.extractValidUpToDate(raw);
+          
+          if (!validUpTo && renewalConfig) {
+            const month = renewalConfig.renewal_month || 3;
+            const day = renewalConfig.renewal_day || 31;
+            const time = renewalConfig.renewal_time || '23:59:59';
+            const timeParts = time.split(':');
+            
+            const now = new Date();
+            let year = now.getFullYear();
+            if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) {
+                year++;
+            }
+            validUpTo = new Date(year, month - 1, day, Number(timeParts[0]||23), Number(timeParts[1]||59), Number(timeParts[2]||59));
+          }
+
+          if (!validUpTo) {
+            this.debugString += `No validUpTo for ${app.applicationId}. `;
+            console.log('No validUpTo resolved for:', app.applicationId);
+            return;
+          }
+
+          const validMs = validUpTo.getTime();
+          const now = Date.now();
+          const eligibleFrom = validMs - windowMs;
+          this.debugString += `App=${app.applicationId}, validMs=${validMs}, eligibleFrom=${eligibleFrom}, now=${now}. `;
+          console.log(`Checking ${app.applicationId}: validMs=${validMs} (${new Date(validMs).toISOString()}), eligibleFrom=${eligibleFrom} (${new Date(eligibleFrom).toISOString()}), now=${now} (${new Date(now).toISOString()})`);
+
+          if (now >= eligibleFrom) {
+            const licenseId = this.extractLicenseId(app);
+            this.debugString += `licenseId=${licenseId}. `;
+            console.log(`Extracted licenseId for ${app.applicationId}: ${licenseId}`);
+            if (licenseId) {
+              const finalDateStr = this.formatDDMMYYYY(validUpTo);
+              const isExpired = now > validMs;
+              console.log(`Adding warning for ${licenseId}, isExpired=${isExpired}`);
+              newWarnings.push({
+                licenseId,
+                type: this.getTypeLabel(app.type || ''),
+                establishmentName: app.establishmentName || app.applicantFullName || 'N/A',
+                validUpTo,
+                finalDateStr,
+                isExpired
+              });
+            } else {
+              console.log(`Failed to extract licenseId for ${app.applicationId}, not adding warning.`);
+            }
+          } else {
+             this.debugString += `Not eligible. `;
+          }
+        });
+        
+        this.renewalWarnings = newWarnings;
+        this.debugString += `Warnings=${newWarnings.length}. `;
+        
+        try {
+          if (this.cdr) {
+            this.cdr.detectChanges();
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    }
 
   ngOnDestroy(): void {
     if (this.routerSubscription) {
@@ -233,6 +367,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             rejected: filteredApplications.rejected
           });
 
+          this.checkRenewalEligibility(approvedWithoutRenewal);
+
           // Include actionable supply-chain pending items on dashboard (e.g., requisition payment pending).
           this.refreshSupplyChainPendingCounts();
         },
@@ -283,20 +419,18 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         }
       }
     }
-    
-    // Fallback: derive from application ID
-    const appId = app.applicationId;
-    if (appId) {
-      if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
-      if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'NA/');
-      if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
-      if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/'); // ✅ ADDED: Company registration
+        // Fallback: derive from application ID
+      const appId = app.applicationId;
+      if (appId) {
+        if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
+        if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'LA/');
+        if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
+        if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/');
+      }
+      return null;
     }
-    
-    return null;
-  }
 
-  private isValidLicenseId(licenseId: string): boolean {
+    private isValidLicenseId(licenseId: string): boolean {
     if (!licenseId || typeof licenseId !== 'string') return false;
     const trimmed = licenseId.trim();
     // ✅ ADDED: 'COMP/' and 'CREG/' prefixes for company registration

@@ -2,6 +2,37 @@
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
   
+  <div style="background-color: black; color: lime; padding: 10px; margin-bottom: 20px; font-family: monospace; z-index: 9999;">
+    DEBUG INFO: {{ debugString || 'No debug info yet' }}
+  </div>
+
+  <!-- Renewal Warnings Section -->
+  @if (renewalWarnings && renewalWarnings.length > 0) {
+    <div class="renewal-warnings-container">
+      @for (warning of renewalWarnings; track warning.licenseId) {
+        <mat-card class="renewal-warning-card">
+          <div class="warning-icon">
+            <mat-icon color="warn">warning</mat-icon>
+          </div>
+          <div class="warning-content">
+            @if (warning.isExpired) {
+              <h3>License Expired</h3>
+              <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) has expired.</p>
+              <p>Please renew your license to experience what you were available before. The final date was <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
+            } @else {
+              <h3>License Renewal Reminder</h3>
+              <p>Your license <strong>{{ warning.licenseId }}</strong> ({{ warning.type }}) is eligible for renewal.</p>
+              <p>The renewal window is currently open. The final date for renewal is <strong class="highlight-date">{{ warning.finalDateStr }}</strong>.</p>
+            }
+          </div>
+          <div class="warning-actions">
+            <button mat-raised-button color="warn" (click)="openMyLicensesForRenewal()">Renew Now</button>
+          </div>
+        </mat-card>
+      }
+    </div>
+  }
+
   <!-- Stats Container: This section displays all application stats (NOW 4 CARDS) -->
   <div class="stats-container" [class.loading]="isLoading">
     <!-- Applied Stat Card -->

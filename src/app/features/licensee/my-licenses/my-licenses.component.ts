@@ -15,6 +15,9 @@ import { of, Subscription } from 'rxjs';
 import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { TimerConfig, TimerConfigService } from '../../../core/services/timer-config.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-my-licenses',
@@ -38,7 +41,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private timerConfigService: TimerConfigService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private http: HttpClient
   ) { }
 
   ngOnInit(): void {
@@ -72,15 +76,27 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       .pipe(
         take(1),
         switchMap((app) =>
-          this.timerConfigService.getTimerConfig(this.renewalReminderTimerCode, fallbackSeconds).pipe(
-            take(1),
-            map((timer) => ({ app, timer }))
-          )
+          forkJoin({
+            app: of(app),
+            timer: this.timerConfigService.getTimerConfig(this.renewalReminderTimerCode, fallbackSeconds).pipe(take(1)),
+            renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)), take(1))
+          })
         )
       )
-      .subscribe(({ app, timer }) => {
+      .subscribe(({ app, timer, renewalConfig }) => {
         const raw = app.raw || {};
-        const validUpTo = this.extractValidUpToDate(raw) || summaryValidUpTo;
+        let validUpTo = this.extractValidUpToDate(raw) || summaryValidUpTo;
+
+        if (!validUpTo && renewalConfig) {
+          const month = renewalConfig.renewal_month || 3;
+          const day = renewalConfig.renewal_day || 31;
+          const now = new Date();
+          let year = now.getFullYear();
+          if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) {
+              year++;
+          }
+          validUpTo = new Date(year, month - 1, day, 23, 59, 59);
+        }
 
         if (validUpTo && !this.isRenewalAllowed(validUpTo, timer)) {
           const windowLabel = this.getTimerWindowLabel(timer);

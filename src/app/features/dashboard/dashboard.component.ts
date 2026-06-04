@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,10 +12,11 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
+import { TimerConfigService } from '../../core/services/timer-config.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { UnifiedDashboardService } from '../../core/services/unified-dashboard.service';
 import { LicenseMeService } from '../../core/services/license-me.service';
@@ -148,6 +149,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   // Professional dashboard properties (from licensee dashboard)
+  debugString: string = '';
+  renewalWarnings: any[] = [];
   dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
     applied: 0,
     pending: 0,
@@ -249,7 +252,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private licenseMeService: LicenseMeService,
     private http: HttpClient,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+    private timerConfigService: TimerConfigService
   ) { }
 
   ngOnInit() {
@@ -276,7 +281,107 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+
+  private extractValidUpToDate(raw: any): Date | null {
+    const str = raw.valid_up_to || raw.validUpTo || (raw.license && raw.license.valid_up_to) || raw.valid_till || raw.validTill;
+    if (!str) return null;
+    const dt = new Date(str);
+    return Number.isFinite(dt.getTime()) ? dt : null;
+  }
+
+  private extractLicenseId(app: any): string | null {
+    const raw = app.raw || {};
+    const possibleFields = [
+      raw.license_id, raw.licenseId, raw.license?.id, raw.license?.license_id, raw.issued_license_id, raw.issuedLicenseId
+    ];
+    for (const field of possibleFields) {
+      if (field && typeof field === 'string' && this.isValidLicenseIdForWarning(field)) return field;
+      if (field && typeof field === 'object' && field.id && this.isValidLicenseIdForWarning(field.id)) return field.id;
+    }
+    const appId = app.applicationId || app.raw?.application_id || '';
+    if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
+    if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'LA/');
+    if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
+    if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/');
+    return null;
+  }
+
+  private isValidLicenseIdForWarning(licenseId: string): boolean {
+    if (!licenseId || typeof licenseId !== 'string') return false;
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
+    return validPrefixes.some(prefix => licenseId.trim().startsWith(prefix));
+  }
+
+  private formatDDMMYYYY(date: Date): string {
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  }
+
+  private checkRenewalEligibility(approvedWithoutRenewal: any[]): void {
+    if (!this.isLicenseeUser()) return;
+    
+    const fallbackSeconds = 90 * 24 * 60 * 60;
+    
+    forkJoin({
+      timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
+      renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
+    }).subscribe(({ timer, renewalConfig }) => {
+      let newWarnings: any[] = [];
+      const windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
+      if (!windowMs) {
+        this.debugString = `windowMs is 0 or undefined. Timer config: ${JSON.stringify(timer)}`;
+        return;
+      }
+
+      approvedWithoutRenewal.forEach(app => {
+        const raw = app.raw || {};
+        let validUpTo = this.extractValidUpToDate(raw);
+        if (!validUpTo && renewalConfig) {
+          const month = renewalConfig.renewal_month || renewalConfig.renewalMonth || 3;
+          const day = renewalConfig.renewal_day || renewalConfig.renewalDay || 31;
+          const time = renewalConfig.renewal_time || renewalConfig.renewalTime || '23:59:59';
+          const timeParts = time.split(':');
+          const now = new Date();
+          let year = now.getFullYear();
+          if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) year++;
+          validUpTo = new Date(year, month - 1, day, Number(timeParts[0]||23), Number(timeParts[1]||59), Number(timeParts[2]||59));
+        }
+
+        if (!validUpTo) return;
+
+        const validMs = validUpTo.getTime();
+        const now = Date.now();
+        const eligibleFrom = validMs - windowMs;
+
+        if (now >= eligibleFrom) {
+          const licenseId = this.extractLicenseId(app);
+          if (licenseId) {
+            newWarnings.push({
+              licenseId,
+              type: app.type || '',
+              establishmentName: app.establishmentName || app.applicantFullName || 'N/A',
+              validUpTo,
+              finalDateStr: this.formatDDMMYYYY(validUpTo),
+              isExpired: now > validMs
+            });
+          }
+        }
+      });
+      
+      this.renewalWarnings = newWarnings;
+      this.debugString = `Licensee: true | Timer windowMs: ${windowMs} | Approved Apps: ${approvedWithoutRenewal.length} | Warnings found: ${newWarnings.length}`;
+      try { if (this.cdr) this.cdr.detectChanges(); } catch (e) {}
+    });
+  }
+
+  openMyLicensesForRenewal(): void {
+    this.router.navigate(['/licensee/supply-chain'], { queryParams: { section: 'license-renewal' } });
+  }
+
   ngOnDestroy() {
+
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -830,7 +935,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // If no specific section is selected, load dashboard stats
     if (!this.selectedSupplyChainSection) {
-      this.loadDashboardStatsLight();
+      if (this.isLicenseeUser()) {
+        this.loadDashboardStats();
+      } else {
+        this.loadDashboardStatsLight();
+      }
     } else {
       this.isLoading = false; // Directly show the section
     }
@@ -979,6 +1088,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
 
           // Show submitted + pending + awaiting payment together in Pending table.
+          this.checkRenewalEligibility(filteredApplications.approved);
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
@@ -1046,6 +1156,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             };
           }
 
+          this.checkRenewalEligibility(filteredApplications.approved);
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
