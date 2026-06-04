@@ -532,48 +532,87 @@
         <!-- Body -->
         <div class="rw-body">
           <ng-container *ngIf="warning.isExpired">
-            <span class="rw-badge rw-badge--expired">
-              <mat-icon>block</mat-icon> LICENSE EXPIRED
-            </span>
-            <h3 class="rw-title">Your license has expired</h3>
-            <p class="rw-desc">
+
+            <!-- Row 1: Badge + Title on same line -->
+            <div class="rw-row rw-row--header">
+              <span class="rw-badge rw-badge--expired">
+                <mat-icon>block</mat-icon> EXPIRED
+              </span>
+              <h3 class="rw-title">Your license has expired</h3>
+            </div>
+
+            <!-- Row 2: License ID + type chip -->
+            <div class="rw-row rw-row--license">
               <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
-              <span class="rw-establishment" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+            </div>
+
+            <!-- Row 3: Establishment + category (if available) -->
+            <div class="rw-row rw-row--establishment" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+              <div class="rw-est-pill">
                 <mat-icon class="rw-est-icon">store</mat-icon>
-                {{ warning.establishmentName }}
-                <ng-container *ngIf="warning.licenseCategoryName">
-                  <span class="rw-est-sep">•</span>{{ warning.licenseCategoryName }}
+                <span class="rw-est-name">{{ warning.establishmentName }}</span>
+              </div>
+              <div class="rw-cat-pill" *ngIf="warning.licenseCategoryName">
+                <mat-icon class="rw-cat-icon">category</mat-icon>
+                <span class="rw-cat-name">{{ warning.licenseCategoryName }}</span>
+                <ng-container *ngIf="warning.licenseSubCategoryName">
+                  <span class="rw-cat-sep">›</span>
+                  <span class="rw-subcat-name">{{ warning.licenseSubCategoryName }}</span>
                 </ng-container>
-              </span>
-            </p>
-            <p class="rw-meta">
+              </div>
+            </div>
+
+            <!-- Row 4: Date + message -->
+            <div class="rw-row rw-row--meta">
               <mat-icon class="rw-meta-icon">event_busy</mat-icon>
-              Expired on&nbsp;<strong class="rw-date rw-date--expired">{{ warning.finalDateStr }}</strong>
-              &nbsp;— Please renew to restore full access.
-            </p>
+              <span>Expired on</span>
+              <strong class="rw-date rw-date--expired">{{ warning.finalDateStr }}</strong>
+              <span class="rw-meta-hint">— Renew to restore full access</span>
+            </div>
+
           </ng-container>
 
           <ng-container *ngIf="!warning.isExpired">
-            <span class="rw-badge rw-badge--expiring">
-              <mat-icon>notifications_active</mat-icon> RENEWAL OPEN
-            </span>
-            <h3 class="rw-title">Your license is up for renewal</h3>
-            <p class="rw-desc">
+
+            <!-- Row 1: Badge + Title -->
+            <div class="rw-row rw-row--header">
+              <span class="rw-badge rw-badge--expiring">
+                <mat-icon>notifications_active</mat-icon> RENEWAL OPEN
+              </span>
+              <h3 class="rw-title">Your license is up for renewal</h3>
+            </div>
+
+            <!-- Row 2: License ID + type chip -->
+            <div class="rw-row rw-row--license">
               <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
-              <span class="rw-establishment" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+            </div>
+
+            <!-- Row 3: Establishment + category -->
+            <div class="rw-row rw-row--establishment" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+              <div class="rw-est-pill">
                 <mat-icon class="rw-est-icon">store</mat-icon>
-                {{ warning.establishmentName }}
-                <ng-container *ngIf="warning.licenseCategoryName">
-                  <span class="rw-est-sep">•</span>{{ warning.licenseCategoryName }}
+                <span class="rw-est-name">{{ warning.establishmentName }}</span>
+              </div>
+              <div class="rw-cat-pill" *ngIf="warning.licenseCategoryName">
+                <mat-icon class="rw-cat-icon">category</mat-icon>
+                <span class="rw-cat-name">{{ warning.licenseCategoryName }}</span>
+                <ng-container *ngIf="warning.licenseSubCategoryName">
+                  <span class="rw-cat-sep">›</span>
+                  <span class="rw-subcat-name">{{ warning.licenseSubCategoryName }}</span>
                 </ng-container>
-              </span>
-            </p>
-            <p class="rw-meta">
+              </div>
+            </div>
+
+            <!-- Row 4: Deadline -->
+            <div class="rw-row rw-row--meta">
               <mat-icon class="rw-meta-icon">event_available</mat-icon>
-              Renewal portal is open. Deadline:&nbsp;<strong class="rw-date rw-date--expiring">{{ warning.finalDateStr }}</strong>
-            </p>
+              <span>Renewal deadline:</span>
+              <strong class="rw-date rw-date--expiring">{{ warning.finalDateStr }}</strong>
+              <span class="rw-meta-hint">— Portal is currently open</span>
+            </div>
+
           </ng-container>
         </div>
 

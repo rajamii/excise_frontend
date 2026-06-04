@@ -361,6 +361,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               type: app.type || '',
               establishmentName: app.establishmentName || app.applicantFullName || 'N/A',
               licenseCategoryName: (app as any).licenseCategoryName || (app.raw?.license_category_name) || '',
+              licenseSubCategoryName: (app.raw?.license_sub_category_name) || (app.raw?.licenseSubCategoryName) || (app.raw?.license_sub_category?.name) || (app.raw?.license_sub_category?.description) || '',
               validUpTo,
               finalDateStr: this.formatDDMMYYYY(validUpTo),
               isExpired: now > validMs
