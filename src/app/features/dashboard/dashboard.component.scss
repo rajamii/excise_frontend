@@ -2390,7 +2390,6 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
         .rw-divider      { background: $rw-exp-divider; }
         .rw-badge        { background: $rw-exp-badge-bg; }
         .rw-title        { color: $rw-exp-accent; }
-        .rw-license-id   { color: $rw-exp-accent; border-bottom: 2px solid rgba($rw-exp-border, 0.35); }
         .rw-type-chip    { background: rgba($rw-exp-border, 0.1); color: $rw-exp-accent; border: 1px solid rgba($rw-exp-border, 0.25); }
         .rw-meta-icon    { color: $rw-exp-date; }
         .rw-date--expired { color: $rw-exp-date; }
@@ -2406,7 +2405,6 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
         .rw-divider      { background: $rw-sn-divider; }
         .rw-badge        { background: $rw-sn-badge-bg; }
         .rw-title        { color: $rw-sn-accent; }
-        .rw-license-id   { color: $rw-sn-accent; border-bottom: 2px solid rgba($rw-sn-border, 0.35); }
         .rw-type-chip    { background: rgba($rw-sn-border, 0.12); color: $rw-sn-accent; border: 1px solid rgba($rw-sn-border, 0.28); }
         .rw-meta-icon    { color: $rw-sn-date; }
         .rw-date--expiring { color: $rw-sn-date; }
@@ -2505,11 +2503,18 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
 
 // ── License ID ────────────────────────────────────────────
 .rw-license-id {
+    display: inline-flex;
+    align-items: center;
     font-size: 13px;
     font-weight: 800;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.07em;
     font-family: 'Roboto Mono', monospace, sans-serif;
     white-space: nowrap;
+    padding: 4px 14px;
+    border-radius: 6px;
+    background: rgba(120, 80, 0, 0.07);
+    border: 1.5px solid rgba(120, 80, 0, 0.2);
+    color: #7a5000;
 }
 
 // ── Type chip ─────────────────────────────────────────────
@@ -2549,6 +2554,14 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
     border: 1px solid rgba(230, 81, 0, 0.2);
     mat-icon { color: #b84200; }
     span      { color: #b84200; }
+}
+
+// ── License ID — same style on all card states ──
+.rw-expired .rw-license-id,
+.rw-expiring .rw-license-id {
+    background: rgba(120, 80, 0, 0.07);
+    border: 1.5px solid rgba(120, 80, 0, 0.2);
+    color: #7a5000;
 }
 
 // ── Category pill ─────────────────────────────────────────
