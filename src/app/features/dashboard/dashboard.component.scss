@@ -2513,6 +2513,33 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
     line-height: 1.6;
 }
 
+.rw-establishment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #555;
+    padding: 2px 10px 2px 6px;
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+
+    .rw-est-icon {
+        font-size: 13px;
+        width: 13px;
+        height: 13px;
+        color: #777;
+        flex-shrink: 0;
+    }
+
+    .rw-est-sep {
+        color: #999;
+        font-weight: 400;
+        margin: 0 1px;
+    }
+}
+
 .rw-meta {
     margin: 0;
     display: flex;

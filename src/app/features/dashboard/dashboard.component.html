@@ -539,6 +539,13 @@
             <p class="rw-desc">
               <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
+              <span class="rw-establishment" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+                <mat-icon class="rw-est-icon">store</mat-icon>
+                {{ warning.establishmentName }}
+                <ng-container *ngIf="warning.licenseCategoryName">
+                  <span class="rw-est-sep">•</span>{{ warning.licenseCategoryName }}
+                </ng-container>
+              </span>
             </p>
             <p class="rw-meta">
               <mat-icon class="rw-meta-icon">event_busy</mat-icon>
@@ -555,6 +562,13 @@
             <p class="rw-desc">
               <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
+              <span class="rw-establishment" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+                <mat-icon class="rw-est-icon">store</mat-icon>
+                {{ warning.establishmentName }}
+                <ng-container *ngIf="warning.licenseCategoryName">
+                  <span class="rw-est-sep">•</span>{{ warning.licenseCategoryName }}
+                </ng-container>
+              </span>
             </p>
             <p class="rw-meta">
               <mat-icon class="rw-meta-icon">event_available</mat-icon>
