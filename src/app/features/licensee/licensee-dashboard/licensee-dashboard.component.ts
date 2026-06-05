@@ -140,9 +140,13 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     }
 
     openMyLicensesForRenewal(): void {
-      this.dialog.open(MyLicensesComponent, {
+      const dialogRef = this.dialog.open(MyLicensesComponent, {
         width: '1200px',
         maxHeight: '90vh'
+      });
+
+      dialogRef.afterClosed().subscribe(() => {
+        this.loadDashboardData();
       });
     }
 
@@ -177,6 +181,9 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         if (!windowMs) return;
 
         approvedWithoutRenewal.forEach(app => {
+          if (app.type === 'license-renewal') {
+            return;
+          }
           const raw = app.raw || {};
           let validUpTo = this.extractValidUpToDate(raw);
           
@@ -435,8 +442,16 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     [...applied, ...pending, ...awaitingPayment].forEach(app => {
       const raw = app.raw || {};
       
-      // PRIORITY 1: Check renewalOf fields
-      const renewalOfValue = raw.renewalOf || raw.renewal_of || raw.renewalOfLicenseId || raw.renewal_of_license_id;
+      // PRIORITY 1: Check renewalOf or old license fields
+      const renewalOfValue = 
+        raw.renewalOf || 
+        raw.renewal_of || 
+        raw.renewalOfLicenseId || 
+        raw.renewal_of_license_id || 
+        raw.old_license_id || 
+        raw.oldLicenseId || 
+        raw.old_license || 
+        raw.oldLicense;
       
       if (renewalOfValue) {
         let licenseIdStr = '';
@@ -451,13 +466,13 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         
         if (licenseIdStr && this.isValidLicenseId(licenseIdStr)) {
           renewedIds.add(licenseIdStr);
-          // console.log(`🔄 Dashboard: Found renewed license ID from renewalOf: ${licenseIdStr} (App: ${app.applicationId})`);
+          // console.log(`🔄 Dashboard: Found renewed license ID from renewalOf/oldLicense: ${licenseIdStr} (App: ${app.applicationId})`);
           return;
         }
       }
       
       // PRIORITY 2: Check license fields
-      const licenseValue = raw.license || raw.license_id;
+      const licenseValue = raw.license || raw.license_id || raw.issued_license_id || raw.issuedLicenseId;
       
       if (licenseValue) {
         let licenseIdStr = '';
@@ -487,8 +502,13 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
           derivedLicenseId = appId.replace('NLI/', 'NA/');
         } else if (appId.startsWith('SBM/')) {
           derivedLicenseId = appId.replace('SBM/', 'SB/');
-        } else if (appId.startsWith('COMP/')) { // ✅ ADDED
+        } else if (appId.startsWith('COMP/')) {
           derivedLicenseId = appId.replace('COMP/', 'CREG/');
+        } else if (appId.startsWith('LRA/')) {
+          // A renewal application LRA/01/2026-27/... could be renewing an NA/ or LA/ license.
+          // Since it's ambiguous, we can add both potential derivations.
+          renewedIds.add(appId.replace('LRA/', 'LA/'));
+          renewedIds.add(appId.replace('LRA/', 'NA/'));
         }
         
         if (derivedLicenseId && this.isValidLicenseId(derivedLicenseId)) {
