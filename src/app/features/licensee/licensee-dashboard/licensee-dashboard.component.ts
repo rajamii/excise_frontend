@@ -281,15 +281,15 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       .pipe(
         switchMap((config) =>
           forkJoin({
-            counts: this.unifiedDashboardService.getUnifiedDashboardCounts(config),
-            applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, config)
+            counts: this.unifiedDashboardService.getUnifiedDashboardCounts(config, true),
+            applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, config)
           })
         ),
         catchError((error) => {
           console.error('❌ Error loading dashboard config:', error);
           return forkJoin({
-            counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
-            applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus()
+            counts: this.unifiedDashboardService.getUnifiedDashboardCounts(undefined, true),
+            applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true)
           });
         }),
         finalize(() => {

@@ -311,6 +311,83 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return validPrefixes.some(prefix => licenseId.trim().startsWith(prefix));
   }
 
+  private getRenewedLicenseIds(
+    applied: any[], 
+    pending: any[], 
+    awaitingPayment: any[]
+  ): Set<string> {
+    const renewedIds = new Set<string>();
+    
+    [...applied, ...pending, ...awaitingPayment].forEach(app => {
+      const raw = app.raw || {};
+      
+      const renewalOfValue = 
+        raw.renewalOf || 
+        raw.renewal_of || 
+        raw.renewalOfLicenseId || 
+        raw.renewal_of_license_id || 
+        raw.old_license_id || 
+        raw.oldLicenseId || 
+        raw.old_license || 
+        raw.oldLicense;
+      
+      if (renewalOfValue) {
+        let licenseIdStr = '';
+        if (typeof renewalOfValue === 'string') {
+          licenseIdStr = renewalOfValue;
+        } else if (typeof renewalOfValue === 'object' && renewalOfValue !== null) {
+          licenseIdStr = renewalOfValue.license_id || renewalOfValue.id || String(renewalOfValue);
+        } else {
+          licenseIdStr = String(renewalOfValue);
+        }
+        
+        if (licenseIdStr && this.isValidLicenseIdForWarning(licenseIdStr)) {
+          renewedIds.add(licenseIdStr);
+          return;
+        }
+      }
+      
+      const licenseValue = raw.license || raw.license_id || raw.issued_license_id || raw.issuedLicenseId;
+      if (licenseValue) {
+        let licenseIdStr = '';
+        if (typeof licenseValue === 'string') {
+          licenseIdStr = licenseValue;
+        } else if (typeof licenseValue === 'object' && licenseValue !== null) {
+          licenseIdStr = licenseValue.license_id || licenseValue.id || String(licenseValue);
+        } else {
+          licenseIdStr = String(licenseValue);
+        }
+        
+        if (licenseIdStr && this.isValidLicenseIdForWarning(licenseIdStr)) {
+          renewedIds.add(licenseIdStr);
+        }
+      }
+      
+      const appId = app.applicationId || app.raw?.application_id || '';
+      if (appId) {
+        let derivedLicenseId = null;
+        if (appId.startsWith('LIC/')) {
+          derivedLicenseId = appId.replace('LIC/', 'LA/');
+        } else if (appId.startsWith('NLI/')) {
+          derivedLicenseId = appId.replace('NLI/', 'NA/');
+        } else if (appId.startsWith('SBM/')) {
+          derivedLicenseId = appId.replace('SBM/', 'SB/');
+        } else if (appId.startsWith('COMP/')) {
+          derivedLicenseId = appId.replace('COMP/', 'CREG/');
+        } else if (appId.startsWith('LRA/')) {
+          renewedIds.add(appId.replace('LRA/', 'LA/'));
+          renewedIds.add(appId.replace('LRA/', 'NA/'));
+        }
+        
+        if (derivedLicenseId && this.isValidLicenseIdForWarning(derivedLicenseId)) {
+          renewedIds.add(derivedLicenseId);
+        }
+      }
+    });
+    
+    return renewedIds;
+  }
+
   private formatDDMMYYYY(date: Date): string {
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -334,6 +411,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
 
       approvedWithoutRenewal.forEach(app => {
+        if (app.type === 'license-renewal') {
+          return;
+        }
         const raw = app.raw || {};
         let validUpTo = this.extractValidUpToDate(raw);
         if (!validUpTo && renewalConfig) {
@@ -1040,8 +1120,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private loadDashboardStats() {
     // Use the unified dashboard service for all roles
     forkJoin({
-      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(this.dashboardConfig),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, this.dashboardConfig),
+      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(this.dashboardConfig, true),
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, this.dashboardConfig),
       hologramProcurements: this.isLicenseeUser()
         ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
         : of([])
@@ -1065,13 +1145,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
             ...filteredApplications.applied
           ];
 
+          const renewedLicenseIds = this.getRenewedLicenseIds(
+            filteredApplications.applied,
+            filteredApplications.pending,
+            filteredApplications.awaitingPayment
+          );
+
+          const approvedWithoutRenewal: UnifiedApplication[] = [];
+          filteredApplications.approved.forEach((app: UnifiedApplication) => {
+            const licenseId = this.extractLicenseId(app);
+            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            if (!isRenewed) {
+              approvedWithoutRenewal.push(app);
+            }
+          });
+
           // Store counts separately but combine pending display
           this.dashboardCounts = {
             applied: 0,
             pending: pendingBucket.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
             objection: filteredApplications.objection.length,
-            approved: filteredApplications.approved.length,
+            approved: approvedWithoutRenewal.length,
             rejected: filteredApplications.rejected.length
           };
 
@@ -1087,12 +1182,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
 
           // Show submitted + pending + awaiting payment together in Pending table.
-          this.checkRenewalEligibility(filteredApplications.approved);
+          this.checkRenewalEligibility(approvedWithoutRenewal);
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
             objection: filteredApplications.objection,
-            approved: filteredApplications.approved,
+            approved: approvedWithoutRenewal,
             rejected: filteredApplications.rejected
           });
 
@@ -1140,9 +1235,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
             ...filteredApplications.applied
           ];
 
+          const renewedLicenseIds = this.getRenewedLicenseIds(
+            filteredApplications.applied,
+            filteredApplications.pending,
+            filteredApplications.awaitingPayment
+          );
+
+          const approvedWithoutRenewal: UnifiedApplication[] = [];
+          filteredApplications.approved.forEach((app: UnifiedApplication) => {
+            const licenseId = this.extractLicenseId(app);
+            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            if (!isRenewed) {
+              approvedWithoutRenewal.push(app);
+            }
+          });
+
           this.dashboardCounts = {
             ...this.dashboardCounts,
-            awaitingPayment: filteredApplications.awaitingPayment.length
+            awaitingPayment: filteredApplications.awaitingPayment.length,
+            approved: approvedWithoutRenewal.length
           };
 
           if (this.isLicenseeUser()) {
@@ -1155,12 +1266,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
             };
           }
 
-          this.checkRenewalEligibility(filteredApplications.approved);
+          this.checkRenewalEligibility(approvedWithoutRenewal);
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
             objection: filteredApplications.objection,
-            approved: filteredApplications.approved,
+            approved: approvedWithoutRenewal,
             rejected: filteredApplications.rejected
           });
 

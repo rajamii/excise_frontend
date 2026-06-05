@@ -118,19 +118,21 @@ export class UnifiedDashboardService {
     return enabled.size ? Array.from(enabled) : this.allTypes.slice();
   }
 
-  getUnifiedDashboardCounts(config?: DashboardConfig): Observable<DashboardCount> {
+  getUnifiedDashboardCounts(config?: DashboardConfig, forceRefresh = false): Observable<DashboardCount> {
     const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal']));
     const cacheKey = enabledTypes.slice().sort().join('|');
-    if (this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
+    if (!forceRefresh && this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
       return this.unifiedCountsCache$;
     }
     const tasks: Array<Observable<DashboardCount>> = [];
 
     const empty: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 } as DashboardCount;
 
+    const getUrl = (url: string) => forceRefresh ? `${url}?cb=${Date.now()}` : url;
+
     if (enabledTypes.includes('license-renewal')) {
       tasks.push(
-        this.http.get<DashboardCount>(`${this.endpoints.renewal}/dashboard-counts/`).pipe(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.renewal}/dashboard-counts/`)).pipe(
           catchError((err) => {
             console.error(' Renewal counts error:', err);
             return of(empty);
@@ -141,7 +143,7 @@ export class UnifiedDashboardService {
 
     if (enabledTypes.includes('new-license')) {
       tasks.push(
-        this.http.get<DashboardCount>(`${this.endpoints.new}/dashboard-counts/`).pipe(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.new}/dashboard-counts/`)).pipe(
           catchError((err) => {
             console.error(' New license counts error:', err);
             return of(empty);
@@ -152,7 +154,7 @@ export class UnifiedDashboardService {
 
     if (enabledTypes.includes('salesman-barman')) {
       tasks.push(
-        this.http.get<DashboardCount>(`${this.endpoints.salesman}/dashboard-counts/`).pipe(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.salesman}/dashboard-counts/`)).pipe(
           catchError((err) => {
             console.error(' Salesman counts error:', err);
             return of(empty);
@@ -163,7 +165,7 @@ export class UnifiedDashboardService {
 
     if (enabledTypes.includes('company-registration')) {
       tasks.push(
-        this.http.get<DashboardCount>(`${this.endpoints.company}/dashboard-counts/`).pipe(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.company}/dashboard-counts/`)).pipe(
           catchError((err) => {
             console.error(' Company registration counts error:', err);
             return of(empty);
@@ -231,10 +233,12 @@ export class UnifiedDashboardService {
       requests.push(req$);
     };
 
+    const getUrl = (url: string) => forceRefresh ? `${url}?cb=${Date.now()}` : url;
+
     if (enabledTypes.includes('license-renewal')) {
       push(
         'license-renewal',
-        this.http.get<any>(`${this.endpoints.renewal}/list-by-status/`).pipe(
+        this.http.get<any>(getUrl(`${this.endpoints.renewal}/list-by-status/`)).pipe(
           catchError((err) => {
             console.error('Renewal error:', err);
             return of({ applied: [], pending: [], approved: [], rejected: [] });
@@ -246,7 +250,7 @@ export class UnifiedDashboardService {
     if (enabledTypes.includes('new-license')) {
       push(
         'new-license',
-        this.http.get<any>(`${this.endpoints.new}/list-by-status/`).pipe(
+        this.http.get<any>(getUrl(`${this.endpoints.new}/list-by-status/`)).pipe(
           catchError((err) => {
             console.error('New License error:', err);
             return of({ applied: [], pending: [], approved: [], rejected: [] });
@@ -258,7 +262,7 @@ export class UnifiedDashboardService {
     if (enabledTypes.includes('salesman-barman')) {
       push(
         'salesman-barman',
-        this.http.get<any>(`${this.endpoints.salesman}/list-by-status/`).pipe(
+        this.http.get<any>(getUrl(`${this.endpoints.salesman}/list-by-status/`)).pipe(
           catchError((err) => {
             console.error('Salesman error:', err);
             return of({ applied: [], pending: [], approved: [], rejected: [] });
@@ -270,7 +274,7 @@ export class UnifiedDashboardService {
     if (enabledTypes.includes('company-registration')) {
       push(
         'company-registration',
-        this.http.get<any>(`${this.endpoints.company}/list-by-status/`).pipe(
+        this.http.get<any>(getUrl(`${this.endpoints.company}/list-by-status/`)).pipe(
           catchError((err) => {
             console.error('Company registration error:', err);
             return of({ applied: [], pending: [], approved: [], rejected: [] });
