@@ -416,6 +416,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
         if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'LA/');
         if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
+        if (appId.startsWith('RSBM/')) return appId.replace('RSBM/', 'SB/');
         if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/');
       }
       return null;
@@ -509,6 +510,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
           // Since it's ambiguous, we can add both potential derivations.
           renewedIds.add(appId.replace('LRA/', 'LA/'));
           renewedIds.add(appId.replace('LRA/', 'NA/'));
+        } else if (appId.startsWith('RSBM/')) {
+          renewedIds.add(appId.replace('RSBM/', 'SB/'));
         }
         
         if (derivedLicenseId && this.isValidLicenseId(derivedLicenseId)) {

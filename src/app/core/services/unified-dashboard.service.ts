@@ -45,6 +45,8 @@ export class UnifiedDashboardService {
     if (!id) return '';
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('LRA/')) return 'license-renewal';
+    if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('NA/')) return 'new-license';
     if (id.startsWith('LA/')) return 'license-renewal';
     return '';

@@ -1906,7 +1906,7 @@ private initializeWalletContextAndLoadData(): void {
     if (this.pendingNewLicenseLicenseFeeAmount > 0 && this.pendingNewLicenseSecurityFeeAmount > 0) return;
 
     const contextType = String(this.pendingWalletPaymentContext?.itemType || '').trim().toLowerCase();
-    const detail$ = contextType === 'license-renewal' || applicationId.toUpperCase().startsWith('LRA/')
+    const detail$ = contextType === 'license-renewal' || applicationId.toUpperCase().startsWith('LRA/') || applicationId.toUpperCase().startsWith('RSBM/')
       ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
       : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
 
@@ -2188,7 +2188,7 @@ private initializeWalletContextAndLoadData(): void {
     const typeToken = String(context?.itemType || '').trim().toLowerCase();
     const refToken = String(context?.referenceNo || '').trim().toUpperCase();
     const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/');
-    const isRenewal = typeToken.includes('license-renewal') || refToken.startsWith('LRA/');
+    const isRenewal = typeToken.includes('license-renewal') || refToken.startsWith('LRA/') || refToken.startsWith('RSBM/');
     if (!isNewLicense && !isRenewal) return;
 
     const applicationId = String(this.pendingNewLicenseApplicationId || context?.id || '').trim();

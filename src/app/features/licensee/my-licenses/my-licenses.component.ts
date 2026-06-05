@@ -158,9 +158,11 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       return explicit;
     }
 
-    const id = String((application as any)?.applicationId || '').trim();
+    const id = String((application as any)?.applicationId || '').trim().toUpperCase();
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('LRA/')) return 'license-renewal';
+    if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('SBM/')) return 'salesman-barman';
     return 'new-license';
   }
@@ -422,8 +424,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   private extractLicenseId(raw: any, application: UnifiedApplication): string | null {
     console.log('🔍 extractLicenseId called with:', { raw, application });
     
-    // First, determine the expected license ID prefix based on application type
-    const expectedPrefix = this.getExpectedLicensePrefix(application.type);
+    const appId = String(application.applicationId || raw.application_id || raw.applicationId || '').trim().toUpperCase();
+    const expectedPrefix = appId.startsWith('RSBM/') ? 'SB/' : this.getExpectedLicensePrefix(application.type);
     console.log('  Expected license prefix:', expectedPrefix);
     
     // CRITICAL: For approved applications, check renewalOf field first
@@ -522,7 +524,6 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     // LIC/101/2025-26/0001 -> LA/101/2025-26/0001
     // NLI/101/2025-26/0001 -> NA/101/2025-26/0001
     // SBM/101/2025-26/0001 -> SB/101/2025-26/0001
-    const appId = application.applicationId;
     if (appId) {
       console.log('  Attempting to derive license ID from application ID:', appId);
       let derivedLicenseId = null;

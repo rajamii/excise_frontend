@@ -377,6 +377,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         } else if (appId.startsWith('LRA/')) {
           renewedIds.add(appId.replace('LRA/', 'LA/'));
           renewedIds.add(appId.replace('LRA/', 'NA/'));
+        } else if (appId.startsWith('RSBM/')) {
+          renewedIds.add(appId.replace('RSBM/', 'SB/'));
         }
         
         if (derivedLicenseId && this.isValidLicenseIdForWarning(derivedLicenseId)) {
