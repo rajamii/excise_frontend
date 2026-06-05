@@ -1,4 +1,5 @@
 /* licensee-dashboard.component.scss */
+@use "sass:color";
 
 .dashboard-container {
     display: flex;
@@ -668,7 +669,7 @@ $expiring-date-color:#e65100;
     &.btn-expired {
         background: linear-gradient(135deg, $expired-btn-bg, $expired-btn-hover);
         &:hover {
-            background: linear-gradient(135deg, $expired-btn-hover, darken($expired-btn-hover, 8%));
+            background: linear-gradient(135deg, $expired-btn-hover, color.adjust($expired-btn-hover, $lightness: -8%));
             box-shadow: 0 5px 16px rgba($expired-btn-bg, 0.45);
             transform: translateY(-1px);
         }
@@ -677,7 +678,7 @@ $expiring-date-color:#e65100;
     &.btn-expiring {
         background: linear-gradient(135deg, $expiring-btn-bg, $expiring-btn-hover);
         &:hover {
-            background: linear-gradient(135deg, $expiring-btn-hover, darken($expiring-btn-hover, 8%));
+            background: linear-gradient(135deg, $expiring-btn-hover, color.adjust($expiring-btn-hover, $lightness: -8%));
             box-shadow: 0 5px 16px rgba($expiring-btn-bg, 0.45);
             transform: translateY(-1px);
         }
