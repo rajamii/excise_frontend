@@ -477,4 +477,13 @@ export class AdminService {
   toggleCheckPostActive(id: number): Observable<any> {
     return this.http.patch(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/toggle-active/`, {});
   }
+
+  // Renewal Application Config
+  getRenewalApplicationConfig(): Observable<any> {
+    return this.http.get<any>(`${this.mastersUrl}/renewal-application-config/`);
+  }
+
+  updateRenewalApplicationConfig(changes: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/renewal-application-config/update/`, changes);
+  }
 }

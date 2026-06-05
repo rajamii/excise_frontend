@@ -87,6 +87,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.police_stations.view' }
       },
       {
+        path: 'admin/license-validity-period',
+        loadComponent: () =>
+          import('../admin/master/license-validity-period/license-validity-period.component').then((m) => m.LicenseValidityPeriodComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/license-types',
         loadComponent: () =>
           import('../admin/master/license-type/list/list.component').then((m) => m.ListComponent),
@@ -288,6 +295,7 @@ const routes: Routes = [
       { path: 'districts', redirectTo: 'admin/districts', pathMatch: 'full' },
       { path: 'subdivisions', redirectTo: 'admin/subdivisions', pathMatch: 'full' },
       { path: 'police-stations', redirectTo: 'admin/police-stations', pathMatch: 'full' },
+      { path: 'license-validity-period', redirectTo: 'admin/license-validity-period', pathMatch: 'full' },
       { path: 'license-types', redirectTo: 'admin/license-types', pathMatch: 'full' },
       { path: 'license-categories', redirectTo: 'admin/license-categories', pathMatch: 'full' },
       { path: 'license-titles', redirectTo: 'admin/license-titles', pathMatch: 'full' },
