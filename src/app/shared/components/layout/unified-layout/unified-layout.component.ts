@@ -1041,9 +1041,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     const selectHtml = groups.length > 1
       ? `
-        <div class="license-popup__row">
-          <label class="license-popup__label" for="licenseGroup">Select license</label>
-          <select id="licenseGroup" class="license-popup__select">
+        <div class="lp-filter-row">
+          <label class="lp-filter-label" for="licenseGroup">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+            Filter by type
+          </label>
+          <select id="licenseGroup" class="lp-filter-select">
             ${groups.map((g) => `<option value="${this.escapeHtml(g.key)}">${this.escapeHtml(g.label)}</option>`).join('')}
           </select>
         </div>
@@ -1051,17 +1054,44 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       : '';
 
     void Swal.fire({
-      title: 'License Numbers',
       html: `
-        <div class="license-popup">
-          ${selectHtml}
-          <div id="licenseGroupLabel" class="license-popup__group-label"></div>
-          <div id="licenseList" class="license-popup__list"></div>
+        <div class="lp-modal">
+
+          <!-- Header -->
+          <div class="lp-header">
+            <div class="lp-header-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2"/>
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                <line x1="12" y1="12" x2="12" y2="16"/>
+                <line x1="10" y1="14" x2="14" y2="14"/>
+              </svg>
+            </div>
+            <div class="lp-header-text">
+              <h2 class="lp-title">License &amp; Application Numbers</h2>
+              <p class="lp-subtitle">Your registered license details and renewal history</p>
+            </div>
+            <button class="lp-close-btn" id="lpCloseBtn" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="lp-body">
+            ${selectHtml}
+            <div id="licenseGroupLabel" class="lp-category-badge"></div>
+            <div id="licenseList"></div>
+          </div>
+
         </div>
       `,
-      icon: 'info',
-      confirmButtonText: 'Close',
+      showConfirmButton: false,
+      showCloseButton: false,
+      padding: 0,
+      background: 'transparent',
+      customClass: { popup: 'lp-swal-popup', htmlContainer: 'lp-swal-html' },
       didOpen: () => {
+        document.getElementById('lpCloseBtn')?.addEventListener('click', () => Swal.close());
         const selectEl = document.getElementById('licenseGroup') as HTMLSelectElement | null;
         const initialKey = groups.some((g) => g.key === this.selectedLicenseGroupKey) ? this.selectedLicenseGroupKey : groups[0].key;
         if (selectEl) {
@@ -1083,19 +1113,76 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const group = groups.find((g) => g.key === groupKey) || groups[0];
     this.selectedLicenseGroupKey = group.key;
     if (labelEl) {
-      labelEl.textContent = group.label || 'License';
+      labelEl.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        ${this.escapeHtml(group.label || 'License')}
+      `;
     }
 
-    const ids = group.items
-      .map((x) => String(x?.license_id || x?.licenseId || '').trim())
-      .filter(Boolean)
-      .sort((a, b) => this.compareLicenseIdsDesc(a, b));
+    const items = group.items
+      .map((x) => {
+        const rawDetails = x?.renewalDetails ?? x?.renewal_details ?? [];
+        const details = Array.isArray(rawDetails) ? rawDetails : [];
+        return {
+          id: String(x?.license_id || x?.licenseId || '').trim(),
+          renewalCount: Number(x?.renewalCount ?? x?.renewal_count ?? 0),
+          renewalDetails: details
+        };
+      })
+      .filter((item) => item.id)
+      .sort((a, b) => this.compareLicenseIdsDesc(a.id, b.id));
 
-    const html = ids.length
-      ? `<ul class="license-popup__ul">${ids.map((id) => `<li><code>${this.escapeHtml(id)}</code></li>`).join('')}</ul>`
-      : `<div class="license-popup__empty">No license number found for this selection.</div>`;
+    if (!items.length) {
+      target.innerHTML = `
+        <div class="lp-empty">
+          <div class="lp-empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <p class="lp-empty-text">No license found for this selection.</p>
+        </div>`;
+      return;
+    }
 
-    target.innerHTML = html;
+    const cardsHtml = items.map((item, idx) => {
+      const renewalRows = item.renewalDetails.map((d: any) => {
+        const appId = String(d?.applicationId || d?.application_id || '').trim();
+        const dateVal = String(d?.date || '').trim();
+        return `
+          <div class="lp-renewal-row">
+            <span class="lp-renewal-connector">└</span>
+            <div class="lp-renewal-content">
+              <span class="lp-renewal-label">Renewal Application</span>
+              <code class="lp-renewal-appid">${this.escapeHtml(appId)}</code>
+              ${dateVal ? `<span class="lp-renewal-date">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Renewed on ${this.escapeHtml(dateVal)}
+              </span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="lp-card">
+          <div class="lp-card-header">
+            <div class="lp-card-num-wrap">
+              <span class="lp-card-index">#${idx + 1}</span>
+              <div class="lp-card-num-block">
+                <span class="lp-card-num-label">License Number</span>
+                <code class="lp-license-id">${this.escapeHtml(item.id)}</code>
+              </div>
+            </div>
+            <div class="lp-renewal-badge ${item.renewalCount > 0 ? 'has-renewals' : 'no-renewals'}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              ${item.renewalCount} Renewal${item.renewalCount !== 1 ? 's' : ''}
+            </div>
+          </div>
+          ${renewalRows ? `<div class="lp-renewals-section">${renewalRows}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    target.innerHTML = `<div class="lp-cards-list">${cardsHtml}</div>`;
     this.triggerUiRefresh();
   }
 

@@ -1,4 +1,4 @@
-/* Simple Government Portal Layout - Exact Match */
+﻿/* Simple Government Portal Layout - Exact Match */
 
 :host {
   display: flex;
@@ -24,84 +24,323 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-/* SweetAlert2 license popup styling (encapsulation: none) */
-.swal2-popup {
-  .license-popup {
-    text-align: left;
+/* ============================================================
+/* ============================================================
+   SweetAlert2 — License Numbers Popup  (encapsulation: none)
+   ============================================================ */
 
-    .license-popup__row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
+/* SweetAlert wrapper: transparent, zero-padding — our card controls everything */
+.lp-swal-popup {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  width: auto !important;
+  max-width: 540px !important;
+}
+.lp-swal-html {
+  padding: 0 !important;
+  margin: 0 !important;
+}
 
-    .license-popup__label {
-      font-size: 12px;
-      font-weight: 700;
-      color: #334155;
-      min-width: 92px;
-    }
+/* ── Main modal card ── */
+.lp-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22), 0 8px 24px rgba(15, 23, 42, 0.12);
+  width: 500px;
+  max-width: 94vw;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
-    .license-popup__select {
-      flex: 1;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 8px 10px;
-      font-size: 13px;
-      outline: none;
-      background: #fff;
+/* ── Header ── */
+.lp-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b4cb8 50%, #6366f1 100%);
+  padding: 26px 22px 22px 22px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+}
+.lp-header-icon {
+  width: 54px;
+  height: 54px;
+  background: rgba(255,255,255,0.18);
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+.lp-header-text { flex: 1; min-width: 0; }
+.lp-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 5px 0;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+.lp-subtitle {
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.lp-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  padding: 0;
+  &:hover { background: rgba(255,255,255,0.28); }
+}
 
-      &:focus {
-        border-color: #4f46e5;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-      }
-    }
+/* ── Body ── */
+.lp-body {
+  padding: 22px 22px 26px;
+  background: #f1f5f9;
+}
 
-    .license-popup__list {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 10px 12px;
-      max-height: 220px;
-      overflow: auto;
-    }
+/* ── Filter row ── */
+.lp-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.lp-filter-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.lp-filter-select {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+}
 
-    .license-popup__group-label {
-      font-size: 13px;
-      font-weight: 800;
-      color: #0f172a;
-      margin: 2px 0 10px 0;
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(79, 70, 229, 0.10), rgba(236, 72, 153, 0.08));
-      border: 1px solid rgba(148, 163, 184, 0.6);
-    }
+/* ── Category badge ── */
+.lp-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3b4cb8;
+  background: #eff2ff;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 100px;
+  padding: 6px 16px;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-    .license-popup__ul {
-      margin: 0;
-      padding-left: 18px;
+/* ── Cards list ── */
+.lp-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 2px;
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+}
 
-      li {
-        margin: 6px 0;
-
-        code {
-          color: #c026d3;
-          background: rgba(192, 38, 211, 0.08);
-          padding: 2px 6px;
-          border-radius: 8px;
-        }
-      }
-    }
-
-    .license-popup__empty {
-      font-size: 13px;
-      color: #475569;
-      padding: 6px 2px;
-    }
+/* ── License card ── */
+.lp-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  &:hover {
+    border-color: #a5b4fc;
+    box-shadow: 0 4px 18px rgba(59,76,184,0.10);
+  }
+}
+.lp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+.lp-card-num-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.lp-card-index {
+  width: 28px;
+  height: 28px;
+  background: #eff2ff;
+  color: #3b4cb8;
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.lp-card-num-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.lp-card-num-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.lp-license-id {
+  font-family: 'SFMono-Regular', 'Fira Code', 'Consolas', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: #3b4cb8;
+  background: #eff2ff;
+  border: 1.5px solid #c7d2fe;
+  padding: 4px 12px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.lp-renewal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 13px;
+  border-radius: 100px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  &.has-renewals {
+    color: #0d9488;
+    background: #f0fdfa;
+    border: 1.5px solid #99f6e4;
+  }
+  &.no-renewals {
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
   }
 }
 
+/* ── Renewals section ── */
+.lp-renewals-section {
+  border-top: 1.5px solid #f1f5f9;
+  background: #f8fafc;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lp-renewal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.lp-renewal-connector {
+  font-size: 16px;
+  line-height: 1;
+  color: #0d9488;
+  opacity: 0.7;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+.lp-renewal-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lp-renewal-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.lp-renewal-appid {
+  font-family: 'SFMono-Regular', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0d9488;
+  background: #f0fdfa;
+  border: 1.5px solid #99f6e4;
+  padding: 3px 10px;
+  border-radius: 7px;
+  letter-spacing: 0.3px;
+}
+.lp-renewal-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 2px 9px;
+  border-radius: 6px;
+}
+
+/* ── Empty state ── */
+.lp-empty {
+  text-align: center;
+  padding: 32px 20px;
+  .lp-empty-icon { margin-bottom: 12px; opacity: 0.6; }
+  .lp-empty-text {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+    font-weight: 500;
+  }
+}
 .sidenav-container {
   flex: 1 !important;
   background-color: #f5f5f5 !important;
