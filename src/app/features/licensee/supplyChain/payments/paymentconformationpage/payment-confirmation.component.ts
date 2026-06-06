@@ -2177,21 +2177,43 @@ private initializeWalletContextAndLoadData(): void {
         this.refreshWalletData();
         this.loadCancellationDataFromApi();
         this.loadHologramDataFromApi();
-        // New-license convenience: when user came from "Proceed to Pay" popup we deep-link into
-        // license_fee first and optionally chain security_deposit next.
-        if (context.tab === 'license_fee' && this.chainedNewLicenseSecurityAmount > 0) {
-          const nextAmount = this.chainedNewLicenseSecurityAmount;
-          this.chainedNewLicenseSecurityAmount = 0;
-          this.pendingWalletPaymentContext = {
-            ...context,
-            tab: 'security_deposit',
-            amount: nextAmount
-          };
-          this.hasHandledPendingWalletPayment = false;
-          this.isHandlingPendingWalletPayment = false;
-          this.setActiveTab('security_deposit');
-          this.persistPendingPaymentContextToStorage();
-          return;
+        // New-license / renewal convenience: chain payments bidirectionally if one is unpaid
+        const refNo = this.pendingNewLicenseReferenceNo || context.referenceNo;
+        const isLicenseFlow = this.isLicenseFeeWorkflowPaymentType(context.itemType);
+
+        if (isLicenseFlow) {
+          if (context.tab === 'license_fee') {
+            const securityPaid = this.isFeePaid('security_deposit', refNo);
+            const nextAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
+            if (!securityPaid && nextAmount > 0) {
+              this.chainedNewLicenseSecurityAmount = 0;
+              this.pendingWalletPaymentContext = {
+                ...context,
+                tab: 'security_deposit',
+                amount: nextAmount
+              };
+              this.hasHandledPendingWalletPayment = false;
+              this.isHandlingPendingWalletPayment = false;
+              this.setActiveTab('security_deposit');
+              this.persistPendingPaymentContextToStorage();
+              return;
+            }
+          } else if (context.tab === 'security_deposit') {
+            const licensePaid = this.isFeePaid('license_fee', refNo);
+            const nextAmount = this.pendingNewLicenseLicenseFeeAmount || 0;
+            if (!licensePaid && nextAmount > 0) {
+              this.pendingWalletPaymentContext = {
+                ...context,
+                tab: 'license_fee',
+                amount: nextAmount
+              };
+              this.hasHandledPendingWalletPayment = false;
+              this.isHandlingPendingWalletPayment = false;
+              this.setActiveTab('license_fee');
+              this.persistPendingPaymentContextToStorage();
+              return;
+            }
+          }
         }
         this.maybeForceRefreshAfterNewLicenseApproval(context);
         this.finishPendingWalletPaymentHandling();
