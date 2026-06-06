@@ -3321,6 +3321,25 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
+    getValidUpToDate(): Date | null {
+        if (!this.applicationData) return null;
+        const rawDate = 
+            this.applicationData['valid_up_to'] || 
+            this.applicationData['old_license_valid_up_to'] || 
+            this.applicationData['oldLicenseValidUpTo'] ||
+            this.applicationData['validUpTo'] ||
+            this.applicationData['expiryDate'] ||
+            null;
+        if (!rawDate) return null;
+        if (rawDate instanceof Date) return rawDate;
+        const parsed = new Date(rawDate);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+    isExpired(): boolean {
+        const validUpTo = this.getValidUpToDate();
+        if (!validUpTo) return false;
+        return validUpTo.getTime() < Date.now();
+    }
 
     getApplicationTitle(): string {
         return APPLICATION_TITLES[this.applicationType] || 'APPLICATION';

@@ -64,6 +64,12 @@
                             </p>
                             <p><strong>Submission Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy"
                                 }}</p>
+                            <p *ngIf="getValidUpToDate()">
+                                <strong>Valid Up To:</strong> 
+                                <span [class.text-danger]="isExpired()" [class.fw-bold]="isExpired()">
+                                    {{ getValidUpToDate() | date: "dd-MM-yyyy" }}
+                                </span>
+                            </p>
                         </div>
                     </div>
                     <div class="col-md-6">
