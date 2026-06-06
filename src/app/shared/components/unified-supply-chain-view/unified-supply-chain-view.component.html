@@ -73,11 +73,11 @@
                             <span [ngClass]="getStatusBadgeClass(getCurrentStatusToken())" class="d-block mt-1">
                                 {{ getCurrentStatusText() }}
                              </span>
-                             <div class="mt-2" *ngIf="isNewLicense() && hasAnyUnresolvedObjections()">
+                             <div class="mt-2" *ngIf="isNewLicenseOrRenewal() && hasAnyUnresolvedObjections()">
                                  <span class="badge bg-danger">Objection</span>
                                  <span class="badge bg-light text-dark ms-2">{{ unresolvedObjectionCount() }} pending</span>
                              </div>
-                            <p class="mt-2" *ngIf="!isSalesmanBarmanRegistration()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
+                            <p class="mt-2" *ngIf="!isSalesmanOrRenewal()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
                     </div>
                 </div>
@@ -732,7 +732,7 @@
                         </div>
                     </ng-template>
                 </div>
-                @if (isNewLicense()) {
+                @if (isNewLicenseOrRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Applicant Information</h5>
                     <div class="table-responsive">
@@ -1403,6 +1403,7 @@
                     </div>
                 </div>
 
+                @if (isNewLicenseRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Applicant & Establishment Details</h5>
                     <div class="table-responsive">
@@ -1432,7 +1433,9 @@
                         </table>
                     </div>
                 </div>
+                }
 
+                @if (isNewLicenseRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Site Details</h5>
                     <div class="table-responsive">
@@ -1482,6 +1485,7 @@
                         </table>
                     </div>
                 </div>
+                }
 
                 <div class="section-card mb-4">
                     <h5 class="section-title">Renewal Fee & Payment Status</h5>
@@ -1510,7 +1514,7 @@
                 </div>
                 }
 
-                @if (isSalesmanBarmanRegistration()) {
+                @if (isSalesmanOrRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Salesman/Barman Applicant Information</h5>
                     <div class="table-responsive">

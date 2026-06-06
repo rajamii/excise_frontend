@@ -3302,6 +3302,22 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
     isRenewal(): boolean { return this.applicationType === 'license-renewal'; }
+    isSalesmanRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
+        return this.isRenewal() && id.startsWith('RSBM/');
+    }
+    isNewLicenseRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
+        return this.isRenewal() && !id.startsWith('RSBM/');
+    }
+    isNewLicenseOrRenewal(): boolean {
+        return this.isNewLicense() || this.isNewLicenseRenewal();
+    }
+    isSalesmanOrRenewal(): boolean {
+        return this.isSalesmanBarmanRegistration() || this.isSalesmanRenewal();
+    }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
@@ -3621,7 +3637,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         let docFields: Array<{ label: string; keys: string[] }> = [];
 
-        if (this.applicationType === 'new-license') {
+        const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
+        const isSalesman = this.applicationType === 'salesman-barman-registration' || id.startsWith('RSBM/');
+        const isNewLicense = this.applicationType === 'new-license' || this.applicationType === 'license-renewal' || id.startsWith('LRA/');
+
+        if (isNewLicense) {
             docFields = [
                 { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
                 { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
@@ -3629,7 +3649,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
                 { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
             ];
-        } else if (this.applicationType === 'salesman-barman-registration') {
+        } else if (isSalesman) {
             docFields = [
                 { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto'] },
                 { label: 'Aadhaar Card', keys: ['aadhaar_card', 'aadhaarCard'] },
