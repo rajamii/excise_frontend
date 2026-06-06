@@ -621,17 +621,11 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               </p>
             </div>
           `, 
-          confirmButtonText: 'Go to Dashboard',
-          showCancelButton: true,
-          cancelButtonText: 'Stay Here'
-        }).then((result) => { 
-          if (result.isConfirmed) { 
-            this.closeDialog();
-            // ✅ FIXED: Navigate to the correct licensee dashboard route
-            this.router.navigate(['/licensee/dashboard'], { queryParams: { section: 'license-renewal' } });
-          } else {
-            this.loadMyLicenses();
-          }
+          confirmButtonText: 'Back',
+          confirmButtonColor: '#3085d6',
+          allowOutsideClick: false
+        }).then(() => { 
+          this.closeDialog();
         });
       },
       error: (error: any) => {
