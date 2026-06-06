@@ -2482,6 +2482,10 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
     flex-shrink: 0;
 
     mat-icon { font-size: 11px; width: 11px; height: 11px; }
+
+    &.rw-badge--in-progress {
+        background: #1C2B78 !important;
+    }
 }
 
 // ── Title ─────────────────────────────────────────────────
@@ -2669,6 +2673,20 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
         &:hover {
             box-shadow: 0 6px 20px rgba($rw-sn-btn-from, 0.45);
             transform: translateY(-2px) scale(1.02);
+        }
+    }
+
+    &.rw-btn--in-progress {
+        background: rgba(0, 0, 0, 0.08) !important;
+        border: 1px dashed #bdbdbd !important;
+        color: #757575 !important;
+        cursor: not-allowed;
+        pointer-events: none;
+        box-shadow: none !important;
+
+        mat-icon {
+            color: #757575 !important;
+            animation: none !important;
         }
     }
 }

@@ -521,8 +521,9 @@
         <!-- Icon section -->
         <div class="rw-icon-section">
           <div class="rw-icon-wrap">
-            <mat-icon *ngIf="warning.isExpired">gpp_bad</mat-icon>
-            <mat-icon *ngIf="!warning.isExpired">update</mat-icon>
+            <mat-icon *ngIf="warning.hasActiveRenewal">hourglass_empty</mat-icon>
+            <mat-icon *ngIf="!warning.hasActiveRenewal && warning.isExpired">gpp_bad</mat-icon>
+            <mat-icon *ngIf="!warning.hasActiveRenewal && !warning.isExpired">update</mat-icon>
           </div>
         </div>
 
@@ -535,8 +536,9 @@
 
             <!-- Line 1: Badge · Title · License ID · Type chip -->
             <div class="rw-line rw-line--top">
-              <span class="rw-badge rw-badge--expired"><mat-icon>block</mat-icon>EXPIRED</span>
-              <h3 class="rw-title">Your license has expired</h3>
+              <span class="rw-badge rw-badge--in-progress" *ngIf="warning.hasActiveRenewal"><mat-icon>hourglass_empty</mat-icon>RENEWAL IN PROGRESS</span>
+              <span class="rw-badge rw-badge--expired" *ngIf="!warning.hasActiveRenewal"><mat-icon>block</mat-icon>EXPIRED</span>
+              <h3 class="rw-title">Your license has expired <span *ngIf="warning.hasActiveRenewal">(Renewal Pending)</span></h3>
               <span class="rw-divider-dot">·</span>
               <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
@@ -569,8 +571,10 @@
 
             <!-- Line 1: Badge · Title · License ID · Type chip -->
             <div class="rw-line rw-line--top">
-              <span class="rw-badge rw-badge--expiring"><mat-icon>notifications_active</mat-icon>RENEWAL OPEN</span>
-              <h3 class="rw-title">Your license is up for renewal</h3>
+              <span class="rw-badge rw-badge--in-progress" *ngIf="warning.hasActiveRenewal"><mat-icon>hourglass_empty</mat-icon>RENEWAL IN PROGRESS</span>
+              <span class="rw-badge rw-badge--expiring" *ngIf="!warning.hasActiveRenewal"><mat-icon>notifications_active</mat-icon>RENEWAL OPEN</span>
+              <h3 class="rw-title" *ngIf="warning.hasActiveRenewal">Your license renewal is in progress</h3>
+              <h3 class="rw-title" *ngIf="!warning.hasActiveRenewal">Your license is up for renewal</h3>
               <span class="rw-divider-dot">·</span>
               <span class="rw-license-id">{{ warning.licenseId }}</span>
               <span class="rw-type-chip">{{ warning.type }}</span>
@@ -602,7 +606,11 @@
 
         <!-- Action -->
         <div class="rw-actions">
-          <button class="rw-btn"
+          <button class="rw-btn rw-btn--in-progress" *ngIf="warning.hasActiveRenewal" disabled>
+            <mat-icon>hourglass_empty</mat-icon>
+            Renewal In Progress
+          </button>
+          <button class="rw-btn" *ngIf="!warning.hasActiveRenewal"
                   [class.rw-btn--expired]="warning.isExpired"
                   [class.rw-btn--expiring]="!warning.isExpired"
                   (click)="openMyLicensesForRenewal()">
