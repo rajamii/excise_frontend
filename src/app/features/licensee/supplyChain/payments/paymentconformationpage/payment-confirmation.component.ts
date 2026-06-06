@@ -1790,7 +1790,35 @@ private initializeWalletContextAndLoadData(): void {
     }
   }
 
+  private isFeePaid(walletType: 'license_fee' | 'security_deposit', referenceNo: string): boolean {
+    const ref = String(referenceNo || '').trim().toUpperCase();
+    if (!ref) return false;
+
+    return this.historyData.some((txn) => {
+      const txnRef = String(txn?.reference || '').trim().toUpperCase();
+      if (txnRef !== ref) return false;
+
+      const status = String(txn?.status || '').toLowerCase();
+      const isSuccessful = status.includes('success') || status.includes('paid') || status.includes('completed');
+      if (!isSuccessful) return false;
+
+      const type = String(txn?.type || '').toLowerCase();
+      const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+      if (!isDebitLike) return false;
+
+      const txnWalletType = String((txn as any)?.walletType || '').trim().toLowerCase();
+      if (txnWalletType) return txnWalletType === walletType;
+
+      const paymentFor = String(txn?.paymentFor || '').toLowerCase();
+      if (walletType === 'license_fee') return paymentFor.includes('license');
+      if (walletType === 'security_deposit') return paymentFor.includes('security');
+      return false;
+    });
+  }
+
   private syncPendingNewLicenseContextToActiveTab(): void {
+    if (!this.walletDataLoaded) return;
+
     const ctx = this.pendingWalletPaymentContext;
     if (!ctx) return;
     if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
@@ -1801,7 +1829,12 @@ private initializeWalletContextAndLoadData(): void {
       this.pendingNewLicenseReferenceNo = String(ctx.referenceNo || '').trim();
     }
 
+    const refNo = this.pendingNewLicenseReferenceNo || ctx.referenceNo;
+
     if (this.activeTab === 'license_fee') {
+      if (this.isFeePaid('license_fee', refNo)) {
+        return;
+      }
       const amount = ctx.tab === 'license_fee'
         ? ctx.amount
         : (this.pendingNewLicenseLicenseFeeAmount || ctx.amount);
@@ -1817,6 +1850,9 @@ private initializeWalletContextAndLoadData(): void {
     }
 
     if (this.activeTab === 'security_deposit') {
+      if (this.isFeePaid('security_deposit', refNo)) {
+        return;
+      }
       const amount = ctx.tab === 'security_deposit'
         ? ctx.amount
         : (this.pendingNewLicenseSecurityFeeAmount || ctx.amount);
