@@ -240,13 +240,19 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         const approvedApps = result.approved || [];
         this.activeRenewalLicenseIds = this.collectActiveRenewalLicenseIds(result);
         
+        // Filter out LRA (License Renewal) and RSBM (Renewed Salesman Barman) applications
+        const filteredApps = approvedApps.filter((app: UnifiedApplication) => {
+          const id = String(app.applicationId || '').trim().toUpperCase();
+          return !id.startsWith('LRA/') && !id.startsWith('RSBM/');
+        });
+        
         // 🔍 DEBUG: Log the first approved app to see structure
-        if (approvedApps.length > 0) {
-          console.log('📋 Sample approved application:', approvedApps[0]);
-          console.log('📋 Sample raw data:', approvedApps[0].raw);
+        if (filteredApps.length > 0) {
+          console.log('📋 Sample approved application:', filteredApps[0]);
+          console.log('📋 Sample raw data:', filteredApps[0].raw);
         }
         
-        const sortedApps = approvedApps.sort((a: UnifiedApplication, b: UnifiedApplication) => {
+        const sortedApps = filteredApps.sort((a: UnifiedApplication, b: UnifiedApplication) => {
           const dateA = this.getApprovalDate(a);
           const dateB = this.getApprovalDate(b);
           return dateB.getTime() - dateA.getTime();

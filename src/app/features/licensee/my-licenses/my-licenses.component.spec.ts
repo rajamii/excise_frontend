@@ -120,6 +120,50 @@ describe('MyLicensesComponent', () => {
     expect(component.hasData()).toBe(false);
   });
 
+  it('should load licenses and filter out LRA/ and RSBM/ applications', () => {
+    const mockData = {
+      applied: [],
+      pending: [],
+      approved: [
+        {
+          type: 'new-license',
+          applicationId: 'NLI/001/2024-25/0001',
+          transactions: [],
+          raw: {}
+        },
+        {
+          type: 'license-renewal',
+          applicationId: 'LRA/001/2024-25/0002',
+          transactions: [],
+          raw: {}
+        },
+        {
+          type: 'license-renewal',
+          applicationId: 'RSBM/001/2024-25/0003',
+          transactions: [],
+          raw: {}
+        },
+        {
+          type: 'salesman-barman',
+          applicationId: 'SBM/001/2024-25/0004',
+          transactions: [],
+          raw: {}
+        }
+      ],
+      rejected: [],
+      awaitingPayment: []
+    };
+
+    mockDashboardService.getUnifiedApplicationsByStatus.and.returnValue(of(mockData as any));
+
+    component.ngOnInit();
+
+    expect(mockDashboardService.getUnifiedApplicationsByStatus).toHaveBeenCalled();
+    expect(component.dataSource.data.length).toBe(2);
+    expect(component.dataSource.data[0].applicationId).toBe('NLI/001/2024-25/0001');
+    expect(component.dataSource.data[1].applicationId).toBe('SBM/001/2024-25/0004');
+  });
+
   it('should get display name from establishment name', () => {
     const app = {
       establishmentName: 'Test Establishment',
