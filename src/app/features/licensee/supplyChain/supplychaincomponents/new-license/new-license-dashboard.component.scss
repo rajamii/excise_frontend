@@ -135,6 +135,15 @@
   }
 }
 
+.awaiting-payment-requests {
+  --summary-accent-start: #ff9800;
+  --summary-accent-end: #f57c00;
+
+  .card-icon {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+  }
+}
+
 .objection-requests {
   --summary-accent-start: #f97316;
   --summary-accent-end: #c2410c;
@@ -329,6 +338,10 @@ table {
 .status-badge.pending {
   background: #fff7ed;
   color: #b45309;
+}
+.status-badge.awaiting-payment {
+  background: #fef3c7;
+  color: #d97706;
 }
 .status-badge.objection {
   background: #ffedd5;

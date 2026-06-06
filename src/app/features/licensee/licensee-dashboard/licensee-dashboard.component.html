@@ -38,6 +38,20 @@
       }
     </mat-card>
 
+    <!-- Awaiting Payment Stat Card -->
+    @if (dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) {
+      <mat-card class="stat-card awaiting-payment">
+        <div class="circle-icon orange-bg">
+          <mat-icon style="color: white; font-size: 24px; display: flex; align-items: center; justify-content: center;">payment</mat-icon>
+        </div>
+        <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
+        <div class="label">Awaiting Payment</div>
+        <div class="sub-label">
+          <span class="payment-count">{{ getAwaitingPaymentBreakdownText() }}</span>
+        </div>
+      </mat-card>
+    }
+
     <!-- Approved Stat Card (display only) -->
     <mat-card class="stat-card approved">
       <div class="circle-icon green-bg">

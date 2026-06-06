@@ -1449,6 +1449,14 @@ mat-card,
     display: none !important;
 }
 
+.stats-container .stat-card.awaiting-payment .sub-info {
+    display: block !important;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #e55a00;
+    font-weight: 600;
+}
+
 .stats-container .stat-card .card-header {
     justify-content: center !important;
     padding: 1.5rem 1.5rem 0.5rem !important;

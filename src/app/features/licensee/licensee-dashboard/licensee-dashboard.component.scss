@@ -131,7 +131,7 @@
 // ========================================
 .stats-container {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); // ✅ Changed to 4 columns for 4 cards
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 25px;
 
     .stat-card {
@@ -180,6 +180,10 @@
 
         .yellow-bg {
             background-color: rgba(231, 184, 0, 0.17);
+        }
+
+        .orange-bg {
+            background-color: rgba(255, 152, 0, 0.17);
         }
 
         .value {

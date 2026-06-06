@@ -421,6 +421,26 @@
           </div>
         </mat-card>
 
+        <!-- Awaiting Payment Stat Card -->
+        <mat-card class="stat-card awaiting-payment" *ngIf="shouldShowStatCard('awaitingPayment') && dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
+          <div class="card-header">
+            <div class="circle-icon orange-bg">
+              <mat-icon>payment</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('awaitingPayment') >= 0"
+              [class.negative]="getStatTrend('awaitingPayment') < 0">
+              <mat-icon>{{ getStatTrend('awaitingPayment') > 0 ? 'trending_up' : getStatTrend('awaitingPayment') < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(getStatTrend('awaitingPayment')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
+            <div class="label">Awaiting Payment</div>
+             <div class="sub-info">{{ getAwaitingPaymentBreakdownText() }}</div>
+          </div>
+        </mat-card>
+
         <!-- Objection Stat Card -->
         <mat-card class="stat-card objection" *ngIf="shouldShowStatCard('objection')">
           <div class="card-header">

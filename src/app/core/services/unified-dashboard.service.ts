@@ -380,7 +380,9 @@ export class UnifiedDashboardService {
           const stage = String(app.currentStage || '').toLowerCase();
           const stageId = app.raw?.current_stage_id || app.raw?.currentStageId;
           const isAwaitingByName = stage === 'awaiting_payment' || stage.includes('awaiting') || stage === 'awaiting payment';
-          const isAwaitingById = stageId === 23 || stageId === 31 || Number(stageId) === 23 || Number(stageId) === 31;
+          const isAwaitingById = 
+            stageId === 23 || stageId === 31 || stageId === 109 || stageId === 119 || 
+            Number(stageId) === 23 || Number(stageId) === 31 || Number(stageId) === 109 || Number(stageId) === 119;
           return isAwaitingByName || isAwaitingById;
         };
         

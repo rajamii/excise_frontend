@@ -34,10 +34,11 @@ export class RegistrationManagementComponent implements OnInit {
     approved: 0,
     pending: 0,
     objection: 0,
-    rejected: 0
+    rejected: 0,
+    awaitingPayment: 0
   };
 
-  activeCardFilter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected' | '' = '';
+  activeCardFilter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment' | '' = '';
 
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize = 5;
@@ -53,7 +54,7 @@ export class RegistrationManagementComponent implements OnInit {
     companyName?: string;
     currentStage: string;
     currentStageRaw: string;
-    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment';
     hasObjectionHistory?: boolean;
     hasObjectionUpdate?: boolean;
   }> = [];
@@ -89,6 +90,7 @@ export class RegistrationManagementComponent implements OnInit {
     if (this.isLicenseeUser()) {
       // Licensee: only flag awaiting payment or objection
       return group === 'objection' ||
+        group === 'awaiting-payment' ||
         (stage.includes('payment') && stage.includes('await')) ||
         stage === 'awaiting_payment' ||
         stage === 'awaiting payment';
@@ -107,20 +109,25 @@ export class RegistrationManagementComponent implements OnInit {
     return this.roleService.isAdminRole();
   }
 
-  private simplifyStageForLicensee(stageValue: string, statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'): string {
+  private simplifyStageForLicensee(stageValue: string, statusGroup: string, currentStageId?: any): string {
     if (statusGroup === 'approved') return 'Approved';
     if (statusGroup === 'rejected') return 'Rejected';
     if (statusGroup === 'objection') return 'Objection';
 
     const raw = String(stageValue || '').toLowerCase();
+    const stageIdStr = String(currentStageId || '').trim();
     if (raw.includes('approve')) return 'Approved';
     if (raw.includes('reject')) return 'Rejected';
-    if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
-    if (raw.includes('payment')) return 'Awaiting Payment';
+    if (
+      (raw.includes('awaiting') && raw.includes('payment')) ||
+      raw.includes('payment') ||
+      stageIdStr === '109' ||
+      stageIdStr === '119'
+    ) return 'Awaiting Payment';
     return 'Pending';
   }
 
-  onCardFilterClick(filter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected'): void {
+  onCardFilterClick(filter: 'new' | 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment'): void {
     if (this.activeCardFilter === filter || filter === 'new') {
       // 'new' = Total Application — always shows all rows (no status filter)
       // toggling the same filter off also shows all rows
@@ -378,7 +385,8 @@ export class RegistrationManagementComponent implements OnInit {
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number(counts?.objection || 0),
-          rejected: Number(counts?.rejected || 0)
+          rejected: Number(counts?.rejected || 0),
+          awaitingPayment: 0
         };
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
@@ -593,25 +601,31 @@ export class RegistrationManagementComponent implements OnInit {
     }).subscribe({
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenSalesmanGroupedData(grouped);
+        
+        const approvedCount = this.allRows.filter(r => r.statusGroup === 'approved').length;
+        const pendingCount = this.allRows.filter(r => r.statusGroup === 'pending').length;
+        const objectionCount = this.allRows.filter(r => r.statusGroup === 'objection').length;
+        const rejectedCount = this.allRows.filter(r => r.statusGroup === 'rejected').length;
+        const awaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
+
         this.counts = {
-          newApplication: Number((counts as any)?.new_application || (counts as any)?.newApplication || 0),
-          approved: Number(counts?.approved || 0),
-          pending: Number(counts?.pending || 0),
-          objection: Number((counts as any)?.objection || 0),
-          rejected: Number(counts?.rejected || 0)
+          newApplication: this.allRows.length,
+          approved: approvedCount,
+          pending: pendingCount,
+          objection: objectionCount,
+          rejected: rejectedCount,
+          awaitingPayment: awaitingPaymentCount
         };
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.companyOptions = this.getCompanyOptions(this.allRows);
 
-        // Default to "Pending" filter for admin users viewing salesman-barman,
-        // and for licensees. Objection has higher priority than pending.
-        // If no objection/pending items exist, show all applications (no filter).
         if (this.activeCardFilter === '') {
-          const objectionCount = Number((counts as any)?.objection || 0);
-          const pendingCount = Number(counts?.pending || 0);
           if (objectionCount > 0) {
             this.activeCardFilter = 'objection';
             this.statusFilter = 'objection';
+          } else if (awaitingPaymentCount > 0) {
+            this.activeCardFilter = 'awaiting-payment';
+            this.statusFilter = 'awaiting-payment';
           } else if (pendingCount > 0) {
             this.activeCardFilter = 'pending';
             this.statusFilter = 'pending';
@@ -638,7 +652,7 @@ export class RegistrationManagementComponent implements OnInit {
     companyName?: string;
     currentStage: string;
     currentStageRaw: string;
-    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment';
     hasObjectionHistory?: boolean;
     hasObjectionUpdate?: boolean;
   }> {
@@ -658,9 +672,10 @@ export class RegistrationManagementComponent implements OnInit {
           item?.currentStage ??
           statusGroup
         );
+        const currentStageId = item?.current_stage_id ?? item?.currentStageId ?? item?.current_stage;
 
         const computedStage = this.isLicenseeUser()
-          ? this.simplifyStageForLicensee(rawStage, statusGroup)
+          ? this.simplifyStageForLicensee(rawStage, statusGroup, currentStageId)
           : this.formatStageName(rawStage);
 
         const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
@@ -671,6 +686,11 @@ export class RegistrationManagementComponent implements OnInit {
           Boolean(item?.has_objection_history ?? item?.hasObjectionHistory ?? item?.has_objection ?? item?.hasObjection ?? item?.has_objections ?? item?.hasObjections) ||
           hasHistoryFromTxn;
         const hasObjectionUpdate = Boolean(item?.has_objection_update ?? item?.hasObjectionUpdate) || hasUpdateFromTxn;
+
+        let finalStatusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment' = statusGroup;
+        if (computedStage === 'Awaiting Payment') {
+          finalStatusGroup = 'awaiting-payment';
+        }
 
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
@@ -697,7 +717,7 @@ export class RegistrationManagementComponent implements OnInit {
           companyName: String(item?.applicant_full_name ?? item?.applicantFullName ?? item?.applicant_username ?? item?.applicantUsername ?? 'N/A'),
           currentStage: computedStage,
           currentStageRaw: rawStage,
-          statusGroup,
+          statusGroup: finalStatusGroup,
           hasObjectionHistory,
           hasObjectionUpdate
         };
@@ -766,7 +786,7 @@ export class RegistrationManagementComponent implements OnInit {
   }
 
   private resolveCounts(
-    rows: Array<{ statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' }>,
+    rows: Array<{ statusGroup: any }>,
     rawCounts: any
   ): {
     newApplication: number;
@@ -774,6 +794,7 @@ export class RegistrationManagementComponent implements OnInit {
     pending: number;
     objection: number;
     rejected: number;
+    awaitingPayment: number;
   } {
     if (rows.length > 0) {
       return { newApplication: 0, ...this.calculateCounts(rows) };
@@ -784,22 +805,26 @@ export class RegistrationManagementComponent implements OnInit {
       approved: Number(rawCounts?.approved || 0),
       pending: Number(rawCounts?.pending || rawCounts?.applied || 0),
       objection: Number(rawCounts?.objection || 0),
-      rejected: Number(rawCounts?.rejected || 0)
+      rejected: Number(rawCounts?.rejected || 0),
+      awaitingPayment: Number(rawCounts?.awaitingPayment || 0)
     };
   }
 
-  private calculateCounts(rows: Array<{ statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' }>): {
+  private calculateCounts(rows: Array<{ statusGroup: any }>): {
     approved: number;
     pending: number;
     objection: number;
     rejected: number;
+    awaitingPayment: number;
   } {
     return rows.reduce(
       (acc, row) => {
-        acc[row.statusGroup] += 1;
+        if (row.statusGroup in acc) {
+          (acc as any)[row.statusGroup] += 1;
+        }
         return acc;
       },
-      { approved: 0, pending: 0, objection: 0, rejected: 0 }
+      { approved: 0, pending: 0, objection: 0, rejected: 0, awaitingPayment: 0 } as any
     );
   }
 

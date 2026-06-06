@@ -52,6 +52,24 @@
           </div>
         </div>
       </div>
+      <!-- Awaiting Payment Card -->
+      <div class="col-xl col-lg-6 col-md-6" *ngIf="currentSection === 'salesman-barman-registration' && counts.awaitingPayment && counts.awaitingPayment > 0">
+        <div
+          class="summary-card awaiting-payment-requests summary-card-clickable"
+          role="button"
+          tabindex="0"
+          (click)="onCardFilterClick('awaiting-payment')"
+          (keydown.enter)="onCardFilterClick('awaiting-payment')"
+          (keydown.space)="onCardFilterClick('awaiting-payment')"
+          [class.active]="activeCardFilter === 'awaiting-payment'"
+        >
+          <div class="card-icon"><i class="bi bi-credit-card"></i></div>
+          <div class="card-content">
+            <h3 class="card-value">{{ counts.awaitingPayment }}</h3>
+            <p class="card-label">Awaiting Payment</p>
+          </div>
+        </div>
+      </div>
       <div class="col-xl col-lg-6 col-md-6">
         <div
           class="summary-card objection-requests summary-card-clickable"

@@ -131,6 +131,19 @@
   }
 }
 
+.awaiting-payment-requests {
+  --accent-start: #ff9800;
+  --accent-end: #f57c00;
+
+  .card-icon {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+  }
+
+  .card-value {
+    color: #e65100;
+  }
+}
+
 .objection-requests {
   --accent-start: #e76e1f;
   --accent-end: #f08b3e;
@@ -294,6 +307,11 @@
   &--pending {
     background: #fef9c3;
     color: #a16207;
+  }
+
+  &--awaiting-payment {
+    background: #fef3c7;
+    color: #d97706;
   }
 
   &--objection {

@@ -15,6 +15,7 @@ interface RenewalCounts {
   objection: number;
   approved: number;
   rejected: number;
+  awaitingPayment?: number;
 }
 
 interface RenewalItem {
@@ -25,7 +26,7 @@ interface RenewalItem {
   submittedOn: string;
   currentStage: string;
   currentStageRaw: string;
-  statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
+  statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' | 'awaiting-payment';
   canView: boolean;
 }
 
@@ -53,7 +54,7 @@ export class LicenseRenewalDashboardComponent implements OnInit {
   isLoading = false;
   error: string | null = null;
 
-  counts: RenewalCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
+  counts: RenewalCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 };
   allRows: RenewalItem[] = [];
   filteredRows: RenewalItem[] = [];
 
@@ -86,18 +87,26 @@ export class LicenseRenewalDashboardComponent implements OnInit {
       )
     }).subscribe({
       next: ({ counts, grouped }) => {
-        this.counts = {
-          applied: Number(counts?.applied || 0),
-          pending: Number(counts?.pending || 0),
-          objection: Number((counts as any)?.objection || 0),
-          approved: Number(counts?.approved || 0),
-          rejected: Number(counts?.rejected || 0)
-        };
         this.allRows = this.flattenGroupedData(grouped);
+        
+        const approvedCount = this.allRows.filter(r => r.statusGroup === 'approved').length;
+        const pendingCount = this.allRows.filter(r => r.statusGroup === 'pending').length;
+        const objectionCount = this.allRows.filter(r => r.statusGroup === 'objection').length;
+        const rejectedCount = this.allRows.filter(r => r.statusGroup === 'rejected').length;
+        const awaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
+
+        this.counts = {
+          applied: this.allRows.filter(r => r.statusGroup === 'applied').length,
+          pending: pendingCount,
+          objection: objectionCount,
+          approved: approvedCount,
+          rejected: rejectedCount,
+          awaitingPayment: awaitingPaymentCount
+        };
+
         if (this.activeSummaryFilter === '') {
-          const objectionCount = Number((counts as any)?.objection || 0);
-          const pendingCount = Number(counts?.pending || 0);
           if (objectionCount > 0) this.activeSummaryFilter = 'objection';
+          else if (awaitingPaymentCount > 0) this.activeSummaryFilter = 'awaiting-payment';
           else if (pendingCount > 0) this.activeSummaryFilter = 'pending';
         }
         this.applyFilters();
@@ -169,7 +178,7 @@ export class LicenseRenewalDashboardComponent implements OnInit {
 
   private flattenGroupedData(grouped: GroupedRenewalResponse): RenewalItem[] {
     const output: RenewalItem[] = [];
-    const groups: Array<[RenewalItem['statusGroup'], any[]]> = [
+    const groups: Array<[any, any[]]> = [
       ['applied', grouped?.applied || []],
       ['pending', grouped?.pending || []],
       ['objection', (grouped as any)?.objection || []],
@@ -182,16 +191,32 @@ export class LicenseRenewalDashboardComponent implements OnInit {
         const appId = String(raw?.application_id || raw?.applicationId || raw?.id || '').trim();
         if (!appId) continue;
 
+        const currentStageId = raw?.current_stage_id || raw?.currentStageId || raw?.current_stage;
         const currentStageRaw = String(raw?.current_stage_name || raw?.currentStageName || raw?.current_stage || '').trim();
+        
+        let finalStatusGroup: RenewalItem['statusGroup'] = statusGroup;
+        const stageRawLower = currentStageRaw.toLowerCase();
+        const isAwaitingPaymentStage = 
+          stageRawLower.includes('awaiting payment') || 
+          stageRawLower.includes('awaiting_payment') || 
+          currentStageId === 119 || 
+          currentStageId === '119' ||
+          currentStageId === 109 ||
+          currentStageId === '109';
+
+        if (isAwaitingPaymentStage) {
+          finalStatusGroup = 'awaiting-payment';
+        }
+
         output.push({
           id: appId,
           applicationId: appId,
           applicantName: String(raw?.applicant_name || raw?.applicantName || '').trim() || '-',
           oldLicenseId: String(raw?.old_license_id || raw?.oldLicenseId || '').trim() || '-',
           submittedOn: this.formatDate(raw?.submitted_on || raw?.submittedOn || raw?.submitted_at || raw?.submittedAt || raw?.created_at || raw?.createdAt || raw?.updated_at || raw?.updatedAt),
-          currentStage: this.computeCurrentStageLabel(statusGroup, currentStageRaw),
+          currentStage: this.computeCurrentStageLabel(finalStatusGroup, currentStageRaw),
           currentStageRaw: currentStageRaw || '-',
-          statusGroup,
+          statusGroup: finalStatusGroup,
           canView: true
         });
       }
@@ -204,6 +229,7 @@ export class LicenseRenewalDashboardComponent implements OnInit {
       if (statusGroup === 'approved') return 'Approved';
       if (statusGroup === 'rejected') return 'Rejected';
       if (statusGroup === 'objection') return 'Objection';
+      if (statusGroup === 'awaiting-payment') return 'Awaiting Payment';
       return 'Pending';
     }
     return this.formatStageName(currentStageRaw || statusGroup);

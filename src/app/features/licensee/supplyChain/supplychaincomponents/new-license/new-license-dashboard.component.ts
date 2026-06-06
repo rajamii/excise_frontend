@@ -22,6 +22,7 @@ interface NewLicenseCounts {
   objection: number;
   approved: number;
   rejected: number;
+  awaitingPayment?: number;
 }
 
 interface NewLicenseItem {
@@ -38,7 +39,7 @@ interface NewLicenseItem {
   canPayNow: boolean;
   currentStage: string;
   currentStageRaw: string;
-  statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
+  statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' | 'awaiting-payment';
   hasObjectionHistory?: boolean;
   hasObjectionUpdate?: boolean;
   updatedObjectionFields?: string[];
@@ -75,7 +76,8 @@ export class NewLicenseDashboardComponent implements OnInit {
     pending: 0,
     objection: 0,
     approved: 0,
-    rejected: 0
+    rejected: 0,
+    awaitingPayment: 0
   };
 
   private serverCounts: NewLicenseCounts = {
@@ -83,7 +85,8 @@ export class NewLicenseDashboardComponent implements OnInit {
     pending: 0,
     objection: 0,
     approved: 0,
-    rejected: 0
+    rejected: 0,
+    awaitingPayment: 0
   };
 
   allRows: NewLicenseItem[] = [];
@@ -159,7 +162,8 @@ export class NewLicenseDashboardComponent implements OnInit {
           pending: Number(counts?.pending || 0),
           objection: Number((counts as any)?.objection || 0),
           approved: Number(counts?.approved || 0),
-          rejected: Number(counts?.rejected || 0)
+          rejected: Number(counts?.rejected || 0),
+          awaitingPayment: 0
         };
         this.allRows = this.flattenGroupedData(grouped);
 
@@ -169,8 +173,11 @@ export class NewLicenseDashboardComponent implements OnInit {
         if (this.activeSummaryFilter === '') {
           const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
+          const awaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
           if (objectionCount > 0) {
             this.activeSummaryFilter = 'objection';
+          } else if (awaitingPaymentCount > 0) {
+            this.activeSummaryFilter = 'awaiting-payment';
           } else if (pendingCount > 0) {
             this.activeSummaryFilter = 'pending';
           }
@@ -228,6 +235,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     });
 
     const calculated = this.calculateCounts(this.summaryRows);
+    this.serverCounts.awaitingPayment = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
     const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.dateFilter && !this.monthFilter;
     this.counts = canUseServerCounts ? this.serverCounts : calculated;
 
@@ -513,11 +521,26 @@ export class NewLicenseDashboardComponent implements OnInit {
           : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
 
         const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
+        const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
+        let finalStatusGroup: NewLicenseItem['statusGroup'] = statusGroup;
+        if (this.isLicenseeUser()) {
+          const rawLower = currentStageRaw.toLowerCase();
+          const isAwaiting = 
+            rawLower.includes('awaiting') && rawLower.includes('payment') ||
+            rawLower.includes('payment') ||
+            canPayNow ||
+            currentStageId === 23 ||
+            currentStageId === '23';
+
+          if (isAwaiting) {
+            finalStatusGroup = 'awaiting-payment';
+          }
+        }
 
         // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
         const currentStage = this.isLicenseeUser() && !canView
           ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
-          : this.computeCurrentStageLabel(item, statusGroup, currentStageRaw);
+          : this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw);
 
         const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
         const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
@@ -547,7 +570,7 @@ export class NewLicenseDashboardComponent implements OnInit {
           canPayNow,
           currentStageRaw,
           currentStage,
-          statusGroup,
+          statusGroup: finalStatusGroup,
           hasObjectionHistory,
           hasObjectionUpdate,
           updatedObjectionFields
@@ -569,7 +592,8 @@ export class NewLicenseDashboardComponent implements OnInit {
       pending: 2,
       objection: 3,
       approved: 4,
-      rejected: 4
+      rejected: 4,
+      'awaiting-payment': 5
     };
 
     const byId = new Map<string, NewLicenseItem>();
@@ -744,6 +768,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     if (statusGroup === 'approved') return 'Approved';
     if (statusGroup === 'rejected') return 'Rejected';
     if (statusGroup === 'objection') return 'Objection by Admin';
+    if (statusGroup === 'awaiting-payment') return 'Awaiting Payment';
 
     const raw = String(stageValue ?? '').toLowerCase();
     const stageId = Number.parseInt(raw, 10);
@@ -761,13 +786,14 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private calculateCounts(rows: NewLicenseItem[]): NewLicenseCounts {
-    const next: NewLicenseCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
+    const next: NewLicenseCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 };
     for (const row of rows || []) {
       if (row?.statusGroup === 'applied') next.applied += 1;
       else if (row?.statusGroup === 'pending') next.pending += 1;
       else if (row?.statusGroup === 'objection') next.objection += 1;
       else if (row?.statusGroup === 'approved') next.approved += 1;
       else if (row?.statusGroup === 'rejected') next.rejected += 1;
+      else if (row?.statusGroup === 'awaiting-payment') next.awaitingPayment = (next.awaitingPayment || 0) + 1;
     }
     return next;
   }

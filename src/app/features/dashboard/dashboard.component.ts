@@ -159,6 +159,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
+  awaitingPaymentBreakdown = {
+    newLicense: 0,
+    licenseRenewal: 0,
+    salesmanBarman: 0,
+    companyRegistration: 0
+  };
+
   supplyChainPendingCounts: Record<string, number> = {};
   oicActionPendingCounts: Record<string, number> = {};
 
@@ -1198,6 +1205,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
             rejected: filteredApplications.rejected.length
           };
 
+          this.awaitingPaymentBreakdown = {
+            newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
+            licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
+            salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
+          };
+
           // Licensee UX: include hologram procurement workflow (circulating for approvals) in Pending/Approved totals.
           if (this.isLicenseeUser()) {
             const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
@@ -1285,6 +1299,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
             ...this.dashboardCounts,
             awaitingPayment: filteredApplications.awaitingPayment.length,
             approved: approvedWithoutRenewal.length
+          };
+
+          this.awaitingPaymentBreakdown = {
+            newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
+            licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
+            salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
           };
 
           if (this.isLicenseeUser()) {
@@ -1922,6 +1943,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'label-registration': 'Label Registration',
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
+      'license-renewal': 'License Renewal Management',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',
@@ -2274,7 +2296,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const roleId = this.currentUser?.roleId;
     
     // All roles can see basic stats
-    if (['applied', 'pending', 'objection', 'approved', 'rejected'].includes(type)) {
+    if (['applied', 'pending', 'objection', 'approved', 'rejected', 'awaitingPayment'].includes(type)) {
       return true;
     }
     
@@ -2286,6 +2308,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const trends: { [key: string]: number } = {
       applied: 12,
       pending: -8,
+      awaitingPayment: 0,
       objection: 6,
       approved: 15,
       rejected: -5
@@ -2302,6 +2325,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'New submissions';
       case 'pending':
         return roleId === 10 ? 'Awaiting your review' : 'Under review';
+      case 'awaitingPayment':
+        return 'Fees pending';
       case 'objection':
         return 'Needs correction';
       case 'approved':
@@ -2311,6 +2336,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
       default:
         return '';
     }
+  }
+
+  getAwaitingPaymentBreakdownText(): string {
+    const parts: string[] = [];
+    if (this.awaitingPaymentBreakdown.newLicense > 0) {
+      parts.push('New License');
+    }
+    if (this.awaitingPaymentBreakdown.licenseRenewal > 0) {
+      parts.push('Renewal');
+    }
+    if (this.awaitingPaymentBreakdown.salesmanBarman > 0) {
+      parts.push('Salesman/Barman');
+    }
+    if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
+      parts.push('Company Reg');
+    }
+    return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }
 
   // Performance Metrics

@@ -39,6 +39,13 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
+  awaitingPaymentBreakdown = {
+    newLicense: 0,
+    licenseRenewal: 0,
+    salesmanBarman: 0,
+    companyRegistration: 0
+  };
+
   isLoading = false;
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -348,6 +355,13 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             rejected: filteredApplications.rejected.length
           };
 
+          this.awaitingPaymentBreakdown = {
+            newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
+            licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
+            salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
+          };
+
           // console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
 
           // Update datasources
@@ -568,6 +582,23 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       case 'company-registration': return 'Company Registration';
       default: return type;
     }
+  }
+
+  getAwaitingPaymentBreakdownText(): string {
+    const parts: string[] = [];
+    if (this.awaitingPaymentBreakdown.newLicense > 0) {
+      parts.push('New License');
+    }
+    if (this.awaitingPaymentBreakdown.licenseRenewal > 0) {
+      parts.push('Renewal');
+    }
+    if (this.awaitingPaymentBreakdown.salesmanBarman > 0) {
+      parts.push('Salesman/Barman');
+    }
+    if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
+      parts.push('Company Reg');
+    }
+    return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }
 
   private processPayment(application: UnifiedApplication): void {
