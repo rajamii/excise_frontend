@@ -9,6 +9,7 @@ import { AccountService } from '../../../core/services/account.service';
 import { DashboardStatisticsComponent } from '../../../shared/components/dashboard-statistics/dashboard-statistics.component';
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
+import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
 
 interface CommissionerData {
   id?: number;
@@ -878,10 +879,12 @@ export class CommissionerDashboardComponent implements OnInit {
   private supplyChainService = inject(SupplyChainService);
   private hologramDataService = inject(HologramDataService);
   private unifiedActionsService = inject(UnifiedActionsService);
+  private unifiedDashboardService = inject(UnifiedDashboardService);
 
   // Data properties
   allApplications: CommissionerData[] = [];
   filteredApplications: CommissionerData[] = [];
+  unifiedCounts = { applied: 0, pending: 0, approved: 0, rejected: 0 };
   selectedApplicationType: string = 'all';
   selectedCompany: string = '';
   companyOptions: string[] = [];
@@ -915,6 +918,7 @@ export class CommissionerDashboardComponent implements OnInit {
     } else {
       console.log('📊 Loading all applications for Commissioner review...');
       this.loadAllApplications();
+      this.loadUnifiedDashboardCounts();
     }
   }
 
@@ -952,6 +956,23 @@ export class CommissionerDashboardComponent implements OnInit {
     this.loadTransitPermits();
     this.loadHolograms();
     this.loadCancellations();
+  }
+
+  loadUnifiedDashboardCounts(): void {
+    this.unifiedDashboardService.getUnifiedDashboardCounts(undefined, true).subscribe({
+      next: (counts) => {
+        console.log('Unified dashboard counts loaded for commissioner:', counts);
+        this.unifiedCounts = {
+          applied: counts?.applied || 0,
+          pending: counts?.pending || 0,
+          approved: counts?.approved || 0,
+          rejected: counts?.rejected || 0
+        };
+      },
+      error: (err) => {
+        console.error('Error loading unified dashboard counts:', err);
+      }
+    });
   }
 
   loadCancellations(): void {
@@ -1190,10 +1211,10 @@ export class CommissionerDashboardComponent implements OnInit {
     const legacyPending = this.getStatusCount('PENDING') + this.getStatusCount('FORWARDED');
 
     return {
-      applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED'),
-      pending: actionablePending || legacyPending,
-      approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER'),
-      rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER')
+      applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED') + (this.unifiedCounts?.applied || 0),
+      pending: (actionablePending || legacyPending) + (this.unifiedCounts?.pending || 0),
+      approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER') + (this.unifiedCounts?.approved || 0),
+      rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER') + (this.unifiedCounts?.rejected || 0)
     };
   }
 
@@ -1361,6 +1382,7 @@ export class CommissionerDashboardComponent implements OnInit {
             this.loadHolograms();
           } else if (['APPROVE', 'REJECT', 'EXTEND', 'ISSUE', 'FORWARD', 'ASSIGN_CARTONS', 'COMPLETE'].includes((event.action || '').toUpperCase())) {
             this.loadAllApplications();
+            this.loadUnifiedDashboardCounts();
           }
         } else {
           alert(`Action failed: ${result.message}`);
