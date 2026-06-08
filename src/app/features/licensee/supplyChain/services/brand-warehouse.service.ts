@@ -89,7 +89,9 @@ export class BrandWarehouseService {
         if ( 
             normalized.startsWith('NA/') || 
             normalized.startsWith('NLI/') || 
-            normalized.startsWith('LA/') 
+            normalized.startsWith('LA/') ||
+            normalized.startsWith('SB/') ||
+            /^MP[A-Z0-9]+$/i.test(normalized)
         ) { 
             return normalized; 
         } 
