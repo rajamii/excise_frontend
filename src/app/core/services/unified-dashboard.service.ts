@@ -84,7 +84,7 @@ export class UnifiedDashboardService {
     });
   }
 
-  private clearUnifiedAppsCache(): void {
+  public clearUnifiedAppsCache(): void {
     this.unifiedAppsCache$ = undefined;
     this.unifiedAppsCacheKey = null;
     this.unifiedCountsCache$ = undefined;
@@ -191,9 +191,10 @@ export class UnifiedDashboardService {
             pending: (acc.pending || 0) + (cur.pending || 0),
             objection: (acc.objection || 0) + (cur.objection || 0),
             approved: (acc.approved || 0) + (cur.approved || 0),
-            rejected: (acc.rejected || 0) + (cur.rejected || 0)
+            rejected: (acc.rejected || 0) + (cur.rejected || 0),
+            awaitingPayment: (acc.awaitingPayment || 0) + (cur.awaitingPayment || (cur as any).awaiting_payment || 0)
           }),
-          { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 } as DashboardCount
+          { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any
         )
       )
     ).pipe(shareReplay({ bufferSize: 1, refCount: false }));

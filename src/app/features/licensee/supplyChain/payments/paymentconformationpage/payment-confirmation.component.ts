@@ -11,6 +11,7 @@ import { PaymentIntegrationService } from '../../../../../core/services/payment-
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import {
@@ -311,7 +312,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     private enaRequisitionService: EnaRequisitionService,
     private paymentIntegrationService: PaymentIntegrationService,
     private licenseApplicationService: LicenseApplicationService,
-    private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService
+    private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
+    private unifiedDashboardService: UnifiedDashboardService
   ) { }
 
   ngOnInit(): void {
@@ -436,6 +438,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   ngOnDestroy(): void {
+    this.unifiedDashboardService.clearUnifiedAppsCache();
     this.cleanupModalArtifacts();
     this.restoreMovedModals();
   }
@@ -2177,6 +2180,7 @@ private initializeWalletContextAndLoadData(): void {
         this.refreshWalletData();
         this.loadCancellationDataFromApi();
         this.loadHologramDataFromApi();
+        this.unifiedDashboardService.clearUnifiedAppsCache();
         // New-license / renewal convenience: chain payments bidirectionally if one is unpaid
         const refNo = this.pendingNewLicenseReferenceNo || context.referenceNo;
         const isLicenseFlow = this.isLicenseFeeWorkflowPaymentType(context.itemType);

@@ -1150,6 +1150,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboardStats() {
+    this.unifiedDashboardService.clearUnifiedAppsCache();
     // Use the unified dashboard service for all roles
     forkJoin({
       counts: this.unifiedDashboardService.getUnifiedDashboardCounts(this.dashboardConfig, true),
