@@ -11,6 +11,8 @@ import { RoleService } from '../../../../../core/services/role.service';
 import { ApplicationMovementComponent } from '../../../../licensee/licensee-dashboard/application-table/application-movement/application-movement.component';
 import { ObjectionDetailsDialogComponent } from '../new-license/objection-details-dialog/objection-details-dialog.component';
 import { SalesmanBarmanResolveObjectionsDialogComponent } from './salesman-barman-resolve-objections-dialog.component';
+import { PrintApplicationComponent } from '../../../licensee-dashboard/application-table/print-application/print-application.component';
+import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -72,7 +74,8 @@ export class RegistrationManagementComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private roleService: RoleService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private unifiedDashboardService: UnifiedDashboardService
   ) {}
 
   ngOnInit(): void {
@@ -330,6 +333,52 @@ export class RegistrationManagementComponent implements OnInit {
     }).afterClosed().subscribe((ok) => {
       if (ok) {
         this.loadSalesmanBarmanData();
+      }
+    });
+  }
+
+  isCommissionerOrAdmin(): boolean {
+    const user = this.roleService.getCurrentUser();
+    if (!user) return false;
+    return user.roleId === 1 || user.roleId === 10;
+  }
+
+  isPaymentSuccess(row: any): boolean {
+    return String(row.paymentStatus || '').toLowerCase().includes('success');
+  }
+
+  printLicense(row: any): void {
+    const appId = row.applicationId || row.id;
+    if (!appId) {
+      void Swal.fire('Error', 'Could not find application ID', 'error');
+      return;
+    }
+
+    this.unifiedDashboardService.getApplicationDetail(appId, 'salesman-barman').subscribe({
+      next: (fullApp: any) => {
+        const formattedApp = {
+          ...fullApp,
+          type: 'salesman-barman',
+          applicationId: appId,
+          raw: fullApp
+        };
+        this.dialog.open(PrintApplicationComponent, {
+          width: '450px',
+          data: { application: formattedApp, tableType: 'approved', returnUrl: this.router.url }
+        });
+      },
+      error: (err: any) => {
+        console.error('Error fetching application details:', err);
+        const formattedApp = {
+          ...row,
+          type: 'salesman-barman',
+          applicationId: appId,
+          raw: row
+        };
+        this.dialog.open(PrintApplicationComponent, {
+          width: '450px',
+          data: { application: formattedApp, tableType: 'approved', returnUrl: this.router.url }
+        });
       }
     });
   }

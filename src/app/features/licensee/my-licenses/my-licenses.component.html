@@ -101,6 +101,7 @@
 
               <!-- Print Button -->
               <button 
+                *ngIf="canPrintLicense(element)"
                 mat-icon-button 
                 class="action-btn print-btn"
                 (click)="printLicense(element)"

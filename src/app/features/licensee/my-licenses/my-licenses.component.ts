@@ -51,7 +51,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       filter(event => event instanceof NavigationStart)
     ).subscribe((event: any) => {
       const url = String(event?.url || '');
-      if (url.startsWith('/licensee/final-license')) this.closeDialog();
+      if (url.startsWith('/final-license')) this.closeDialog();
     });
 
     this.loadMyLicenses();
@@ -302,6 +302,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe((result: boolean | undefined) => {
       if (result === true) this.loadMyLicenses();
     });
+  }
+
+  canPrintLicense(application: UnifiedApplication): boolean {
+    return this.resolveApplicationType(application) !== 'salesman-barman';
   }
 
   printLicense(application: UnifiedApplication): void {

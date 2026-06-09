@@ -96,7 +96,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       (application as any)?.raw?.applicationId ||
       '';
 
-    this.router.navigate(['/licensee/final-license'], {
+    this.router.navigate(['/final-license'], {
       queryParams: {
         applicationId,
         type: application?.type || '',

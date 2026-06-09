@@ -141,13 +141,11 @@ export class PrintApplicationComponent {
   }
 
   canPrint(): boolean {
-    const count = this.getPrintCount();
-    if (count < 5) return true;
-    return this.getIsPrintFeePaid();
+    return true;
   }
 
   needsPayment(): boolean {
-    return this.getPrintCount() >= 5 && !this.getIsPrintFeePaid();
+    return false;
   }
 
   private refreshPrintInfo(): void {
@@ -222,7 +220,7 @@ export class PrintApplicationComponent {
         if (['new-license', 'license-renewal', 'salesman-barman'].includes((appType || '').toLowerCase())) {
           const inferredType = this.inferApiTypeFromId(finalLicenseId || '');
           this.dialogRef.close(true);
-          void this.router.navigate(['/licensee/final-license'], {
+          void this.router.navigate(['/final-license'], {
             queryParams: {
               applicationId: finalLicenseId,
               type: inferredType || appType,
@@ -250,7 +248,7 @@ export class PrintApplicationComponent {
         if ((appTypeLower === 'new-license' || appTypeLower === 'license-renewal' || appTypeLower === 'salesman-barman') && Number(err?.status) === 404) {
           const inferredType = this.inferApiTypeFromId(finalLicenseId || '');
           this.dialogRef.close(true);
-          void this.router.navigate(['/licensee/final-license'], {
+          void this.router.navigate(['/final-license'], {
             queryParams: {
               applicationId: finalLicenseId,
               type: inferredType || appType,
