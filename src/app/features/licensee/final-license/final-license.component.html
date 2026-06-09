@@ -117,7 +117,7 @@
     </ng-template>
 
     <!-- Page 1 -->
-    <section class="page">
+    <section class="page" [class.salesman-certificate]="isSalesmanBarman">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
 
       <header class="header">
@@ -138,11 +138,39 @@
         </div>
       </header>
 
-      <div class="sub-title">COUNTER FOIL</div>
+      <div class="sub-title" *ngIf="!isSalesmanBarman">COUNTER FOIL</div>
 
       <div class="content">
         <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
 
+        <ng-container *ngIf="isSalesmanBarman; else standardLicenseText">
+          <p class="paragraph" *ngIf="templateData().applicationId || templateData().applicationDateTime || templateData().validFrom || templateData().validTo">
+            With reference to Application ID no <span class="strong">{{ templateData().applicationId || '-' }}</span>
+            <span *ngIf="templateData().applicationDateTime"> dated <span class="strong">{{ templateData().applicationDateTime }}</span></span>
+            this is to inform you that Shri/Smt <span class="strong">{{ templateData().licenseeName || '-' }}</span>
+            has been appointed as {{ templateData().modeOfOperation || 'Salesman/Barman' }} of your
+            {{ templateData().kindOfShop || 'licensed premises' }}.
+          </p>
+
+          <p class="paragraph" *ngIf="templateData().validFrom || templateData().validTo">
+            Registration of {{ templateData().modeOfOperation || 'Salesman/Barman' }} is valid for a period of 1 year
+            with effect from <span class="strong">{{ templateData().validFrom || '-' }}</span>
+            to <span class="strong">{{ templateData().validTo || '-' }}</span>.
+          </p>
+
+          <p class="paragraph" *ngIf="templateData().transactionRef || templateData().transactionDate">
+            Registration fee deposited vide Transaction Reference Number
+            <span class="strong">{{ templateData().transactionRef || '-' }}</span>
+            <span *ngIf="templateData().transactionDate"> dated <span class="strong">{{ templateData().transactionDate }}</span></span>.
+          </p>
+
+          <p class="paragraph restriction">
+            The {{ templateData().modeOfOperation || 'Salesman/Barman' }} Registration Certificate issued by the Department
+            shall not be valid for any other purposes.
+          </p>
+        </ng-container>
+
+        <ng-template #standardLicenseText>
         <p class="paragraph" *ngIf="templateData().licenseFee || templateData().transactionRef || templateData().transactionDate || templateData().validFrom || templateData().validTo">
           The License fee of <span class="strong">{{ templateData().licenseFee }}</span> for issue of this License
           vide Transaction Reference Number <span class="strong">{{ templateData().transactionRef }}</span> dated
@@ -154,6 +182,7 @@
         <p class="paragraph small">
           This is a computer generated License which does not require signature.
         </p>
+        </ng-template>
       </div>
 
       <footer class="footer">
@@ -176,7 +205,7 @@
     </section>
 
     <!-- Page 2 -->
-    <section class="page terms-page">
+    <section class="page terms-page" *ngIf="!isSalesmanBarman">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
 
       <header class="header compact">
@@ -226,7 +255,7 @@
       </footer>
     </section>
 
-    <section class="page terms-page" *ngFor="let p of termsPages().slice(1); let i = index">
+    <section class="page terms-page" *ngFor="let p of isSalesmanBarman ? [] : termsPages().slice(1); let i = index">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
 
       <div class="content">

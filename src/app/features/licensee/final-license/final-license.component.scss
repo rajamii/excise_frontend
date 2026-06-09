@@ -332,6 +332,60 @@
   font-size: 11px;
 }
 
+.paragraph.restriction {
+  margin-top: 22px;
+  font-weight: 800;
+}
+
+.page.salesman-certificate {
+  padding-top: 14mm;
+
+  .header {
+    margin-bottom: 26mm;
+  }
+
+  .emblem-img {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 4px;
+  }
+
+  .title {
+    font-size: 13px;
+    text-transform: none;
+    margin-top: 12px;
+  }
+
+  .details {
+    margin-bottom: 22px;
+  }
+
+  .info-table {
+    font-size: 12px;
+
+    td {
+      padding: 4px 6px;
+    }
+  }
+
+  .photo-img,
+  .photo-box {
+    width: 28mm;
+    height: 35mm;
+  }
+
+  .qr,
+  .qr-img {
+    width: 30mm;
+    height: 30mm;
+  }
+
+  .paragraph {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+}
+
 .footer {
   display: flex;
   justify-content: space-between;

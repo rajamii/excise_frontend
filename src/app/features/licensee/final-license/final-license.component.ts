@@ -10,6 +10,8 @@ import { LicenseService } from '../../../core/services/license.service';
 
 type FinalLicenseTemplateData = {
   licenseNumber: string;
+  applicationId?: string;
+  certificateType?: string;
   licenseTitle?: string;
   licenseeName: string;
   fatherOrHusbandName: string;
@@ -24,6 +26,7 @@ type FinalLicenseTemplateData = {
   validFrom: string;
   validTo: string;
   generatedOn: string;
+  applicationDateTime?: string;
 };
 
 type TermsPage = {
@@ -64,7 +67,7 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly freePrintLimit = 5;
   readonly paymentRequired = signal<boolean>(false);
 
-  private readonly resolvedApiType = signal<'new-license' | 'license-renewal' | ''>('');
+  private readonly resolvedApiType = signal<'new-license' | 'license-renewal' | 'salesman-barman' | ''>('');
 
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
@@ -126,17 +129,20 @@ export class FinalLicenseComponent implements OnDestroy {
     });
   }
 
-  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | '' {
+  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
 
     // Application-id prefixes
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('SBM/')) return 'salesman-barman';
+    if (id.startsWith('RSBM/')) return 'license-renewal';
 
     // License-id prefixes (sometimes used by mistake in the query param)
     if (id.startsWith('NA/')) return 'new-license';
     if (id.startsWith('LA/')) return 'license-renewal';
+    if (id.startsWith('SB/')) return 'salesman-barman';
 
     return '';
   }
@@ -152,6 +158,13 @@ export class FinalLicenseComponent implements OnDestroy {
     if (q === 'new-license') return true;
     if (q) return false;
     return this.resolvedApiType() === 'new-license';
+  }
+
+  get isSalesmanBarman(): boolean {
+    const q = (this.queryAppType() || '').toLowerCase();
+    if (q === 'salesman-barman' || q === 'salesman-barman-registration') return true;
+    if (q) return false;
+    return this.resolvedApiType() === 'salesman-barman';
   }
 
   private loadFinalLicense(): void {
@@ -170,11 +183,15 @@ export class FinalLicenseComponent implements OnDestroy {
     const appType = (this.queryAppType() || '').toLowerCase();
     const newReq$ = this.licenseAppService.getNewFinalLicenseData(applicationId);
     const oldReq$ = this.licenseAppService.getOldFinalLicenseData(applicationId);
+    const salesmanReq$ = this.licenseAppService.getSalesmanBarmanFinalLicenseData(applicationId);
 
     let req$ = oldReq$;
     if (appType === 'new-license') {
       this.resolvedApiType.set('new-license');
       req$ = newReq$;
+    } else if (appType === 'salesman-barman' || appType === 'salesman-barman-registration') {
+      this.resolvedApiType.set('salesman-barman');
+      req$ = salesmanReq$;
     } else if (appType) {
       this.resolvedApiType.set('license-renewal');
       req$ = oldReq$;
@@ -182,8 +199,13 @@ export class FinalLicenseComponent implements OnDestroy {
       this.resolvedApiType.set('new-license');
       req$ = newReq$.pipe(
         catchError(() => {
-          this.resolvedApiType.set('license-renewal');
-          return oldReq$;
+          this.resolvedApiType.set('salesman-barman');
+          return salesmanReq$.pipe(
+            catchError(() => {
+              this.resolvedApiType.set('license-renewal');
+              return oldReq$;
+            })
+          );
         })
       );
     }
@@ -201,10 +223,12 @@ export class FinalLicenseComponent implements OnDestroy {
           .filter((t: string) => !!t);
         this.terms.set(normalizedTerms);
         this.termsPages.set([{ start: 1, items: normalizedTerms }]);
-        void this.paginateTermsToPages();
+        if (!this.isSalesmanBarman) void this.paginateTermsToPages();
 
         this.templateData.update(current => ({
           ...current,
+          applicationId: String(data?.applicationId || data?.application_id || current.applicationId || applicationId),
+          certificateType: String(data?.certificateType || data?.certificate_type || current.certificateType || ''),
           licenseNumber: String(data?.licenseNumber || data?.license_id || current.licenseNumber || applicationId),
           licenseeName: String(data?.licenseeName || current.licenseeName || ''),
           fatherOrHusbandName: String(data?.fatherOrHusbandName || current.fatherOrHusbandName || ''),
@@ -218,7 +242,8 @@ export class FinalLicenseComponent implements OnDestroy {
           transactionDate: String(data?.transactionDate || current.transactionDate || ''),
           validFrom: String(data?.validFrom || current.validFrom || ''),
           validTo: String(data?.validTo || current.validTo || ''),
-          generatedOn: String(data?.generatedOn || current.generatedOn || '')
+          generatedOn: String(data?.generatedOn || current.generatedOn || ''),
+          applicationDateTime: String(data?.applicationDateTime || data?.application_date_time || current.applicationDateTime || '')
         }));
 
         this.printCount.set(this.extractPrintCount(data));
@@ -381,6 +406,8 @@ export class FinalLicenseComponent implements OnDestroy {
 
     const req$ = this.isNewLicense
       ? this.licenseAppService.getNewFinalLicensePassportPhoto(applicationId)
+      : this.isSalesmanBarman
+        ? this.licenseAppService.getSalesmanBarmanFinalLicensePassportPhoto(applicationId)
       : this.licenseAppService.getOldFinalLicensePassportPhoto(applicationId);
 
     req$.subscribe({
@@ -420,6 +447,8 @@ export class FinalLicenseComponent implements OnDestroy {
 
     const req$ = this.isNewLicense
       ? this.licenseAppService.getNewFinalLicenseQrCode(applicationId)
+      : this.isSalesmanBarman
+        ? this.licenseAppService.getSalesmanBarmanFinalLicenseQrCode(applicationId)
       : this.licenseAppService.getOldFinalLicenseQrCode(applicationId);
 
     try {
@@ -512,6 +541,8 @@ export class FinalLicenseComponent implements OnDestroy {
 
     const req$ = this.isNewLicense
       ? this.licenseAppService.getNewFinalLicenseData(applicationId)
+      : this.isSalesmanBarman
+        ? this.licenseAppService.getSalesmanBarmanFinalLicenseData(applicationId)
       : this.licenseAppService.getOldFinalLicenseData(applicationId);
 
     try {
@@ -543,7 +574,7 @@ export class FinalLicenseComponent implements OnDestroy {
     const cleanup = () => {
       document.body.classList.remove('print-prep');
       window.removeEventListener('afterprint', cleanup);
-      void this.paginateTermsToPages();
+      if (!this.isSalesmanBarman) void this.paginateTermsToPages();
     };
 
     window.addEventListener('afterprint', cleanup);
@@ -577,7 +608,7 @@ export class FinalLicenseComponent implements OnDestroy {
 
       await this.waitForNextFrame();
       await this.waitForNextFrame();
-      await this.paginateTermsToPages();
+      if (!this.isSalesmanBarman) await this.paginateTermsToPages();
       await this.waitForTemplateAssets(7000);
       await this.waitForAssets(7000);
 
