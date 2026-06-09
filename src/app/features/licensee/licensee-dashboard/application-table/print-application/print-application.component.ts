@@ -141,11 +141,19 @@ export class PrintApplicationComponent {
   }
 
   canPrint(): boolean {
-    return true;
+    if (this.getApplicationType() === 'salesman-barman') {
+      return true;
+    }
+    const count = this.getPrintCount();
+    if (count < 5) return true;
+    return this.getIsPrintFeePaid();
   }
 
   needsPayment(): boolean {
-    return false;
+    if (this.getApplicationType() === 'salesman-barman') {
+      return false;
+    }
+    return this.getPrintCount() >= 5 && !this.getIsPrintFeePaid();
   }
 
   private refreshPrintInfo(): void {

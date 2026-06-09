@@ -371,10 +371,12 @@ export class FinalLicenseComponent implements OnDestroy {
   }
 
   get needsPayment(): boolean {
+    if (this.isSalesmanBarman) return false;
     return this.printCount() >= this.freePrintLimit && !this.isPrintFeePaid();
   }
 
   get canPrint(): boolean {
+    if (this.isSalesmanBarman) return true;
     if (this.printCount() < this.freePrintLimit) return true;
     return this.isPrintFeePaid();
   }
