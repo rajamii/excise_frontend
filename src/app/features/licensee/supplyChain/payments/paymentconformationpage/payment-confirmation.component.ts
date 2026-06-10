@@ -2055,6 +2055,34 @@ private initializeWalletContextAndLoadData(): void {
       return;
     }
 
+    if (context.tab === 'license_fee' && context.referenceNo && context.referenceNo.startsWith('SBM/')) {
+      this.isHandlingPendingWalletPayment = true;
+      this.salesmanBarmanRegistrationService.getSalesmanBarmanDetail(context.id || context.referenceNo).subscribe({
+        next: (res: any) => {
+          this.isHandlingPendingWalletPayment = false;
+          if (res && res.new_license_application_id && !res.is_parent_license_fee_paid) {
+            Swal.fire({
+              icon: 'error',
+              title: 'License Fee Unpaid',
+              text: 'Pay the license fee first, then only you can pay for salesman/barman application.'
+            });
+            this.resetPendingPaymentAttemptState();
+            return;
+          }
+          this.continueOpenPendingWalletPaymentConfirmation(context);
+        },
+        error: (err) => {
+          this.isHandlingPendingWalletPayment = false;
+          this.continueOpenPendingWalletPaymentConfirmation(context);
+        }
+      });
+      return;
+    }
+
+    this.continueOpenPendingWalletPaymentConfirmation(context);
+  }
+
+  private continueOpenPendingWalletPaymentConfirmation(context: any): void {
     const deductionAmount = Number(context.amount || 0);
     const currentBalance = this.getAvailableBalanceForModuleTab(context.tab);
     if (deductionAmount <= 0) {
@@ -2101,6 +2129,7 @@ private initializeWalletContextAndLoadData(): void {
     this.pendingWalletPaymentDeclarationAccepted = false;
     this.showPendingWalletConfirmationModal = true;
   }
+
 
   closePendingWalletPaymentConfirmation(): void {
     this.showPendingWalletConfirmationModal = false;
