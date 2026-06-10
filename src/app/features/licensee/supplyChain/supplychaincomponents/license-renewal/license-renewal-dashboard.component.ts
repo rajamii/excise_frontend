@@ -204,7 +204,7 @@ export class LicenseRenewalDashboardComponent implements OnInit {
           currentStageId === 109 ||
           currentStageId === '109';
 
-        if (isAwaitingPaymentStage) {
+        if (this.isLicenseeUser() && isAwaitingPaymentStage) {
           finalStatusGroup = 'awaiting-payment';
         }
 
