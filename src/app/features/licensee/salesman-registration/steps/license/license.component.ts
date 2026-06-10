@@ -265,6 +265,16 @@ export class LicenseComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  get isNeitherCategorySelected(): boolean {
+    const categoryId = this.applicationForm.get('licenseCategory')?.value;
+    if (!categoryId) return false;
+    const catId = Number(categoryId);
+    const categoryName = (this.getLicenseCategoryName(catId) || '').toLowerCase();
+    return [9, 1].includes(catId) ||
+      categoryName.includes('homestay') ||
+      categoryName.includes('manufacturing');
+  }
+
   private setupFormSubscriptions(): void {
     // Filter licensees by district and category
     this.applicationForm.get('district')?.valueChanges
@@ -287,6 +297,22 @@ export class LicenseComponent implements OnInit, OnDestroy {
       districtId,
       licenseCategory
     });
+
+    if (licenseCategory) {
+      const catId = Number(licenseCategory);
+      const categoryName = (this.getLicenseCategoryName(catId) || '').toLowerCase();
+      const isNeither = [9, 1].includes(catId) ||
+        categoryName.includes('homestay') ||
+        categoryName.includes('manufacturing');
+
+      if (isNeither) {
+        console.log('🚫 Selected Homestay/Manufacturing category, disabling licensee dropdown');
+        this.filteredLicensees = [];
+        this.applicationForm.get('licensee')?.setValue('');
+        this.applicationForm.get('licensee')?.disable();
+        return;
+      }
+    }
 
     if (!districtId) {
       console.log('⚠️ No district selected, clearing licensees');

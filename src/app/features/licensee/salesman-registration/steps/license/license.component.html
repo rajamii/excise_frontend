@@ -147,7 +147,7 @@
     </mat-card-content>
     
     <mat-card-actions>
-      <button mat-flat-button color="primary" type="submit" [disabled]="!applicationForm.valid" (click)="onSubmit()">
+      <button mat-flat-button color="primary" type="submit" [disabled]="!applicationForm.valid || isNeitherCategorySelected" (click)="onSubmit()">
         Proceed to Next Step
       </button>
     </mat-card-actions>
