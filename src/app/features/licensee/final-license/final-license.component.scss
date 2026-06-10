@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
 .final-license-root {
   padding: 12px 16px 24px;
 }
@@ -128,6 +130,7 @@
 }
 
 .page {
+  font-family: 'Inter', sans-serif;
   position: relative;
   width: 210mm;
   height: 297mm;
@@ -191,21 +194,30 @@
 }
 
 .dept {
-  font-weight: 800;
-  letter-spacing: 0.6px;
-  font-size: 15px;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  font-size: 18px;
+  color: #0f172a;
 }
 
 .govt {
-  font-size: 12px;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
   margin-top: 2px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #475569;
 }
 
 .title {
-  font-size: 12px;
+  font-family: 'Cinzel', serif;
+  font-size: 14.5px;
   font-weight: 700;
   margin-top: 8px;
   text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #1e293b;
 }
 
 .header-right {
@@ -216,10 +228,10 @@
 .qr {
   width: 110px;
   height: 110px;
-  border: 2px solid #111;
+  border: 2px solid #0f172a;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px) 0 0/8px 8px,
-    linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px) 0 0/8px 8px;
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px) 0 0/8px 8px,
+    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px) 0 0/8px 8px;
 }
 
 .qr.small {
@@ -231,10 +243,16 @@
   position: relative;
   z-index: 3;
   text-align: center;
-  margin: 14px 0 12px;
-  font-size: 13px;
+  margin: 18px 0 14px;
+  font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #0f172a;
+  font-family: 'Cinzel', serif;
+  display: inline-block;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .content {
@@ -244,32 +262,36 @@
 }
 
 .details {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .info-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13.5px;
 
   td {
-    padding: 5px 6px;
-    vertical-align: top;
+    padding: 6px 8px;
+    vertical-align: middle;
   }
 
   .key {
     width: 31%;
-    font-weight: 700;
+    font-weight: 600;
+    color: #475569;
   }
 
   .colon {
     width: 3%;
     text-align: center;
     font-weight: 700;
+    color: #64748b;
   }
 
   .value {
     width: 46%;
+    font-weight: 500;
+    color: #0f172a;
   }
 
   .photo {
@@ -285,19 +307,23 @@
 .photo-box {
   width: 120px;
   height: 130px;
-  border: 2px solid #444;
-  background: #f3f4f6;
+  border: 1.5px solid #0f172a;
+  background: #f8fafc;
   margin-left: auto;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
 .photo-img {
   width: 120px;
   height: 130px;
-  border: 2px solid #444;
+  border: 1.5px solid #0f172a;
   margin-left: auto;
   object-fit: cover;
   display: block;
-  background: #f3f4f6;
+  background: #f8fafc;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
 .mini-spinner {
@@ -309,7 +335,9 @@
   height: 110px;
   object-fit: contain;
   display: block;
-  border: 1px solid #1f2937;
+  border: 1.5px solid #0f172a;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
 .qr-img.small {
@@ -318,23 +346,39 @@
 }
 
 .strong {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .paragraph {
-  margin: 14px 0 0;
-  font-size: 12px;
-  line-height: 1.55;
+  margin: 16px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #1e293b;
+  text-align: justify;
 }
 
 .paragraph.small {
-  margin-top: 10px;
-  font-size: 11px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #4b5563;
 }
 
 .paragraph.restriction {
-  margin-top: 22px;
-  font-weight: 800;
+  margin-top: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+
+.renewal-highlight {
+  color: #166534;
+  background-color: #f0fdf4;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid #bbf7d0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.95em;
+  font-weight: 700;
 }
 
 .page.salesman-certificate {
@@ -351,7 +395,7 @@
   }
 
   .title {
-    font-size: 13px;
+    font-size: 14px;
     text-transform: none;
     margin-top: 12px;
   }
@@ -361,10 +405,10 @@
   }
 
   .info-table {
-    font-size: 12px;
+    font-size: 13.5px;
 
     td {
-      padding: 4px 6px;
+      padding: 5px 8px;
     }
   }
 
@@ -381,8 +425,8 @@
   }
 
   .paragraph {
-    font-size: 12px;
-    line-height: 1.55;
+    font-size: 13.5px;
+    line-height: 1.6;
   }
 }
 
