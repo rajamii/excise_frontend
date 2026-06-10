@@ -52,6 +52,7 @@
         </mat-form-field>
 
         <!-- Mode of Operation -->
+        @if (modesOfOperation.length > 0) {
         <mat-form-field appearance="outline">
           <mat-label>Select Mode of Operation</mat-label>
           <mat-select formControlName="modeOfOperation">
@@ -77,6 +78,12 @@
           <mat-error>{{ getFieldError('modeOfOperation') }}</mat-error>
           }
         </mat-form-field>
+        } @else if (applicationForm.get('licenseCategory')?.value) {
+        <div style="grid-column: span 2; display: flex; align-items: center; gap: 8px; padding: 12px; background-color: #ffebee; border: 1px solid #ffcdd2; border-radius: 4px; color: #c62828; margin-bottom: 16px;">
+          <mat-icon>warning</mat-icon>
+          <span>Salesman/Barman registration is not allowed for Homestay / Manufacturing category.</span>
+        </div>
+        }
 
         <!-- Select Licensee -->
         <mat-form-field appearance="outline" style="grid-column: span 2;">

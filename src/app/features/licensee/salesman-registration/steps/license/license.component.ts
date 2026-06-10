@@ -37,10 +37,11 @@ export class LicenseComponent implements OnInit, OnDestroy {
   licenseCategories: LicenseCategory[] = [];
   filteredLicensees: Licensee[] = [];
 
-  modesOfOperation: ModeOfOperation[] = [
+  private allModesOfOperation: ModeOfOperation[] = [
     { value: 'salesman', label: 'Salesman', code: 'SM' },
     { value: 'barman', label: 'Barman', code: 'BM' }
   ];
+  modesOfOperation: ModeOfOperation[] = [...this.allModesOfOperation];
 
   @Output() readonly next = new EventEmitter<void>();
   private destroy$ = new Subject<void>();
@@ -192,6 +193,78 @@ export class LicenseComponent implements OnInit, OnDestroy {
     });
   }
 
+  updateModesOfOperation(categoryId: number | string | null | undefined): void {
+    if (!categoryId) {
+      this.modesOfOperation = [...this.allModesOfOperation];
+      this.applicationForm.get('modeOfOperation')?.enable();
+      return;
+    }
+
+    const catId = Number(categoryId);
+    const categoryName = (this.getLicenseCategoryName(catId) || '').toLowerCase();
+
+    // Salesman Only categories:
+    // 14: Foreign liquor retail shop
+    // 10: pachwai
+    // 6: departmental store
+    // 12: retail denatured spirt
+    const isSalesmanOnly = [14, 10, 6, 12].includes(catId) || 
+      categoryName.includes('foreign liquor retail shop') ||
+      categoryName.includes('pachwai') ||
+      categoryName.includes('departmental store') ||
+      categoryName.includes('denatured spirit');
+
+    // Barman Only categories:
+    // 13: special category hotel
+    // 3: barman license exclusively for homemade wine
+    // 4: bar-cum hotel and lodge
+    // 5: casino and bar
+    // 7: discotheque and night club
+    // 8: grade category hotel
+    // 11: restaurant cum bar shop
+    const isBarmanOnly = [13, 3, 4, 5, 7, 8, 11].includes(catId) ||
+      categoryName.includes('special category hotel') ||
+      categoryName.includes('homemade wine') ||
+      categoryName.includes('hotel & lodge') ||
+      categoryName.includes('hotel and lodge') ||
+      categoryName.includes('casino') ||
+      categoryName.includes('discotheque') ||
+      categoryName.includes('grade category hotel') ||
+      categoryName.includes('restaurant - cum - bar shop') ||
+      categoryName.includes('restaurant cum bar shop');
+
+    // Neither (Only Self) categories:
+    // 9: homestay with locally made liquor serving facility
+    // 1: manufacturing
+    const isNeither = [9, 1].includes(catId) ||
+      categoryName.includes('homestay') ||
+      categoryName.includes('manufacturing');
+
+    if (isNeither) {
+      this.modesOfOperation = [];
+      this.applicationForm.get('modeOfOperation')?.setValue('');
+      this.applicationForm.get('modeOfOperation')?.disable();
+    } else if (isSalesmanOnly) {
+      this.modesOfOperation = this.allModesOfOperation.filter(m => m.value === 'salesman');
+      this.applicationForm.get('modeOfOperation')?.enable();
+      const currentMode = this.applicationForm.get('modeOfOperation')?.value;
+      if (currentMode && currentMode !== 'salesman') {
+        this.applicationForm.get('modeOfOperation')?.setValue('');
+      }
+    } else if (isBarmanOnly) {
+      this.modesOfOperation = this.allModesOfOperation.filter(m => m.value === 'barman');
+      this.applicationForm.get('modeOfOperation')?.enable();
+      const currentMode = this.applicationForm.get('modeOfOperation')?.value;
+      if (currentMode && currentMode !== 'barman') {
+        this.applicationForm.get('modeOfOperation')?.setValue('');
+      }
+    } else {
+      this.modesOfOperation = [...this.allModesOfOperation];
+      this.applicationForm.get('modeOfOperation')?.enable();
+    }
+    this.cdr.detectChanges();
+  }
+
   private setupFormSubscriptions(): void {
     // Filter licensees by district and category
     this.applicationForm.get('district')?.valueChanges
@@ -200,7 +273,10 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
     this.applicationForm.get('licenseCategory')?.valueChanges
       .pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.fetchLicensees());
+      .subscribe((categoryId) => {
+        this.updateModesOfOperation(categoryId);
+        this.fetchLicensees();
+      });
   }
 
   private fetchLicensees(): void {
@@ -297,6 +373,9 @@ export class LicenseComponent implements OnInit, OnDestroy {
       try {
         const parsed = JSON.parse(saved);
         this.applicationForm.patchValue(parsed);
+        if (parsed.licenseCategory) {
+          this.updateModesOfOperation(parsed.licenseCategory);
+        }
         setTimeout(() => this.fetchLicensees(), 100);
       } catch (e) {
         console.error('Saved data parse error', e);

@@ -5,8 +5,10 @@ import {
   OnDestroy,
   OnInit,
   Output,
-  signal
+  signal,
+  inject
 } from '@angular/core';
+import { MatStepper } from '@angular/material/stepper';
 import {
   FormBuilder,
   FormGroup,
@@ -134,11 +136,14 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   residentialStatuses = ['Resident', 'Non-Resident'];
   maritalStatuses = ['Single', 'Married', 'Divorced'];
   licenseCategories: LicenseCategory[] = [];
-  modesOfOperation: ModeOfOperation[] = [
+  
+  private stepper = inject(MatStepper, { optional: true });
+  private allModesOfOperation: ModeOfOperation[] = [
     { value: 'Self', label: 'Self' },
     { value: 'Salesman', label: 'Salesman' },
     { value: 'Barman', label: 'Barman' }
   ];
+  modesOfOperation: ModeOfOperation[] = [...this.allModesOfOperation];
   readonly coiRcSsOptions: DocumentTypeOption[] = [
     { value: 'COI', label: 'Certificate of Identification (COI)' },
     { value: 'RC', label: 'Residential Certificate (RC)' },
@@ -240,8 +245,101 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     this.loadLicenseCategories();
     this.restoreDocuments();
     this.syncApplicationTypeRules();
+    this.updateModesOfOperation();
     this.validateAge();
     this.autoFillFromProfiles();
+
+    if (this.stepper) {
+      this.stepper.selectionChange
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((event) => {
+          if (event.selectedStep.label === 'Applicant Details') {
+            this.updateModesOfOperation();
+          }
+        });
+    }
+  }
+
+  shouldShowModeOfOperationDropdown(): boolean {
+    return this.modesOfOperation.length > 1;
+  }
+
+  updateModesOfOperation(): void {
+    const keyInfoStr = sessionStorage.getItem('keyInfoData');
+    if (!keyInfoStr) {
+      this.modesOfOperation = [...this.allModesOfOperation];
+      return;
+    }
+
+    try {
+      const keyInfo = JSON.parse(keyInfoStr);
+      const catId = Number(keyInfo.licenseCategory || keyInfo.license_category);
+      const categoryName = (keyInfo.license_category_name || '').toLowerCase();
+
+      // Salesman Only categories:
+      // 14: Foreign liquor retail shop
+      // 10: pachwai
+      // 6: departmental store
+      // 12: retail denatured spirt
+      const isSalesmanOnly = [14, 10, 6, 12].includes(catId) || 
+        categoryName.includes('foreign liquor retail shop') ||
+        categoryName.includes('pachwai') ||
+        categoryName.includes('departmental store') ||
+        categoryName.includes('denatured spirit');
+
+      // Barman Only categories:
+      // 13: special category hotel
+      // 3: barman license exclusively for homemade wine
+      // 4: bar-cum hotel and lodge
+      // 5: casino and bar
+      // 7: discotheque and night club
+      // 8: grade category hotel
+      // 11: restaurant cum bar shop
+      const isBarmanOnly = [13, 3, 4, 5, 7, 8, 11].includes(catId) ||
+        categoryName.includes('special category hotel') ||
+        categoryName.includes('homemade wine') ||
+        categoryName.includes('hotel & lodge') ||
+        categoryName.includes('hotel and lodge') ||
+        categoryName.includes('casino') ||
+        categoryName.includes('discotheque') ||
+        categoryName.includes('grade category hotel') ||
+        categoryName.includes('restaurant - cum - bar shop') ||
+        categoryName.includes('restaurant cum bar shop');
+
+      // Neither (Only Self) categories:
+      // 9: homestay with locally made liquor serving facility
+      // 1: manufacturing
+      const isNeither = [9, 1].includes(catId) ||
+        categoryName.includes('homestay') ||
+        categoryName.includes('manufacturing');
+
+      if (isNeither) {
+        this.modesOfOperation = this.allModesOfOperation.filter(m => m.value === 'Self');
+        this.applicantDetailsForm.get('modeOfOperation')?.setValue('Self');
+        this.applicantDetailsForm.get('modeOfOperation')?.disable();
+      } else if (isSalesmanOnly) {
+        this.modesOfOperation = this.allModesOfOperation.filter(m => m.value === 'Self' || m.value === 'Salesman');
+        this.applicantDetailsForm.get('modeOfOperation')?.enable();
+        const currentMode = this.applicantDetailsForm.get('modeOfOperation')?.value;
+        if (currentMode && currentMode !== 'Self' && currentMode !== 'Salesman') {
+          this.applicantDetailsForm.get('modeOfOperation')?.setValue('Self');
+        }
+      } else if (isBarmanOnly) {
+        this.modesOfOperation = this.allModesOfOperation.filter(m => m.value === 'Self' || m.value === 'Barman');
+        this.applicantDetailsForm.get('modeOfOperation')?.enable();
+        const currentMode = this.applicantDetailsForm.get('modeOfOperation')?.value;
+        if (currentMode && currentMode !== 'Self' && currentMode !== 'Barman') {
+          this.applicantDetailsForm.get('modeOfOperation')?.setValue('Self');
+        }
+      } else {
+        this.modesOfOperation = [...this.allModesOfOperation];
+        this.applicantDetailsForm.get('modeOfOperation')?.enable();
+      }
+    } catch (e) {
+      console.error('Failed to parse keyInfoData or filter modes of operation:', e);
+      this.modesOfOperation = [...this.allModesOfOperation];
+      this.applicantDetailsForm.get('modeOfOperation')?.enable();
+    }
   }
 
   ngOnDestroy(): void {
@@ -794,6 +892,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
     this.clearMemberDetailsData();
     this.syncApplicationTypeRules();
+    this.updateModesOfOperation();
     this.toggleLicenseHistoryValidators(this.applicantDetailsForm.get('hasExciseLicense')?.value, 'existing');
     this.toggleLicenseHistoryValidators(this.applicantDetailsForm.get('familyExciseLicense')?.value, 'family');
     sessionStorage.removeItem('applicantDetailsData');
