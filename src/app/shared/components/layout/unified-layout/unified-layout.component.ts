@@ -1198,7 +1198,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       const subCategory = toText(row?.license_sub_category || row?.licenseSubCategory);
       const appType = toText(row?.application_type || row?.applicationType);
       const labelParts = [category, subCategory].filter(Boolean);
-      const label = labelParts.length ? labelParts.join(' • ') : (appType || 'License');
+      let label = labelParts.length ? labelParts.join(' • ') : (appType || 'License');
+      
+      const sbRole = toText(row?.salesman_barman_role || row?.salesmanBarmanRole);
+      if (sbRole) {
+        label = `${label} • ${sbRole}`;
+      }
+
       const key = `${label}__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}__${appType}`;
 
       const existing = byKey.get(key);
