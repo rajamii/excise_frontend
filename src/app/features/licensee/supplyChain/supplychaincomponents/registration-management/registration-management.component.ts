@@ -744,7 +744,7 @@ export class RegistrationManagementComponent implements OnInit {
         const hasObjectionUpdate = Boolean(item?.has_objection_update ?? item?.hasObjectionUpdate) || hasUpdateFromTxn;
 
         let finalStatusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment' = statusGroup;
-        if (computedStage === 'Awaiting Payment') {
+        if (this.isLicenseeUser() && computedStage === 'Awaiting Payment') {
           finalStatusGroup = 'awaiting-payment';
         }
 
