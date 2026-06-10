@@ -1,4 +1,4 @@
-﻿<div class="final-license-root">
+<div class="final-license-root">
   <div class="print-overlay no-print" *ngIf="printing()" aria-live="polite" aria-busy="true">
     <div class="print-overlay-card">
       <mat-progress-spinner diameter="42" mode="indeterminate"></mat-progress-spinner>
@@ -145,7 +145,7 @@
 
         <ng-container *ngIf="isSalesmanBarman; else standardLicenseText">
           <p class="paragraph" *ngIf="templateData().applicationId || templateData().applicationDateTime || templateData().validFrom || templateData().validTo">
-            With reference to Application ID no <span class="strong">{{ templateData().applicationId || '-' }}</span>
+            With reference to Application ID no <span class="strong">{{ templateData().applicationId || '-' }}</span><span *ngIf="templateData().renewalApplicationId"> (Renewed Application ID: <span class="strong">{{ templateData().renewalApplicationId }}</span>)</span>
             <span *ngIf="templateData().applicationDateTime"> dated <span class="strong">{{ templateData().applicationDateTime }}</span></span>
             this is to inform you that Shri/Smt <span class="strong">{{ templateData().licenseeName || '-' }}</span>
             has been appointed as {{ templateData().modeOfOperation || 'Salesman/Barman' }} of your
@@ -181,6 +181,9 @@
 
         <p class="paragraph small">
           This is a computer generated License which does not require signature.
+        </p>
+        <p class="paragraph small" *ngIf="templateData().renewalApplicationId">
+          (Renewed Application ID: <span class="strong">{{ templateData().renewalApplicationId }}</span>)
         </p>
         </ng-template>
       </div>

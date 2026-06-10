@@ -11,6 +11,7 @@ import { LicenseService } from '../../../core/services/license.service';
 type FinalLicenseTemplateData = {
   licenseNumber: string;
   applicationId?: string;
+  renewalApplicationId?: string;
   certificateType?: string;
   licenseTitle?: string;
   licenseeName: string;
@@ -228,6 +229,7 @@ export class FinalLicenseComponent implements OnDestroy {
         this.templateData.update(current => ({
           ...current,
           applicationId: String(data?.applicationId || data?.application_id || current.applicationId || applicationId),
+          renewalApplicationId: data?.renewalApplicationId || data?.renewal_application_id || current.renewalApplicationId || '',
           certificateType: String(data?.certificateType || data?.certificate_type || current.certificateType || ''),
           licenseNumber: String(data?.licenseNumber || data?.license_id || current.licenseNumber || applicationId),
           licenseeName: String(data?.licenseeName || current.licenseeName || ''),
