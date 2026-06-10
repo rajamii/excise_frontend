@@ -30,7 +30,7 @@ export class SalesmanBarmanRegistrationService {
   // === DETAIL ===
   getSalesmanBarmanDetail(applicationId: string): Observable<SalesmanBarman> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<SalesmanBarman>(`${this.baseUrl}/detail/${encodedId}/`);
+    return this.http.get<SalesmanBarman>(`${this.baseUrl}/detail/${encodedId}/?_=${new Date().getTime()}`);
   }
 
   payRegistrationLicenseFee(applicationId: string): Observable<any> {

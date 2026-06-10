@@ -2057,10 +2057,17 @@ private initializeWalletContextAndLoadData(): void {
 
     if (context.tab === 'license_fee' && context.referenceNo && context.referenceNo.startsWith('SBM/')) {
       this.isHandlingPendingWalletPayment = true;
-      this.salesmanBarmanRegistrationService.getSalesmanBarmanDetail(context.id || context.referenceNo).subscribe({
+      const sbmId = String(context.id || context.referenceNo).trim();
+      console.log('[SBM Pay] Checking parent license fee status for:', sbmId);
+      this.salesmanBarmanRegistrationService.getSalesmanBarmanDetail(sbmId).subscribe({
         next: (res: any) => {
           this.isHandlingPendingWalletPayment = false;
-          if (res && res.new_license_application_id && !res.is_parent_license_fee_paid) {
+          console.log('[SBM Pay] Detail response:', {
+            is_parent_license_fee_paid: res?.is_parent_license_fee_paid,
+            new_license_application_id: res?.new_license_application_id,
+            application_id: res?.application_id
+          });
+          if (res && res.is_parent_license_fee_paid === false) {
             Swal.fire({
               icon: 'error',
               title: 'License Fee Unpaid',
@@ -2069,9 +2076,11 @@ private initializeWalletContextAndLoadData(): void {
             this.resetPendingPaymentAttemptState();
             return;
           }
+
           this.continueOpenPendingWalletPaymentConfirmation(context);
         },
         error: (err) => {
+          console.warn('[SBM Pay] Detail API error, proceeding anyway:', err);
           this.isHandlingPendingWalletPayment = false;
           this.continueOpenPendingWalletPaymentConfirmation(context);
         }
