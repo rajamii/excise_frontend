@@ -1043,8 +1043,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       ? `
         <div class="lp-filter-row">
           <label class="lp-filter-label" for="licenseGroup">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
-            Filter by type
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+            Filter by License Type
           </label>
           <select id="licenseGroup" class="lp-filter-select">
             ${groups.map((g) => `<option value="${this.escapeHtml(g.key)}">${this.escapeHtml(g.label)}</option>`).join('')}
@@ -1060,19 +1060,19 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           <!-- Header -->
           <div class="lp-header">
             <div class="lp-header-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2.5"/>
                 <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-                <line x1="12" y1="12" x2="12" y2="16"/>
-                <line x1="10" y1="14" x2="14" y2="14"/>
+                <circle cx="12" cy="14" r="2"/>
+                <line x1="12" y1="16" x2="12" y2="18"/>
               </svg>
             </div>
             <div class="lp-header-text">
               <h2 class="lp-title">License &amp; Application Numbers</h2>
               <p class="lp-subtitle">Your registered license details and renewal history</p>
             </div>
-            <button class="lp-close-btn" id="lpCloseBtn" type="button">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <button class="lp-close-btn" id="lpCloseBtn" type="button" aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
 
