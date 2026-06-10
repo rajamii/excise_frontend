@@ -59,6 +59,7 @@ export class RegistrationManagementComponent implements OnInit {
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment';
     hasObjectionHistory?: boolean;
     hasObjectionUpdate?: boolean;
+    isPrintFeePaid?: boolean;
   }> = [];
   filteredRows = [...this.allRows];
   stageFilterOptions: string[] = [];
@@ -341,6 +342,12 @@ export class RegistrationManagementComponent implements OnInit {
     const user = this.roleService.getCurrentUser();
     if (!user) return false;
     return user.roleId === 1 || user.roleId === 10;
+  }
+
+  isCommissionerUser(): boolean {
+    const user = this.roleService.getCurrentUser();
+    if (!user) return false;
+    return user.roleId === 10;
   }
 
   isPaymentSuccess(row: any): boolean {
@@ -768,7 +775,8 @@ export class RegistrationManagementComponent implements OnInit {
           currentStageRaw: rawStage,
           statusGroup: finalStatusGroup,
           hasObjectionHistory,
-          hasObjectionUpdate
+          hasObjectionUpdate,
+          isPrintFeePaid: Boolean(item?.is_print_fee_paid ?? item?.isPrintFeePaid ?? false)
         };
       });
     };

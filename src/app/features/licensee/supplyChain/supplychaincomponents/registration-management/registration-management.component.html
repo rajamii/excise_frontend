@@ -256,7 +256,7 @@
                     <i class="bi bi-clock-history"></i>
                   </button>
                   <button
-                    *ngIf="isCommissionerOrAdmin() && currentSection === 'salesman-barman-registration' && isPaymentSuccess(row)"
+                    *ngIf="isCommissionerUser() && currentSection === 'salesman-barman-registration' && row.isPrintFeePaid"
                     class="btn btn-link p-0 action-print ms-2 text-success"
                     title="Print License"
                     (click)="printLicense(row)"
