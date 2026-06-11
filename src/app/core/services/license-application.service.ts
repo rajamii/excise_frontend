@@ -990,11 +990,11 @@ export class LicenseApplicationService {
    * Initiate a renewal tracking application (LRA/...) for an existing license.
    * Backend: transactional/license_renewal_application/renew/<license_id>/
    */
-  initiateLicenseRenewalApplication(licenseId: string): Observable<any> {
+  initiateLicenseRenewalApplication(licenseId: string, options?: any): Observable<any> {
     const encodedId = encodeURIComponent(licenseId);
     return this.http.post(
       `${environment.apiBaseUrl}/transactional/license_renewal_application/renew/${encodedId}/`,
-      {}
+      options || {}
     );
   }
 }
