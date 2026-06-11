@@ -381,6 +381,24 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     " onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#cbd5e0'">
                       ${modeOptionsHtml}
                     </select>
+
+                    <!-- SBM Warning / Declaration -->
+                    <div id="swal-sbm-warning" style="
+                      display: none; 
+                      margin-top: 15px; 
+                      padding: 12px; 
+                      background-color: #fffaf0; 
+                      border-left: 4px solid #dd6b20; 
+                      border-radius: 4px;
+                      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                    ">
+                      <p style="margin: 0; font-size: 0.85rem; color: #dd6b20; font-weight: 600; line-height: 1.4;">
+                        Warning:
+                      </p>
+                      <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #7b341e; font-weight: 500; line-height: 1.4;">
+                        Choosing "Self" will terminate your active/approved Salesman/Barman registration. No revert back will be allowed for the Salesman/Barman of this application after you proceed.
+                      </p>
+                    </div>
                   </div>
 
                   <!-- Additional Charges Checkboxes (only if eligible) -->
@@ -425,6 +443,21 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               cancelButtonColor: '#d33',
               confirmButtonText: 'Submit & Renew',
               cancelButtonText: 'Cancel',
+              didOpen: () => {
+                const selectEl = document.getElementById('swal-mode-of-operation') as HTMLSelectElement;
+                const warningEl = document.getElementById('swal-sbm-warning') as HTMLDivElement;
+                if (selectEl && warningEl) {
+                  const checkWarning = () => {
+                    if (selectEl.value === 'Self' && (hasSalesmanSbm || hasBarmanSbm)) {
+                      warningEl.style.display = 'block';
+                    } else {
+                      warningEl.style.display = 'none';
+                    }
+                  };
+                  selectEl.addEventListener('change', checkWarning);
+                  checkWarning();
+                }
+              },
               preConfirm: () => {
                 const mode = (document.getElementById('swal-mode-of-operation') as HTMLSelectElement)?.value || 'Self';
                 const pachwai = (document.getElementById('swal-pachwai') as HTMLInputElement)?.checked || false;
