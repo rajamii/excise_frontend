@@ -453,6 +453,62 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     } else {
                       warningEl.style.display = 'none';
                     }
+
+                    if (selectEl.value === 'Salesman' && !hasSalesmanSbm) {
+                      Swal.showValidationMessage('Please register/fill the salesman application first to opt for salesman.');
+                      
+                      // Highlight validation message
+                      const validationMsgEl = Swal.getValidationMessage();
+                      if (validationMsgEl) {
+                        validationMsgEl.style.backgroundColor = '#fff5f5';
+                        validationMsgEl.style.color = '#e53e3e';
+                        validationMsgEl.style.border = '1px solid #fed7d7';
+                        validationMsgEl.style.borderRadius = '6px';
+                        validationMsgEl.style.padding = '12px';
+                        validationMsgEl.style.fontSize = '0.9rem';
+                        validationMsgEl.style.fontWeight = '600';
+                      }
+
+                      // Disable Submit button
+                      const confirmBtn = Swal.getConfirmButton();
+                      if (confirmBtn) {
+                        confirmBtn.setAttribute('disabled', 'true');
+                        confirmBtn.style.opacity = '0.5';
+                        confirmBtn.style.cursor = 'not-allowed';
+                      }
+                    } else if (selectEl.value === 'Barman' && !hasBarmanSbm) {
+                      Swal.showValidationMessage('Please register/fill the barman application first to opt for barman.');
+                      
+                      // Highlight validation message
+                      const validationMsgEl = Swal.getValidationMessage();
+                      if (validationMsgEl) {
+                        validationMsgEl.style.backgroundColor = '#fff5f5';
+                        validationMsgEl.style.color = '#e53e3e';
+                        validationMsgEl.style.border = '1px solid #fed7d7';
+                        validationMsgEl.style.borderRadius = '6px';
+                        validationMsgEl.style.padding = '12px';
+                        validationMsgEl.style.fontSize = '0.9rem';
+                        validationMsgEl.style.fontWeight = '600';
+                      }
+
+                      // Disable Submit button
+                      const confirmBtn = Swal.getConfirmButton();
+                      if (confirmBtn) {
+                        confirmBtn.setAttribute('disabled', 'true');
+                        confirmBtn.style.opacity = '0.5';
+                        confirmBtn.style.cursor = 'not-allowed';
+                      }
+                    } else {
+                      Swal.resetValidationMessage();
+                      
+                      // Enable Submit button
+                      const confirmBtn = Swal.getConfirmButton();
+                      if (confirmBtn) {
+                        confirmBtn.removeAttribute('disabled');
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                      }
+                    }
                   };
                   selectEl.addEventListener('change', checkWarning);
                   checkWarning();
@@ -463,6 +519,15 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                 const pachwai = (document.getElementById('swal-pachwai') as HTMLInputElement)?.checked || false;
                 const draughtBeer = (document.getElementById('swal-draught-beer') as HTMLInputElement)?.checked || false;
                 
+                if (mode === 'Salesman' && !hasSalesmanSbm) {
+                  Swal.showValidationMessage('Please register/fill the salesman application first to opt for salesman.');
+                  return false;
+                }
+                if (mode === 'Barman' && !hasBarmanSbm) {
+                  Swal.showValidationMessage('Please register/fill the barman application first to opt for barman.');
+                  return false;
+                }
+
                 return {
                   mode_of_operation: mode,
                   pachwai: pachwai,
