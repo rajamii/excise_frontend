@@ -1033,74 +1033,96 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   openLicenseNumbersPopup(): void {
     if (!this.isLicenseeUser()) return;
 
-    const groups = this.getLicenseGroups();
-    if (groups.length === 0) {
-      void Swal.fire('License Number', 'No license number is available yet.', 'info');
-      return;
-    }
-
-    const selectHtml = groups.length > 1
-      ? `
-        <div class="lp-filter-row">
-          <label class="lp-filter-label" for="licenseGroup">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
-            Filter by License Type
-          </label>
-          <select id="licenseGroup" class="lp-filter-select">
-            ${groups.map((g) => `<option value="${this.escapeHtml(g.key)}">${this.escapeHtml(g.label)}</option>`).join('')}
-          </select>
-        </div>
-      `
-      : '';
-
-    void Swal.fire({
-      html: `
-        <div class="lp-modal">
-
-          <!-- Header -->
-          <div class="lp-header">
-            <div class="lp-header-icon">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="7" width="20" height="14" rx="2.5"/>
-                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-                <circle cx="12" cy="14" r="2"/>
-                <line x1="12" y1="16" x2="12" y2="18"/>
-              </svg>
-            </div>
-            <div class="lp-header-text">
-              <h2 class="lp-title">License &amp; Application Numbers</h2>
-              <p class="lp-subtitle">Your registered license details and renewal history</p>
-            </div>
-            <button class="lp-close-btn" id="lpCloseBtn" type="button" aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-
-          <!-- Body -->
-          <div class="lp-body">
-            ${selectHtml}
-            <div id="licenseGroupLabel" class="lp-category-badge"></div>
-            <div id="licenseList"></div>
-          </div>
-
-        </div>
-      `,
-      showConfirmButton: false,
-      showCloseButton: false,
-      padding: 0,
-      background: 'transparent',
-      customClass: { popup: 'lp-swal-popup', htmlContainer: 'lp-swal-html' },
+    Swal.fire({
+      title: 'Loading Details',
+      html: 'Please wait...',
+      allowOutsideClick: false,
       didOpen: () => {
-        document.getElementById('lpCloseBtn')?.addEventListener('click', () => Swal.close());
-        const selectEl = document.getElementById('licenseGroup') as HTMLSelectElement | null;
-        const initialKey = groups.some((g) => g.key === this.selectedLicenseGroupKey) ? this.selectedLicenseGroupKey : groups[0].key;
-        if (selectEl) {
-          selectEl.value = initialKey;
-          selectEl.addEventListener('change', () => {
-            this.renderLicensePopupList(groups, selectEl.value);
-          });
+        Swal.showLoading();
+      }
+    });
+
+    this.licenseMeService.getMyLicenses().subscribe({
+      next: (licenses) => {
+        Swal.close();
+        const licenseRows = Array.isArray(licenses) ? licenses : [];
+        this.myLicenses = licenseRows;
+        this.ensureSelectedLicenseGroup();
+        this.applySubtypeMenuRules(licenseRows);
+
+        const groups = this.getLicenseGroups();
+        if (groups.length === 0) {
+          void Swal.fire('License Number', 'No license number is available yet.', 'info');
+          return;
         }
-        this.renderLicensePopupList(groups, initialKey);
+
+        const selectHtml = groups.length > 1
+          ? `
+            <div class="lp-filter-row">
+              <label class="lp-filter-label" for="licenseGroup">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+                Filter by License Type
+              </label>
+              <select id="licenseGroup" class="lp-filter-select">
+                ${groups.map((g) => `<option value="${this.escapeHtml(g.key)}">${this.escapeHtml(g.label)}</option>`).join('')}
+              </select>
+            </div>
+          `
+          : '';
+
+        void Swal.fire({
+          html: `
+            <div class="lp-modal">
+              <!-- Header -->
+              <div class="lp-header">
+                <div class="lp-header-icon">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2.5"/>
+                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                    <circle cx="12" cy="14" r="2"/>
+                    <line x1="12" y1="16" x2="12" y2="18"/>
+                  </svg>
+                </div>
+                <div class="lp-header-text">
+                  <h2 class="lp-title">License &amp; Application Numbers</h2>
+                  <p class="lp-subtitle">Your registered license details and renewal history</p>
+                </div>
+                <button class="lp-close-btn" id="lpCloseBtn" type="button" aria-label="Close">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              <!-- Body -->
+              <div class="lp-body">
+                ${selectHtml}
+                <div id="licenseGroupLabel" class="lp-category-badge"></div>
+                <div id="licenseList"></div>
+              </div>
+            </div>
+          `,
+          showConfirmButton: false,
+          showCloseButton: false,
+          padding: 0,
+          background: 'transparent',
+          customClass: { popup: 'lp-swal-popup', htmlContainer: 'lp-swal-html' },
+          didOpen: () => {
+            document.getElementById('lpCloseBtn')?.addEventListener('click', () => Swal.close());
+            const selectEl = document.getElementById('licenseGroup') as HTMLSelectElement | null;
+            const initialKey = groups.some((g) => g.key === this.selectedLicenseGroupKey) ? this.selectedLicenseGroupKey : groups[0].key;
+            if (selectEl) {
+              selectEl.value = initialKey;
+              selectEl.addEventListener('change', () => {
+                this.renderLicensePopupList(groups, selectEl.value);
+              });
+            }
+            this.renderLicensePopupList(groups, initialKey);
+          }
+        });
+      },
+      error: (error) => {
+        Swal.close();
+        console.error('Failed to load license details for popup:', error);
+        void Swal.fire('Error', 'Failed to retrieve license details. Please try again.', 'error');
       }
     });
   }
@@ -1194,13 +1216,20 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const byKey = new Map<string, { key: string; label: string; items: any[] }>();
 
     for (const row of rows) {
+      // Exclude inactive salesman/barman licenses
+      const sbRole = toText(row?.salesman_barman_role || row?.salesmanBarmanRole);
+      const isSb = Boolean(sbRole || String(row?.application_type || row?.applicationType || '').toLowerCase().includes('salesman') || String(row?.application_type || row?.applicationType || '').toLowerCase().includes('barman'));
+      const isActive = row?.is_active ?? row?.isActive;
+      if (isSb && isActive === false) {
+        continue;
+      }
+
       const category = toText(row?.license_category || row?.licenseCategory);
       const subCategory = toText(row?.license_sub_category || row?.licenseSubCategory);
       const appType = toText(row?.application_type || row?.applicationType);
       const labelParts = [category, subCategory].filter(Boolean);
       let label = labelParts.length ? labelParts.join(' • ') : (appType || 'License');
       
-      const sbRole = toText(row?.salesman_barman_role || row?.salesmanBarmanRole);
       if (sbRole) {
         label = `${label} • ${sbRole}`;
       }
