@@ -87,6 +87,42 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         const raw = app.raw || {};
         let validUpTo = this.extractValidUpToDate(raw) || summaryValidUpTo;
 
+        // SOP: Block Salesman/Barman renewal if New/Main license renewal is active/required but not initiated
+        if (resolvedType === 'salesman-barman') {
+          const newLicenseApps = this.dataSource.data.filter(item => this.resolveApplicationType(item) === 'new-license');
+          for (const newLicenseApp of newLicenseApps) {
+            let newLicValidUpTo = this.extractValidUpToDate(newLicenseApp.raw || {});
+            if (!newLicValidUpTo && renewalConfig) {
+              const month = renewalConfig.renewal_month || 3;
+              const day = renewalConfig.renewal_day || 31;
+              const now = new Date();
+              let year = now.getFullYear();
+              if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) {
+                  year++;
+              }
+              newLicValidUpTo = new Date(year, month - 1, day, 23, 59, 59);
+            }
+
+            if (newLicValidUpTo) {
+              const isNewLicEligible = this.isRenewalAllowed(newLicValidUpTo, timer);
+              const newLicId = this.extractLicenseId(newLicenseApp.raw || {}, newLicenseApp);
+              const hasActiveRenewal = newLicId ? this.activeRenewalLicenseIds.has(this.normalizeLicenseId(newLicId)) : false;
+
+              if (isNewLicEligible && !hasActiveRenewal) {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Renewal Blocked',
+                  html: `
+                    <p>Renewal of Salesman/Barman registration is not allowed.</p>
+                    <p>Please renew your <strong>New License (${newLicId || 'Main License'})</strong> first.</p>
+                  `
+                });
+                return;
+              }
+            }
+          }
+        }
+
         if (!validUpTo && renewalConfig) {
           const month = renewalConfig.renewal_month || 3;
           const day = renewalConfig.renewal_day || 31;
