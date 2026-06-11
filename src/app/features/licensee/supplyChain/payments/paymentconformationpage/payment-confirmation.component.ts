@@ -1853,6 +1853,11 @@ private initializeWalletContextAndLoadData(): void {
     }
 
     if (this.activeTab === 'security_deposit') {
+      const isRenewal = String(ctx.itemType || '').trim().toLowerCase() === 'license-renewal'
+                     || String(refNo || '').trim().toUpperCase().startsWith('LRA/');
+      if (isRenewal) {
+        return;
+      }
       if (this.isFeePaid('security_deposit', refNo)) {
         return;
       }
@@ -1988,6 +1993,11 @@ private initializeWalletContextAndLoadData(): void {
       && this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
       && this.pendingWalletPaymentContext.tab === tab
       && this.activeTab === tab) {
+      const isRenewal = String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() === 'license-renewal'
+                     || String(this.pendingWalletPaymentContext.referenceNo || '').trim().toUpperCase().startsWith('LRA/');
+      if (isRenewal && tab === 'security_deposit') {
+        return false;
+      }
       return true;
     }
 
@@ -2224,10 +2234,12 @@ private initializeWalletContextAndLoadData(): void {
         const isLicenseFlow = this.isLicenseFeeWorkflowPaymentType(context.itemType);
 
         if (isLicenseFlow) {
+          const isRenewal = String(context.itemType || '').trim().toLowerCase() === 'license-renewal'
+                         || String(refNo || '').trim().toUpperCase().startsWith('LRA/');
           if (context.tab === 'license_fee') {
             const securityPaid = this.isFeePaid('security_deposit', refNo);
             const nextAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
-            if (!securityPaid && nextAmount > 0) {
+            if (!securityPaid && nextAmount > 0 && !isRenewal) {
               this.chainedNewLicenseSecurityAmount = 0;
               this.pendingWalletPaymentContext = {
                 ...context,

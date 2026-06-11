@@ -918,7 +918,7 @@ private getTransitRejectSummary(): {
         source?.['yearlyLicenseFee'] ??
         0
       );
-      const securityFee = this.toNumber(source?.['security_fee_amount'] ?? source?.['securityFeeAmount'] ?? 0);
+      const securityFee = isRenewal ? 0 : this.toNumber(source?.['security_fee_amount'] ?? source?.['securityFeeAmount'] ?? 0);
       return { licenseFee, securityFee, total: licenseFee + securityFee };
     };
 
@@ -991,7 +991,7 @@ private getTransitRejectSummary(): {
               </div>
               <div style="padding:10px 10px 4px;">
                 ${feeRow('License Fee', licenseFee, true)}
-                ${feeRow('Security Deposit', securityFee, true)}
+                ${securityFee > 0 ? feeRow('Security Deposit', securityFee, true) : ''}
               </div>
               <!-- Total -->
               <div style="display:flex; justify-content:space-between; align-items:center;
@@ -1008,7 +1008,7 @@ private getTransitRejectSummary(): {
             <div style="margin-top:12px; padding:10px 14px; background:#fffbeb; border:1px solid #fde68a;
                         border-radius:8px; font-size:12px; color:#92400e; display:flex; gap:8px; align-items:flex-start;">
               <span style="font-size:15px; flex-shrink:0;">&#9888;</span>
-              <span>You will be taken to <b>Wallet &rarr; License Fee / Security Deposit</b> tabs to complete payment.</span>
+              <span>You will be taken to <b>Wallet &rarr; ${isRenewal ? 'License Fee' : 'License Fee / Security Deposit'}</b> tabs to complete payment.</span>
             </div>
 
           </div>
@@ -1036,15 +1036,13 @@ private getTransitRejectSummary(): {
             ref: applicationId,
             referenceNo: applicationId,
             amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
-            securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+            securityAmount: !isRenewal && Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
             source: isRenewal ? 'license-renewal' : 'new-license'
           }
         });
       });
     };
 
-    // Dashboard/list rows often don't carry computed fee fields; fetch full detail
-    // so the modal shows correct amounts.
     Swal.fire({
       title: 'Loading...',
       text: 'Fetching fee amounts',
