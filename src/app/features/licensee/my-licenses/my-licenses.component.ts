@@ -619,26 +619,30 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                 const warningEl = document.getElementById('swal-sbm-warning') as HTMLDivElement;
                 const grid      = document.getElementById('rl-mode-grid');
 
-                const checkWarning = (mode: string) => {
+                const checkWarning = (mode: string, isInitial = false) => {
                   if (warningEl) {
                     warningEl.style.display = (mode === 'Self' && (hasSalesmanSbm || hasBarmanSbm)) ? 'flex' : 'none';
                   }
-                  if (mode === 'Salesman' && !hasSalesmanSbm) {
-                    Swal.showValidationMessage('Please register/fill the salesman application first.');
-                    const vm = Swal.getValidationMessage();
-                    if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
-                    const btn = Swal.getConfirmButton();
-                    if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
-                  } else if (mode === 'Barman' && !hasBarmanSbm) {
-                    Swal.showValidationMessage('Please register/fill the barman application first.');
-                    const vm = Swal.getValidationMessage();
-                    if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
-                    const btn = Swal.getConfirmButton();
-                    if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
-                  } else {
-                    Swal.resetValidationMessage();
-                    const btn = Swal.getConfirmButton();
-                    if (btn) { btn.removeAttribute('disabled'); btn.style.opacity='1'; btn.style.cursor='pointer'; }
+                  // Only show validation errors when user actively changes mode (not on initial load)
+                  // This prevents Swal from disabling the cancel button on open
+                  if (!isInitial) {
+                    if (mode === 'Salesman' && !hasSalesmanSbm) {
+                      Swal.showValidationMessage('Please register the salesman application first.');
+                      const vm = Swal.getValidationMessage();
+                      if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
+                      const btn = Swal.getConfirmButton();
+                      if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
+                    } else if (mode === 'Barman' && !hasBarmanSbm) {
+                      Swal.showValidationMessage('Please register the barman application first.');
+                      const vm = Swal.getValidationMessage();
+                      if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
+                      const btn = Swal.getConfirmButton();
+                      if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
+                    } else {
+                      Swal.resetValidationMessage();
+                      const btn = Swal.getConfirmButton();
+                      if (btn) { btn.removeAttribute('disabled'); btn.style.opacity='1'; btn.style.cursor='pointer'; }
+                    }
                   }
                 };
 
@@ -646,16 +650,23 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   grid.querySelectorAll<HTMLElement>('.rl-mode-card').forEach(card => {
                     card.addEventListener('click', () => {
                       const mode = card.dataset['mode'] ?? '';
-                      // Update hidden select
                       selectEl.value = mode;
-                      // Update card states
                       grid.querySelectorAll('.rl-mode-card').forEach(c => c.classList.remove('is-selected'));
                       card.classList.add('is-selected');
-                      checkWarning(mode);
+                      checkWarning(mode, false);
                     });
                   });
-                  // Run initial check
-                  checkWarning(selectEl.value);
+                  // Initial check — only show warning div, do NOT call showValidationMessage
+                  checkWarning(selectEl.value, true);
+                }
+
+                // Ensure cancel button always closes — wire directly to Swal.close()
+                const cancelBtn = Swal.getCancelButton();
+                if (cancelBtn) {
+                  cancelBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    Swal.close();
+                  });
                 }
               },
               preConfirm: () => {

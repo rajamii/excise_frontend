@@ -838,9 +838,12 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 }
 
 .rl-swal-actions {
-  padding: 0 26px 26px !important;
+  padding: 16px 26px 26px !important;
   gap: 12px !important;
   margin-top: 0 !important;
+  position: relative !important;
+  z-index: 10 !important;
+  background: #ffffff !important;
 }
 
 .rl-confirm-btn {
@@ -1315,6 +1318,8 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #3730a3 100%);
   border-top: 1px solid rgba(165, 180, 252, 0.15);
   padding: 16px 26px;
+  position: relative;
+  z-index: 1;
 }
 
 .rl-fee-summary-left {
