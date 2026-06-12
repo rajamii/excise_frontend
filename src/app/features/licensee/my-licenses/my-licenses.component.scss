@@ -267,3 +267,361 @@ mat-card-content {
     }
   }
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   RENEW LICENSE OPTIONS POPUP — Custom Design
+   ════════════════════════════════════════════════════════════════ */
+
+// SweetAlert2 wrapper overrides
+.rl-swal-popup {
+  padding: 0 !important;
+  border-radius: 22px !important;
+  overflow: hidden !important;
+  box-shadow: 0 32px 80px rgba(6, 78, 59, 0.20), 0 8px 24px rgba(15, 23, 42, 0.14) !important;
+  width: 520px !important;
+  max-width: 95vw !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rl-swal-actions {
+  padding: 0 28px 26px !important;
+  gap: 12px !important;
+  margin-top: 0 !important;
+}
+
+.rl-confirm-btn {
+  border-radius: 12px !important;
+  padding: 11px 24px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px !important;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35) !important;
+  transition: all 0.2s ease !important;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  border: none !important;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.45) !important;
+    transform: translateY(-1px) !important;
+  }
+  &:active { transform: translateY(0) !important; }
+}
+
+.rl-cancel-btn {
+  border-radius: 12px !important;
+  padding: 11px 24px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1.5px solid #e2e8f0 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+
+  &:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+  }
+}
+
+// Modal structure
+.rl-modal {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+// Header
+.rl-header {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 40%, #059669 80%, #10b981 100%);
+  padding: 26px 28px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -35px; right: -35px;
+    width: 130px; height: 130px;
+    background: radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+}
+
+.rl-header-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.rl-header-text {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.rl-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+.rl-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.70);
+  margin: 0;
+  font-weight: 400;
+}
+
+// License banner
+.rl-license-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-bottom: 1.5px solid #a7f3d0;
+  padding: 13px 28px;
+  flex-wrap: wrap;
+}
+
+.rl-license-banner-icon {
+  color: #059669;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.rl-license-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+
+.rl-license-id {
+  font-family: 'SFMono-Regular', 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #064e3b;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid #6ee7b7;
+  padding: 3px 12px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+}
+
+// Body
+.rl-body {
+  padding: 22px 28px 8px;
+  background: #ffffff;
+}
+
+// Field group
+.rl-field-group {
+  margin-bottom: 20px;
+}
+
+.rl-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 10px;
+}
+
+// Select wrapper
+.rl-select-wrap {
+  position: relative;
+}
+
+.rl-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #f8fafc;
+  border: 1.5px solid #d1fae5;
+  border-radius: 12px;
+  padding: 12px 44px 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+    background: #ffffff;
+  }
+
+  option {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+    background: #ffffff;
+  }
+}
+
+.rl-select-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #059669;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+// Warning box
+.rl-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 13px 15px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #fcd34d;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  color: #92400e;
+}
+
+.rl-warning-title {
+  margin: 0 0 3px 0;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #b45309;
+}
+
+.rl-warning-text {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+// Divider
+.rl-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d1fae5, transparent);
+  margin: 0 0 20px 0;
+}
+
+// Checkbox cards
+.rl-checks-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rl-check-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &:hover {
+    border-color: #6ee7b7;
+    background: #f0fdf4;
+  }
+
+  &.is-checked {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.12);
+
+    .rl-check-box {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      border-color: #059669;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.30);
+    }
+
+    .rl-check-tick { opacity: 1; }
+    .rl-check-name { color: #064e3b; }
+    .rl-check-fee { color: #059669; }
+  }
+}
+
+.rl-check-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rl-check-box {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.rl-check-tick {
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.rl-check-content {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rl-check-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #334155;
+  transition: color 0.2s;
+}
+
+.rl-check-fee {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 3px 10px;
+  border-radius: 100px;
+  transition: all 0.2s;
+}

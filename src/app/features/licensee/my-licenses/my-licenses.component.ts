@@ -353,161 +353,161 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             const draughtBeerChecked = !!(raw.draught_beer ?? raw.draught_beer_flag ?? raw.draught_beer_selected ?? raw.draughtBeer);
 
             Swal.fire({
-              title: 'Renew License Options',
+              title: '',
               html: `
-                <div style="text-align: left; font-family: 'Inter', sans-serif; padding: 5px 10px;">
-                  <p style="margin-bottom: 20px; color: #4a5568; font-size: 0.95rem; line-height: 1.5;">
-                    Please review and select the options below for renewing license <strong>${renewalId}</strong>.
-                    Your renewal fees will be calculated based on these selections.
-                  </p>
+                <div class="rl-modal">
 
-                  <!-- Mode of Operation Dropdown -->
-                  <div style="margin-bottom: 20px;">
-                    <label for="swal-mode-of-operation" style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 8px; font-size: 0.9rem;">
-                      Mode of Operation
-                    </label>
-                    <select id="swal-mode-of-operation" style="
-                      display: block; 
-                      width: 100%; 
-                      padding: 10px 12px; 
-                      font-size: 0.9rem; 
-                      border: 1px solid #cbd5e0; 
-                      border-radius: 6px; 
-                      background-color: #fff;
-                      color: #2d3748;
-                      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-                      outline: none;
-                      transition: border-color 0.2s;
-                    " onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#cbd5e0'">
-                      ${modeOptionsHtml}
-                    </select>
-
-                    <!-- SBM Warning / Declaration -->
-                    <div id="swal-sbm-warning" style="
-                      display: none; 
-                      margin-top: 15px; 
-                      padding: 12px; 
-                      background-color: #fffaf0; 
-                      border-left: 4px solid #dd6b20; 
-                      border-radius: 4px;
-                      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-                    ">
-                      <p style="margin: 0; font-size: 0.85rem; color: #dd6b20; font-weight: 600; line-height: 1.4;">
-                        Warning:
-                      </p>
-                      <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #7b341e; font-weight: 500; line-height: 1.4;">
-                        Choosing "Self" will terminate your active/approved Salesman/Barman registration. No revert back will be allowed for the Salesman/Barman of this application after you proceed.
-                      </p>
+                  <!-- Header -->
+                  <div class="rl-header">
+                    <div class="rl-header-icon">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                      </svg>
+                    </div>
+                    <div class="rl-header-text">
+                      <h2 class="rl-title">Renew License</h2>
+                      <p class="rl-subtitle">Configure your renewal options below</p>
                     </div>
                   </div>
 
-                  <!-- Additional Charges Checkboxes (only if eligible) -->
-                  ${hasAdditionalCharges ? `
-                    <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                      <label style="display: block; font-weight: 600; color: #2d3748; margin-bottom: 12px; font-size: 0.9rem;">
-                        Additional Charges
+                  <!-- License ID Banner -->
+                  <div class="rl-license-banner">
+                    <div class="rl-license-banner-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                    </div>
+                    <span class="rl-license-label">License Number</span>
+                    <code class="rl-license-id">${renewalId}</code>
+                  </div>
+
+                  <!-- Body -->
+                  <div class="rl-body">
+
+                    <!-- Mode of Operation -->
+                    <div class="rl-field-group">
+                      <label class="rl-field-label" for="swal-mode-of-operation">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                        Mode of Operation
                       </label>
-                      
-                      <div style="margin-bottom: 10px; display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="swal-pachwai" ${pachwaiChecked ? 'checked' : ''} style="
-                          width: 18px; 
-                          height: 18px; 
-                          margin-right: 12px; 
-                          cursor: pointer;
-                          accent-color: #3182ce;
-                        ">
-                        <label for="swal-pachwai" style="cursor: pointer; font-size: 0.9rem; color: #4a5568; font-weight: 500;">
-                          Pachwai <span style="color: #718096; font-size: 0.8rem;">(Additional ₹3,000)</span>
-                        </label>
+                      <div class="rl-select-wrap">
+                        <select id="swal-mode-of-operation" class="rl-select">
+                          ${modeOptionsHtml}
+                        </select>
+                        <span class="rl-select-arrow">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </span>
                       </div>
-                      
-                      <div style="margin-bottom: 10px; display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="swal-draught-beer" ${draughtBeerChecked ? 'checked' : ''} style="
-                          width: 18px; 
-                          height: 18px; 
-                          margin-right: 12px; 
-                          cursor: pointer;
-                          accent-color: #3182ce;
-                        ">
-                        <label for="swal-draught-beer" style="cursor: pointer; font-size: 0.9rem; color: #4a5568; font-weight: 500;">
-                          Draught Beer <span style="color: #718096; font-size: 0.8rem;">(Additional ₹5,000)</span>
-                        </label>
+
+                      <!-- SBM Warning -->
+                      <div id="swal-sbm-warning" class="rl-warning" style="display:none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                          <p class="rl-warning-title">Warning</p>
+                          <p class="rl-warning-text">Choosing "Self" will terminate your active/approved Salesman/Barman registration. No revert back will be allowed after you proceed.</p>
+                        </div>
                       </div>
                     </div>
-                  ` : ''}
+
+                    <!-- Additional Charges -->
+                    ${hasAdditionalCharges ? `
+                      <div class="rl-divider"></div>
+                      <div class="rl-field-group">
+                        <label class="rl-field-label">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                          Additional Charges
+                        </label>
+                        <div class="rl-checks-grid">
+                          <label class="rl-check-card" id="rl-pachwai-card">
+                            <input type="checkbox" id="swal-pachwai" class="rl-check-input" ${pachwaiChecked ? 'checked' : ''}>
+                            <span class="rl-check-box">
+                              <svg class="rl-check-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <div class="rl-check-content">
+                              <span class="rl-check-name">Pachwai</span>
+                              <span class="rl-check-fee">+₹3,000</span>
+                            </div>
+                          </label>
+
+                          <label class="rl-check-card" id="rl-draught-card">
+                            <input type="checkbox" id="swal-draught-beer" class="rl-check-input" ${draughtBeerChecked ? 'checked' : ''}>
+                            <span class="rl-check-box">
+                              <svg class="rl-check-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <div class="rl-check-content">
+                              <span class="rl-check-name">Draught Beer</span>
+                              <span class="rl-check-fee">+₹5,000</span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    ` : ''}
+
+                  </div>
                 </div>
               `,
-              icon: 'info',
+              icon: undefined,
               showCancelButton: true,
-              confirmButtonColor: '#3085d6',
-              cancelButtonColor: '#d33',
-              confirmButtonText: 'Submit & Renew',
+              confirmButtonColor: '#059669',
+              cancelButtonColor: '#64748b',
+              confirmButtonText: `
+                <span style="display:inline-flex;align-items:center;gap:7px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
+                  Submit &amp; Renew
+                </span>`,
               cancelButtonText: 'Cancel',
+              customClass: {
+                popup: 'rl-swal-popup',
+                confirmButton: 'rl-confirm-btn',
+                cancelButton: 'rl-cancel-btn',
+                actions: 'rl-swal-actions',
+              },
+              padding: 0,
               didOpen: () => {
+                // Wire up check-card visual toggling
+                ['rl-pachwai-card', 'rl-draught-card'].forEach(cardId => {
+                  const card = document.getElementById(cardId);
+                  if (!card) return;
+                  const input = card.querySelector('input') as HTMLInputElement;
+                  if (!input) return;
+                  const update = () => {
+                    if (input.checked) card.classList.add('is-checked');
+                    else card.classList.remove('is-checked');
+                  };
+                  update();
+                  input.addEventListener('change', update);
+                });
+
                 const selectEl = document.getElementById('swal-mode-of-operation') as HTMLSelectElement;
                 const warningEl = document.getElementById('swal-sbm-warning') as HTMLDivElement;
                 if (selectEl && warningEl) {
                   const checkWarning = () => {
                     if (selectEl.value === 'Self' && (hasSalesmanSbm || hasBarmanSbm)) {
-                      warningEl.style.display = 'block';
+                      warningEl.style.display = 'flex';
                     } else {
                       warningEl.style.display = 'none';
                     }
 
                     if (selectEl.value === 'Salesman' && !hasSalesmanSbm) {
                       Swal.showValidationMessage('Please register/fill the salesman application first to opt for salesman.');
-                      
-                      // Highlight validation message
                       const validationMsgEl = Swal.getValidationMessage();
                       if (validationMsgEl) {
-                        validationMsgEl.style.backgroundColor = '#fff5f5';
-                        validationMsgEl.style.color = '#e53e3e';
-                        validationMsgEl.style.border = '1px solid #fed7d7';
-                        validationMsgEl.style.borderRadius = '6px';
-                        validationMsgEl.style.padding = '12px';
-                        validationMsgEl.style.fontSize = '0.9rem';
-                        validationMsgEl.style.fontWeight = '600';
+                        validationMsgEl.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px 0;';
                       }
-
-                      // Disable Submit button
                       const confirmBtn = Swal.getConfirmButton();
-                      if (confirmBtn) {
-                        confirmBtn.setAttribute('disabled', 'true');
-                        confirmBtn.style.opacity = '0.5';
-                        confirmBtn.style.cursor = 'not-allowed';
-                      }
+                      if (confirmBtn) { confirmBtn.setAttribute('disabled', 'true'); confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
                     } else if (selectEl.value === 'Barman' && !hasBarmanSbm) {
                       Swal.showValidationMessage('Please register/fill the barman application first to opt for barman.');
-                      
-                      // Highlight validation message
                       const validationMsgEl = Swal.getValidationMessage();
                       if (validationMsgEl) {
-                        validationMsgEl.style.backgroundColor = '#fff5f5';
-                        validationMsgEl.style.color = '#e53e3e';
-                        validationMsgEl.style.border = '1px solid #fed7d7';
-                        validationMsgEl.style.borderRadius = '6px';
-                        validationMsgEl.style.padding = '12px';
-                        validationMsgEl.style.fontSize = '0.9rem';
-                        validationMsgEl.style.fontWeight = '600';
+                        validationMsgEl.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px 0;';
                       }
-
-                      // Disable Submit button
                       const confirmBtn = Swal.getConfirmButton();
-                      if (confirmBtn) {
-                        confirmBtn.setAttribute('disabled', 'true');
-                        confirmBtn.style.opacity = '0.5';
-                        confirmBtn.style.cursor = 'not-allowed';
-                      }
+                      if (confirmBtn) { confirmBtn.setAttribute('disabled', 'true'); confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
                     } else {
                       Swal.resetValidationMessage();
-                      
-                      // Enable Submit button
                       const confirmBtn = Swal.getConfirmButton();
-                      if (confirmBtn) {
-                        confirmBtn.removeAttribute('disabled');
-                        confirmBtn.style.opacity = '1';
-                        confirmBtn.style.cursor = 'pointer';
-                      }
+                      if (confirmBtn) { confirmBtn.removeAttribute('disabled'); confirmBtn.style.opacity = '1'; confirmBtn.style.cursor = 'pointer'; }
                     }
                   };
                   selectEl.addEventListener('change', checkWarning);
