@@ -302,10 +302,14 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
               if (isLinked) {
                 const sbmRole = String(sbmRaw.role || '').toLowerCase();
-                if (sbmRole.includes('salesman')) {
-                  hasSalesmanSbm = true;
-                } else if (sbmRole.includes('barman')) {
-                  hasBarmanSbm = true;
+                const stageName = String(sbm.currentStageName || sbm.currentStage || sbmRaw.current_stage?.name || sbmRaw.current_stage_name || '').toLowerCase();
+                const isRejected = stageName === 'rejected' || sbm.currentStage === '105' || sbmRaw.current_stage_id === 105;
+                if (!isRejected) {
+                  if (sbmRole.includes('salesman')) {
+                    hasSalesmanSbm = true;
+                  } else if (sbmRole.includes('barman')) {
+                    hasBarmanSbm = true;
+                  }
                 }
               }
             }
@@ -483,7 +487,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                         Mode of Operation
                       </label>
-                      <!-- Hidden real select (used by preConfirm) -->
+                      <!-- Hidden real select (used by confirm logic) -->
                       <select id="swal-mode-of-operation" style="display:none;">
                         ${modeOptionsHtml}
                       </select>
@@ -513,6 +517,12 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                           <p class="rl-warning-title">Warning</p>
                           <p class="rl-warning-text">Choosing "Self" will terminate your active/approved Salesman/Barman registration. No revert back will be allowed after you proceed.</p>
                         </div>
+                      </div>
+
+                      <!-- Custom inline validation error (replaces Swal.showValidationMessage to avoid state lock) -->
+                      <div id="rl-custom-error" style="display:none; align-items:center; gap:8px; margin-top:10px; padding:10px 14px; background:#fff5f5; color:#c53030; border:1px solid #fed7d7; border-radius:8px; font-size:0.85rem; font-weight:600;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span id="rl-custom-error-text"></span>
                       </div>
                     </div>
 
@@ -570,25 +580,38 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     </div>
                   </div>
 
+                  <!-- Actions Footer -->
+                  <div style="display: flex; justify-content: center; padding: 20px 28px 26px; gap: 12px; background: #ffffff;">
+                    <button type="button" id="custom-confirm-btn" style="min-width: 140px; outline: none; border: none; cursor: pointer; border-radius: 12px; padding: 11px 24px; font-size: 14px; font-weight: 700; letter-spacing: 0.2px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35); background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; display: inline-flex; align-items: center; justify-content: center; gap: 7px;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
+                      Submit &amp; Renew
+                    </button>
+                    <button type="button" id="custom-cancel-btn" style="min-width: 120px; outline: none; border: 1.5px solid #e2e8f0; cursor: pointer; border-radius: 12px; padding: 11px 24px; font-size: 14px; font-weight: 600; background: #f1f5f9; color: #475569; display: inline-flex; align-items: center; justify-content: center;">Cancel</button>
+                  </div>
+
                 </div>
               `,
               icon: undefined,
-              showCancelButton: true,
-              confirmButtonColor: '#3730a3',
-              confirmButtonText: `
-                <span style="display:inline-flex;align-items:center;gap:7px;">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
-                  Submit &amp; Renew
-                </span>`,
-              cancelButtonText: 'Cancel',
+              showConfirmButton: false,
+              showCancelButton: false,
+              allowOutsideClick: true,
+              allowEscapeKey: true,
               customClass: {
                 popup: 'rl-swal-popup',
-                confirmButton: 'rl-confirm-btn',
-                cancelButton: 'rl-cancel-btn',
-                actions: 'rl-swal-actions',
               },
               padding: 0,
               didOpen: () => {
+                // Helper: show/hide custom inline error (never touches Swal internals)
+                const showError = (msg: string) => {
+                  const el = document.getElementById('rl-custom-error') as HTMLElement | null;
+                  const txt = document.getElementById('rl-custom-error-text') as HTMLElement | null;
+                  if (el && txt) { txt.textContent = msg; el.style.display = 'flex'; }
+                };
+                const clearError = () => {
+                  const el = document.getElementById('rl-custom-error') as HTMLElement | null;
+                  if (el) { el.style.display = 'none'; }
+                };
+
                 // ── Live fee total ────────────────────────────────────────────
                 const updateFeeTotal = () => {
                   const pachwaiEl = document.getElementById('swal-pachwai') as HTMLInputElement;
@@ -618,31 +641,24 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                 const selectEl  = document.getElementById('swal-mode-of-operation') as HTMLSelectElement;
                 const warningEl = document.getElementById('swal-sbm-warning') as HTMLDivElement;
                 const grid      = document.getElementById('rl-mode-grid');
+                const confirmBtn = document.getElementById('custom-confirm-btn') as HTMLButtonElement | null;
+                const cancelBtn  = document.getElementById('custom-cancel-btn') as HTMLButtonElement | null;
 
-                const checkWarning = (mode: string, isInitial = false) => {
+                const updateModeState = (mode: string) => {
+                  // Show SBM termination warning when Self is chosen and user has active SBM
                   if (warningEl) {
                     warningEl.style.display = (mode === 'Self' && (hasSalesmanSbm || hasBarmanSbm)) ? 'flex' : 'none';
                   }
-                  // Only show validation errors when user actively changes mode (not on initial load)
-                  // This prevents Swal from disabling the cancel button on open
-                  if (!isInitial) {
-                    if (mode === 'Salesman' && !hasSalesmanSbm) {
-                      Swal.showValidationMessage('Please register the salesman application first.');
-                      const vm = Swal.getValidationMessage();
-                      if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
-                      const btn = Swal.getConfirmButton();
-                      if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
-                    } else if (mode === 'Barman' && !hasBarmanSbm) {
-                      Swal.showValidationMessage('Please register the barman application first.');
-                      const vm = Swal.getValidationMessage();
-                      if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
-                      const btn = Swal.getConfirmButton();
-                      if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
-                    } else {
-                      Swal.resetValidationMessage();
-                      const btn = Swal.getConfirmButton();
-                      if (btn) { btn.removeAttribute('disabled'); btn.style.opacity='1'; btn.style.cursor='pointer'; }
-                    }
+                  // Show/hide inline error — never calls Swal.showValidationMessage
+                  if (mode === 'Salesman' && !hasSalesmanSbm) {
+                    showError('Please register the salesman application first before selecting Salesman mode.');
+                    if (confirmBtn) { confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
+                  } else if (mode === 'Barman' && !hasBarmanSbm) {
+                    showError('Please register the barman application first before selecting Barman mode.');
+                    if (confirmBtn) { confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
+                  } else {
+                    clearError();
+                    if (confirmBtn) { confirmBtn.style.opacity = '1'; confirmBtn.style.cursor = 'pointer'; }
                   }
                 };
 
@@ -653,45 +669,52 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                       selectEl.value = mode;
                       grid.querySelectorAll('.rl-mode-card').forEach(c => c.classList.remove('is-selected'));
                       card.classList.add('is-selected');
-                      checkWarning(mode, false);
+                      updateModeState(mode);
                     });
                   });
-                  // Initial check — only show warning div, do NOT call showValidationMessage
-                  checkWarning(selectEl.value, true);
+                  // Initial state check — only touches custom DOM, never SweetAlert2 internals
+                  updateModeState(selectEl.value);
                 }
 
-                // Ensure cancel button always closes — wire directly to Swal.close()
-                const cancelBtn = Swal.getCancelButton();
+                // ── Cancel button ────────────────────────────────────────────
                 if (cancelBtn) {
-                  cancelBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                  cancelBtn.addEventListener('click', () => {
                     Swal.close();
+                    // Defensive cleanup in case Swal.close() doesn't fully clean up
+                    setTimeout(() => {
+                      try {
+                        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+                        document.documentElement.classList.remove('swal2-shown');
+                        document.querySelectorAll('.swal2-container').forEach(el => (el as HTMLElement).remove());
+                      } catch { /* ignore */ }
+                    }, 50);
                   });
                 }
-              },
-              preConfirm: () => {
-                const mode = (document.getElementById('swal-mode-of-operation') as HTMLSelectElement)?.value || 'Self';
-                const pachwai = (document.getElementById('swal-pachwai') as HTMLInputElement)?.checked || false;
-                const draughtBeer = (document.getElementById('swal-draught-beer') as HTMLInputElement)?.checked || false;
-                
-                if (mode === 'Salesman' && !hasSalesmanSbm) {
-                  Swal.showValidationMessage('Please register/fill the salesman application first to opt for salesman.');
-                  return false;
-                }
-                if (mode === 'Barman' && !hasBarmanSbm) {
-                  Swal.showValidationMessage('Please register/fill the barman application first to opt for barman.');
-                  return false;
-                }
 
-                return {
-                  mode_of_operation: mode,
-                  pachwai: pachwai,
-                  draught_beer: draughtBeer
-                };
-              }
-            }).then((result) => {
-              if (result.isConfirmed) {
-                this.processRenewal(renewalId!, 'new-license', result.value);
+                // ── Confirm button ───────────────────────────────────────────
+                if (confirmBtn) {
+                  confirmBtn.addEventListener('click', () => {
+                    const mode = selectEl?.value || 'Self';
+                    const pachwai = (document.getElementById('swal-pachwai') as HTMLInputElement)?.checked || false;
+                    const draughtBeer = (document.getElementById('swal-draught-beer') as HTMLInputElement)?.checked || false;
+
+                    if (mode === 'Salesman' && !hasSalesmanSbm) {
+                      showError('Please register/fill the salesman application first to opt for Salesman.');
+                      return;
+                    }
+                    if (mode === 'Barman' && !hasBarmanSbm) {
+                      showError('Please register/fill the barman application first to opt for Barman.');
+                      return;
+                    }
+
+                    Swal.close();
+                    this.processRenewal(renewalId!, 'new-license', {
+                      mode_of_operation: mode,
+                      pachwai: pachwai,
+                      draught_beer: draughtBeer
+                    });
+                  });
+                }
               }
             });
           }
