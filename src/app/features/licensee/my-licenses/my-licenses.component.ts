@@ -352,6 +352,76 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             const pachwaiChecked = !!(raw.pachwai ?? raw.pachwai_flag ?? raw.pachwai_selected);
             const draughtBeerChecked = !!(raw.draught_beer ?? raw.draught_beer_flag ?? raw.draught_beer_selected ?? raw.draughtBeer);
 
+            // ── Fee & location data ───────────────────────────────────────────
+            const locationName: string = String(
+              raw.location_name ?? raw.locationName ?? raw.location_description ?? raw.locationDescription ?? ''
+            ).trim();
+            const districtName: string = String(
+              raw.site_district_name ?? raw.siteDistrictName ?? raw.district_name ?? raw.districtName ?? ''
+            ).trim();
+            const locationDisplay = [locationName, districtName].filter(Boolean).join(', ') || null;
+
+            const baseFee: number = Number(
+              raw.yearly_license_fee ?? raw.yearlyLicenseFee ??
+              raw.license_fee_amount ?? raw.licenseFeeAmount ??
+              raw.renewal_amount ?? raw.renewalAmount ?? 0
+            );
+            const lateFee: number = Number(raw.late_fee ?? raw.lateFee ?? 0);
+            const securityDeposit: number = Number(raw.security_amount ?? raw.securityAmount ?? raw.security_fee_amount ?? raw.securityFeeAmount ?? 0);
+
+            const additionalInitial = (pachwaiChecked ? 3000 : 0) + (draughtBeerChecked ? 5000 : 0);
+            const fixedTotal = baseFee + lateFee + securityDeposit;
+
+            // Build base fees breakdown rows HTML (only show non-zero rows)
+            const feeRows: string[] = [];
+            if (baseFee > 0) {
+              feeRows.push(`
+                <div class="rl-fee-row">
+                  <span class="rl-fee-row-label">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
+                    Renewal / License Fee
+                  </span>
+                  <span class="rl-fee-row-amt">₹${baseFee.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+            if (lateFee > 0) {
+              feeRows.push(`
+                <div class="rl-fee-row">
+                  <span class="rl-fee-row-label rl-fee-row-label--late">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Late Fee
+                  </span>
+                  <span class="rl-fee-row-amt rl-fee-row-amt--late">₹${lateFee.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+            if (securityDeposit > 0) {
+              feeRows.push(`
+                <div class="rl-fee-row">
+                  <span class="rl-fee-row-label">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Security Deposit
+                  </span>
+                  <span class="rl-fee-row-amt">₹${securityDeposit.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+
+            const feeBreakdownHtml = (feeRows.length > 0 || locationDisplay) ? `
+              <div class="rl-divider"></div>
+              <div class="rl-field-group rl-fee-breakdown-group">
+                <label class="rl-field-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  Fee Breakdown
+                </label>
+                ${locationDisplay ? `
+                  <div class="rl-location-chip">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    ${locationDisplay}
+                  </div>` : ''}
+                <div class="rl-fee-rows">
+                  ${feeRows.length > 0 ? feeRows.join('') : '<div class="rl-fee-row-empty">Fees will be calculated on submission</div>'}
+                </div>
+              </div>` : '';
+
             Swal.fire({
               title: '',
               html: `
@@ -360,7 +430,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   <!-- Header -->
                   <div class="rl-header">
                     <div class="rl-header-icon">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="23 4 23 10 17 10"/>
                         <polyline points="1 20 1 14 7 14"/>
                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -368,7 +438,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     </div>
                     <div class="rl-header-text">
                       <h2 class="rl-title">Renew License</h2>
-                      <p class="rl-subtitle">Configure your renewal options below</p>
+                      <p class="rl-subtitle">Review and confirm your renewal options</p>
                     </div>
                   </div>
 
@@ -377,7 +447,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     <div class="rl-license-banner-icon">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
                     </div>
-                    <span class="rl-license-label">License Number</span>
+                    <span class="rl-license-label">License ID</span>
                     <code class="rl-license-id">${renewalId}</code>
                   </div>
 
@@ -387,7 +457,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     <!-- Mode of Operation -->
                     <div class="rl-field-group">
                       <label class="rl-field-label" for="swal-mode-of-operation">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                         Mode of Operation
                       </label>
                       <div class="rl-select-wrap">
@@ -401,7 +471,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
                       <!-- SBM Warning -->
                       <div id="swal-sbm-warning" class="rl-warning" style="display:none;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         <div>
                           <p class="rl-warning-title">Warning</p>
                           <p class="rl-warning-text">Choosing "Self" will terminate your active/approved Salesman/Barman registration. No revert back will be allowed after you proceed.</p>
@@ -414,7 +484,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                       <div class="rl-divider"></div>
                       <div class="rl-field-group">
                         <label class="rl-field-label">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                           Additional Charges
                         </label>
                         <div class="rl-checks-grid">
@@ -443,12 +513,31 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                       </div>
                     ` : ''}
 
+                    <!-- Fee Breakdown (location + base fees) -->
+                    ${feeBreakdownHtml}
+
                   </div>
+
+                  <!-- Live Fee Summary Bar -->
+                  <div class="rl-fee-summary">
+                    <div class="rl-fee-summary-left">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                      <div>
+                        <div class="rl-fee-summary-label">Estimated Total</div>
+                        <div class="rl-fee-summary-sublabel">Base + additional charges</div>
+                      </div>
+                    </div>
+                    <div class="rl-fee-total-wrap">
+                      <span class="rl-fee-currency">₹</span>
+                      <span class="rl-fee-total" id="rl-fee-total">${(fixedTotal + additionalInitial).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+
                 </div>
               `,
               icon: undefined,
               showCancelButton: true,
-              confirmButtonColor: '#059669',
+              confirmButtonColor: '#7c3aed',
               cancelButtonColor: '#64748b',
               confirmButtonText: `
                 <span style="display:inline-flex;align-items:center;gap:7px;">
@@ -464,7 +553,18 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               },
               padding: 0,
               didOpen: () => {
-                // Wire up check-card visual toggling
+                // Wire up check-card visual toggling + live fee total
+                const updateFeeTotal = () => {
+                  const pachwaiEl = document.getElementById('swal-pachwai') as HTMLInputElement;
+                  const draughtEl = document.getElementById('swal-draught-beer') as HTMLInputElement;
+                  const totalEl = document.getElementById('rl-fee-total');
+                  if (totalEl) {
+                    const additionalSelected = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
+                    const grand = fixedTotal + additionalSelected;
+                    totalEl.textContent = grand.toLocaleString('en-IN');
+                  }
+                };
+
                 ['rl-pachwai-card', 'rl-draught-card'].forEach(cardId => {
                   const card = document.getElementById(cardId);
                   if (!card) return;
@@ -473,6 +573,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   const update = () => {
                     if (input.checked) card.classList.add('is-checked');
                     else card.classList.remove('is-checked');
+                    updateFeeTotal();
                   };
                   update();
                   input.addEventListener('change', update);
