@@ -361,27 +361,49 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             ).trim();
             const locationDisplay = [locationName, districtName].filter(Boolean).join(', ') || null;
 
-            const baseFee: number = Number(
+            // yearly_license_fee is the TOTAL stored fee including previously-selected additional charges.
+            // To get the base location fee, subtract the additional charges that were previously baked in.
+            const storedTotalFee: number = Number(
               raw.yearly_license_fee ?? raw.yearlyLicenseFee ??
-              raw.license_fee_amount ?? raw.licenseFeeAmount ??
+              raw.license_fee_amount ?? raw.licenseFeeAmount ?? 0
+            );
+            const renewalAmount: number = Number(
               raw.renewal_amount ?? raw.renewalAmount ?? 0
             );
             const lateFee: number = Number(raw.late_fee ?? raw.lateFee ?? 0);
-            const securityDeposit: number = Number(raw.security_amount ?? raw.securityAmount ?? raw.security_fee_amount ?? raw.securityFeeAmount ?? 0);
+            // Security deposit is NOT charged at renewal — excluded intentionally
 
-            const additionalInitial = (pachwaiChecked ? 3000 : 0) + (draughtBeerChecked ? 5000 : 0);
-            const fixedTotal = baseFee + lateFee + securityDeposit;
+            // Subtract previously-included additional charges to get the pure base location fee
+            const prevPachwai  = pachwaiChecked      ? 3000 : 0;
+            const prevDraught  = draughtBeerChecked  ? 5000 : 0;
+            const locationFee: number = storedTotalFee - prevPachwai - prevDraught;
 
-            // Build base fees breakdown rows HTML (only show non-zero rows)
+            // Estimated total is dynamic: base location fee + whatever the user selects now + late fee
+            // (renewalAmount is added if present as a separate renewal processing fee)
+            const additionalInitial = prevPachwai + prevDraught; // current selection
+            const fixedBase = locationFee + renewalAmount + lateFee;
+            const fixedTotal = fixedBase + additionalInitial; // = storedTotalFee + renewalAmount + lateFee
+
+            // Build fee breakdown rows (only show non-zero)
             const feeRows: string[] = [];
-            if (baseFee > 0) {
+            if (locationFee > 0) {
+              feeRows.push(`
+                <div class="rl-fee-row">
+                  <span class="rl-fee-row-label">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Location Fee
+                  </span>
+                  <span class="rl-fee-row-amt">₹${locationFee.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+            if (renewalAmount > 0) {
               feeRows.push(`
                 <div class="rl-fee-row">
                   <span class="rl-fee-row-label">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
-                    Renewal / License Fee
+                    Renewal Fee
                   </span>
-                  <span class="rl-fee-row-amt">₹${baseFee.toLocaleString('en-IN')}</span>
+                  <span class="rl-fee-row-amt">₹${renewalAmount.toLocaleString('en-IN')}</span>
                 </div>`);
             }
             if (lateFee > 0) {
@@ -394,14 +416,15 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   <span class="rl-fee-row-amt rl-fee-row-amt--late">₹${lateFee.toLocaleString('en-IN')}</span>
                 </div>`);
             }
-            if (securityDeposit > 0) {
+            if (feeRows.length > 1) {
+              const breakdownTotal = locationFee + renewalAmount + lateFee;
               feeRows.push(`
-                <div class="rl-fee-row">
-                  <span class="rl-fee-row-label">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    Security Deposit
+                <div class="rl-fee-row rl-fee-row--total">
+                  <span class="rl-fee-row-label rl-fee-row-label--total">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Subtotal
                   </span>
-                  <span class="rl-fee-row-amt">₹${securityDeposit.toLocaleString('en-IN')}</span>
+                  <span class="rl-fee-row-amt rl-fee-row-amt--total">₹${breakdownTotal.toLocaleString('en-IN')}</span>
                 </div>`);
             }
 
@@ -524,12 +547,12 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                       <div>
                         <div class="rl-fee-summary-label">Estimated Total</div>
-                        <div class="rl-fee-summary-sublabel">Base + additional charges</div>
+                        <div class="rl-fee-summary-sublabel">Recalculated by server on submit</div>
                       </div>
                     </div>
                     <div class="rl-fee-total-wrap">
                       <span class="rl-fee-currency">₹</span>
-                      <span class="rl-fee-total" id="rl-fee-total">${(fixedTotal + additionalInitial).toLocaleString('en-IN')}</span>
+                      <span class="rl-fee-total" id="rl-fee-total">${fixedTotal.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
 
@@ -559,8 +582,9 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   const draughtEl = document.getElementById('swal-draught-beer') as HTMLInputElement;
                   const totalEl = document.getElementById('rl-fee-total');
                   if (totalEl) {
-                    const additionalSelected = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
-                    const grand = fixedTotal + additionalSelected;
+                    const selectedAdditional = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
+                    // fixedBase = locationFee + renewalAmount + lateFee (no additional)
+                    const grand = fixedBase + selectedAdditional;
                     totalEl.textContent = grand.toLocaleString('en-IN');
                   }
                 };

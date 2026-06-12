@@ -1222,9 +1222,70 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   svg { color: #0284c7; flex-shrink: 0; }
 }
 
+
+
+// ── Fee Summary Bar ───────────────────────────────────────────────
+.rl-fee-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #3730a3 100%);
+  border-top: 1px solid rgba(165, 180, 252, 0.15);
+  padding: 16px 26px;
+}
+
+.rl-fee-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  svg { flex-shrink: 0; color: rgba(199, 210, 254, 0.45); }
+}
+
+.rl-fee-summary-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #e0e7ff;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.rl-fee-summary-sublabel {
+  font-size: 10px;
+  color: rgba(199, 210, 254, 0.55);
+  margin-top: 2px;
+}
+
+.rl-fee-total-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.rl-fee-currency {
+  font-size: 16px;
+  font-weight: 700;
+  color: #c7d2fe;
+}
+
+.rl-fee-total {
+  font-size: 28px;
+  font-weight: 800;
+  color: #eef2ff;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rl-fee-note {
+  font-size: 11px;
+  color: rgba(199, 210, 254, 0.40);
+  margin-left: 4px;
+}
+
+// ── Fee rows with background ──────────────────────────────────────
 .rl-fee-rows {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: #f5f3ff;
+  border: 1.5px solid #ddd6fe;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -1233,34 +1294,55 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-size: 13px;
-  border-bottom: 1px solid #f3f4f6;
+  background: #f5f3ff;
+  border-bottom: 1px solid #ede9fe;
 
   &:last-child { border-bottom: none; }
+
+  &:first-child {
+    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+  }
+
+  &--total {
+    background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%) !important;
+    border-top: 1.5px solid #c7d2fe;
+  }
 }
 
 .rl-fee-row-label {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #6b7280;
-  font-weight: 500;
+  color: #4338ca;
+  font-weight: 600;
 
-  svg { color: #9ca3af; }
+  svg { color: #6d28d9; }
 
   &--late {
     color: #d97706;
     svg { color: #d97706; }
   }
+
+  &--total {
+    color: #3730a3;
+    font-weight: 800;
+    svg { color: #4338ca; }
+  }
 }
 
 .rl-fee-row-amt {
-  font-weight: 700;
-  color: #374151;
-  font-size: 13.5px;
+  font-weight: 800;
+  color: #3730a3;
+  font-size: 14px;
 
   &--late { color: #d97706; }
+
+  &--total {
+    font-size: 15px;
+    color: #1e1b4b;
+  }
 }
 
 .rl-fee-row-empty {
@@ -1269,62 +1351,4 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   color: #9ca3af;
   font-style: italic;
   text-align: center;
-}
-
-// ── Fee Summary Bar ───────────────────────────────────────────────
-.rl-fee-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #3730a3 100%);
-  padding: 16px 26px;
-}
-
-.rl-fee-summary-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(224, 231, 255, 0.60);
-
-  svg { flex-shrink: 0; }
-}
-
-.rl-fee-summary-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(224, 231, 255, 0.85);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-.rl-fee-summary-sublabel {
-  font-size: 10.5px;
-  color: rgba(224, 231, 255, 0.45);
-  margin-top: 1px;
-}
-
-.rl-fee-total-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-}
-
-.rl-fee-currency {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fbbf24;
-}
-
-.rl-fee-total {
-  font-size: 26px;
-  font-weight: 800;
-  color: #fde68a;
-  letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.rl-fee-note {
-  font-size: 11px;
-  color: rgba(253, 230, 138, 0.55);
-  margin-left: 3px;
 }
