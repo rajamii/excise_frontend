@@ -479,17 +479,31 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
                     <!-- Mode of Operation -->
                     <div class="rl-field-group">
-                      <label class="rl-field-label" for="swal-mode-of-operation">
+                      <label class="rl-field-label">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                         Mode of Operation
                       </label>
-                      <div class="rl-select-wrap">
-                        <select id="swal-mode-of-operation" class="rl-select">
-                          ${modeOptionsHtml}
-                        </select>
-                        <span class="rl-select-arrow">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                        </span>
+                      <!-- Hidden real select (used by preConfirm) -->
+                      <select id="swal-mode-of-operation" style="display:none;">
+                        ${modeOptionsHtml}
+                      </select>
+                      <!-- Custom radio cards -->
+                      <div class="rl-mode-grid" id="rl-mode-grid">
+                        ${allowedModes.map(mode => {
+                          let label = mode;
+                          let badge = '';
+                          if (mode === 'Salesman' && hasSalesmanSbm) { label = 'Salesman'; badge = '<span class="rl-mode-badge">Registered ✓</span>'; }
+                          else if (mode === 'Barman' && hasBarmanSbm) { label = 'Barman'; badge = '<span class="rl-mode-badge">Registered ✓</span>'; }
+                          const isSelected = mode === lastMode;
+                          return `
+                            <label class="rl-mode-card ${isSelected ? 'is-selected' : ''}" data-mode="${mode}">
+                              <span class="rl-mode-check-box">
+                                <svg class="rl-mode-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                              </span>
+                              <span class="rl-mode-label">${label}</span>
+                              ${badge}
+                            </label>`;
+                        }).join('')}
                       </div>
 
                       <!-- SBM Warning -->
@@ -560,8 +574,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               `,
               icon: undefined,
               showCancelButton: true,
-              confirmButtonColor: '#7c3aed',
-              cancelButtonColor: '#64748b',
+              confirmButtonColor: '#3730a3',
               confirmButtonText: `
                 <span style="display:inline-flex;align-items:center;gap:7px;">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
@@ -576,67 +589,73 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               },
               padding: 0,
               didOpen: () => {
-                // Wire up check-card visual toggling + live fee total
+                // ── Live fee total ────────────────────────────────────────────
                 const updateFeeTotal = () => {
                   const pachwaiEl = document.getElementById('swal-pachwai') as HTMLInputElement;
                   const draughtEl = document.getElementById('swal-draught-beer') as HTMLInputElement;
-                  const totalEl = document.getElementById('rl-fee-total');
+                  const totalEl   = document.getElementById('rl-fee-total');
                   if (totalEl) {
                     const selectedAdditional = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
-                    // fixedBase = locationFee + renewalAmount + lateFee (no additional)
-                    const grand = fixedBase + selectedAdditional;
-                    totalEl.textContent = grand.toLocaleString('en-IN');
+                    totalEl.textContent = (fixedBase + selectedAdditional).toLocaleString('en-IN');
                   }
                 };
 
+                // ── Additional charge cards ───────────────────────────────────
                 ['rl-pachwai-card', 'rl-draught-card'].forEach(cardId => {
-                  const card = document.getElementById(cardId);
+                  const card  = document.getElementById(cardId);
                   if (!card) return;
                   const input = card.querySelector('input') as HTMLInputElement;
                   if (!input) return;
                   const update = () => {
-                    if (input.checked) card.classList.add('is-checked');
-                    else card.classList.remove('is-checked');
+                    card.classList.toggle('is-checked', input.checked);
                     updateFeeTotal();
                   };
                   update();
                   input.addEventListener('change', update);
                 });
 
-                const selectEl = document.getElementById('swal-mode-of-operation') as HTMLSelectElement;
+                // ── Mode of operation radio cards ────────────────────────────
+                const selectEl  = document.getElementById('swal-mode-of-operation') as HTMLSelectElement;
                 const warningEl = document.getElementById('swal-sbm-warning') as HTMLDivElement;
-                if (selectEl && warningEl) {
-                  const checkWarning = () => {
-                    if (selectEl.value === 'Self' && (hasSalesmanSbm || hasBarmanSbm)) {
-                      warningEl.style.display = 'flex';
-                    } else {
-                      warningEl.style.display = 'none';
-                    }
+                const grid      = document.getElementById('rl-mode-grid');
 
-                    if (selectEl.value === 'Salesman' && !hasSalesmanSbm) {
-                      Swal.showValidationMessage('Please register/fill the salesman application first to opt for salesman.');
-                      const validationMsgEl = Swal.getValidationMessage();
-                      if (validationMsgEl) {
-                        validationMsgEl.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px 0;';
-                      }
-                      const confirmBtn = Swal.getConfirmButton();
-                      if (confirmBtn) { confirmBtn.setAttribute('disabled', 'true'); confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
-                    } else if (selectEl.value === 'Barman' && !hasBarmanSbm) {
-                      Swal.showValidationMessage('Please register/fill the barman application first to opt for barman.');
-                      const validationMsgEl = Swal.getValidationMessage();
-                      if (validationMsgEl) {
-                        validationMsgEl.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px 0;';
-                      }
-                      const confirmBtn = Swal.getConfirmButton();
-                      if (confirmBtn) { confirmBtn.setAttribute('disabled', 'true'); confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
-                    } else {
-                      Swal.resetValidationMessage();
-                      const confirmBtn = Swal.getConfirmButton();
-                      if (confirmBtn) { confirmBtn.removeAttribute('disabled'); confirmBtn.style.opacity = '1'; confirmBtn.style.cursor = 'pointer'; }
-                    }
-                  };
-                  selectEl.addEventListener('change', checkWarning);
-                  checkWarning();
+                const checkWarning = (mode: string) => {
+                  if (warningEl) {
+                    warningEl.style.display = (mode === 'Self' && (hasSalesmanSbm || hasBarmanSbm)) ? 'flex' : 'none';
+                  }
+                  if (mode === 'Salesman' && !hasSalesmanSbm) {
+                    Swal.showValidationMessage('Please register/fill the salesman application first.');
+                    const vm = Swal.getValidationMessage();
+                    if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
+                    const btn = Swal.getConfirmButton();
+                    if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
+                  } else if (mode === 'Barman' && !hasBarmanSbm) {
+                    Swal.showValidationMessage('Please register/fill the barman application first.');
+                    const vm = Swal.getValidationMessage();
+                    if (vm) vm.style.cssText = 'background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;border-radius:8px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin:0 28px;';
+                    const btn = Swal.getConfirmButton();
+                    if (btn) { btn.setAttribute('disabled','true'); btn.style.opacity='0.5'; btn.style.cursor='not-allowed'; }
+                  } else {
+                    Swal.resetValidationMessage();
+                    const btn = Swal.getConfirmButton();
+                    if (btn) { btn.removeAttribute('disabled'); btn.style.opacity='1'; btn.style.cursor='pointer'; }
+                  }
+                };
+
+                if (grid && selectEl) {
+                  grid.querySelectorAll<HTMLElement>('.rl-mode-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                      const mode = card.dataset['mode'] ?? '';
+                      // Update hidden select
+                      selectEl.value = mode;
+                      // Update card states
+                      grid.querySelectorAll('.rl-mode-card').forEach(c => c.classList.remove('is-selected'));
+                      card.classList.add('is-selected');
+                      checkWarning(mode);
+                    });
+                  });
+                  // Run initial check
+                  checkWarning(selectEl.value);
                 }
               },
               preConfirm: () => {
