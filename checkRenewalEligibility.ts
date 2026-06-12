@@ -1,4 +1,21 @@
-﻿  getTypeLabel(type: string): string {
+import { HttpClient } from '@angular/common/http';
+import { ChangeDetectorRef } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { forkJoin, of } from 'rxjs';
+import { take, catchError } from 'rxjs/operators';
+import { environment } from './src/environments/environment';
+import { UnifiedApplication } from './src/app/core/models/unified-application.model';
+import { MyLicensesComponent } from './src/app/features/licensee/my-licenses/my-licenses.component';
+import { TimerConfigService } from './src/app/core/services/timer-config.service';
+
+export class RenewalEligibilityChecker {
+  dialog!: MatDialog;
+  timerConfigService!: TimerConfigService;
+  http!: HttpClient;
+  cdr!: ChangeDetectorRef;
+  renewalWarnings: any[] = [];
+
+  getTypeLabel(type: string): string {
     switch (type) {
       case 'license-renewal': return 'License Renewal';
       case 'new-license': return 'New License';
@@ -12,7 +29,7 @@
     const dd = String(date.getDate()).padStart(2, '0');
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const yyyy = date.getFullYear();
-    return ${dd}//;
+    return `${dd}/${mm}/${yyyy}`;
   }
 
   openMyLicensesForRenewal(): void {
@@ -41,12 +58,30 @@
     return Number.isFinite(dt.getTime()) ? dt : null;
   }
 
-  private checkRenewalEligibility(approvedWithoutRenewal: UnifiedApplication[]): void {
+  private extractLicenseId(app: UnifiedApplication): string | null {
+    const raw = app.raw || {};
+    const possibleFields = [
+      raw.license_id,
+      raw.licenseId,
+      raw.license?.id,
+      raw.license?.license_id,
+      raw.issued_license_id,
+      raw.issuedLicenseId
+    ];
+    for (const field of possibleFields) {
+      if (field && typeof field === 'string') {
+        return field;
+      }
+    }
+    return null;
+  }
+
+  checkRenewalEligibility(approvedWithoutRenewal: UnifiedApplication[]): void {
     const fallbackSeconds = 90 * 24 * 60 * 60;
     
     forkJoin({
       timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
-      renewalConfig: this.http.get<any>(${environment.apiBaseUrl}/masters/core/renewal-application-config/).pipe(catchError(() => of(null)))
+      renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
     }).subscribe(({ timer, renewalConfig }) => {
       let newWarnings: any[] = [];
       const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
@@ -56,7 +91,6 @@
         const raw = app.raw || {};
         let validUpTo = this.extractValidUpToDate(raw);
         
-        // If valid_up_to is null, or if user wants to override using renewalConfig!
         if (!validUpTo && renewalConfig) {
           const month = renewalConfig.renewal_month || 3;
           const day = renewalConfig.renewal_day || 31;
