@@ -527,12 +527,12 @@
               </div>
             </div>
 
-            <!-- Section 2: Issued License Card -->
-            <div class="issued-license-banner shadow-sm" *ngIf="detailData.issued_license">
-              <div class="ilb-icon"><mat-icon>card_membership</mat-icon></div>
+            <!-- Section 2: Issued License Card (Main) -->
+            <div class="issued-license-banner shadow-sm" [class.inactive-license-theme]="!detailData.issued_license.is_active" *ngIf="detailData.issued_license">
+              <div class="ilb-icon" [class.inactive-lic-icon]="!detailData.issued_license.is_active"><mat-icon>card_membership</mat-icon></div>
               <div class="ilb-main">
-                <span class="ilb-label">Issued License</span>
-                <code class="ilb-id">{{ detailData.issued_license.license_id }}</code>
+                <span class="ilb-label">{{ !detailData.issued_license.is_active ? 'Expired / Inactive Main License' : 'Issued Main License' }}</span>
+                <code class="ilb-id" [class.inactive-lic-code]="!detailData.issued_license.is_active">{{ detailData.issued_license.license_id }}</code>
                 <div class="ilb-meta">
                   <span>{{ detailData.issued_license.license_category }} — {{ detailData.issued_license.license_sub_category }}</span>
                   <span>Issued: <strong>{{ detailData.issued_license.issue_date }}</strong></span>
@@ -545,7 +545,30 @@
                 </span>
               </div>
             </div>
-            <div class="no-license-notice shadow-sm" *ngIf="!detailData.issued_license">
+
+            <!-- Additional Issued Licenses (e.g. Salesman/Barman licenses) -->
+            <div class="issued-license-banner shadow-sm" 
+                 [class.inactive-license-theme]="!lic.is_active" 
+                 *ngFor="let lic of detailData.additional_licenses" 
+                 style="margin-top: 1rem;">
+              <div class="ilb-icon" [class.inactive-lic-icon]="!lic.is_active"><mat-icon>badge</mat-icon></div>
+              <div class="ilb-main">
+                <span class="ilb-label">{{ !lic.is_active ? 'Expired / Inactive Sub License' : 'Issued Sub / Staff License' }}</span>
+                <code class="ilb-id" [class.inactive-lic-code]="!lic.is_active">{{ lic.license_id }}</code>
+                <div class="ilb-meta">
+                  <span>{{ lic.license_category }} — {{ lic.license_sub_category }}</span>
+                  <span>Issued: <strong>{{ lic.issue_date }}</strong></span>
+                  <span>Valid Until: <strong>{{ lic.valid_up_to }}</strong></span>
+                </div>
+              </div>
+              <div class="ilb-status">
+                <span class="status-badge" [ngClass]="lic.is_active ? 'active' : 'inactive'">
+                  {{ lic.is_active ? 'Active' : 'Expired / Inactive' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="no-license-notice shadow-sm" *ngIf="!detailData.issued_license && (!detailData.additional_licenses || detailData.additional_licenses.length === 0)">
               <mat-icon>info_outline</mat-icon>
               <span>No license has been issued yet for this application.</span>
             </div>
