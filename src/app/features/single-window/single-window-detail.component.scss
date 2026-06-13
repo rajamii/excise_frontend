@@ -1027,91 +1027,77 @@
   color: #047857;
 }
 
-/* Workflow App Selector styles */
+/* ═══════════════════════════════════════════════════
+   Workflow App Selector — redesigned
+   ═══════════════════════════════════════════════════ */
 .workflow-app-selector {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: 1.25rem;
   margin-bottom: 2rem;
-  background: rgba(241, 245, 249, 0.45);
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 1.5rem;
-  box-shadow: inset 0 2px 8px rgba(15, 23, 42, 0.02);
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8edf4 100%);
+  border: 1px solid #dde6f0;
+  border-radius: 20px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.7);
 
   .grouped-selector-box {
     flex: 1;
-    min-width: 340px; /* Increased from 280px */
-    height: 425px; /* Increased from 375px */
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 1.15rem;
+    min-width: 320px;
+    height: 440px;
+    border-radius: 16px;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -2px rgba(0, 0, 0, 0.01);
-    transition: all 0.25s ease;
     box-sizing: border-box;
+    overflow: hidden;
+    transition: box-shadow 0.25s ease, transform 0.2s ease;
 
     &:hover {
-      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+      transform: translateY(-2px);
     }
 
+    /* ── License & Renewals box ── */
     &--license {
-      border-top: 4px solid #10b981;
-      background: linear-gradient(135deg, #ecfdf5 0%, #a7f3d0 100%);
-      .box-header::before { background-color: #10b981; }
+      background: linear-gradient(160deg, #f0fdf4 0%, #ecfdf5 100%) !important;
+      border: 1.5px solid #6ee7b7 !important;
+      box-shadow: 0 6px 20px rgba(16,185,129,0.18), 0 2px 0 rgba(255,255,255,0.8) inset;
+
+      .box-header {
+        background: linear-gradient(90deg, #065f46 0%, #047857 100%) !important;
+        color: #ffffff !important;
+        border-bottom: none !important;
+        &::before { background: #34d399 !important; }
+        mat-icon { color: #6ee7b7; }
+      }
+
+      .box-items::-webkit-scrollbar-thumb { background: #6ee7b7; }
     }
 
+    /* ── Staff box ── */
     &--staff {
-      border-top: 4px solid #ec4899;
-      background: linear-gradient(135deg, #fff1f2 0%, #fbcfe8 100%);
-      .box-header::before { background-color: #ec4899; }
+      background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 100%) !important;
+      border: 1.5px solid #f9a8d4 !important;
+      box-shadow: 0 6px 20px rgba(236,72,153,0.18), 0 2px 0 rgba(255,255,255,0.8) inset;
+
+      .box-header {
+        background: linear-gradient(90deg, #831843 0%, #be185d 100%) !important;
+        color: #ffffff !important;
+        border-bottom: none !important;
+        &::before { background: #f9a8d4 !important; }
+        mat-icon { color: #fbcfe8; }
+      }
+
+      .box-items::-webkit-scrollbar-thumb { background: #f9a8d4; }
     }
 
-    .renewal-section-divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      margin: 0.5rem 0;
-      flex-shrink: 0;
-
-      &::before, &::after {
-        content: '';
-        flex: 1;
-        border-bottom: 1.5px dashed #fde68a;
-      }
-      &::before {
-        margin-right: 0.5rem;
-      }
-      &::after {
-        margin-left: 0.5rem;
-      }
-    }
-
-    .renewal-section-badge {
-      background: #fef3c7;
-      color: #b45309;
-      border: 1px solid #fde68a;
-      padding: 0.2rem 0.6rem;
-      border-radius: 20px;
-      font-size: 0.65rem;
-      font-weight: 850;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    }
-
+    /* Header bar */
     .box-header {
-      font-size: 0.775rem;
-      font-weight: 850;
+      font-size: 0.72rem;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #334155;
-      border-bottom: 2px solid #f1f5f9;
-      padding-bottom: 0.65rem;
-      margin-bottom: 0.75rem;
+      letter-spacing: 0.1em;
+      padding: 0.85rem 1.1rem;
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -1120,231 +1106,206 @@
       &::before {
         content: '';
         display: inline-block;
-        width: 3px;
-        height: 12px;
+        width: 4px;
+        height: 14px;
         border-radius: 4px;
         flex-shrink: 0;
+        background: rgba(255,255,255,0.5);
       }
     }
 
+    /* Items scroll area */
     .box-items {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.6rem;
       overflow-y: auto;
-      padding-right: 0.25rem;
+      padding: 0.85rem;
       box-sizing: border-box;
 
-      /* Beautiful custom scrollbar */
-      &::-webkit-scrollbar {
-        width: 5px;
-      }
-      &::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      &::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 10px;
-        &:hover {
-          background: #94a3b8;
-        }
-      }
+      &::-webkit-scrollbar { width: 4px; }
+      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-thumb { border-radius: 10px; }
     }
 
+    /* Renewal divider */
+    .renewal-section-divider {
+      display: flex;
+      align-items: center;
+      margin: 0.25rem 0;
+      flex-shrink: 0;
+
+      &::before, &::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1.5px dashed #fde68a;
+      }
+      &::before { margin-right: 0.5rem; }
+      &::after  { margin-left: 0.5rem; }
+    }
+
+    .renewal-section-badge {
+      background: linear-gradient(90deg, #92400e, #b45309);
+      color: #fef3c7;
+      border: none;
+      padding: 0.2rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(180,83,9,0.25);
+    }
+
+    /* ── Sub-item cards ── */
     .sub-item-card {
-      border-radius: 10px;
-      padding: 0.7rem 0.95rem; /* Tighter padding for a more compact card display */
+      border-radius: 12px;
+      padding: 0.85rem 1rem 0.75rem;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.2s ease;
       display: flex;
       flex-direction: column;
-      gap: 0.2rem; /* Reduced gap for compact stacked layout */
+      gap: 0.22rem;
       position: relative;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
       box-sizing: border-box;
 
-      &:hover {
-        transform: translateY(-2px);
-      }
+      &:hover { transform: translateY(-1px); }
 
       .view-details-link-btn {
         position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
+        top: 0.55rem;
+        right: 0.55rem;
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
+        background: rgba(255,255,255,0.7);
+        border: 1px solid rgba(0,0,0,0.1);
         color: #64748b;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        z-index: 10;
         padding: 0;
-
-        mat-icon {
-          font-size: 14px;
-          width: 14px;
-          height: 14px;
-        }
-
-        &:hover {
-          background: #10b981;
-          color: #ffffff;
-          border-color: #10b981;
-          transform: scale(1.1);
-          box-shadow: 0 4px 8px rgba(16, 185, 129, 0.25);
-        }
-      }
-
-      /* Original Application - Green/Mint theme */
-      &--original {
-        background: #ffffff;
-        border: 1.5px solid #cbd5e1;
-
-        &:hover {
-          background: #f8fafc;
-          border-color: #94a3b8;
-        }
-
-        &.active {
-          background: #ffffff;
-          border-color: #10b981;
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
-
-          .item-type-label {
-            color: #047857;
-          }
-          .item-id {
-            color: #065f46;
-          }
-        }
-      }
-
-      /* Renewal Application - Indigo/Violet theme */
-      &--renewal {
-        background: #ffffff;
-        border: 1.5px solid #dcd7f9;
-
-        &:hover {
-          background: #f5f3ff;
-          border-color: #c7bcf7;
-        }
-
-        .item-type-label {
-          color: #7c3aed;
-        }
-        .item-id {
-          color: #4c1d95;
-        }
-
-        &.active {
-          background: #ffffff;
-          border-color: #6366f1;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
-
-          .item-type-label {
-            color: #4338ca;
-          }
-          .item-id {
-            color: #312e81;
-          }
-        }
-      }
-
-      /* Staff Registration - Pink/Rose theme */
-      &--staff {
-        background: #ffffff;
-        border: 1.5px solid #fbcfe8;
-
-        &:hover {
-          background: #fdf2f8;
-          border-color: #f9a8d4;
-        }
-
-        .item-type-label {
-          color: #db2777;
-        }
-        .item-id {
-          color: #9d174d;
-        }
-
-        &.active {
-          background: #ffffff;
-          border-color: #ec4899;
-          box-shadow: 0 4px 12px rgba(236, 72, 153, 0.12);
-
-          .item-type-label {
-            color: #be185d;
-          }
-          .item-id {
-            color: #831843;
-          }
-        }
+        z-index: 10;
+        mat-icon { font-size: 13px; width: 13px; height: 13px; }
+        &:hover { background: #fff; color: #10b981; border-color: #10b981; transform: scale(1.1); }
       }
 
       .item-type-label {
-        font-size: 0.675rem;
-        font-weight: 850;
+        font-size: 0.65rem;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #64748b;
-        padding-right: 1.5rem; /* Ensure text doesn't overlap details button */
+        letter-spacing: 0.08em;
       }
 
       .item-id {
-        font-size: 1.05rem;
-        font-weight: 850;
-        color: #0f172a;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 1rem;
+        font-weight: 800;
         letter-spacing: -0.01em;
+        line-height: 1.2;
+      }
+
+      .item-name {
+        font-size: 0.8rem;
+        font-weight: 600;
       }
 
       .lic-no {
-        font-size: 0.725rem;
-        color: #334155;
+        font-size: 0.72rem;
         font-weight: 600;
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        padding: 0.15rem 0.45rem;
-        border-radius: 4px;
-        width: fit-content;
         font-family: monospace;
       }
 
       .item-status {
-        font-size: 0.75rem;
-        font-weight: 700;
+        font-size: 0.68rem;
+        font-weight: 800;
         text-transform: uppercase;
-        color: #64748b;
-        display: flex;
+        letter-spacing: 0.05em;
+        display: inline-flex;
         align-items: center;
-        gap: 0.25rem;
-        margin-top: 0.25rem;
-        
+        gap: 4px;
+        margin-top: 2px;
+
         &::before {
-          content: '';
-          display: inline-block;
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          background-color: currentColor;
+          content: '●';
+          font-size: 0.5rem;
+        }
+      }
+
+      /* Original — white card with emerald border */
+      &--original {
+        background: #ffffff !important;
+        border: 2px solid #10b981 !important;
+        box-shadow: 0 2px 10px rgba(16,185,129,0.1);
+
+        .item-type-label { color: #065f46 !important; font-weight: 800; }
+        .item-id         { color: #064e3b !important; }
+        .lic-no          { color: #047857 !important; }
+        .item-status     { color: #059669 !important; }
+
+        &:hover {
+          background: #f0fdf4 !important;
+          border-color: #059669 !important;
+          box-shadow: 0 4px 14px rgba(16,185,129,0.15);
         }
 
-        &.status-active {
-          color: #059669;
+        &.active {
+          background: #f0fdf4 !important;
+          border: 2px solid #059669 !important;
+          box-shadow: 0 0 0 3px rgba(16,185,129,0.12), 0 6px 16px rgba(16,185,129,0.12);
+        }
+      }
+
+      /* Renewal — white card with amber border */
+      &--renewal {
+        background: #ffffff !important;
+        border: 2px solid #f59e0b !important;
+        box-shadow: 0 2px 10px rgba(245,158,11,0.1);
+
+        .item-type-label { color: #92400e !important; font-weight: 800; }
+        .item-id         { color: #78350f !important; }
+        .lic-no          { color: #b45309 !important; }
+        .item-status     { color: #d97706 !important; }
+
+        &:hover {
+          background: #fffbeb !important;
+          border-color: #d97706 !important;
+          box-shadow: 0 4px 14px rgba(245,158,11,0.15);
         }
 
-        &.status-pending {
-          color: #d97706;
+        &.active {
+          background: #fffbeb !important;
+          border: 2px solid #d97706 !important;
+          box-shadow: 0 0 0 3px rgba(245,158,11,0.12), 0 6px 16px rgba(245,158,11,0.12);
+        }
+      }
+
+      /* Staff — white card with rose border */
+      &--staff {
+        background: #ffffff !important;
+        border: 2px solid #ec4899 !important;
+        box-shadow: 0 2px 10px rgba(236,72,153,0.08);
+
+        .item-type-label { color: #831843 !important; font-weight: 800; }
+        .item-id         { color: #701a75 !important; }
+        .item-name       { color: #9d174d !important; }
+        .lic-no          { color: #be185d !important; }
+        .item-status     { color: #db2777 !important; }
+
+        &:hover {
+          background: #fdf2f8 !important;
+          border-color: #db2777 !important;
+          box-shadow: 0 4px 14px rgba(236,72,153,0.14);
         }
 
-        &.status-inactive {
-          color: #dc2626;
+        &.active {
+          background: #fdf2f8 !important;
+          border: 2px solid #db2777 !important;
+          box-shadow: 0 0 0 3px rgba(236,72,153,0.12), 0 6px 16px rgba(236,72,153,0.12);
         }
       }
     }
