@@ -382,6 +382,55 @@
       </div>
     </div>
 
+    <!-- Application Selector for Multi-App Tracking -->
+    <div class="workflow-app-selector" *ngIf="type !== 'licensee' && type !== 'license' && detailData && (detailData.renewal_applications?.length > 0 || detailData.salesman_barman_applications?.length > 0)">
+      
+      <!-- Box 1: License & Renewal Applications -->
+      <div class="grouped-selector-box">
+        <div class="box-header">License & Renewals (NA)</div>
+        <div class="box-items">
+          <!-- Main NLA Item -->
+          <div class="sub-item-card" 
+               [class.active]="selectedWorkflowAppId === detailData.application_id" 
+               (click)="selectWorkflowApp(detailData.application_id, detailData)">
+            <div class="item-type-label">Original Application</div>
+            <div class="item-id">{{ detailData.application_id }}</div>
+            <div class="lic-no" *ngIf="detailData.issued_license?.license_id">License: {{ detailData.issued_license.license_id }}</div>
+            <div class="item-status" [ngClass]="getStatusClass(detailData.current_stage)">{{ detailData.current_stage }}</div>
+          </div>
+          
+          <!-- Renewal Applications List -->
+          <div class="sub-item-card" 
+               *ngFor="let r of detailData.renewal_applications" 
+               [class.active]="selectedWorkflowAppId === r.application_id" 
+               (click)="selectWorkflowApp(r.application_id, r)">
+            <div class="item-type-label">Renewal Application</div>
+            <div class="item-id">{{ r.application_id }}</div>
+            <div class="lic-no" *ngIf="r.old_license_id">License: {{ r.old_license_id }}</div>
+            <div class="item-status" [ngClass]="getStatusClass(r.current_stage)">{{ r.current_stage }}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Box 2: Salesman & Barman Registrations -->
+      <div class="grouped-selector-box" *ngIf="detailData.salesman_barman_applications?.length">
+        <div class="box-header">Staff Registrations (Salesman/Barman)</div>
+        <div class="box-items">
+          <!-- Salesman/Barman Items List -->
+          <div class="sub-item-card" 
+               *ngFor="let s of detailData.salesman_barman_applications" 
+               [class.active]="selectedWorkflowAppId === s.application_id" 
+               (click)="selectWorkflowApp(s.application_id, s)">
+            <div class="item-type-label">Staff: {{ s.role }}</div>
+            <div class="item-id">{{ s.application_id }}</div>
+            <div class="item-name" style="font-size: 0.8rem; font-weight: 700; color: #475569; margin: 0.1rem 0;">{{ s.name }}</div>
+            <div class="lic-no" *ngIf="s.license_id && s.license_id !== 'N/A'">License: {{ s.license_id }}</div>
+            <div class="item-status" [ngClass]="getStatusClass(s.current_stage)">{{ s.current_stage }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- TABS SECTION FOR APPLICATIONS -->
     <mat-tab-group *ngIf="type !== 'licensee' && type !== 'license'" class="detail-tabs-group" mat-stretch-tabs="false" [(selectedIndex)]="activeTab">
       <!-- Tab 1: Overview and fields -->
@@ -819,33 +868,6 @@
 
         <div class="tab-padding">
 
-          <!-- Application Selector for Multi-App Tracking -->
-          <div class="workflow-app-selector" *ngIf="detailData && (detailData.renewal_applications?.length > 0 || detailData.salesman_barman_applications?.length > 0)">
-            <!-- Main NLA Application -->
-            <div class="selector-card" [class.active]="selectedWorkflowAppId === detailData.application_id" (click)="selectWorkflowApp(detailData.application_id, detailData)">
-              <div class="app-type">New Application</div>
-              <div class="app-id">{{ detailData.application_id }}</div>
-              <div class="lic-no" *ngIf="detailData.issued_license?.license_id">License: {{ detailData.issued_license.license_id }}</div>
-              <div class="app-status">{{ detailData.current_stage }}</div>
-            </div>
-            
-            <!-- Renewal Applications -->
-            <div class="selector-card" *ngFor="let r of detailData.renewal_applications" [class.active]="selectedWorkflowAppId === r.application_id" (click)="selectWorkflowApp(r.application_id, r)">
-              <div class="app-type">Renewal Application</div>
-              <div class="app-id">{{ r.application_id }}</div>
-              <div class="lic-no" *ngIf="r.old_license_id">License: {{ r.old_license_id }}</div>
-              <div class="app-status">{{ r.current_stage }}</div>
-            </div>
-
-            <!-- Salesman/Barman Applications -->
-            <div class="selector-card" *ngFor="let s of detailData.salesman_barman_applications" [class.active]="selectedWorkflowAppId === s.application_id" (click)="selectWorkflowApp(s.application_id, s)">
-              <div class="app-type">Staff: {{ s.role }}</div>
-              <div class="app-id">{{ s.application_id }}</div>
-              <div class="lic-no" *ngIf="s.license_id && s.license_id !== 'N/A'">License: {{ s.license_id }}</div>
-              <div class="app-status">{{ s.current_stage }}</div>
-            </div>
-          </div>
-
           <div class="workflow-card shadow-sm">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
               <h3 style="margin: 0; border-left: 4px solid #10b981; padding-left: 0.75rem;">Department Workflow Route History</h3>
@@ -939,6 +961,138 @@
                 </div>
               </mat-card>
             </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 4: Payment Details -->
+      <mat-tab label="Payment Details">
+        <div class="tab-padding">
+          
+          <div class="no-records-fallback" *ngIf="!selectedWorkflowApp">
+            <mat-icon>receipt_long</mat-icon>
+            <p>No payment details or transaction history found.</p>
+          </div>
+
+          <div class="workflow-card shadow-sm" *ngIf="selectedWorkflowApp">
+            
+            <!-- Application Title Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem;">
+              <h3 style="margin: 0; border-left: 4px solid #10b981; padding-left: 0.75rem;">
+                {{ getSelectedWorkflowAppTitle() }}
+              </h3>
+              <div class="lic-no" style="font-size: 0.85rem; font-weight: 700; color: #4338ca; background: rgba(99, 102, 241, 0.1); padding: 0.35rem 0.75rem; border-radius: 8px; border: 1.5px solid rgba(99, 102, 241, 0.2);">
+                Application ID: <code>{{ selectedWorkflowApp.application_id }}</code>
+              </div>
+            </div>
+
+            <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: #475569; letter-spacing: -0.01em;">Payment Status Overview</h4>
+            
+            <!-- Fee Paid Checkpoint Cards -->
+            <div class="grid-layout" style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
+              
+              <!-- For Salesman/Barman application -->
+              <ng-container *ngIf="selectedWorkflowApp.role">
+                <div class="summary-stats-card shadow-sm payment-card" style="margin: 0;">
+                  <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-muted);">Salesman/Barman Print Fee</h4>
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <mat-icon [ngClass]="selectedWorkflowApp.is_print_fee_paid ? 'paid' : 'unpaid'" style="font-size: 28px; width: 28px; height: 28px; line-height: 28px;">
+                      {{ selectedWorkflowApp.is_print_fee_paid ? 'check_circle' : 'pending' }}
+                    </mat-icon>
+                    <div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: #10b981;" *ngIf="selectedWorkflowApp.is_print_fee_paid">
+                        PAID
+                      </div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: #f59e0b;" *ngIf="!selectedWorkflowApp.is_print_fee_paid">
+                        UNPAID
+                      </div>
+                      <span style="font-size: 0.8rem; color: #64748b;">Required for salesman printing</span>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- For NLA or Renewal application -->
+              <ng-container *ngIf="!selectedWorkflowApp.role">
+                <!-- License / Application Fee Card -->
+                <div class="summary-stats-card shadow-sm payment-card" style="margin: 0;">
+                  <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-muted);">License / Application Fee</h4>
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <mat-icon [ngClass]="selectedWorkflowApp.is_license_fee_paid ? 'paid' : 'unpaid'" style="font-size: 28px; width: 28px; height: 28px; line-height: 28px;">
+                      {{ selectedWorkflowApp.is_license_fee_paid ? 'check_circle' : 'pending' }}
+                    </mat-icon>
+                    <div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: #10b981;" *ngIf="selectedWorkflowApp.is_license_fee_paid">
+                        PAID
+                      </div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: #f59e0b;" *ngIf="!selectedWorkflowApp.is_license_fee_paid">
+                        UNPAID
+                      </div>
+                      <span style="font-size: 0.8rem; color: #64748b;">Processing & issue fee</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Security Deposit Card -->
+                <div class="summary-stats-card shadow-sm payment-card" style="margin: 0;" *ngIf="!selectedWorkflowApp.old_license_id">
+                  <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-muted);">Security Deposit</h4>
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <mat-icon [ngClass]="selectedWorkflowApp.is_security_fee_paid ? 'paid' : 'unpaid'" style="font-size: 28px; width: 28px; height: 28px; line-height: 28px;">
+                      {{ selectedWorkflowApp.is_security_fee_paid ? 'check_circle' : 'pending' }}
+                    </mat-icon>
+                    <div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: #10b981;" *ngIf="selectedWorkflowApp.is_security_fee_paid">
+                        PAID
+                      </div>
+                      <div style="font-weight: 700; font-size: 1.1rem; color: #f59e0b;" *ngIf="!selectedWorkflowApp.is_security_fee_paid">
+                        UNPAID
+                      </div>
+                      <span style="font-size: 0.8rem; color: #64748b;">Refundable security deposit</span>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+            </div>
+
+            <h4 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 0.95rem; font-weight: 700; color: #475569; letter-spacing: -0.01em;">Payment Transaction History</h4>
+            
+            <div class="no-records-fallback" *ngIf="!selectedWorkflowApp.payments || selectedWorkflowApp.payments.length === 0" style="padding: 2rem 1.5rem;">
+              <mat-icon style="font-size: 30px; width: 30px; height: 30px; margin-bottom: 0.5rem;">receipt_long</mat-icon>
+              <p style="font-size: 0.85rem;">No payment gateway or wallet transactions found for this application.</p>
+            </div>
+
+            <table class="data-table" *ngIf="selectedWorkflowApp.payments && selectedWorkflowApp.payments.length > 0">
+              <thead>
+                <tr>
+                  <th>Transaction ID / UTR</th>
+                  <th>Amount</th>
+                  <th>Payment Type</th>
+                  <th>Date & Time</th>
+                  <th>Status</th>
+                  <th>Remarks / Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of selectedWorkflowApp.payments">
+                  <td><code>{{ p.transaction_id }}</code></td>
+                  <td><strong>₹{{ p.amount }}</strong></td>
+                  <td><span class="status-badge stage-badge" style="background: #e2e8f0; color: #475569;">{{ p.payment_type }}</span></td>
+                  <td style="white-space: nowrap;">{{ p.created_at }}</td>
+                  <td>
+                    <span class="status-badge" [ngClass]="{
+                      'active': p.payment_status === 'Success',
+                      'inactive': p.payment_status === 'Failed',
+                      'pending': p.payment_status === 'Pending'
+                    }">
+                      {{ p.payment_status }}
+                    </span>
+                  </td>
+                  <td>{{ p.remarks }}</td>
+                </tr>
+              </tbody>
+            </table>
+
           </div>
         </div>
       </mat-tab>

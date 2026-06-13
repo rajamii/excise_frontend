@@ -1031,88 +1031,134 @@
 .workflow-app-selector {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
   border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 1.25rem;
+  padding-bottom: 1.5rem;
 
-  .selector-card {
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem;
-    min-width: 200px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  .grouped-selector-box {
+    flex: 1;
+    min-width: 280px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    position: relative;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.01);
-    flex: 1;
+    gap: 0.85rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -2px rgba(0, 0, 0, 0.01);
+    transition: all 0.2s ease;
 
     &:hover {
-      background: #f1f5f9;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.02), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
       border-color: #cbd5e1;
-      transform: translateY(-2px);
     }
 
-    &.active {
-      background: rgba(16, 185, 129, 0.04);
-      border-color: #10b981;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.06);
-
-      .app-type {
-        color: #047857;
-      }
-      .app-id {
-        color: #065f46;
-      }
-    }
-
-    .app-type {
-      font-size: 0.725rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #64748b;
-    }
-
-    .app-id {
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.01em;
-    }
-
-    .lic-no {
+    .box-header {
       font-size: 0.775rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       color: #475569;
-      font-weight: 600;
-      background: rgba(0, 0, 0, 0.03);
-      padding: 0.15rem 0.4rem;
-      border-radius: 4px;
-      width: fit-content;
-      font-family: monospace;
+      border-bottom: 1.5px solid #f1f5f9;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.25rem;
     }
 
-    .app-status {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: #059669;
+    .box-items {
       display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      margin-top: 0.25rem;
-      
-      &::before {
-        content: '';
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background-color: currentColor;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sub-item-card {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.85rem 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      position: relative;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
+
+      &:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        transform: translateY(-2px);
+      }
+
+      &.active {
+        background: rgba(16, 185, 129, 0.04);
+        border-color: #10b981;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.06);
+
+        .item-type-label {
+          color: #047857;
+        }
+        .item-id {
+          color: #065f46;
+        }
+      }
+
+      .item-type-label {
+        font-size: 0.7rem;
+        font-weight: 850;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+      }
+
+      .item-id {
+        font-size: 1.05rem;
+        font-weight: 850;
+        color: #0f172a;
+        letter-spacing: -0.01em;
+      }
+
+      .lic-no {
+        font-size: 0.75rem;
+        color: #475569;
+        font-weight: 600;
+        background: rgba(0, 0, 0, 0.03);
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        width: fit-content;
+        font-family: monospace;
+      }
+
+      .item-status {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.25rem;
+        
+        &::before {
+          content: '';
+          display: inline-block;
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background-color: currentColor;
+        }
+
+        &.status-active {
+          color: #059669;
+        }
+
+        &.status-pending {
+          color: #d97706;
+        }
+
+        &.status-inactive {
+          color: #dc2626;
+        }
       }
     }
   }

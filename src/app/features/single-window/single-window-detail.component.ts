@@ -30,6 +30,7 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
 
   selectedWorkflowAppId: string | null = null;
   selectedWorkflowApp: any = null;
+  paymentApplications: any[] = [];
 
   ngOnInit() {
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
@@ -55,6 +56,7 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
     this.detailData = null;
     this.selectedWorkflowAppId = null;
     this.selectedWorkflowApp = null;
+    this.paymentApplications = [];
 
     let url = '';
     if (this.type === 'licensee') {
@@ -105,6 +107,9 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
           this.selectedWorkflowAppId = this.detailData.application_id;
           this.selectedWorkflowApp = this.detailData;
         }
+
+        // Setup the consolidated list of application payment states
+        this.setupPaymentApplications();
       },
       error: (err) => {
         console.error('Failed to load detail data', err);
@@ -112,6 +117,69 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  setupPaymentApplications() {
+    this.paymentApplications = [];
+    if (!this.detailData) return;
+
+    if (this.type === 'new_license_app') {
+      // 1. Add the main New License Application
+      this.paymentApplications.push({
+        application_id: this.detailData.application_id,
+        type: 'new_license_app',
+        title: 'New License Application',
+        is_license_fee_paid: this.detailData.is_license_fee_paid,
+        is_security_fee_paid: this.detailData.is_security_fee_paid,
+        payments: this.detailData.payments || []
+      });
+
+      // 2. Add all Renewal Applications
+      if (this.detailData.renewal_applications && this.detailData.renewal_applications.length > 0) {
+        for (const r of this.detailData.renewal_applications) {
+          this.paymentApplications.push({
+            application_id: r.application_id,
+            type: 'renewal_app',
+            title: 'Renewal Application',
+            is_license_fee_paid: r.is_license_fee_paid,
+            is_security_fee_paid: r.is_security_fee_paid,
+            payments: r.payments || []
+          });
+        }
+      }
+
+      // 3. Add all Salesman/Barman Applications
+      if (this.detailData.salesman_barman_applications && this.detailData.salesman_barman_applications.length > 0) {
+        for (const s of this.detailData.salesman_barman_applications) {
+          this.paymentApplications.push({
+            application_id: s.application_id,
+            type: 'salesman_barman_app',
+            title: `Staff Registration (${s.role || 'Salesman/Barman'}) - ${s.name || ''}`,
+            is_print_fee_paid: s.is_print_fee_paid,
+            payments: s.payments || []
+          });
+        }
+      }
+    } else if (this.type === 'renewal_app') {
+      // Single renewal application
+      this.paymentApplications.push({
+        application_id: this.detailData.application_id,
+        type: 'renewal_app',
+        title: 'Renewal Application',
+        is_license_fee_paid: this.detailData.is_license_fee_paid,
+        is_security_fee_paid: this.detailData.is_security_fee_paid,
+        payments: this.detailData.payments || []
+      });
+    } else if (this.type === 'salesman_barman_app') {
+      // Single salesman barman application
+      this.paymentApplications.push({
+        application_id: this.detailData.application_id,
+        type: 'salesman_barman_app',
+        title: `Staff Registration (${this.detailData.role || 'Salesman/Barman'}) - ${this.detailData.applicant_name || ''}`,
+        is_print_fee_paid: this.detailData.is_print_fee_paid,
+        payments: this.detailData.payments || []
+      });
+    }
   }
 
   selectWorkflowApp(appId: string, appData: any) {
@@ -182,4 +250,27 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
     };
     return labels[type] || type;
   }
+
+  getSelectedWorkflowAppTitle(): string {
+    if (!this.selectedWorkflowApp) return '';
+    if (this.selectedWorkflowApp.role) {
+      return `Staff Registration (${this.selectedWorkflowApp.role}) - ${this.selectedWorkflowApp.name || ''}`;
+    }
+    if (this.selectedWorkflowApp.old_license_id) {
+      return 'Renewal Application';
+    }
+    return 'New License Application';
+  }
+
+  isLicenseActive(): boolean {
+    if (!this.selectedWorkflowApp || !this.detailData) return false;
+    return this.selectedWorkflowAppId === this.detailData.application_id || 
+           !!this.selectedWorkflowApp.old_license_id;
+   }
+ 
+   isStaffActive(): boolean {
+    if (!this.selectedWorkflowApp) return false;
+    return !!this.selectedWorkflowApp.role;
+  }
 }
+
