@@ -182,7 +182,7 @@
       <div class="latest-tab-headers">
         <button [class.active]="activeLatestTab === 'admin'" (click)="setLatestTab('admin')" type="button">
           <mat-icon>supervisor_account</mat-icon>
-          <span>Admin & Licensees</span>
+          <span>Admin Users</span>
           <span class="count-badge">{{ latestUsers.length }}</span>
         </button>
         <button [class.active]="activeLatestTab === 'license'" (click)="setLatestTab('license')" type="button">
@@ -204,7 +204,7 @@
           <table class="premium-table">
             <thead>
               <tr>
-                <th>Licensee Name</th>
+                <th>Name</th>
                 <th>Username</th>
                 <th>Contact Info</th>
                 <th>User Role</th>
