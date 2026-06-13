@@ -233,88 +233,82 @@
           </div>
 
           <!-- Renewal Applications list -->
-          <div class="history-block shadow-sm">
-            <h3>Renewal Applications</h3>
+          <div class="history-block history-block--renewal shadow-sm">
+            <div class="hb-header">
+              <div class="hb-header__left">
+                <span class="hb-header__icon hb-header__icon--renewal"><mat-icon>autorenew</mat-icon></span>
+                <div>
+                  <h3>Renewal Applications</h3>
+                  <span class="hb-header__sub">License renewal history</span>
+                </div>
+              </div>
+              <span class="hb-header__count" *ngIf="detailData.renewal_applications?.length > 0">{{ detailData.renewal_applications.length }} record{{ detailData.renewal_applications.length > 1 ? 's' : '' }}</span>
+            </div>
             <div class="no-records-fallback" *ngIf="!detailData.renewal_applications || detailData.renewal_applications.length === 0">
               <p>No renewal applications submitted by this user.</p>
             </div>
-            <table class="data-table" *ngIf="detailData.renewal_applications && detailData.renewal_applications.length > 0">
+            <table class="data-table data-table--styled" *ngIf="detailData.renewal_applications && detailData.renewal_applications.length > 0">
               <thead>
                 <tr>
-                  <th>Application ID</th>
-                  <th>Old License ID</th>
-                  <th>Current Stage</th>
-                  <th>License Fee</th>
-                  <th>Security Deposit</th>
-                  <th>Submitted On</th>
-                  <th>Actions</th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--indigo"></span>Application ID</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--blue"></span>Old License ID</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--amber"></span>Current Stage</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--green"></span>License Fee</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--teal"></span>Security Deposit</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--slate"></span>Submitted On</div></th>
+                  <th><div class="th-cell">Actions</div></th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let app of detailData.renewal_applications">
-                  <td><code>{{ app.application_id }}</code></td>
-                  <td><code>{{ app.old_license_id }}</code></td>
-                  <td>
-                    <span class="status-badge stage-badge">{{ app.current_stage }}</span>
-                  </td>
-                  <td>
-                    <span class="status-badge" [ngClass]="app.is_license_fee_paid ? 'active' : 'inactive'">
-                      {{ app.is_license_fee_paid ? 'Paid' : 'Unpaid' }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="status-badge" [ngClass]="app.is_security_fee_paid ? 'active' : 'inactive'">
-                      {{ app.is_security_fee_paid ? 'Paid' : 'Unpaid' }}
-                    </span>
-                  </td>
+                  <td><code class="app-code app-code--renewal">{{ app.application_id }}</code></td>
+                  <td><code class="app-code app-code--license">{{ app.old_license_id }}</code></td>
+                  <td><span class="status-badge stage-badge">{{ app.current_stage }}</span></td>
+                  <td><span class="fee-badge" [ngClass]="app.is_license_fee_paid ? 'fee-paid' : 'fee-unpaid'"><mat-icon>{{ app.is_license_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>{{ app.is_license_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
+                  <td><span class="fee-badge" [ngClass]="app.is_security_fee_paid ? 'fee-paid' : 'fee-unpaid'"><mat-icon>{{ app.is_security_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>{{ app.is_security_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
                   <td>{{ app.created_at }}</td>
-                  <td>
-                    <button mat-button class="table-action-btn" (click)="viewApplicationDetail('renewal_app', app.application_id)">
-                      <mat-icon>timeline</mat-icon> Track
-                    </button>
-                  </td>
+                  <td><button mat-button class="table-action-btn" (click)="viewApplicationDetail('renewal_app', app.application_id)"><mat-icon>timeline</mat-icon> Track</button></td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <!-- Salesman/Barman applications list -->
-          <div class="history-block shadow-sm">
-            <h3>Salesman & Barman Registrations</h3>
+          <div class="history-block history-block--staff shadow-sm">
+            <div class="hb-header">
+              <div class="hb-header__left">
+                <span class="hb-header__icon hb-header__icon--staff"><mat-icon>badge</mat-icon></span>
+                <div>
+                  <h3>Salesman &amp; Barman Registrations</h3>
+                  <span class="hb-header__sub">Staff registration records</span>
+                </div>
+              </div>
+              <span class="hb-header__count" *ngIf="detailData.salesman_barman_applications?.length > 0">{{ detailData.salesman_barman_applications.length }} record{{ detailData.salesman_barman_applications.length > 1 ? 's' : '' }}</span>
+            </div>
             <div class="no-records-fallback" *ngIf="!detailData.salesman_barman_applications || detailData.salesman_barman_applications.length === 0">
               <p>No staff registrations submitted by this user.</p>
             </div>
-            <table class="data-table" *ngIf="detailData.salesman_barman_applications && detailData.salesman_barman_applications.length > 0">
+            <table class="data-table data-table--styled" *ngIf="detailData.salesman_barman_applications && detailData.salesman_barman_applications.length > 0">
               <thead>
                 <tr>
-                  <th>Application ID</th>
-                  <th>Name</th>
-                  <th>Staff Role</th>
-                  <th>Current Stage</th>
-                  <th>Print Fee</th>
-                  <th>Submitted On</th>
-                  <th>Actions</th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--indigo"></span>Application ID</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--blue"></span>Name</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--violet"></span>Staff Role</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--amber"></span>Current Stage</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--green"></span>Print Fee</div></th>
+                  <th><div class="th-cell"><span class="th-dot th-dot--slate"></span>Submitted On</div></th>
+                  <th><div class="th-cell">Actions</div></th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let app of detailData.salesman_barman_applications">
-                  <td><code>{{ app.application_id }}</code></td>
-                  <td>{{ app.name }}</td>
-                  <td>{{ app.role }}</td>
-                  <td>
-                    <span class="status-badge stage-badge">{{ app.current_stage }}</span>
-                  </td>
-                  <td>
-                    <span class="status-badge" [ngClass]="app.is_print_fee_paid ? 'active' : 'inactive'">
-                      {{ app.is_print_fee_paid ? 'Paid' : 'Unpaid' }}
-                    </span>
-                  </td>
+                  <td><code class="app-code app-code--renewal">{{ app.application_id }}</code></td>
+                  <td class="font-semibold">{{ app.name }}</td>
+                  <td><span class="role-chip">{{ app.role }}</span></td>
+                  <td><span class="status-badge stage-badge">{{ app.current_stage }}</span></td>
+                  <td><span class="fee-badge" [ngClass]="app.is_print_fee_paid ? 'fee-paid' : 'fee-unpaid'"><mat-icon>{{ app.is_print_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>{{ app.is_print_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
                   <td>{{ app.created_at }}</td>
-                  <td>
-                    <button mat-button class="table-action-btn" (click)="viewApplicationDetail('salesman_barman_app', app.application_id)">
-                      <mat-icon>timeline</mat-icon> Track
-                    </button>
-                  </td>
+                  <td><button mat-button class="table-action-btn" (click)="viewApplicationDetail('salesman_barman_app', app.application_id)"><mat-icon>timeline</mat-icon> Track</button></td>
                 </tr>
               </tbody>
             </table>
@@ -571,41 +565,45 @@
             </div>
 
             <!-- Section 3: Renewal Applications -->
-            <div class="history-block shadow-sm" style="margin-top: 1.5rem;">
-              <h3>Renewal Applications</h3>
+            <div class="history-block history-block--renewal shadow-sm" style="margin-top: 1.5rem;">
+              <div class="hb-header">
+                <div class="hb-header__left">
+                  <span class="hb-header__icon hb-header__icon--renewal"><mat-icon>autorenew</mat-icon></span>
+                  <div>
+                    <h3>Renewal Applications</h3>
+                    <span class="hb-header__sub">License renewal history &amp; tracking</span>
+                  </div>
+                </div>
+                <span class="hb-header__count" *ngIf="detailData.renewal_applications?.length > 0">{{ detailData.renewal_applications.length }} record{{ detailData.renewal_applications.length > 1 ? 's' : '' }}</span>
+              </div>
               <div class="no-records-fallback" *ngIf="!detailData.renewal_applications || detailData.renewal_applications.length === 0">
                 <mat-icon>autorenew</mat-icon>
                 <p>No renewal applications found for this licensee.</p>
               </div>
-              <table class="data-table" *ngIf="detailData.renewal_applications && detailData.renewal_applications.length > 0">
+              <table class="data-table data-table--styled" *ngIf="detailData.renewal_applications && detailData.renewal_applications.length > 0">
                 <thead>
                   <tr>
-                    <th>Renewal App ID</th>
-                    <th>Old License ID</th>
-                    <th>Current Stage</th>
-                    <th>Pending At</th>
-                    <th>License Fee</th>
-                    <th>Security Deposit</th>
-                    <th>Applied On</th>
-                    <th>Actions</th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--indigo"></span>Renewal App ID</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--blue"></span>Old License ID</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--amber"></span>Current Stage</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--orange"></span>Pending At</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--green"></span>License Fee</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--teal"></span>Security Deposit</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--slate"></span>Applied On</div></th>
+                    <th><div class="th-cell">Actions</div></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let r of detailData.renewal_applications">
-                    <td><code>{{ r.application_id }}</code></td>
-                    <td><code>{{ r.old_license_id }}</code></td>
+                    <td><code class="app-code app-code--renewal">{{ r.application_id }}</code></td>
+                    <td><code class="app-code app-code--license">{{ r.old_license_id }}</code></td>
                     <td><span class="status-badge stage-badge">{{ r.current_stage }}</span></td>
                     <td>
-                      <span class="pending-role-inline" *ngIf="!r.is_approved">
-                        <mat-icon style="font-size:12px;width:12px;height:12px">manage_accounts</mat-icon>
-                        {{ r.pending_at_role }}
-                      </span>
-                      <span class="approved-inline" *ngIf="r.is_approved">
-                        <mat-icon style="font-size:12px;width:12px;height:12px">check_circle</mat-icon> Approved
-                      </span>
+                      <span class="pending-role-inline" *ngIf="!r.is_approved"><mat-icon style="font-size:12px;width:12px;height:12px">manage_accounts</mat-icon>{{ r.pending_at_role }}</span>
+                      <span class="approved-inline" *ngIf="r.is_approved"><mat-icon style="font-size:12px;width:12px;height:12px">check_circle</mat-icon> Approved</span>
                     </td>
-                    <td><span class="status-badge" [ngClass]="r.is_license_fee_paid ? 'active' : 'inactive'">{{ r.is_license_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
-                    <td><span class="status-badge" [ngClass]="r.is_security_fee_paid ? 'active' : 'inactive'">{{ r.is_security_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
+                    <td><span class="fee-badge" [ngClass]="r.is_license_fee_paid ? 'fee-paid' : 'fee-unpaid'"><mat-icon>{{ r.is_license_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>{{ r.is_license_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
+                    <td><span class="fee-badge" [ngClass]="r.is_security_fee_paid ? 'fee-paid' : 'fee-unpaid'"><mat-icon>{{ r.is_security_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>{{ r.is_security_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
                     <td>{{ r.created_at }}</td>
                     <td><button mat-button class="table-action-btn" (click)="viewApplicationDetail('renewal_app', r.application_id)"><mat-icon>timeline</mat-icon> Track</button></td>
                   </tr>
@@ -614,41 +612,45 @@
             </div>
 
             <!-- Section 4: Salesman/Barman Applications -->
-            <div class="history-block shadow-sm" style="margin-top: 1.5rem;">
-              <h3>Salesman & Barman Registrations</h3>
+            <div class="history-block history-block--staff shadow-sm" style="margin-top: 1.5rem;">
+              <div class="hb-header">
+                <div class="hb-header__left">
+                  <span class="hb-header__icon hb-header__icon--staff"><mat-icon>badge</mat-icon></span>
+                  <div>
+                    <h3>Salesman &amp; Barman Registrations</h3>
+                    <span class="hb-header__sub">Staff registration records</span>
+                  </div>
+                </div>
+                <span class="hb-header__count" *ngIf="detailData.salesman_barman_applications?.length > 0">{{ detailData.salesman_barman_applications.length }} record{{ detailData.salesman_barman_applications.length > 1 ? 's' : '' }}</span>
+              </div>
               <div class="no-records-fallback" *ngIf="!detailData.salesman_barman_applications || detailData.salesman_barman_applications.length === 0">
                 <mat-icon>badge</mat-icon>
                 <p>No salesman/barman registrations found for this licensee.</p>
               </div>
-              <table class="data-table" *ngIf="detailData.salesman_barman_applications && detailData.salesman_barman_applications.length > 0">
+              <table class="data-table data-table--styled" *ngIf="detailData.salesman_barman_applications && detailData.salesman_barman_applications.length > 0">
                 <thead>
                   <tr>
-                    <th>Application ID</th>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Current Stage</th>
-                    <th>Pending At</th>
-                    <th>Print Fee</th>
-                    <th>Applied On</th>
-                    <th>Actions</th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--indigo"></span>Application ID</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--blue"></span>Name</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--violet"></span>Role</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--amber"></span>Current Stage</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--orange"></span>Pending At</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--green"></span>Print Fee</div></th>
+                    <th><div class="th-cell"><span class="th-dot th-dot--slate"></span>Applied On</div></th>
+                    <th><div class="th-cell">Actions</div></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let s of detailData.salesman_barman_applications">
-                    <td><code>{{ s.application_id }}</code></td>
-                    <td>{{ s.name }}</td>
-                    <td>{{ s.role }}</td>
+                    <td><code class="app-code app-code--renewal">{{ s.application_id }}</code></td>
+                    <td class="font-semibold">{{ s.name }}</td>
+                    <td><span class="role-chip">{{ s.role }}</span></td>
                     <td><span class="status-badge stage-badge">{{ s.current_stage }}</span></td>
                     <td>
-                      <span class="pending-role-inline" *ngIf="!s.is_approved">
-                        <mat-icon style="font-size:12px;width:12px;height:12px">manage_accounts</mat-icon>
-                        {{ s.pending_at_role }}
-                      </span>
-                      <span class="approved-inline" *ngIf="s.is_approved">
-                        <mat-icon style="font-size:12px;width:12px;height:12px">check_circle</mat-icon> Approved
-                      </span>
+                      <span class="pending-role-inline" *ngIf="!s.is_approved"><mat-icon style="font-size:12px;width:12px;height:12px">manage_accounts</mat-icon>{{ s.pending_at_role }}</span>
+                      <span class="approved-inline" *ngIf="s.is_approved"><mat-icon style="font-size:12px;width:12px;height:12px">check_circle</mat-icon> Approved</span>
                     </td>
-                    <td><span class="status-badge" [ngClass]="s.is_print_fee_paid ? 'active' : 'inactive'">{{ s.is_print_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
+                    <td><span class="fee-badge" [ngClass]="s.is_print_fee_paid ? 'fee-paid' : 'fee-unpaid'"><mat-icon>{{ s.is_print_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>{{ s.is_print_fee_paid ? 'Paid' : 'Unpaid' }}</span></td>
                     <td>{{ s.created_at }}</td>
                     <td><button mat-button class="table-action-btn" (click)="viewApplicationDetail('salesman_barman_app', s.application_id)"><mat-icon>timeline</mat-icon> Track</button></td>
                   </tr>
