@@ -100,6 +100,10 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
               }
             }
           }
+        } else {
+          // For other application types, detailData is the application itself
+          this.selectedWorkflowAppId = this.detailData.application_id;
+          this.selectedWorkflowApp = this.detailData;
         }
       },
       error: (err) => {

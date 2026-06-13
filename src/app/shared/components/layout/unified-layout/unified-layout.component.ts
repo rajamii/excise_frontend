@@ -120,10 +120,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // ── Other ──
       { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
       { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
-      { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
-      { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForOic: true },
-      { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true },
-      { section: 'single-window', label: 'Single Window Enquiry', icon: 'manage_search' }
+      { section: 'single-window', label: 'User Details', icon: 'manage_search' },
+      { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
     ];
 
   constructor(

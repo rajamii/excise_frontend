@@ -1,12 +1,4 @@
 <div class="detail-portal-container">
-  <!-- Back navigation and Header -->
-  <div class="back-bar">
-    <button mat-button class="back-btn" (click)="goBack()" type="button">
-      <mat-icon>arrow_back</mat-icon>
-      <span>Back to Search Dashboard</span>
-    </button>
-  </div>
-
   <!-- Loading State -->
   <div class="loader-container shadow-sm" *ngIf="isLoading">
     <mat-spinner diameter="50"></mat-spinner>
@@ -488,7 +480,12 @@
                   </div>
                 </div>
 
-                <h3 style="margin-top: 1.5rem;">Fee & Payment Status</h3>
+                <h3 style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 4px;">
+                  <span>Fee & Payment Status</span>
+                  <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: none;">
+                    New License App: <code>{{ detailData.application_id }}</code>
+                  </span>
+                </h3>
                 <div class="payment-check-list">
                   <div class="payment-check-item">
                     <mat-icon [ngClass]="detailData.is_license_fee_paid ? 'paid' : 'unpaid'">
@@ -749,7 +746,15 @@
 
             <!-- Right Fees/Payment Panel -->
             <div class="summary-stats-card shadow-sm payment-card">
-              <h3>Fee and Payment Checkpoints</h3>
+              <h3 style="display: flex; flex-direction: column; gap: 4px;">
+                <span>Fee & Payment Status</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: none;" *ngIf="type === 'renewal_app'">
+                  Renewal App: <code>{{ detailData.application_id }}</code>
+                </span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: none;" *ngIf="type === 'salesman_barman_app'">
+                  Salesman/Barman App: <code>{{ detailData.application_id }}</code>
+                </span>
+              </h3>
               <div class="payment-check-list">
                 <!-- For renewal license apps -->
                 <ng-container *ngIf="type === 'renewal_app'">
