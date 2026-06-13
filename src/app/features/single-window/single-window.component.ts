@@ -102,6 +102,7 @@ export class SingleWindowComponent implements OnInit {
     this.licensePageSize = event.pageSize;
   }
 
+  // Handle page changes for deactivated users paginator
   onDeactivatedPageChange(event: any) {
     this.deactivatedPageIndex = event.pageIndex;
     this.deactivatedPageSize = event.pageSize;

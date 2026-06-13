@@ -5,6 +5,7 @@
     <div class="portal-header__blob portal-header__blob--1"></div>
     <div class="portal-header__blob portal-header__blob--2"></div>
     <div class="portal-header__blob portal-header__blob--3"></div>
+    <div class="portal-header__blob portal-header__blob--shine"></div>
     <!-- Grid overlay -->
     <div class="portal-header__grid"></div>
 
@@ -214,6 +215,16 @@
 
   <!-- Landing Default view (when not searched yet) -->
   <div class="landing-default" *ngIf="!hasSearched">
+
+    <!-- ── Separator ── -->
+    <div class="section-divider">
+      <div class="section-divider__line"></div>
+      <div class="section-divider__label">
+        <mat-icon>insights</mat-icon>
+        Registry &amp; Activity
+      </div>
+      <div class="section-divider__line"></div>
+    </div>
     <!-- Recent Activity & Registries Header -->
     <div class="section-header">
       <div class="section-header__left">
