@@ -1,19 +1,122 @@
 <div class="lvp-wrapper">
 
   <!-- Page Header -->
-  <div class="lvp-page-header">
-    <div class="lvp-page-header__icon">
-      <mat-icon>event_available</mat-icon>
+  <div class="lvp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 28px;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div class="lvp-page-header__icon">
+        <mat-icon>event_available</mat-icon>
+      </div>
+      <div>
+        <h2 class="lvp-page-header__title">License Validity Period</h2>
+        <p class="lvp-page-header__subtitle">Configure the exact date and time when licenses expire annually.</p>
+      </div>
     </div>
-    <div>
-      <h2 class="lvp-page-header__title">License Validity Period</h2>
-      <p class="lvp-page-header__subtitle">Configure the exact date and time when licenses expire annually.</p>
+    <!-- Aside status portion showing when the open window starts -->
+    <div *ngIf="!isLoading" class="lvp-header-aside-card" style="display: flex; align-items: center; gap: 12px; background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 18px; border-radius: 12px; box-shadow: 0 2px 10px rgba(37, 99, 235, 0.08);">
+      <div style="background: #2563eb; color: #fff; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">lock_open</mat-icon>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">Renewal Window Opens On</div>
+        <div style="font-size: 14px; font-weight: 800; color: #1e3a8a; margin-top: 2px;">
+          {{ getRenewalOpenDateTimeExplanation() }}
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Loading Skeleton -->
   <div *ngIf="isLoading" class="lvp-card">
     <div class="lvp-skeleton"></div>
+  </div>
+
+  <!-- Renewal Eligibility Window Card -->
+  <div *ngIf="!isLoading" class="lvp-card mb-4" style="margin-bottom: 24px;">
+
+    <!-- Card Title Bar -->
+    <div class="lvp-card__header" style="background: linear-gradient(135deg, #1e293b, #0f172a); border-bottom-color: #334155;">
+      <mat-icon class="lvp-card__header-icon" style="color: #60a5fa;">history_toggle_off</mat-icon>
+      <span class="lvp-card__header-title" style="color: #ffffff;">Renewal Eligibility Window (Open Window)</span>
+    </div>
+
+    <!-- Explanation / Content -->
+    <div class="lvp-info-section" style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+      <div style="font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+        <mat-icon style="color: #0284c7; font-size: 20px; width: 20px; height: 20px;">info</mat-icon>
+        Configure the Renewal Eligibility Period
+      </div>
+      <p style="font-size: 13.5px; color: #475569; margin-bottom: 0; line-height: 1.6;">
+        This setting specifies the duration <b>before</b> a license's expiry date when the licensee is permitted to begin the renewal process. During this active open window, the system enables renewal actions and triggers notifications.
+      </p>
+    </div>
+
+    <!-- Table -->
+    <div class="lvp-table-wrap">
+      <table class="lvp-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Configuration Timer</th>
+            <th>
+              <mat-icon class="th-icon">pin</mat-icon>
+              Value
+            </th>
+            <th>
+              <mat-icon class="th-icon">more_time</mat-icon>
+              Unit
+            </th>
+            <th>
+              <mat-icon class="th-icon">schedule</mat-icon>
+              Calculated Period Before Expiry
+            </th>
+            <th>
+              <mat-icon class="th-icon">event_available</mat-icon>
+              Effective Open Date & Time
+            </th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="lvp-table__index">1</td>
+            <td>
+              <span style="font-family: monospace; font-size: 13px; font-weight: 600; color: #334155;">
+                {{ timerConfig.code }}
+              </span>
+            </td>
+            <td>
+              <span class="lvp-badge" style="background-color: #f1f5f9; color: #334155; border-color: #cbd5e1; font-weight: 600;">
+                {{ timerConfig.delayValue }}
+              </span>
+            </td>
+            <td>
+              <span class="lvp-badge" style="background-color: #f0fdf4; color: #166534; border-color: #bbf7d0; text-transform: capitalize; font-weight: 600;">
+                {{ timerConfig.delayUnit }}
+              </span>
+            </td>
+            <td>
+              <span class="lvp-badge lvp-badge--preview" style="font-weight: 600; color: #1e3a8a; background-color: #eff6ff; border-color: #bfdbfe;">
+                <mat-icon style="color: #2563eb;">schedule</mat-icon>
+                {{ getDurationExplanation(timerConfig.delayValue, timerConfig.delayUnit) }}
+              </span>
+            </td>
+            <td>
+              <span class="lvp-badge" style="background-color: #eff6ff; color: #1e40af; border-color: #bfdbfe; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px;">
+                <mat-icon style="color: #2563eb; font-size: 16px; width: 16px; height: 16px; margin-right: 0;">lock_open</mat-icon>
+                {{ getRenewalOpenDateTimeExplanation() }}
+              </span>
+            </td>
+            <td>
+              <button mat-raised-button color="accent" class="lvp-update-btn" (click)="openEditTimerDialog()">
+                <mat-icon>edit</mat-icon>
+                Update
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
   <!-- Summary Table Card -->
@@ -215,3 +318,109 @@
 
   </div>
 </ng-template>
+
+<!-- ─────────────── Edit Timer Dialog Template ─────────────── -->
+<ng-template #editTimerDialogTpl>
+  <div class="lvp-dialog">
+
+    <!-- Dialog Header -->
+    <div class="lvp-dialog__header" style="background: linear-gradient(135deg, #1e293b, #0f172a); border-bottom-color: #334155;">
+      <div class="lvp-dialog__header-icon" style="background: rgba(255, 255, 255, 0.15);">
+        <mat-icon style="color: #60a5fa;">history_toggle_off</mat-icon>
+      </div>
+      <div>
+        <h3 class="lvp-dialog__title" style="color: #ffffff; margin: 0 0 4px; font-size: 1.15rem; font-weight: 700;">Update Renewal Eligibility Window</h3>
+        <p class="lvp-dialog__subtitle" style="color: #cbd5e1; margin: 0; font-size: 0.85rem;">Configure the open window period before license expiry.</p>
+      </div>
+      <button mat-icon-button class="lvp-dialog__close" style="color: #cbd5e1;" (click)="closeTimerDialog()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- Dialog Body -->
+    <form #editTimerForm="ngForm" class="lvp-dialog__body">
+
+      <!-- Value Input Row -->
+      <div class="lvp-dialog__field-group">
+        <div class="lvp-dialog__field-label">
+          <mat-icon>pin</mat-icon>
+          Window Value
+        </div>
+        <mat-form-field appearance="outline" class="lvp-dialog__field">
+          <mat-label>Value (Integer >= 1)</mat-label>
+          <input matInput type="number" name="delayValue" required
+                 min="1"
+                 [(ngModel)]="editTimerConfig.delayValue"
+                 #valueModel="ngModel" />
+          <mat-hint>Enter the duration value (e.g., 30)</mat-hint>
+          <mat-error *ngIf="valueModel.errors?.['required']">Value is required</mat-error>
+          <mat-error *ngIf="valueModel.errors?.['min']">Must be 1 or greater</mat-error>
+        </mat-form-field>
+        <div class="lvp-dialog__preview-chip" *ngIf="editTimerConfig.delayValue >= 1">
+          <mat-icon>check_circle</mat-icon>
+          {{ editTimerConfig.delayValue }}
+        </div>
+      </div>
+
+      <!-- Unit Dropdown Row -->
+      <div class="lvp-dialog__field-group">
+        <div class="lvp-dialog__field-label">
+          <mat-icon>more_time</mat-icon>
+          Window Unit
+        </div>
+        <mat-form-field appearance="outline" class="lvp-dialog__field">
+          <mat-label>Select Unit</mat-label>
+          <mat-select name="delayUnit" required [(ngModel)]="editTimerConfig.delayUnit" #unitModel="ngModel">
+            <mat-option value="second">Second(s)</mat-option>
+            <mat-option value="minute">Minute(s)</mat-option>
+            <mat-option value="hour">Hour(s)</mat-option>
+            <mat-option value="day">Day(s)</mat-option>
+            <mat-option value="week">Week(s)</mat-option>
+            <mat-option value="month">Month(s)</mat-option>
+            <mat-option value="year">Year(s)</mat-option>
+          </mat-select>
+          <mat-error *ngIf="unitModel.errors?.['required']">Unit is required</mat-error>
+        </mat-form-field>
+        <div class="lvp-dialog__preview-chip" *ngIf="editTimerConfig.delayUnit">
+          <mat-icon>check_circle</mat-icon>
+          {{ editTimerConfig.delayUnit }}
+        </div>
+      </div>
+
+      <!-- Real-time Summary Preview Banner -->
+      <div class="lvp-dialog__summary" *ngIf="editTimerForm.valid" style="background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; display: flex; flex-direction: column; gap: 6px; align-items: stretch; padding: 14px 16px;">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+          <mat-icon style="color: #2563eb; font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;">schedule</mat-icon>
+          <div>
+            <strong>Calculated Period:</strong>
+            Opens <strong>{{ getDurationExplanation(editTimerConfig.delayValue, editTimerConfig.delayUnit) }}</strong> before expiry.
+          </div>
+        </div>
+        <div style="margin-top: 6px; border-top: 1px dashed #bfdbfe; padding-top: 8px; display: flex; align-items: flex-start; gap: 8px;">
+          <mat-icon style="color: #2563eb; font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;">lock_open</mat-icon>
+          <div>
+            <strong>Effective Start Date:</strong>
+            <span style="color: #1e40af; font-weight: 800;">{{ getRenewalOpenDateTimeExplanationFor(editTimerConfig.delayValue, editTimerConfig.delayUnit) }}</span>
+          </div>
+        </div>
+      </div>
+
+    </form>
+
+    <!-- Dialog Actions -->
+    <div class="lvp-dialog__actions">
+      <button mat-stroked-button class="lvp-btn-cancel" (click)="closeTimerDialog()">
+        <mat-icon>cancel</mat-icon> Cancel
+      </button>
+      <button mat-raised-button color="primary" class="lvp-btn-save"
+              [disabled]="editTimerForm.invalid || isTimerSaving"
+              (click)="onSaveTimer(editTimerForm)">
+        <mat-spinner *ngIf="isTimerSaving" diameter="18" style="margin-right:6px;"></mat-spinner>
+        <mat-icon *ngIf="!isTimerSaving">save</mat-icon>
+        {{ isTimerSaving ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+
+  </div>
+</ng-template>
+
