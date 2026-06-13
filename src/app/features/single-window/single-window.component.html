@@ -42,8 +42,15 @@
 
   <!-- Search Dashboard -->
   <div class="search-section">
-    <mat-card class="search-card">
-      <mat-card-content>
+    <div class="search-card">
+      <div class="search-card__inner">
+        <!-- Left label -->
+        <div class="search-card__label">
+          <mat-icon>manage_search</mat-icon>
+          <span>Search Registry</span>
+        </div>
+
+        <!-- Input row -->
         <div class="search-box-wrapper">
           <mat-icon class="search-icon">search</mat-icon>
           <input
@@ -64,12 +71,20 @@
           >
             <mat-icon>close</mat-icon>
           </button>
+          <div class="search-kbd-hint">
+            <kbd>Enter</kbd>
+          </div>
         </div>
+
+        <!-- Hint chips -->
         <div class="search-hints">
-          <span><mat-icon>info</mat-icon> Try searching: <strong>"John"</strong>, <strong>"LIC/2026/01"</strong>, or application IDs.</span>
+          <span class="hint-label"><mat-icon>lightbulb</mat-icon> Try:</span>
+          <span class="hint-chip"><mat-icon>person</mat-icon>"sameer"</span>
+          <span class="hint-chip"><mat-icon>card_membership</mat-icon>"NLI/1101/2026-27/..."</span>
+          <span class="hint-chip"><mat-icon>description</mat-icon>Application IDs</span>
         </div>
-      </mat-card-content>
-    </mat-card>
+      </div>
+    </div>
   </div>
 
   <!-- Main Search Results Display -->
@@ -242,13 +257,48 @@
           <table class="premium-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Username</th>
-                <th>Contact Info</th>
-                <th>User Role</th>
-                <th>Registered On</th>
-                <th>Status</th>
-                <th class="text-right">Action</th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--blue"><mat-icon>account_circle</mat-icon></span>
+                    Name
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--indigo"><mat-icon>alternate_email</mat-icon></span>
+                    Username
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--teal"><mat-icon>contacts</mat-icon></span>
+                    Contact Info
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--violet"><mat-icon>badge</mat-icon></span>
+                    User Role
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--amber"><mat-icon>event</mat-icon></span>
+                    Registered On
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--green"><mat-icon>verified_user</mat-icon></span>
+                    Status
+                  </div>
+                </th>
+                <th class="text-right">
+                  <div class="th-inner th-inner--right">
+                    <span class="th-icon-wrap th-icon-wrap--slate"><mat-icon>open_in_new</mat-icon></span>
+                    Action
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -309,14 +359,54 @@
           <table class="premium-table">
             <thead>
               <tr>
-                <th>NLA Application No.</th>
-                <th>Establishment / Applicant</th>
-                <th>License Category</th>
-                <th>Issued License</th>
-                <th>Application Status</th>
-                <th>Pending At</th>
-                <th>Applied On</th>
-                <th class="text-right">Action</th>
+                <th class="th-nla">
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--indigo"><mat-icon>description</mat-icon></span>
+                    NLA Application No.
+                  </div>
+                </th>
+                <th class="th-establishment">
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--blue"><mat-icon>store</mat-icon></span>
+                    Establishment / Applicant
+                  </div>
+                </th>
+                <th class="th-category">
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--violet"><mat-icon>category</mat-icon></span>
+                    License Category
+                  </div>
+                </th>
+                <th class="th-license">
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--green"><mat-icon>verified</mat-icon></span>
+                    Issued License
+                  </div>
+                </th>
+                <th class="th-status">
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--amber"><mat-icon>pending_actions</mat-icon></span>
+                    Application Status
+                  </div>
+                </th>
+                <th class="th-pending">
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--orange"><mat-icon>manage_accounts</mat-icon></span>
+                    Pending At
+                  </div>
+                </th>
+                <th class="th-date">
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--teal"><mat-icon>event</mat-icon></span>
+                    Applied On
+                  </div>
+                </th>
+                <th class="th-action text-right">
+                  <div class="th-inner th-inner--right">
+                    <span class="th-icon-wrap th-icon-wrap--slate"><mat-icon>open_in_new</mat-icon></span>
+                    Action
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
