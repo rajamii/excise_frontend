@@ -1039,11 +1039,11 @@
   .grouped-selector-box {
     flex: 1;
     min-width: 280px;
-    height: 330px; /* Fixed height for visual consistency */
+    height: 375px; /* Increased height to comfortably fit at least 2 cards */
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
-    padding: 1.25rem;
+    padding: 1.15rem; /* Slightly tighter box padding to maximize scrollable area */
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -2px rgba(0, 0, 0, 0.01);
@@ -1115,12 +1115,12 @@
 
     .sub-item-card {
       border-radius: 10px;
-      padding: 0.85rem 1.1rem;
+      padding: 0.7rem 0.95rem; /* Tighter padding for a more compact card display */
       cursor: pointer;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       flex-direction: column;
-      gap: 0.3rem;
+      gap: 0.2rem; /* Reduced gap for compact stacked layout */
       position: relative;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
       box-sizing: border-box;
