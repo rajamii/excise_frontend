@@ -1044,39 +1044,39 @@
               <!-- For NLA or Renewal application -->
               <ng-container *ngIf="!selectedWorkflowApp.role">
                 <!-- License / Application Fee Card -->
-                <div class="summary-stats-card shadow-sm payment-card" style="margin: 0;">
-                  <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-muted);">License / Application Fee</h4>
-                  <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <mat-icon [ngClass]="selectedWorkflowApp.is_license_fee_paid ? 'paid' : 'unpaid'" style="font-size: 28px; width: 28px; height: 28px; line-height: 28px;">
-                      {{ selectedWorkflowApp.is_license_fee_paid ? 'check_circle' : 'pending' }}
+                <div class="fee-status-card fee-status-card--license" style="margin: 0;">
+                  <div class="fsc-label">
+                    <mat-icon>receipt</mat-icon>
+                    License / Application Fee
+                  </div>
+                  <div class="fsc-body">
+                    <mat-icon class="fsc-icon" [ngClass]="selectedWorkflowApp.is_license_fee_paid ? 'fsc-icon--paid' : 'fsc-icon--unpaid'">
+                      {{ selectedWorkflowApp.is_license_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}
                     </mat-icon>
                     <div>
-                      <div style="font-weight: 700; font-size: 1.1rem; color: #10b981;" *ngIf="selectedWorkflowApp.is_license_fee_paid">
-                        PAID
+                      <div class="fsc-status" [ngClass]="selectedWorkflowApp.is_license_fee_paid ? 'fsc-status--paid' : 'fsc-status--unpaid'">
+                        {{ selectedWorkflowApp.is_license_fee_paid ? 'PAID' : 'UNPAID' }}
                       </div>
-                      <div style="font-weight: 700; font-size: 1.1rem; color: #f59e0b;" *ngIf="!selectedWorkflowApp.is_license_fee_paid">
-                        UNPAID
-                      </div>
-                      <span style="font-size: 0.8rem; color: #64748b;">Processing & issue fee</span>
+                      <span class="fsc-sub">Processing &amp; issue fee</span>
                     </div>
                   </div>
                 </div>
 
                 <!-- Security Deposit Card -->
-                <div class="summary-stats-card shadow-sm payment-card" style="margin: 0;" *ngIf="!selectedWorkflowApp.old_license_id">
-                  <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-muted);">Security Deposit</h4>
-                  <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <mat-icon [ngClass]="selectedWorkflowApp.is_security_fee_paid ? 'paid' : 'unpaid'" style="font-size: 28px; width: 28px; height: 28px; line-height: 28px;">
-                      {{ selectedWorkflowApp.is_security_fee_paid ? 'check_circle' : 'pending' }}
+                <div class="fee-status-card fee-status-card--security" style="margin: 0;" *ngIf="!selectedWorkflowApp.old_license_id">
+                  <div class="fsc-label">
+                    <mat-icon>account_balance_wallet</mat-icon>
+                    Security Deposit
+                  </div>
+                  <div class="fsc-body">
+                    <mat-icon class="fsc-icon" [ngClass]="selectedWorkflowApp.is_security_fee_paid ? 'fsc-icon--paid' : 'fsc-icon--unpaid'">
+                      {{ selectedWorkflowApp.is_security_fee_paid ? 'check_circle' : 'radio_button_unchecked' }}
                     </mat-icon>
                     <div>
-                      <div style="font-weight: 700; font-size: 1.1rem; color: #10b981;" *ngIf="selectedWorkflowApp.is_security_fee_paid">
-                        PAID
+                      <div class="fsc-status" [ngClass]="selectedWorkflowApp.is_security_fee_paid ? 'fsc-status--paid' : 'fsc-status--unpaid'">
+                        {{ selectedWorkflowApp.is_security_fee_paid ? 'PAID' : 'UNPAID' }}
                       </div>
-                      <div style="font-weight: 700; font-size: 1.1rem; color: #f59e0b;" *ngIf="!selectedWorkflowApp.is_security_fee_paid">
-                        UNPAID
-                      </div>
-                      <span style="font-size: 0.8rem; color: #64748b;">Refundable security deposit</span>
+                      <span class="fsc-sub">Refundable security deposit</span>
                     </div>
                   </div>
                 </div>
@@ -1084,43 +1084,57 @@
 
             </div>
 
-            <h4 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 0.95rem; font-weight: 700; color: #475569; letter-spacing: -0.01em;">Payment Transaction History</h4>
-            
-            <div class="no-records-fallback" *ngIf="!selectedWorkflowApp.payments || selectedWorkflowApp.payments.length === 0" style="padding: 2rem 1.5rem;">
-              <mat-icon style="font-size: 30px; width: 30px; height: 30px; margin-bottom: 0.5rem;">receipt_long</mat-icon>
-              <p style="font-size: 0.85rem;">No payment gateway or wallet transactions found for this application.</p>
-            </div>
+            <div class="payment-history-section">
+              <div class="phs-header">
+                <span class="phs-header__icon"><mat-icon>receipt_long</mat-icon></span>
+                <div>
+                  <h4 class="phs-header__title">Payment Transaction History</h4>
+                  <span class="phs-header__sub">All wallet & gateway transactions for this application</span>
+                </div>
+                <span class="phs-header__count" *ngIf="selectedWorkflowApp.payments?.length > 0">
+                  {{ selectedWorkflowApp.payments.length }} transaction{{ selectedWorkflowApp.payments.length > 1 ? 's' : '' }}
+                </span>
+              </div>
 
-            <table class="data-table" *ngIf="selectedWorkflowApp.payments && selectedWorkflowApp.payments.length > 0">
-              <thead>
-                <tr>
-                  <th>Transaction ID / UTR</th>
-                  <th>Amount</th>
-                  <th>Payment Type</th>
-                  <th>Date & Time</th>
-                  <th>Status</th>
-                  <th>Remarks / Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let p of selectedWorkflowApp.payments">
-                  <td><code>{{ p.transaction_id }}</code></td>
-                  <td><strong>₹{{ p.amount }}</strong></td>
-                  <td><span class="status-badge stage-badge" style="background: #e2e8f0; color: #475569;">{{ p.payment_type }}</span></td>
-                  <td style="white-space: nowrap;">{{ p.created_at }}</td>
-                  <td>
-                    <span class="status-badge" [ngClass]="{
-                      'active': p.payment_status === 'Success',
-                      'inactive': p.payment_status === 'Failed',
-                      'pending': p.payment_status === 'Pending'
-                    }">
-                      {{ p.payment_status }}
-                    </span>
-                  </td>
-                  <td>{{ p.remarks }}</td>
-                </tr>
-              </tbody>
-            </table>
+              <div class="no-records-fallback" *ngIf="!selectedWorkflowApp.payments || selectedWorkflowApp.payments.length === 0" style="padding: 2rem 1.5rem;">
+                <mat-icon style="font-size: 30px; width: 30px; height: 30px; margin-bottom: 0.5rem;">receipt_long</mat-icon>
+                <p style="font-size: 0.85rem;">No payment gateway or wallet transactions found for this application.</p>
+              </div>
+
+              <div class="phs-table-wrap" *ngIf="selectedWorkflowApp.payments && selectedWorkflowApp.payments.length > 0">
+                <table class="phs-table">
+                  <thead>
+                    <tr>
+                      <th><div class="th-cell"><span class="th-dot th-dot--indigo"></span>Transaction ID / UTR</div></th>
+                      <th><div class="th-cell"><span class="th-dot th-dot--green"></span>Amount</div></th>
+                      <th><div class="th-cell"><span class="th-dot th-dot--blue"></span>Payment Type</div></th>
+                      <th><div class="th-cell"><span class="th-dot th-dot--teal"></span>Date &amp; Time</div></th>
+                      <th><div class="th-cell"><span class="th-dot th-dot--amber"></span>Status</div></th>
+                      <th><div class="th-cell"><span class="th-dot th-dot--slate"></span>Remarks / Description</div></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let p of selectedWorkflowApp.payments">
+                      <td><code class="txn-code">{{ p.transaction_id }}</code></td>
+                      <td><span class="amt-chip">₹{{ p.amount }}</span></td>
+                      <td><span class="ptype-chip">{{ p.payment_type }}</span></td>
+                      <td class="date-cell">{{ p.created_at }}</td>
+                      <td>
+                        <span class="pstatus-badge" [ngClass]="{
+                          'pstatus--success': p.payment_status === 'Success',
+                          'pstatus--failed':  p.payment_status === 'Failed',
+                          'pstatus--pending': p.payment_status === 'Pending'
+                        }">
+                          <span class="pstatus-dot"></span>
+                          {{ p.payment_status }}
+                        </span>
+                      </td>
+                      <td class="remarks-cell">{{ p.remarks }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
           </div>
         </div>

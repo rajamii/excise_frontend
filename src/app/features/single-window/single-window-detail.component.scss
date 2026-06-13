@@ -1951,3 +1951,288 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.4; transform: scale(0.8); }
 }
+
+/* ═══════════════════════════════════════════════════
+   Payment Transaction History Section
+   ═══════════════════════════════════════════════════ */
+.payment-history-section {
+  margin-top: 2rem;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid #334155;
+  background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 50%, #ffffff 100%);
+  box-shadow:
+    0 4px 20px rgba(15,23,42,0.1),
+    0 1px 0 rgba(255,255,255,0.9) inset;
+}
+
+/* ── Header bar ── */
+.phs-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1.25rem;
+  background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+  border-bottom: 1px solid #0f172a;
+
+  &__icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    mat-icon { font-size: 18px; width: 18px; height: 18px; color: #94a3b8; }
+  }
+
+  &__title {
+    margin: 0 0 2px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  &__sub {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  &__count {
+    margin-left: auto;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #94a3b8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+}
+
+/* ── Table wrapper ── */
+.phs-table-wrap {
+  overflow-x: auto;
+  padding: 0.75rem;
+}
+
+/* ── Table ── */
+.phs-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+
+  thead tr {
+    background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+  }
+
+  thead th {
+    padding: 0.8rem 1rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #94a3b8;
+    border-bottom: 2px solid #334155;
+    white-space: nowrap;
+
+    .th-cell { display: flex; align-items: center; gap: 7px; }
+  }
+
+  tbody tr {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+
+    &:nth-child(even) { background: #f8fafc; }
+    &:hover           { background: #f1f5f9; }
+    &:last-child      { border-bottom: none; }
+  }
+
+  tbody td {
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+    color: #334155;
+  }
+}
+
+/* Transaction ID code chip */
+.txn-code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+/* Amount chip */
+.amt-chip {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 0.25rem 0.7rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* Payment type chip */
+.ptype-chip {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #334155;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Status badge */
+.pstatus-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+  border-radius: 20px;
+  white-space: nowrap;
+
+  .pstatus-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  &.pstatus--success {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #6ee7b7;
+    .pstatus-dot { animation: statusPulse 2s ease-in-out infinite; }
+  }
+
+  &.pstatus--failed {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+  }
+
+  &.pstatus--pending {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fcd34d;
+    .pstatus-dot { animation: statusPulse 1.4s ease-in-out infinite; }
+  }
+}
+
+.date-cell    { white-space: nowrap; color: #475569; font-size: 0.82rem; }
+.remarks-cell { color: #475569; font-size: 0.82rem; line-height: 1.4; }
+
+/* ═══════════════════════════════════════════════════
+   Fee Status Cards — License Fee & Security Deposit
+   ═══════════════════════════════════════════════════ */
+.fee-status-card {
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  /* top accent line */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+
+  /* License Fee — green tint */
+  &--license {
+    background: linear-gradient(160deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1.5px solid #6ee7b7;
+    box-shadow: 0 4px 16px rgba(16,185,129,0.1);
+
+    &::before { background: linear-gradient(90deg, #10b981, #34d399); }
+  }
+
+  /* Security Deposit — amber tint */
+  &--security {
+    background: linear-gradient(160deg, #fffbeb 0%, #fef9c3 100%);
+    border: 1.5px solid #fcd34d;
+    box-shadow: 0 4px 16px rgba(245,158,11,0.1);
+
+    &::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  }
+}
+
+.fsc-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+
+  .fee-status-card--license &  { color: #065f46; mat-icon { color: #10b981; } }
+  .fee-status-card--security & { color: #92400e; mat-icon { color: #f59e0b; } }
+
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}
+
+.fsc-body {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.fsc-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+
+  &--paid   { color: #10b981; }
+  &--unpaid { color: #f59e0b; }
+}
+
+.fsc-status {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+
+  &--paid   { color: #059669; }
+  &--unpaid { color: #d97706; }
+}
+
+.fsc-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+  display: block;
+  margin-top: 2px;
+}
