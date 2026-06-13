@@ -149,9 +149,27 @@ export class SingleWindowComponent implements OnInit {
   }
 
   viewDetails(result: any) {
-    if (result.type === 'license') {
-      // Try to navigate to applicant profile if we have applicant_id
-      if (result.meta && result.meta.applicant_id) {
+    if (result.type === 'licensee') {
+      this.router.navigate(['/dashboard'], {
+        queryParams: {
+          section: 'single-window-detail',
+          type: 'licensee',
+          id: result.id
+        }
+      });
+    } else {
+      // Check if there is an associated NLA application ID
+      const appId = (result.meta && result.meta.application_id) || result.application_id;
+      if (appId) {
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'single-window-detail',
+            type: 'new_license_app',
+            id: appId
+          }
+        });
+      } else if (result.type === 'license' && result.meta && result.meta.applicant_id) {
+        // Fallback for license: navigate to licensee profile
         this.router.navigate(['/dashboard'], {
           queryParams: {
             section: 'single-window-detail',
@@ -159,35 +177,16 @@ export class SingleWindowComponent implements OnInit {
             id: result.meta.applicant_id
           }
         });
-      } else if (result.meta && result.meta.license_id) {
+      } else {
+        // Fallback to original navigation
         this.router.navigate(['/dashboard'], {
           queryParams: {
             section: 'single-window-detail',
-            type: 'license',
-            id: result.meta.license_id
+            type: result.type,
+            id: result.id
           }
         });
-      } else {
-        Swal.fire('Information', 'No applicant details found linked to this license.', 'info');
       }
-    } else if (result.type === 'new_license_app') {
-      // Landing table uses application_id directly; search results use id
-      const appId = result.application_id || result.id;
-      this.router.navigate(['/dashboard'], {
-        queryParams: {
-          section: 'single-window-detail',
-          type: 'new_license_app',
-          id: appId
-        }
-      });
-    } else {
-      this.router.navigate(['/dashboard'], {
-        queryParams: {
-          section: 'single-window-detail',
-          type: result.type,
-          id: result.id
-        }
-      });
     }
   }
 
