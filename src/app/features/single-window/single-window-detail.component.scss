@@ -1039,19 +1039,29 @@
   .grouped-selector-box {
     flex: 1;
     min-width: 280px;
+    height: 330px; /* Fixed height for visual consistency */
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
     padding: 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -2px rgba(0, 0, 0, 0.01);
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
+    box-sizing: border-box;
 
     &:hover {
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.02), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-      border-color: #cbd5e1;
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    }
+
+    &--license {
+      border-top: 4px solid #10b981;
+      .box-header::before { background-color: #10b981; }
+    }
+
+    &--staff {
+      border-top: 4px solid #ec4899;
+      .box-header::before { background-color: #ec4899; }
     }
 
     .box-header {
@@ -1059,21 +1069,51 @@
       font-weight: 850;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: #475569;
-      border-bottom: 1.5px solid #f1f5f9;
-      padding-bottom: 0.5rem;
-      margin-bottom: 0.25rem;
+      color: #334155;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 0.65rem;
+      margin-bottom: 0.75rem;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      &::before {
+        content: '';
+        display: inline-block;
+        width: 3px;
+        height: 12px;
+        border-radius: 4px;
+        flex-shrink: 0;
+      }
     }
 
     .box-items {
+      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+      box-sizing: border-box;
+
+      /* Beautiful custom scrollbar */
+      &::-webkit-scrollbar {
+        width: 5px;
+      }
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        &:hover {
+          background: #94a3b8;
+        }
+      }
     }
 
     .sub-item-card {
-      background: #f8fafc;
-      border: 1.5px solid #e2e8f0;
       border-radius: 10px;
       padding: 0.85rem 1.1rem;
       cursor: pointer;
@@ -1083,31 +1123,103 @@
       gap: 0.3rem;
       position: relative;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
+      box-sizing: border-box;
 
       &:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
         transform: translateY(-2px);
       }
 
-      &.active {
-        background: rgba(16, 185, 129, 0.04);
-        border-color: #10b981;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.06);
+      /* Original Application - Green/Mint theme */
+      &--original {
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+
+        &:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+
+        &.active {
+          background: rgba(16, 185, 129, 0.05);
+          border-color: #10b981;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+
+          .item-type-label {
+            color: #047857;
+          }
+          .item-id {
+            color: #065f46;
+          }
+        }
+      }
+
+      /* Renewal Application - Indigo/Violet theme */
+      &--renewal {
+        background: #f5f3ff;
+        border: 1.5px solid #ede9fe;
+
+        &:hover {
+          background: #ede9fe;
+          border-color: #ddd6fe;
+        }
 
         .item-type-label {
-          color: #047857;
+          color: #7c3aed;
         }
         .item-id {
-          color: #065f46;
+          color: #4c1d95;
+        }
+
+        &.active {
+          background: rgba(99, 102, 241, 0.06);
+          border-color: #6366f1;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+
+          .item-type-label {
+            color: #4338ca;
+          }
+          .item-id {
+            color: #312e81;
+          }
+        }
+      }
+
+      /* Staff Registration - Pink/Rose theme */
+      &--staff {
+        background: #fdf2f8;
+        border: 1.5px solid #fce7f3;
+
+        &:hover {
+          background: #fce7f3;
+          border-color: #fbcfe8;
+        }
+
+        .item-type-label {
+          color: #db2777;
+        }
+        .item-id {
+          color: #9d174d;
+        }
+
+        &.active {
+          background: rgba(236, 72, 153, 0.06);
+          border-color: #ec4899;
+          box-shadow: 0 4px 12px rgba(236, 72, 153, 0.08);
+
+          .item-type-label {
+            color: #be185d;
+          }
+          .item-id {
+            color: #831843;
+          }
         }
       }
 
       .item-type-label {
-        font-size: 0.7rem;
+        font-size: 0.675rem;
         font-weight: 850;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         color: #64748b;
       }
 
@@ -1119,7 +1231,7 @@
       }
 
       .lic-no {
-        font-size: 0.75rem;
+        font-size: 0.725rem;
         color: #475569;
         font-weight: 600;
         background: rgba(0, 0, 0, 0.03);

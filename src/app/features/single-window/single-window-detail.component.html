@@ -386,11 +386,11 @@
     <div class="workflow-app-selector" *ngIf="type !== 'licensee' && type !== 'license' && detailData && (detailData.renewal_applications?.length > 0 || detailData.salesman_barman_applications?.length > 0)">
       
       <!-- Box 1: License & Renewal Applications -->
-      <div class="grouped-selector-box">
+      <div class="grouped-selector-box grouped-selector-box--license">
         <div class="box-header">License & Renewals (NA)</div>
         <div class="box-items">
           <!-- Main NLA Item -->
-          <div class="sub-item-card" 
+          <div class="sub-item-card sub-item-card--original" 
                [class.active]="selectedWorkflowAppId === detailData.application_id" 
                (click)="selectWorkflowApp(detailData.application_id, detailData)">
             <div class="item-type-label">Original Application</div>
@@ -400,7 +400,7 @@
           </div>
           
           <!-- Renewal Applications List -->
-          <div class="sub-item-card" 
+          <div class="sub-item-card sub-item-card--renewal" 
                *ngFor="let r of detailData.renewal_applications" 
                [class.active]="selectedWorkflowAppId === r.application_id" 
                (click)="selectWorkflowApp(r.application_id, r)">
@@ -413,11 +413,11 @@
       </div>
       
       <!-- Box 2: Salesman & Barman Registrations -->
-      <div class="grouped-selector-box" *ngIf="detailData.salesman_barman_applications?.length">
+      <div class="grouped-selector-box grouped-selector-box--staff" *ngIf="detailData.salesman_barman_applications?.length">
         <div class="box-header">Staff Registrations (Salesman/Barman)</div>
         <div class="box-items">
           <!-- Salesman/Barman Items List -->
-          <div class="sub-item-card" 
+          <div class="sub-item-card sub-item-card--staff" 
                *ngFor="let s of detailData.salesman_barman_applications" 
                [class.active]="selectedWorkflowAppId === s.application_id" 
                (click)="selectWorkflowApp(s.application_id, s)">
