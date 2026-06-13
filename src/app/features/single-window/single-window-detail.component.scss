@@ -1091,5 +1091,56 @@
   }
 }
 
+/* Deactivated user theme styling */
+.detail-banner.deactivated-banner-theme {
+  background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%) !important;
+  border: 1.5px solid #ef4444;
+  box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.15), 0 8px 10px -6px rgba(220, 38, 38, 0.15) !important;
+
+  .banner-badge-wrapper.licensee {
+    background: rgba(239, 68, 68, 0.25) !important;
+    color: #fca5a5 !important;
+  }
+}
+
+.deactivated-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 1.5px solid #fca5a5;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.05);
+
+  mat-icon {
+    color: #dc2626;
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .warning-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    strong {
+      color: #991b1b;
+      font-size: 0.95rem;
+      font-weight: 850;
+      letter-spacing: 0.025em;
+    }
+
+    span {
+      color: #7f1d1d;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+  }
+}
+
+
 
 

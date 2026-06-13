@@ -23,7 +23,7 @@
   <div class="detail-content-wrapper" *ngIf="!isLoading && !error && detailData">
     
     <!-- Profile/Application Main Banner -->
-    <div class="detail-banner shadow-sm">
+    <div class="detail-banner shadow-sm" [class.deactivated-banner-theme]="type === 'licensee' && !detailData.user?.is_active">
       <div class="banner-inner">
         <div class="banner-badge-wrapper" [ngClass]="type">
           <mat-icon *ngIf="type === 'licensee'">person</mat-icon>
@@ -51,6 +51,15 @@
             {{ type === 'licensee' ? (detailData.user?.is_active ? 'Active' : 'Inactive') : type === 'license' ? (detailData.is_active ? 'Active' : 'Expired/Inactive') : detailData.current_stage }}
           </span>
         </div>
+      </div>
+    </div>
+
+    <!-- Deactivated Account Warning Banner -->
+    <div class="deactivated-warning-banner" *ngIf="type === 'licensee' && !detailData.user?.is_active">
+      <mat-icon>warning</mat-icon>
+      <div class="warning-text">
+        <strong>DEACTIVATED & SUSPENDED ACCOUNT</strong>
+        <span>This user account is disabled. The profile registry data below is archived and read-only.</span>
       </div>
     </div>
 

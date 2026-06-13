@@ -30,7 +30,8 @@ export class SingleWindowComponent implements OnInit {
   // Latest created records states
   latestUsers: any[] = [];
   latestRecords: any[] = [];
-  activeLatestTab = 'admin'; // 'admin' or 'license'
+  latestDeactivatedUsers: any[] = [];
+  activeLatestTab = 'admin'; // 'admin', 'license', or 'deactivated'
   isLatestLoading = false;
 
   // Pagination states
@@ -41,6 +42,10 @@ export class SingleWindowComponent implements OnInit {
   licensePageSize = 10;
   licensePageIndex = 0;
   licensePageSizes = [10, 15, 30, 40];
+
+  deactivatedPageSize = 10;
+  deactivatedPageIndex = 0;
+  deactivatedPageSizes = [10, 15, 30, 40];
 
   private searchSubject = new Subject<string>();
 
@@ -62,6 +67,7 @@ export class SingleWindowComponent implements OnInit {
       next: (res) => {
         this.latestUsers = res.users || [];
         this.latestRecords = res.records || [];
+        this.latestDeactivatedUsers = res.deactivated_users || [];
         this.isLatestLoading = false;
       },
       error: (err) => {
@@ -81,6 +87,11 @@ export class SingleWindowComponent implements OnInit {
     return this.latestRecords.slice(start, start + this.licensePageSize);
   }
 
+  get paginatedLatestDeactivatedUsers(): any[] {
+    const start = this.deactivatedPageIndex * this.deactivatedPageSize;
+    return this.latestDeactivatedUsers.slice(start, start + this.deactivatedPageSize);
+  }
+
   onAdminPageChange(event: any) {
     this.adminPageIndex = event.pageIndex;
     this.adminPageSize = event.pageSize;
@@ -89,6 +100,11 @@ export class SingleWindowComponent implements OnInit {
   onLicensePageChange(event: any) {
     this.licensePageIndex = event.pageIndex;
     this.licensePageSize = event.pageSize;
+  }
+
+  onDeactivatedPageChange(event: any) {
+    this.deactivatedPageIndex = event.pageIndex;
+    this.deactivatedPageSize = event.pageSize;
   }
 
   setLatestTab(tab: string) {

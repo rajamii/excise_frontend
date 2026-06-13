@@ -1172,3 +1172,113 @@
   &.renewal_app      { background: rgba(245,158,11,0.08); color: #d97706; }
   &.salesman_barman_app { background: rgba(236,72,153,0.08); color: #db2777; }
 }
+
+/* Deactivated Users Tab styling (Red effect where possible) */
+.deactivated-tab-btn {
+  &.active {
+    background: rgba(239, 68, 68, 0.08) !important;
+    color: #dc2626 !important;
+
+    mat-icon { color: #ef4444 !important; }
+    .count-badge { background: rgba(239, 68, 68, 0.18) !important; color: #b91c1c !important; }
+  }
+}
+
+.deactivated-icon {
+  color: #f87171 !important;
+}
+
+.deactivated-badge {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #b91c1c !important;
+}
+
+.deactivated-panel {
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border-radius: 12px;
+  background: rgba(254, 242, 242, 0.3);
+}
+
+.red-fallback {
+  border: 1px dashed rgba(239, 68, 68, 0.3) !important;
+  background: #fef2f2 !important;
+  padding: 3rem !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 12px;
+  
+  .red-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #ef4444;
+  }
+  p {
+    color: #b91c1c;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.th-icon-wrap--red {
+  background: rgba(239, 68, 68, 0.18) !important;
+  mat-icon { color: #fca5a5 !important; }
+}
+
+.deactivated-tr {
+  background: rgba(254, 242, 242, 0.15) !important;
+  border-bottom: 1px solid #fee2e2 !important;
+
+  &:hover {
+    background: rgba(254, 242, 242, 0.4) !important;
+  }
+}
+
+.red-cell-icon {
+  color: #ef4444 !important;
+}
+
+.red-text {
+  color: #b91c1c !important;
+}
+
+.red-code {
+  background: #fecaca !important;
+  color: #991b1b !important;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  font-family: monospace;
+}
+
+.red-badge {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fecaca !important;
+}
+
+.status-deactivated {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: inline-block;
+}
+
+.red-btn {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25) !important;
+
+  &:hover {
+    background: #dc2626 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.38) !important;
+  }
+}
+

@@ -243,6 +243,11 @@
           <span>Licenses & Applications</span>
           <span class="count-badge">{{ latestRecords.length }}</span>
         </button>
+        <button [class.active]="activeLatestTab === 'deactivated'" (click)="setLatestTab('deactivated')" type="button" class="deactivated-tab-btn">
+          <mat-icon class="deactivated-icon">no_accounts</mat-icon>
+          <span>Deactivated Users</span>
+          <span class="count-badge deactivated-badge">{{ latestDeactivatedUsers.length }}</span>
+        </button>
       </div>
 
       <!-- Loading State for Latest -->
@@ -349,6 +354,110 @@
           [pageSizeOptions]="adminPageSizes"
           [pageIndex]="adminPageIndex"
           (page)="onAdminPageChange($event)"
+          class="premium-paginator">
+        </mat-paginator>
+      </div>
+
+      <!-- Deactivated Users Tab Content -->
+      <div class="tab-content-panel deactivated-panel" *ngIf="!isLatestLoading && activeLatestTab === 'deactivated'">
+        <div class="no-records-fallback red-fallback" *ngIf="latestDeactivatedUsers.length === 0">
+          <mat-icon class="red-icon">no_accounts</mat-icon>
+          <p>No deactivated or suspended accounts found.</p>
+        </div>
+        
+        <div class="table-responsive-wrapper" *ngIf="latestDeactivatedUsers.length > 0">
+          <table class="premium-table deactivated-table">
+            <thead>
+              <tr>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>account_circle</mat-icon></span>
+                    Name
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>alternate_email</mat-icon></span>
+                    Username
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>contacts</mat-icon></span>
+                    Contact Info
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>badge</mat-icon></span>
+                    User Role
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>event</mat-icon></span>
+                    Registered On
+                  </div>
+                </th>
+                <th>
+                  <div class="th-inner">
+                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>verified_user</mat-icon></span>
+                    Status
+                  </div>
+                </th>
+                <th class="text-right">
+                  <div class="th-inner th-inner--right">
+                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>open_in_new</mat-icon></span>
+                    Action
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of paginatedLatestDeactivatedUsers" class="deactivated-tr">
+                <td class="font-bold">
+                  <div class="user-meta-cell">
+                    <mat-icon class="cell-icon red-cell-icon">account_circle</mat-icon>
+                    <div class="cell-text">
+                      <span class="primary-text red-text">{{ user.first_name }} {{ user.last_name }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <code class="red-code">&#64;{{ user.username }}</code>
+                </td>
+                <td>
+                  <div class="contact-cell">
+                    <span class="primary-text red-text"><mat-icon>email</mat-icon> {{ user.email }}</span>
+                    <span class="secondary-text"><mat-icon>phone</mat-icon> {{ user.phone_number }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="role-badge red-badge">{{ user.role_name }}</span>
+                </td>
+                <td class="date-cell">{{ user.date_joined }}</td>
+                <td>
+                  <span class="status-pill status-deactivated">
+                    Deactivated
+                  </span>
+                </td>
+                <td class="text-right">
+                  <button mat-raised-button color="warn" class="track-btn-sm red-btn" (click)="viewDetails({type: 'licensee', id: user.id})">
+                    <span>View Profile</span>
+                    <mat-icon>chevron_right</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginator -->
+        <mat-paginator *ngIf="latestDeactivatedUsers.length > 0"
+          [length]="latestDeactivatedUsers.length"
+          [pageSize]="deactivatedPageSize"
+          [pageSizeOptions]="deactivatedPageSizes"
+          [pageIndex]="deactivatedPageIndex"
+          (page)="onDeactivatedPageChange($event)"
           class="premium-paginator">
         </mat-paginator>
       </div>
