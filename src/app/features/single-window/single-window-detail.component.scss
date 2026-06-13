@@ -45,103 +45,225 @@
 
 /* Detail Banner */
 .detail-banner {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border-radius: 16px;
-  padding: 2.25rem;
+  background: linear-gradient(135deg, #0b1120 0%, #0d2137 40%, #0f3460 70%, #0a2744 100%);
+  border-radius: 20px;
+  padding: 1.75rem 2.25rem;
   color: #ffffff;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  box-shadow:
+    0 25px 60px -12px rgba(11, 17, 32, 0.7),
+    0 8px 20px -6px rgba(11, 17, 32, 0.5),
+    0 0 0 1px rgba(255,255,255,0.06) inset,
+    0 1px 0 rgba(255,255,255,0.12) inset;
   margin-bottom: 2rem;
+  transform-style: preserve-3d;
+
+  /* bottom edge glow — 3D floor line */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(99,102,241,0.7) 25%,
+      rgba(139,92,246,0.8) 50%,
+      rgba(59,130,246,0.7) 75%,
+      transparent 100%);
+    z-index: 3;
+    border-radius: 0 0 20px 20px;
+    animation: bannerFloor 4s ease-in-out infinite alternate;
+  }
+
+  /* ── Animated orbs ── */
+  .db-orb {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(60px);
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+
+  .db-orb--1 {
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
+    top: -120px; right: 5%;
+    animation-delay: 0s;
+  }
+
+  .db-orb--2 {
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%);
+    bottom: -80px; left: 8%;
+    animation-delay: 2.5s;
+  }
+
+  .db-orb--3 {
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%);
+    top: 10px; left: 35%;
+    animation-delay: 5s;
+  }
+
+  /* ── Perspective grid ── */
+  .db-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 36px 36px;
+    -webkit-mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 30%, transparent 100%);
+    mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 30%, transparent 100%);
+  }
+
+  /* ── Rotating conic shine ── */
+  .db-shine {
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 180deg,
+      rgba(255,255,255,0.05) 0deg,
+      transparent 80deg,
+      rgba(255,255,255,0.07) 160deg,
+      transparent 240deg
+    );
+    pointer-events: none;
+    z-index: 1;
+    animation: shineRotate 14s linear infinite;
+  }
 
   .banner-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 1.5rem;
+    gap: 1.25rem;
     position: relative;
     z-index: 2;
   }
 
   .banner-badge-wrapper {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 10px;
-    font-size: 0.75rem;
+    padding: 0.45rem 1rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.12);
 
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
-    &.licensee { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-    &.new_license_app { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
-    &.renewal_app { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-    &.salesman_barman_app { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
-    &.license { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    &.licensee           { background: rgba(59,130,246,0.2);  color: #93c5fd; mat-icon { color: #93c5fd; } }
+    &.new_license_app    { background: rgba(139,92,246,0.2);  color: #c4b5fd; mat-icon { color: #c4b5fd; } }
+    &.renewal_app        { background: rgba(245,158,11,0.2);  color: #fcd34d; mat-icon { color: #fcd34d; } }
+    &.salesman_barman_app{ background: rgba(236,72,153,0.2);  color: #f9a8d4; mat-icon { color: #f9a8d4; } }
+    &.license            { background: rgba(16,185,129,0.2);  color: #6ee7b7; mat-icon { color: #6ee7b7; } }
   }
 
   .banner-title-block {
     flex: 1;
 
     h2 {
-      font-size: 1.85rem;
+      font-size: 1.65rem;
       font-weight: 800;
-      margin: 0.5rem 0 0.35rem 0;
-      letter-spacing: -0.025em;
+      margin: 0.35rem 0 0.25rem;
+      letter-spacing: -0.03em;
+      background: linear-gradient(100deg, #ffffff 0%, #c7d2fe 60%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .subtitle {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       margin: 0;
       color: #94a3b8;
 
-      strong {
-        color: #f1f5f9;
-      }
+      strong { color: #e2e8f0; font-weight: 600; }
     }
   }
 
   .status-pill {
-    padding: 0.5rem 1.25rem;
+    padding: 0.55rem 1.35rem;
     border-radius: 30px;
-    font-size: 0.825rem;
-    font-weight: 700;
+    font-size: 0.78rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    letter-spacing: 0.1em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+
+    /* pulsing dot before text */
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
 
     &.status-active {
-      background: rgba(16, 185, 129, 0.2);
+      background: rgba(52,211,153,0.15);
       color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      border: 1.5px solid rgba(52,211,153,0.4);
+      box-shadow: 0 0 18px rgba(52,211,153,0.2);
+      &::before { animation: statusPulse 2s ease-in-out infinite; }
     }
 
     &.status-inactive {
-      background: rgba(239, 68, 68, 0.2);
+      background: rgba(239,68,68,0.15);
       color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      border: 1.5px solid rgba(239,68,68,0.35);
+      box-shadow: 0 0 14px rgba(239,68,68,0.15);
     }
 
     &.status-pending {
-      background: rgba(245, 158, 11, 0.2);
+      background: rgba(245,158,11,0.15);
       color: #fbbf24;
-      border: 1px solid rgba(245, 158, 11, 0.3);
+      border: 1.5px solid rgba(245,158,11,0.35);
+      box-shadow: 0 0 14px rgba(245,158,11,0.15);
+      &::before { animation: statusPulse 1.5s ease-in-out infinite; }
     }
 
     &.status-draft {
-      background: rgba(100, 116, 139, 0.2);
+      background: rgba(100,116,139,0.15);
       color: #cbd5e1;
-      border: 1px solid rgba(100, 116, 139, 0.3);
+      border: 1.5px solid rgba(100,116,139,0.3);
     }
   }
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-16px) scale(1.06); }
+}
+
+@keyframes shineRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes bannerFloor {
+  0%   { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.7); }
 }
 
 /* Tabs */
