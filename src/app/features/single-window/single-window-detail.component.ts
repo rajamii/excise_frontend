@@ -22,15 +22,20 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
 
   type: string | null = null;
   id: string | null = null;
+  targetId: string | null = null;
   isLoading = false;
   error: string | null = null;
   detailData: any = null;
   activeTab = 0;
 
+  selectedWorkflowAppId: string | null = null;
+  selectedWorkflowApp: any = null;
+
   ngOnInit() {
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.type = params['type'] || null;
       this.id = params['id'] || null;
+      this.targetId = params['targetId'] || null;
       if (this.type && this.id) {
         this.fetchDetailData();
       } else {
@@ -48,6 +53,8 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.error = null;
     this.detailData = null;
+    this.selectedWorkflowAppId = null;
+    this.selectedWorkflowApp = null;
 
     let url = '';
     if (this.type === 'licensee') {
@@ -70,6 +77,30 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.detailData = res;
         this.isLoading = false;
+
+        // Auto-select the active workflow application
+        if (this.type === 'new_license_app') {
+          // Default to the main NLA application
+          this.selectedWorkflowAppId = this.detailData.application_id;
+          this.selectedWorkflowApp = this.detailData;
+
+          // If a targetId was passed, find if it matches any renewal or SBM sub-application
+          if (this.targetId) {
+            const renewalMatch = this.detailData.renewal_applications?.find((r: any) => r.application_id === this.targetId);
+            if (renewalMatch) {
+              this.selectedWorkflowAppId = renewalMatch.application_id;
+              this.selectedWorkflowApp = renewalMatch;
+              this.activeTab = 1; // Auto-switch to Workflow Tracking tab
+            } else {
+              const sbmMatch = this.detailData.salesman_barman_applications?.find((s: any) => s.application_id === this.targetId);
+              if (sbmMatch) {
+                this.selectedWorkflowAppId = sbmMatch.application_id;
+                this.selectedWorkflowApp = sbmMatch;
+                this.activeTab = 1; // Auto-switch to Workflow Tracking tab
+              }
+            }
+          }
+        }
       },
       error: (err) => {
         console.error('Failed to load detail data', err);
@@ -78,6 +109,30 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  selectWorkflowApp(appId: string, appData: any) {
+    this.selectedWorkflowAppId = appId;
+    this.selectedWorkflowApp = appData;
+  }
+
+  getWorkflowLicenseId(): string | null {
+    if (!this.selectedWorkflowApp || !this.detailData) return null;
+    
+    // If it's a renewal app, show old_license_id
+    if (this.selectedWorkflowApp.old_license_id) {
+      return this.selectedWorkflowApp.old_license_id;
+    }
+    // If it's a salesman/barman app, show license_id
+    if (this.selectedWorkflowApp.license_id) {
+      return this.selectedWorkflowApp.license_id;
+    }
+    // If it's the main NLA, show issued_license?.license_id
+    if (this.selectedWorkflowApp.application_id === this.detailData.application_id) {
+      return this.detailData.issued_license?.license_id || null;
+    }
+    return null;
+  }
+
 
   goBack() {
     this.router.navigate(['/dashboard'], {

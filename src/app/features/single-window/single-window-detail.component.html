@@ -388,7 +388,7 @@
     </div>
 
     <!-- TABS SECTION FOR APPLICATIONS -->
-    <mat-tab-group *ngIf="type !== 'licensee' && type !== 'license'" class="detail-tabs-group" mat-stretch-tabs="false">
+    <mat-tab-group *ngIf="type !== 'licensee' && type !== 'license'" class="detail-tabs-group" mat-stretch-tabs="false" [(selectedIndex)]="activeTab">
       <!-- Tab 1: Overview and fields -->
       <mat-tab label="Overview">
         <div class="tab-padding">
@@ -779,17 +779,50 @@
       <mat-tab label="Workflow Tracking">
 
         <div class="tab-padding">
-          <div class="workflow-card shadow-sm">
-            <h3>Department Workflow Route History</h3>
+
+          <!-- Application Selector for Multi-App Tracking -->
+          <div class="workflow-app-selector" *ngIf="detailData && (detailData.renewal_applications?.length > 0 || detailData.salesman_barman_applications?.length > 0)">
+            <!-- Main NLA Application -->
+            <div class="selector-card" [class.active]="selectedWorkflowAppId === detailData.application_id" (click)="selectWorkflowApp(detailData.application_id, detailData)">
+              <div class="app-type">New Application</div>
+              <div class="app-id">{{ detailData.application_id }}</div>
+              <div class="lic-no" *ngIf="detailData.issued_license?.license_id">License: {{ detailData.issued_license.license_id }}</div>
+              <div class="app-status">{{ detailData.current_stage }}</div>
+            </div>
             
-            <div class="no-records-fallback" *ngIf="!detailData.history || detailData.history.length === 0">
+            <!-- Renewal Applications -->
+            <div class="selector-card" *ngFor="let r of detailData.renewal_applications" [class.active]="selectedWorkflowAppId === r.application_id" (click)="selectWorkflowApp(r.application_id, r)">
+              <div class="app-type">Renewal Application</div>
+              <div class="app-id">{{ r.application_id }}</div>
+              <div class="lic-no" *ngIf="r.old_license_id">License: {{ r.old_license_id }}</div>
+              <div class="app-status">{{ r.current_stage }}</div>
+            </div>
+
+            <!-- Salesman/Barman Applications -->
+            <div class="selector-card" *ngFor="let s of detailData.salesman_barman_applications" [class.active]="selectedWorkflowAppId === s.application_id" (click)="selectWorkflowApp(s.application_id, s)">
+              <div class="app-type">Staff: {{ s.role }}</div>
+              <div class="app-id">{{ s.application_id }}</div>
+              <div class="lic-no" *ngIf="s.license_id && s.license_id !== 'N/A'">License: {{ s.license_id }}</div>
+              <div class="app-status">{{ s.current_stage }}</div>
+            </div>
+          </div>
+
+          <div class="workflow-card shadow-sm">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+              <h3 style="margin: 0; border-left: 4px solid #10b981; padding-left: 0.75rem;">Department Workflow Route History</h3>
+              <div class="lic-no" style="font-size: 0.85rem; font-weight: 700; color: #047857; background: rgba(16, 185, 129, 0.1); padding: 0.35rem 0.75rem; border-radius: 8px; border: 1.5px solid rgba(16, 185, 129, 0.2);" *ngIf="getWorkflowLicenseId()">
+                License Number: <code>{{ getWorkflowLicenseId() }}</code>
+              </div>
+            </div>
+            
+            <div class="no-records-fallback" *ngIf="!selectedWorkflowApp?.history || selectedWorkflowApp.history.length === 0">
               <mat-icon>timeline</mat-icon>
               <p>No transaction stage history logged for this application yet.</p>
             </div>
 
             <!-- Vertical Government Timeline -->
-              <div class="vertical-timeline" *ngIf="detailData.history && detailData.history.length > 0">
-              <div class="timeline-item" *ngFor="let step of detailData.history; let isLast = last">
+            <div class="vertical-timeline" *ngIf="selectedWorkflowApp?.history && selectedWorkflowApp.history.length > 0">
+              <div class="timeline-item" *ngFor="let step of selectedWorkflowApp.history; let isLast = last">
                 <div class="timeline-line" *ngIf="!isLast"></div>
                 
                 <div class="timeline-marker">
@@ -832,13 +865,13 @@
           <div class="workflow-card shadow-sm">
             <h3>Active & Resolved Objections</h3>
             
-            <div class="no-records-fallback" *ngIf="!detailData.objections || detailData.objections.length === 0">
+            <div class="no-records-fallback" *ngIf="!selectedWorkflowApp?.objections || selectedWorkflowApp.objections.length === 0">
               <mat-icon>verified_user</mat-icon>
               <p>Clear record. No objections have been raised against this application.</p>
             </div>
 
-            <div class="objections-list" *ngIf="detailData.objections && detailData.objections.length > 0">
-              <mat-card class="objection-log-card" *ngFor="let ob of detailData.objections">
+            <div class="objections-list" *ngIf="selectedWorkflowApp?.objections && selectedWorkflowApp.objections.length > 0">
+              <mat-card class="objection-log-card" *ngFor="let ob of selectedWorkflowApp.objections">
                 <div class="objection-header">
                   <div class="objection-by">
                     <mat-icon>warning_amber</mat-icon>

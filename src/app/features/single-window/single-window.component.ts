@@ -165,7 +165,8 @@ export class SingleWindowComponent implements OnInit {
           queryParams: {
             section: 'single-window-detail',
             type: 'new_license_app',
-            id: appId
+            id: appId,
+            targetId: result.id
           }
         });
       } else if (result.type === 'license' && result.meta && result.meta.applicant_id) {
