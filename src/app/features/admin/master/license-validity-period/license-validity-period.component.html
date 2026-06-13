@@ -1,24 +1,29 @@
 <div class="lvp-wrapper">
 
   <!-- Page Header -->
-  <div class="lvp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 28px;">
-    <div style="display: flex; align-items: center; gap: 16px;">
-      <div class="lvp-page-header__icon">
+  <div class="lvp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; background: linear-gradient(135deg, #0d6e6e 0%, #0e9e82 50%, #11b88f 100%); border-radius: 14px; padding: 20px 26px; box-shadow: 0 6px 24px rgba(13, 110, 110, 0.28); position: relative; overflow: hidden;">
+    <!-- Decorative circles -->
+    <span style="position:absolute; right: -30px; top: -30px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.06); pointer-events: none;"></span>
+    <span style="position:absolute; right: 60px; bottom: -40px; width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,0.05); pointer-events: none;"></span>
+
+    <div style="display: flex; align-items: center; gap: 16px; position: relative;">
+      <div class="lvp-page-header__icon" style="background: rgba(255,255,255,0.18); box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
         <mat-icon>event_available</mat-icon>
       </div>
       <div>
-        <h2 class="lvp-page-header__title">License Validity Period</h2>
-        <p class="lvp-page-header__subtitle">Configure the exact date and time when licenses expire annually.</p>
+        <h2 class="lvp-page-header__title" style="color: #ffffff; font-size: 1.5rem; text-shadow: 0 1px 4px rgba(0,0,0,0.15);">License Validity Period</h2>
+        <p class="lvp-page-header__subtitle" style="color: rgba(255,255,255,0.78); margin: 0;">Configure the exact date and time when licenses expire annually.</p>
       </div>
     </div>
+
     <!-- Aside status portion showing when the open window starts -->
-    <div *ngIf="!isLoading" class="lvp-header-aside-card" style="display: flex; align-items: center; gap: 12px; background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 18px; border-radius: 12px; box-shadow: 0 2px 10px rgba(37, 99, 235, 0.08);">
-      <div style="background: #2563eb; color: #fff; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+    <div *ngIf="!isLoading" class="lvp-header-aside-card" style="position: relative; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(6px); padding: 12px 18px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.12);">
+      <div style="background: rgba(255,255,255,0.25); color: #fff; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
         <mat-icon style="font-size: 20px; width: 20px; height: 20px;">lock_open</mat-icon>
       </div>
       <div>
-        <div style="font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">Renewal Window Opens On</div>
-        <div style="font-size: 14px; font-weight: 800; color: #1e3a8a; margin-top: 2px;">
+        <div style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.2;">Renewal Window Opens On</div>
+        <div style="font-size: 14px; font-weight: 800; color: #ffffff; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.15);">
           {{ getRenewalOpenDateTimeExplanation() }}
         </div>
       </div>
@@ -123,9 +128,9 @@
   <div *ngIf="!isLoading" class="lvp-card">
 
     <!-- Card Title Bar -->
-    <div class="lvp-card__header">
-      <mat-icon class="lvp-card__header-icon">calendar_month</mat-icon>
-      <span class="lvp-card__header-title">Current Expiry Configuration</span>
+    <div class="lvp-card__header" style="background: linear-gradient(135deg, #1e293b, #0f172a); border-bottom-color: #334155;">
+      <mat-icon class="lvp-card__header-icon" style="color: #60a5fa;">calendar_month</mat-icon>
+      <span class="lvp-card__header-title" style="color: #ffffff;">Current Expiry Configuration</span>
     </div>
 
     <!-- Table -->
@@ -340,11 +345,36 @@
     <!-- Dialog Body -->
     <form #editTimerForm="ngForm" class="lvp-dialog__body">
 
-      <!-- Value Input Row -->
+      <!-- Unit Dropdown Row (At the Top) -->
       <div class="lvp-dialog__field-group">
         <div class="lvp-dialog__field-label">
+          <mat-icon>more_time</mat-icon>
+          Window Unit
+        </div>
+        <mat-form-field appearance="outline" class="lvp-dialog__field">
+          <mat-label>Select Unit</mat-label>
+          <mat-select name="delayUnit" required [(ngModel)]="editTimerConfig.delayUnit" (selectionChange)="onTimerUnitChange()" #unitModel="ngModel">
+            <mat-option value="second">Second(s)</mat-option>
+            <mat-option value="minute">Minute(s)</mat-option>
+            <mat-option value="hour">Hour(s)</mat-option>
+            <mat-option value="day">Day(s)</mat-option>
+            <mat-option value="week">Week(s)</mat-option>
+            <mat-option value="month">Month(s)</mat-option>
+            <mat-option value="year">Year(s)</mat-option>
+          </mat-select>
+          <mat-error *ngIf="unitModel.errors?.['required']">Unit is required</mat-error>
+        </mat-form-field>
+        <div class="lvp-dialog__preview-chip" *ngIf="editTimerConfig.delayUnit">
+          <mat-icon>check_circle</mat-icon>
+          Active Unit: {{ editTimerConfig.delayUnit }}
+        </div>
+      </div>
+
+      <!-- Case A: Standard Value box for Second, Minute, Hour, Day, Week -->
+      <div *ngIf="editTimerConfig.delayUnit !== 'month' && editTimerConfig.delayUnit !== 'year'" class="lvp-dialog__field-group">
+        <div class="lvp-dialog__field-label">
           <mat-icon>pin</mat-icon>
-          Window Value
+          Window Value ({{ editTimerConfig.delayUnit }})
         </div>
         <mat-form-field appearance="outline" class="lvp-dialog__field">
           <mat-label>Value (Integer >= 1)</mat-label>
@@ -358,33 +388,64 @@
         </mat-form-field>
         <div class="lvp-dialog__preview-chip" *ngIf="editTimerConfig.delayValue >= 1">
           <mat-icon>check_circle</mat-icon>
-          {{ editTimerConfig.delayValue }}
+          Value: {{ editTimerConfig.delayValue }}
         </div>
       </div>
 
-      <!-- Unit Dropdown Row -->
-      <div class="lvp-dialog__field-group">
+      <!-- Case B: Month & Date selectors for Month unit -->
+      <div *ngIf="editTimerConfig.delayUnit === 'month'" style="display: flex; gap: 10px; flex-direction: column;">
+        
+        <!-- Select Month Dropdown -->
+        <div class="lvp-dialog__field-group">
+          <div class="lvp-dialog__field-label">
+            <mat-icon>calendar_month</mat-icon>
+            Select Start Month
+          </div>
+          <mat-form-field appearance="outline" class="lvp-dialog__field">
+            <mat-label>Select Month</mat-label>
+            <mat-select name="timerMonth" required [(ngModel)]="editTimerMonth" (selectionChange)="updateMonthDelayValue()">
+              <mat-option *ngFor="let m of monthsList" [value]="m.value">
+                {{ m.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Select Day Dropdown -->
+        <div class="lvp-dialog__field-group">
+          <div class="lvp-dialog__field-label">
+            <mat-icon>today</mat-icon>
+            Select Start Day
+          </div>
+          <mat-form-field appearance="outline" class="lvp-dialog__field">
+            <mat-label>Select Day</mat-label>
+            <mat-select name="timerDay" required [(ngModel)]="editTimerDay">
+              <mat-option *ngFor="let d of daysList" [value]="d">
+                {{ d }}{{ getDaySuffix(d) }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+      </div>
+
+      <!-- Case C: Year input box for Year unit -->
+      <div *ngIf="editTimerConfig.delayUnit === 'year'" class="lvp-dialog__field-group">
         <div class="lvp-dialog__field-label">
-          <mat-icon>more_time</mat-icon>
-          Window Unit
+          <mat-icon>calendar_today</mat-icon>
+          Select Start Year
         </div>
         <mat-form-field appearance="outline" class="lvp-dialog__field">
-          <mat-label>Select Unit</mat-label>
-          <mat-select name="delayUnit" required [(ngModel)]="editTimerConfig.delayUnit" #unitModel="ngModel">
-            <mat-option value="second">Second(s)</mat-option>
-            <mat-option value="minute">Minute(s)</mat-option>
-            <mat-option value="hour">Hour(s)</mat-option>
-            <mat-option value="day">Day(s)</mat-option>
-            <mat-option value="week">Week(s)</mat-option>
-            <mat-option value="month">Month(s)</mat-option>
-            <mat-option value="year">Year(s)</mat-option>
-          </mat-select>
-          <mat-error *ngIf="unitModel.errors?.['required']">Unit is required</mat-error>
+          <mat-label>Year (e.g. 2027)</mat-label>
+          <input matInput type="number" name="timerYear" required
+                 min="2027"
+                 [(ngModel)]="editTimerYear"
+                 (change)="updateYearDelayValue()"
+                 #yearModel="ngModel" />
+          <mat-hint>Renewal starts in selected year (Current is 2026)</mat-hint>
+          <mat-error *ngIf="yearModel.errors?.['required']">Year is required</mat-error>
+          <mat-error *ngIf="yearModel.errors?.['min']">Must be 2027 or later</mat-error>
         </mat-form-field>
-        <div class="lvp-dialog__preview-chip" *ngIf="editTimerConfig.delayUnit">
-          <mat-icon>check_circle</mat-icon>
-          {{ editTimerConfig.delayUnit }}
-        </div>
       </div>
 
       <!-- Real-time Summary Preview Banner -->

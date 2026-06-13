@@ -39,11 +39,32 @@ export class LicenseValidityPeriodComponent implements OnInit {
   editConfig: any = {};
   editTimerConfig: any = {};
 
+  editTimerMonth: number = 1;
+  editTimerDay: number = 1;
+  editTimerYear: number = 2027;
+
   isLoading = true;
   isSaving = false;
   isTimerSaving = false;
 
   availableUnits = ['second', 'minute', 'hour', 'day', 'week', 'month', 'year'];
+
+  monthsList = [
+    { value: 1, name: 'January' },
+    { value: 2, name: 'February' },
+    { value: 3, name: 'March' },
+    { value: 4, name: 'April' },
+    { value: 5, name: 'May' },
+    { value: 6, name: 'June' },
+    { value: 7, name: 'July' },
+    { value: 8, name: 'August' },
+    { value: 9, name: 'September' },
+    { value: 10, name: 'October' },
+    { value: 11, name: 'November' },
+    { value: 12, name: 'December' }
+  ];
+
+  daysList = Array.from({ length: 31 }, (_, i) => i + 1);
 
   private readonly MONTH_NAMES = [
     '', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -111,12 +132,67 @@ export class LicenseValidityPeriodComponent implements OnInit {
 
   openEditTimerDialog(): void {
     this.editTimerConfig = { ...this.timerConfig };
+
+    const m = this.config.renewalMonth || 3;
+    const d = this.config.renewalDay || 31;
+
+    // Default fallback
+    this.editTimerMonth = m;
+    this.editTimerDay = d;
+    this.editTimerYear = 2026 + (this.editTimerConfig.delayValue || 1);
+
+    if (this.editTimerConfig.delayUnit === 'month') {
+      const baseDate = new Date(2026, m - 1, d);
+      baseDate.setMonth(baseDate.getMonth() - (this.editTimerConfig.delayValue || 1));
+      this.editTimerMonth = baseDate.getMonth() + 1;
+      this.editTimerDay = baseDate.getDate();
+    } else if (this.editTimerConfig.delayUnit === 'year') {
+      this.editTimerYear = 2026 + (this.editTimerConfig.delayValue || 1);
+    }
+
     this.timerDialogRef = this.dialog.open(this.editTimerDialogTpl, {
       width: '540px',
       maxWidth: '95vw',
       panelClass: 'lvp-dialog-panel',
       disableClose: true
     });
+  }
+
+  onTimerUnitChange(): void {
+    const unit = this.editTimerConfig.delayUnit;
+    if (unit === 'month') {
+      this.updateMonthDelayValue();
+    } else if (unit === 'year') {
+      this.updateYearDelayValue();
+    } else {
+      if (!this.editTimerConfig.delayValue || this.editTimerConfig.delayValue < 1) {
+        this.editTimerConfig.delayValue = 30; // default fallback
+      }
+    }
+  }
+
+  updateMonthDelayValue(): void {
+    const expiryMonth = this.config.renewalMonth || 3;
+    const selectedMonth = this.editTimerMonth;
+    
+    let diff = expiryMonth - selectedMonth;
+    if (diff < 0) {
+      diff += 12;
+    }
+    if (diff === 0) {
+      diff = 12;
+    }
+    this.editTimerConfig.delayValue = diff;
+  }
+
+  updateYearDelayValue(): void {
+    const currentYear = 2026;
+    let selectedYear = this.editTimerYear;
+    if (selectedYear < currentYear) {
+      selectedYear = currentYear + 1;
+      this.editTimerYear = selectedYear;
+    }
+    this.editTimerConfig.delayValue = selectedYear - currentYear;
   }
 
   closeTimerDialog(): void {
