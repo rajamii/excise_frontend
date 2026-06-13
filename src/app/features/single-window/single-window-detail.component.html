@@ -399,6 +399,11 @@
             <div class="item-status" [ngClass]="getStatusClass(detailData.current_stage)">{{ detailData.current_stage }}</div>
           </div>
           
+          <!-- Renewal Section Divider / Badge -->
+          <div class="renewal-section-divider" *ngIf="detailData.renewal_applications?.length > 0">
+            <span class="renewal-section-badge">Renewals</span>
+          </div>
+
           <!-- Renewal Applications List -->
           <div class="sub-item-card sub-item-card--renewal" 
                *ngFor="let r of detailData.renewal_applications" 

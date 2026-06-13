@@ -1033,17 +1033,20 @@
   flex-wrap: wrap;
   gap: 1.5rem;
   margin-bottom: 2rem;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 1.5rem;
+  background: rgba(241, 245, 249, 0.45);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: inset 0 2px 8px rgba(15, 23, 42, 0.02);
 
   .grouped-selector-box {
     flex: 1;
-    min-width: 280px;
-    height: 375px; /* Increased height to comfortably fit at least 2 cards */
+    min-width: 340px; /* Increased from 280px */
+    height: 425px; /* Increased from 375px */
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
-    padding: 1.15rem; /* Slightly tighter box padding to maximize scrollable area */
+    padding: 1.15rem;
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -2px rgba(0, 0, 0, 0.01);
@@ -1056,12 +1059,48 @@
 
     &--license {
       border-top: 4px solid #10b981;
+      background: linear-gradient(135deg, #ffffff 0%, #f6fdf9 40%, #e6f7ed 100%);
       .box-header::before { background-color: #10b981; }
     }
 
     &--staff {
       border-top: 4px solid #ec4899;
+      background: linear-gradient(135deg, #ffffff 0%, #fdf5f9 40%, #fbe7f3 100%);
       .box-header::before { background-color: #ec4899; }
+    }
+
+    .renewal-section-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 0.5rem 0;
+      flex-shrink: 0;
+
+      &::before, &::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1.5px dashed #fde68a;
+      }
+      &::before {
+        margin-right: 0.5rem;
+      }
+      &::after {
+        margin-left: 0.5rem;
+      }
+    }
+
+    .renewal-section-badge {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.65rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     .box-header {
