@@ -4,12 +4,12 @@ import { AdminService } from '../../admin.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
-import { DecimalPipe, NgIf } from '@angular/common';
+import { DecimalPipe, NgIf, NgFor, CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-license-validity-period',
   standalone: true,
-  imports: [MaterialModule, NgIf, DecimalPipe],
+  imports: [MaterialModule, NgIf, NgFor, DecimalPipe, CommonModule],
   templateUrl: './license-validity-period.component.html',
   styleUrl: './license-validity-period.component.scss'
 })
