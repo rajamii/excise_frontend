@@ -1,13 +1,41 @@
 <div class="single-window-container">
   <!-- Portal Header Banner -->
   <div class="portal-header">
+    <!-- Animated background blobs -->
+    <div class="portal-header__blob portal-header__blob--1"></div>
+    <div class="portal-header__blob portal-header__blob--2"></div>
+    <div class="portal-header__blob portal-header__blob--3"></div>
+    <!-- Grid overlay -->
+    <div class="portal-header__grid"></div>
+
     <div class="header-content">
       <div class="govt-emblem">
         <mat-icon class="emblem-icon">account_balance</mat-icon>
       </div>
       <div class="header-text">
+        <div class="header-eyebrow">
+          <span class="eyebrow-dot"></span>
+          Sikkim Excise Management System
+        </div>
         <h1>Single Window Enquiry Portal</h1>
         <p>Search, track, and monitor all licensee applications, credentials, and workflow stages in one centralized database.</p>
+      </div>
+
+      <!-- Live stats chips -->
+      <div class="header-live-chips">
+        <div class="live-chip">
+          <mat-icon>verified_user</mat-icon>
+          <span>Live Registry</span>
+          <span class="live-dot"></span>
+        </div>
+        <div class="live-chip">
+          <mat-icon>manage_search</mat-icon>
+          <span>Unified Search</span>
+        </div>
+        <div class="live-chip">
+          <mat-icon>timeline</mat-icon>
+          <span>Workflow Tracking</span>
+        </div>
       </div>
     </div>
   </div>
@@ -173,8 +201,18 @@
   <div class="landing-default" *ngIf="!hasSearched">
     <!-- Recent Activity & Registries Header -->
     <div class="section-header">
-      <h2><mat-icon>insights</mat-icon> Recent Activity & Registries</h2>
-      <p>Track the latest licensee user profiles, active licenses, and submitted applications across the state database.</p>
+      <div class="section-header__left">
+        <div class="section-header__icon-wrap">
+          <mat-icon>insights</mat-icon>
+        </div>
+        <div>
+          <h2>Recent Activity &amp; Registries</h2>
+          <p>Track the latest licensee user profiles, active licenses, and submitted applications across the state database.</p>
+        </div>
+      </div>
+      <div class="section-header__badge">
+        <span class="live-dot"></span> Live Data
+      </div>
     </div>
 
     <!-- Latest Created Tabs Section -->
