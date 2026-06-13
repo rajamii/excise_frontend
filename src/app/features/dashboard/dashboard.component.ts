@@ -73,6 +73,8 @@ import { PrepareApplicationComponent as CompanyCollaborationPrepareApplicationCo
 import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } from '../licensee/salesman-registration/prepare-application.component';
 import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-registration/prepare-application/prepare-application.component';
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
+import { SingleWindowComponent } from '../single-window/single-window.component';
+import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -129,7 +131,9 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     CompanyCollaborationPrepareApplicationComponent,
     SalesmanPrepareApplicationComponent,
     LabelRegistrationPrepareApplicationComponent,
-    ApplyNewLicenseComponent
+    ApplyNewLicenseComponent,
+    SingleWindowComponent,
+    SingleWindowDetailComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -1927,6 +1931,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     const titles: { [key: string]: string } = {
       // Common sections
+      'single-window': 'Single Window Enquiry',
+      'single-window-detail': 'Enquiry Details',
       'requisition': 'Requisition Management',
       'revalidation': 'Revalidation Management',
       'cancellation': 'Cancellation Management',

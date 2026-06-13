@@ -1,0 +1,386 @@
+<div class="single-window-container">
+  <!-- Portal Header Banner -->
+  <div class="portal-header">
+    <div class="header-content">
+      <div class="govt-emblem">
+        <mat-icon class="emblem-icon">account_balance</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Single Window Enquiry Portal</h1>
+        <p>Search, track, and monitor all licensee applications, credentials, and workflow stages in one centralized database.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Dashboard -->
+  <div class="search-section">
+    <mat-card class="search-card">
+      <mat-card-content>
+        <div class="search-box-wrapper">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search by Licensee Name, Username, License Number, Application ID..."
+            class="search-input"
+            aria-label="Search Single Window Database"
+          />
+          <button
+            mat-icon-button
+            *ngIf="searchQuery"
+            (click)="clearSearch()"
+            class="clear-button"
+            type="button"
+            aria-label="Clear search"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="search-hints">
+          <span><mat-icon>info</mat-icon> Try searching: <strong>"John"</strong>, <strong>"LIC/2026/01"</strong>, or application IDs.</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Main Search Results Display -->
+  <div class="results-section" *ngIf="hasSearched">
+    <!-- Quick Stats Summary -->
+    <div class="quick-stats-grid" *ngIf="searchResults.length > 0 && !isLoading">
+      <div class="stat-card total-results">
+        <mat-icon>bar_chart</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ searchResults.length }}</span>
+          <span class="stat-label">Matching Records Found</span>
+        </div>
+      </div>
+      <div class="stat-card licensees" (click)="setTab('licensee')">
+        <mat-icon>person</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ getTabCount('licensee') }}</span>
+          <span class="stat-label">Licensees</span>
+        </div>
+      </div>
+      <div class="stat-card licenses" (click)="setTab('license')">
+        <mat-icon>card_membership</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ getTabCount('license') }}</span>
+          <span class="stat-label">Active Licenses</span>
+        </div>
+      </div>
+      <div class="stat-card applications" (click)="setTab('new_license_app')">
+        <mat-icon>description</mat-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ getTabCount('new_license_app') + getTabCount('renewal_app') + getTabCount('salesman_barman_app') }}</span>
+          <span class="stat-label">Applications</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Tabs Filter -->
+    <div class="tabs-container" *ngIf="searchResults.length > 0 && !isLoading">
+      <div class="tab-list">
+        <button [class.active]="selectedTab === 'all'" (click)="setTab('all')" type="button">
+          All Results <span class="tab-badge">{{ getTabCount('all') }}</span>
+        </button>
+        <button [class.active]="selectedTab === 'licensee'" (click)="setTab('licensee')" type="button">
+          Licensees <span class="tab-badge">{{ getTabCount('licensee') }}</span>
+        </button>
+        <button [class.active]="selectedTab === 'license'" (click)="setTab('license')" type="button">
+          Licenses <span class="tab-badge">{{ getTabCount('license') }}</span>
+        </button>
+        <button [class.active]="selectedTab === 'new_license_app'" (click)="setTab('new_license_app')" type="button">
+          New Apps <span class="tab-badge">{{ getTabCount('new_license_app') }}</span>
+        </button>
+        <button [class.active]="selectedTab === 'renewal_app'" (click)="setTab('renewal_app')" type="button">
+          Renewals <span class="tab-badge">{{ getTabCount('renewal_app') }}</span>
+        </button>
+        <button [class.active]="selectedTab === 'salesman_barman_app'" (click)="setTab('salesman_barman_app')" type="button">
+          Salesman / Barman <span class="tab-badge">{{ getTabCount('salesman_barman_app') }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loader -->
+    <div class="loader-container" *ngIf="isLoading">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Searching central registry database...</p>
+    </div>
+
+    <!-- Error Display -->
+    <div class="error-container" *ngIf="error && !isLoading">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error }}</p>
+    </div>
+
+    <!-- Results List -->
+    <div class="results-list-container" *ngIf="!isLoading && !error">
+      <div class="no-results" *ngIf="filteredResults.length === 0">
+        <mat-icon class="no-results-icon">search_off</mat-icon>
+        <h3>No matching records found</h3>
+        <p>No results match the selected category filters or query. Try refining your spelling or entering a different search term.</p>
+      </div>
+
+      <div class="results-grid" *ngIf="filteredResults.length > 0">
+        <mat-card class="result-item-card" *ngFor="let item of filteredResults">
+          <div class="card-glow-border"></div>
+          <mat-card-content>
+            <div class="result-card-inner">
+              <div class="result-type-icon-wrapper" [ngClass]="item.type">
+                <mat-icon>{{ getTypeIcon(item.type) }}</mat-icon>
+                <span class="type-badge">{{ getTypeLabel(item.type) }}</span>
+              </div>
+
+              <div class="result-details">
+                <h3 class="result-title">{{ item.title }}</h3>
+                <p class="result-subtitle">{{ item.subtitle }}</p>
+
+                <!-- Metadata details -->
+                <div class="meta-tags">
+                  <div class="meta-tag" *ngIf="item.meta.valid_up_to">
+                    <mat-icon>event_available</mat-icon>
+                    <span>Expires: {{ item.meta.valid_up_to }}</span>
+                  </div>
+                  <div class="meta-tag" *ngIf="item.meta.created_at">
+                    <mat-icon>schedule</mat-icon>
+                    <span>Submitted: {{ item.meta.created_at }}</span>
+                  </div>
+                  <div class="meta-tag" *ngIf="item.meta.username">
+                    <mat-icon>account_circle</mat-icon>
+                    <span>User: {{ item.meta.username }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="result-actions">
+                <span class="status-pill" [ngClass]="getStatusClass(item.status)">
+                  {{ item.status }}
+                </span>
+                <button mat-raised-button color="primary" class="view-btn" (click)="viewDetails(item)">
+                  <span>Track Application</span>
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+
+  <!-- Landing Default view (when not searched yet) -->
+  <div class="landing-default" *ngIf="!hasSearched">
+    <!-- Recent Activity & Registries Header -->
+    <div class="section-header">
+      <h2><mat-icon>insights</mat-icon> Recent Activity & Registries</h2>
+      <p>Track the latest licensee user profiles, active licenses, and submitted applications across the state database.</p>
+    </div>
+
+    <!-- Latest Created Tabs Section -->
+    <div class="latest-tabs-wrapper">
+      <div class="latest-tab-headers">
+        <button [class.active]="activeLatestTab === 'admin'" (click)="setLatestTab('admin')" type="button">
+          <mat-icon>supervisor_account</mat-icon>
+          <span>Admin & Licensees</span>
+          <span class="count-badge">{{ latestUsers.length }}</span>
+        </button>
+        <button [class.active]="activeLatestTab === 'license'" (click)="setLatestTab('license')" type="button">
+          <mat-icon>history_edu</mat-icon>
+          <span>Licenses & Applications</span>
+          <span class="count-badge">{{ latestRecords.length }}</span>
+        </button>
+      </div>
+
+      <!-- Loading State for Latest -->
+      <div class="latest-loader" *ngIf="isLatestLoading">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading latest records from central registry...</p>
+      </div>
+
+      <!-- Admin/Users Tab Content -->
+      <div class="tab-content-panel" *ngIf="!isLatestLoading && activeLatestTab === 'admin'">
+        <div class="table-responsive-wrapper">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Licensee Name</th>
+                <th>Username</th>
+                <th>Contact Info</th>
+                <th>User Role</th>
+                <th>Registered On</th>
+                <th>Status</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of paginatedLatestUsers">
+                <td class="font-bold">
+                  <div class="user-meta-cell">
+                    <mat-icon class="cell-icon">account_circle</mat-icon>
+                    <div class="cell-text">
+                      <span class="primary-text">{{ user.first_name }} {{ user.last_name }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <code>&#64;{{ user.username }}</code>
+                </td>
+                <td>
+                  <div class="contact-cell">
+                    <span class="primary-text"><mat-icon>email</mat-icon> {{ user.email }}</span>
+                    <span class="secondary-text"><mat-icon>phone</mat-icon> {{ user.phone_number }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="role-badge">{{ user.role_name }}</span>
+                </td>
+                <td class="date-cell">{{ user.date_joined }}</td>
+                <td>
+                  <span class="status-pill" [ngClass]="user.is_active ? 'status-active' : 'status-inactive'">
+                    {{ user.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <button mat-raised-button color="primary" class="track-btn-sm" (click)="viewDetails({type: 'licensee', id: user.id})">
+                    <span>View Profile</span>
+                    <mat-icon>chevron_right</mat-icon>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="latestUsers.length === 0">
+                <td colspan="6" class="text-center no-data-cell">No recent licensee accounts found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginator -->
+        <mat-paginator
+          [length]="latestUsers.length"
+          [pageSize]="adminPageSize"
+          [pageSizeOptions]="adminPageSizes"
+          [pageIndex]="adminPageIndex"
+          (page)="onAdminPageChange($event)"
+          class="premium-paginator">
+        </mat-paginator>
+      </div>
+
+      <!-- Licenses/Applications Tab Content — NLA only -->
+      <div class="tab-content-panel" *ngIf="!isLatestLoading && activeLatestTab === 'license'">
+        <div class="table-responsive-wrapper">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>NLA Application No.</th>
+                <th>Establishment / Applicant</th>
+                <th>License Category</th>
+                <th>Issued License</th>
+                <th>Application Status</th>
+                <th>Pending At</th>
+                <th>Applied On</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let record of paginatedLatestRecords">
+                <td>
+                  <div class="nla-id-cell">
+                    <mat-icon class="cell-icon nla-icon">description</mat-icon>
+                    <div class="cell-text">
+                      <code class="nla-code">{{ record.application_id }}</code>
+                      <span class="nla-sub" *ngIf="record.is_approved">
+                        <mat-icon style="font-size:12px;width:12px;height:12px;color:#10b981">verified</mat-icon>
+                        Approved
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-text">
+                    <span class="primary-text">{{ record.establishment_name }}</span>
+                    <span class="secondary-text">
+                      <mat-icon style="font-size:11px;width:11px;height:11px">person</mat-icon>
+                      {{ record.applicant_name }} &nbsp;·&nbsp; &#64;{{ record.applicant_username }}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="category-tag">{{ record.license_category }}</span>
+                </td>
+                <td>
+                  <div *ngIf="record.issued_license_id" class="license-issued-cell">
+                    <code class="license-code">{{ record.issued_license_id }}</code>
+                    <span class="status-pill" [ngClass]="record.license_is_active ? 'status-active' : 'status-inactive'">
+                      {{ record.license_is_active ? 'Active' : 'Expired' }}
+                    </span>
+                  </div>
+                  <span *ngIf="!record.issued_license_id" class="not-issued-tag">Not Issued</span>
+                </td>
+                <td>
+                  <span class="status-pill" [ngClass]="getStatusClass(record.current_stage)">
+                    {{ record.current_stage }}
+                  </span>
+                </td>
+                <td>
+                  <span *ngIf="!record.is_approved" class="pending-role-tag">
+                    <mat-icon style="font-size:13px;width:13px;height:13px">manage_accounts</mat-icon>
+                    {{ record.pending_at }}
+                  </span>
+                  <span *ngIf="record.is_approved" class="approved-badge">
+                    <mat-icon style="font-size:13px;width:13px;height:13px">check_circle</mat-icon>
+                    Completed
+                  </span>
+                </td>
+                <td class="date-cell">{{ record.created_at }}</td>
+                <td class="text-right">
+                  <button mat-raised-button color="primary" class="track-btn-sm" (click)="viewDetails(record)">
+                    <span>View Profile</span>
+                    <mat-icon>chevron_right</mat-icon>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="latestRecords.length === 0">
+                <td colspan="8" class="text-center no-data-cell">No new license applications found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginator -->
+        <mat-paginator
+          [length]="latestRecords.length"
+          [pageSize]="licensePageSize"
+          [pageSizeOptions]="licensePageSizes"
+          [pageIndex]="licensePageIndex"
+          (page)="onLicensePageChange($event)"
+          class="premium-paginator">
+        </mat-paginator>
+      </div>
+    </div>
+
+    <!-- Quick Info Cards Section -->
+
+    <div class="landing-card-grid">
+      <div class="landing-card">
+        <div class="landing-icon-wrap">
+          <mat-icon>manage_search</mat-icon>
+        </div>
+        <h3>Unified Search</h3>
+        <p>Look up licensees and applications globally. Instantly search records across users, licenses, renewals, and barman/salesman registries.</p>
+      </div>
+      <div class="landing-card">
+        <div class="landing-icon-wrap">
+          <mat-icon>timeline</mat-icon>
+        </div>
+        <h3>Workflow Stages</h3>
+        <p>Trace the exact department workflow routing, actions taken by other officials, date timestamps, and check-post history details.</p>
+      </div>
+      <div class="landing-card">
+        <div class="landing-icon-wrap">
+          <mat-icon>feedback</mat-icon>
+        </div>
+        <h3>Objections & Observers</h3>
+        <p>Identify active query objections, remarks, pending payments, or documents holding back licenses. Help users solve query issues immediately.</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -123,6 +123,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
       { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForOic: true },
       { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true },
+      { section: 'single-window', label: 'Single Window Enquiry', icon: 'manage_search' }
     ];
 
   constructor(
@@ -1533,6 +1534,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).
     if (section === 'officer-activity') {
       return true;
+    }
+
+    if (section === 'single-window' || section === 'single-window-detail') {
+      return roleId === 3 || roleId === 1;
     }
 
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {

@@ -396,6 +396,12 @@
                 <mat-icon class="nav-icon">assignment</mat-icon>
                 <span class="nav-text">Officer Activity</span>
               </button>
+
+              <!-- Single Window Enquiry — site admin can also access -->
+              <button class="nav-item" (click)="navigateToSection('single-window')" [class.active]="isDashboardSectionActive('single-window')">
+                <mat-icon class="nav-icon">manage_search</mat-icon>
+                <span class="nav-text">Single Window Enquiry</span>
+              </button>
             </div>
           </div>
         </div>
