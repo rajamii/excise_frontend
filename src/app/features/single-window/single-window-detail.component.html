@@ -397,6 +397,12 @@
             <div class="item-id">{{ detailData.application_id }}</div>
             <div class="lic-no" *ngIf="detailData.issued_license?.license_id">License: {{ detailData.issued_license.license_id }}</div>
             <div class="item-status" [ngClass]="getStatusClass(detailData.current_stage)">{{ detailData.current_stage }}</div>
+            
+            <button class="view-details-link-btn" 
+                    matTooltip="View Application Details"
+                    (click)="$event.stopPropagation(); viewApplicationDetail('new_license_app', detailData.application_id)">
+              <mat-icon>launch</mat-icon>
+            </button>
           </div>
           
           <!-- Renewal Section Divider / Badge -->
@@ -413,6 +419,12 @@
             <div class="item-id">{{ r.application_id }}</div>
             <div class="lic-no" *ngIf="r.old_license_id">License: {{ r.old_license_id }}</div>
             <div class="item-status" [ngClass]="getStatusClass(r.current_stage)">{{ r.current_stage }}</div>
+
+            <button class="view-details-link-btn" 
+                    matTooltip="View Application Details"
+                    (click)="$event.stopPropagation(); viewApplicationDetail('renewal_app', r.application_id)">
+              <mat-icon>launch</mat-icon>
+            </button>
           </div>
         </div>
       </div>
@@ -431,6 +443,12 @@
             <div class="item-name" style="font-size: 0.8rem; font-weight: 700; color: #475569; margin: 0.1rem 0;">{{ s.name }}</div>
             <div class="lic-no" *ngIf="s.license_id && s.license_id !== 'N/A'">License: {{ s.license_id }}</div>
             <div class="item-status" [ngClass]="getStatusClass(s.current_stage)">{{ s.current_stage }}</div>
+
+            <button class="view-details-link-btn" 
+                    matTooltip="View Application Details"
+                    (click)="$event.stopPropagation(); viewApplicationDetail('salesman_barman_app', s.application_id)">
+              <mat-icon>launch</mat-icon>
+            </button>
           </div>
         </div>
       </div>
