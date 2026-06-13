@@ -1993,9 +1993,7 @@ private initializeWalletContextAndLoadData(): void {
       && this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
       && this.pendingWalletPaymentContext.tab === tab
       && this.activeTab === tab) {
-      const isRenewal = String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() === 'license-renewal'
-                     || String(this.pendingWalletPaymentContext.referenceNo || '').trim().toUpperCase().startsWith('LRA/');
-      if (isRenewal && tab === 'security_deposit') {
+      if (tab === 'security_deposit') {
         return false;
       }
       return true;
@@ -2030,6 +2028,20 @@ private initializeWalletContextAndLoadData(): void {
       return this.activeTab === tab;
     }
     return context.tab === tab && this.activeTab === tab;
+  }
+
+  showSecurityRechargeAlert(): boolean {
+    if (!this.pendingWalletPaymentContext) return false;
+    const refNo = this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext.referenceNo;
+    if (!refNo) return false;
+
+    const isNewLicense = this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
+      && String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() !== 'license-renewal'
+      && !String(refNo).trim().toUpperCase().startsWith('LRA/');
+
+    if (!isNewLicense) return false;
+
+    return !this.isFeePaid('security_deposit', refNo);
   }
 
   getPendingPaymentModuleLabel(): string {
@@ -2237,21 +2249,7 @@ private initializeWalletContextAndLoadData(): void {
           const isRenewal = String(context.itemType || '').trim().toLowerCase() === 'license-renewal'
                          || String(refNo || '').trim().toUpperCase().startsWith('LRA/');
           if (context.tab === 'license_fee') {
-            const securityPaid = this.isFeePaid('security_deposit', refNo);
-            const nextAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
-            if (!securityPaid && nextAmount > 0 && !isRenewal) {
-              this.chainedNewLicenseSecurityAmount = 0;
-              this.pendingWalletPaymentContext = {
-                ...context,
-                tab: 'security_deposit',
-                amount: nextAmount
-              };
-              this.hasHandledPendingWalletPayment = false;
-              this.isHandlingPendingWalletPayment = false;
-              this.setActiveTab('security_deposit');
-              this.persistPendingPaymentContextToStorage();
-              return;
-            }
+            // No manual Pay Now tab redirection for security deposit since it is paid on recharge.
           } else if (context.tab === 'security_deposit') {
             const licensePaid = this.isFeePaid('license_fee', refNo);
             const nextAmount = this.pendingNewLicenseLicenseFeeAmount || 0;
@@ -2803,7 +2801,13 @@ private initializeWalletContextAndLoadData(): void {
 
     this.modalContext = { walletType: modalWalletType , moduleLabel, walletLabel, hoa };
     this.currentTxnId = this.generateWalletTransactionId(modalWalletType);
-    this.paymentAmount = 0;
+    if (modalWalletType === 'license_fee') {
+      this.paymentAmount = this.pendingNewLicenseLicenseFeeAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else if (modalWalletType === 'security_deposit') {
+      this.paymentAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else {
+      this.paymentAmount = 0;
+    }
 
     // Show the modal
     const modalElement = document.getElementById('addMoneyModal');
@@ -2931,7 +2935,13 @@ private initializeWalletContextAndLoadData(): void {
     this.cleanupModalArtifacts();
     this.selectedAddMoneyContext = this.getAddMoneyContext(walletType);
     this.addMoneyTransactionId = this.generateWalletTransactionId(walletType);
-    this.addMoneyAmount = 0;
+    if (walletType === 'license_fee') {
+      this.addMoneyAmount = this.pendingNewLicenseLicenseFeeAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else if (walletType === 'security_deposit') {
+      this.addMoneyAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else {
+      this.addMoneyAmount = 0;
+    }
 
     const modalEl = document.getElementById('addMoneyModal');
     if (modalEl) {

@@ -51,6 +51,7 @@
                       class="form-control"
                       [ngModel]="amount"
                       (ngModelChange)="onAmountChange($event)"
+                      [readonly]="context?.walletType === 'security_deposit'"
                       placeholder="0.00">
                   </div>
                 </td>

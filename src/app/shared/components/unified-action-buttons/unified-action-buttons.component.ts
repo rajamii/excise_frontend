@@ -1005,10 +1005,20 @@ private getTransitRejectSummary(): {
             ${breakdownHtml}
 
             <!-- Info note -->
-            <div style="margin-top:12px; padding:10px 14px; background:#fffbeb; border:1px solid #fde68a;
-                        border-radius:8px; font-size:12px; color:#92400e; display:flex; gap:8px; align-items:flex-start;">
-              <span style="font-size:15px; flex-shrink:0;">&#9888;</span>
-              <span>You will be taken to <b>Wallet &rarr; ${isRenewal ? 'License Fee' : 'License Fee / Security Deposit'}</b> tabs to complete payment.</span>
+            <div style="margin-top:12px; padding:12px 16px; background:#f0f9ff; border:1px solid #bae6fd;
+                        border-radius:8px; font-size:13px; color:#0369a1; text-align: left; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-weight: 700; display:flex; gap:8px; align-items:center;">
+                <span style="font-size:16px;">&#8505;</span>
+                <span>Important Payment Instructions:</span>
+              </div>
+              <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color:#334155;">
+                <li><b>License Fee:</b> Pay by navigating to the <b>License Fee Wallet</b> tab and clicking <b>Pay Now</b>.</li>
+                ${!isRenewal ? `
+                <li style="background: #fffbeb; padding: 6px 10px; border-radius: 4px; border: 1px solid #fde68a; margin-top: 6px; color: #b45309; list-style-type: none; margin-left: -20px;">
+                  &#9888; &nbsp;<b>Security Deposit:</b> Simply <b>recharge/add money</b> to the <b>Security Deposit Wallet</b>. Recharging is sufficient to mark it as paid, and the amount will remain in your wallet as active security balance (it will not be debited).
+                </li>
+                ` : ''}
+              </ul>
             </div>
 
           </div>
@@ -1023,7 +1033,7 @@ private getTransitRejectSummary(): {
           confirmButton: 'swal-proceed-confirm',
           cancelButton: 'swal-proceed-cancel'
         },
-        width: '480px'
+        width: '540px'
       }).then((result) => {
         if (!result.isConfirmed) return;
         this.router.navigate(['/dashboard'], {
