@@ -325,21 +325,23 @@
     font-weight: 700;
     font-size: 0.875rem;
     height: 52px;
-    color: #64748b;
     letter-spacing: 0.01em;
     opacity: 1 !important;
     min-width: 130px;
     transition: color 0.2s ease, background 0.2s ease;
+    border-radius: 10px 10px 0 0;
 
-    /* tab label text */
     .mdc-tab__text-label {
-      color: #64748b;
+      color: #475569;
       transition: color 0.2s ease;
     }
 
-    /* hover state */
     &:hover .mdc-tab__text-label {
       color: #1e293b;
+    }
+
+    &:hover {
+      background: #f1f5f9 !important;
     }
   }
 
