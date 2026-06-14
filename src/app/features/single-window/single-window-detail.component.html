@@ -405,6 +405,7 @@
             <div class="item-status" [ngClass]="getStatusClass(detailData.current_stage)">{{ detailData.current_stage }}</div>
             
             <button class="view-details-link-btn" 
+                    *ngIf="type !== 'new_license_app'"
                     matTooltip="View Application Details"
                     (click)="$event.stopPropagation(); viewApplicationDetail('new_license_app', detailData.application_id)">
               <mat-icon>open_in_new</mat-icon>
