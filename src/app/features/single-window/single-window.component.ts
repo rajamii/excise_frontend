@@ -26,6 +26,7 @@ export class SingleWindowComponent implements OnInit {
   isLoading = false;
   hasSearched = false;
   error: string | null = null;
+  searchMode: 'registry' | 'payment' = 'registry';
 
   // Latest created records states
   latestUsers: any[] = [];
@@ -112,6 +113,12 @@ export class SingleWindowComponent implements OnInit {
     this.activeLatestTab = tab;
   }
 
+  setSearchMode(mode: 'registry' | 'payment') {
+    this.searchMode = mode;
+    this.selectedTab = 'all';
+    this.clearSearch();
+  }
+
   onSearchChange() {
     this.searchSubject.next(this.searchQuery);
   }
@@ -137,7 +144,10 @@ export class SingleWindowComponent implements OnInit {
     this.hasSearched = true;
 
     this.http.get<any>(`${environment.apiBaseUrl}/transactional/single-window/search/`, {
-      params: { query: trimmed }
+      params: { 
+        query: trimmed,
+        search_type: this.searchMode
+      }
     }).subscribe({
       next: (res) => {
         this.searchResults = res.results || [];
@@ -214,7 +224,8 @@ export class SingleWindowComponent implements OnInit {
       'license': 'License',
       'new_license_app': 'New License Application',
       'renewal_app': 'Renewal Application',
-      'salesman_barman_app': 'Salesman/Barman Application'
+      'salesman_barman_app': 'Salesman/Barman Application',
+      'payment': 'Payment Transaction'
     };
     return labels[type] || type;
   }
@@ -225,7 +236,8 @@ export class SingleWindowComponent implements OnInit {
       'license': 'card_membership',
       'new_license_app': 'add_business',
       'renewal_app': 'autorenew',
-      'salesman_barman_app': 'badge'
+      'salesman_barman_app': 'badge',
+      'payment': 'payments'
     };
     return icons[type] || 'description';
   }
