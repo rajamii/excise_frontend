@@ -28,6 +28,45 @@ export class SingleWindowComponent implements OnInit {
   error: string | null = null;
   searchMode: 'registry' | 'payment' = 'registry';
 
+  // Advanced Filters states
+  showAdvancedFilters = false;
+  filterDay = '';
+  filterMonth = '';
+  filterYear = '';
+  filterCategory = '';
+  filterRole = '';
+
+  daysList: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
+  monthsList = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' }
+  ];
+  yearsList: number[] = [2024, 2025, 2026, 2027];
+  categoriesList: string[] = ['Foreign Liquor Retail Shop', 'Manufacturing'];
+  rolesList: string[] = [
+    'Commissioner',
+    'Deputy Commissioner',
+    'District User',
+    'IT Cell',
+    'Joint commissioner',
+    'Offcier-In-Charge',
+    'Permit Section',
+    'Secretary',
+    'Single Window',
+    'Site Inquiry Officer',
+    'site_admin'
+  ];
+
   // Latest created records states
   latestUsers: any[] = [];
   latestRecords: any[] = [];
@@ -78,19 +117,85 @@ export class SingleWindowComponent implements OnInit {
     });
   }
 
+  get filteredLatestUsers(): any[] {
+    let list = this.latestUsers;
+    if (this.showAdvancedFilters) {
+      if (this.filterRole) {
+        list = list.filter(u => u.role_name && u.role_name.toLowerCase().includes(this.filterRole.toLowerCase()));
+      }
+      if (this.filterDay || this.filterMonth || this.filterYear) {
+        list = list.filter(u => {
+          if (!u.date_joined || u.date_joined === 'N/A') return false;
+          const d = new Date(u.date_joined);
+          if (isNaN(d.getTime())) return false;
+          if (this.filterDay && d.getDate() !== parseInt(this.filterDay)) return false;
+          if (this.filterMonth && (d.getMonth() + 1) !== parseInt(this.filterMonth)) return false;
+          if (this.filterYear && d.getFullYear() !== parseInt(this.filterYear)) return false;
+          return true;
+        });
+      }
+    }
+    return list;
+  }
+
+  get filteredLatestDeactivatedUsers(): any[] {
+    let list = this.latestDeactivatedUsers;
+    if (this.showAdvancedFilters) {
+      if (this.filterRole) {
+        list = list.filter(u => u.role_name && u.role_name.toLowerCase().includes(this.filterRole.toLowerCase()));
+      }
+      if (this.filterDay || this.filterMonth || this.filterYear) {
+        list = list.filter(u => {
+          if (!u.date_joined || u.date_joined === 'N/A') return false;
+          const d = new Date(u.date_joined);
+          if (isNaN(d.getTime())) return false;
+          if (this.filterDay && d.getDate() !== parseInt(this.filterDay)) return false;
+          if (this.filterMonth && (d.getMonth() + 1) !== parseInt(this.filterMonth)) return false;
+          if (this.filterYear && d.getFullYear() !== parseInt(this.filterYear)) return false;
+          return true;
+        });
+      }
+    }
+    return list;
+  }
+
+  get filteredLatestRecords(): any[] {
+    let list = this.latestRecords;
+    if (this.showAdvancedFilters) {
+      if (this.filterCategory) {
+        list = list.filter(r => r.license_category && r.license_category.toLowerCase().includes(this.filterCategory.toLowerCase()));
+      }
+      if (this.filterDay || this.filterMonth || this.filterYear) {
+        list = list.filter(r => {
+          if (!r.created_at || r.created_at === 'N/A') return false;
+          const parts = r.created_at.split('-');
+          if (parts.length < 3) return false;
+          const y = parseInt(parts[0]);
+          const m = parseInt(parts[1]);
+          const d = parseInt(parts[2]);
+          if (this.filterDay && d !== parseInt(this.filterDay)) return false;
+          if (this.filterMonth && m !== parseInt(this.filterMonth)) return false;
+          if (this.filterYear && y !== parseInt(this.filterYear)) return false;
+          return true;
+        });
+      }
+    }
+    return list;
+  }
+
   get paginatedLatestUsers(): any[] {
     const start = this.adminPageIndex * this.adminPageSize;
-    return this.latestUsers.slice(start, start + this.adminPageSize);
+    return this.filteredLatestUsers.slice(start, start + this.adminPageSize);
   }
 
   get paginatedLatestRecords(): any[] {
     const start = this.licensePageIndex * this.licensePageSize;
-    return this.latestRecords.slice(start, start + this.licensePageSize);
+    return this.filteredLatestRecords.slice(start, start + this.licensePageSize);
   }
 
   get paginatedLatestDeactivatedUsers(): any[] {
     const start = this.deactivatedPageIndex * this.deactivatedPageSize;
-    return this.latestDeactivatedUsers.slice(start, start + this.deactivatedPageSize);
+    return this.filteredLatestDeactivatedUsers.slice(start, start + this.deactivatedPageSize);
   }
 
   onAdminPageChange(event: any) {
@@ -117,6 +222,33 @@ export class SingleWindowComponent implements OnInit {
     this.searchMode = mode;
     this.selectedTab = 'all';
     this.clearSearch();
+    this.resetFilters();
+  }
+
+  toggleAdvancedFilters() {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+    if (!this.showAdvancedFilters) {
+      this.resetFilters();
+    }
+  }
+
+  resetFilters() {
+    this.filterDay = '';
+    this.filterMonth = '';
+    this.filterYear = '';
+    this.filterCategory = '';
+    this.filterRole = '';
+    this.onFilterChange();
+  }
+
+  onFilterChange() {
+    if (this.hasSearched) {
+      this.executeSearch(this.searchQuery);
+    } else {
+      this.adminPageIndex = 0;
+      this.licensePageIndex = 0;
+      this.deactivatedPageIndex = 0;
+    }
   }
 
   onSearchChange() {
@@ -143,11 +275,21 @@ export class SingleWindowComponent implements OnInit {
     this.error = null;
     this.hasSearched = true;
 
+    const params: any = { 
+      query: trimmed,
+      search_type: this.searchMode
+    };
+
+    if (this.showAdvancedFilters) {
+      if (this.filterDay) params.day = this.filterDay;
+      if (this.filterMonth) params.month = this.filterMonth;
+      if (this.filterYear) params.year = this.filterYear;
+      if (this.filterCategory) params.category = this.filterCategory;
+      if (this.filterRole) params.role = this.filterRole;
+    }
+
     this.http.get<any>(`${environment.apiBaseUrl}/transactional/single-window/search/`, {
-      params: { 
-        query: trimmed,
-        search_type: this.searchMode
-      }
+      params
     }).subscribe({
       next: (res) => {
         this.searchResults = res.results || [];

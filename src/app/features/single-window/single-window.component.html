@@ -61,6 +61,10 @@
             <mat-icon>payments</mat-icon>
             <span>Search Payments</span>
           </button>
+          <button type="button" class="mode-toggle-btn filter-toggle-btn" [class.active]="showAdvancedFilters" (click)="toggleAdvancedFilters()">
+            <mat-icon>{{ showAdvancedFilters ? 'filter_alt_off' : 'filter_alt' }}</mat-icon>
+            <span>Advanced Filters</span>
+          </button>
         </div>
 
         <!-- Input row -->
@@ -70,7 +74,7 @@
             type="text"
             [(ngModel)]="searchQuery"
             (ngModelChange)="onSearchChange()"
-            [placeholder]="searchMode === 'registry' ? 'Search by Licensee Name, Username, License Number, Application ID, Transaction ID / UTR...' : 'Search by Amount, Transaction ID / UTR, Date & Time (YYYY-MM-DD)...'"
+            [placeholder]="searchMode === 'registry' ? 'Search by Licensee Name, Username, License Number, Application ID...' : 'Search by Amount, Transaction ID / UTR, Date & Time (YYYY-MM-DD)...'"
             class="search-input"
             aria-label="Search Single Window Database"
           />
@@ -95,7 +99,6 @@
           <span class="hint-chip"><mat-icon>person</mat-icon>"sam"</span>
           <span class="hint-chip"><mat-icon>card_membership</mat-icon>"NLI/1101/2026-27/..."</span>
           <span class="hint-chip"><mat-icon>description</mat-icon>Application IDs</span>
-          <span class="hint-chip"><mat-icon>receipt</mat-icon>"CF677B4EF..." (UTR/Txn ID)</span>
         </div>
 
         <!-- Hint chips for payment -->
@@ -104,6 +107,63 @@
           <span class="hint-chip"><mat-icon>receipt</mat-icon>"TXN"</span>
           <span class="hint-chip"><mat-icon>monetization_on</mat-icon>"10000"</span>
           <span class="hint-chip"><mat-icon>calendar_today</mat-icon>"2026-06"</span>
+        </div>
+
+        <!-- Advanced Filters Panel -->
+        <div class="advanced-filters-panel" *ngIf="showAdvancedFilters">
+          <div class="filters-grid">
+            <!-- Day Filter -->
+            <div class="filter-item">
+              <label>Day</label>
+              <select [(ngModel)]="filterDay" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Days</option>
+                <option *ngFor="let day of daysList" [value]="day">{{ day }}</option>
+              </select>
+            </div>
+
+            <!-- Month Filter -->
+            <div class="filter-item">
+              <label>Month</label>
+              <select [(ngModel)]="filterMonth" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Months</option>
+                <option *ngFor="let m of monthsList" [value]="m.value">{{ m.label }}</option>
+              </select>
+            </div>
+
+            <!-- Year Filter -->
+            <div class="filter-item">
+              <label>Year</label>
+              <select [(ngModel)]="filterYear" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Years</option>
+                <option *ngFor="let y of yearsList" [value]="y">{{ y }}</option>
+              </select>
+            </div>
+
+            <!-- Category Filter (registry mode only) -->
+            <div class="filter-item" *ngIf="searchMode === 'registry'">
+              <label>License Category</label>
+              <select [(ngModel)]="filterCategory" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Categories</option>
+                <option *ngFor="let cat of categoriesList" [value]="cat">{{ cat }}</option>
+              </select>
+            </div>
+
+            <!-- Role Filter (registry mode only) -->
+            <div class="filter-item" *ngIf="searchMode === 'registry'">
+              <label>Officer Role</label>
+              <select [(ngModel)]="filterRole" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Roles</option>
+                <option *ngFor="let role of rolesList" [value]="role">{{ role }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filters-actions">
+            <button type="button" class="reset-filters-btn" (click)="resetFilters()">
+              <mat-icon>restart_alt</mat-icon>
+              <span>Reset Filters</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -276,17 +336,17 @@
         <button [class.active]="activeLatestTab === 'admin'" (click)="setLatestTab('admin')" type="button">
           <mat-icon>supervisor_account</mat-icon>
           <span>Admin Users</span>
-          <span class="count-badge">{{ latestUsers.length }}</span>
+          <span class="count-badge">{{ filteredLatestUsers.length }}</span>
         </button>
         <button [class.active]="activeLatestTab === 'license'" (click)="setLatestTab('license')" type="button">
           <mat-icon>history_edu</mat-icon>
           <span>Licenses & Applications</span>
-          <span class="count-badge">{{ latestRecords.length }}</span>
+          <span class="count-badge">{{ filteredLatestRecords.length }}</span>
         </button>
         <button [class.active]="activeLatestTab === 'deactivated'" (click)="setLatestTab('deactivated')" type="button" class="deactivated-tab-btn">
           <mat-icon class="deactivated-icon">no_accounts</mat-icon>
           <span>Deactivated Users</span>
-          <span class="count-badge deactivated-badge">{{ latestDeactivatedUsers.length }}</span>
+          <span class="count-badge deactivated-badge">{{ filteredLatestDeactivatedUsers.length }}</span>
         </button>
       </div>
 
@@ -381,7 +441,7 @@
                   </button>
                 </td>
               </tr>
-              <tr *ngIf="latestUsers.length === 0">
+              <tr *ngIf="filteredLatestUsers.length === 0">
                 <td colspan="6" class="text-center no-data-cell">No recent licensee accounts found.</td>
               </tr>
             </tbody>
@@ -389,7 +449,7 @@
         </div>
         <!-- Paginator -->
         <mat-paginator
-          [length]="latestUsers.length"
+          [length]="filteredLatestUsers.length"
           [pageSize]="adminPageSize"
           [pageSizeOptions]="adminPageSizes"
           [pageIndex]="adminPageIndex"
@@ -400,12 +460,12 @@
 
       <!-- Deactivated Users Tab Content -->
       <div class="tab-content-panel deactivated-panel" *ngIf="!isLatestLoading && activeLatestTab === 'deactivated'">
-        <div class="no-records-fallback red-fallback" *ngIf="latestDeactivatedUsers.length === 0">
+        <div class="no-records-fallback red-fallback" *ngIf="filteredLatestDeactivatedUsers.length === 0">
           <mat-icon class="red-icon">no_accounts</mat-icon>
           <p>No deactivated or suspended accounts found.</p>
         </div>
         
-        <div class="table-responsive-wrapper" *ngIf="latestDeactivatedUsers.length > 0">
+        <div class="table-responsive-wrapper" *ngIf="filteredLatestDeactivatedUsers.length > 0">
           <table class="premium-table deactivated-table">
             <thead>
               <tr>
@@ -492,8 +552,8 @@
           </table>
         </div>
         <!-- Paginator -->
-        <mat-paginator *ngIf="latestDeactivatedUsers.length > 0"
-          [length]="latestDeactivatedUsers.length"
+        <mat-paginator *ngIf="filteredLatestDeactivatedUsers.length > 0"
+          [length]="filteredLatestDeactivatedUsers.length"
           [pageSize]="deactivatedPageSize"
           [pageSizeOptions]="deactivatedPageSizes"
           [pageIndex]="deactivatedPageIndex"
@@ -616,7 +676,7 @@
                   </button>
                 </td>
               </tr>
-              <tr *ngIf="latestRecords.length === 0">
+              <tr *ngIf="filteredLatestRecords.length === 0">
                 <td colspan="8" class="text-center no-data-cell">No new license applications found.</td>
               </tr>
             </tbody>
@@ -624,7 +684,7 @@
         </div>
         <!-- Paginator -->
         <mat-paginator
-          [length]="latestRecords.length"
+          [length]="filteredLatestRecords.length"
           [pageSize]="licensePageSize"
           [pageSizeOptions]="licensePageSizes"
           [pageIndex]="licensePageIndex"
