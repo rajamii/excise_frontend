@@ -399,6 +399,11 @@ export class SingleWindowComponent implements OnInit {
     return 'status-draft';
   }
 
+  shouldShowApplicantName(item: any): boolean {
+    const name = String(item?.meta?.applicant_name || '').trim();
+    return !!name && name !== 'N/A' && name !== 'Unknown';
+  }
+
   getTabCount(type: string): number {
     if (type === 'all') {
       return this.searchResults.length;

@@ -275,6 +275,10 @@
                     <mat-icon>account_circle</mat-icon>
                     <span>User: {{ item.meta?.username }}</span>
                   </div>
+                  <div class="meta-tag" *ngIf="shouldShowApplicantName(item)">
+                    <mat-icon>person</mat-icon>
+                    <span>Applicant: {{ item.meta?.applicant_name }}</span>
+                  </div>
                   <div class="meta-tag" *ngIf="item.meta?.transaction_id">
                     <mat-icon>receipt</mat-icon>
                     <span>Txn ID/UTR: <code>{{ item.meta?.transaction_id }}</code></span>
