@@ -397,6 +397,12 @@
                 <span class="nav-text">User Details</span>
               </button>
 
+              <!-- Payment Transactions -->
+              <button class="nav-item" (click)="navigateToSection('payment-transactions')" [class.active]="isDashboardSectionActive('payment-transactions')">
+                <mat-icon class="nav-icon">receipt_long</mat-icon>
+                <span class="nav-text">Transactions</span>
+              </button>
+
               <!-- Officer Activity — last item for site admin -->
               <button class="nav-item" (click)="navigateToSection('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
                 <mat-icon class="nav-icon">assignment</mat-icon>

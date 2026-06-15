@@ -121,6 +121,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
       { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
       { section: 'single-window', label: 'User Details', icon: 'manage_search' },
+      { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long' },
       { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
     ];
 
@@ -1535,6 +1536,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'single-window' || section === 'single-window-detail') {
+      return roleId === 3 || roleId === 1;
+    }
+
+    if (section === 'payment-transactions') {
       return roleId === 3 || roleId === 1;
     }
 
