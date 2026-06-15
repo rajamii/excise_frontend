@@ -75,6 +75,7 @@ import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
 import { SingleWindowComponent } from '../single-window/single-window.component';
 import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
+import { PaymentTransactionsComponent } from '../admin/payment-transactions/payment-transactions.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -133,7 +134,8 @@ import { SingleWindowDetailComponent } from '../single-window/single-window-deta
     LabelRegistrationPrepareApplicationComponent,
     ApplyNewLicenseComponent,
     SingleWindowComponent,
-    SingleWindowDetailComponent
+    SingleWindowDetailComponent,
+    PaymentTransactionsComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -1424,6 +1426,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    if (String(this.selectedSupplyChainSection || '') === 'payment-transactions') {
+      const roleId = Number(this.currentUser?.roleId || 0);
+      if (roleId !== 1 && roleId !== 3) {
+        this.selectedSupplyChainSection = null;
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: null, tab: null, source: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+        return;
+      }
+    }
+
     if ([5, 6].includes(Number(this.currentUser?.roleId || 0)) && String(this.selectedSupplyChainSection || '') === 'new-license') {
       this.selectedSupplyChainSection = null;
       this.router.navigate([], {
@@ -1956,6 +1972,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Common sections
       'single-window': 'User Details',
       'single-window-detail': 'User Details',
+      'payment-transactions': 'Transactions',
       'requisition': 'Requisition Management',
       'revalidation': 'Revalidation Management',
       'cancellation': 'Cancellation Management',

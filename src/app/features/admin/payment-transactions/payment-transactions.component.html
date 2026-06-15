@@ -1,0 +1,233 @@
+<div class="payment-transactions-container">
+  <!-- Portal Header Banner -->
+  <div class="portal-header">
+    <!-- Animated background blobs -->
+    <div class="portal-header__blob portal-header__blob--1"></div>
+    <div class="portal-header__blob portal-header__blob--2"></div>
+    <div class="portal-header__blob portal-header__blob--3"></div>
+    <div class="portal-header__blob portal-header__blob--shine"></div>
+    <!-- Grid overlay -->
+    <div class="portal-header__grid"></div>
+
+    <div class="header-content">
+      <div class="govt-emblem">
+        <mat-icon class="emblem-icon">account_balance_wallet</mat-icon>
+      </div>
+      <div class="header-text">
+        <div class="header-eyebrow">
+          <span class="eyebrow-dot"></span>
+          Sikkim Excise Management System
+        </div>
+        <h1>Payment Gateway Transactions Directory</h1>
+        <p>Monitor, search, and verify all licensee payments processed through the BillDesk gateway (Success, Failed, and Pending transactions).</p>
+      </div>
+
+      <!-- Live stats chips -->
+      <div class="header-live-chips">
+        <div class="live-chip">
+          <mat-icon>verified</mat-icon>
+          <span>Real-time Sync</span>
+          <span class="live-dot"></span>
+        </div>
+        <div class="live-chip">
+          <mat-icon>payments</mat-icon>
+          <span>BillDesk Gateway</span>
+        </div>
+        <div class="live-chip">
+          <mat-icon>history</mat-icon>
+          <span>Audit Registry</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Dashboard -->
+  <div class="search-section">
+    <div class="search-card">
+      <div class="search-card__inner">
+        <!-- Left label -->
+        <div class="search-card__label">
+          <mat-icon>payments</mat-icon>
+          <span>Search Transactions</span>
+        </div>
+
+        <!-- Search controls and toggle filters -->
+        <div class="filter-controls-row">
+          <!-- Text search box -->
+          <div class="search-box-wrapper">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchChange()"
+              placeholder="Search by UTR, Application ID, Username, or Amount..."
+              class="search-input"
+              aria-label="Search payment transactions"
+            />
+            <button
+              mat-icon-button
+              *ngIf="searchQuery"
+              (click)="clearSearch()"
+              class="clear-button"
+              type="button"
+              aria-label="Clear search"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+            <div class="search-kbd-hint">
+              <kbd>Enter</kbd>
+            </div>
+          </div>
+
+          <!-- Status Dropdown filter -->
+          <div class="status-filter-wrapper">
+            <mat-icon class="select-icon">filter_list</mat-icon>
+            <select [(ngModel)]="selectedStatus" (change)="onStatusChange()" class="status-select">
+              <option value="">All Statuses</option>
+              <option value="S">Success</option>
+              <option value="F">Failed</option>
+              <option value="P">Pending</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Hint chips -->
+        <div class="search-hints">
+          <span class="hint-label"><mat-icon>lightbulb</mat-icon> Try searching:</span>
+          <span class="hint-chip"><mat-icon>receipt</mat-icon> "UTR" or "TXN" number</span>
+          <span class="hint-chip"><mat-icon>monetization_on</mat-icon> "10000" (Exact Amount)</span>
+          <span class="hint-chip"><mat-icon>person</mat-icon> "Licensee Application ID"</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transactions Table Section -->
+  <div class="results-section">
+    <!-- Loader -->
+    <div class="loader-container" *ngIf="isLoading">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading gateway transactions from central database...</p>
+    </div>
+
+    <!-- Error Display -->
+    <div class="error-container" *ngIf="error && !isLoading">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error }}</p>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="tab-content-panel" *ngIf="!isLoading && !error">
+      <div class="table-responsive-wrapper">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>
+                <div class="th-inner">
+                  <span class="th-icon-wrap th-icon-wrap--indigo"><mat-icon>receipt</mat-icon></span>
+                  UTR / Order ID
+                </div>
+              </th>
+              <th>
+                <div class="th-inner">
+                  <span class="th-icon-wrap th-icon-wrap--blue"><mat-icon>store</mat-icon></span>
+                  Applicant / App ID
+                </div>
+              </th>
+              <th>
+                <div class="th-inner">
+                  <span class="th-icon-wrap th-icon-wrap--violet"><mat-icon>payment</mat-icon></span>
+                  Purpose
+                </div>
+              </th>
+              <th>
+                <div class="th-inner">
+                  <span class="th-icon-wrap th-icon-wrap--teal"><mat-icon>payments</mat-icon></span>
+                  Amount
+                </div>
+              </th>
+              <th>
+                <div class="th-inner">
+                  <span class="th-icon-wrap th-icon-wrap--amber"><mat-icon>event</mat-icon></span>
+                  Txn Date
+                </div>
+              </th>
+              <th>
+                <div class="th-inner">
+                  <span class="th-icon-wrap th-icon-wrap--green"><mat-icon>check_circle</mat-icon></span>
+                  Gateway Status
+                </div>
+              </th>
+              <th class="text-right">
+                <div class="th-inner th-inner--right">
+                  <span class="th-icon-wrap th-icon-wrap--slate"><mat-icon>open_in_new</mat-icon></span>
+                  Action
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let txn of transactions">
+              <td>
+                <div class="nla-id-cell">
+                  <mat-icon class="cell-icon nla-icon">receipt</mat-icon>
+                  <div class="cell-text">
+                    <code class="nla-code">{{ txn.utr || 'N/A' }}</code>
+                    <span class="nla-sub" *ngIf="txn.responseBankreferenceno">
+                      Ref: {{ txn.responseBankreferenceno }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="cell-text">
+                  <span class="primary-text font-bold">{{ txn.applicantName }}</span>
+                  <span class="secondary-text">
+                    <mat-icon style="font-size:11px;width:11px;height:11px">tag</mat-icon>
+                    App ID: <code>{{ txn.payerId || 'N/A' }}</code>
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div class="cell-text">
+                  <span class="primary-text">{{ txn.purpose }}</span>
+                  <span class="secondary-text">Module: <code>{{ txn.paymentModuleCode }}</code></span>
+                </div>
+              </td>
+              <td>
+                <div class="amount-cell">
+                  <span class="amount-value">₹{{ Number(txn.transactionAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 }) }}</span>
+                </div>
+              </td>
+              <td class="date-cell">{{ formatDate(txn.transactionDate) }}</td>
+              <td>
+                <span class="status-pill" [ngClass]="getStatusClass(txn.paymentStatus)">
+                  {{ getStatusLabel(txn.paymentStatus) }}
+                </span>
+              </td>
+              <td class="text-right">
+                <button mat-raised-button color="primary" class="track-btn-sm" (click)="viewDetails(txn)">
+                  <span>View Details</span>
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="transactions.length === 0">
+              <td colspan="7" class="text-center no-data-cell">No transaction records found matching your filters.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginator -->
+      <mat-paginator
+        [length]="totalTransactions"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="pageSizeOptions"
+        [pageIndex]="pageIndex"
+        (page)="onPageChange($event)"
+        class="premium-paginator">
+      </mat-paginator>
+    </div>
+  </div>
+</div>
