@@ -486,4 +486,12 @@ export class AdminService {
   updateRenewalApplicationConfig(changes: any): Observable<any> {
     return this.http.put(`${this.mastersUrl}/renewal-application-config/update/`, changes);
   }
+
+  getTimerConfig(code: string): Observable<any> {
+    return this.http.get<any>(`${this.mastersUrl}/timer-config/?code=${code}`);
+  }
+
+  updateTimerConfig(payload: { code: string; delay_value: number; delay_unit: string; is_active: boolean }): Observable<any> {
+    return this.http.put<any>(`${this.mastersUrl}/timer-config/update/`, payload);
+  }
 }

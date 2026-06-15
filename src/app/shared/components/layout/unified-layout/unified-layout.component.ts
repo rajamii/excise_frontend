@@ -120,9 +120,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // ── Other ──
       { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
       { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
-      { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
-      { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForOic: true },
-      { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true },
+      { section: 'single-window', label: 'User Details', icon: 'manage_search' },
+      { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
     ];
 
   constructor(
@@ -1533,6 +1532,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).
     if (section === 'officer-activity') {
       return true;
+    }
+
+    if (section === 'single-window' || section === 'single-window-detail') {
+      return roleId === 3 || roleId === 1;
     }
 
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {

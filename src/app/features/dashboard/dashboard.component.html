@@ -137,6 +137,8 @@
         <app-new-license-dashboard *ngIf="selectedSupplyChainSection === 'new-license'"></app-new-license-dashboard>
         <app-license-renewal-dashboard *ngIf="selectedSupplyChainSection === 'license-renewal'"></app-license-renewal-dashboard>
         <app-apply-new-license *ngIf="selectedSupplyChainSection === 'new-license-apply'"></app-apply-new-license>
+        <app-single-window *ngIf="selectedSupplyChainSection === 'single-window'"></app-single-window>
+        <app-single-window-detail *ngIf="selectedSupplyChainSection === 'single-window-detail'"></app-single-window-detail>
 
         <!-- IT Cell specific sections -->
         <app-itcell *ngIf="selectedSupplyChainSection === 'itcell-hologram'"></app-itcell>
