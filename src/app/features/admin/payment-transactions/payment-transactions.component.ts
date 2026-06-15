@@ -222,7 +222,7 @@ export class PaymentTransactionsComponent implements OnInit {
         </div>
       `,
       showConfirmButton: false,
-      width: '650px',
+      width: '480px',
       background: '#ffffff',
       showCloseButton: true,
       customClass: {
