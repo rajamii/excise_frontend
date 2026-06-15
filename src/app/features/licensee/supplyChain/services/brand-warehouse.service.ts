@@ -32,6 +32,7 @@ export interface BrandWarehouse {
     brand_type: string;
     brand_id?: number | null;
     brand_name?: string;
+    liquor_type?: number | null;
     current_stock: number;
     capacity_size: number;
     ex_factory_price_rs_per_case?: number;
@@ -273,6 +274,7 @@ export class BrandWarehouseService {
                     brand_type: brand.brandType || brand.brand_type || '',
                     brand_id: brand.brandId ?? brand.brand_id ?? null,
                     brand_name: brand.brandName || brand.brand_name || '',
+                    liquor_type: brand.liquorType ?? brand.liquor_type ?? null,
                     current_stock: brand.currentStock || brand.current_stock || 0,
                     capacity_size: brand.capacitySize || brand.capacity_size || 0,
                     ex_factory_price_rs_per_case: Number(brand.exFactoryPriceRsPerCase ?? brand.ex_factory_price_rs_per_case ?? 0),

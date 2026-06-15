@@ -23,6 +23,16 @@
         <input matInput name="brandName" [(ngModel)]="brandName" placeholder="Type brand name" required />
       </mat-form-field>
 
+      <!-- Liquor Type select dropdown -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Liquor Type</mat-label>
+        <mat-select name="liquorType" [(ngModel)]="row.liquor_type" required>
+          @for (item of liquorTypes; track item.id) {
+            <mat-option [value]="item.id">{{ item.liquorType }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
       <!-- Size (ml) select dropdown -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Size (ml)</mat-label>
