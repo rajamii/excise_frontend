@@ -28,6 +28,7 @@ export class StockManageComponent implements OnInit {
   } = {
     license_id: '',
     brand_id: null,
+    liquor_type: null,
     capacity_size: 0,
     current_stock: 0,
     ex_factory_price_rs_per_case: 0,
@@ -44,6 +45,7 @@ export class StockManageComponent implements OnInit {
   sizes: LiquorCategoryRow[] = [];
   isEditMode = false;
   brandMlInCasesList: any[] = [];
+  liquorTypes: any[] = [];
 
   // Brand/size are free-text / numeric inputs (no dropdowns)
   brandName = '';
@@ -77,6 +79,15 @@ export class StockManageComponent implements OnInit {
 
     this.brands = this.data?.brands || [];
     this.sizes = this.data?.sizes || [];
+
+    this.masterService.getLiquorTypes().subscribe({
+      next: (data: any) => {
+        this.liquorTypes = Array.isArray(data) ? data : (data?.data || data?.results || []);
+      },
+      error: () => {
+        this.liquorTypes = [];
+      },
+    });
 
     this.adminService.getActiveLicenses().subscribe({
       next: (data) => {
@@ -150,6 +161,7 @@ export class StockManageComponent implements OnInit {
       const payload: any = {
         license_id: String(this.row.license_id || '').trim(),
         brand_id: null,
+        liquor_type: this.row.liquor_type || null,
         capacity_size: resolvedSize,
         current_stock: Number(this.row.current_stock || 0),
         ex_factory_price_rs_per_case: Number(this.row.ex_factory_price_rs_per_case ?? 0),
@@ -220,7 +232,7 @@ export class StockManageComponent implements OnInit {
             return;
           }
 
-          this.masterService.createMasterBrand({ brandName: resolvedBrandName }).subscribe({
+          this.masterService.createMasterBrand({ brandName: resolvedBrandName, liquorTypeId: this.row.liquor_type || null }).subscribe({
             next: (createdResp: any) => {
               const created = createdResp?.data || createdResp;
               const newId = Number(created?.id);
@@ -242,7 +254,7 @@ export class StockManageComponent implements OnInit {
         },
         error: () => {
           // If search fails, fall back to create.
-          this.masterService.createMasterBrand({ brandName: resolvedBrandName }).subscribe({
+          this.masterService.createMasterBrand({ brandName: resolvedBrandName, liquorTypeId: this.row.liquor_type || null }).subscribe({
             next: (createdResp: any) => {
               const created = createdResp?.data || createdResp;
               const newId = Number(created?.id);
