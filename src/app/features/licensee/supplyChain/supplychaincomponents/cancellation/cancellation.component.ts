@@ -371,7 +371,7 @@ export class CancellationComponent implements OnInit {
 
   // Filter methods
   applyCancellationFilters(): void {
-    let summary = [...this.cancellationData];
+    let summary = [...this.cancellationData].filter(item => this.isVisibleToCurrentAdmin(item));
 
     // Date filter
     if (this.cancellationDateFilter) {
@@ -1112,6 +1112,25 @@ export class CancellationComponent implements OnInit {
     if (this.isCommissioner()) return 'commissioner';
     if (this.isPermitSection()) return 'permit-section';
     return 'licensee';
+  }
+
+  /**
+   * Visibility rule for admin users:
+   * - Show the record if the admin has actions to take (allowedActions non-empty) — it's their turn.
+   * - Show the record if it has already passed through their stage (historical) — they already acted.
+   * - Hide the record if it hasn't reached their stage yet.
+   * Licensee users always see all their own records.
+   */
+  isVisibleToCurrentAdmin(item: TableData): boolean {
+    if (!this.isCommissioner() && !this.isPermitSection()) return true;
+
+    if ((item.allowedActions?.length ?? 0) > 0) return true;
+
+    const combined = `${String(item.status ?? '')} ${String((item as any).currentStageName ?? '')}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (this.isCommissioner() && combined.includes('commissioner')) return true;
+    if (this.isPermitSection() && combined.includes('permitsection')) return true;
+
+    return false;
   }
 
   // Method to clear stored approvals (for development/testing)

@@ -1,6 +1,17 @@
 <div class="container-fluid p-0">
   <!-- Wallet Cards Section -->
   <div class="container-fluid py-4">
+    <!-- Security Deposit Recharge Warning Alert -->
+    <div class="alert alert-warning d-flex align-items-start mb-4 shadow-sm border-warning" *ngIf="showSecurityRechargeAlert()" style="border-left: 5px solid #ffc107; background-color: #fffbeb;">
+      <i class="bi bi-exclamation-triangle-fill me-3 text-warning" style="font-size: 1.5rem;"></i>
+      <div>
+        <h5 class="alert-heading fw-bold mb-1" style="color: #856404 !important; font-size: 1.1rem;">Security Deposit Wallet Recharge Required</h5>
+        <p class="mb-0" style="color: #856404; font-size: 0.95rem;">
+          To complete your new license application successfully, please recharge/add money to your <strong>Security Deposit Wallet</strong> below with the required amount. Recharging is sufficient to complete this payment, and the security deposit will remain in your wallet as active security balance (it will not be debited, and no manual "Pay Now" action is required).
+        </p>
+      </div>
+    </div>
+
     <div class="wallet-cards-grid">
       @if (walletViewMode === 'wallets') {
       <!-- Excise Duty Card -->
@@ -121,9 +132,6 @@
           <i class="bi bi-funnel-fill me-2"></i>
           <span>Filter Transactions</span>
         </div>
-        <button class="btn btn-sm btn-light" (click)="clearTabFilters()" title="Clear All Filters">
-          <i class="bi bi-arrow-clockwise me-1"></i>Reset
-        </button>
       </div>
       <div class="filter-body">
         <div class="row g-2 align-items-end">
@@ -202,8 +210,8 @@
                 (ngModelChange)="applyFiltersToActiveTab()" placeholder="0">
             </div>
           </div>
-          <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-            <button class="btn btn-sm btn-light w-100" (click)="clearTabFilters()" title="Clear All Filters">
+          <div class="col-xl-1 col-lg-2 col-md-3 col-sm-6 d-flex align-items-end">
+            <button class="btn btn-sm btn-outline-primary w-100 fw-semibold" (click)="clearTabFilters()" title="Clear All Filters">
               <i class="bi bi-arrow-clockwise me-1"></i>Reset
             </button>
           </div>
@@ -1287,6 +1295,15 @@
     </div>
   </div>
 </div>
+
+<app-unified-add-money-modal
+  [context]="modalContext"
+  [transactionId]="currentTxnId"
+  [amount]="paymentAmount"
+  (amountChange)="paymentAmount = $event"
+  (proceed)="onProceedPayment($event)"
+  (close)="closeAddMoneyModal()">
+</app-unified-add-money-modal>
 
 
 

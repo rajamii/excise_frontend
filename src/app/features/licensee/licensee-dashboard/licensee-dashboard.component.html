@@ -1,7 +1,7 @@
 <!-- licensee-dashboard.component.html -->
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
-  
+
   <!-- Stats Container: This section displays all application stats (NOW 4 CARDS) -->
   <div class="stats-container" [class.loading]="isLoading">
     <!-- Applied Stat Card -->
@@ -18,7 +18,7 @@
       <div class="circle-icon yellow-bg">
         <img src="assets/images/dashboard/pending.png" alt="Pending Icon">
       </div>
-      <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
+      <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) + getSupplyChainPendingTotal() }}</div>
       <div class="label">Pending</div>
       <!-- Show breakdown if there are awaiting payment items -->
       @if (dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) {
@@ -26,7 +26,31 @@
           <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
         </div>
       }
+      @if (getSupplyChainPendingTotal() > 0) {
+        <div class="sub-label">
+          @if (getSupplyChainPendingCount('requisition') > 0) {
+            <span class="payment-count">{{ getSupplyChainPendingCount('requisition') }} requisition payment pending</span>
+          }
+          @if (getSupplyChainPendingCount('hologram') > 0) {
+            <span class="payment-count">{{ getSupplyChainPendingCount('hologram') }} hologram payment pending</span>
+          }
+        </div>
+      }
     </mat-card>
+
+    <!-- Awaiting Payment Stat Card -->
+    @if (dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) {
+      <mat-card class="stat-card awaiting-payment">
+        <div class="circle-icon orange-bg">
+          <mat-icon style="color: white; font-size: 24px; display: flex; align-items: center; justify-content: center;">payment</mat-icon>
+        </div>
+        <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
+        <div class="label">Awaiting Payment</div>
+        <div class="sub-label">
+          <span class="payment-count">{{ getAwaitingPaymentBreakdownText() }}</span>
+        </div>
+      </mat-card>
+    }
 
     <!-- Approved Stat Card (display only) -->
     <mat-card class="stat-card approved">
@@ -46,6 +70,71 @@
       <div class="label">Rejected</div>
     </mat-card>
   </div>
+
+  <!-- Renewal Warnings Section - shown after the stats boxes -->
+  @if (renewalWarnings && renewalWarnings.length > 0) {
+    <div class="renewal-warnings-container">
+      @for (warning of renewalWarnings; track warning.licenseId) {
+        <div class="renewal-warning-card" [class.expired]="warning.isExpired" [class.expiring-soon]="!warning.isExpired">
+
+          <!-- Left accent strip + icon -->
+          <div class="warning-left">
+            <div class="warning-icon-wrap">
+              @if (warning.isExpired) {
+                <mat-icon>cancel</mat-icon>
+              } @else {
+                <mat-icon>schedule</mat-icon>
+              }
+            </div>
+          </div>
+
+          <!-- Main content -->
+          <div class="warning-body">
+            <div class="warning-badge">
+              @if (warning.isExpired) {
+                <span class="badge badge-expired">EXPIRED</span>
+              } @else {
+                <span class="badge badge-expiring">RENEWAL OPEN</span>
+              }
+            </div>
+
+            @if (warning.isExpired) {
+              <h3 class="warning-title">License Expired</h3>
+              <p class="warning-desc">
+                Your license <strong>{{ warning.licenseId }}</strong>
+                <span class="type-chip">{{ warning.type }}</span>
+                has expired. Please renew to restore full access.
+              </p>
+              <p class="warning-meta">
+                <mat-icon class="meta-icon">event_busy</mat-icon>
+                Expired on <strong class="highlight-date expired-date">{{ warning.finalDateStr }}</strong>
+              </p>
+            } @else {
+              <h3 class="warning-title">License Renewal Reminder</h3>
+              <p class="warning-desc">
+                Your license <strong>{{ warning.licenseId }}</strong>
+                <span class="type-chip">{{ warning.type }}</span>
+                is eligible for renewal. The renewal portal is currently open.
+              </p>
+              <p class="warning-meta">
+                <mat-icon class="meta-icon">event_available</mat-icon>
+                Renewal deadline: <strong class="highlight-date expiring-date">{{ warning.finalDateStr }}</strong>
+              </p>
+            }
+          </div>
+
+          <!-- Action -->
+          <div class="warning-actions">
+            <button class="renew-btn" [class.btn-expired]="warning.isExpired" [class.btn-expiring]="!warning.isExpired" (click)="openMyLicensesForRenewal()">
+              <mat-icon>autorenew</mat-icon>
+              Renew Now
+            </button>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
 
   <!-- Dashboard Tables Section -->
   <ng-container>

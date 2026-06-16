@@ -1044,9 +1044,21 @@
                             <td>{{ brand.bottleSize }}</td>
                             <td><span class="font-monospace">{{ brand.cartonNumber }}</span></td>
                             <td><small class="font-monospace">{{ brand.serialRanges }}</small></td>
-                            <td class="text-end text-success fw-bold">{{ brand.qtyUsed | number }}</td>
-                            <td class="text-end text-danger fw-bold">{{ brand.qtyDamaged | number }}</td>
-                            <td class="text-end text-info fw-bold">{{ brand.qtyLeftover | number }}</td>
+                            <td class="text-end">
+                              <div class="text-success fw-bold">{{ brand.qtyUsed | number }}</div>
+                              <small class="font-monospace text-muted">{{ brand.usedRanges || 'N/A' }}</small>
+                            </td>
+                            <td class="text-end">
+                              <div class="text-danger fw-bold">{{ brand.qtyDamaged | number }}</div>
+                              <small class="font-monospace text-muted">{{ brand.damagedRanges || 'N/A' }}</small>
+                            </td>
+                            <td class="text-end text-info fw-bold">
+                              @if (brand.qtyLeftover !== null && brand.qtyLeftover !== undefined) {
+                              {{ brand.qtyLeftover | number }}
+                              } @else {
+                              -
+                              }
+                            </td>
                           </tr>
                           } @empty {
                           <tr>
@@ -1593,9 +1605,11 @@
                             <div class="status-label">
                               <strong>{{ range.status }}</strong>
                             </div>
+                            @if (range.status !== 'AVAILABLE' && range.description && !range.description.toLowerCase().startsWith('allocated for request')) {
                             <div class="status-description text-muted">
                               {{ range.description }}
                             </div>
+                            }
                           </div>
                         </div>
                         <div class="col-md-4">

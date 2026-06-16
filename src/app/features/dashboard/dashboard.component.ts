@@ -1,21 +1,25 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
+import { TimerConfigService } from '../../core/services/timer-config.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { UnifiedDashboardService } from '../../core/services/unified-dashboard.service';
+import { LicenseMeService } from '../../core/services/license-me.service';
 import { UnifiedApplication } from '../../core/models/unified-application.model';
 import { DashboardCount } from '../../core/models/dashboard.model';
 import { MatTableDataSource } from '@angular/material/table';
@@ -23,6 +27,7 @@ import { ApplicationTableComponent } from '../licensee/licensee-dashboard/applic
 import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../core/services/account.service';
 import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
+import { SidebarPendingBadgeService } from '../../shared/services/sidebar-pending-badge.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
 import {
@@ -43,6 +48,7 @@ import { ImportPermitComponent } from '../licensee/supplyChain/import-permit/imp
 import { Hologramrequestlevel1Component } from '../licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component';
 import { HologramComponent } from '../licensee/supplyChain/HoloGram/hologram/hologram.component';
 import { NewLicenseDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/new-license/new-license-dashboard.component';
+import { LicenseRenewalDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/license-renewal/license-renewal-dashboard.component';
 import { RegistrationManagementComponent } from '../licensee/supplyChain/supplychaincomponents/registration-management/registration-management.component';
 import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
@@ -67,12 +73,16 @@ import { PrepareApplicationComponent as CompanyCollaborationPrepareApplicationCo
 import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } from '../licensee/salesman-registration/prepare-application.component';
 import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-registration/prepare-application/prepare-application.component';
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
+import { SingleWindowComponent } from '../single-window/single-window.component';
+import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
+import { PaymentTransactionsComponent } from '../admin/payment-transactions/payment-transactions.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     NgIf,
     NgFor,
     NgClass,
@@ -82,6 +92,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     MatCardModule,
     MatSelectModule,
     MatFormFieldModule,
+    MatInputModule,
     MatTabsModule,
     MatBadgeModule,
     MatProgressSpinnerModule,
@@ -99,6 +110,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     Hologramrequestlevel1Component,
     HologramComponent,
     NewLicenseDashboardComponent,
+    LicenseRenewalDashboardComponent,
     RegistrationManagementComponent,
     PaymentConfirmationComponent,
     // Officer-specific Components
@@ -120,7 +132,10 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     CompanyCollaborationPrepareApplicationComponent,
     SalesmanPrepareApplicationComponent,
     LabelRegistrationPrepareApplicationComponent,
-    ApplyNewLicenseComponent
+    ApplyNewLicenseComponent,
+    SingleWindowComponent,
+    SingleWindowDetailComponent,
+    PaymentTransactionsComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -140,23 +155,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   // Professional dashboard properties (from licensee dashboard)
+  renewalWarnings: any[] = [];
   dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
     applied: 0,
     pending: 0,
+    objection: 0,
     approved: 0,
     rejected: 0,
     awaitingPayment: 0
   };
 
+  awaitingPaymentBreakdown = {
+    newLicense: 0,
+    licenseRenewal: 0,
+    salesmanBarman: 0,
+    companyRegistration: 0
+  };
+
+  supplyChainPendingCounts: Record<string, number> = {};
+  oicActionPendingCounts: Record<string, number> = {};
+
   selectedMetricsPeriod: 'today' | 'week' | 'month' | 'quarter' = 'week';
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
   pendingDataSource = new MatTableDataSource<UnifiedApplication>();
+  objectionDataSource = new MatTableDataSource<UnifiedApplication>();
   approvedDataSource = new MatTableDataSource<UnifiedApplication>();
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'approved';
+  activeTable: 'default' | 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' = 'approved';
+  private applicationsLoaded = false;
+  private applicationsLoading = false;
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
@@ -166,19 +196,63 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private showBreweryOrDistilleryMenus = false;
   private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
+  private walletEligibilityResolved = false;
+  private walletEligibilityLoading = false;
 
   // Professional dashboard enhancements
-  previousCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  previousCounts: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
   recentActivities: any[] = [];
   performanceMetrics: any[] = [];
   customStats: any[] = [];
   quickActions: any[] = [];
+
+  // User activity log (Officer Activity / License Activity)
+  userActivities: any[] = [];
+  userActivityLoading = false;
+  userActivityError: string | null = null;
+  userActivityLimit = 500;
+  activityFilterType = '';
+  activityFilterUserId = '';
+  activityFilterMonth = '';       // YYYY-MM
+  activityFilterDate = '';        // YYYY-MM-DD
+  activityFilterAction = '';      // '' | 'LOGIN' | 'LOGOUT'
+
+  // Pagination
+  activityPage = 1;
+  activityPageSize = 10;
+  activityTotalCount = 0;
+
+  get activityTotalPages(): number {
+    return Math.max(1, Math.ceil(this.activityTotalCount / this.activityPageSize));
+  }
+
+  get activityPagedRows(): any[] {
+    const start = (this.activityPage - 1) * Number(this.activityPageSize);
+    return this.userActivities.slice(start, start + Number(this.activityPageSize));
+  }
+
+  get activityPageNumbers(): number[] {
+    const total = this.activityTotalPages;
+    const current = this.activityPage;
+    const delta = 2;
+    const pages: number[] = [];
+    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  activityGoToPage(page: number): void {
+    if (page < 1 || page > this.activityTotalPages) return;
+    this.activityPage = page;
+  }
 
   now = new Date();
   greetingText = 'Welcome';
   userDisplayName = 'User';
   userRoleDisplayName = 'User';
   private pendingHologramOverviewRedirect = false;
+  private navigationCount = 0;
 
   constructor(
     private roleService: RoleService,
@@ -187,9 +261,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private accountService: AccountService,
     private hologramService: HologramDataService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService,
+    private licenseMeService: LicenseMeService,
     private http: HttpClient,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+    private timerConfigService: TimerConfigService
   ) { }
 
   ngOnInit() {
@@ -216,7 +294,212 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+
+  private extractValidUpToDate(raw: any): Date | null {
+    const str = raw.valid_up_to || raw.validUpTo || (raw.license && raw.license.valid_up_to) || raw.valid_till || raw.validTill;
+    if (!str) return null;
+    const dt = new Date(str);
+    return Number.isFinite(dt.getTime()) ? dt : null;
+  }
+
+  private extractLicenseId(app: any): string | null {
+    const raw = app.raw || {};
+    const possibleFields = [
+      raw.license_id, raw.licenseId, raw.license?.id, raw.license?.license_id, raw.issued_license_id, raw.issuedLicenseId
+    ];
+    for (const field of possibleFields) {
+      if (field && typeof field === 'string' && this.isValidLicenseIdForWarning(field)) return field;
+      if (field && typeof field === 'object' && field.id && this.isValidLicenseIdForWarning(field.id)) return field.id;
+    }
+    const appId = app.applicationId || app.raw?.application_id || '';
+    if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
+    if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'NA/');
+    if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
+    if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/');
+    return null;
+  }
+
+  private isValidLicenseIdForWarning(licenseId: string): boolean {
+    if (!licenseId || typeof licenseId !== 'string') return false;
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
+    return validPrefixes.some(prefix => licenseId.trim().startsWith(prefix));
+  }
+
+  private getRenewedLicenseIds(
+    applied: any[], 
+    pending: any[], 
+    awaitingPayment: any[]
+  ): Set<string> {
+    const renewedIds = new Set<string>();
+    
+    [...applied, ...pending, ...awaitingPayment].forEach(app => {
+      const raw = app.raw || {};
+      
+      const renewalOfValue = 
+        raw.renewalOf || 
+        raw.renewal_of || 
+        raw.renewalOfLicenseId || 
+        raw.renewal_of_license_id || 
+        raw.old_license_id || 
+        raw.oldLicenseId || 
+        raw.old_license || 
+        raw.oldLicense;
+      
+      if (renewalOfValue) {
+        let licenseIdStr = '';
+        if (typeof renewalOfValue === 'string') {
+          licenseIdStr = renewalOfValue;
+        } else if (typeof renewalOfValue === 'object' && renewalOfValue !== null) {
+          licenseIdStr = renewalOfValue.license_id || renewalOfValue.id || String(renewalOfValue);
+        } else {
+          licenseIdStr = String(renewalOfValue);
+        }
+        
+        if (licenseIdStr && this.isValidLicenseIdForWarning(licenseIdStr)) {
+          renewedIds.add(licenseIdStr);
+          return;
+        }
+      }
+      
+      const licenseValue = raw.license || raw.license_id || raw.issued_license_id || raw.issuedLicenseId;
+      if (licenseValue) {
+        let licenseIdStr = '';
+        if (typeof licenseValue === 'string') {
+          licenseIdStr = licenseValue;
+        } else if (typeof licenseValue === 'object' && licenseValue !== null) {
+          licenseIdStr = licenseValue.license_id || licenseValue.id || String(licenseValue);
+        } else {
+          licenseIdStr = String(licenseValue);
+        }
+        
+        if (licenseIdStr && this.isValidLicenseIdForWarning(licenseIdStr)) {
+          renewedIds.add(licenseIdStr);
+        }
+      }
+      
+      const appId = app.applicationId || app.raw?.application_id || '';
+      if (appId) {
+        let derivedLicenseId = null;
+        if (appId.startsWith('LIC/')) {
+          derivedLicenseId = appId.replace('LIC/', 'LA/');
+        } else if (appId.startsWith('NLI/')) {
+          derivedLicenseId = appId.replace('NLI/', 'NA/');
+        } else if (appId.startsWith('SBM/')) {
+          derivedLicenseId = appId.replace('SBM/', 'SB/');
+        } else if (appId.startsWith('COMP/')) {
+          derivedLicenseId = appId.replace('COMP/', 'CREG/');
+        } else if (appId.startsWith('LRA/')) {
+          renewedIds.add(appId.replace('LRA/', 'LA/'));
+          renewedIds.add(appId.replace('LRA/', 'NA/'));
+        } else if (appId.startsWith('RSBM/')) {
+          renewedIds.add(appId.replace('RSBM/', 'SB/'));
+        }
+        
+        if (derivedLicenseId && this.isValidLicenseIdForWarning(derivedLicenseId)) {
+          renewedIds.add(derivedLicenseId);
+        }
+      }
+    });
+    
+    return renewedIds;
+  }
+
+  private formatDDMMYYYY(date: Date): string {
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  }
+
+  private checkRenewalEligibility(approvedWithoutRenewal: any[], approvedWithRenewal: any[] = []): void {
+    if (!this.isLicenseeUser()) return;
+    
+    const fallbackSeconds = 90 * 24 * 60 * 60;
+    
+    forkJoin({
+      timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
+      renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
+    }).subscribe(({ timer, renewalConfig }) => {
+      let newWarnings: any[] = [];
+      const windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
+      if (!windowMs) {
+        return;
+      }
+
+      const appMap = new Map<string, {
+        app: any,
+        validUpTo: Date,
+        hasActiveRenewal: boolean
+      }>();
+
+      const collectApp = (app: any, hasActiveRenewal: boolean) => {
+        if (app.type === 'license-renewal') {
+          return;
+        }
+        const raw = app.raw || {};
+        let validUpTo = this.extractValidUpToDate(raw);
+        if (!validUpTo && renewalConfig) {
+          const month = renewalConfig.renewal_month || renewalConfig.renewalMonth || 3;
+          const day = renewalConfig.renewal_day || renewalConfig.renewalDay || 31;
+          const time = renewalConfig.renewal_time || renewalConfig.renewalTime || '23:59:59';
+          const timeParts = time.split(':');
+          const now = new Date();
+          let year = now.getFullYear();
+          if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) year++;
+          validUpTo = new Date(year, month - 1, day, Number(timeParts[0]||23), Number(timeParts[1]||59), Number(timeParts[2]||59));
+        }
+
+        if (!validUpTo) return;
+
+        const licenseId = this.extractLicenseId(app);
+        if (!licenseId) return;
+
+        const existing = appMap.get(licenseId);
+        if (!existing || validUpTo.getTime() > existing.validUpTo.getTime()) {
+          appMap.set(licenseId, {
+            app,
+            validUpTo,
+            hasActiveRenewal: existing ? (existing.hasActiveRenewal || hasActiveRenewal) : hasActiveRenewal
+          });
+        } else {
+          existing.hasActiveRenewal = existing.hasActiveRenewal || hasActiveRenewal;
+        }
+      };
+
+      approvedWithoutRenewal.forEach(app => collectApp(app, false));
+      approvedWithRenewal.forEach(app => collectApp(app, true));
+
+      appMap.forEach(({ app, validUpTo, hasActiveRenewal }, licenseId) => {
+        const validMs = validUpTo.getTime();
+        const now = Date.now();
+        const eligibleFrom = validMs - windowMs;
+
+        if (now >= eligibleFrom) {
+          newWarnings.push({
+            licenseId,
+            type: app.type || '',
+            establishmentName: app.establishmentName || app.applicantFullName || 'N/A',
+            licenseCategoryName: (app as any).licenseCategoryName || (app.raw?.license_category_name) || '',
+            licenseSubCategoryName: (app.raw?.license_sub_category_name) || (app.raw?.licenseSubCategoryName) || (app.raw?.license_sub_category?.name) || (app.raw?.license_sub_category?.description) || '',
+            validUpTo,
+            finalDateStr: this.formatDDMMYYYY(validUpTo),
+            isExpired: now > validMs,
+            hasActiveRenewal
+          });
+        }
+      });
+      
+      this.renewalWarnings = newWarnings;
+      try { if (this.cdr) this.cdr.detectChanges(); } catch (e) {}
+    });
+  }
+
+  openMyLicensesForRenewal(): void {
+    this.router.navigate(['/licensee/supply-chain'], { queryParams: { section: 'license-renewal' } });
+  }
+
   ngOnDestroy() {
+
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -239,11 +522,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.currentUser = user;
           this.refreshWelcomeText();
           this.tryRedirectHologramOverview();
-
-          // If dashboard stats were loaded before we had role/user info, reload once the user is available.
-          if (!this.selectedSupplyChainSection && !this.shouldShowRoleSpecificDashboard()) {
-            this.loadDashboardStats();
-          }
         }
       });
   }
@@ -318,9 +596,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // Subscribe to query parameter changes
     this.route.queryParams
-      .pipe(takeUntil(this.destroy$))
+      .pipe(skip(1), takeUntil(this.destroy$))
       .subscribe(params => {
         const section = params['section'];
+        if (section === 'single-window') {
+          this.navigationCount = 0;
+        } else if (section === 'single-window-detail') {
+          this.navigationCount++;
+        } else {
+          this.navigationCount = 0;
+        }
         this.selectedSupplyChainSection = section || null;
         this.enforceSectionAccess();
         this.walletViewMode = this.readWalletViewFromParams(params);
@@ -331,12 +616,314 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.tryRedirectHologramOverview();
         }
 
+        if (this.selectedSupplyChainSection === 'officer-activity') {
+          this.loadUserActivities();
+        }
+
         // Navigating back to /dashboard (clearing section) should always reload stats.
         if (!this.selectedSupplyChainSection) {
           this.activeTable = 'approved';
           this.loadDashboardData();
         }
       });
+  }
+
+  get activitySectionTitle(): string {
+    return this.isLicenseeUser() ? 'License Activity' : 'Officer Activity';
+  }
+
+  loadUserActivities(): void {
+    if (!this.currentUser) {
+      return;
+    }
+
+    this.userActivityLoading = true;
+    this.userActivityError = null;
+    this.activityPage = 1; // reset to first page on every fresh load
+
+    let params = new HttpParams().set('limit', String(Number(this.userActivityLimit) || 500));
+
+    const type = String(this.activityFilterType || '').trim();
+    if (type) {
+      params = params.set('type', type);
+    }
+
+    // Login / Logout quick filter
+    const action = String(this.activityFilterAction || '').trim();
+    if (action) {
+      params = params.set('action', action);
+    }
+
+    // Month filter (YYYY-MM)
+    const month = String(this.activityFilterMonth || '').trim();
+    if (month) {
+      params = params.set('month', month);
+    }
+
+    // Specific date filter (YYYY-MM-DD) — takes precedence over month if both set
+    const date = String(this.activityFilterDate || '').trim();
+    if (date) {
+      params = params.set('date', date);
+    }
+
+    // Only admins/officers can filter other users; licensee always gets their own activity from backend.
+    const userId = String(this.activityFilterUserId || '').trim();
+    if (!this.isLicenseeUser() && userId) {
+      params = params.set('user_id', userId);
+    }
+
+    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/logs/activities/`, { params })
+      .pipe(
+        finalize(() => (this.userActivityLoading = false)),
+        catchError((err) => {
+          this.userActivityError = err?.error?.detail || 'Failed to load activity log.';
+          this.userActivities = [];
+          this.activityTotalCount = 0;
+          return of([]);
+        })
+      )
+      .subscribe((rows: any[]) => {
+        this.userActivities = Array.isArray(rows) ? rows : [];
+        this.activityTotalCount = this.userActivities.length;
+      });
+  }
+
+  private getActivityCode(row: any): string {
+    return String(row?.activity_type || row?.activityType || '').trim().toUpperCase();
+  }
+
+  private getActivityDisplay(row: any): string {
+    return String(row?.activity_type_display || row?.activityTypeDisplay || '').trim().toLowerCase();
+  }
+
+  private getRowTimestampMs(row: any): number | null {
+    const raw = row?.timestamp || row?.created_at || row?.createdAt;
+    if (!raw) return null;
+    const t = new Date(raw).getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+
+  getActivityActionLabel(row: any): string {
+    // Check both the raw code and the display value (API may return either)
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+
+    if (code === 'LOGIN'  || display === 'login')          return 'Login';
+    if (code === 'LOGOUT' || display === 'logout')         return 'Logout';
+    if (code === 'REG'    || display.includes('registr'))  return 'Registration';
+    if (code === 'PASS_RESET' || display.includes('password')) return 'Password Reset';
+    if (code === 'USR_UPD'   || display.includes('update'))    return 'User Update';
+    if (code === 'USR_DEL'   || display.includes('delet'))     return 'User Delete';
+
+    // Fallback: use display value if available, else code
+    return (row?.activity_type_display || row?.activityTypeDisplay || code || 'Activity');
+  }
+
+  getActivityBadgeClass(row: any): string {
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+
+    if (code === 'LOGIN'  || display === 'login')          return 'act-badge--login';
+    if (code === 'LOGOUT' || display === 'logout')         return 'act-badge--logout';
+    if (code === 'PASS_RESET' || display.includes('password')) return 'act-badge--warn';
+    if (code === 'USR_DEL'   || display.includes('delet'))     return 'act-badge--danger';
+    if (code === 'USR_UPD'   || display.includes('update'))    return 'act-badge--update';
+    if (code === 'REG'    || display.includes('registr'))  return 'act-badge--reg';
+    return 'act-badge--default';
+  }
+
+  getActivityIcon(row: any): string {
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+
+    if (code === 'LOGIN'  || display === 'login')   return 'login';
+    if (code === 'LOGOUT' || display === 'logout')  return 'logout';
+    if (code === 'PASS_RESET' || display.includes('password')) return 'key';
+    if (code === 'USR_DEL'   || display.includes('delet'))     return 'person_remove';
+    if (code === 'USR_UPD'   || display.includes('update'))    return 'manage_accounts';
+    if (code === 'REG'    || display.includes('registr'))      return 'person_add';
+    return 'radio_button_checked';
+  }
+
+  isLoginActivity(row: any): boolean {
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+    return code === 'LOGIN' || display === 'login';
+  }
+
+  isLogoutActivity(row: any): boolean {
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+    return code === 'LOGOUT' || display === 'logout';
+  }
+
+  isWarnActivity(row: any): boolean {
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+    return code === 'PASS_RESET' || code === 'USR_DEL' ||
+           display.includes('password') || display.includes('delet');
+  }
+
+  isInfoActivity(row: any): boolean {
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+    return code === 'REG' || code === 'USR_UPD' ||
+           display.includes('registr') || display.includes('update');
+  }
+
+  /** Returns first ~70 chars of user agent — browser + OS only, no full UA string */
+  getShortUserAgent(userAgent: any): string {
+    const ua = String(userAgent || '').trim();
+    if (!ua) return '';
+    const lower = ua.toLowerCase();
+    const browser =
+      lower.includes('edg/') ? 'Edge' :
+      lower.includes('chrome/') ? 'Chrome' :
+      lower.includes('firefox/') ? 'Firefox' :
+      lower.includes('safari/') && !lower.includes('chrome/') ? 'Safari' :
+      'Browser';
+    const os =
+      lower.includes('windows') ? 'Windows' :
+      lower.includes('android') ? 'Android' :
+      lower.includes('iphone') || lower.includes('ipad') ? 'iOS' :
+      lower.includes('mac os') || lower.includes('macintosh') ? 'macOS' :
+      lower.includes('linux') ? 'Linux' : '';
+    return os ? `${browser} / ${os}` : browser;
+  }
+
+  /**
+   * Session duration:
+   * - LOGOUT row → find the nearest LOGIN in the full list (same user, within 24h), show |diff|
+   * - LOGIN row  → find the nearest LOGOUT after it (same user, within 24h), show diff
+   *
+   * Uses loose equality for user_id to handle int/string mismatches from the API.
+   * Falls back to ignoring user_id when only one user's data is present (licensee view).
+   */
+  getSessionDuration(row: any): string | null {
+    const code    = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+    const isLogin  = code === 'LOGIN'  || display === 'login';
+    const isLogout = code === 'LOGOUT' || display === 'logout';
+
+    if (!isLogin && !isLogout) return null;
+
+    const rowTimeMs = this.getRowTimestampMs(row);
+    if (!rowTimeMs) return null;
+
+    // Use loose equality — API may return user_id as int, stored as number, but coerce to string for safety
+    const userId = row?.user_id != null ? String(row.user_id) : null;
+
+    const sameUser = (candidate: any): boolean => {
+      if (!userId) return true; // no user_id on row — match all (single-user view)
+      const cId = candidate?.user_id != null ? String(candidate.user_id) : null;
+      if (!cId) return true;
+      return cId === userId;
+    };
+
+    const formatDiff = (ms: number): string => {
+      const absMs = Math.abs(ms);
+      const mins  = Math.floor(absMs / 60000);
+      if (mins < 1) return '< 1 min';
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    };
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+    if (isLogout) {
+      // Find the nearest LOGIN by the same user — closest absolute time within 24h window.
+      let bestDiff: number | null = null;
+
+      for (const candidate of this.userActivities) {
+        if (!candidate || candidate === row) continue;
+        if (!sameUser(candidate)) continue;
+        const cCode    = this.getActivityCode(candidate);
+        const cDisplay = this.getActivityDisplay(candidate);
+        if (cCode !== 'LOGIN' && cDisplay !== 'login') continue;
+        const loginTime = this.getRowTimestampMs(candidate);
+        if (!loginTime) continue;
+        const diff = Math.abs(rowTimeMs - loginTime);
+        if (diff > WINDOW_MS) continue;
+        if (bestDiff === null || diff < bestDiff) {
+          bestDiff = diff;
+        }
+      }
+
+      return bestDiff !== null ? formatDiff(bestDiff) : null;
+    }
+
+    // LOGIN row: find the nearest LOGOUT for the same user within 24h.
+    let bestDiff: number | null = null;
+
+    for (const candidate of this.userActivities) {
+      if (!candidate || candidate === row) continue;
+      if (!sameUser(candidate)) continue;
+      const cCode    = this.getActivityCode(candidate);
+      const cDisplay = this.getActivityDisplay(candidate);
+      if (cCode !== 'LOGOUT' && cDisplay !== 'logout') continue;
+      const logoutTime = this.getRowTimestampMs(candidate);
+      if (!logoutTime) continue;
+      const diff = Math.abs(logoutTime - rowTimeMs);
+      if (diff > WINDOW_MS) continue;
+      if (bestDiff === null || diff < bestDiff) {
+        bestDiff = diff;
+      }
+    }
+
+    return bestDiff !== null ? formatDiff(bestDiff) : null;
+  }
+
+  /** Single compact summary line for the detail area */
+  getActivitySummaryLine(row: any): string {
+    const code = this.getActivityCode(row);
+    const display = this.getActivityDisplay(row);
+    const meta = (row?.metadata && typeof row.metadata === 'object') ? row.metadata : {};
+
+    const isLogin  = code === 'LOGIN'  || display === 'login';
+    const isLogout = code === 'LOGOUT' || display === 'logout';
+    const isReg    = code === 'REG'    || display.includes('registr');
+
+    if (isLogin) {
+      const method = String(meta?.auth_method ?? meta?.authMethod ?? meta?.method ?? '').trim();
+      return method ? `Auth method: ${method}` : 'Session started';
+    }
+    if (isLogout) {
+      const method = String(meta?.method ?? meta?.logout_method ?? meta?.logoutMethod ?? '').trim();
+      return method ? `Logout method: ${method}` : 'Session ended';
+    }
+    if (isReg) {
+      const src = String(meta?.initial_source ?? meta?.initialSource ?? '').trim();
+      const method = String(meta?.registration_method ?? meta?.registrationMethod ?? meta?.method ?? '').trim();
+      const parts = [method && `via ${method}`, src && `source: ${src}`].filter(Boolean);
+      return parts.length ? parts.join(', ') : 'Account registered';
+    }
+    if (code === 'PASS_RESET' || display.includes('password')) return 'Password reset completed';
+    if (code === 'USR_UPD' || display.includes('update')) {
+      const fields = meta?.updated_fields ?? meta?.updatedFields ?? meta?.fields;
+      if (Array.isArray(fields) && fields.length) {
+        return `Updated: ${fields.slice(0, 3).map((v: any) => String(v)).join(', ')}${fields.length > 3 ? '…' : ''}`;
+      }
+      return 'Profile updated';
+    }
+    if (code === 'USR_DEL' || display.includes('delet')) return 'Account deleted';
+
+    // Fallback: render all metadata key-value pairs compactly
+    const entries = Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined && v !== '');
+    if (entries.length) {
+      return entries.slice(0, 3).map(([k, v]) => `${this.humanizeKey(k)}: ${String(v).slice(0, 40)}`).join(' · ');
+    }
+    return '';
+  }
+
+  private humanizeKey(key: string): string {
+    return String(key || '')
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .trim()
+      .split(/\s+/)
+      .map(w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+      .join(' ');
   }
 
   private readWalletViewFromParams(params: any): 'wallets' | 'others' {
@@ -447,7 +1034,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private proceedWithDashboardLoad() {
     // Load dashboard configuration
-    this.dashboardConfigService.getCurrentUserDashboardConfig()
+    this.dashboardConfigService.getCurrentUserDashboardConfigCached()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (config) => {
@@ -473,17 +1060,115 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // If no specific section is selected, load dashboard stats
     if (!this.selectedSupplyChainSection) {
-      this.loadDashboardStats();
+      if (this.isLicenseeUser()) {
+        this.loadDashboardStats();
+      } else {
+        this.loadDashboardStatsLight();
+      }
     } else {
       this.isLoading = false; // Directly show the section
     }
   }
 
+  getSupplyChainPendingCount(section: string): number {
+    const key = String(section || '').trim().toLowerCase();
+    return Number(this.supplyChainPendingCounts?.[key] || 0);
+  }
+
+  getOicPendingCount(section: string): number {
+    const key = String(section || '').trim().toLowerCase();
+    return Number(this.oicActionPendingCounts?.[key] || 0);
+  }
+
+  getSupplyChainPendingTotal(): number {
+    return this.getSupplyChainPendingCount('requisition') + this.getSupplyChainPendingCount('hologram');
+  }
+
+  isOicUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || 0);
+    if (roleId === 7) return true;
+
+    const roleName = String(this.currentUser?.role?.name || this.currentUser?.role?.displayName || '').toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized.includes('officerincharge') || normalized === 'oic' || normalized === 'offcierincharge';
+  }
+
+  private refreshSupplyChainPendingCounts(force = false): void {
+    if (!this.isLicenseeUser()) {
+      this.supplyChainPendingCounts = {};
+      return;
+    }
+
+    this.sidebarPendingBadgeService
+      .refresh(['requisition', 'hologram'], force, { audience: 'licensee', mode: 'full' })
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(() => of({} as Record<string, number>))
+      )
+      .subscribe((counts) => {
+        this.supplyChainPendingCounts = counts || {};
+      });
+  }
+
+  private refreshOicActionPendingCount(force = false): void {
+    if (!this.isOicUser()) {
+      this.oicActionPendingCounts = {};
+      return;
+    }
+
+    // OIC dashboard "Pending" should reflect only items where the user has an action
+    // (align with sidebar badges), not all in-flight applications.
+    // Include Daily Hologram Entry so OIC remembers to complete the daily register.
+    const sections = ['transit-applications', 'hologram-daily-entry'];
+    this.sidebarPendingBadgeService
+      .refresh(sections, force, { audience: 'officer', mode: 'full' })
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(() => of({} as Record<string, number>))
+      )
+      .subscribe((counts) => {
+        this.oicActionPendingCounts = counts || {};
+        const total = Object.values(counts || {}).reduce((sum, v) => sum + Number(v || 0), 0);
+        this.dashboardCounts = { ...this.dashboardCounts, pending: total };
+      });
+  }
+
+  private loadDashboardStatsLight() {
+    // Keep login fast: fetch only counts. Lists are fetched on-demand when user opens a table.
+    this.applicationsLoaded = false;
+    this.applicationsLoading = false;
+    this.clearDataSources();
+
+    this.unifiedDashboardService
+      .getUnifiedDashboardCounts(this.dashboardConfig)
+      .pipe(finalize(() => { this.isLoading = false; }))
+      .subscribe({
+        next: (counts) => {
+          this.dashboardCounts = {
+            applied: counts?.applied || 0,
+            pending: counts?.pending || 0,
+            objection: counts?.objection || 0,
+            approved: counts?.approved || 0,
+            rejected: counts?.rejected || 0,
+            awaitingPayment: 0
+          };
+          this.refreshSupplyChainPendingCounts();
+          this.refreshOicActionPendingCount();
+        },
+        error: (error) => {
+          console.error('❌ Error loading dashboard counts:', error);
+          this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
+          this.supplyChainPendingCounts = {};
+        }
+      });
+  }
+
   private loadDashboardStats() {
+    this.unifiedDashboardService.clearUnifiedAppsCache();
     // Use the unified dashboard service for all roles
     forkJoin({
-      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(),
+      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(this.dashboardConfig, true),
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, this.dashboardConfig),
       hologramProcurements: this.isLicenseeUser()
         ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
         : of([])
@@ -494,6 +1179,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           let filteredApplications = {
             applied: result.applications.applied || [],
             pending: result.applications.pending || [],
+            objection: (result.applications as any).objection || [],
             awaitingPayment: result.applications.awaitingPayment || [],
             approved: result.applications.approved || [],
             rejected: result.applications.rejected || []
@@ -506,13 +1192,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
             ...filteredApplications.applied
           ];
 
+          const renewedLicenseIds = this.getRenewedLicenseIds(
+            filteredApplications.applied,
+            filteredApplications.pending,
+            filteredApplications.awaitingPayment
+          );
+
+          const approvedWithoutRenewal: UnifiedApplication[] = [];
+          const approvedWithRenewal: UnifiedApplication[] = [];
+          filteredApplications.approved.forEach((app: UnifiedApplication) => {
+            const licenseId = this.extractLicenseId(app);
+            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            if (isRenewed) {
+              approvedWithRenewal.push(app);
+            } else {
+              approvedWithoutRenewal.push(app);
+            }
+          });
+
           // Store counts separately but combine pending display
           this.dashboardCounts = {
             applied: 0,
             pending: pendingBucket.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
-            approved: filteredApplications.approved.length,
+            objection: filteredApplications.objection.length,
+            approved: approvedWithoutRenewal.length,
             rejected: filteredApplications.rejected.length
+          };
+
+          this.awaitingPaymentBreakdown = {
+            newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
+            licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
+            salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
           };
 
           // Licensee UX: include hologram procurement workflow (circulating for approvals) in Pending/Approved totals.
@@ -527,17 +1239,115 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
 
           // Show submitted + pending + awaiting payment together in Pending table.
+          this.checkRenewalEligibility(approvedWithoutRenewal, approvedWithRenewal);
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
-            approved: filteredApplications.approved,
+            objection: filteredApplications.objection,
+            approved: approvedWithoutRenewal,
             rejected: filteredApplications.rejected
           });
+
+          this.refreshSupplyChainPendingCounts();
+          this.refreshOicActionPendingCount();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
-          this.dashboardCounts = { applied: 0, pending: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
+          this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.clearDataSources();
+          this.supplyChainPendingCounts = {};
+        }
+      });
+  }
+
+  private ensureApplicationsLoaded(forceRefresh = false): void {
+    if (this.applicationsLoading) return;
+    if (!forceRefresh && this.applicationsLoaded) return;
+
+    this.applicationsLoading = true;
+
+    forkJoin({
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
+      hologramProcurements: this.isLicenseeUser()
+        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        : of([])
+    })
+      .pipe(finalize(() => { this.applicationsLoading = false; }))
+      .subscribe({
+        next: (result) => {
+          this.applicationsLoaded = true;
+
+          const filteredApplications = {
+            applied: result.applications.applied || [],
+            pending: result.applications.pending || [],
+            objection: (result.applications as any).objection || [],
+            awaitingPayment: result.applications.awaitingPayment || [],
+            approved: result.applications.approved || [],
+            rejected: result.applications.rejected || []
+          };
+
+          const pendingBucket = [
+            ...filteredApplications.pending,
+            ...filteredApplications.awaitingPayment,
+            ...filteredApplications.applied
+          ];
+
+          const renewedLicenseIds = this.getRenewedLicenseIds(
+            filteredApplications.applied,
+            filteredApplications.pending,
+            filteredApplications.awaitingPayment
+          );
+
+          const approvedWithoutRenewal: UnifiedApplication[] = [];
+          const approvedWithRenewal: UnifiedApplication[] = [];
+          filteredApplications.approved.forEach((app: UnifiedApplication) => {
+            const licenseId = this.extractLicenseId(app);
+            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            if (isRenewed) {
+              approvedWithRenewal.push(app);
+            } else {
+              approvedWithoutRenewal.push(app);
+            }
+          });
+
+          this.dashboardCounts = {
+            ...this.dashboardCounts,
+            awaitingPayment: filteredApplications.awaitingPayment.length,
+            approved: approvedWithoutRenewal.length
+          };
+
+          this.awaitingPaymentBreakdown = {
+            newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
+            licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
+            salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
+          };
+
+          if (this.isLicenseeUser()) {
+            const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
+            this.dashboardCounts = {
+              ...this.dashboardCounts,
+              pending: (this.dashboardCounts.pending || 0) + hologramCounts.pending,
+              approved: (this.dashboardCounts.approved || 0) + hologramCounts.approved,
+              rejected: (this.dashboardCounts.rejected || 0) + hologramCounts.rejected
+            };
+          }
+
+          this.checkRenewalEligibility(approvedWithoutRenewal, approvedWithRenewal);
+          this.updateDataSources({
+            applied: [],
+            pending: pendingBucket,
+            objection: filteredApplications.objection,
+            approved: approvedWithoutRenewal,
+            rejected: filteredApplications.rejected
+          });
+
+          this.refreshSupplyChainPendingCounts();
+        },
+        error: (error) => {
+          console.error('❌ Error loading dashboard applications:', error);
+          this.clearDataSources();
+          this.supplyChainPendingCounts = {};
         }
       });
   }
@@ -616,6 +1426,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private enforceSectionAccess(): void {
+    if (String(this.selectedSupplyChainSection || '') === 'payment-transactions') {
+      const roleId = Number(this.currentUser?.roleId || 0);
+      if (roleId !== 1 && roleId !== 3) {
+        this.selectedSupplyChainSection = null;
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: null, tab: null, source: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+        return;
+      }
+    }
+
     if ([5, 6].includes(Number(this.currentUser?.roleId || 0)) && String(this.selectedSupplyChainSection || '') === 'new-license') {
       this.selectedSupplyChainSection = null;
       this.router.navigate([], {
@@ -696,6 +1520,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.licenseeMenuAccessResolved) {
       return;
     }
+    if (!this.walletEligibilityResolved) {
+      this.ensureLicenseeWalletEligibilityLoaded();
+      return;
+    }
     // Wallet becomes visible once the source application reaches `awaiting_payment`
     // (Awaiting License Fee Payment) or final approval.
     if (!this.showManufacturingWalletNav) {
@@ -726,16 +1554,49 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.showBreweryOrDistilleryWalletViews = false;
     this.showManufacturingWalletNav = false;
 
+    // Keep login fast: derive initial menu visibility only from licenses.
+    // Wallet eligibility and application-derived menus are computed lazily when the user opens wallet.
+    this.walletEligibilityResolved = false;
+    this.walletEligibilityLoading = false;
+    this.licenseMeService
+      .getMyLicenses()
+      .subscribe({
+        next: (licenses) => {
+          const licenseRows = Array.isArray(licenses) ? licenses : [];
+          const menuRows = filterRowsForSupplyChainSidebarMenus(licenseRows);
+          const hasDistillery = menuRows.some((item) => this.isDistillery(item));
+          const hasBrewery = menuRows.some((item) => this.isBrewery(item));
+
+          this.showDistilleryMenus = hasDistillery;
+          this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+          this.showBreweryOrDistilleryWalletViews = hasDistillery || hasBrewery;
+          this.showManufacturingWalletNav = false;
+          this.licenseeMenuAccessResolved = true;
+          this.enforceSectionAccess();
+          this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
+        },
+        error: () => {
+          this.showDistilleryMenus = false;
+          this.showBreweryOrDistilleryMenus = false;
+          this.showBreweryOrDistilleryWalletViews = false;
+          this.showManufacturingWalletNav = false;
+          this.licenseeMenuAccessResolved = true;
+          this.enforceSectionAccess();
+        }
+      });
+  }
+
+  private ensureLicenseeWalletEligibilityLoaded(): void {
+    if (!this.isLicenseeUser()) return;
+    if (!this.licenseeMenuAccessResolved) return;
+    if (this.walletEligibilityResolved || this.walletEligibilityLoading) return;
+
+    this.walletEligibilityLoading = true;
+
     forkJoin({
-      licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
-        catchError(() => of([]))
-      ),
-      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(
-        catchError(() => of({ approved: [] }))
-      ),
-      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(
-        catchError(() => of([]))
-      )
+      licenses: this.licenseMeService.getMyLicenses(),
+      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(catchError(() => of({ approved: [] }))),
+      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(catchError(() => of([])))
     }).subscribe({
       next: ({ licenses, approvedPayload, allApplications }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
@@ -744,26 +1605,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
         const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
         const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
-        const hasDistilleryAny = combinedRows.some((item) => this.isDistillery(item));
-        const hasBreweryAny = combinedRows.some((item) => this.isBrewery(item));
-        const menuRows = filterRowsForSupplyChainSidebarMenus(combinedRows);
-        const hasDistillery = menuRows.some((item) => this.isDistillery(item));
-        const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
-        this.showDistilleryMenus = hasDistillery;
-        this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
-        this.showBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
         this.showManufacturingWalletNav = this.computeWalletNavVisible(combinedRows);
-        this.licenseeMenuAccessResolved = true;
+        this.walletEligibilityResolved = true;
+        this.walletEligibilityLoading = false;
+
         this.enforceSectionAccess();
         this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
       },
       error: () => {
-        this.showDistilleryMenus = false;
-        this.showBreweryOrDistilleryMenus = false;
-        this.showBreweryOrDistilleryWalletViews = false;
         this.showManufacturingWalletNav = false;
-        this.licenseeMenuAccessResolved = true;
+        this.walletEligibilityResolved = true;
+        this.walletEligibilityLoading = false;
         this.enforceSectionAccess();
       }
     });
@@ -877,6 +1730,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Supply Chain Section Handlers
   clearSupplyChainSection(): void {
+    if (this.selectedSupplyChainSection === 'single-window-detail') {
+      if (this.navigationCount > 0) {
+        this.navigationCount -= 2;
+        window.history.back();
+        return;
+      } else {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: 'single-window', type: null, id: null, targetId: null },
+          queryParamsHandling: 'merge'
+        });
+        return;
+      }
+    }
+
     const parentSectionMap: Record<string, string> = {
       'import-permit': 'requisition',
       'transit-permit': 'transit',
@@ -910,8 +1778,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // Professional dashboard methods (from licensee dashboard)
-  showTable(table: 'applied' | 'pending' | 'approved' | 'rejected') {
+  showTable(table: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected') {
     this.activeTable = table;
+    // Load list-by-status APIs only when user opens a table.
+    this.ensureApplicationsLoaded(false);
   }
 
   goBack() {
@@ -930,7 +1800,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       (application as any)?.raw?.applicationId ||
       '';
 
-    this.router.navigate(['/licensee/final-license'], {
+    this.router.navigate(['/final-license'], {
       queryParams: {
         applicationId,
         type: application?.type || '',
@@ -964,11 +1834,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private updateDataSources(result: {
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
+    objection: UnifiedApplication[];
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
   }): void {
     this.appliedDataSource.data = result.applied || [];
     this.pendingDataSource.data = result.pending || [];
+    this.objectionDataSource.data = result.objection || [];
     this.approvedDataSource.data = result.approved || [];
     this.rejectedDataSource.data = result.rejected || [];
   }
@@ -976,6 +1848,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private clearDataSources(): void {
     this.appliedDataSource.data = [];
     this.pendingDataSource.data = [];
+    this.objectionDataSource.data = [];
     this.approvedDataSource.data = [];
     this.rejectedDataSource.data = [];
   }
@@ -1092,8 +1965,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Get supply chain section title
   getSupplyChainSectionTitle(): string {
+    if (this.selectedSupplyChainSection === 'officer-activity') {
+      return this.isLicenseeUser() ? 'License Activity' : 'Officer Activity';
+    }
     const titles: { [key: string]: string } = {
       // Common sections
+      'single-window': 'User Details',
+      'single-window-detail': 'User Details',
+      'payment-transactions': 'Transactions',
       'requisition': 'Requisition Management',
       'revalidation': 'Revalidation Management',
       'cancellation': 'Cancellation Management',
@@ -1111,6 +1990,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'label-registration': 'Label Registration',
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
+      'license-renewal': 'License Renewal Management',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',
@@ -1463,7 +2343,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const roleId = this.currentUser?.roleId;
     
     // All roles can see basic stats
-    if (['applied', 'pending', 'approved', 'rejected'].includes(type)) {
+    if (['applied', 'pending', 'objection', 'approved', 'rejected', 'awaitingPayment'].includes(type)) {
       return true;
     }
     
@@ -1475,6 +2355,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const trends: { [key: string]: number } = {
       applied: 12,
       pending: -8,
+      awaitingPayment: 0,
+      objection: 6,
       approved: 15,
       rejected: -5
     };
@@ -1490,6 +2372,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'New submissions';
       case 'pending':
         return roleId === 10 ? 'Awaiting your review' : 'Under review';
+      case 'awaitingPayment':
+        return 'Fees pending';
+      case 'objection':
+        return 'Needs correction';
       case 'approved':
         return 'Successfully processed';
       case 'rejected':
@@ -1497,6 +2383,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
       default:
         return '';
     }
+  }
+
+  getAwaitingPaymentBreakdownText(): string {
+    const parts: string[] = [];
+    if (this.awaitingPaymentBreakdown.newLicense > 0) {
+      parts.push('New License');
+    }
+    if (this.awaitingPaymentBreakdown.licenseRenewal > 0) {
+      parts.push('Renewal');
+    }
+    if (this.awaitingPaymentBreakdown.salesmanBarman > 0) {
+      parts.push('Salesman/Barman');
+    }
+    if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
+      parts.push('Company Reg');
+    }
+    return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }
 
   // Performance Metrics

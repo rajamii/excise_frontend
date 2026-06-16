@@ -14,18 +14,17 @@
 
   <!-- Letter Content -->
   <div class="main">
-    <div class="letter-header">
-      <div class="logo">
-        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Sikkim Logo" onerror="this.style.display='none'">
+    <div class="new-letter-header">
+      <div class="header-logo-left">
+        <img src="assets/fav-icon-black.png" alt="Sikkim Crest">
       </div>
-      GOVERNMENT OF SIKKIM<br />
-      SIKKIM EXCISE DEPARTMENT<br />
-      MG MARG, GANGTOK-737101
-    </div>
-
-    <div class="sub-header">
-      Website: <a href="http://www.excise.sikkim.gov.in">www.excise.sikkim.gov.in</a>
-      &nbsp;&nbsp; | &nbsp;&nbsp; E-Mail: <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a>
+      <div class="header-text-center">
+        <div class="dept-title">EXCISE DEPARTMENT</div>
+        <div class="gov-title">GOVERNMENT OF SIKKIM</div>
+      </div>
+      <div class="header-logo-right">
+        <img src="assets/download.jpg" alt="Sikkim Logo">
+      </div>
     </div>
 
     <div class="flex">
@@ -54,12 +53,16 @@
       <p>
         Please find enclosed the import permit nos.
         <span class="bold-text">{{ letterData.permitFrom }}</span>
-        , all dated:
+        /Excise, all dated:
         <span class="bold-text">{{ letterData.permitDate }}</span>
-        issued to
-        <span class="bold-text">{{ letterData.issuedTo }}</span>
-        for granting export permit to import from the state of
-        <span class="bold-text">{{ letterData.liftedFromState }}</span>.
+        issued to M/s
+        <span class="bold-text underline">{{ letterData.issuedTo }}</span>
+        to import
+        <span class="bold-text">{{ letterData.totalBLDisplay }}</span> of
+        <span class="bold-text">{{ letterData.productName }}</span>
+        having strength &ndash;(<span class="bold-text">{{ letterData.strengthFrom }}</span>&deg; to
+        <span class="bold-text">{{ letterData.strengthTo }}</span>&deg; Proof) from
+        <span class="bold-text">{{ letterData.importFrom }}</span>.
       </p>
     </div>
 
@@ -68,6 +71,24 @@
         Commissioner<br />
         Excise Headquarters, Gangtok<br />
       </p>
+    </div>
+
+    <div class="new-letter-footer">
+      <div class="footer-address">Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
+      <div class="footer-contacts">
+        <div class="footer-contact-item">
+          <i class="bi bi-globe"></i>
+          <span class="contact-text">excise.sikkim.gov.in</span>
+        </div>
+        <div class="footer-contact-item">
+          <i class="bi bi-envelope"></i>
+          <span class="contact-text">excise.dept&#64;sikkim.gov.in</span>
+        </div>
+        <div class="footer-contact-item">
+          <i class="bi bi-telephone"></i>
+          <span class="contact-text">03592-203963</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -80,18 +101,17 @@
 
   <!-- Second Letter Content -->
   <div class="main">
-    <div class="letter-header">
-      <div class="logo">
-        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Sikkim Logo" onerror="this.style.display='none'">
+    <div class="new-letter-header">
+      <div class="header-logo-left">
+        <img src="assets/fav-icon-black.png" alt="Sikkim Crest">
       </div>
-      GOVERNMENT OF SIKKIM<br />
-      SIKKIM EXCISE DEPARTMENT<br />
-      MG MARG, GANGTOK-737101
-    </div>
-
-    <div class="sub-header">
-      Website: <a href="http://www.excise.sikkim.gov.in">www.excise.sikkim.gov.in</a>
-      &nbsp;&nbsp; | &nbsp;&nbsp; E-Mail: <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a>
+      <div class="header-text-center">
+        <div class="dept-title">EXCISE DEPARTMENT</div>
+        <div class="gov-title">GOVERNMENT OF SIKKIM</div>
+      </div>
+      <div class="header-logo-right">
+        <img src="assets/download.jpg" alt="Sikkim Logo">
+      </div>
     </div>
 
     <div class="flex">
@@ -119,9 +139,13 @@
         <span class="bold-text">{{ secondLetterData.requisitionNumberOfPermits }}</span>,<br />
         all dated:
         <span class="bold-text">{{ secondLetterData.permitDated }}</span> issued to
-        <span class="bold-text">{{ secondLetterData.issuedTo }}</span>
-        for granting export permit to import the state of
-        <span class="bold-text">{{ secondLetterData.stateName }}</span>.
+        M/s <span class="bold-text underline">{{ secondLetterData.issuedTo }}</span>
+        to import
+        <span class="bold-text">{{ letterData.totalBLDisplay }}</span> of
+        <span class="bold-text">{{ letterData.productName }}</span>
+        having strength &ndash;(<span class="bold-text">{{ letterData.strengthFrom }}</span>&deg; to
+        <span class="bold-text">{{ letterData.strengthTo }}</span>&deg; Proof) from
+        <span class="bold-text">{{ letterData.importFrom }}</span>.
       </p>
     </div>
 
@@ -130,6 +154,24 @@
         N.D. Bhojuar SES<br />
         Excise Headquarters, Gangtok
       </p>
+    </div>
+
+    <div class="new-letter-footer">
+      <div class="footer-address">Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
+      <div class="footer-contacts">
+        <div class="footer-contact-item">
+          <i class="bi bi-globe"></i>
+          <span class="contact-text">excise.sikkim.gov.in</span>
+        </div>
+        <div class="footer-contact-item">
+          <i class="bi bi-envelope"></i>
+          <span class="contact-text">excise.dept&#64;sikkim.gov.in</span>
+        </div>
+        <div class="footer-contact-item">
+          <i class="bi bi-telephone"></i>
+          <span class="contact-text">03592-203963</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -142,18 +184,17 @@
 
   <!-- Third Letter Content -->
   <div class="main">
-    <div class="letter-header">
-      <div class="logo">
-        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Sikkim Logo" onerror="this.style.display='none'">
+    <div class="new-letter-header">
+      <div class="header-logo-left">
+        <img src="assets/fav-icon-black.png" alt="Sikkim Crest">
       </div>
-      GOVERNMENT OF SIKKIM<br />
-      SIKKIM EXCISE DEPARTMENT<br />
-      MG MARG, GANGTOK-737101
-    </div>
-
-    <div class="sub-header">
-      Website: <a href="http://www.excise.sikkim.gov.in">www.excise.sikkim.gov.in</a>
-      &nbsp;&nbsp; | &nbsp;&nbsp; E-Mail: <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a>
+      <div class="header-text-center">
+        <div class="dept-title">EXCISE DEPARTMENT</div>
+        <div class="gov-title">GOVERNMENT OF SIKKIM</div>
+      </div>
+      <div class="header-logo-right">
+        <img src="assets/download.jpg" alt="Sikkim Logo">
+      </div>
     </div>
 
     <div class="flex">
@@ -171,8 +212,7 @@
       <p>
         To,<br />
         The Superintendent of Excise,<br />
-        Government of West Bengal,<br />
-        Darjeeling District.
+        Government of <span class="bold-text">{{ letterData.liftedFromState }}</span>.
       </p>
 
       <p>
@@ -182,12 +222,13 @@
       <p>
         Please find enclosed the import permit nos.
         <span class="bold-text">{{ thirdLetterData.permitFrom }}</span>,
-        all dated:
+        /Excise, all dated:
         <span class="bold-text">{{ thirdLetterData.permitDated }}</span> issued to
-        <span class="bold-text underline">{{ thirdLetterData.issuedTo }}</span> to import
-        <span class="bold-text">{{ thirdLetterData.importTo }} BL</span> of Grain ENA having strength
-        (<span class="bold-text">{{ thirdLetterData.strength }}</span>) (Strength Value:
-        <span class="bold-text">{{ thirdLetterData.strengthValue }}</span>) from
+        M/s <span class="bold-text underline">{{ thirdLetterData.issuedTo }}</span> to import
+        <span class="bold-text">{{ thirdLetterData.totalBLDisplay }}</span> of
+        <span class="bold-text">{{ thirdLetterData.productName }}</span>
+        having strength &ndash;(<span class="bold-text">{{ thirdLetterData.strengthFrom }}</span>&deg; to
+        <span class="bold-text">{{ thirdLetterData.strengthTo }}</span>&deg; Proof) from
         <span class="bold-text">{{ thirdLetterData.importFrom }}</span> via route <span class="bold-text">{{ thirdLetterData.viaRoute }}</span>.
       </p>
     </div>
@@ -197,6 +238,24 @@
         <span class="bold-text">Commissioner<br /></span>
         <strong>Excise Headquarters, Gangtok</strong><br />
       </p>
+    </div>
+
+    <div class="new-letter-footer">
+      <div class="footer-address">Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
+      <div class="footer-contacts">
+        <div class="footer-contact-item">
+          <i class="bi bi-globe"></i>
+          <span class="contact-text">excise.sikkim.gov.in</span>
+        </div>
+        <div class="footer-contact-item">
+          <i class="bi bi-envelope"></i>
+          <span class="contact-text">excise.dept&#64;sikkim.gov.in</span>
+        </div>
+        <div class="footer-contact-item">
+          <i class="bi bi-telephone"></i>
+          <span class="contact-text">03592-203963</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -209,7 +268,7 @@
 
   <!-- Import Permit Copies -->
   <div class="permit-copies-container">
-    <div *ngFor="let permit of generatePermitCopies(); let i = index" 
+    <div *ngFor="let permit of permitCopies; let i = index" 
          class="permit-copy" 
          [class.last-copy]="permit.isLastCopy"
          [class.main-permit]="permit.isMainPermit">
@@ -264,10 +323,10 @@
             <td>B.R.No./Date</td>
           </tr>
           <tr>
-            <td><p class="bold-text">Grain ENA</p></td>
+            <td><p class="bold-text">{{ thirdLetterData.productName }}</p></td>
             <td>___</td>
             <td><span class="bold-text">{{ permit.displayTotalENA }}</span> BL</td>
-            <td><span class="bold-text">{{ permit.strengthFrom }}</span>° to <span class="bold-text">{{ permit.strengthTo }}</span>° Proof</td>
+            <td><span class="bold-text">{{ permit.strengthFrom }}</span>&deg; to <span class="bold-text">{{ permit.strengthTo }}</span>&deg; Proof</td>
             <td>₹<span class="bold-text">{{ permit.importPassFee }}</span></td>
             <td><span class="bold-text">{{ permit.brNumber }}</span></td>
           </tr>

@@ -170,6 +170,72 @@ const routes: Routes = [
             },
           },
           {
+            path: 'hologram-suppliers',
+            loadComponent: () =>
+              import('./master/hologram-supplier/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'hologram',
+            redirectTo: 'hologram/transit-permit-distributor-data',
+            pathMatch: 'full',
+          },
+          {
+            path: 'hologram/transit-permit-distributor-data',
+            loadComponent: () =>
+              import(
+                './master/hologram/transit-permit-distributor-data/list/list.component'
+              ).then((m) => m.ListComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'hologram/brand-ml-in-cases',
+            loadComponent: () =>
+              import('./master/hologram/brand-ml-in-cases/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'brand-ml-in-cases',
+            loadComponent: () =>
+              import('./master/hologram/brand-ml-in-cases/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'hologram/master-bottle-type',
+            loadComponent: () =>
+              import('./master/hologram/master-bottle-type/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'hologram/master-liquor-type',
+            loadComponent: () =>
+              import('./master/hologram/master-liquor-type/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'hologram/brands',
+            loadComponent: () =>
+              import('./master/hologram/brands/brands.component').then((m) => m.BrandsComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'about-us',
             redirectTo: 'about-us/heads-of-organisations',
             pathMatch: 'full'
@@ -249,6 +315,17 @@ const routes: Routes = [
             data: {
               authorities: ['site_admin'],
               contactUsCategory: 'grievanceRedressalOfficer',
+            },
+          },
+          {
+            path: 'license-validity-period',
+            loadComponent: () =>
+              import('./master/license-validity-period/license-validity-period.component').then(
+                (m) => m.LicenseValidityPeriodComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
             },
           },
         ]

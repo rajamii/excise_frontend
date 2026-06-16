@@ -87,6 +87,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.police_stations.view' }
       },
       {
+        path: 'admin/license-validity-period',
+        loadComponent: () =>
+          import('../admin/master/license-validity-period/license-validity-period.component').then((m) => m.LicenseValidityPeriodComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/license-types',
         loadComponent: () =>
           import('../admin/master/license-type/list/list.component').then((m) => m.ListComponent),
@@ -126,6 +133,93 @@ const routes: Routes = [
           import('../admin/master/road/list/list.component').then((m) => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.roads.view' }
+      },
+      {
+        path: 'admin/hologram-suppliers',
+        loadComponent: () =>
+          import('../admin/master/hologram-supplier/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/hologram',
+        redirectTo: 'admin/hologram/transit-permit-distributor-data',
+        pathMatch: 'full'
+      },
+      {
+        path: 'admin/hologram/transit-permit-distributor-data',
+        loadComponent: () =>
+          import('../admin/master/hologram/transit-permit-distributor-data/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/hologram/brand-ml-in-cases',
+        loadComponent: () =>
+          import('../admin/master/hologram/brand-ml-in-cases/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/brand-ml-in-cases',
+        loadComponent: () =>
+          import('../admin/master/hologram/brand-ml-in-cases/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/hologram/master-bottle-type',
+        loadComponent: () =>
+          import('../admin/master/hologram/master-bottle-type/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/hologram/master-liquor-type',
+        loadComponent: () =>
+          import('../admin/master/hologram/master-liquor-type/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/hologram/brands',
+        loadComponent: () =>
+          import('../admin/master/hologram/brands/brands.component').then((m) => m.BrandsComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/bulk-spirit',
+        redirectTo: 'admin/bulk-spirit/ena-bulk-spirit',
+        pathMatch: 'full'
+      },
+      {
+        path: 'admin/bulk-spirit/ena-bulk-spirit',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/ena-bulk-spirit/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/bulk-spirit/distillery-details',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/distillery-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/bulk-spirit/ena-purpose-details',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/ena-purpose-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/bulk-spirit/check-post-details',
+        loadComponent: () =>
+          import('../admin/master/bulk-spirit/check-post-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
       },
       {
         path: 'admin/about-us',
@@ -186,19 +280,30 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.users.view' }
       },
+      {
+        path: 'admin/sbi-e-pay',
+        loadComponent: () =>
+          import('../admin/master/sbi-e-pay/sbi-e-pay.component').then((m) => m.SbiEPayComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
       // Backward-compatible aliases for old paths under /dashboard/*
       { path: 'users', redirectTo: 'admin/users', pathMatch: 'full' },
+      { path: 'sbi-e-pay', redirectTo: 'admin/sbi-e-pay', pathMatch: 'full' },
       { path: 'roles', redirectTo: 'admin/roles', pathMatch: 'full' },
       // ✅ COMMENTED OUT: District redirect (matches commented route above)
       { path: 'districts', redirectTo: 'admin/districts', pathMatch: 'full' },
       { path: 'subdivisions', redirectTo: 'admin/subdivisions', pathMatch: 'full' },
       { path: 'police-stations', redirectTo: 'admin/police-stations', pathMatch: 'full' },
+      { path: 'license-validity-period', redirectTo: 'admin/license-validity-period', pathMatch: 'full' },
       { path: 'license-types', redirectTo: 'admin/license-types', pathMatch: 'full' },
       { path: 'license-categories', redirectTo: 'admin/license-categories', pathMatch: 'full' },
       { path: 'license-titles', redirectTo: 'admin/license-titles', pathMatch: 'full' },
       { path: 'license-subcategories', redirectTo: 'admin/license-subcategories', pathMatch: 'full' },
       { path: 'license-terms', redirectTo: 'admin/license-terms', pathMatch: 'full' },
       { path: 'roads', redirectTo: 'admin/roads', pathMatch: 'full' },
+      { path: 'hologram-suppliers', redirectTo: 'admin/hologram-suppliers', pathMatch: 'full' },
+      { path: 'brand-ml-in-cases', redirectTo: 'admin/brand-ml-in-cases', pathMatch: 'full' },
       { path: 'about-us', redirectTo: 'admin/about-us', pathMatch: 'full' },
       { path: 'contact-us', redirectTo: 'admin/contact-us', pathMatch: 'full' },
       { path: 'oic', redirectTo: 'admin/oic', pathMatch: 'full' }

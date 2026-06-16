@@ -3,6 +3,7 @@ import { MaterialModule } from '../../material.module';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators,FormBuilder } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-captcha',
@@ -37,15 +38,18 @@ export class CaptchaComponent implements OnInit {
   loadCaptcha(): void {
     this.authService.getCaptcha().subscribe({
       next: (data: { key: string; imageUrl?: string; image_url?: string }) => {
-        const imagePath = data.image_url || data.imageUrl;
-        if (!imagePath) {
+        // Capture the incoming base64 image string from the backend response
+        const base64DataStream = data.image_url || data.imageUrl;
+        
+        if (!base64DataStream) {
           console.error('Captcha response missing image path', data);
           if (navigator.onLine) {
             alert('Failed to load captcha. Please try again.');
           }
           return;
         }
-        this.captchaImageUrl = `${this.baseUrl}${imagePath}`;
+        
+        this.captchaImageUrl = base64DataStream;
         this.captchaKey = data.key;
         this.formGroup.patchValue({ hashkey: this.captchaKey });
       },

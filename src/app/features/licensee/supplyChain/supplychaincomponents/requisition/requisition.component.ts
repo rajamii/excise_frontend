@@ -495,6 +495,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.summaryRequisitionData = this.requisitionData.filter(item => {
+      // Admin visibility: only show records at or past this admin's stage
+      if (!this.isVisibleToCurrentAdmin(item)) return false;
+
       let matches = true;
 
       const submissionDate =
@@ -574,6 +577,29 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   isPermitSection(): boolean {
     return this.accountService.hasAnyRole(['permit-section', 'permit section', 'permit_section', 'Permit Section']);
+  }
+
+  /**
+   * Visibility rule for admin users:
+   * - Show the record if the admin has actions to take (allowedActions non-empty) — it's their turn.
+   * - Show the record if it has already passed through their stage (historical) — they already acted.
+   * - Hide the record if it hasn't reached their stage yet.
+   * Licensee users always see all their own records.
+   */
+  isVisibleToCurrentAdmin(item: TableData): boolean {
+    // Licensee sees everything (scoped by backend to their own records)
+    if (!this.isCommissioner() && !this.isPermitSection()) return true;
+
+    // If the backend says there are actions to take → it's this admin's turn
+    if ((item.allowedActions?.length ?? 0) > 0) return true;
+
+    // If the record has already passed through this admin's stage → show for history
+    const combined = `${String(item.status ?? '')} ${String(item.currentStageName ?? '')}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (this.isCommissioner() && combined.includes('commissioner')) return true;
+    if (this.isPermitSection() && combined.includes('permitsection')) return true;
+
+    // Record hasn't reached this admin's stage yet → hide it
+    return false;
   }
 
   approveRequisition(item: TableData): void {
@@ -1181,9 +1207,35 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
 
     const tankerDetails: TankerArrivalEntry[] = tankerDetailsList.map((item: any) => ({
+      permit_no: String(item?.permit_no ?? item?.permitNo ?? '').trim() || undefined,
       tanker_no: String(item?.tanker_no ?? item?.tankerNo ?? ''),
       bulk_liter: Number(item?.bulk_liter ?? item?.bulkLiter ?? 0) || 0
     }));
+
+    const requisitionTotalQty = Number(
+      row?.requisition_total_quantity ??
+      row?.requisitionTotalQuantity ??
+      row?.requested_total_quantity ??
+      row?.requestedTotalQuantity ??
+      row?.requisition?.totalbl ??
+      0
+    ) || 0;
+    const requisitionPermitCount = Number(
+      row?.requisition_number_of_permits ??
+      row?.requisitionNumberOfPermits ??
+      row?.requisition?.requisiton_number_of_permits ??
+      row?.requisition?.requisition_number_of_permits ??
+      0
+    ) || 0;
+    const permitsInThisEntry = Array.from(
+      new Set(
+        tankerDetails
+          .map((t) => String(t?.permit_no || '').trim())
+          .filter((t) => Boolean(t))
+      )
+    );
+    const perPermitQty = requisitionPermitCount > 0 ? (requisitionTotalQty / requisitionPermitCount) : requisitionTotalQty;
+    const requestedQtyForEntry = permitsInThisEntry.length > 0 ? (perPermitQty * permitsInThisEntry.length) : requisitionTotalQty;
 
     return {
       id: Number(row?.id ?? 0) || 0,
@@ -1214,14 +1266,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         row?.createdAt ??
         ''
       ),
-      requestedTotalQuantity: Number(
-        row?.requisition_total_quantity ??
-        row?.requisitionTotalQuantity ??
-        row?.requested_total_quantity ??
-        row?.requestedTotalQuantity ??
-        row?.requisition?.totalbl ??
-        0
-      ) || 0,
+      // Show requested qty for the permit(s) in this arrival entry, not the whole requisition reference.
+      requestedTotalQuantity: requestedQtyForEntry,
       distilleryName: String(
         row?.distillery_name ??
         row?.distilleryName ??
@@ -2425,10 +2471,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
-  private isApprovedCommissionerAwaitingPayment(item: TableData): boolean {
+  isApprovedCommissionerAwaitingPayment(item: TableData): boolean {
     const status = this.normalizeStageToken(item?.status);
     const stage = this.normalizeStageToken(item?.currentStageName);
     const combined = `${status} ${stage}`;
+
+    // Once payment is made the item moves to a post-payment stage — no longer actionable
+    const postPaymentMarkers = ['forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted', 'paymentdone', 'permitsection'];
+    if (postPaymentMarkers.some(m => combined.includes(m))) return false;
+
+    // Also clear if a payment reference exists on the item
+    if (item?.paymentId || item?.paymentDate) return false;
+
     // Business rule: "APPROVED COMMISSIONER" still needs payment, so keep it in Pending.
     return combined.includes('approvedcommissioner');
   }
@@ -2501,7 +2555,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isPendingSummaryStatus(item: TableData): boolean {
-    return this.isPendingLikeStatus(item) && !this.isUnderProcessLikeStatus(item) && !this.isCancellationLikeStatus(item);
+    // For licensee view: anything in-flight (pending OR under process) counts as Pending,
+    // since the licensee has no action to take — they're just waiting.
+    return this.isPendingLikeStatus(item) && !this.isCancellationLikeStatus(item);
   }
 
   private toBooleanFlag(value: any, fallback?: boolean): boolean | undefined {

@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HologramDataService } from '../../licensee/supplyChain/services/hologram-data.service';
 import { AccountService } from '../../../core/services/account.service';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
+import { HologramSupplier } from '../../licensee/supplyChain/services/hologram-data.service';
 
 @Component({
   selector: 'app-itcell',
@@ -30,6 +31,12 @@ export class ITCELLComponent implements OnInit {
   // Modal state
   showHologramModal = false;
   selectedHologram: any | null = null;
+
+  // Supply Order Letter modal state
+  showSupplyOrderModal = false;
+  supplyOrderLetterModel: any | null = null;
+  supplyOrderLetterLoading = false;
+  supplyOrderLetterError = '';
 
   // Filters
   selectedMonth: string = '';
@@ -141,19 +148,12 @@ export class ITCELLComponent implements OnInit {
     if (this.initialSummaryAutoSelected) return;
     this.initialSummaryAutoSelected = true;
 
-    // Don't override if user already selected a status.
     const selected = String(this.statusFilter || '').trim();
     if (selected && selected.toLowerCase() !== 'all') return;
 
-    // This screen uses "Submitted" / "Under IT Cell Review" as the pending-like buckets.
-    const preferred =
-      (this.getStatusCount('Submitted') > 0 && 'Submitted') ||
-      (this.getStatusCount('Under IT Cell Review') > 0 && 'Under IT Cell Review') ||
-      '';
-
-    if (preferred) {
-      this.statusFilter = preferred;
-      this.activeSummaryFilter = preferred;
+    if (this.getStatusCount('Pending') > 0) {
+      this.statusFilter = 'Pending';
+      this.activeSummaryFilter = 'Pending';
       this.applyFilters();
     }
   }
@@ -202,6 +202,8 @@ export class ITCELLComponent implements OnInit {
         filtered = filtered.filter(item => this.isApprovedLikeStatus(item));
       } else if (filter === 'edited') {
         filtered = filtered.filter(item => Boolean(item?.editedByCommissioner));
+      } else if (filter === 'pending') {
+        filtered = filtered.filter(item => this.isPendingLikeStatus(item));
       } else {
         filtered = filtered.filter(item => item.status === this.statusFilter);
       }
@@ -379,15 +381,41 @@ export class ITCELLComponent implements OnInit {
   }
 
   getStatusClass(status: string): string {
-    if (status === 'Payment Completed' || status === 'Heading for Carton Assignment') {
-      return 'bg-success-subtle text-success';
-    } else if (status === 'Forwarded to Commissioner' || status === 'Hologram Verified') {
-      return 'bg-info-subtle text-info';
-    } else if (status === 'Submitted') {
-      return 'bg-warning-subtle text-warning';
-    } else {
-      return 'bg-primary-subtle text-primary';
+    const token = this.normalizeStageToken(status);
+
+    // Stage 681 — Cartoon/Carton Assigned (final fulfillment)
+    if (token.includes('cartoonassigned') || token.includes('cartonassigned')) {
+      return 'status-badge-cartoon-assigned';
     }
+    // Stage 680 — Payment Completed
+    if (token.includes('paymentcompleted')) {
+      return 'status-badge-payment-completed';
+    }
+    // Stage 678 — Approved by Commissioner
+    if (token.includes('approvedbycommissioner') || (token.includes('approved') && token.includes('commissioner'))) {
+      return 'status-badge-approved-commissioner';
+    }
+    // Stage 679 — Rejected by Commissioner
+    if (token.includes('rejectedbycommissioner') || (token.includes('rejected') && token.includes('commissioner'))) {
+      return 'status-badge-rejected';
+    }
+    // Stage 677 — Forwarded to Commissioner
+    if (token.includes('forwardedtocommissioner') || (token.includes('forwarded') && token.includes('commissioner'))) {
+      return 'status-badge-forwarded';
+    }
+    // Stage 676 — Under IT Cell Review
+    if (token.includes('underitcellreview') || token.includes('itcellreview')) {
+      return 'status-badge-under-review';
+    }
+    // Stage 75 — Submitted HP
+    if (token.includes('submittedhp') || token.includes('submitted')) {
+      return 'status-badge-submitted';
+    }
+    // Generic approved fallback
+    if (token.includes('approved')) return 'status-badge-approved-commissioner';
+    if (token.includes('rejected')) return 'status-badge-rejected';
+
+    return 'status-badge-default';
   }
 
   getStatusCount(status: string): number {
@@ -397,6 +425,10 @@ export class ITCELLComponent implements OnInit {
     }
     if (filter === 'approved') {
       return this.summaryHologramData.filter(h => this.isApprovedLikeStatus(h)).length;
+    }
+    // "Pending" = Submitted + Under IT Cell Review (anything still actionable by IT Cell)
+    if (filter === 'pending') {
+      return this.summaryHologramData.filter(h => this.isPendingLikeStatus(h)).length;
     }
     return this.summaryHologramData.filter(h => h.status === status).length;
   }
@@ -431,16 +463,380 @@ export class ITCELLComponent implements OnInit {
     });
   }
 
+  openSupplyOrderLetter(hologram: any): void {
+    this.showSupplyOrderModal = true;
+    this.supplyOrderLetterModel = null;
+    this.supplyOrderLetterError = '';
+    this.supplyOrderLetterLoading = true;
+
+    // Fetch full procurement details (includes supplier_details) then build the letter model
+    this.hologramService.getProcurement(hologram.id).subscribe({
+      next: (procurement: any) => {
+        const supplier = procurement?.supplier_details || procurement?.supplierDetails || null;
+        if (!supplier) {
+          this.supplyOrderLetterError = 'Supplier is not set for this procurement. Please ask the licensee to select a supplier while submitting the procurement.';
+          this.supplyOrderLetterLoading = false;
+          return;
+        }
+        this.supplyOrderLetterModel = this.buildSupplyOrderLetterModel(procurement, supplier);
+        this.supplyOrderLetterLoading = false;
+      },
+      error: () => {
+        this.supplyOrderLetterError = 'Failed to load procurement details. Please try again.';
+        this.supplyOrderLetterLoading = false;
+      }
+    });
+  }
+
+  closeSupplyOrderModal(): void {
+    this.showSupplyOrderModal = false;
+    this.supplyOrderLetterModel = null;
+    this.supplyOrderLetterError = '';
+  }
+
+  private getPrintStyles(): string {
+    return `
+    @page { size: A4; margin: 10mm 8mm 10mm 8mm; }
+    * { box-sizing: border-box; }
+    html, body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      color: #111827;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+    /* Wrapper: creates visible white space on left & right so border is seen */
+    .letter-page-wrapper {
+      padding: 0 14mm;
+      min-height: calc(297mm - 20mm);
+    }
+    /* The actual bordered letter box */
+    .letter-page-box {
+      border: 2px solid #1a1a2e;
+      padding: 0 0 0 0;
+      width: 100%;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(297mm - 20mm);
+      position: relative;
+      overflow: hidden;
+    }
+    /* Watermark — repeating diagonal "EXCISE DEPARTMENT" text */
+    .letter-page-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 60px,
+        transparent 60px
+      );
+      background-repeat: repeat;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .watermark-layer {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .watermark-layer span {
+      display: inline-block;
+      width: 200px;
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(26, 26, 46, 0.07);
+      white-space: nowrap;
+      margin: 22px 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      user-select: none;
+    }
+    /* Ensure all content sits above watermark */
+    .print-header,
+    .letter-body,
+    .print-footer {
+      position: relative;
+      z-index: 1;
+    }
+    .letter-body {
+      padding: 16px 24px 20px 24px;
+      flex: 1;
+    }
+    /* ── HEADER ── */
+    .print-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 14px 24px 10px 24px;
+      border-bottom: 2px solid #1a1a2e;
+    }
+    .print-header-logo {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      flex-shrink: 0;
+      filter: brightness(0) saturate(100%);
+    }
+    .print-header-text {
+      text-align: center;
+    }
+    .print-header-title {
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .print-header-subtitle {
+      font-weight: 700;
+      font-size: 13px;
+      color: #374151;
+    }
+    /* Ref & Date row */
+    .ref-date-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      margin-top: 14px;
+    }
+    /* To block */
+    .to-block { margin-bottom: 14px; line-height: 1.7; }
+    .ms-3 { margin-left: 16px; }
+    /* Subject spacing */
+    .subject-line {
+      font-weight: 800;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    .mt-4 { margin-top: 16px; }
+    .mt-3 { margin-top: 12px; }
+    .mb-2 { margin-bottom: 8px; }
+    .mb-3 { margin-bottom: 12px; }
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+    th, td {
+      border: 1px solid #1a1a2e;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+    thead th {
+      background: #f3f4f6;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .text-end { text-align: right; }
+    .text-center { text-align: center; }
+    /* Footer note */
+    .footer-note { margin-top: 18px; font-size: 11px; font-weight: 600; }
+    /* ── SIGNATURE SECTION ── */
+    .signature-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 70px;
+      padding-bottom: 8px;
+    }
+    .thanking-you {
+      font-size: 13px;
+    }
+    .signature-block {
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .signature-block .sig-line {
+      border-top: 1px solid #1a1a2e;
+      width: 140px;
+      margin: 0 auto 4px auto;
+    }
+    .signature-block .sig-name {
+      font-weight: 700;
+      font-size: 12px;
+    }
+    /* ── FOOTER BAR ── */
+    .print-footer {
+      border-top: 2px solid #1a1a2e;
+      padding: 8px 24px;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #374151;
+    }
+    /* Bootstrap utility classes that may appear in innerHTML */
+    .d-flex { display: flex; }
+    .justify-content-between { justify-content: space-between; }
+    `;
+  }
+
+  private wrapInPageBox(innerHtml: string, model: any): string {
+    const logoUrl = '/assets/fav-icon.png';
+    const refNo = model?.refNo || '';
+    const dated = model?.dated || '';
+
+    const header = `
+      <div class="print-header">
+        <img class="print-header-logo" src="${logoUrl}" alt="Excise Dept Logo" />
+        <div class="print-header-text">
+          <div class="print-header-title">Excise Department</div>
+          <div class="print-header-subtitle">Government of Sikkim</div>
+        </div>
+      </div>`;
+
+    const footer = `
+      <div class="print-footer">
+        Excise Headquarters, M. G. Marg, Gangtok &ndash; 737 101<br>
+        E-mail: excise.dept@sikkim.gov.in &nbsp;|&nbsp; Tel: 03592-203963
+      </div>`;
+
+    const signatureSection = `
+      <div class="signature-section">
+        <div class="thanking-you">Thanking you.</div>
+        <div class="signature-block">
+          <div class="sig-line"></div>
+          <div>Information Technology (IT) Cell</div>
+          <div>Excise Department, HQ</div>
+          <div>Gangtok</div>
+        </div>
+      </div>`;
+
+    // Build repeating watermark spans (enough to fill an A4 page)
+    const wmText = 'EXCISE DEPARTMENT';
+    const wmSpans = Array(80).fill(`<span>${wmText}</span>`).join('');
+    const watermark = `<div class="watermark-layer">${wmSpans}</div>`;
+
+    return `
+      <div class="letter-page-wrapper">
+        <div class="letter-page-box">
+          ${watermark}
+          ${header}
+          <div class="letter-body">
+            ${innerHtml}
+            ${signatureSection}
+          </div>
+          ${footer}
+        </div>
+      </div>`;
+  }
+
+  printSupplyOrderLetter(): void {
+    const printArea = document.getElementById('itcellSupplyOrderPrintArea');
+    if (!printArea) return;
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Supply Order Letter</title>
+  <style>${this.getPrintStyles()}</style>
+</head>
+<body>
+  ${this.wrapInPageBox(printArea.innerHTML, this.supplyOrderLetterModel)}
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      this.printViaIframe(printArea.innerHTML);
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  }
+
+  private printViaIframe(content: string): void {
+    const existingFrame = document.getElementById('itcellPrintFrame');
+    if (existingFrame) existingFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'itcellPrintFrame';
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Supply Order Letter</title>
+  <style>${this.getPrintStyles()}</style>
+</head>
+<body>${this.wrapInPageBox(content, this.supplyOrderLetterModel)}</body>
+</html>`);
+    doc.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => iframe.remove(), 2000);
+    };
+  }
+
+  private buildSupplyOrderLetterModel(procurement: any, supplier: HologramSupplier): any {
+    const refNo = String(procurement?.refNo || procurement?.ref_no || procurement?.referenceNo || '').trim();
+    const datedRaw = procurement?.submissionDate || procurement?.date || '';
+    const dated = datedRaw
+      ? new Date(datedRaw).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const localQtyNum = Number(procurement?.localQty ?? procurement?.local_qty ?? 0);
+    const exportQtyNum = Number(procurement?.exportQty ?? procurement?.export_qty ?? 0);
+    const defenceQtyNum = Number(procurement?.defenceQty ?? procurement?.defence_qty ?? 0);
+    const totalQtyNum = localQtyNum + exportQtyNum + defenceQtyNum;
+
+    const fmt = (n: number) => n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+    const manufacturingUnit = String(
+      procurement?.licenseeName || procurement?.manufacturingUnit || procurement?.manufacturing_unit || ''
+    ).trim();
+
+    const addressText = String(supplier?.address || '').trim();
+    const toAddressLines = addressText
+      ? addressText.split(/\r?\n/).map((x: string) => x.trim()).filter(Boolean)
+      : [];
+
+    return {
+      refNo,
+      dated,
+      toPost: String(supplier?.post || 'The General Manager'),
+      toCompany: String(supplier?.company_name || (supplier as any)?.companyName || (supplier as any)?.name || ''),
+      toAddressLines,
+      toState: String(supplier?.state || '').trim(),
+      manufacturingUnit,
+      localQty: fmt(localQtyNum),
+      exportQty: fmt(exportQtyNum),
+      defenceQty: fmt(defenceQtyNum),
+      totalQty: fmt(totalQtyNum),
+    };
+  }
+
   isPaymentCompleted(hologram: any): boolean {
-    const paymentStatus = String(hologram?.paymentStatus || '').toLowerCase();
-    const stageStatus = String(hologram?.status || '').toLowerCase();
+    const paymentStatus = String(hologram?.paymentStatus || hologram?.payment_status || '').toLowerCase();
+    const stageStatus = String(hologram?.status || hologram?.current_stage_name || '').toLowerCase();
+    // Only show Supply Order Letter button when payment is actually completed (stage 80)
     return (
-      paymentStatus.includes('completed') ||
-      paymentStatus.includes('paid') ||
-      paymentStatus.includes('success') ||
-      stageStatus.includes('payment completed') ||
+      paymentStatus === 'completed' ||
+      stageStatus === 'payment completed' ||
       stageStatus.includes('carton assigned') ||
-      stageStatus.includes('forwarded to commissioner')
+      stageStatus.includes('arrived')
     );
   }
 
@@ -485,6 +881,19 @@ export class ITCELLComponent implements OnInit {
     const token = this.normalizeStageToken(item?.status);
     const isCartoonAssigned = token.includes('cartoonassigned') || token.includes('cartonassigned');
     return token.includes('approved') || isCartoonAssigned;
+  }
+
+  /** Pending = Submitted OR Under IT Cell Review — anything still actionable by IT Cell */
+  private isPendingLikeStatus(item: any): boolean {
+    if (this.isApprovedLikeStatus(item)) return false;
+    const token = this.normalizeStageToken(item?.status);
+    return (
+      token.includes('submit') ||
+      token.includes('underitcellreview') ||
+      token.includes('itcellreview') ||
+      token.includes('pending') ||
+      token.includes('review')
+    );
   }
 
   closeModal(): void {

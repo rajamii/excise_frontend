@@ -184,6 +184,7 @@
           </mat-error>
         </mat-form-field>
 
+        @if (shouldShowModeOfOperationDropdown()) {
         <mat-form-field appearance="outline">
           <mat-label>Mode of Operation</mat-label>
           <mat-select formControlName="modeOfOperation">
@@ -192,6 +193,7 @@
             }
           </mat-select>
         </mat-form-field>
+        }
       </div>
 
       <h5 class="section-title">Eligibility Questions</h5>

@@ -13,6 +13,13 @@ import { LicenseSubcategory } from '../../core/models/license-subcategory.model'
 import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
 import { LicenseFormTermsResponse } from './master/license-terms/license-terms.model';
+import { HologramSupplier } from '../../core/models/hologram-supplier.model';
+import { EnaBulkSpiritType } from '../../core/models/ena-bulk-spirit.model';
+import { EnaDistilleryDetail } from '../../core/models/ena-distillery.model';
+import { ActiveLicense } from '../../core/models/active-license.model';
+import { TransitPermitDistributorData } from '../../core/models/transit-permit-distributor-data.model';
+import { BrandMlInCases } from '../../core/models/brand-ml-in-cases.model';
+import { MasterBottleType } from '../../core/models/master-bottle-type.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -64,6 +71,7 @@ export class AdminService {
   private readonly mastersUrl = `${this.baseUrl}/masters/core`;
   private readonly licenseMastersUrl = `${this.baseUrl}/masters/license`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
+  private readonly supplyChainUrl = `${this.baseUrl}/masters/supply_chain`;
 
   constructor(private http: HttpClient) { }
 
@@ -310,6 +318,73 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/roads/${id}/delete/`);
   }
 
+  // ========================== HOLOGRAM SUPPLIER MANAGEMENT ==========================
+
+  // Adds a new hologram supplier
+  addHologramSupplier(supplier: HologramSupplier): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/hologram-suppliers/create/`, supplier);
+  }
+
+  // Updates an existing hologram supplier by ID
+  updateHologramSupplier(id: number, changes: Partial<HologramSupplier>): Observable<HologramSupplier> {
+    return this.http.put<HologramSupplier>(`${this.supplyChainUrl}/hologram-suppliers/${id}/update/`, changes);
+  }
+
+  // Deletes a hologram supplier by ID
+  deleteHologramSupplier(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/hologram-suppliers/${id}/delete/`);
+  }
+
+  // ========================== HOLOGRAM (TRANSIT PERMIT) MASTERS ==========================
+
+  addTransitPermitDistributorData(payload: TransitPermitDistributorData): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/distributor-data/`, payload);
+  }
+
+  updateTransitPermitDistributorData(id: number, changes: Partial<TransitPermitDistributorData>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/distributor-data/${id}/`, changes);
+  }
+
+  deleteTransitPermitDistributorData(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/distributor-data/${id}/`);
+  }
+
+  addBrandMlInCases(payload: BrandMlInCases): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/transit-permit/brand-ml-in-cases/`, payload);
+  }
+
+  updateBrandMlInCases(id: number, changes: Partial<BrandMlInCases>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/transit-permit/brand-ml-in-cases/${id}/`, changes);
+  }
+
+  deleteBrandMlInCases(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/transit-permit/brand-ml-in-cases/${id}/`);
+  }
+
+  addMasterBottleType(payload: MasterBottleType): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/liquor-data/bottle-types/create/`, payload);
+  }
+
+  updateMasterBottleType(id: number, changes: Partial<MasterBottleType>): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/liquor-data/bottle-types/${id}/`, changes);
+  }
+
+  deleteMasterBottleType(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/liquor-data/bottle-types/${id}/`);
+  }
+
+  addMasterLiquorType(payload: { liquor_type: string }): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/liquor-data/liquor-types/`, payload);
+  }
+
+  updateMasterLiquorType(id: number, changes: { liquor_type: string }): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/liquor-data/liquor-types/${id}/`, changes);
+  }
+
+  deleteMasterLiquorType(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/liquor-data/liquor-types/${id}/`);
+  }
+
   // ========================== LICENSE TERMS (LEGACY CODES) ==========================
 
   getLicenseFormTerms(licenseeCatCode: number, licenseeScatCode: number): Observable<LicenseFormTermsResponse> {
@@ -327,5 +402,96 @@ export class AdminService {
         terms,
       }
     );
+  }
+
+  // ========================== BULK SPIRIT (ENA) MANAGEMENT ==========================
+
+  getActiveLicenses(): Observable<ActiveLicense[]> {
+    return this.http.get<ActiveLicense[]>(`${this.licenseMastersUrl}/active/`);
+  }
+
+  addEnaBulkSpiritType(payload: EnaBulkSpiritType): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/bulk-spirit/bulk-spirit-types/create/`, payload);
+  }
+
+  updateEnaBulkSpiritType(id: number, changes: Partial<EnaBulkSpiritType>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/bulk-spirit/bulk-spirit-types/${id}/update/`, changes);
+  }
+
+  deleteEnaBulkSpiritType(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/bulk-spirit/bulk-spirit-types/${id}/delete/`);
+  }
+
+  addEnaDistilleryDetail(payload: EnaDistilleryDetail): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/ena-distillery-types/create/`, payload);
+  }
+
+  updateEnaDistilleryDetail(id: number, changes: Partial<EnaDistilleryDetail>): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/ena-distillery-types/${id}/update/`, changes);
+  }
+
+  deleteEnaDistilleryDetail(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/ena-distillery-types/${id}/delete/`);
+  }
+
+  // ========================== ENA PURPOSE DETAILS MANAGEMENT ==========================
+
+  getEnaPurposeDetails(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.supplyChainUrl}/purposes/admin/purposes/`);
+  }
+
+  addEnaPurposeDetail(payload: { purpose_name: string }): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/purposes/admin/purposes/create/`, payload);
+  }
+
+  updateEnaPurposeDetail(id: number, changes: { purpose_name: string }): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/purposes/admin/purposes/${id}/update/`, changes);
+  }
+
+  deleteEnaPurposeDetail(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/purposes/admin/purposes/${id}/delete/`);
+  }
+
+  toggleEnaPurposeActive(id: number): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/purposes/admin/purposes/${id}/toggle-active/`, {});
+  }
+
+  // ========================== CHECK POST DETAILS MANAGEMENT ==========================
+
+  getCheckPostDetails(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.supplyChainUrl}/checkposts/admin/checkposts/`);
+  }
+
+  addCheckPostDetail(payload: { check_post_name: string }): Observable<any> {
+    return this.http.post(`${this.supplyChainUrl}/checkposts/admin/checkposts/create/`, payload);
+  }
+
+  updateCheckPostDetail(id: number, changes: { check_post_name: string }): Observable<any> {
+    return this.http.put(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/update/`, changes);
+  }
+
+  deleteCheckPostDetail(id: number): Observable<any> {
+    return this.http.delete(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/delete/`);
+  }
+
+  toggleCheckPostActive(id: number): Observable<any> {
+    return this.http.patch(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/toggle-active/`, {});
+  }
+
+  // Renewal Application Config
+  getRenewalApplicationConfig(): Observable<any> {
+    return this.http.get<any>(`${this.mastersUrl}/renewal-application-config/`);
+  }
+
+  updateRenewalApplicationConfig(changes: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/renewal-application-config/update/`, changes);
+  }
+
+  getTimerConfig(code: string): Observable<any> {
+    return this.http.get<any>(`${this.mastersUrl}/timer-config/?code=${code}`);
+  }
+
+  updateTimerConfig(payload: { code: string; delay_value: number; delay_unit: string; is_active: boolean }): Observable<any> {
+    return this.http.put<any>(`${this.mastersUrl}/timer-config/update/`, payload);
   }
 }

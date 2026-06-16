@@ -35,17 +35,6 @@
       </div>
     </div>
 
-    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
-      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
-      <div class="card-icon">
-        <i class="bi bi-gear"></i>
-      </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRevalidationStatusCount('UNDER_PROCESS') }}</h3>
-        <p class="card-label">Under Process</p>
-      </div>
-    </div>
-
     <div class="summary-card action-required-requests summary-card-clickable" role="button" tabindex="0"
       (click)="onSummaryCardClick('ACTION_REQUIRED')" [class.active]="activeSummaryFilter === 'ACTION_REQUIRED'">
       <div class="card-icon">
@@ -177,10 +166,7 @@
                 <span class="company-name">{{ getCompanyDisplayName(item) }}</span>
               </td>
               <td class="status">
-                <span
-                  class="status-badge status-{{ item.status.toLowerCase().includes('expired') ? 'expired' : 
-                                                      item.status.toLowerCase().includes('invalid') ? 'invalid' : 
-                                                      item.status.toLowerCase().includes('pending') ? 'pending' : 'default' }}">
+                <span class="status-badge {{ getStatusBadgeClass(item) }}">
                   {{ item.status }}
                 </span>
               </td>

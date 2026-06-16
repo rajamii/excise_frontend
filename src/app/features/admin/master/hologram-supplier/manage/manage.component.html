@@ -1,0 +1,76 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} Hologram Supplier
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- Company Name -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Company Name</mat-label>
+        <input
+          matInput
+          name="companyName"
+          required
+          [(ngModel)]="supplier.companyName"
+          #companyNameModel="ngModel"
+        />
+        <mat-error *ngIf="companyNameModel.errors?.['required']">
+          Company name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Post -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Post</mat-label>
+        <input
+          matInput
+          name="post"
+          [(ngModel)]="supplier.post"
+        />
+      </mat-form-field>
+
+      <!-- Address -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Address</mat-label>
+        <textarea
+          matInput
+          name="address"
+          rows="3"
+          [(ngModel)]="supplier.address"
+        ></textarea>
+      </mat-form-field>
+
+      <!-- State -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>State</mat-label>
+        <input
+          matInput
+          name="state"
+          [(ngModel)]="supplier.state"
+        />
+      </mat-form-field>
+
+      <!-- Active Status -->
+      <div class="active-toggle">
+        <mat-slide-toggle name="isActive" [(ngModel)]="supplier.isActive">
+          Active
+        </mat-slide-toggle>
+      </div>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button
+        matButton="filled"
+        color="primary"
+        (click)="onSave()"
+        [disabled]="form.invalid"
+      >
+        Save
+      </button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

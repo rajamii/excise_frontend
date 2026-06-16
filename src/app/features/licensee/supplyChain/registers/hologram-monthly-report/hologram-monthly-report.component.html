@@ -16,6 +16,9 @@
                 <button class="btn btn-info btn-sm" (click)="autoCalculateFromDaily()" title="Refresh data from daily register">
                   <i class="bi bi-arrow-clockwise me-1"></i>Refresh
                 </button>
+                <button class="btn btn-outline-success btn-sm" (click)="exportMonthlyReportCsv()" [disabled]="!overviewSummary" title="Export selected month report (CSV for Excel)">
+                  <i class="bi bi-download me-1"></i>Export
+                </button>
               </div>
             </div>
           </div>
@@ -151,69 +154,79 @@
       <div class="bg-white">
         <div class="container-fluid p-3">
           @if (overviewSummary) {
-          <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5 g-3 mb-3">
+          <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-5 g-3 mb-3">
+
+            <!-- Previous Month Balance -->
             <div class="col">
-              <div class="card border-info border-2 h-100" style="background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);">
-                <div class="card-body py-2 px-2">
-                  <h6 class="text-info fw-bold mb-1" style="font-size: 0.85rem;">
-                    <i class="bi bi-arrow-down-circle me-1"></i>Previous Month Balance
-                  </h6>
-                  <div class="fs-5 fw-bold text-success">{{ getPreviousMonthClosingBalance() | number }}</div>
-                  <small class="text-muted d-block" style="font-size: 0.7rem;">{{ getPreviousMonthDisplay() }}</small>
-                  <small class="text-info" style="font-size: 0.7rem;">
-                    <i class="bi bi-info-circle me-1"></i>Opening stock
-                  </small>
+              <div class="stat-card stat-card--teal">
+                <div class="stat-card__icon-wrap">
+                  <i class="bi bi-arrow-down-circle-fill"></i>
+                </div>
+                <div class="stat-card__body">
+                  <span class="stat-card__label">Previous Month Balance</span>
+                  <span class="stat-card__value">{{ getPreviousMonthClosingBalance() | number }}</span>
+                  <span class="stat-card__sub">{{ getPreviousMonthDisplay() }}</span>
+                  <span class="stat-card__hint"><i class="bi bi-info-circle me-1"></i>Opening stock</span>
                 </div>
               </div>
             </div>
 
+            <!-- Fresh Arrivals -->
             <div class="col">
-              <div class="card border-success border-2 h-100">
-                <div class="card-body py-2 px-2">
-                  <h6 class="text-success fw-bold mb-1" style="font-size: 0.85rem;">
-                    <i class="bi bi-box-seam me-1"></i>Fresh Arrivals
-                  </h6>
-                  <div class="fs-5 fw-bold text-success">{{ overviewSummary.totalArrivals | number }}</div>
-                  <small class="text-muted" style="font-size: 0.7rem;">Shipments: {{ overviewSummary.arrivalCount }}</small>
+              <div class="stat-card stat-card--green">
+                <div class="stat-card__icon-wrap">
+                  <i class="bi bi-box-seam-fill"></i>
+                </div>
+                <div class="stat-card__body">
+                  <span class="stat-card__label">Fresh Arrivals</span>
+                  <span class="stat-card__value">{{ overviewSummary.totalArrivals | number }}</span>
+                  <span class="stat-card__sub">Shipments: {{ overviewSummary.arrivalCount }}</span>
                 </div>
               </div>
             </div>
 
+            <!-- Total Utilized -->
             <div class="col">
-              <div class="card border-primary border-2 h-100">
-                <div class="card-body py-2 px-2">
-                  <h6 class="text-primary fw-bold mb-1" style="font-size: 0.85rem;">
-                    <i class="bi bi-arrow-up-circle me-1"></i>Total Utilized
-                  </h6>
-                  <div class="fs-5 fw-bold text-primary">{{ overviewSummary.totalUtilized | number }}</div>
-                  <small class="text-muted" style="font-size: 0.7rem;">Entries: {{ overviewSummary.utilizationCount }}</small>
+              <div class="stat-card stat-card--blue">
+                <div class="stat-card__icon-wrap">
+                  <i class="bi bi-arrow-up-circle-fill"></i>
+                </div>
+                <div class="stat-card__body">
+                  <span class="stat-card__label">Total Utilized</span>
+                  <span class="stat-card__value">{{ overviewSummary.totalUtilized | number }}</span>
+                  <span class="stat-card__sub">Entries: {{ overviewSummary.utilizationCount }}</span>
                 </div>
               </div>
             </div>
 
+            <!-- Total Wastage -->
             <div class="col">
-              <div class="card border-danger border-2 h-100">
-                <div class="card-body py-2 px-2">
-                  <h6 class="text-danger fw-bold mb-1" style="font-size: 0.85rem;">
-                    <i class="bi bi-exclamation-triangle me-1"></i>Total Wastage
-                  </h6>
-                  <div class="fs-5 fw-bold text-danger">{{ overviewSummary.totalWastage | number }}</div>
-                  <small class="text-muted" style="font-size: 0.7rem;">Entries: {{ overviewSummary.wastageCount }}</small>
+              <div class="stat-card stat-card--red">
+                <div class="stat-card__icon-wrap">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div class="stat-card__body">
+                  <span class="stat-card__label">Total Wastage</span>
+                  <span class="stat-card__value">{{ overviewSummary.totalWastage | number }}</span>
+                  <span class="stat-card__sub">Entries: {{ overviewSummary.wastageCount }}</span>
                 </div>
               </div>
             </div>
 
+            <!-- Closing Balance -->
             <div class="col">
-              <div class="card border-dark border-2 h-100">
-                <div class="card-body py-2 px-2">
-                  <h6 class="text-dark fw-bold mb-1" style="font-size: 0.85rem;">
-                    <i class="bi bi-calculator me-1"></i>Closing Balance
-                  </h6>
-                  <div class="fs-5 fw-bold text-dark">{{ overviewSummary.closingBalance | number }}</div>
-                  <small class="text-muted" style="font-size: 0.7rem;">Opening: {{ overviewSummary.openingStock | number }}</small>
+              <div class="stat-card stat-card--purple">
+                <div class="stat-card__icon-wrap">
+                  <i class="bi bi-calculator-fill"></i>
+                </div>
+                <div class="stat-card__body">
+                  <span class="stat-card__label">Closing Balance</span>
+                  <span class="stat-card__value">{{ overviewSummary.closingBalance | number }}</span>
+                  <span class="stat-card__sub">Opening: {{ overviewSummary.openingStock | number }}</span>
                 </div>
               </div>
             </div>
+
           </div>
           }
 

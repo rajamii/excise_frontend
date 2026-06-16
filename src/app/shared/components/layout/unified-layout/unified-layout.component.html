@@ -41,40 +41,94 @@
               <span class="nav-badge" *ngIf="getPendingCount('new-license') as pending">{{ pending }}</span>
             </button>
 
+            <!-- License Renewal Applications -->
+            <button class="nav-item license-renewal-nav-item" (click)="navigateToSupplyChain('license-renewal')" [class.active]="isDashboardSectionActive('license-renewal')">
+              <mat-icon class="nav-icon">autorenew</mat-icon>
+              <span class="nav-text">License Renewal</span>
+              <span class="nav-badge" *ngIf="getPendingCount('license-renewal') as pending">{{ pending }}</span>
+            </button>
+
             <!-- Wallet -->
             <button class="nav-item wallet-nav-item" *ngIf="showManufacturingWalletNav" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
               <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
               <span class="nav-text">Wallet</span>
             </button>
 
-            <!-- Distillery-only supply chain items -->
-            <button class="nav-item" *ngIf="showDistilleryMenus" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
-              <mat-icon class="nav-icon">description</mat-icon>
-              <span class="nav-text">{{ getSidebarLabel('requisition') }}</span>
-            </button>
-            <button class="nav-item" *ngIf="showDistilleryMenus && !isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
-              <mat-icon class="nav-icon">refresh</mat-icon>
-              <span class="nav-text">{{ getSidebarLabel('revalidation') }}</span>
-            </button>
-            <button class="nav-item" *ngIf="showDistilleryMenus" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
-              <mat-icon class="nav-icon">cancel</mat-icon>
-              <span class="nav-text">{{ getSidebarLabel('cancellation') }}</span>
-            </button>
+            <!-- Distillery-only supply chain items — grouped under "Bulk Spirit" -->
+            <ng-container *ngIf="showDistilleryMenus">
+              <button class="nav-item bulk-spirit-nav-item" (click)="bulkSpiritExpanded = !bulkSpiritExpanded"
+                [class.active]="bulkSpiritExpanded && (isDashboardSectionActive('requisition') || isDashboardSectionActive('revalidation') || isDashboardSectionActive('cancellation'))"
+                [class.group-expanded]="bulkSpiritExpanded">
+                <mat-icon class="nav-icon">water_drop</mat-icon>
+                <span class="nav-text">Bulk Spirit</span>
+                <span class="nav-badge nav-badge--group" *ngIf="!bulkSpiritExpanded && getBulkSpiritTotalBadge() > 0">{{ getBulkSpiritTotalBadge() }}</span>
+                <mat-icon class="nav-chevron">{{ bulkSpiritExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="bulkSpiritExpanded">
+                <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
+                  <mat-icon class="nav-icon">description</mat-icon>
+                  <span class="nav-text">Requisition</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('requisition') as cnt">{{ cnt }}</span>
+                </button>
+                <button class="nav-item nav-item--sub bulk-spirit-sub-item" *ngIf="!isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
+                  <mat-icon class="nav-icon">refresh</mat-icon>
+                  <span class="nav-text">Revalidation</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('revalidation') as cnt">{{ cnt }}</span>
+                </button>
+                <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
+                  <mat-icon class="nav-icon">cancel</mat-icon>
+                  <span class="nav-text">Cancellation</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('cancellation') as cnt">{{ cnt }}</span>
+                </button>
+              </ng-container>
+            </ng-container>
 
             <!-- Brewery + Distillery common items -->
-            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('transit')" [class.active]="isDashboardSectionActive('transit')">
+            <button class="nav-item transit-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('transit')" [class.active]="isDashboardSectionActive('transit')">
               <mat-icon class="nav-icon">local_shipping</mat-icon>
               <span class="nav-text">{{ getSidebarLabel('transit') }}</span>
             </button>
-            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
-              <mat-icon class="nav-icon">qr_code</mat-icon>
-              <span class="nav-text">{{ getSidebarLabel('hologram') }}</span>
-            </button>
-            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
-              <mat-icon class="nav-icon">add_box</mat-icon>
-              <span class="nav-text">Hologram Request</span>
-            </button>
-            <button class="nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('stock-inventory')" [class.active]="isDashboardSectionActive('stock-inventory')">
+
+            <!-- Hologram group -->
+            <ng-container *ngIf="showBreweryOrDistilleryMenus">
+              <button class="nav-item bulk-spirit-nav-item hologram-nav-item" (click)="hologramExpanded = !hologramExpanded"
+                [class.active]="hologramExpanded && (isDashboardSectionActive('hologram') || isDashboardSectionActive('hologram-request') || isDashboardSectionActive('hologram-daily-entry') || isDashboardSectionActive('monthly-hologram-statement') || isDashboardSectionActive('hologram-inventory'))"
+                [class.group-expanded]="hologramExpanded">
+                <mat-icon class="nav-icon">qr_code_2</mat-icon>
+                <span class="nav-text">Hologram</span>
+                <span class="nav-badge nav-badge--group" *ngIf="!hologramExpanded && getHologramTotalBadge() > 0">{{ getHologramTotalBadge() }}</span>
+                <mat-icon class="nav-chevron">{{ hologramExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="hologramExpanded">
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
+                  <mat-icon class="nav-icon">qr_code</mat-icon>
+                  <span class="nav-text">New Procurement</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram') as cnt">{{ cnt }}</span>
+                </button>
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
+                  <mat-icon class="nav-icon">add_box</mat-icon>
+                  <span class="nav-text">Request</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram-request') as cnt">{{ cnt }}</span>
+                </button>
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')" *ngIf="!isLicenseeUser()">
+                  <mat-icon class="nav-icon">today</mat-icon>
+                  <span class="nav-text">Daily Entry</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram-daily-entry') as cnt">{{ cnt }}</span>
+                </button>
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('monthly-hologram-statement')" [class.active]="isDashboardSectionActive('monthly-hologram-statement')" *ngIf="!isLicenseeUser()">
+                  <mat-icon class="nav-icon">description</mat-icon>
+                  <span class="nav-text">Monthly Statement</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('monthly-hologram-statement') as cnt">{{ cnt }}</span>
+                </button>
+                <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-inventory')" [class.active]="isDashboardSectionActive('hologram-inventory')" *ngIf="!isLicenseeUser()">
+                  <mat-icon class="nav-icon">inventory_2</mat-icon>
+                  <span class="nav-text">Inventory</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('hologram-inventory') as cnt">{{ cnt }}</span>
+                </button>
+              </ng-container>
+            </ng-container>
+
+            <button class="nav-item stock-inventory-nav-item" *ngIf="showBreweryOrDistilleryMenus" (click)="navigateToSupplyChain('stock-inventory')" [class.active]="isDashboardSectionActive('stock-inventory')">
               <mat-icon class="nav-icon">inventory</mat-icon>
               <span class="nav-text">Stock Inventory</span>
             </button>
@@ -119,37 +173,53 @@
               </mat-expansion-panel>
             </div> -->
 
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('company')" [class.active]="isDashboardSectionActive('company-registration')">
+            <button class="nav-item company-registration-nav-item" (click)="navigateToLicenseeRegistration('company')" [class.active]="isDashboardSectionActive('company-registration')">
               <mat-icon class="nav-icon">apartment</mat-icon>
               <span class="nav-text">Company Registration</span>
             </button>
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
+            <button class="nav-item company-collaboration-nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
               <mat-icon class="nav-icon">groups</mat-icon>
               <span class="nav-text">Company Collaboration</span>
             </button>
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
+            <button class="nav-item salesman-barman-registration-nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
               <span class="nav-badge" *ngIf="getPendingCount('salesman-barman-registration') as pending">{{ pending }}</span>
             </button>
-            <button class="nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
+            <button class="nav-item label-registration-nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
             "isDashboardSectionActive('label-registration')">
               <mat-icon class="nav-icon">label</mat-icon>
               <span class="nav-text">Label Registration</span>
+            </button>
+
+            <!-- License Activity — last item for licensees -->
+            <button class="nav-item license-activity-nav-item" (click)="navigateToSupplyChain('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
+              <mat-icon class="nav-icon">assignment</mat-icon>
+              <span class="nav-text">License Activity</span>
             </button>
           </div>
 
           <!-- Admin/Officer Navigation -->
           <div *ngIf="!isLicenseeUser()">
             <!-- Dashboard -->
-            <a routerLink="/dashboard" class="nav-item" [class.active]="isDashboardHomeActive()">
+            <a routerLink="/dashboard" class="nav-item" [class.active]="isDashboardHomeActive()" (click)="closeSidenav()">
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
-            <ng-container *ngFor="let item of officerSectionItems">
+            <ng-container *ngFor="let item of officerSectionItems; let i = index">
+              <!-- Group header — rendered once before the first item of each group -->
+              <button class="nav-item bulk-spirit-nav-item" *ngIf="isFirstInGroup(i)" (click)="toggleGroup(item.group!)"
+                [class.group-expanded]="isGroupExpanded(item.group!)"
+                [class.active]="isGroupExpanded(item.group!) && false">
+                <mat-icon class="nav-icon">{{ getGroupIcon(item.group!) }}</mat-icon>
+                <span class="nav-text">{{ item.group }}</span>
+                <span class="nav-badge nav-badge--group" *ngIf="!isGroupExpanded(item.group!) && getGroupTotalBadge(item.group!) > 0">{{ getGroupTotalBadge(item.group!) }}</span>
+                <mat-icon class="nav-chevron">{{ isGroupExpanded(item.group!) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
               <button
                 class="nav-item"
-                *ngIf="(item.showOnlyForOic ? isOicUser() : true) && (item.showOnlyForCommissioner ? isCommissionerUser() : true) && (!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForPermitSection || !isPermitSectionUser()) && (!item.hideForOic || !isOicUser()) && (!item.hideForCommissioner || !isCommissionerUser()) && canAccessSection(item.section)"
+                [class.nav-item--sub]="!!item.group"
+                *ngIf="(item.showOnlyForOic ? isOicUser() : true) && (item.showOnlyForCommissioner ? isCommissionerUser() : true) && (!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForPermitSection || !isPermitSectionUser()) && (!item.hideForOic || !isOicUser()) && (!item.hideForCommissioner || !isCommissionerUser()) && canAccessSection(item.section) && (!item.group || isGroupExpanded(item.group))"
                 (click)="navigateToSection(item.section)"
                 [class.active]="isDashboardSectionActive(item.section)">
                 <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
@@ -159,55 +229,179 @@
             </ng-container>
 
             <!-- Site Admin master navigation -->
-            <div *ngIf="isSiteAdminUser()" (click)="closeSidenav()">
-              <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item">
+            <div *ngIf="isSiteAdminUser()">
+              <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">people</mat-icon>
                 <span class="nav-text">User</span>
               </a>
-              <a routerLink="/dashboard/admin/oic" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/oic" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">badge</mat-icon>
                 <span class="nav-text">OIC</span>
               </a>
-              <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
                 <span class="nav-text">Role</span>
               </a>
-              <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">map</mat-icon>
                 <span class="nav-text">District</span>
               </a>
-              <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">account_tree</mat-icon>
                 <span class="nav-text">Sub Division</span>
               </a>
-              <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">local_police</mat-icon>
                 <span class="nav-text">Police Station</span>
               </a>
-              <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-validity-period" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+                <mat-icon class="nav-icon">event_available</mat-icon>
+                <span class="nav-text">License Validity Period</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">category</mat-icon>
                 <span class="nav-text">License Type</span>
               </a>
-              <a routerLink="/dashboard/admin/license-categories" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-categories" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">view_list</mat-icon>
                 <span class="nav-text">License Category</span>
               </a>
-              <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">badge</mat-icon>
                 <span class="nav-text">License Title</span>
               </a>
-              <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">layers</mat-icon>
                 <span class="nav-text">License Subcategory</span>
               </a>
-              <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/brand-ml-in-cases" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+                <mat-icon class="nav-icon">science</mat-icon>
+                <span class="nav-text">ML</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">gavel</mat-icon>
                 <span class="nav-text">Terms &amp; Conditions</span>
               </a>
-              <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item">
+              <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">route</mat-icon>
                 <span class="nav-text">Road</span>
               </a>
+              <a routerLink="/dashboard/admin/hologram-suppliers" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Hologram Suppliers</span>
+              </a>
+              <a routerLink="/dashboard/admin/sbi-e-pay" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+                <mat-icon class="nav-icon">payment</mat-icon>
+                <span class="nav-text">SBI ePAY</span>
+              </a>
+
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminHologramExpanded = !adminHologramExpanded"
+                [class.active]="adminHologramExpanded || isAdminRouteActive('/dashboard/admin/hologram')"
+                [class.group-expanded]="adminHologramExpanded">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Hologram</span>
+                <mat-icon class="nav-chevron">{{ adminHologramExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminHologramExpanded">
+                <a routerLink="/dashboard/admin/hologram/transit-permit-distributor-data" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">local_shipping</mat-icon>
+                  <span class="nav-text">Transit Permit Distributor Data</span>
+                </a>
+                <a routerLink="/dashboard/admin/hologram/master-bottle-type" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">category</mat-icon>
+                  <span class="nav-text">Master Bottle Type</span>
+                </a>
+                <a routerLink="/dashboard/admin/hologram/master-liquor-type" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">local_bar</mat-icon>
+                  <span class="nav-text">Master Liquor Type</span>
+                </a>
+                <a routerLink="/dashboard/admin/hologram/brands" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">inventory</mat-icon>
+                  <span class="nav-text">Brands</span>
+                </a>
+              </ng-container>
+
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminBulkSpiritExpanded = !adminBulkSpiritExpanded"
+                [class.active]="adminBulkSpiritExpanded || isAdminRouteActive('/dashboard/admin/bulk-spirit')"
+                [class.group-expanded]="adminBulkSpiritExpanded">
+                <mat-icon class="nav-icon">local_bar</mat-icon>
+                <span class="nav-text">Bulk Spirit</span>
+                <mat-icon class="nav-chevron">{{ adminBulkSpiritExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminBulkSpiritExpanded">
+                <a routerLink="/dashboard/admin/bulk-spirit/ena-bulk-spirit" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">list</mat-icon>
+                  <span class="nav-text">ENA Bulk Spirit Details</span>
+                </a>
+                <a routerLink="/dashboard/admin/bulk-spirit/distillery-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">factory</mat-icon>
+                  <span class="nav-text">Lifted From Details</span>
+                </a>
+                <a routerLink="/dashboard/admin/bulk-spirit/ena-purpose-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">assignment</mat-icon>
+                  <span class="nav-text">ENA Purpose Details</span>
+                </a>
+                <a routerLink="/dashboard/admin/bulk-spirit/check-post-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">location_on</mat-icon>
+                  <span class="nav-text">Check Post Details</span>
+                </a>
+              </ng-container>
+
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminAboutUsExpanded = !adminAboutUsExpanded"
+                [class.active]="adminAboutUsExpanded || isAdminRouteActive('/dashboard/admin/about-us')"
+                [class.group-expanded]="adminAboutUsExpanded">
+                <mat-icon class="nav-icon">info</mat-icon>
+                <span class="nav-text">About Us</span>
+                <mat-icon class="nav-chevron">{{ adminAboutUsExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminAboutUsExpanded">
+                <a routerLink="/dashboard/admin/about-us/heads-of-organisations" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">account_balance</mat-icon>
+                  <span class="nav-text">Heads of Organisations</span>
+                </a>
+                <a routerLink="/dashboard/admin/about-us/excise-secretaries" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">supervisor_account</mat-icon>
+                  <span class="nav-text">Excise Secretaries</span>
+                </a>
+              </ng-container>
+
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminContactUsExpanded = !adminContactUsExpanded"
+                [class.active]="adminContactUsExpanded || isAdminRouteActive('/dashboard/admin/contact-us')"
+                [class.group-expanded]="adminContactUsExpanded">
+                <mat-icon class="nav-icon">contact_mail</mat-icon>
+                <span class="nav-text">Contact Us</span>
+                <mat-icon class="nav-chevron">{{ adminContactUsExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminContactUsExpanded">
+                <a routerLink="/dashboard/admin/contact-us/nodal-officer" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">person</mat-icon>
+                  <span class="nav-text">Website Nodal Officer</span>
+                </a>
+                <a routerLink="/dashboard/admin/contact-us/public-information-officers" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">groups</mat-icon>
+                  <span class="nav-text">Public Information Officers</span>
+                </a>
+                <a routerLink="/dashboard/admin/contact-us/directorate-district-officials" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">account_balance</mat-icon>
+                  <span class="nav-text">Directorate &amp; District Officials</span>
+                </a>
+                <a routerLink="/dashboard/admin/contact-us/grievance-redressal-officer" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">support_agent</mat-icon>
+                  <span class="nav-text">Grievance Redressal Officer</span>
+                </a>
+              </ng-container>
+
+              <!-- Single Window Enquiry (User Details) — site admin can also access -->
+              <button class="nav-item" (click)="navigateToSection('single-window')" [class.active]="isDashboardSectionActive('single-window')">
+                <mat-icon class="nav-icon">manage_search</mat-icon>
+                <span class="nav-text">User Details</span>
+              </button>
+
+              <!-- Officer Activity — last item for site admin -->
+              <button class="nav-item" (click)="navigateToSection('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
+                <mat-icon class="nav-icon">assignment</mat-icon>
+                <span class="nav-text">Officer Activity</span>
+              </button>
             </div>
           </div>
         </div>
@@ -242,17 +436,28 @@
 
           </div>
 
-          <!-- Right Section with User Info -->
-          <div class="nav-right">
-            <div class="top-user-info" (click)="openUserProfile()">
-              <div class="top-user-avatar">
-                <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
-              </div>
-              <div class="top-user-details">
-                <span class="top-user-name">{{ userName || 'License User' }}</span>
+           <!-- Right Section with User Info -->
+           <div class="nav-right">
+             <div class="top-user-info" (click)="openUserProfile()">
+              <button
+                *ngIf="isLicenseeUser() && selectedLicenseDisplay"
+                type="button"
+                class="top-license-chip"
+                (click)="$event.stopPropagation(); openLicenseNumbersPopup()"
+                title="View license numbers"
+              >
+                <mat-icon class="chip-icon">badge</mat-icon>
+                <span class="chip-text">{{ selectedLicenseDisplay }}</span>
+                <mat-icon class="chip-caret">expand_more</mat-icon>
+              </button>
+                <div class="top-user-avatar">
+                  <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
+                </div>
+                <div class="top-user-details">
+                  <span class="top-user-name">{{ userName || 'License User' }}</span>
+                </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
 

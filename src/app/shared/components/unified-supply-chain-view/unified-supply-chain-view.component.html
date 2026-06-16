@@ -48,7 +48,7 @@
         <div id="applicationPrintSection" class="card shadow-sm border-0 printable-content">
             <div class="application-header text-center fw-bold mb-3 fs-5">
                 <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-                    <img src="assets/icons/fav-icon.png" alt="Department Seal" class="dept-seal" />
+                    <img src="assets/icons/fav-icon-black.png" alt="Department Seal" class="dept-seal" />
                     <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
                 </div>
                 <div class="text-primary fs-4 mt-2">{{ getApplicationTitle() }}</div>
@@ -64,6 +64,12 @@
                             </p>
                             <p><strong>Submission Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy"
                                 }}</p>
+                            <p *ngIf="getValidUpToDate()">
+                                <strong>Valid Up To:</strong> 
+                                <span [class.text-danger]="isExpired()" [class.fw-bold]="isExpired()">
+                                    {{ getValidUpToDate() | date: "dd-MM-yyyy" }}
+                                </span>
+                            </p>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -72,8 +78,12 @@
                             <p><strong>Current Status:</strong></p>
                             <span [ngClass]="getStatusBadgeClass(getCurrentStatusToken())" class="d-block mt-1">
                                 {{ getCurrentStatusText() }}
-                            </span>
-                            <p class="mt-2" *ngIf="!isSalesmanBarmanRegistration()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
+                             </span>
+                             <div class="mt-2" *ngIf="isNewLicenseOrRenewal() && hasAnyUnresolvedObjections()">
+                                 <span class="badge bg-danger">Objection</span>
+                                 <span class="badge bg-light text-dark ms-2">{{ unresolvedObjectionCount() }} pending</span>
+                             </div>
+                            <p class="mt-2" *ngIf="!isSalesmanOrRenewal()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
                         </div>
                     </div>
                 </div>
@@ -578,6 +588,32 @@
                     </div>
                 </div>
 
+                <div class="section-card mb-4" *ngIf="isHologram() && hologramSupplierDetails">
+                    <h5 class="section-title">Supplier Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Company</td>
+                                    <td>{{ hologramSupplierDetails.company_name || hologramSupplierDetails.companyName || hologramSupplierDetails.name || '—' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Post</td>
+                                    <td>{{ hologramSupplierDetails.post || '—' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Address</td>
+                                    <td>{{ hologramSupplierDetails.address || '—' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">State</td>
+                                    <td>{{ hologramSupplierDetails.state || '—' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="section-card mb-4">
                     <h5 class="section-title">Status & Additional Information</h5>
                     <div class="table-responsive">
@@ -604,6 +640,12 @@
                     </div>
                 </div>
 
+                <div class="no-print d-flex justify-content-center mt-3" *ngIf="shouldShowSupplyOrderLetterButton()">
+                    <button type="button" class="btn btn-primary" (click)="openSupplyOrderLetter()">
+                        Supply Order Letter
+                    </button>
+                </div>
+
                 <div class="no-print d-flex justify-content-center mt-3">
                     <app-unified-action-buttons
                         [item]="applicationData"
@@ -615,7 +657,88 @@
                     </app-unified-action-buttons>
                 </div>
                 }
-                @if (isNewLicense()) {
+
+                <!-- Supply Order Letter (Inline) -->
+                <div class="section-card mb-4" id="supplyOrderLetterSection" *ngIf="supplyOrderLetterOpen">
+                    <div class="d-flex justify-content-between align-items-center no-print">
+                        <h5 class="section-title mb-0">Supply Order Letter</h5>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary" (click)="printSupplyOrderLetter()">Print</button>
+                            <button type="button" class="btn btn-secondary" (click)="closeSupplyOrderLetter()">Close</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-3" *ngIf="supplyOrderLetterModel; else noLetterInline">
+                        <div id="supplyOrderLetterPrintArea" class="supply-letter">
+                            <div class="supply-letter-header">
+                                <div class="supply-letter-title">EXCISE DEPARTMENT</div>
+                                <div class="supply-letter-subtitle">GOVERNMENT OF SIKKIM</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-3">
+                                <div>No. {{ supplyOrderLetterModel.refNo }}</div>
+                                <div>Dated: {{ supplyOrderLetterModel.dated }}</div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div>To,</div>
+                                <div class="ms-3">{{ supplyOrderLetterModel.toPost }}</div>
+                                <div class="ms-3">{{ supplyOrderLetterModel.toCompany }}</div>
+                                <div class="ms-3" *ngFor="let ln of supplyOrderLetterModel.toAddressLines">{{ ln }}</div>
+                            </div>
+
+                            <div class="mt-4 fw-semibold">Subject: Supply of Hologram</div>
+
+                            <div class="mt-3">
+                                Kindly arrange to Supply {{ supplyOrderLetterModel.totalQty }} no's of Hologram to {{ supplyOrderLetterModel.manufacturingUnit }}.
+                            </div>
+
+                            <div class="mt-4 mb-4">Details with regard to Number of Holograms are as under:-</div>
+
+                            <table class="table table-bordered mt-4 supply-letter-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 90px;">Sl No.</th>
+                                        <th>SERIES</th>
+                                        <th style="width: 220px;">QUANTITY</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>Local</td>
+                                        <td class="text-end">{{ supplyOrderLetterModel.localQty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2</td>
+                                        <td>Export</td>
+                                        <td class="text-end">{{ supplyOrderLetterModel.exportQty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3</td>
+                                        <td>Defence</td>
+                                        <td class="text-end">{{ supplyOrderLetterModel.defenceQty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="fw-semibold text-center">TOTAL</td>
+                                        <td class="text-end fw-semibold">{{ supplyOrderLetterModel.totalQty }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="mt-4 small">
+                                *Dispatch Report may kindly be forwarded to above mentioned Email Address.
+                            </div>
+                        </div>
+                    </div>
+
+                    <ng-template #noLetterInline>
+                        <div class="alert alert-warning mb-0">
+                            Supplier is not set for this procurement. Please ask the licensee to select supplier while submitting procurement.
+                        </div>
+                    </ng-template>
+                </div>
+                @if (isNewLicenseOrRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Applicant Information</h5>
                     <div class="table-responsive">
@@ -623,7 +746,13 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light">Applicant Name</td>
-                                    <td>{{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}</td>
+                                    <td>
+                                        {{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('applicant_name')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Father/Husband Name</td>
@@ -714,6 +843,14 @@
                                 <tr>
                                     <td class="fw-semibold bg-light">License Subcategory</td>
                                     <td>{{ applicationData.license_sub_category_name || applicationData.licenseSubCategoryName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Pachwai</td>
+                                    <td>{{ asYesNo(getPachwaiSelected()) }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Draught Beer</td>
+                                    <td>{{ asYesNo(getDraughtBeerSelected()) }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Site District</td>
@@ -827,26 +964,56 @@
                                     <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
                                     <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
                                 </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Brand Type</td>
-                                    <td>{{ applicationData.brandType || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">License</td>
-                                    <td>{{ applicationData.license || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Application Year</td>
-                                    <td>{{ applicationData.applicationYear || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Company Name</td>
-                                    <td>{{ applicationData.companyName || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">PAN</td>
-                                    <td>{{ applicationData.pan || 'Not available' }}</td>
-                                </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Brand Type</td>
+                                     <td>
+                                         {{ applicationData.brandType || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['brandType','brand_type'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">License</td>
+                                     <td>
+                                         {{ applicationData.license || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['license'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Application Year</td>
+                                     <td>
+                                         {{ applicationData.applicationYear || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['applicationYear','application_year'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Company Name</td>
+                                     <td>
+                                         {{ applicationData.companyName || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['companyName','company_name'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">PAN</td>
+                                     <td>
+                                         {{ applicationData.pan || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['pan'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
                             </tbody>
                         </table>
                     </div>
@@ -857,30 +1024,66 @@
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light detail-label-cell">Office Address</td>
-                                    <td>{{ applicationData.officeAddress || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Factory Address</td>
-                                    <td>{{ applicationData.factoryAddress || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Country / State</td>
-                                    <td>{{ (applicationData.country || 'NA') + ' / ' + (applicationData.state || 'NA') }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">PIN Code</td>
-                                    <td>{{ applicationData.pinCode || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Company Mobile</td>
-                                    <td>{{ applicationData.companyMobileNumber || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Company Email</td>
-                                    <td>{{ applicationData.companyEmailId || 'Not available' }}</td>
-                                </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light detail-label-cell">Office Address</td>
+                                     <td>
+                                         {{ applicationData.officeAddress || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['officeAddress','office_address'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Factory Address</td>
+                                     <td>
+                                         {{ applicationData.factoryAddress || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['factoryAddress','factory_address'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Country / State</td>
+                                     <td>
+                                         {{ (applicationData.country || 'NA') + ' / ' + (applicationData.state || 'NA') }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['country','state'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">PIN Code</td>
+                                     <td>
+                                         {{ applicationData.pinCode || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['pinCode','pin_code'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Company Mobile</td>
+                                     <td>
+                                         {{ applicationData.companyMobileNumber || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['companyMobileNumber','company_mobile_number'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Company Email</td>
+                                     <td>
+                                         {{ applicationData.companyEmailId || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['companyEmailId','company_email_id'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
                             </tbody>
                         </table>
                     </div>
@@ -891,26 +1094,56 @@
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light detail-label-cell">Member Name</td>
-                                    <td>{{ applicationData.memberName || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Designation</td>
-                                    <td>{{ applicationData.memberDesignation || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Member Mobile</td>
-                                    <td>{{ applicationData.memberMobileNumber || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Member Email</td>
-                                    <td>{{ applicationData.memberEmailId || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Member Address</td>
-                                    <td>{{ applicationData.memberAddress || 'Not available' }}</td>
-                                </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light detail-label-cell">Member Name</td>
+                                     <td>
+                                         {{ applicationData.memberName || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['memberName','member_name'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Designation</td>
+                                     <td>
+                                         {{ applicationData.memberDesignation || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['memberDesignation','member_designation'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Member Mobile</td>
+                                     <td>
+                                         {{ applicationData.memberMobileNumber || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['memberMobileNumber','member_mobile_number'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Member Email</td>
+                                     <td>
+                                         {{ applicationData.memberEmailId || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['memberEmailId','member_email_id'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Member Address</td>
+                                     <td>
+                                         {{ applicationData.memberAddress || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['memberAddress','member_address'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Payment ID</td>
                                     <td>{{ applicationData.paymentId || 'Not available' }}</td>
@@ -943,26 +1176,56 @@
                                     <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
                                     <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
                                 </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Financial Year</td>
-                                    <td>{{ applicationData['financial_year'] || applicationData['financialYear'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Application Year</td>
-                                    <td>{{ applicationData['application_year'] || applicationData['applicationYear'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Licensee Name</td>
-                                    <td>{{ applicationData['licensee_name'] || applicationData['licenseeName'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">License Number</td>
-                                    <td>{{ applicationData['license_number'] || applicationData['licenseNumber'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Licensee Address</td>
-                                    <td>{{ applicationData['licensee_address'] || applicationData['licenseeAddress'] || 'Not available' }}</td>
-                                </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Financial Year</td>
+                                     <td>
+                                         {{ applicationData['financial_year'] || applicationData['financialYear'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['financial_year','financialYear'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Application Year</td>
+                                     <td>
+                                         {{ applicationData['application_year'] || applicationData['applicationYear'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['application_year','applicationYear'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Licensee Name</td>
+                                     <td>
+                                         {{ applicationData['licensee_name'] || applicationData['licenseeName'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['licensee_name','licenseeName'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">License Number</td>
+                                     <td>
+                                         {{ applicationData['license_number'] || applicationData['licenseNumber'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['license_number','licenseNumber'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Licensee Address</td>
+                                     <td>
+                                         {{ applicationData['licensee_address'] || applicationData['licenseeAddress'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['licensee_address','licenseeAddress'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
                             </tbody>
                         </table>
                     </div>
@@ -973,30 +1236,66 @@
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light detail-label-cell">Brand Owner</td>
-                                    <td>{{ applicationData['brand_owner_name'] || applicationData['brandOwnerName'] || applicationData['brand_owner'] || applicationData['brandOwner'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Brand Owner Code</td>
-                                    <td>{{ applicationData['brand_owner_code'] || applicationData['brandOwnerCode'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">PAN</td>
-                                    <td>{{ applicationData['brand_owner_pan'] || applicationData['brandOwnerPan'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Office Address</td>
-                                    <td>{{ applicationData['brand_owner_office_address'] || applicationData['brandOwnerOfficeAddress'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Factory Address</td>
-                                    <td>{{ applicationData['brand_owner_factory_address'] || applicationData['brandOwnerFactoryAddress'] || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Mobile / Email</td>
-                                    <td>{{ (applicationData['brand_owner_mobile'] || applicationData['brandOwnerMobile'] || 'NA') + ' / ' + (applicationData['brand_owner_email'] || applicationData['brandOwnerEmail'] || 'NA') }}</td>
-                                </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light detail-label-cell">Brand Owner</td>
+                                     <td>
+                                         {{ applicationData['brand_owner_name'] || applicationData['brandOwnerName'] || applicationData['brand_owner'] || applicationData['brandOwner'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['brand_owner_name','brandOwnerName','brand_owner','brandOwner'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Brand Owner Code</td>
+                                     <td>
+                                         {{ applicationData['brand_owner_code'] || applicationData['brandOwnerCode'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['brand_owner_code','brandOwnerCode'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">PAN</td>
+                                     <td>
+                                         {{ applicationData['brand_owner_pan'] || applicationData['brandOwnerPan'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['brand_owner_pan','brandOwnerPan'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Office Address</td>
+                                     <td>
+                                         {{ applicationData['brand_owner_office_address'] || applicationData['brandOwnerOfficeAddress'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['brand_owner_office_address','brandOwnerOfficeAddress'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Factory Address</td>
+                                     <td>
+                                         {{ applicationData['brand_owner_factory_address'] || applicationData['brandOwnerFactoryAddress'] || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['brand_owner_factory_address','brandOwnerFactoryAddress'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Mobile / Email</td>
+                                     <td>
+                                         {{ (applicationData['brand_owner_mobile'] || applicationData['brandOwnerMobile'] || 'NA') + ' / ' + (applicationData['brand_owner_email'] || applicationData['brandOwnerEmail'] || 'NA') }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['brand_owner_mobile','brandOwnerMobile','brand_owner_email','brandOwnerEmail'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
                             </tbody>
                         </table>
                     </div>
@@ -1071,7 +1370,157 @@
                 </div>
                 }
 
-                @if (isSalesmanBarmanRegistration()) {
+                @if (isRenewal()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Renewal & License Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Renewal Application No</td>
+                                    <td>{{ applicationData.referenceNo || applicationData['application_id'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Old License No</td>
+                                    <td>{{ applicationData['license_id_display'] || applicationData['old_license_id'] || applicationData['oldLicenseId'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Old License Issue Date</td>
+                                    <td>{{ (applicationData['old_license_issue_date'] | date: "dd-MM-yyyy") || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Old License Valid Up To</td>
+                                    <td>{{ (applicationData['old_license_valid_up_to'] | date: "dd-MM-yyyy") || (applicationData['valid_up_to'] | date: "dd-MM-yyyy") || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Type</td>
+                                    <td>{{ applicationData.license_type_name || applicationData.licenseTypeName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Category</td>
+                                    <td>{{ applicationData.license_category_name || applicationData.licenseCategoryName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Sub Category</td>
+                                    <td>{{ applicationData.license_sub_category_name || applicationData.licenseSubCategoryName || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                @if (isNewLicenseRenewal()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Applicant & Establishment Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Establishment Name</td>
+                                    <td>{{ applicationData.establishment_name || applicationData.establishmentName || applicationData.applicant_name || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Applicant Name</td>
+                                    <td>{{ applicationData.applicant_name || applicationData.applicantName || applicationData['licensee_name'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Mobile / Email</td>
+                                    <td>{{ (applicationData.mobileNumber || applicationData.mobile_number || 'NA') + ' / ' + (applicationData.emailId || applicationData['email_id'] || applicationData.email || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN / Aadhaar</td>
+                                    <td>{{ (applicationData.pan || 'NA') + ' / ' + (applicationData.aadhaar || applicationData['aadhar'] || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Applicant Address</td>
+                                    <td>{{ applicationData.address || applicationData['applicant_address'] || applicationData['applicantAddress'] || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                @if (isNewLicenseRenewal()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Site Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">District</td>
+                                    <td>{{ applicationData.site_district_name || applicationData.siteDistrictName || applicationData.excise_district || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Subdivision</td>
+                                    <td>{{ applicationData.site_subdivision_name || applicationData.siteSubdivisionName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Police Station</td>
+                                    <td>{{ applicationData.police_station_name || applicationData.policeStationName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Type</td>
+                                    <td>{{ applicationData.site_type || applicationData['siteType'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Road Name</td>
+                                    <td>{{ applicationData.road_name || applicationData.roadName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Pin Code</td>
+                                    <td>{{ applicationData.pin_code || applicationData.pinCode || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Construction Type</td>
+                                    <td>{{ applicationData.construction_type || applicationData.constructionType || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Length / Breadth</td>
+                                    <td>{{ (applicationData.length || 'NA') + ' / ' + (applicationData.breadth || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Owned</td>
+                                    <td>{{ applicationData.site_owned || applicationData.siteOwned || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">NOC Obtained</td>
+                                    <td>{{ applicationData.noc_obtained || applicationData.nocObtained || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Renewal Fee & Payment Status</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">License Fee</td>
+                                    <td>Rs {{ applicationData['license_fee_amount'] || applicationData['licenseFeeAmount'] || applicationData.yearly_license_fee || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Security Deposit</td>
+                                    <td>Rs {{ applicationData['security_fee_amount'] || applicationData['securityFeeAmount'] || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Fee Paid</td>
+                                    <td>{{ applicationData['is_license_fee_paid'] || applicationData['isLicenseFeePaid'] ? 'Yes' : 'No' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Security Fee Paid</td>
+                                    <td>{{ applicationData['is_security_fee_paid'] || applicationData['isSecurityFeePaid'] ? 'Yes' : 'No' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                @if (isSalesmanOrRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Salesman/Barman Applicant Information</h5>
                     <div class="table-responsive">
@@ -1081,48 +1530,104 @@
                                     <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
                                     <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
                                 </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Applicant Name</td>
-                                    <td>
-                                        {{
-                                            ((applicationData.firstName || '') + ' ' + (applicationData.middleName || '') + ' ' + (applicationData.lastName || '')).trim() ||
-                                            applicationData.applicant_name ||
-                                            'Not available'
-                                        }}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Role</td>
-                                    <td>{{ applicationData.role || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Father/Husband Name</td>
-                                    <td>{{ applicationData.fatherHusbandName || applicationData.father_husband_name || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Gender / DOB</td>
-                                    <td>{{ (applicationData.gender || 'NA') + ' / ' + ((applicationData.dob | date: "dd-MM-yyyy") || 'NA') }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Nationality</td>
-                                    <td>{{ applicationData.nationality || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Mobile / Email</td>
-                                    <td>{{ (applicationData.mobileNumber || 'NA') + ' / ' + (applicationData.emailId || 'NA') }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Address</td>
-                                    <td>{{ applicationData.address || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">PAN / Aadhaar</td>
-                                    <td>{{ (applicationData.pan || 'NA') + ' / ' + (applicationData.aadhaar || 'NA') }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Sikkim Subject</td>
-                                    <td>{{ applicationData.sikkimSubject ? 'Yes' : 'No' }}</td>
-                                </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Applicant Name</td>
+                                     <td>
+                                         {{
+                                             ((applicationData.firstName || '') + ' ' + (applicationData.middleName || '') + ' ' + (applicationData.lastName || '')).trim() ||
+                                             applicationData.applicant_name ||
+                                             'Not available'
+                                         }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['firstName','middleName','lastName','applicant_name','applicantName'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Role</td>
+                                     <td>
+                                         {{ applicationData.role || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['role'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Father/Husband Name</td>
+                                     <td>
+                                         {{ applicationData.fatherHusbandName || applicationData.father_husband_name || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['fatherHusbandName','father_husband_name'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Gender / DOB</td>
+                                     <td>
+                                         {{ (applicationData.gender || 'NA') + ' / ' + ((applicationData.dob | date: "dd-MM-yyyy") || 'NA') }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['gender','dob'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Nationality</td>
+                                     <td>
+                                         {{ applicationData.nationality || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['nationality'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Mobile / Email</td>
+                                     <td>
+                                         {{ (applicationData.mobileNumber || 'NA') + ' / ' + (applicationData.emailId || 'NA') }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['mobileNumber','mobile_number','emailId','email_id'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Address</td>
+                                     <td>
+                                         {{ applicationData.address || 'Not available' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['address'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">PAN / Aadhaar</td>
+                                     <td>
+                                         {{ (applicationData.pan || 'NA') + ' / ' + (applicationData.aadhaar || 'NA') }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['pan'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2" title="PAN">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2" title="PAN">UPDATED</span>
+                                         </ng-container>
+                                         <ng-container [ngSwitch]="objectionStateForAny(['aadhaar','aadhar'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2" title="Aadhaar">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2" title="Aadhaar">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                     <td class="fw-semibold bg-light">Sikkim Subject</td>
+                                     <td>
+                                         {{ applicationData.sikkimSubject ? 'Yes' : 'No' }}
+                                         <ng-container [ngSwitch]="objectionStateForAny(['sikkimSubject','sikkim_subject'])">
+                                             <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                             <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                         </ng-container>
+                                     </td>
+                                 </tr>
                             </tbody>
                         </table>
                     </div>
@@ -1141,9 +1646,20 @@
                                     <td class="fw-semibold bg-light">License Category</td>
                                     <td>{{ applicationData.license_category_name || applicationData.licenseCategoryName || applicationData.license_category || 'Not available' }}</td>
                                 </tr>
-                                <tr>
+                                <!-- Show License ID row only if license_id_display is available -->
+                                <tr *ngIf="applicationData['license_id_display'] || applicationData['licenseIdDisplay']">
+                                    <td class="fw-semibold bg-light">License No</td>
+                                    <td>{{ applicationData['license_id_display'] || applicationData['licenseIdDisplay'] }}</td>
+                                </tr>
+                                <!-- Show New License Application ID row only if available -->
+                                <tr *ngIf="applicationData['new_license_application_id'] || applicationData['newLicenseApplicationId']">
+                                    <td class="fw-semibold bg-light">New License Application No</td>
+                                    <td>{{ applicationData['new_license_application_id'] || applicationData['newLicenseApplicationId'] }}</td>
+                                </tr>
+                                <!-- Fallback: show "Not available" only if BOTH are missing -->
+                                <tr *ngIf="!applicationData['license_id_display'] && !applicationData['licenseIdDisplay'] && !applicationData['new_license_application_id'] && !applicationData['newLicenseApplicationId']">
                                     <td class="fw-semibold bg-light">License</td>
-                                    <td>{{ applicationData.license || 'Not available' }}</td>
+                                    <td>Not available</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Submitted On</td>
@@ -1173,7 +1689,7 @@
                             <i class="bi bi-clipboard2-data me-2"></i>View Site Enquiry Report
                         </button>
 
-                        <button class="btn btn-primary btn-lg application-footer-actions__print" type="button" *ngIf="!isHologram()" (click)="printApplication()">
+                        <button class="btn btn-primary btn-lg application-footer-actions__print" type="button" (click)="printApplication()">
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
                     </div>
@@ -1382,7 +1898,13 @@
                             <span>Click to View</span>
                         </div>
                     </div>
-                    <div class="doc-item__label">{{ doc.label }}</div>
+                    <div class="doc-item__label">
+                        {{ doc.label }}
+                        <ng-container [ngSwitch]="objectionStateForDocLabel(doc.label)">
+                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                        </ng-container>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1405,6 +1927,9 @@
                 <div class="site-enquiry-modal-subtitle">
                     {{ applicationData?.referenceNo || applicationData?.['application_id'] || 'Application' }}
                 </div>
+                <div class="mt-1" *ngIf="siteEnquiryReport?.['is_reverted']">
+                    <span class="badge bg-warning text-dark">REVERTED</span>
+                </div>
             </div>
             <button type="button" class="site-enquiry-modal-close" (click)="closeSiteEnquiryReportModal()" aria-label="Close">
                 <i class="bi bi-x-lg"></i>
@@ -1421,6 +1946,10 @@
             </div>
 
             <div class="site-enquiry-report-card" *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportEntries.length > 0">
+                <div class="alert alert-warning mb-3" *ngIf="siteEnquiryReport?.['is_reverted'] && siteEnquiryReport?.['reverted_remarks']">
+                    <div class="fw-semibold mb-1">Revert remarks</div>
+                    <div class="small">{{ siteEnquiryReport?.['reverted_remarks'] }}</div>
+                </div>
                 <table class="table table-bordered site-enquiry-report-table mb-0">
                     <tbody>
                         <tr *ngFor="let field of siteEnquiryReportEntries">
@@ -1443,6 +1972,11 @@
             <div class="alert alert-info mb-0" *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportEntries.length === 0">
                 No site enquiry report data found for this application.
             </div>
+        </div>
+        <div class="site-enquiry-modal-footer" *ngIf="canRevertSiteEnquiryReport()">
+            <button type="button" class="btn site-enquiry-revert-btn" (click)="revertSiteEnquiryReportFromModal(); $event.stopPropagation()">
+                <i class="bi bi-arrow-counterclockwise me-2"></i>Revert Back
+            </button>
         </div>
     </div>
 </div>

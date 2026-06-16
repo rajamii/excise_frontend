@@ -60,15 +60,33 @@
           }
         </mat-form-field>
 
-        <!-- Site Type (Radio Group) -->
-        <div class="radio-group-container">
-          <label class="field-label">Site Type <span class="required">*</span></label>
-          <mat-radio-group formControlName="siteType" required>
-            <mat-radio-button value="New">New</mat-radio-button>
-            <mat-radio-button value="Existing">Existing</mat-radio-button>
-          </mat-radio-group>
-          @if (keyInfoForm.controls['siteType'].invalid && keyInfoForm.controls['siteType'].touched) {
-          <mat-error class="radio-error">{{ getErrorMessage('siteType') }}</mat-error>
+        <!-- Site Type + Additional Charges side by side -->
+        <div class="site-type-charges-row">
+          <!-- Site Type (Radio Group) -->
+          <div class="radio-group-container">
+            <label class="field-label">Site Type <span class="required">*</span></label>
+            <mat-radio-group formControlName="siteType" required>
+              <mat-radio-button value="New">New</mat-radio-button>
+              <mat-radio-button value="Existing">Existing</mat-radio-button>
+            </mat-radio-group>
+            @if (keyInfoForm.controls['siteType'].invalid && keyInfoForm.controls['siteType'].touched) {
+            <mat-error class="radio-error">{{ getErrorMessage('siteType') }}</mat-error>
+            }
+          </div>
+
+          <!-- Additional Charges (inline, next to Site Type) -->
+          @if (shouldShowAdditionalCharges()) {
+            <div class="additional-charges-inline">
+              <label class="field-label">Additional Charges</label>
+              <div class="charges-checkboxes">
+                <mat-checkbox formControlName="pachwai">
+                  Pachwai (₹{{ pachwaiAmount() }})
+                </mat-checkbox>
+                <mat-checkbox formControlName="draughtBeer">
+                  Draught Beer (₹{{ draughtBeerAmount() }})
+                </mat-checkbox>
+              </div>
+            </div>
           }
         </div>
 

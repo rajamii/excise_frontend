@@ -105,6 +105,7 @@ export class HologramMonthlyReportComponent implements OnInit {
   selectedManufacturingUnit: string = '';
   commissionerMode = false;
   manufacturingUnits: string[] = [];
+  private licenseeIdByNormalizedName = new Map<string, string>();
 
   // Date filter for table rows
   dateFilter: string = '';
@@ -197,7 +198,7 @@ export class HologramMonthlyReportComponent implements OnInit {
             .toPromise()
             .catch(() => null)
         : Promise.resolve(null)
-    ]).then(([dailyEntries, rollsDetails, procurementPayload, commissionerOverview]: [any, any, any, any]) => {
+    ]).then(async ([dailyEntries, rollsDetails, procurementPayload, commissionerOverview]: [any, any, any, any]) => {
       let dailyRows = this.extractRows(dailyEntries);
       const rollsArray = this.extractRows(rollsDetails);
       const procurementRows = this.extractRows(procurementPayload);
@@ -332,8 +333,21 @@ export class HologramMonthlyReportComponent implements OnInit {
         sum + (e.issued_qty || e.issuedQty || 0), 0);
       const totalWastage = effectiveEntries.reduce((sum: number, e: any) => 
         sum + (e.wastage_qty || e.wastageQty || 0), 0);
-      const freshArrival = effectiveArrivals.reduce((sum: number, a: any) => 
-        sum + (a.total_count || a.totalCount || 0), 0);
+      // IMPORTANT:
+      // "Fresh Arrival" must always be calculated from the originally received serial ranges,
+      // not from a mutable roll.total_count that changes after utilization/damage.
+      const arrivalsByRefForTotals = new Map<string, any[]>();
+      effectiveArrivals.forEach((arrival: any) => {
+        const refNo = arrival.procurement_ref || arrival.procurementRef || arrival.ref_no || arrival.refNo || 'UNKNOWN';
+        if (!arrivalsByRefForTotals.has(refNo)) {
+          arrivalsByRefForTotals.set(refNo, []);
+        }
+        arrivalsByRefForTotals.get(refNo)!.push(arrival);
+      });
+      const freshArrival = Array.from(arrivalsByRefForTotals.values()).reduce((sum, group) => {
+        const aggregated = this.aggregateArrivalGroup(group);
+        return sum + aggregated.total;
+      }, 0);
       
       // ALSO get utilization from roll usage history (this is the approved data)
       let totalUtilizedFromRolls = 0;
@@ -359,19 +373,67 @@ export class HologramMonthlyReportComponent implements OnInit {
       // Use roll history if daily register has no approved entries
       const finalUtilized = totalUtilized > 0 ? totalUtilized : totalUtilizedFromRolls;
       const finalWastage = totalWastage > 0 ? totalWastage : totalWastageFromRolls;
-      const openingStock = this.computeOpeningStockForMonth(
-        monthKey,
-        dailyRows || [],
-        rollsArray || [],
-        procurementRows || [],
-        commissionerOverviewEntries || []
-      );
+
+      // For commissioner mode, fetch the previous month's closing balance from the backend
+      // generate_report endpoint, which correctly aggregates all historical rolls and usage
+      // across all licensees. Client-side computation is unreliable here because getRollsDetails()
+      // is scoped to the logged-in user and returns no data for the commissioner.
+      const getPrevMonthOpeningStock = async (): Promise<number> => {
+        if (!this.commissionerMode) {
+          return this.computeOpeningStockForMonth(
+            monthKey,
+            dailyRows || [],
+            rollsArray || [],
+            procurementRows || [],
+            commissionerOverviewEntries || []
+          );
+        }
+
+        // Compute previous month/year
+        const monthNum = parseInt(monthKey.split('-')[1], 10);
+        const yearNum = parseInt(monthKey.split('-')[0], 10);
+        const prevMonthNum = monthNum === 1 ? 12 : monthNum - 1;
+        const prevYearNum = monthNum === 1 ? yearNum - 1 : yearNum;
+        const prevMonthCode = this.getMonthCode(prevMonthNum);
+
+        // Build query params
+        const params: Record<string, string> = {
+          month: prevMonthCode,
+          year: prevYearNum.toString(),
+          hologram_type: this.selectedHologramType,
+        };
+        if (this.selectedManufacturingUnit) {
+          // Resolve licensee_id for commissioner-mode so opening stock equals last month's closing balance
+          // for the selected manufacturing unit.
+          const licId = this.resolveSelectedLicenseeId(dailyRows || [], rollsArray || [], procurementRows || [], commissionerOverviewEntries || []);
+          if (licId) {
+            params['licensee_id'] = String(licId);
+          }
+        }
+
+        const queryString = Object.entries(params)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+          .join('&');
+
+        // Prefer client-side computation for commissioner opening stock to guarantee consistency
+        // with this UI's rules (arrival derived from serial ranges, deductions from approved usage).
+        // Backend generate_report has been observed to return incorrect closing balance in some cases.
+        return this.computeOpeningStockForMonth(
+          monthKey,
+          dailyRows || [],
+          rollsArray || [],
+          procurementRows || [],
+          commissionerOverviewEntries || []
+        );
+      };
+
+      const openingStock = await getPrevMonthOpeningStock();
       
       // Set overview summary
       this.overviewSummary = {
         openingStock: openingStock,
         totalArrivals: freshArrival,
-        arrivalCount: effectiveArrivals.length,
+        arrivalCount: arrivalsByRefForTotals.size,
         totalUtilized: finalUtilized,
         utilizationCount: effectiveEntries.filter((e: any) => (e.issued_qty || e.issuedQty || 0) > 0).length,
         totalWastage: finalWastage,
@@ -415,8 +477,9 @@ export class HologramMonthlyReportComponent implements OnInit {
         const receivedDate = firstRoll.received_date || firstRoll.receivedDate || '';
         const preciseTime = new Date(receivedDate).getTime();
         
-        // Calculate total for this procurement
-        const totalAmount = rollsGroup.reduce((sum, roll) => sum + (roll.total_count || roll.totalCount || 0), 0);
+        // Calculate total for this procurement from serial ranges (not mutable roll.total_count)
+        const aggregated = this.aggregateArrivalGroup(rollsGroup);
+        const totalAmount = aggregated.total;
         
         console.log(`📦 Procurement ${refNo}: ${rollsGroup.length} rolls, total=${totalAmount}, date=${receivedDate}`);
         
@@ -433,7 +496,9 @@ export class HologramMonthlyReportComponent implements OnInit {
             ref_no: refNo,
             refNo: refNo,
             // Store all rolls for carton ranges display
-            allRolls: rollsGroup
+            allRolls: rollsGroup,
+            // Store normalized carton ranges to ensure stable qty display
+            cartonRangesNormalized: aggregated.ranges
           }
         });
       });
@@ -539,39 +604,22 @@ export class HologramMonthlyReportComponent implements OnInit {
             quantity: number;
           }> = [];
           
-          // Get all rolls from this grouped arrival
-          const allRolls = arrival.allRolls || [arrival];
-          
-          allRolls.forEach((roll: any) => {
-            // Check for carton_details in the roll data
-            const cartonDetails = roll.carton_details || roll.cartonDetails || roll.cartoons || roll.cartoon_details || [];
-            
-            if (Array.isArray(cartonDetails) && cartonDetails.length > 0) {
-              cartonDetails.forEach((carton: any) => {
-                cartonRanges.push({
-                  cartoonNumber: this.resolveArrivalRollLabel(carton),
-                  fromSerial: carton.fromSerial || carton.from_serial || '',
-                  toSerial: carton.toSerial || carton.to_serial || '',
-                  quantity: carton.quantity || carton.totalCount || 0
-                });
+          const normalizedRanges = Array.isArray(arrival.cartonRangesNormalized) ? arrival.cartonRangesNormalized : null;
+          if (normalizedRanges && normalizedRanges.length > 0) {
+            normalizedRanges.forEach((r: any) => {
+              cartonRanges.push({
+                cartoonNumber: String(r.cartoonNumber || r.rollNumber || r.cartonNumber || '').trim(),
+                fromSerial: String(r.fromSerial || '').trim(),
+                toSerial: String(r.toSerial || '').trim(),
+                quantity: Number(r.quantity || 0)
               });
-            } else {
-              // Fallback: If no carton_details, use the roll itself as a carton
-              const singleCarton = roll.carton_number || roll.cartonNumber || roll.cartoon_number;
-              if (singleCarton) {
-                cartonRanges.push({
-                  cartoonNumber: this.resolveArrivalRollLabel({
-                    rollNumber: roll.rollNumber || roll.roll_number,
-                    cartoonNumber: roll.cartoonNumber || roll.cartoon_number,
-                    carton_number: roll.carton_number || roll.cartonNumber
-                  }),
-                  fromSerial: roll.from_serial || roll.fromSerial || '',
-                  toSerial: roll.to_serial || roll.toSerial || '',
-                  quantity: roll.total_count || roll.totalCount || 0
-                });
-              }
-            }
-          });
+            });
+          } else {
+            // Backward-compatible fallback: derive ranges from the rolls themselves
+            const allRolls = arrival.allRolls || [arrival];
+            const aggregatedFallback = this.aggregateArrivalGroup(allRolls);
+            aggregatedFallback.ranges.forEach((r) => cartonRanges.push(r));
+          }
           
           // Sort carton ranges by fromSerial number to maintain entry order (a, b, c)
           cartonRanges.sort((a, b) => {
@@ -1218,6 +1266,123 @@ export class HologramMonthlyReportComponent implements OnInit {
     this.loadMonthlyReport();
   }
 
+  exportMonthlyReportCsv(): void {
+    if (!this.overviewSummary) {
+      return;
+    }
+
+    const monthNumber = this.getMonthNumber(this.selectedMonth);
+    const monthKey = `${this.selectedYear}-${String(monthNumber).padStart(2, '0')}`;
+    const unit = this.commissionerMode ? (this.selectedManufacturingUnit || 'ALL_UNITS') : 'OIC';
+    const safeUnit = unit.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'UNIT';
+    const filename = `monthly_hologram_${monthKey}_${this.selectedHologramType}_${safeUnit}.csv`;
+
+    const toCsvCell = (value: any): string => {
+      const text = String(value ?? '');
+      const escaped = text.replace(/\"/g, '""');
+      return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
+    };
+
+    const formatDate = (iso: any): string => {
+      const dt = iso ? new Date(iso) : null;
+      if (!dt || Number.isNaN(dt.getTime())) {
+        return '';
+      }
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const lines: string[] = [];
+    lines.push(['Month', this.selectedMonth, 'Year', this.selectedYear, 'Type', this.selectedHologramType, 'Unit', unit].map(toCsvCell).join(','));
+    lines.push(['Opening Stock', this.overviewSummary.openingStock, 'Fresh Arrival', this.overviewSummary.totalArrivals, 'Total Utilized', this.overviewSummary.totalUtilized, 'Total Wastage', this.overviewSummary.totalWastage, 'Closing Balance', this.overviewSummary.closingBalance].map(toCsvCell).join(','));
+    lines.push('');
+
+    // One transaction per row (arrival/utilization) to keep the report easy to read/print.
+    const header = [
+      'Txn Type',
+      'Date',
+      'Reference No',
+      'Arrival Rolls',
+      'Arrival Qty',
+      'Utilized Brands',
+      'Utilized Qty',
+      'Damaged Brands',
+      'Damaged Qty',
+      'Opening Balance',
+      'Closing Balance'
+    ];
+    lines.push(header.map(toCsvCell).join(','));
+
+    const rows = (this.filteredStatementRows || []).filter((r) => r.rowType !== 'SUMMARY');
+    const joinUnique = (items: string[]): string => Array.from(new Set(items.map((v) => (v || '').trim()).filter(Boolean))).join(' | ');
+
+    for (const row of rows) {
+      const refNo = row.meta?.referenceNo || '';
+      const date = formatDate(row.meta?.transactionDateTime);
+      const opening = row.meta?.openingBalanceForGroup ?? '';
+      const closing = row.meta?.closingBalanceForGroup ?? row.closingBalance ?? '';
+
+      if (row.rowType === 'ARRIVAL') {
+        const ranges = Array.isArray(row.meta?.cartonRanges) ? row.meta?.cartonRanges : [];
+        const rollSummary = ranges.length > 0
+          ? joinUnique(ranges.map((r: any) => `${String(r?.cartoonNumber || '').trim()} ${String(r?.fromSerial || '').trim()}-${String(r?.toSerial || '').trim()}`.trim()))
+          : (row.meta?.cartoonNumber || '');
+        lines.push([
+          'ARRIVAL',
+          date,
+          refNo,
+          rollSummary,
+          Number(row.freshArrival || 0),
+          '',
+          '',
+          '',
+          '',
+          opening,
+          closing
+        ].map(toCsvCell).join(','));
+        continue;
+      }
+
+      if (row.rowType === 'UTILIZATION') {
+        const utilizationDetails = Array.isArray(row.utilizationDetails) ? row.utilizationDetails : [];
+        const wastageDetails = Array.isArray(row.wastageDetails) ? row.wastageDetails : [];
+
+        const utilizedQty = Number(row.utilizationQty || 0);
+        const damagedQty = Number(row.wastageQty || 0);
+        const utilizedBrands = utilizationDetails.length > 0
+          ? joinUnique(utilizationDetails.map((d: any) => `${d?.brandName || ''} ${d?.bottleSize || ''}`.trim()))
+          : String(row.brandDetails || '').trim();
+        const damagedBrands = wastageDetails.length > 0
+          ? joinUnique(wastageDetails.map((d: any) => `${d?.brandName || ''} ${d?.bottleSize || ''}`.trim()))
+          : String(row.brandDetails || '').trim();
+
+        lines.push([
+          'UTILIZATION',
+          date,
+          refNo,
+          '',
+          '',
+          utilizedBrands,
+          utilizedQty || '',
+          damagedBrands,
+          damagedQty || '',
+          opening,
+          closing
+        ].map(toCsvCell).join(','));
+      }
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   /**
    * Get unique brands from utilization details
    */
@@ -1679,6 +1844,11 @@ export class HologramMonthlyReportComponent implements OnInit {
           const name = this.extractLicenseeName(row);
           if (name) {
             result.add(name);
+            const normalized = this.normalizeManufacturingUnitName(name);
+            const licId = String(row?.licensee_id ?? row?.licenseeId ?? '').trim();
+            if (normalized && licId) {
+              this.licenseeIdByNormalizedName.set(normalized, licId);
+            }
           }
         }
         this.createdDistilleryBreweryNames = Array.from(result).sort((a, b) => a.localeCompare(b));
@@ -1773,12 +1943,22 @@ export class HologramMonthlyReportComponent implements OnInit {
       if (name) {
         names.add(name);
       }
+      const normalized = this.normalizeManufacturingUnitName(name);
+      const licId = this.extractLicenseeId(entry);
+      if (normalized && licId) {
+        this.licenseeIdByNormalizedName.set(normalized, licId);
+      }
     }
 
     for (const roll of rollsDetails || []) {
       const name = this.extractManufacturingUnitName(roll);
       if (name) {
         names.add(name);
+      }
+      const normalized = this.normalizeManufacturingUnitName(name);
+      const licId = this.extractLicenseeId(roll);
+      if (normalized && licId) {
+        this.licenseeIdByNormalizedName.set(normalized, licId);
       }
     }
 
@@ -1852,6 +2032,59 @@ export class HologramMonthlyReportComponent implements OnInit {
       row?.establishmentName ||
       ''
     ).trim();
+  }
+
+  private extractLicenseeId(row: any): string {
+    // NOTE: Do not fall back to `row.id` here. Many endpoints use `id` for the record id
+    // (daily register row, roll row, license master row) which is NOT the licensee id expected
+    // by commissioner monthly-report endpoints.
+    const raw = row?.licensee_id ?? row?.licenseeId ?? row?.licensee ?? row?.license_id ?? row?.licenseId ?? '';
+    const id = String(raw ?? '').trim();
+    return id && id !== '0' ? id : '';
+  }
+
+  private resolveSelectedLicenseeId(
+    dailyRows: any[],
+    rollsArray: any[],
+    procurementRows: any[],
+    commissionerOverviewEntries: any[]
+  ): string {
+    if (!this.selectedManufacturingUnit) {
+      return '';
+    }
+
+    const selected = this.normalizeManufacturingUnitName(this.selectedManufacturingUnit);
+    if (!selected) {
+      return '';
+    }
+
+    const fromMap = this.licenseeIdByNormalizedName.get(selected);
+    if (fromMap) {
+      return fromMap;
+    }
+
+    const candidates = [
+      ...(dailyRows || []),
+      ...(rollsArray || []),
+      ...(procurementRows || []),
+      ...(commissionerOverviewEntries || [])
+    ];
+
+    for (const row of candidates) {
+      const name = this.normalizeManufacturingUnitName(this.extractManufacturingUnitName(row));
+      if (!name) {
+        continue;
+      }
+      if (name === selected || name.startsWith(selected) || selected.startsWith(name)) {
+        const licId = this.extractLicenseeId(row);
+        if (licId) {
+          this.licenseeIdByNormalizedName.set(selected, licId);
+          return licId;
+        }
+      }
+    }
+
+    return '';
   }
 
   private normalizeManufacturingUnitName(value: string): string {
@@ -2599,6 +2832,18 @@ export class HologramMonthlyReportComponent implements OnInit {
     commissionerOverviewEntries: any[] = []
   ): number {
     const arrivalByMonth = new Map<string, number>();
+    const arrivalsByMonthAndRef = new Map<string, Map<string, any[]>>();
+    const addArrivalItem = (mk: string, ref: string, item: any) => {
+      if (!mk || !ref) return;
+      if (!arrivalsByMonthAndRef.has(mk)) {
+        arrivalsByMonthAndRef.set(mk, new Map<string, any[]>());
+      }
+      const byRef = arrivalsByMonthAndRef.get(mk)!;
+      if (!byRef.has(ref)) {
+        byRef.set(ref, []);
+      }
+      byRef.get(ref)!.push(item);
+    };
 
     for (const roll of rollsRows || []) {
       const receivedDate = roll.received_date || roll.receivedDate || '';
@@ -2613,8 +2858,8 @@ export class HologramMonthlyReportComponent implements OnInit {
       if (!this.matchesSelectedManufacturingUnit(roll)) {
         continue;
       }
-      const qty = Number(roll.total_count || roll.totalCount || 0);
-      arrivalByMonth.set(rollMonthKey, (arrivalByMonth.get(rollMonthKey) || 0) + qty);
+      const ref = this.normalizeReferenceNo(this.extractReferenceNo(roll) || `ROLL-${roll?.id || ''}`);
+      addArrivalItem(rollMonthKey, ref, roll);
     }
 
     for (const procurement of procurementRows || []) {
@@ -2636,39 +2881,84 @@ export class HologramMonthlyReportComponent implements OnInit {
       if (qty <= 0) {
         continue;
       }
-      // Use procurement as fallback for months where rolls are not available.
-      if (!arrivalByMonth.has(procurementMonthKey)) {
-        arrivalByMonth.set(procurementMonthKey, qty);
-      }
+      // Procurement fallback: keep it as an "arrival item" so totals derive from serial ranges
+      // when carton details are available (or from qty otherwise).
+      const ref = this.normalizeReferenceNo(this.extractReferenceNo(procurement) || `PROC-${procurement?.id || ''}`);
+      addArrivalItem(procurementMonthKey, ref, {
+        ...procurement,
+        procurement_ref: this.extractReferenceNo(procurement),
+        total_count: qty,
+        totalCount: qty,
+        carton_details: this.normalizeCartonDetails(procurement)
+      });
     }
 
-    // Commissioner fallback: when rolls/procurement are unavailable for prior months,
-    // use dashboard overview monthly quantity so previous month closing carries forward
-    // as opening balance for the selected month.
-    for (const overviewEntry of commissionerOverviewEntries || []) {
-      const entryMonthKey = this.getMonthKeyFromAnyDate(
-        overviewEntry?.usageDate || overviewEntry?.submissionDate || ''
+    // Finalize monthly arrivals from original serial ranges (stable even after usage/damage)
+    for (const [mk, byRef] of arrivalsByMonthAndRef.entries()) {
+      const monthTotal = Array.from(byRef.values()).reduce(
+        (sum, items) => sum + this.aggregateArrivalGroup(items).total,
+        0
       );
-      if (!entryMonthKey || entryMonthKey >= monthKey) {
-        continue;
+      arrivalByMonth.set(mk, monthTotal);
+    }
+
+    // Commissioner fallback: when rolls/procurement data is unavailable for prior months,
+    // derive the opening stock by computing a running balance from the earliest known month
+    // using the daily rows (which already contain correct issued_qty / wastage_qty).
+    // NOTE: Do NOT use overviewEntry.quantity as arrivals — that field is the requested
+    // allocation quantity, not the received stock, and would produce incorrect opening balances.
+    if (false) {
+      // Collect all prior daily rows sorted by month
+      const priorRowsAll = (dailyRows || []).filter((entry: any) => {
+        const entryDate = entry.usage_date || entry.usageDate || '';
+        const entryMonthKey = this.getMonthKeyFromAnyDate(entryDate);
+        const entryType = (entry.hologram_type || entry.hologramType || 'LOCAL').toString().toUpperCase();
+        const approvalStatus = entry.approval_status || entry.approvalStatus || '';
+        return (
+          !!entryMonthKey &&
+          entryMonthKey < monthKey &&
+          entryType === this.selectedHologramType &&
+          this.matchesApprovalStatus(approvalStatus) &&
+          this.matchesSelectedManufacturingUnit(entry)
+        );
+      });
+
+      // Group by month and compute a running closing balance across all prior months.
+      // Opening of the first known month is 0 (no earlier data available).
+      const monthsWithData = Array.from(
+        new Set(priorRowsAll.map((e: any) => {
+          const d = e.usage_date || e.usageDate || '';
+          return this.getMonthKeyFromAnyDate(d);
+        }))
+      ).sort();
+
+      let runningBalance = 0;
+      for (const mk of monthsWithData) {
+        const monthRows = priorRowsAll.filter((e: any) => {
+          const d = e.usage_date || e.usageDate || '';
+          return this.getMonthKeyFromAnyDate(d) === mk;
+        });
+        // For commissioner mode, arrivals for each prior month come from the request quantity
+        // on the overview entries (one arrival per approved request in that month).
+        const monthArrivals = (commissionerOverviewEntries || []).reduce((sum: number, oe: any) => {
+          const oeMonthKey = this.getMonthKeyFromAnyDate(oe?.usageDate || oe?.submissionDate || '');
+          const oeType = String(oe?.hologramType || 'LOCAL').toUpperCase();
+          if (oeMonthKey !== mk || oeType !== this.selectedHologramType) return sum;
+          if (!this.matchesSelectedManufacturingUnit(oe)) return sum;
+          return sum + Number(oe?.quantity || 0);
+        }, 0);
+
+        const monthUtilized = monthRows.reduce(
+          (sum: number, e: any) => sum + Number(e.issued_qty || e.issuedQty || 0), 0
+        );
+        const monthWastage = monthRows.reduce(
+          (sum: number, e: any) => sum + Number(e.wastage_qty || e.wastageQty || 0), 0
+        );
+        runningBalance = runningBalance + monthArrivals - monthUtilized - monthWastage;
+        if (runningBalance < 0) runningBalance = 0;
       }
 
-      const entryType = String(overviewEntry?.hologramType || 'LOCAL').toUpperCase();
-      if (entryType !== this.selectedHologramType) {
-        continue;
-      }
-      if (!this.matchesSelectedManufacturingUnit(overviewEntry)) {
-        continue;
-      }
-
-      const qty = Number(overviewEntry?.quantity || 0);
-      if (qty <= 0) {
-        continue;
-      }
-
-      if (!arrivalByMonth.has(entryMonthKey)) {
-        arrivalByMonth.set(entryMonthKey, qty);
-      }
+      return runningBalance;
     }
 
     const priorArrivals = Array.from(arrivalByMonth.values()).reduce((sum, qty) => sum + qty, 0);
@@ -3036,6 +3326,91 @@ export class HologramMonthlyReportComponent implements OnInit {
     ].join(' ');
 
     return categoryTokens.includes('brew') || categoryTokens.includes('distill');
+  }
+
+  private normalizeArrivalQuantity(fromSerial: string, toSerial: string, rawQty: any): number {
+    let quantity = Number(rawQty ?? 0);
+    if (!quantity && fromSerial && toSerial) {
+      const fromNo = Number(String(fromSerial).replace(/\D/g, ''));
+      const toNo = Number(String(toSerial).replace(/\D/g, ''));
+      if (Number.isFinite(fromNo) && Number.isFinite(toNo) && toNo >= fromNo) {
+        quantity = (toNo - fromNo) + 1;
+      }
+    }
+    return Number.isFinite(quantity) ? quantity : 0;
+  }
+
+  private extractArrivalCartonRanges(source: any): Array<{
+    cartoonNumber: string;
+    fromSerial: string;
+    toSerial: string;
+    quantity: number;
+  }> {
+    const ranges: Array<{ cartoonNumber: string; fromSerial: string; toSerial: string; quantity: number }> = [];
+    if (!source || typeof source !== 'object') {
+      return ranges;
+    }
+
+    const cartonDetails =
+      source?.carton_details ||
+      source?.cartonDetails ||
+      source?.cartoons ||
+      source?.cartoon_details ||
+      [];
+
+    if (Array.isArray(cartonDetails) && cartonDetails.length > 0) {
+      cartonDetails.forEach((carton: any) => {
+        const fromSerial = String(carton?.fromSerial || carton?.from_serial || carton?.from || '').trim();
+        const toSerial = String(carton?.toSerial || carton?.to_serial || carton?.to || '').trim();
+        const rawQty = carton?.quantity ?? carton?.qty ?? carton?.totalCount ?? carton?.total_count ?? 0;
+        const quantity = this.normalizeArrivalQuantity(fromSerial, toSerial, rawQty);
+        const cartoonNumber = this.resolveArrivalRollLabel(carton);
+        if (cartoonNumber || fromSerial || toSerial || quantity > 0) {
+          ranges.push({ cartoonNumber, fromSerial, toSerial, quantity });
+        }
+      });
+      return ranges;
+    }
+
+    const cartoonNumber = this.resolveArrivalRollLabel({
+      rollNumber: source?.rollNumber || source?.roll_number,
+      cartoonNumber: source?.cartoonNumber || source?.cartoon_number,
+      carton_number: source?.carton_number || source?.cartonNumber
+    });
+    const fromSerial = String(source?.from_serial || source?.fromSerial || source?.from || '').trim();
+    const toSerial = String(source?.to_serial || source?.toSerial || source?.to || '').trim();
+    const rawQty = source?.quantity ?? source?.qty ?? source?.total_count ?? source?.totalCount ?? 0;
+    const quantity = this.normalizeArrivalQuantity(fromSerial, toSerial, rawQty);
+    if (cartoonNumber || fromSerial || toSerial || quantity > 0) {
+      ranges.push({ cartoonNumber, fromSerial, toSerial, quantity });
+    }
+
+    return ranges;
+  }
+
+  private aggregateArrivalGroup(rolls: any[]): {
+    ranges: Array<{ cartoonNumber: string; fromSerial: string; toSerial: string; quantity: number }>;
+    total: number;
+  } {
+    const dedup = new Map<string, { cartoonNumber: string; fromSerial: string; toSerial: string; quantity: number }>();
+
+    (rolls || []).forEach((roll) => {
+      this.extractArrivalCartonRanges(roll).forEach((r) => {
+        const key = `${r.cartoonNumber}|${r.fromSerial}|${r.toSerial}`;
+        if (!dedup.has(key)) {
+          dedup.set(key, r);
+          return;
+        }
+        const existing = dedup.get(key)!;
+        if (!existing.quantity && r.quantity) {
+          dedup.set(key, r);
+        }
+      });
+    });
+
+    const ranges = Array.from(dedup.values());
+    const total = ranges.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
+    return { ranges, total: Number.isFinite(total) ? total : 0 };
   }
 
   private extractLicenseeName(row: any): string {

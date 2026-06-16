@@ -1,0 +1,70 @@
+<h2 mat-dialog-title>{{ data.title || 'Raise Objection' }}</h2>
+
+<mat-dialog-content class="content">
+  <div class="hint">
+    Select the wrong fields and add remarks. Only checked fields with remarks will be sent.
+  </div>
+
+  @if (candidates.length) {
+    <div class="objection-table">
+      <div class="objection-row header">
+        <div class="objection-col check"></div>
+        <div class="objection-col field">Field</div>
+        <div class="objection-col value">Current Value</div>
+        <div class="objection-col remarks">Remarks</div>
+      </div>
+
+      @for (c of candidates; track c.field; let i = $index) {
+        <div class="objection-row" [formGroup]="rowGroup(i)">
+          <div class="objection-col check">
+            <mat-checkbox formControlName="selected"></mat-checkbox>
+          </div>
+          <div class="objection-col field" [title]="c.label">{{ c.label }}</div>
+          <div class="objection-col value">
+            <div class="value-wrap" [title]="c.value">
+              <span class="value-text">{{ c.value }}</span>
+              @if (isFilePath(c.value)) {
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="preview-btn"
+                  aria-label="View document"
+                  (click)="openPreview(c.value)"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="objection-col remarks">
+            <mat-form-field appearance="outline" class="remarks-field">
+              <mat-label>Remark</mat-label>
+              <input matInput formControlName="remarks" placeholder="Enter remark" />
+            </mat-form-field>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div [formGroup]="form">
+      <mat-form-field appearance="outline" class="general-remarks">
+        <mat-label>Objection Remarks</mat-label>
+        <textarea matInput rows="3" formControlName="generalRemarks" placeholder="Enter remarks"></textarea>
+      </mat-form-field>
+    </div>
+  }
+
+  @if (candidates.length) {
+    <div [formGroup]="form">
+      <mat-form-field appearance="outline" class="general-remarks">
+        <mat-label>General Remarks (optional)</mat-label>
+        <textarea matInput rows="2" formControlName="generalRemarks" placeholder="Optional overall note"></textarea>
+      </mat-form-field>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="onCancel()">Cancel</button>
+  <button mat-raised-button color="warn" type="button" (click)="onSubmit()" [disabled]="!canSubmit">Raise Objection</button>
+</mat-dialog-actions>

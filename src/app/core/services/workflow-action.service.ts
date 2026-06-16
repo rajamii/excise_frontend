@@ -31,6 +31,7 @@ export interface ApplicationWorkflowData {
     | 'hologram'
     | 'hologram-procurement'
     | 'new-license'
+    | 'license-renewal'
     | 'company-registration'
     | 'company-collaboration'
     | 'salesman-barman-registration'; // Changed to type to match component
@@ -91,6 +92,14 @@ export class WorkflowActionService {
     );
   }
 
+  getLicenseRenewalApplicationDetail(applicationId: string): Observable<any> {
+    const encoded = encodeURIComponent(String(applicationId || '').trim());
+    if (!encoded) return of(null);
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/detail/${encoded}/`).pipe(
+      catchError(() => of(null))
+    );
+  }
+
 
   private fetchActionsFromBackend(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
     const id = data.id;
@@ -127,6 +136,7 @@ export class WorkflowActionService {
           catchError(() => of([]))
         );
       case 'new-license':
+      case 'license-renewal':
       case 'company-registration':
       case 'company-collaboration':
       case 'salesman-barman-registration':
@@ -161,8 +171,6 @@ export class WorkflowActionService {
       if (!condition || typeof condition !== 'object') return false;
       return condition['is_reverted'] === true
         || condition['isReverted'] === true
-        || condition['has_objections'] === true
-        || condition['hasObjections'] === true
         || condition['objections_resolved'] === true
         || condition['objectionsResolved'] === true;
     };
@@ -182,24 +190,32 @@ export class WorkflowActionService {
     });
 
     return sortedStages
-    .filter((stage: any) => !hasSpecialConditionalFlag(stage))
-    .map((stage: any): WorkflowActionConfig | null => {
-      const explicitAction = String(stage?.action || '').toUpperCase().trim();
-      const stageName = String(stage?.name || '').toLowerCase();
-      let action = '';
-      let label = '';
-      let icon = '';
-      let color: WorkflowActionConfig['color'] = 'accent';
-      let tooltip = '';
-      let requiresConfirmation = false;
+      .filter((stage: any) => !hasSpecialConditionalFlag(stage))
+      .map((stage: any): WorkflowActionConfig | null => {
+        const explicitAction = String(stage?.action || '').toUpperCase().trim();
+        const stageName = String(stage?.name || '').toLowerCase();
+        const condition = stage?.condition && typeof stage.condition === 'object' ? stage.condition : {};
+        let action = '';
+        let label = '';
+        let icon = '';
+        let color: WorkflowActionConfig['color'] = 'accent';
+        let tooltip = '';
+        let requiresConfirmation = false;
 
-      if (explicitAction === 'RAISE_OBJECTION' || explicitAction === 'OBJECTION') {
-        action = 'RAISE_OBJECTION';
-        label = 'Raise Objection';
-        icon = 'report_problem';
-        color = 'warning';
-        tooltip = 'Raise objection and send back to applicant';
-        requiresConfirmation = true;
+        if (condition['has_objections'] === true || condition['hasObjections'] === true) {
+          action = 'RAISE_OBJECTION';
+          label = 'Raise Objection';
+          icon = 'report_problem';
+          color = 'warning';
+          tooltip = 'Raise objection and send back to applicant';
+          requiresConfirmation = true;
+        } else if (explicitAction === 'RAISE_OBJECTION' || explicitAction === 'OBJECTION') {
+          action = 'RAISE_OBJECTION';
+          label = 'Raise Objection';
+          icon = 'report_problem';
+          color = 'warning';
+          tooltip = 'Raise objection and send back to applicant';
+          requiresConfirmation = true;
       } else if (explicitAction === 'REJECT') {
         action = 'REJECT';
         label = 'Reject';
@@ -329,6 +345,7 @@ export class WorkflowActionService {
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${data.id}/perform_action/`;
         break;
       case 'new-license':
+      case 'license-renewal':
       case 'company-registration':
       case 'company-collaboration':
       case 'salesman-barman-registration':

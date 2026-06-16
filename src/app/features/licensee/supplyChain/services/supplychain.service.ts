@@ -387,8 +387,22 @@ export class SupplyChainService {
     ).pipe(
       map((response: any) => {
         if (Array.isArray(response)) return response;
-        if (response?.results) return response.results;
+        if (Array.isArray(response?.results)) return response.results;
+        if (Array.isArray(response?.data)) return response.data;
+        if (Array.isArray(response?.data?.results)) return response.data.results;
+
+        // Some deployments wrap responses differently; if we can't detect an array,
+        // return an empty list and let the fallback below handle it.
         return [];
+      }),
+      map((rows: any[]) => {
+        if (Array.isArray(rows) && rows.length > 0) return rows;
+        // Fallback defaults if API returns 200 but no usable payload
+        return [
+          { ml: 750, pieces_in_case: 12 },
+          { ml: 375, pieces_in_case: 24 },
+          { ml: 180, pieces_in_case: 48 }
+        ];
       }),
       catchError((error) => {
         console.error('getBrandMlInCases error', error);

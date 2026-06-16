@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
 import { map, tap, catchError, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -7,35 +7,70 @@ import { DashboardCount } from '../models/dashboard.model';
 import { UnifiedApplication } from '../models/unified-application.model';
 import { Objection } from '../models/license-application.model';
 import { AccountService } from './account.service';
+import { DashboardConfig, NavigationItem } from '../models/dashboard.models';
 
 @Injectable({ providedIn: 'root' })
 export class UnifiedDashboardService {
   private baseUrl = `${environment.apiBaseUrl}/transactional`;
   private workflowUrl = `${environment.apiBaseUrl}/auth/`;
+  private unifiedCountsCache$?: Observable<DashboardCount>;
+  private unifiedCountsCacheKey: string | null = null;
   private unifiedAppsCache$?: Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
+    objection: UnifiedApplication[];
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }>;
+  private unifiedAppsCacheKey: string | null = null;
   private cacheUserKey: string | null = null;
 
   private endpoints = {
-    renewal: `${this.baseUrl}/license_application`,
+    renewal: `${this.baseUrl}/license_renewal_application`,
     new: `${this.baseUrl}/new_license_application`,
     salesman: `${this.baseUrl}/salesman_barman`,
     company: `${this.baseUrl}/company-registration`
   };
+
+  private readonly allTypes: UnifiedApplication['type'][] = [
+    'license-renewal',
+    'new-license',
+    'salesman-barman',
+    'company-registration'
+  ];
 
   private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('LRA/')) return 'license-renewal';
+    if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('NA/')) return 'new-license';
     if (id.startsWith('LA/')) return 'license-renewal';
     return '';
+  }
+
+  private toStageToken(app: any): string {
+    const raw = app?.current_stage ?? app?.currentStage ?? '';
+    if (typeof raw === 'string' && raw.trim()) {
+      return raw.trim();
+    }
+
+    const stageName =
+      app?.current_stage_name ??
+      app?.currentStageName ??
+      '';
+    const asString = String(stageName || '').trim();
+    if (!asString) return '';
+
+    // Convert DB stage display names like "District User" / "Site Enquiry Officer" / "Objection"
+    // into a stable token for UI grouping.
+    return asString
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
   }
 
   constructor(private http: HttpClient, private accountService: AccountService) {
@@ -49,58 +84,137 @@ export class UnifiedDashboardService {
     });
   }
 
-  private clearUnifiedAppsCache(): void {
+  public clearUnifiedAppsCache(): void {
     this.unifiedAppsCache$ = undefined;
+    this.unifiedAppsCacheKey = null;
+    this.unifiedCountsCache$ = undefined;
+    this.unifiedCountsCacheKey = null;
   }
 
-  
-  getUnifiedDashboardCounts(): Observable<DashboardCount> {
-    const requests = [
-      this.http.get<DashboardCount>(`${this.endpoints.renewal}/dashboard-counts/`).pipe(
-        catchError(err => {
-          console.error(' Renewal counts error:', err);
-          return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
-        })
-      ),
-      this.http.get<DashboardCount>(`${this.endpoints.new}/dashboard-counts/`).pipe(
-        catchError(err => {
-          console.error(' New license counts error:', err);
-          return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
-        })
-      ),
-      this.http.get<DashboardCount>(`${this.endpoints.salesman}/dashboard-counts/`).pipe(
-        catchError(err => {
-          console.error(' Salesman counts error:', err);
-          return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
-        })
-      ),
-      this.http.get<DashboardCount>(`${this.endpoints.company}/dashboard-counts/`).pipe(
-        catchError(err => {
-          console.error(' Company registration counts error:', err);
-          return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
-        })
-      )
-    ];
 
-    return forkJoin(requests).pipe(
-      map(([renewal, newLic, salesman, company]) => ({
-        applied: (renewal.applied || 0) + (newLic.applied || 0) + (salesman.applied || 0) + (company.applied || 0),
-        pending: (renewal.pending || 0) + (newLic.pending || 0) + (salesman.pending || 0) + (company.pending || 0),
-        approved: (renewal.approved || 0) + (newLic.approved || 0) + (salesman.approved || 0) + (company.approved || 0),
-        rejected: (renewal.rejected || 0) + (newLic.rejected || 0) + (salesman.rejected || 0) + (company.rejected || 0),
-      }))
-    );
+  private flattenNavigation(items: NavigationItem[] = []): NavigationItem[] {
+    const out: NavigationItem[] = [];
+    const visit = (list: NavigationItem[]) => {
+      for (const item of list || []) {
+        out.push(item);
+        if (Array.isArray(item.children) && item.children.length) visit(item.children);
+      }
+    };
+    visit(items || []);
+    return out;
+  }
+
+  private inferEnabledTypesFromConfig(config?: DashboardConfig): UnifiedApplication['type'][] {
+    if (!config) return this.allTypes.slice();
+
+    const haystack = this.flattenNavigation(config.navigation)
+      .map((x) => `${x?.label || ''} ${x?.route || ''}`.toLowerCase())
+      .join(' | ');
+
+    const enabled = new Set<UnifiedApplication['type']>();
+    if (/(license[_ -]?application|renewal|licen[cs]e[_ -]?renewal)/.test(haystack)) enabled.add('license-renewal');
+    if (/(new[_ -]?license|new[_ -]?licen[cs]e|new_license_application)/.test(haystack)) enabled.add('new-license');
+    if (/(salesman|barman|salesman_barman)/.test(haystack)) enabled.add('salesman-barman');
+    if (/(company|company[_ -]?registration|company-registration)/.test(haystack)) enabled.add('company-registration');
+
+    return enabled.size ? Array.from(enabled) : this.allTypes.slice();
+  }
+
+  getUnifiedDashboardCounts(config?: DashboardConfig, forceRefresh = false): Observable<DashboardCount> {
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal']));
+    const cacheKey = enabledTypes.slice().sort().join('|');
+    if (!forceRefresh && this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
+      return this.unifiedCountsCache$;
+    }
+    const tasks: Array<Observable<DashboardCount>> = [];
+
+    const empty: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 } as DashboardCount;
+
+    const getUrl = (url: string) => forceRefresh ? `${url}?cb=${Date.now()}` : url;
+
+    if (enabledTypes.includes('license-renewal')) {
+      tasks.push(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.renewal}/dashboard-counts/`)).pipe(
+          catchError((err) => {
+            console.error(' Renewal counts error:', err);
+            return of(empty);
+          })
+        )
+      );
+    }
+
+    if (enabledTypes.includes('new-license')) {
+      tasks.push(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.new}/dashboard-counts/`)).pipe(
+          catchError((err) => {
+            console.error(' New license counts error:', err);
+            return of(empty);
+          })
+        )
+      );
+    }
+
+    if (enabledTypes.includes('salesman-barman')) {
+      tasks.push(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.salesman}/dashboard-counts/`)).pipe(
+          catchError((err) => {
+            console.error(' Salesman counts error:', err);
+            return of(empty);
+          })
+        )
+      );
+    }
+
+    if (enabledTypes.includes('company-registration')) {
+      tasks.push(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.company}/dashboard-counts/`)).pipe(
+          catchError((err) => {
+            console.error(' Company registration counts error:', err);
+            return of(empty);
+          })
+        )
+      );
+    }
+
+    if (!tasks.length) {
+      this.unifiedCountsCacheKey = cacheKey;
+      this.unifiedCountsCache$ = of(empty).pipe(shareReplay({ bufferSize: 1, refCount: false }));
+      return this.unifiedCountsCache$;
+    }
+
+    this.unifiedCountsCacheKey = cacheKey;
+    this.unifiedCountsCache$ = forkJoin(tasks).pipe(
+      map((results) =>
+        results.reduce(
+          (acc, cur) => ({
+            applied: (acc.applied || 0) + (cur.applied || 0),
+            pending: (acc.pending || 0) + (cur.pending || 0),
+            objection: (acc.objection || 0) + (cur.objection || 0),
+            approved: (acc.approved || 0) + (cur.approved || 0),
+            rejected: (acc.rejected || 0) + (cur.rejected || 0),
+            awaitingPayment: (acc.awaitingPayment || 0) + (cur.awaitingPayment || (cur as any).awaiting_payment || 0)
+          }),
+          { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any
+        )
+      )
+    ).pipe(shareReplay({ bufferSize: 1, refCount: false }));
+
+    return this.unifiedCountsCache$;
   }
 
   // Get applications from all 4 types (added company)
-  getUnifiedApplicationsByStatus(forceRefresh = false): Observable<{
+  getUnifiedApplicationsByStatus(forceRefresh = false, config?: DashboardConfig): Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
+    objection: UnifiedApplication[];
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-    if (!forceRefresh && this.unifiedAppsCache$) {
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal']));
+    const cacheKey = enabledTypes.slice().sort().join('|');
+
+    if (!forceRefresh && this.unifiedAppsCache$ && this.unifiedAppsCacheKey === cacheKey) {
       return this.unifiedAppsCache$;
     }
 
@@ -114,85 +228,116 @@ export class UnifiedDashboardService {
       });
     };
 
-    const requests = [
-      this.http.get<any>(`${this.endpoints.renewal}/list-by-status/`).pipe(
-        catchError(err => {
-          console.error('Renewal error:', err);
-          return of({ applied: [], pending: [], approved: [], rejected: [] });
-        })
-      ),
-      this.http.get<any>(`${this.endpoints.new}/list-by-status/`).pipe(
-        catchError(err => {
-          console.error('New License error:', err);
-          return of({ applied: [], pending: [], approved: [], rejected: [] });
-        })
-      ),
-      this.http.get<any>(`${this.endpoints.salesman}/list-by-status/`).pipe(
-        catchError(err => {
-          console.error('Salesman error:', err);
-          return of({ applied: [], pending: [], approved: [], rejected: [] });
-        })
-      ),
-      //  ADDED: Company registration applications
-      this.http.get<any>(`${this.endpoints.company}/list-by-status/`).pipe(
-        catchError(err => {
-          console.error('Company registration error:', err);
-          return of({ applied: [], pending: [], approved: [], rejected: [] });
-        })
-      )
-    ];
+    const requests: Array<Observable<any>> = [];
+    const types: UnifiedApplication['type'][] = [];
+
+    const push = (type: UnifiedApplication['type'], req$: Observable<any>) => {
+      types.push(type);
+      requests.push(req$);
+    };
+
+    const getUrl = (url: string) => forceRefresh ? `${url}?cb=${Date.now()}` : url;
+
+    if (enabledTypes.includes('license-renewal')) {
+      push(
+        'license-renewal',
+        this.http.get<any>(getUrl(`${this.endpoints.renewal}/list-by-status/`)).pipe(
+          catchError((err) => {
+            console.error('Renewal error:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        )
+      );
+    }
+
+    if (enabledTypes.includes('new-license')) {
+      push(
+        'new-license',
+        this.http.get<any>(getUrl(`${this.endpoints.new}/list-by-status/`)).pipe(
+          catchError((err) => {
+            console.error('New License error:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        )
+      );
+    }
+
+    if (enabledTypes.includes('salesman-barman')) {
+      push(
+        'salesman-barman',
+        this.http.get<any>(getUrl(`${this.endpoints.salesman}/list-by-status/`)).pipe(
+          catchError((err) => {
+            console.error('Salesman error:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        )
+      );
+    }
+
+    if (enabledTypes.includes('company-registration')) {
+      push(
+        'company-registration',
+        this.http.get<any>(getUrl(`${this.endpoints.company}/list-by-status/`)).pipe(
+          catchError((err) => {
+            console.error('Company registration error:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        )
+      );
+    }
+
+    this.unifiedAppsCacheKey = cacheKey;
 
     this.unifiedAppsCache$ = forkJoin(requests).pipe(
-      map(([renewal, newLic, salesman, company]) => {
-        const normalize = (data: any, type: UnifiedApplication['type']) => {
-          if (!data) {
-            return { applied: [], pending: [], approved: [], rejected: [], awaitingPayment: [] };
-          }
+        map((responses) => {
+          const getResponse = (t: UnifiedApplication['type']): any => {
+            const idx = types.indexOf(t);
+            return idx >= 0 ? responses[idx] : { applied: [], pending: [], approved: [], rejected: [] };
+          };
 
-          const hasStatusStructure = (
-            data.hasOwnProperty('applied') ||
-            data.hasOwnProperty('pending') ||
-            data.hasOwnProperty('approved') ||
-            data.hasOwnProperty('rejected')
-          );
+          const renewal = getResponse('license-renewal');
+          const newLic = getResponse('new-license');
+          const salesman = getResponse('salesman-barman');
+          const company = getResponse('company-registration');
+          const normalize = (data: any, type: UnifiedApplication['type']) => {
+            if (!data) {
+              return { applied: [], pending: [], objection: [], approved: [], rejected: [], awaitingPayment: [] };
+            }
 
-          if (!hasStatusStructure) {
-            console.error(`${type}: Missing status structure`);
-            return { applied: [], pending: [], approved: [], rejected: [], awaitingPayment: [] };
-          }
+            const hasStatusStructure = (
+              data.hasOwnProperty('applied') ||
+              data.hasOwnProperty('pending') ||
+              data.hasOwnProperty('objection') ||
+              data.hasOwnProperty('approved') ||
+              data.hasOwnProperty('rejected')
+            );
 
-          const extractArray = (statusData: any, statusName: string): UnifiedApplication[] => {
-            if (!Array.isArray(statusData)) return [];
-            
-            return statusData.map((app: any) => {
+            if (!hasStatusStructure) {
+              console.error(`${type}: Missing status structure`);
+              return { applied: [], pending: [], objection: [], approved: [], rejected: [], awaitingPayment: [] };
+            }
+
+            const extractArray = (statusData: any, statusName: string): UnifiedApplication[] => {
+              if (!Array.isArray(statusData)) return [];
+              
+              return statusData.map((app: any) => {
               const applicationId = 
                 app.application_id ||
                 app.applicationId ||
                 app.id ||
                 '';
 
-              let currentStage = app.current_stage || app.currentStage;
-              const currentStageId = app.current_stage_id || app.currentStageId || null;
-              
-              if (typeof currentStage === 'number') {
-                const stageIdToName: { [key: number]: string } = {
-                  1: 'applicant_applied', 2: 'level_1', 3: 'level_2', 4: 'level_3', 5: 'level_4', 6: 'level_5',
-                  7: 'level_1_objection', 8: 'level_2_objection', 9: 'level_3_objection', 10: 'level_4_objection', 11: 'level_5_objection',
-                  12: 'approved', 13: 'applicant_applied', 14: 'level_1', 15: 'level_2', 16: 'approved',
-                  23: 'awaiting_payment', 24: 'rejected_by_level_1', 25: 'rejected_by_level_2', 26: 'rejected_by_level_3',
-                  27: 'rejected_by_level_4', 28: 'rejected_by_level_5', 29: 'rejected', 30: 'objection_raised', 31: 'awaiting_payment'
-                };
-                currentStage = stageIdToName[currentStage] || String(currentStage);
-              }
+                let currentStage = this.toStageToken(app);
+                const currentStageId = app.current_stage_id || app.currentStageId || null;
 
-              const unifiedApp: UnifiedApplication = {
-                type,
-                applicationId: String(applicationId),
-                currentStage: String(currentStage),
-                currentStageName: app.current_stage_name || app.currentStageName || 'Unknown',
-                isApproved: app.is_approved ?? app.isApproved ?? false,
-                establishmentName: app.establishment_name || app.establishmentName || app.company_name || app.companyName || null,
-                applicantFullName: this.getApplicantName(app, type),
+                const unifiedApp: UnifiedApplication = {
+                  type,
+                  applicationId: String(applicationId),
+                  currentStage: String(currentStage || ''),
+                  currentStageName: app.current_stage_name || app.currentStageName || 'Unknown',
+                  isApproved: app.is_approved ?? app.isApproved ?? false,
+                  establishmentName: app.establishment_name || app.establishmentName || app.company_name || app.companyName || null,
+                  applicantFullName: this.getApplicantName(app, type),
                 mobileNumber: app.mobile_number || app.mobileNumber || app.company_mobile_number || app.companyMobileNumber || '',
                 email: app.email || app.emailId || app.email_id || app.company_email_id || app.companyEmailId || '',
                 licenseCategoryName: this.getLicenseCategoryName(app),
@@ -208,14 +353,15 @@ export class UnifiedDashboardService {
             });
           };
 
-          return {
-            applied: extractArray(data.applied, 'applied'),
-            pending: extractArray(data.pending, 'pending'),
-            approved: extractArray(data.approved, 'approved'),
-            rejected: extractArray(data.rejected, 'rejected'),
-            awaitingPayment: []
-          };
-        };
+           return {
+             applied: extractArray(data.applied, 'applied'),
+             pending: extractArray(data.pending, 'pending'),
+             objection: extractArray((data as any).objection, 'objection'),
+             approved: extractArray(data.approved, 'approved'),
+             rejected: extractArray(data.rejected, 'rejected'),
+             awaitingPayment: []
+           };
+         };
 
         const normalizedRenewal = normalize(renewal, 'license-renewal');
         const normalizedNewLic = normalize(newLic, 'new-license');
@@ -225,6 +371,7 @@ export class UnifiedDashboardService {
         // FIXED: Include company applications in aggregation
         let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied];
         let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending];
+        const allObjection = [...normalizedRenewal.objection, ...normalizedNewLic.objection, ...normalizedSalesman.objection, ...normalizedCompany.objection];
         let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved, ...normalizedCompany.approved];
         const allRejected = [...normalizedRenewal.rejected, ...normalizedNewLic.rejected, ...normalizedSalesman.rejected, ...normalizedCompany.rejected];
 
@@ -234,7 +381,9 @@ export class UnifiedDashboardService {
           const stage = String(app.currentStage || '').toLowerCase();
           const stageId = app.raw?.current_stage_id || app.raw?.currentStageId;
           const isAwaitingByName = stage === 'awaiting_payment' || stage.includes('awaiting') || stage === 'awaiting payment';
-          const isAwaitingById = stageId === 23 || stageId === 31 || Number(stageId) === 23 || Number(stageId) === 31;
+          const isAwaitingById = 
+            stageId === 23 || stageId === 31 || stageId === 109 || stageId === 119 || 
+            Number(stageId) === 23 || Number(stageId) === 31 || Number(stageId) === 109 || Number(stageId) === 119;
           return isAwaitingByName || isAwaitingById;
         };
         
@@ -265,6 +414,7 @@ export class UnifiedDashboardService {
         return {
           applied: uniqueByKey(stillApplied),
           pending: uniqueByKey(stillPending),
+          objection: uniqueByKey(allObjection),
           approved: uniqueByKey(stillApproved),
           rejected: uniqueByKey(allRejected),
           awaitingPayment: uniqueByKey(awaitingPaymentApps),
@@ -336,11 +486,27 @@ export class UnifiedDashboardService {
   }
 
   getObjections(applicationId: string): Observable<Objection[]> {
-    return this.http.get<Objection[]>(`${this.workflowUrl}${applicationId}/objections/`);
+    const encodedId = encodeURIComponent(String(applicationId || '').trim());
+    return this.http.get<Objection[]>(`${this.workflowUrl}${encodedId}/objections/`);
   }
 
   resolveObjections(applicationId: string, type: UnifiedApplication['type'], formData: FormData): Observable<any> {
-    return this.http.post<any>(`${this.workflowUrl}${applicationId}/resolve-objections/`, formData);
+    const encodedId = encodeURIComponent(String(applicationId || '').trim());
+    void type;
+
+    // Some backends/proxies return non-JSON (HTML/empty) on auth/CSRF issues which breaks JSON parsing.
+    // Post as text and parse leniently to keep the UI error handling meaningful.
+    return this.http.post(`${this.workflowUrl}${encodedId}/resolve-objections/`, formData, {
+      responseType: 'text',
+      headers: new HttpHeaders({ Accept: 'application/json' })
+    }).pipe(
+      map((text: any) => {
+        const raw = String(text ?? '').trim();
+        if (!raw) return {};
+        if (raw.startsWith('<')) return { _raw: raw };
+        try { return JSON.parse(raw); } catch { return { _raw: raw }; }
+      })
+    );
   }
 
   payLicenseFee(applicationId: string): Observable<any> {

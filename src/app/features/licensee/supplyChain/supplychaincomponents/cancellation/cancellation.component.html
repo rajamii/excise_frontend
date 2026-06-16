@@ -35,16 +35,17 @@
       </div>
     </div>
 
-    <div class="summary-card under-process-requests summary-card-clickable" role="button" tabindex="0"
-      (click)="onSummaryCardClick('UNDER_PROCESS')" [class.active]="activeSummaryFilter === 'UNDER_PROCESS'">
+    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+      (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
       <div class="card-icon">
-        <i class="bi bi-gear"></i>
+        <i class="bi bi-x-circle"></i>
       </div>
       <div class="card-content">
-        <h3 class="card-value">{{ getCancellationStatusCount('UNDER_PROCESS') }}</h3>
-        <p class="card-label">Under Process</p>
+        <h3 class="card-value">{{ getCancellationStatusCount('REJECTED') }}</h3>
+        <p class="card-label">Rejected</p>
       </div>
     </div>
+
   </div>
 </div>
 

@@ -1,0 +1,113 @@
+.content {
+  width: min(1100px, 92vw);
+}
+
+.hint {
+  margin-bottom: 12px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+}
+
+.objection-table {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.objection-row {
+  display: grid;
+  grid-template-columns: 44px 240px minmax(260px, 1fr) 340px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.objection-row.header {
+  border-top: 0;
+  background: linear-gradient(90deg, rgba(25, 118, 210, 0.08), rgba(76, 175, 80, 0.06));
+  font-weight: 600;
+}
+
+.objection-row:not(.header):nth-child(even) {
+  background: rgba(0, 0, 0, 0.012);
+}
+
+.objection-col.field {
+  color: rgba(0, 0, 0, 0.78);
+  background: rgba(25, 118, 210, 0.04);
+  border-radius: 8px;
+  padding: 6px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.objection-col.value {
+  min-width: 0;
+}
+
+.objection-col.remarks {
+  background: rgba(255, 193, 7, 0.06);
+  border-radius: 10px;
+  padding: 4px 6px;
+}
+
+.value-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(76, 175, 80, 0.04);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+.value-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.preview-btn {
+  flex: 0 0 auto;
+  transform: scale(1.1);
+  color: #1976d2;
+}
+
+.remarks-field {
+  width: 100%;
+}
+
+.general-remarks {
+  width: 100%;
+  margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+  .objection-row {
+    grid-template-columns: 34px 1fr;
+    grid-template-areas:
+      "check field"
+      "value value"
+      "remarks remarks";
+  }
+
+  .objection-col.check { grid-area: check; }
+  .objection-col.field { grid-area: field; }
+  .objection-col.value { grid-area: value; }
+  .objection-col.remarks { grid-area: remarks; }
+
+  .objection-col.field {
+    white-space: normal;
+  }
+
+  .value-text {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+  }
+}

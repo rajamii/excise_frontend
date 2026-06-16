@@ -22,7 +22,7 @@ export class NavigationService {
     const currentUser = this.roleService.getCurrentUser();
     if (!currentUser) return;
 
-    this.dashboardConfigService.getCurrentUserDashboardConfig().subscribe({
+    this.dashboardConfigService.getCurrentUserDashboardConfigCached().subscribe({
       next: (config) => {
         const navigationItems = this.buildNavigationItems(config.navigation);
         this.navigationItemsSubject.next(navigationItems);

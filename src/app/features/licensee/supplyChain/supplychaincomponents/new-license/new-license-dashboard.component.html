@@ -25,6 +25,16 @@
         <p class="card-label">Pending</p>
       </div>
     </div>
+    <!-- Awaiting Payment Card -->
+    <div class="summary-card awaiting-payment-requests summary-card-clickable" role="button" tabindex="0"
+      *ngIf="counts.awaitingPayment && counts.awaitingPayment > 0"
+      (click)="onSummaryCardClick('awaiting-payment')" [class.active]="activeSummaryFilter === 'awaiting-payment'">
+      <div class="card-icon"><i class="bi bi-credit-card"></i></div>
+      <div class="card-content">
+        <h3 class="card-value">{{ counts.awaitingPayment }}</h3>
+        <p class="card-label">Awaiting Payment</p>
+      </div>
+    </div>
     <div class="summary-card objection-requests summary-card-clickable" role="button" tabindex="0"
       (click)="onSummaryCardClick('objection')" [class.active]="activeSummaryFilter === 'objection'">
       <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
@@ -116,9 +126,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of pagedRows; let i = index">
+          <tr *ngFor="let row of pagedRows; let i = index"
+              [class.row-needs-action]="needsLicenseeAction(row)">
             <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
-            <td class="fw-semibold">{{ row.applicationId }}</td>
+            <td class="fw-semibold">
+              {{ row.applicationId }}
+              <span *ngIf="row.siteEnquiryIsReverted" class="badge bg-warning text-dark ms-2">REVERTED</span>
+            </td>
             <td>{{ row.submittedOn }}</td>
             <td>
               <span
@@ -134,14 +148,41 @@
             </td>
              <td>{{ row.applicantName }}</td>
              <td>{{ row.establishmentName }}</td>
-             <td>
+              <td>
                 <span class="status-badge {{ row.statusGroup }}">
                   {{ row.currentStage }}
                 </span>
-              </td>
-             <td>
-              <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
-                <i class="bi bi-eye-fill"></i>
+                <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
+                  ACTION REQUIRED
+                </span>
+                <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
+                  <span
+                    class="badge bg-info text-dark ms-2"
+                    [title]="row.updatedObjectionFields?.length ? ('Updated fields: ' + (row.updatedObjectionFields ?? []).join(', ')) : 'Updated'"
+                  >
+                    UPDATED
+                  </span>
+                </ng-container>
+                </td>
+              <td>
+                <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              <button
+                *ngIf="isLicenseeUser() && row.statusGroup === 'objection'"
+                class="btn btn-sm btn-fix-objection me-2"
+                title="Resolve Objections"
+                (click)="resolveObjections(row)"
+              >
+                <i class="bi bi-tools me-1"></i>Fix
+              </button>
+              <button
+                *ngIf="!isLicenseeUser() && row.hasObjectionHistory"
+                class="btn btn-link p-0 action-eye me-2"
+                title="View Objection Details"
+                (click)="viewObjectionDetails(row)"
+              >
+                <i class="bi bi-info-circle-fill"></i>
               </button>
               <button
                 *ngIf="row.canPayNow"

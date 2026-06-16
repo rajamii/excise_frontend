@@ -47,4 +47,12 @@ export class UserService {
       map(roles => roles.find(role => role.id === id)!)
     );
   }
+
+  // Toggle user is_active status (activate / deactivate)
+  toggleUserActive(id: number): Observable<{ message: string; is_active: boolean }> {
+    return this.http.patch<{ message: string; is_active: boolean }>(
+      `${this.baseUrl}/${id}/toggle-active/`,
+      {}
+    );
+  }
 }

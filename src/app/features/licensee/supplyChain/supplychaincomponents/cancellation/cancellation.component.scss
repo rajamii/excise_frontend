@@ -302,6 +302,18 @@
       }
     }
 
+    &.rejected-requests {
+      --summary-accent-start: #ef4444;
+      --summary-accent-end: #dc2626;
+      .card-icon {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+
+      .card-value {
+        color: #dc2626;
+      }
+    }
+
     &.total-amount {
       .card-icon {
         background: linear-gradient(135deg, #10b981, #059669);

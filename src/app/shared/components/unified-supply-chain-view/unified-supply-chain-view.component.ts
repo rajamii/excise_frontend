@@ -3,7 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { MatDialog } from '@angular/material/dialog';
@@ -25,6 +25,8 @@ import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified
 import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
 import { RoleService } from '../../../core/services/role.service';
+import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
+import { Objection } from '../../../core/models/license-application.model';
 
 // Constants
 import {
@@ -364,7 +366,7 @@ interface PendingNewLicenseFeeApproval {
 @Component({
     selector: 'app-unified-supply-chain-view',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, UnifiedActionButtonsComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, UnifiedActionButtonsComponent],
     templateUrl: './unified-supply-chain-view.component.html',
     styleUrls: ['./unified-supply-chain-view.component.scss']
 })
@@ -373,6 +375,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     applicationType: ApplicationType = 'requisition';
     isLoading = false;
     errorMessage = '';
+    objections: Objection[] = [];
+    private objectionIndex = new Map<string, { hasUnresolved: boolean; hasResolved: boolean }>();
+
+    // Hologram supply order letter (IT Cell after payment)
+    supplyOrderLetterOpen = false;
+    supplyOrderLetterModel: any | null = null;
+    private pendingOpenSupplyLetter = false;
+
+    get hologramSupplierDetails(): any | null {
+        const data: any = this.applicationData as any;
+        return (data?.supplier_details || data?.supplierDetails) || null;
+    }
 
     // Uploaded documents modal state
     docsModalOpen = false;
@@ -429,6 +443,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private masterService: MasterService,
         private roleService: RoleService,
         private unifiedActionsService: UnifiedActionsService,
+        private unifiedDashboardService: UnifiedDashboardService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         private sanitizer: DomSanitizer,
@@ -629,6 +644,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     brAmount: ['yearly_license_fee']
                 }
             },
+            'license-renewal': {
+                service: this,
+                listMethod: 'getLicenseRenewalApplications',
+                detailMethod: 'getLicenseRenewalApplicationById',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.LICENSE_RENEWAL],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no'],
+                    submissionDate: ['created_at', 'createdAt', 'submitted_at', 'submittedAt', 'submitted_on', 'submittedOn'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['establishment_name', 'establishmentName', 'applicant_name', 'applicantName'],
+                    brAmount: ['yearly_license_fee']
+                }
+            },
             'company-registration': {
                 service: this.companyRegistrationService,
                 listMethod: 'getCompanyList',
@@ -690,6 +722,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const params = this.extractRouteParams();
         if (params.ref || params.id) {
             this.applicationType = params.type;
+            this.pendingOpenSupplyLetter = Boolean(params.openSupplyLetter);
             this.loadApplicationData(params.ref || '', params.id || '');
         } else {
             this.goBack();
@@ -700,8 +733,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const type = this.route.snapshot.queryParamMap.get('type') as ApplicationType || 'requisition';
         const ref = this.route.snapshot.paramMap.get('ref') || this.route.snapshot.queryParamMap.get('ref');
         const id = this.route.snapshot.queryParamMap.get('id');
+        const openSupplyLetter = String(this.route.snapshot.queryParamMap.get('openSupplyLetter') || '').trim();
 
-        return { type, ref, id };
+        return { type, ref, id, openSupplyLetter };
     }
 
     private loadApplicationData(refNo: string, id: string): void {
@@ -727,20 +761,33 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encodedId}/`);
     }
 
+    private getLicenseRenewalApplications(): Observable<any> {
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/list/`);
+    }
+
+    private getLicenseRenewalApplicationById(id: string): Observable<any> {
+        const encodedId = encodeURIComponent(id);
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/detail/${encodedId}/`);
+    }
+
     private loadByIdWithFallback(config: ServiceConfig, id: string, refNo: string): void {
         const detailObservable = config.service[config.detailMethod](id);
 
         detailObservable.subscribe({
             next: (data: any) => {
                 if (data) {
-                    this.mapApplicationData(data, config);
+                    this.enrichTransitProductsIfNeeded(data, (enriched) => {
+                        this.mapApplicationData(enriched, config);
+                        this.isLoading = false;
+                    });
                 } else {
                     this.loadByReference(config, refNo);
+                    this.isLoading = false;
                 }
-                this.isLoading = false;
             },
             error: (error: any) => {
                 this.loadByReference(config, refNo);
+                this.isLoading = false;
             }
         });
     }
@@ -761,16 +808,65 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 const foundItem = this.findItemByReference(items, refNo, config.fieldMappings.referenceNo);
 
                 if (foundItem) {
-                    this.mapApplicationData(foundItem, config);
+                    this.enrichTransitProductsIfNeeded(foundItem, (enriched) => {
+                        this.mapApplicationData(enriched, config);
+                        this.isLoading = false;
+                    });
                 } else {
                     this.errorMessage = `${this.applicationType} not found in available data.`;
+                    this.isLoading = false;
                 }
-                this.isLoading = false;
             },
             error: (err: any) => {
                 this.errorMessage = `Could not load ${this.applicationType} details from server.`;
                 this.isLoading = false;
             }
+        });
+    }
+
+    private enrichTransitProductsIfNeeded(apiData: any, done: (enriched: any) => void): void {
+        if (this.applicationType !== 'transit') {
+            done(apiData);
+            return;
+        }
+
+        if (!apiData) {
+            done(apiData);
+            return;
+        }
+
+        const existingProducts = this.extractFieldValue(apiData, [
+            'products',
+            'transit_products',
+            'transitProducts',
+            'product_list',
+            'productList',
+        ]);
+        if (Array.isArray(existingProducts) && existingProducts.length > 0) {
+            done(apiData);
+            return;
+        }
+
+        const billNo =
+            this.extractFieldValue(apiData, ['billNo', 'bill_no', 'ourRefNo', 'our_ref_no', 'referenceNo', 'reference_no']) ||
+            '';
+        const billNoToken = String(billNo || '').trim();
+        if (!billNoToken) {
+            done(apiData);
+            return;
+        }
+
+        // Transit permits can be stored as multiple rows with the same `bill_no` (one row per brand).
+        // When loading a single row by `id`, fetch the full set and attach as `products` for the UI.
+        this.supplyChainService.getTransitPermits(billNoToken).subscribe({
+            next: (rows: any[]) => {
+                if (Array.isArray(rows) && rows.length > 0) {
+                    done({ ...apiData, products: rows });
+                } else {
+                    done(apiData);
+                }
+            },
+            error: () => done(apiData),
         });
     }
 
@@ -847,7 +943,103 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.applicationData = mappedData;
         this.resetSiteEnquiryReportState();
         this.calculateNewLicenseUploads();
+        this.loadObjectionsForCurrentApplication();
         this.loadWorkflowActions();
+
+        if (this.pendingOpenSupplyLetter) {
+            this.pendingOpenSupplyLetter = false;
+            if (this.shouldShowSupplyOrderLetterButton()) {
+                // Open on next tick so bindings settle (modal uses model computed from applicationData).
+                setTimeout(() => this.openSupplyOrderLetter(), 0);
+            }
+        }
+    }
+
+    private canonicalFieldName(value: unknown): string {
+        const raw = String(value ?? '').trim();
+        if (!raw) return '';
+        if (raw.includes('_')) return raw.toLowerCase();
+        return raw.replace(/([A-Z])/g, '_$1').toLowerCase();
+    }
+
+    private rebuildObjectionIndex(): void {
+        this.objectionIndex = new Map();
+        for (const obj of this.objections || []) {
+            const key = this.canonicalFieldName((obj as any)?.fieldName);
+            if (!key) continue;
+            const entry = this.objectionIndex.get(key) || { hasUnresolved: false, hasResolved: false };
+            if ((obj as any)?.isResolved) entry.hasResolved = true;
+            else entry.hasUnresolved = true;
+            this.objectionIndex.set(key, entry);
+        }
+    }
+
+    private loadObjectionsForCurrentApplication(): void {
+        const appId = String(this.applicationData?.referenceNo || this.applicationData?.id || '').trim();
+        if (!appId) {
+            this.objections = [];
+            this.rebuildObjectionIndex();
+            return;
+        }
+
+        this.unifiedDashboardService.getObjections(appId).subscribe({
+            next: (data) => {
+                this.objections = Array.isArray(data) ? data : [];
+                this.rebuildObjectionIndex();
+                this.cdr.detectChanges();
+            },
+            error: () => {
+                this.objections = [];
+                this.rebuildObjectionIndex();
+            }
+        });
+    }
+
+    hasAnyUnresolvedObjections(): boolean {
+        for (const v of this.objectionIndex.values()) {
+            if (v.hasUnresolved) return true;
+        }
+        return false;
+    }
+
+    unresolvedObjectionCount(): number {
+        let count = 0;
+        for (const obj of this.objections || []) {
+            if (obj && !(obj as any).isResolved) count += 1;
+        }
+        return count;
+    }
+
+    objectionStateForField(fieldKey: string): 'none' | 'unresolved' | 'resolved' {
+        const key = this.canonicalFieldName(fieldKey);
+        const entry = this.objectionIndex.get(key);
+        if (!entry) return 'none';
+        if (entry.hasUnresolved) return 'unresolved';
+        if (entry.hasResolved) return 'resolved';
+        return 'none';
+    }
+
+    objectionStateForDocLabel(label: string): 'none' | 'unresolved' | 'resolved' {
+        const byLabel: Record<string, string> = {
+            'Passport Photo': 'pass_photo',
+            'PAN Card': 'pan_card',
+            'Sikkim Certificate': 'sikkim_certificate',
+            'DOB Proof': 'dob_proof',
+            'NOC from Landlord': 'noc_landlord',
+        };
+        const key = byLabel[String(label || '').trim()] || '';
+        return key ? this.objectionStateForField(key) : 'none';
+    }
+
+    objectionStateForAny(fields: string[]): 'none' | 'unresolved' | 'resolved' {
+        const list = Array.isArray(fields) ? fields : [];
+        let hasResolved = false;
+        for (const f of list) {
+            const state = this.objectionStateForField(String(f || ''));
+            if (state === 'unresolved') return 'unresolved';
+            if (state === 'resolved') hasResolved = true;
+        }
+        return hasResolved ? 'resolved' : 'none';
     }
 
     private addComputedFields(mappedData: UnifiedApplicationData, apiData: any, config: ServiceConfig): void {
@@ -1045,21 +1237,122 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 mappedData['exciseDuty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalExciseDuty', 'total_excise_duty']));
                 mappedData['additionalExcise'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalAdditionalExcise', 'total_additional_excise']));
 
-                const transitProduct = {
-                    id: mappedData.id,
-                    brand: mappedData['brand'],
-                    sizeML: mappedData['sizeML'],
-                    bottleType: mappedData['bottleType'],
-                    liquorType: mappedData['permitType'],
-                    brandOwner: mappedData['brandOwner'],
-                    manufacturingUnit: mappedData['manufacturingUnit'],
-                    cases: mappedData['quantity'],
-                    educationCess: mappedData['educationCess'],
-                    exciseDuty: mappedData['exciseDuty'],
-                    additionalExcise: mappedData['additionalExcise'],
-                    totalAmount: mappedData['brAmount']
-                };
-                mappedData['transitProducts'] = [transitProduct];
+                const rawTransitProducts = this.extractFieldValue(apiData, [
+                    'products',
+                    'transit_products',
+                    'transitProducts',
+                    'product_list',
+                    'productList',
+                ]);
+
+                if (Array.isArray(rawTransitProducts) && rawTransitProducts.length > 0) {
+                    const normalizedProducts = rawTransitProducts
+                        .map((p: any, index: number) => {
+                            if (!p) return null;
+
+                            const brand = this.extractFieldValue(p, ['brand', 'brand_name', 'brandName']);
+                            const sizeML = this.parseNumericValue(
+                                this.extractFieldValue(p, ['sizeML', 'size_ml', 'sizeMl', 'ml', 'size'])
+                            );
+                            const bottleType = this.extractFieldValue(p, ['bottleType', 'bottle_type']);
+                            const liquorType = this.extractFieldValue(p, ['liquorType', 'liquor_type', 'permitType', 'permit_type', 'type']);
+                            const brandOwner = this.extractFieldValue(p, ['brandOwner', 'brand_owner', 'brandOwnerName', 'brand_owner_name']);
+                            const manufacturingUnit = this.extractFieldValue(p, ['manufacturingUnit', 'manufacturing_unit', 'manufacturingUnitName', 'manufacturing_unit_name']);
+                            const cases = this.parseNumericValue(
+                                this.extractFieldValue(p, ['cases', 'case', 'quantity', 'qty', 'no_of_cases', 'noOfCases'])
+                            );
+
+                            // Per-case charges (best-effort); fallback to request totals if missing.
+                            const educationCessPerCase = this.parseNumericValue(
+                                this.extractFieldValue(p, [
+                                    'educationCess',
+                                    'education_cess',
+                                    'education_cess_per_case',
+                                    'educationCessPerCase',
+                                    'education_cess_rs_per_case',
+                                ]),
+                                this.parseNumericValue(mappedData['educationCess'])
+                            );
+                            const exciseDutyPerCase = this.parseNumericValue(
+                                this.extractFieldValue(p, [
+                                    'exciseDuty',
+                                    'excise_duty',
+                                    'excise_duty_per_case',
+                                    'exciseDutyPerCase',
+                                    'excise_duty_rs_per_case',
+                                ]),
+                                this.parseNumericValue(mappedData['exciseDuty'])
+                            );
+                            const additionalExcisePerCase = this.parseNumericValue(
+                                this.extractFieldValue(p, [
+                                    'additionalExcise',
+                                    'additional_excise',
+                                    'additional_excise_per_case',
+                                    'additionalExcisePerCase',
+                                    'additional_excise_duty_rs_per_case',
+                                    'additional_excise_duty_per_case',
+                                ]),
+                                this.parseNumericValue(mappedData['additionalExcise'])
+                            );
+
+                            const totalAmount = this.parseNumericValue(
+                                this.extractFieldValue(p, ['totalAmount', 'total_amount', 'amount', 'brAmount', 'br_amount']),
+                                (educationCessPerCase + exciseDutyPerCase + additionalExcisePerCase) * (cases || 0)
+                            );
+
+                            return {
+                                id:
+                                    this.parseNumericValue(this.extractFieldValue(p, ['id']), Number(mappedData.id) || 0) ||
+                                    (Number(mappedData.id) || 0) * 1000 + index,
+                                brand,
+                                sizeML,
+                                bottleType,
+                                liquorType: liquorType || mappedData['permitType'],
+                                brandOwner,
+                                manufacturingUnit,
+                                cases,
+                                educationCess: educationCessPerCase,
+                                exciseDuty: exciseDutyPerCase,
+                                additionalExcise: additionalExcisePerCase,
+                                totalAmount,
+                            };
+                        })
+                        .filter(Boolean);
+
+                    mappedData['transitProducts'] = normalizedProducts;
+
+                    const totalCases = normalizedProducts.reduce((sum: number, p: any) => sum + (Number(p?.cases || 0) || 0), 0);
+                    mappedData['quantity'] = totalCases;
+                    mappedData['educationCess'] = normalizedProducts.reduce(
+                        (sum: number, p: any) => sum + (Number(p?.educationCess || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        0
+                    );
+                    mappedData['exciseDuty'] = normalizedProducts.reduce(
+                        (sum: number, p: any) => sum + (Number(p?.exciseDuty || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        0
+                    );
+                    mappedData['additionalExcise'] = normalizedProducts.reduce(
+                        (sum: number, p: any) => sum + (Number(p?.additionalExcise || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        0
+                    );
+                    mappedData['brAmount'] = normalizedProducts.reduce((sum: number, p: any) => sum + (Number(p?.totalAmount || 0) || 0), 0);
+                } else {
+                    const transitProduct = {
+                        id: mappedData.id,
+                        brand: mappedData['brand'],
+                        sizeML: mappedData['sizeML'],
+                        bottleType: mappedData['bottleType'],
+                        liquorType: mappedData['permitType'],
+                        brandOwner: mappedData['brandOwner'],
+                        manufacturingUnit: mappedData['manufacturingUnit'],
+                        cases: mappedData['quantity'],
+                        educationCess: mappedData['educationCess'],
+                        exciseDuty: mappedData['exciseDuty'],
+                        additionalExcise: mappedData['additionalExcise'],
+                        totalAmount: mappedData['brAmount']
+                    };
+                    mappedData['transitProducts'] = [transitProduct];
+                }
 
                 // Approved / Cancelled by OIC — from serializer method fields
                 mappedData['approvedByDisplay'] = this.extractFieldValue(apiData, ['approvedByDisplay', 'approved_by_display']) || '';
@@ -1344,6 +1637,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         if (action === 'APPROVE') {
             this.handleApproveWithDynamicPrechecks(event.item, context);
+            return;
+        }
+
+        if (action === 'FORWARD' && this.isCurrentStageSiteEnquiry()) {
+            const applicationId = this.getWorkflowApplicationId(event.item);
+            if (!applicationId) {
+                this.snackBar.open('Application ID not found for site enquiry.', 'Close', { duration: 4000 });
+                return;
+            }
+            this.openSiteEnquiryAndProcessAction(event.item, context, applicationId, 'FORWARD');
             return;
         }
 
@@ -2378,42 +2681,151 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     private openSiteEnquiryAndApprove(item: any, context: UserContext, applicationId: string): void {
+        this.openSiteEnquiryAndProcessAction(item, context, applicationId, 'APPROVE');
+    }
+
+    private openSiteEnquiryAndProcessAction(
+        item: any,
+        context: UserContext,
+        applicationId: string,
+        nextAction: 'APPROVE' | 'FORWARD'
+    ): void {
+        const isRevertedReport = (report: any): boolean => {
+            if (!report) return false;
+            const rawFlag =
+                report?.is_reverted ??
+                report?.isReverted ??
+                report?.site_enquiry_is_reverted ??
+                report?.siteEnquiryIsReverted ??
+                report?.siteEnquiryReverted;
+            if (rawFlag === true) return true;
+            if (typeof rawFlag === 'string' && rawFlag.trim().toLowerCase() === 'true') return true;
+            const remarks = String(report?.reverted_remarks ?? report?.revertedRemarks ?? '').trim();
+            return remarks.length > 0;
+        };
+
         const submitSiteEnquiry$ =
             this.applicationType === 'new-license'
                 ? (formData: FormData) => this.licenseApplicationService.submitNewLicenseSiteEnquiryData(applicationId, formData)
                 : (formData: FormData) => this.licenseApplicationService.submitSiteEnquiryData(applicationId, formData);
 
-        const dialogRef = this.dialog.open(SiteEnquiryFormDialogComponent, {
-            width: '980px',
-            maxWidth: '98vw',
-            disableClose: true,
-            data: { applicationId }
-        });
-
-        dialogRef.afterClosed().subscribe((result: { formData: FormData } | null) => {
-            if (!result?.formData) {
-                return;
-            }
-
-            submitSiteEnquiry$(result.formData).subscribe({
-                next: () => {
-                    this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
-                        successMessage: 'Site enquiry submitted and application approved.',
-                        failureMessage: 'Approval failed after site enquiry submit.'
-                    });
-                },
-                error: (error: any) => {
-                    const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.', 'site enquiry');
-                    if (String(message).toLowerCase().includes('already submitted')) {
-                        this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
-                            successMessage: 'Existing site enquiry found. Application approved.',
-                            failureMessage: 'Approval failed.'
-                        });
-                        return;
-                    }
-                    this.snackBar.open(message, 'Close', { duration: 4500 });
-                }
+        const openDialog = (existingReport: any | null) => {
+            const dialogRef = this.dialog.open(SiteEnquiryFormDialogComponent, {
+                width: '980px',
+                maxWidth: '98vw',
+                disableClose: true,
+                data: { applicationId, existingReport }
             });
+
+            dialogRef.afterClosed().subscribe((result: { formData: FormData } | null) => {
+                if (!result?.formData) {
+                    return;
+                }
+
+                submitSiteEnquiry$(result.formData).subscribe({
+                    next: () => {
+                        if (nextAction === 'APPROVE') {
+                            this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                                successMessage: 'Site enquiry submitted and application approved.',
+                                failureMessage: 'Approval failed after site enquiry submit.'
+                            });
+                            return;
+                        }
+
+                        this.unifiedActionsService.executeAction('FORWARD', item, this.applicationType, context).subscribe({
+                            next: (result: any) => {
+                                const isSuccess = result?.success !== false;
+                                if (isSuccess) {
+                                    this.snackBar.open(result?.message || 'Site enquiry submitted and forwarded.', 'Close', { duration: 3500 });
+                                    const currentId = this.applicationData?.id?.toString() || '';
+                                    const currentRef = this.applicationData?.referenceNo || '';
+                                    this.loadApplicationData(currentRef, currentId);
+                                    return;
+                                }
+                                this.snackBar.open(result?.message || 'Forward failed after site enquiry submit.', 'Close', { duration: 4500 });
+                            },
+                            error: (error: any) => {
+                                this.snackBar.open(
+                                    this.extractHttpErrorMessage(error, 'Forward failed after site enquiry submit.'),
+                                    'Close',
+                                    { duration: 4500 }
+                                );
+                            }
+                        });
+                    },
+                    error: (error: any) => {
+                        const message = this.extractHttpErrorMessage(error, 'Failed to submit site enquiry form.', 'site enquiry');
+                        if (String(message).toLowerCase().includes('already submitted')) {
+                            if (nextAction === 'APPROVE') {
+                                this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                                    successMessage: 'Existing site enquiry found. Application approved.',
+                                    failureMessage: 'Approval failed.'
+                                });
+                                return;
+                            }
+
+                            this.unifiedActionsService.executeAction('FORWARD', item, this.applicationType, context).subscribe({
+                                next: (result: any) => {
+                                    const isSuccess = result?.success !== false;
+                                    if (isSuccess) {
+                                        this.snackBar.open(result?.message || 'Application forwarded.', 'Close', { duration: 3500 });
+                                        const currentId = this.applicationData?.id?.toString() || '';
+                                        const currentRef = this.applicationData?.referenceNo || '';
+                                        this.loadApplicationData(currentRef, currentId);
+                                        return;
+                                    }
+                                    this.snackBar.open(result?.message || 'Forward failed.', 'Close', { duration: 4500 });
+                                },
+                                error: (err: any) => {
+                                    this.snackBar.open(this.extractHttpErrorMessage(err, 'Forward failed.'), 'Close', { duration: 4500 });
+                                }
+                            });
+                            return;
+                        }
+                        this.snackBar.open(message, 'Close', { duration: 4500 });
+                    }
+                });
+            });
+        };
+
+        // If already submitted, allow editing only when JC has reverted it.
+        this.licenseApplicationService.getSiteEnquiryReport(applicationId).subscribe({
+            next: (report: any) => {
+                if (isRevertedReport(report)) {
+                    openDialog(report);
+                    return;
+                }
+
+                // Existing non-reverted report: proceed approval without reopening the form.
+                if (nextAction === 'APPROVE') {
+                    this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId, {
+                        successMessage: 'Existing site enquiry found. Application approved.',
+                        failureMessage: 'Approval failed.'
+                    });
+                    return;
+                }
+
+                this.unifiedActionsService.executeAction('FORWARD', item, this.applicationType, context).subscribe({
+                    next: (result: any) => {
+                        const isSuccess = result?.success !== false;
+                        if (isSuccess) {
+                            this.snackBar.open(result?.message || 'Application forwarded.', 'Close', { duration: 3500 });
+                            const currentId = this.applicationData?.id?.toString() || '';
+                            const currentRef = this.applicationData?.referenceNo || '';
+                            this.loadApplicationData(currentRef, currentId);
+                            return;
+                        }
+                        this.snackBar.open(result?.message || 'Forward failed.', 'Close', { duration: 4500 });
+                    },
+                    error: (error: any) => {
+                        this.snackBar.open(this.extractHttpErrorMessage(error, 'Forward failed.'), 'Close', { duration: 4500 });
+                    }
+                });
+            },
+            error: () => {
+                // No report yet (or cannot load): open fresh form.
+                openDialog(null);
+            }
         });
     }
 
@@ -2454,7 +2866,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     private buildSiteEnquiryReportEntries(report: Record<string, any>): SiteEnquiryReportField[] {
-        const hiddenKeys = new Set(['content_type']);
+        const hiddenKeys = new Set(['content_type', 'is_reverted', 'reverted_remarks', 'reverted_at']);
 
         return Object.entries(report || {})
             .filter(([key]) => !hiddenKeys.has(key))
@@ -2627,6 +3039,58 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return this.isNewLicense() && this.roleService.hasRole(9) && this.isPendingAtJointCommissionerStage();
     }
 
+    canRevertSiteEnquiryReport(): boolean {
+        if (!this.canViewSiteEnquiryReport()) {
+            return false;
+        }
+        if (this.siteEnquiryReportLoading || !!this.siteEnquiryReportError) {
+            return false;
+        }
+        return !!this.siteEnquiryReport;
+    }
+
+    revertSiteEnquiryReportFromModal(): void {
+        const applicationId = this.getCurrentApplicationId();
+        if (!applicationId) {
+            this.snackBar.open('Application reference not found for site enquiry report.', 'Close', { duration: 4000 });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Revert Site Enquiry Report',
+            input: 'textarea',
+            inputLabel: 'Remarks (required)',
+            inputPlaceholder: 'Enter remarks for Site Enquiry Officer...',
+            inputAttributes: { 'aria-label': 'Revert remarks' },
+            showCancelButton: true,
+            confirmButtonText: 'Revert Back',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            inputValidator: (value) => {
+                const text = String(value || '').trim();
+                if (!text) return 'Remarks are required.';
+                if (text.length < 3) return 'Please enter at least 3 characters.';
+                return null;
+            }
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            const remarks = String(result.value || '').trim();
+
+            this.licenseApplicationService.revertSiteEnquiryReport(applicationId, remarks).subscribe({
+                next: () => {
+                    this.snackBar.open('Site enquiry report reverted back to Site Enquiry Officer.', 'Close', { duration: 4500 });
+                    this.closeSiteEnquiryReportModal();
+                    const params = this.extractRouteParams();
+                    this.loadApplicationData(params.ref || '', params.id || '');
+                },
+                error: (error: any) => {
+                    const message = this.extractHttpErrorMessage(error, 'Failed to revert site enquiry report.', 'site enquiry revert');
+                    this.snackBar.open(message, 'Close', { duration: 5000 });
+                }
+            });
+        });
+    }
+
     openSiteEnquiryReportModal(): void {
         const applicationId = this.getCurrentApplicationId();
         if (!applicationId) {
@@ -2700,6 +3164,136 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         });
     }
 
+    private isHologramPaymentCompleted(): boolean {
+        if (!this.applicationData) return false;
+        const stageName = String(
+            (this.applicationData as any)?.currentStageName ||
+            (this.applicationData as any)?.current_stage_name ||
+            ''
+        ).toLowerCase().trim();
+        const paymentStatus = String(
+            (this.applicationData as any)?.paymentStatus ||
+            (this.applicationData as any)?.payment_status ||
+            ''
+        ).toLowerCase().trim();
+        // Only true when licensee has completed payment (stage "Payment Completed")
+        return (
+            stageName === 'payment completed' ||
+            paymentStatus === 'completed' ||
+            stageName.includes('carton assigned') ||
+            stageName.includes('arrived')
+        );
+    }
+
+    shouldShowSupplyOrderLetterButton(): boolean {
+        const source = this.route.snapshot.queryParamMap.get('source') || '';
+        // Supply Order Letter is handled by the IT Cell dashboard modal — hide it in the unified view
+        if (source === 'itcell' || source === 'it-cell') return false;
+        return this.isHologram() && this.getUserContext() === USER_CONTEXTS.IT_CELL && this.isHologramPaymentCompleted();
+    }
+
+    openSupplyOrderLetter(): void {
+        if (!this.applicationData) return;
+        this.supplyOrderLetterModel = this.buildSupplyOrderLetterModel();
+        this.supplyOrderLetterOpen = true;
+        this.cdr.detectChanges();
+        setTimeout(() => {
+            const el = document.getElementById('supplyOrderLetterSection');
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    }
+
+    closeSupplyOrderLetter(): void {
+        this.supplyOrderLetterOpen = false;
+        this.cdr.detectChanges();
+    }
+
+    printSupplyOrderLetter(): void {
+        const letterEl = document.getElementById('supplyOrderLetterPrintArea');
+        if (!letterEl) return;
+
+        const html = `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Supply Order Letter</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
+    .supply-letter { background: #fff; }
+    .supply-letter-header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 10px; }
+    .supply-letter-title { font-weight: 800; letter-spacing: 0.5px; font-size: 22px; }
+    .supply-letter-subtitle { font-weight: 700; color: #374151; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #111827; padding: 8px; font-size: 12px; }
+    thead th { background: #f3f4f6; }
+    .text-end { text-align: right; }
+    .fw-semibold { font-weight: 700; }
+    .mt-3 { margin-top: 12px; }
+    .mt-4 { margin-top: 16px; }
+    .ms-3 { margin-left: 12px; }
+    .small { font-size: 11px; }
+    .d-flex { display: flex; }
+    .justify-content-between { justify-content: space-between; }
+  </style>
+</head>
+<body>
+  ${letterEl.outerHTML}
+  <script>
+    window.onload = function () { window.print(); window.close(); };
+  </script>
+</body>
+</html>`;
+
+        const win = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
+        if (!win) return;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+    }
+
+    private formatNumberIndian(value: any): string {
+        const num = Number(value || 0) || 0;
+        return num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
+    private buildSupplyOrderLetterModel(): any | null {
+        const supplier = this.hologramSupplierDetails;
+        if (!supplier) return null;
+
+        const refNo = String((this.applicationData as any)?.referenceNo || (this.applicationData as any)?.refNo || (this.applicationData as any)?.ref_no || '').trim();
+        const datedRaw = (this.applicationData as any)?.submissionDate || (this.applicationData as any)?.date || '';
+        const dated = datedRaw ? new Date(datedRaw).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+
+        const localQty = this.formatNumberIndian((this.applicationData as any)?.localQty ?? (this.applicationData as any)?.local_qty ?? 0);
+        const exportQty = this.formatNumberIndian((this.applicationData as any)?.exportQty ?? (this.applicationData as any)?.export_qty ?? 0);
+        const defenceQty = this.formatNumberIndian((this.applicationData as any)?.defenceQty ?? (this.applicationData as any)?.defence_qty ?? 0);
+        const totalQtyNum =
+            Number((this.applicationData as any)?.localQty ?? (this.applicationData as any)?.local_qty ?? 0) +
+            Number((this.applicationData as any)?.exportQty ?? (this.applicationData as any)?.export_qty ?? 0) +
+            Number((this.applicationData as any)?.defenceQty ?? (this.applicationData as any)?.defence_qty ?? 0);
+        const totalQty = this.formatNumberIndian(totalQtyNum);
+
+        const manufacturingUnit = String((this.applicationData as any)?.distilleryName || (this.applicationData as any)?.manufacturingUnit || (this.applicationData as any)?.manufacturing_unit || '').trim();
+
+        const addressText = String(supplier?.address || '').trim();
+        const toAddressLines = addressText ? addressText.split(/\r?\n/).map((x: string) => x.trim()).filter(Boolean) : [];
+
+        return {
+            refNo,
+            dated,
+            toPost: String(supplier?.post || 'The General Manager'),
+            toCompany: String(supplier?.company_name || supplier?.companyName || supplier?.name || ''),
+            toAddressLines,
+            manufacturingUnit,
+            localQty,
+            exportQty,
+            defenceQty,
+            totalQty,
+        };
+    }
+
     // Type check methods for template
     isRequisition(): boolean { return this.applicationType === 'requisition'; }
     isRevalidation(): boolean { return this.applicationType === 'revalidation'; }
@@ -2707,9 +3301,45 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isTransit(): boolean { return this.applicationType === 'transit'; }
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
+    isRenewal(): boolean { return this.applicationType === 'license-renewal'; }
+    isSalesmanRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
+        return this.isRenewal() && id.startsWith('RSBM/');
+    }
+    isNewLicenseRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
+        return this.isRenewal() && !id.startsWith('RSBM/');
+    }
+    isNewLicenseOrRenewal(): boolean {
+        return this.isNewLicense() || this.isNewLicenseRenewal();
+    }
+    isSalesmanOrRenewal(): boolean {
+        return this.isSalesmanBarmanRegistration() || this.isSalesmanRenewal();
+    }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
+    getValidUpToDate(): Date | null {
+        if (!this.applicationData) return null;
+        const rawDate = 
+            this.applicationData['valid_up_to'] || 
+            this.applicationData['old_license_valid_up_to'] || 
+            this.applicationData['oldLicenseValidUpTo'] ||
+            this.applicationData['validUpTo'] ||
+            this.applicationData['expiryDate'] ||
+            null;
+        if (!rawDate) return null;
+        if (rawDate instanceof Date) return rawDate;
+        const parsed = new Date(rawDate);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+    isExpired(): boolean {
+        const validUpTo = this.getValidUpToDate();
+        if (!validUpTo) return false;
+        return validUpTo.getTime() < Date.now();
+    }
 
     getApplicationTitle(): string {
         return APPLICATION_TITLES[this.applicationType] || 'APPLICATION';
@@ -2741,6 +3371,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'transit',
             'hologram',
             'new-license',
+            'license-renewal',
             'company-registration',
             'company-collaboration',
             'salesman-barman-registration'
@@ -2947,6 +3578,24 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return String(value).trim().length > 0;
     }
 
+    asYesNo(value: any): string {
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+        if (typeof value === 'number') return value !== 0 ? 'Yes' : 'No';
+        const text = String(value ?? '').trim().toLowerCase();
+        if (!text) return 'No';
+        return ['true', 'yes', '1'].includes(text) ? 'Yes' : 'No';
+    }
+
+    getPachwaiSelected(): any {
+        const data: any = this.applicationData as any;
+        return data?.pachwai ?? data?.pachwai_flag ?? data?.pachwai_selected;
+    }
+
+    getDraughtBeerSelected(): any {
+        const data: any = this.applicationData as any;
+        return data?.draught_beer ?? data?.draughtBeer ?? data?.draughtbeer;
+    }
+
     getFileUrl(value: unknown): string {
         if (!this.hasText(value)) return '#';
         const valueStr = String(value).trim();
@@ -3007,7 +3656,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         let docFields: Array<{ label: string; keys: string[] }> = [];
 
-        if (this.applicationType === 'new-license') {
+        const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
+        const isSalesman = this.applicationType === 'salesman-barman-registration' || id.startsWith('RSBM/');
+        const isNewLicense = this.applicationType === 'new-license' || this.applicationType === 'license-renewal' || id.startsWith('LRA/');
+
+        if (isNewLicense) {
             docFields = [
                 { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
                 { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
@@ -3015,7 +3668,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
                 { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
             ];
-        } else if (this.applicationType === 'salesman-barman-registration') {
+        } else if (isSalesman) {
             docFields = [
                 { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto'] },
                 { label: 'Aadhaar Card', keys: ['aadhaar_card', 'aadhaarCard'] },

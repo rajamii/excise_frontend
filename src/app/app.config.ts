@@ -15,6 +15,7 @@ import { JwtRefreshInterceptor } from './core/interceptors/jwt-refresh.intercept
 import { routes } from './app.routes';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { uiLoadingInterceptorFn } from './core/interceptors/ui-loading.interceptor-fn';
+import { CsrfInterceptor } from './core/interceptors/csrf.interceptor';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts'; // ✅ Added for Chart.js
 
 export const appConfig: ApplicationConfig = {
@@ -32,6 +33,7 @@ export const appConfig: ApplicationConfig = {
     ),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: JwtRefreshInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: CsrfInterceptor, multi: true },
     
     // ✅ Chart.js configuration
     provideCharts(withDefaultRegisterables()), provideCharts(withDefaultRegisterables()),

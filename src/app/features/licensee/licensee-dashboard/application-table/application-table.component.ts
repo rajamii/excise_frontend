@@ -27,7 +27,7 @@ import { RoleService } from '../../../../core/services/role.service';
 export class ApplicationTableComponent implements OnInit, OnChanges {
     @Input() dataSource: MatTableDataSource<UnifiedApplication> = new MatTableDataSource<UnifiedApplication>();
     @Input() displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-    @Input() tableType: 'applied' | 'pending' | 'approved' | 'rejected' = 'applied';
+    @Input() tableType: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' = 'applied';
 
     @Output() view = new EventEmitter<UnifiedApplication>();
     @Output() payment = new EventEmitter<UnifiedApplication>();
@@ -39,6 +39,7 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
     stageDisplayMapping: { [key: string]: string } = {
         'applied': 'Application Submitted',
         'pending': 'Under Review',
+        'objection': 'Objection Raised',
         'awaiting_payment': 'Awaiting Payment',
         'approved': 'Approved',
         'rejected': 'Rejected',
@@ -94,7 +95,12 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
         const normalized = raw.toLowerCase().replace(/\s+/g, '_');
 
         if (this.isLicenseeUser()) {
-            if (normalized.includes('awaiting_payment') || normalized.includes('payment')) return 'Awaiting Payment';
+            if (
+                normalized.includes('awaiting_payment') || 
+                normalized.includes('payment') || 
+                normalized === '109' || 
+                normalized === '119'
+            ) return 'Awaiting Payment';
             if (normalized.includes('approved')) return 'Approved';
             if (normalized.includes('reject')) return 'Rejected';
             return 'Pending';
@@ -136,8 +142,8 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
     }
 
     isAwaitingPayment(element: UnifiedApplication): boolean {
-        const stage = this.getCurrentStage(element);
-        return stage === 'awaiting_payment' || stage === 'awaiting payment';
+        const stage = String(this.getCurrentStage(element) || '').toLowerCase().trim();
+        return stage === 'awaiting_payment' || stage === 'awaiting payment' || stage === '109' || stage === '119';
     }
 
     onView(element: UnifiedApplication): void {

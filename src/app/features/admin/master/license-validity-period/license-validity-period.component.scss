@@ -1,0 +1,432 @@
+// ──────────────────────────────────────────────────────────────
+//  License Validity Period – component styles
+// ──────────────────────────────────────────────────────────────
+
+// ── Page wrapper ────────────────────────────────────────────────
+.lvp-wrapper {
+  padding: 24px 20px;
+  min-height: 100%;
+  background: #f4f6fb;
+}
+
+// ── Page header ─────────────────────────────────────────────────
+.lvp-page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+    box-shadow: 0 4px 14px rgba(25, 118, 210, 0.35);
+    flex-shrink: 0;
+
+    mat-icon {
+      color: #fff;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #1a2340;
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #607080;
+  }
+}
+
+// ── Card ─────────────────────────────────────────────────────────
+.lvp-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 24px;
+    background: linear-gradient(90deg, #e3eef9 0%, #f0f7ff 100%);
+    border-bottom: 1px solid #dce8f5;
+  }
+
+  &__header-icon {
+    color: #1976d2;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  &__header-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a2340;
+    letter-spacing: 0.01em;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #f8fafd;
+    border-top: 1px solid #eef2f7;
+    font-size: 0.82rem;
+    color: #7a8fa6;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #1976d2;
+    }
+  }
+}
+
+// ── Skeleton ─────────────────────────────────────────────────────
+.lvp-skeleton {
+  height: 120px;
+  margin: 24px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #e8edf2 25%, #f4f6fa 50%, #e8edf2 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// ── Table ─────────────────────────────────────────────────────────
+.lvp-table-wrap {
+  overflow-x: auto;
+  padding: 20px 24px 4px;
+}
+
+.lvp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+
+  thead tr {
+    background: #f0f5fb;
+  }
+
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #5a7090;
+    white-space: nowrap;
+    border-bottom: 2px solid #dce8f5;
+
+    display: table-cell;
+    vertical-align: middle;
+  }
+
+  // inline icon inside <th>
+  .th-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    vertical-align: middle;
+    margin-right: 4px;
+    color: #1976d2;
+    position: relative;
+    top: -1px;
+  }
+
+  td {
+    padding: 18px 16px;
+    border-bottom: 1px solid #f0f4f8;
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background 0.15s;
+
+    &:hover {
+      background: #f7faff;
+    }
+  }
+
+  &__index {
+    font-weight: 700;
+    color: #b0bec5;
+    font-size: 0.85rem;
+    width: 36px;
+  }
+}
+
+// ── Badges ────────────────────────────────────────────────────────
+.lvp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  em {
+    font-style: normal;
+    font-weight: 400;
+    color: inherit;
+    opacity: 0.7;
+    font-size: 0.82em;
+  }
+
+  &--month {
+    background: #e8f0fe;
+    color: #1967d2;
+
+    mat-icon { color: #1967d2; }
+  }
+
+  &--day {
+    background: #e6f4ea;
+    color: #1e7e34;
+
+    mat-icon { color: #1e7e34; }
+  }
+
+  &--time {
+    background: #fff3e0;
+    color: #e65100;
+
+    mat-icon { color: #e65100; }
+  }
+
+  &--preview {
+    background: #fce4ec;
+    color: #b71c1c;
+    font-size: 0.84rem;
+
+    mat-icon { color: #c62828; }
+  }
+}
+
+// ── Update button ─────────────────────────────────────────────────
+.lvp-update-btn {
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  border-radius: 8px !important;
+  padding: 0 14px !important;
+  height: 36px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Dialog styles  (scoped inside component via ViewEncapsulation
+//  but we also add .lvp-dialog-panel as panelClass for overlay)
+// ──────────────────────────────────────────────────────────────
+.lvp-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 22px 22px 18px;
+    background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+    color: #fff;
+    position: relative;
+  }
+
+  &__header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 26px;
+      width: 26px;
+      height: 26px;
+      color: #fff;
+    }
+  }
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  &__close {
+    position: absolute !important;
+    top: 12px;
+    right: 12px;
+    color: rgba(255, 255, 255, 0.85) !important;
+
+    &:hover { color: #fff !important; }
+  }
+
+  &__body {
+    padding: 24px 22px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  // ── Field group (label + input + chip)
+  &__field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  &__field-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #5a7090;
+    margin-bottom: 2px;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      color: #1976d2;
+    }
+  }
+
+  &__field {
+    width: 100%;
+  }
+
+  &__preview-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    align-self: flex-start;
+    margin-top: -2px;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      color: #2e7d32;
+    }
+  }
+
+  // ── Summary banner
+  &__summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    color: #0d47a1;
+    margin-top: 6px;
+    margin-bottom: 4px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #1565c0;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+  }
+
+  // ── Action row
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 22px 20px;
+    border-top: 1px solid #eef2f7;
+    background: #fafcff;
+  }
+}
+
+.lvp-btn-cancel {
+  font-weight: 600;
+  border-radius: 8px !important;
+  color: #607080;
+  border-color: #cfd8e3 !important;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+  }
+}
+
+.lvp-btn-save {
+  font-weight: 700;
+  border-radius: 8px !important;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}

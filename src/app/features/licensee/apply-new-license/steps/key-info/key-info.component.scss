@@ -41,6 +41,37 @@ mat-card {
       padding: 20px 0;
       justify-items: center;
       align-items: start;
+
+      .field-label {
+        font-weight: 600;
+        color: #1C2B78;
+        font-size: 14px;
+        margin-bottom: 4px;
+
+        .required {
+          color: #ff1313;
+          margin-left: 2px;
+        }
+      }
+
+      .radio-group-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        mat-radio-group {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+        }
+
+        .radio-error {
+          color: #f44336;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+      }
       
       mat-form-field {
         width: 100%;
@@ -61,6 +92,65 @@ mat-card {
       }
     }
     
+    // Site Type + Additional Charges side-by-side row
+    .site-type-charges-row {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: nowrap;
+
+      .radio-group-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex-shrink: 0;
+
+        mat-radio-group {
+          display: flex;
+          flex-direction: row;
+          gap: 16px;
+          align-items: center;
+        }
+
+        .radio-error {
+          color: #f44336;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+      }
+
+      .additional-charges-inline {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px 16px;
+        background-color: #f5f7ff;
+        border: 1px solid #c5cdf5;
+        border-radius: 8px;
+        flex-shrink: 0;
+
+        .field-label {
+          font-weight: 600;
+          color: #1C2B78;
+          font-size: 13px;
+          margin-bottom: 2px;
+        }
+
+        .charges-checkboxes {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+
+          mat-checkbox {
+            font-size: 13px;
+            color: #333;
+          }
+        }
+      }
+    }
+
     .radio-questions-container {
       padding: 20px 0;
       display: flex;

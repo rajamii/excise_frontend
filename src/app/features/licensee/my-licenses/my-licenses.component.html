@@ -101,6 +101,7 @@
 
               <!-- Print Button -->
               <button 
+                *ngIf="canPrintLicense(element)"
                 mat-icon-button 
                 class="action-btn print-btn"
                 (click)="printLicense(element)"
@@ -110,6 +111,7 @@
 
               <!-- ✅ Renew Button -->
               <button 
+                *ngIf="canShowRenewButton(element)"
                 mat-icon-button 
                 color="accent"
                 class="action-btn renew-btn"

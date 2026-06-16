@@ -183,7 +183,9 @@ export interface PaymentStatusUpdatePayload {
 export interface BilldeskWalletRechargeInitiatePayload {
   transaction_id: string;
   wallet_type: string;
-  head_of_account: string;
+  licensee_id?: string;
+  payer_id?: string;
+  head_of_account?: string;
   amount: number;
 }
 

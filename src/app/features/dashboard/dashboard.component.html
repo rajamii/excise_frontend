@@ -59,7 +59,7 @@
         </div>
 
         <!-- Header Right: Wallet Toggle + Action Button -->
-        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle()">
+        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle() || selectedSupplyChainSection === 'officer-activity'">
           <div class="wallet-view-toggle" *ngIf="shouldShowWalletViewToggle()">
             <button
               mat-button
@@ -87,6 +87,17 @@
             class="header-action-btn">
             <mat-icon>{{ getHeaderActionIcon() }}</mat-icon>
             {{ getHeaderActionLabel() }}
+          </button>
+
+          <!-- Refresh button for License / Officer Activity -->
+          <button
+            *ngIf="selectedSupplyChainSection === 'officer-activity'"
+            class="act-refresh-btn"
+            type="button"
+            (click)="loadUserActivities()"
+            [disabled]="userActivityLoading">
+            <mat-icon [class.act-spin]="userActivityLoading">refresh</mat-icon>
+            Refresh
           </button>
         </div>
       </div>
@@ -124,7 +135,11 @@
           *ngIf="selectedSupplyChainSection === 'label-registration'">
         </app-label-registration-prepare-application>
         <app-new-license-dashboard *ngIf="selectedSupplyChainSection === 'new-license'"></app-new-license-dashboard>
+        <app-license-renewal-dashboard *ngIf="selectedSupplyChainSection === 'license-renewal'"></app-license-renewal-dashboard>
         <app-apply-new-license *ngIf="selectedSupplyChainSection === 'new-license-apply'"></app-apply-new-license>
+        <app-single-window *ngIf="selectedSupplyChainSection === 'single-window'"></app-single-window>
+        <app-single-window-detail *ngIf="selectedSupplyChainSection === 'single-window-detail'"></app-single-window-detail>
+        <app-payment-transactions *ngIf="selectedSupplyChainSection === 'payment-transactions'"></app-payment-transactions>
 
         <!-- IT Cell specific sections -->
         <app-itcell *ngIf="selectedSupplyChainSection === 'itcell-hologram'"></app-itcell>
@@ -167,18 +182,167 @@
 
         <!-- Officer Activity section -->
         <div *ngIf="selectedSupplyChainSection === 'officer-activity'" class="officer-activity-section">
-          <div class="officer-activity-placeholder">
-            <div class="placeholder-card">
-              <div class="placeholder-icon-wrap">
-                <mat-icon>construction</mat-icon>
+
+          <!-- Filters row — visible to all users -->
+          <div class="act-filters act-filters--all">
+
+            <!-- Month filter -->
+            <div class="act-filter-field">
+              <label>Month</label>
+              <input type="month" [(ngModel)]="activityFilterMonth"
+                     (ngModelChange)="loadUserActivities()"
+                     class="act-filter-month" />
+            </div>
+
+            <!-- Specific date filter -->
+            <div class="act-filter-field">
+              <label>Date</label>
+              <input type="date" [(ngModel)]="activityFilterDate"
+                     (ngModelChange)="loadUserActivities()"
+                     class="act-filter-month" />
+            </div>
+
+            <!-- Login / Logout quick filter -->
+            <div class="act-filter-field">
+              <label>Action</label>
+              <select [(ngModel)]="activityFilterAction"
+                      (ngModelChange)="loadUserActivities()"
+                      class="act-filter-select">
+                <option value="">All Actions</option>
+                <option value="LOGIN">Login</option>
+                <option value="LOGOUT">Logout</option>
+              </select>
+            </div>
+
+            <button class="act-clear-btn" type="button"
+              (click)="activityFilterMonth=''; activityFilterDate=''; activityFilterAction=''; activityFilterUserId=''; activityFilterType=''; loadUserActivities()">
+              Clear
+            </button>
+          </div>
+
+          <!-- Admin-only filters -->
+      
+
+          <!-- Loading -->
+          <div class="act-loading" *ngIf="userActivityLoading">
+            <div class="act-loading__spinner"></div>
+            <span>Loading activity log…</span>
+          </div>
+
+          <!-- Error -->
+          <div class="act-error" *ngIf="!userActivityLoading && userActivityError">
+            <mat-icon>warning</mat-icon>
+            {{ userActivityError }}
+          </div>
+
+          <!-- Empty -->
+          <div class="act-empty" *ngIf="!userActivityLoading && !userActivityError && !userActivities?.length">
+            <mat-icon>inbox</mat-icon>
+            <span>No activity records found.</span>
+          </div>
+
+          <!-- Table -->
+          <div class="act-table-wrap" *ngIf="!userActivityLoading && !userActivityError && userActivities?.length">
+            <table class="act-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date &amp; Time</th>
+                  <th>Action</th>
+                  <th>IP Address</th>
+                  <th>Browser / OS</th>
+                  <th>Session Duration</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of activityPagedRows; let i = index"
+                    [class.act-row--login]="isLoginActivity(row)"
+                    [class.act-row--logout]="isLogoutActivity(row)"
+                    [class.act-row--warn]="isWarnActivity(row)"
+                    [class.act-row--info]="isInfoActivity(row)">
+
+                  <td class="act-td-num">{{ (activityPage - 1) * activityPageSize + i + 1 }}</td>
+
+                  <td class="act-td-time" style="white-space:nowrap">
+                    {{ row?.timestamp | date:'dd MMM yyyy' }}<br>
+                    <span class="act-time-sub">{{ row?.timestamp | date:'h:mm a' }}</span>
+                  </td>
+
+                  <td class="act-td-badge">
+                    <span class="act-badge" [ngClass]="getActivityBadgeClass(row)">
+                      {{ getActivityActionLabel(row) }}
+                    </span>
+                  </td>
+
+                   <td class="act-td-ip">
+                     <span *ngIf="(row?.ip_address || row?.ipAddress) && (row?.ip_address || row?.ipAddress) !== 'null'; else dash">
+                       {{ row?.ip_address || row?.ipAddress }}
+                     </span>
+                   </td>
+
+                  <td class="act-td-ua">
+                    <span *ngIf="row?.user_agent || row?.userAgent; else dash" [title]="row?.user_agent || row?.userAgent">
+                      {{ getShortUserAgent(row?.user_agent || row?.userAgent) }}
+                    </span>
+                  </td>
+
+                  <td class="act-td-session">
+                    <span class="act-session-chip" *ngIf="getSessionDuration(row) as dur; else dash">
+                      <mat-icon>hourglass_empty</mat-icon>{{ dur }}
+                    </span>
+                  </td>
+
+                  <td class="act-td-detail">
+                    <span *ngIf="getActivitySummaryLine(row) as detail; else dash">{{ detail }}</span>
+                  </td>
+
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="act-pagination" *ngIf="activityTotalPages > 1">
+              <div class="act-pagination__info">
+                Showing {{ (activityPage - 1) * activityPageSize + 1 }}–{{ activityPage * activityPageSize > activityTotalCount ? activityTotalCount : activityPage * activityPageSize }} of {{ activityTotalCount }} records
               </div>
-              <h3>Under Development</h3>
-              <p>
-                The Officer Activity module is currently under development and will be available very soon.
-              </p>
-              <span class="placeholder-note">Thank you for your patience.</span>
+              <div class="act-pagination__controls">
+                <button class="act-page-btn" [disabled]="activityPage === 1" (click)="activityGoToPage(1)" title="First">
+                  <mat-icon>first_page</mat-icon>
+                </button>
+                <button class="act-page-btn" [disabled]="activityPage === 1" (click)="activityGoToPage(activityPage - 1)" title="Previous">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+
+                <button *ngFor="let p of activityPageNumbers"
+                        class="act-page-btn act-page-btn--num"
+                        [class.act-page-btn--active]="p === activityPage"
+                        (click)="activityGoToPage(p)">
+                  {{ p }}
+                </button>
+
+                <button class="act-page-btn" [disabled]="activityPage === activityTotalPages" (click)="activityGoToPage(activityPage + 1)" title="Next">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+                <button class="act-page-btn" [disabled]="activityPage === activityTotalPages" (click)="activityGoToPage(activityTotalPages)" title="Last">
+                  <mat-icon>last_page</mat-icon>
+                </button>
+
+                <div class="act-page-size">
+                  <label>Per page</label>
+                  <select [(ngModel)]="activityPageSize" (change)="activityGoToPage(1)">
+                    <option [value]="5">5</option>
+                    <option [value]="10">10</option>
+                    <option [value]="25">25</option>
+                    <option [value]="50">50</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
+
+          <ng-template #dash><span class="act-dash">—</span></ng-template>
+
         </div>
 
         <!-- System Monitoring section -->
@@ -198,6 +362,7 @@
 
     <!-- Stats Container: Professional stats cards - Show when no supply chain section selected and not role-specific dashboard -->
     <div class="stats-container" *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+
 
       <!-- Dynamic Stats Cards based on role -->
       <div class="stats-grid">
@@ -238,17 +403,67 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
+            <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) + getSupplyChainPendingTotal() }}</div>
             <div class="label">Pending</div>
-            <div class="sub-info" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
-              <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+            <div
+              class="sub-info"
+              *ngIf="(dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) || getSupplyChainPendingTotal() > 0 || (isOicUser() && (getOicPendingCount('transit-applications') > 0 || getOicPendingCount('hologram-daily-entry') > 0))"
+            >
+              <span class="payment-count" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+              <span class="payment-count" *ngIf="getSupplyChainPendingCount('requisition') > 0">{{ getSupplyChainPendingCount('requisition') }} requisition payment pending</span>
+              <span class="payment-count" *ngIf="getSupplyChainPendingCount('hologram') > 0">{{ getSupplyChainPendingCount('hologram') }} hologram payment pending</span>
+              <span class="payment-count" *ngIf="isOicUser() && getOicPendingCount('transit-applications') > 0">{{ getOicPendingCount('transit-applications') }} transit applications pending</span>
+              <span class="payment-count" *ngIf="isOicUser() && getOicPendingCount('hologram-daily-entry') > 0">{{ getOicPendingCount('hologram-daily-entry') }} daily entry pending</span>
             </div>
-            <div class="sub-info" *ngIf="!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0">
+            <div class="sub-info" *ngIf="(!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0) && getSupplyChainPendingTotal() === 0 && (!isOicUser() || (getOicPendingCount('transit-applications') === 0 && getOicPendingCount('hologram-daily-entry') === 0))">
               {{ getStatSubInfo('pending') }}
             </div>
           </div>
           <div class="card-footer">
             <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
+
+        <!-- Awaiting Payment Stat Card -->
+        <mat-card class="stat-card awaiting-payment" *ngIf="shouldShowStatCard('awaitingPayment') && dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
+          <div class="card-header">
+            <div class="circle-icon orange-bg">
+              <mat-icon>payment</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('awaitingPayment') >= 0"
+              [class.negative]="getStatTrend('awaitingPayment') < 0">
+              <mat-icon>{{ getStatTrend('awaitingPayment') > 0 ? 'trending_up' : getStatTrend('awaitingPayment') < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(getStatTrend('awaitingPayment')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
+            <div class="label">Awaiting Payment</div>
+             <div class="sub-info">{{ getAwaitingPaymentBreakdownText() }}</div>
+          </div>
+        </mat-card>
+
+        <!-- Objection Stat Card -->
+        <mat-card class="stat-card objection" *ngIf="shouldShowStatCard('objection')">
+          <div class="card-header">
+            <div class="circle-icon orange-bg">
+              <mat-icon>error_outline</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('objection') > 0"
+              [class.negative]="getStatTrend('objection') < 0">
+              <mat-icon>{{ getStatTrend('objection') > 0 ? 'trending_up' : getStatTrend('objection') < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(getStatTrend('objection')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.objection || 0 }}</div>
+            <div class="label">Objection</div>
+            <div class="sub-info">{{ getStatSubInfo('objection') }}</div>
+          </div>
+          <div class="card-footer">
+            <button mat-button color="primary" (click)="showTable('objection')">View All →</button>
           </div>
         </mat-card>
 
@@ -317,6 +532,116 @@
             <span class="view-all">{{ customStat.actionText }} →</span>
           </div>
         </mat-card>
+      </div>
+    </div>
+
+    <!-- Renewal Warnings Section (Licensee Only) - shown after stats boxes -->
+    <div class="renewal-warnings-container" *ngIf="renewalWarnings && renewalWarnings.length > 0 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      <div class="renewal-warning-card" *ngFor="let warning of renewalWarnings"
+           [class.rw-expired]="warning.isExpired"
+           [class.rw-expiring]="!warning.isExpired">
+
+        <!-- Icon section -->
+        <div class="rw-icon-section">
+          <div class="rw-icon-wrap">
+            <mat-icon *ngIf="warning.hasActiveRenewal">hourglass_empty</mat-icon>
+            <mat-icon *ngIf="!warning.hasActiveRenewal && warning.isExpired">gpp_bad</mat-icon>
+            <mat-icon *ngIf="!warning.hasActiveRenewal && !warning.isExpired">update</mat-icon>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="rw-divider"></div>
+
+        <!-- Body -->
+        <div class="rw-body">
+          <ng-container *ngIf="warning.isExpired">
+
+            <!-- Line 1: Badge · Title · License ID · Type chip -->
+            <div class="rw-line rw-line--top">
+              <span class="rw-badge rw-badge--in-progress" *ngIf="warning.hasActiveRenewal"><mat-icon>hourglass_empty</mat-icon>RENEWAL IN PROGRESS</span>
+              <span class="rw-badge rw-badge--expired" *ngIf="!warning.hasActiveRenewal"><mat-icon>block</mat-icon>EXPIRED</span>
+              <h3 class="rw-title">Your license has expired <span *ngIf="warning.hasActiveRenewal">(Renewal Pending)</span></h3>
+              <span class="rw-divider-dot">·</span>
+              <span class="rw-license-id">{{ warning.licenseId }}</span>
+              <span class="rw-type-chip">{{ warning.type }}</span>
+            </div>
+
+            <!-- Line 2: Establishment · Category › Subcategory · Date -->
+            <div class="rw-line rw-line--bottom">
+              <div class="rw-est-pill" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+                <mat-icon>store</mat-icon>
+                <span>{{ warning.establishmentName }}</span>
+              </div>
+              <div class="rw-cat-pill" *ngIf="warning.licenseCategoryName">
+                <mat-icon>category</mat-icon>
+                <span class="rw-cat-name">{{ warning.licenseCategoryName }}</span>
+                <ng-container *ngIf="warning.licenseSubCategoryName">
+                  <span class="rw-cat-sep">›</span>
+                  <span class="rw-subcat-name">{{ warning.licenseSubCategoryName }}</span>
+                </ng-container>
+              </div>
+              <div class="rw-date-pill rw-date-pill--expired">
+                <mat-icon>event_busy</mat-icon>
+                <span>Expired</span>
+                <strong>{{ warning.finalDateStr }}</strong>
+              </div>
+            </div>
+
+          </ng-container>
+
+          <ng-container *ngIf="!warning.isExpired">
+
+            <!-- Line 1: Badge · Title · License ID · Type chip -->
+            <div class="rw-line rw-line--top">
+              <span class="rw-badge rw-badge--in-progress" *ngIf="warning.hasActiveRenewal"><mat-icon>hourglass_empty</mat-icon>RENEWAL IN PROGRESS</span>
+              <span class="rw-badge rw-badge--expiring" *ngIf="!warning.hasActiveRenewal"><mat-icon>notifications_active</mat-icon>RENEWAL OPEN</span>
+              <h3 class="rw-title" *ngIf="warning.hasActiveRenewal">Your license renewal is in progress</h3>
+              <h3 class="rw-title" *ngIf="!warning.hasActiveRenewal">Your license is up for renewal</h3>
+              <span class="rw-divider-dot">·</span>
+              <span class="rw-license-id">{{ warning.licenseId }}</span>
+              <span class="rw-type-chip">{{ warning.type }}</span>
+            </div>
+
+            <!-- Line 2: Establishment · Category › Subcategory · Deadline -->
+            <div class="rw-line rw-line--bottom">
+              <div class="rw-est-pill" *ngIf="warning.establishmentName && warning.establishmentName !== 'N/A'">
+                <mat-icon>store</mat-icon>
+                <span>{{ warning.establishmentName }}</span>
+              </div>
+              <div class="rw-cat-pill" *ngIf="warning.licenseCategoryName">
+                <mat-icon>category</mat-icon>
+                <span class="rw-cat-name">{{ warning.licenseCategoryName }}</span>
+                <ng-container *ngIf="warning.licenseSubCategoryName">
+                  <span class="rw-cat-sep">›</span>
+                  <span class="rw-subcat-name">{{ warning.licenseSubCategoryName }}</span>
+                </ng-container>
+              </div>
+              <div class="rw-date-pill rw-date-pill--expiring">
+                <mat-icon>event_available</mat-icon>
+                <span>Deadline</span>
+                <strong>{{ warning.finalDateStr }}</strong>
+              </div>
+            </div>
+
+          </ng-container>
+        </div>
+
+        <!-- Action -->
+        <div class="rw-actions">
+          <button class="rw-btn rw-btn--in-progress" *ngIf="warning.hasActiveRenewal" disabled>
+            <mat-icon>hourglass_empty</mat-icon>
+            Renewal In Progress
+          </button>
+          <button class="rw-btn" *ngIf="!warning.hasActiveRenewal"
+                  [class.rw-btn--expired]="warning.isExpired"
+                  [class.rw-btn--expiring]="!warning.isExpired"
+                  (click)="openMyLicensesForRenewal()">
+            <mat-icon>autorenew</mat-icon>
+            Renew Now
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -430,6 +755,21 @@
         <mat-card-content>
           <app-application-table [dataSource]="pendingDataSource" [displayedColumns]="displayedColumns"
             [tableType]="'pending'" (view)="viewApplication($event)" (payment)="onPaymentConfirmed($event)">
+          </app-application-table>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Objection Table Card -->
+      <mat-card *ngIf="activeTable === 'objection'">
+        <mat-card-header>
+          <button mat-icon-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-card-title>Objection Applications</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-application-table [dataSource]="objectionDataSource" [displayedColumns]="displayedColumns"
+            [tableType]="'objection'" (view)="viewApplication($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>

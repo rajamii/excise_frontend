@@ -1,13 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { BrandwarehouseComponent } from './brandwarehouse.component';
 import { BrandWarehouseService } from '../../services/brand-warehouse.service';
+import { SupplyChainService } from '../../services/supplychain.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
+import { ProductionService } from '../../services/production.service';
 
 describe('BrandwarehouseComponent', () => {
   let component: BrandwarehouseComponent;
   let fixture: ComponentFixture<BrandwarehouseComponent>;
   let mockBrandWarehouseService: jasmine.SpyObj<BrandWarehouseService>;
+  let mockSupplyChainService: jasmine.SpyObj<SupplyChainService>;
+  let mockSupplyChainProfileService: jasmine.SpyObj<SupplyChainProfileService>;
+  let mockProductionService: jasmine.SpyObj<ProductionService>;
 
   beforeEach(async () => {
     const spy = jasmine.createSpyObj('BrandWarehouseService', [
@@ -17,16 +24,26 @@ describe('BrandwarehouseComponent', () => {
       'adjustStock'
     ]);
 
+    const supplychainSpy = jasmine.createSpyObj('SupplyChainService', ['getBrandMlInCases']);
+    const profileSpy = jasmine.createSpyObj('SupplyChainProfileService', ['getProfile']);
+    const productionSpy = jasmine.createSpyObj('ProductionService', ['getProductionHistory']);
+
     await TestBed.configureTestingModule({
-      imports: [BrandwarehouseComponent, FormsModule],
+      imports: [BrandwarehouseComponent, FormsModule, HttpClientTestingModule],
       providers: [
-        { provide: BrandWarehouseService, useValue: spy }
+        { provide: BrandWarehouseService, useValue: spy },
+        { provide: SupplyChainService, useValue: supplychainSpy },
+        { provide: SupplyChainProfileService, useValue: profileSpy },
+        { provide: ProductionService, useValue: productionSpy }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(BrandwarehouseComponent);
     component = fixture.componentInstance;
     mockBrandWarehouseService = TestBed.inject(BrandWarehouseService) as jasmine.SpyObj<BrandWarehouseService>;
+    mockSupplyChainService = TestBed.inject(SupplyChainService) as jasmine.SpyObj<SupplyChainService>;
+    mockSupplyChainProfileService = TestBed.inject(SupplyChainProfileService) as jasmine.SpyObj<SupplyChainProfileService>;
+    mockProductionService = TestBed.inject(ProductionService) as jasmine.SpyObj<ProductionService>;
 
     // Setup default mock responses
     mockBrandWarehouseService.initializeSikkimBrands.and.returnValue(of({ success: true, created: 0, updated: 0 }));
@@ -42,6 +59,12 @@ describe('BrandwarehouseComponent', () => {
       pendingAdjustments: 0
     }));
     mockBrandWarehouseService.getGroupedBrandWarehouses.and.returnValue(of([]));
+    mockSupplyChainService.getBrandMlInCases.and.returnValue(of([
+      { ml: 90, pieces_in_case: 12 },
+      { ml: 180, pieces_in_case: 1 },
+    ]));
+    mockSupplyChainProfileService.getProfile.and.returnValue(of({ success: true, exists: true, data: null } as any));
+    mockProductionService.getProductionHistory.and.returnValue(of([] as any));
   });
 
   it('should create', () => {

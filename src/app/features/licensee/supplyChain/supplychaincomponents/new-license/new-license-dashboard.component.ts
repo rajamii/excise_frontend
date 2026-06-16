@@ -13,6 +13,8 @@ import { ApplicationMovementComponent } from '../../../licensee-dashboard/applic
 import { RoleService } from '../../../../../core/services/role.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { timeout } from 'rxjs';
+import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
+import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
 
 interface NewLicenseCounts {
   applied: number;
@@ -20,11 +22,15 @@ interface NewLicenseCounts {
   objection: number;
   approved: number;
   rejected: number;
+  awaitingPayment?: number;
 }
 
 interface NewLicenseItem {
   id: string;
   applicationId: string;
+  siteEnquiryIsReverted?: boolean;
+  isApproved?: boolean;
+  licenseNumber?: string;
   applicantName: string;
   establishmentName: string;
   submittedOn: string;
@@ -33,7 +39,10 @@ interface NewLicenseItem {
   canPayNow: boolean;
   currentStage: string;
   currentStageRaw: string;
-  statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
+  statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' | 'awaiting-payment';
+  hasObjectionHistory?: boolean;
+  hasObjectionUpdate?: boolean;
+  updatedObjectionFields?: string[];
 }
 
 interface GroupedNewLicenseResponse {
@@ -67,7 +76,8 @@ export class NewLicenseDashboardComponent implements OnInit {
     pending: 0,
     objection: 0,
     approved: 0,
-    rejected: 0
+    rejected: 0,
+    awaitingPayment: 0
   };
 
   private serverCounts: NewLicenseCounts = {
@@ -75,7 +85,8 @@ export class NewLicenseDashboardComponent implements OnInit {
     pending: 0,
     objection: 0,
     approved: 0,
-    rejected: 0
+    rejected: 0,
+    awaitingPayment: 0
   };
 
   allRows: NewLicenseItem[] = [];
@@ -89,6 +100,17 @@ export class NewLicenseDashboardComponent implements OnInit {
   monthFilter = '';
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
 
+  get approvedLicenseNumbers(): string[] {
+    if (!this.isLicenseeUser()) return [];
+
+    const numbers = this.allRows
+      .filter((r) => r?.statusGroup === 'approved' && Boolean(r?.isApproved))
+      .map((r) => String(r?.licenseNumber || '').trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(numbers));
+  }
+
   
 
   ngOnInit(): void {
@@ -97,6 +119,23 @@ export class NewLicenseDashboardComponent implements OnInit {
 
   isLicenseeUser(): boolean {
     return this.roleService.isLicenseeRole();
+  }
+
+  /** Returns true when the current user needs to take action on this row. */
+  needsLicenseeAction(row: NewLicenseItem): boolean {
+    if (this.isLicenseeUser()) {
+      // Licensee: flag awaiting payment (app fee or license fee) or objection
+      if (row.statusGroup === 'objection') return true;
+      if (row.canPayNow) return true;
+      const stage = String(row.currentStageRaw || '').toLowerCase();
+      return (stage.includes('payment') && stage.includes('await')) ||
+        stage === 'awaiting_payment' ||
+        stage === 'awaiting payment';
+    }
+
+    // Admin/officer: flag only pending rows (needs processing by officer).
+    // Objection rows are waiting for the licensee to respond — not the officer's action.
+    return row.statusGroup === 'pending';
   }
 
   loadData(): void {
@@ -123,15 +162,25 @@ export class NewLicenseDashboardComponent implements OnInit {
           pending: Number(counts?.pending || 0),
           objection: Number((counts as any)?.objection || 0),
           approved: Number(counts?.approved || 0),
-          rejected: Number(counts?.rejected || 0)
+          rejected: Number(counts?.rejected || 0),
+          awaitingPayment: 0
         };
         this.allRows = this.flattenGroupedData(grouped);
 
-        // Default to "Pending" filter for licensees only when there are pending items.
-        // If no pending items exist, show all applications (no filter).
-        if (this.isLicenseeUser() && this.activeSummaryFilter === '') {
+        // Default to "Pending" filter for all users (admin + licensee) when there are pending items.
+        // Objection has higher priority than pending.
+        // If no objection/pending items exist, show all applications (no filter).
+        if (this.activeSummaryFilter === '') {
+          const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
-          this.activeSummaryFilter = pendingCount > 0 ? 'pending' : '';
+          const awaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
+          if (objectionCount > 0) {
+            this.activeSummaryFilter = 'objection';
+          } else if (awaitingPaymentCount > 0) {
+            this.activeSummaryFilter = 'awaiting-payment';
+          } else if (pendingCount > 0) {
+            this.activeSummaryFilter = 'pending';
+          }
         }
 
         this.applyFilters();
@@ -186,6 +235,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     });
 
     const calculated = this.calculateCounts(this.summaryRows);
+    this.serverCounts.awaitingPayment = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
     const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.dateFilter && !this.monthFilter;
     this.counts = canUseServerCounts ? this.serverCounts : calculated;
 
@@ -229,6 +279,22 @@ export class NewLicenseDashboardComponent implements OnInit {
     if (this.totalPages === 0) return;
     if (this.pageIndex >= this.totalPages - 1) return;
     this.pageIndex += 1;
+  }
+
+  showApprovedLicenseNumbers(): void {
+    const items = this.approvedLicenseNumbers;
+    if (items.length === 0) {
+      void Swal.fire('License Number', 'No approved license number is available yet.', 'info');
+      return;
+    }
+
+    const list = items.map((x) => `<li><code>${this.escapeHtml(x)}</code></li>`).join('');
+    void Swal.fire({
+      title: 'Approved License Number',
+      html: `<div style="text-align:left"><ul style="padding-left: 1.25rem; margin:0">${list}</ul></div>`,
+      icon: 'info',
+      confirmButtonText: 'Close'
+    });
   }
 
   clearFilters(): void {
@@ -455,18 +521,47 @@ export class NewLicenseDashboardComponent implements OnInit {
           : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
 
         const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
-        const currentStageComputed = this.isLicenseeUser()
-          ? this.simplifyStageForLicensee(statusGroup, currentStageRaw)
-          : this.formatStageName(currentStageRaw || statusGroup);
+        const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
+        let finalStatusGroup: NewLicenseItem['statusGroup'] = statusGroup;
+        if (this.isLicenseeUser()) {
+          const rawLower = currentStageRaw.toLowerCase();
+          const isAwaiting = 
+            rawLower.includes('awaiting') && rawLower.includes('payment') ||
+            rawLower.includes('payment') ||
+            canPayNow ||
+            currentStageId === 23 ||
+            currentStageId === '23';
+
+          if (isAwaiting) {
+            finalStatusGroup = 'awaiting-payment';
+          }
+        }
 
         // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
         const currentStage = this.isLicenseeUser() && !canView
           ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
-          : currentStageComputed;
+          : this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw);
+
+        const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
+        const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
+        const hasObjectionHistory = transactions.some((t: any) => /objection/i.test(txnText(t)));
+        const hasObjectionUpdate = transactions.some((t: any) => /resolve|correct|update/i.test(txnText(t)) && /objection/i.test(txnText(t)));
+
+        const updatedObjectionFields = this.computeUpdatedObjectionFields(item);
+        const siteEnquiryIsReverted = Boolean(
+          (item?.site_enquiry_is_reverted ?? item?.siteEnquiryIsReverted ?? item?.siteEnquiryReverted) || false
+        );
+
+        const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
+        const isApproved = Boolean(item?.is_approved ?? item?.isApproved ?? statusGroup === 'approved');
+        const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
 
         return ({
-          id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
-          applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
+          id: applicationId,
+          applicationId,
+          siteEnquiryIsReverted,
+          isApproved,
+          licenseNumber,
           applicantName: this.getApplicantName(item),
           establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
           submittedOn,
@@ -475,18 +570,142 @@ export class NewLicenseDashboardComponent implements OnInit {
           canPayNow,
           currentStageRaw,
           currentStage,
-          statusGroup
+          statusGroup: finalStatusGroup,
+          hasObjectionHistory,
+          hasObjectionUpdate,
+          updatedObjectionFields
         });
       });
     };
 
-    return [
+    const combined = [
       ...mapGroup(grouped?.applied, 'applied'),
       ...mapGroup(grouped?.pending, 'pending'),
       ...mapGroup(grouped?.objection, 'objection'),
       ...mapGroup(grouped?.approved, 'approved'),
       ...mapGroup(grouped?.rejected, 'rejected')
     ];
+
+    // De-duplicate by applicationId (backend sometimes returns the same application twice).
+    const priority: Record<NewLicenseItem['statusGroup'], number> = {
+      applied: 1,
+      pending: 2,
+      objection: 3,
+      approved: 4,
+      rejected: 4,
+      'awaiting-payment': 5
+    };
+
+    const byId = new Map<string, NewLicenseItem>();
+    for (const row of combined) {
+      const id = String(row?.applicationId || '').trim();
+      if (!id) continue;
+
+      const existing = byId.get(id);
+      if (!existing) {
+        byId.set(id, row);
+        continue;
+      }
+
+      const a = priority[row.statusGroup] ?? 0;
+      const b = priority[existing.statusGroup] ?? 0;
+      if (a > b) {
+        byId.set(id, row);
+        continue;
+      }
+    }
+
+    return Array.from(byId.values());
+  }
+
+  private computeCurrentStageLabel(item: any, statusGroup: NewLicenseItem['statusGroup'], currentStageRaw: string): string {
+    if (this.isLicenseeUser()) {
+      return this.simplifyStageForLicensee(statusGroup, currentStageRaw);
+    }
+
+    if (statusGroup === 'objection') {
+      const raisedByRole = this.inferObjectionRaisedByRoleName(item);
+      const label = raisedByRole ? this.toDisplayRoleName(raisedByRole) : 'Admin';
+      return `Objection by ${label}`;
+    }
+
+    return this.formatStageName(currentStageRaw || statusGroup);
+  }
+
+  private inferObjectionRaisedByRoleName(item: any): string {
+    const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
+    if (!transactions.length) return '';
+
+    const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''}`;
+
+    const objectionTxn =
+      transactions.find((t: any) => /objection/i.test(txnText(t)))
+      || transactions.find((t: any) => /objection/i.test(String(t?.stage?.name ?? t?.stage_name ?? t?.stage ?? '')));
+
+    const roleName = String(
+      objectionTxn?.forwarded_by?.name
+      || objectionTxn?.forwardedBy?.name
+      || objectionTxn?.forwarded_to?.name
+      || objectionTxn?.forwardedTo?.name
+      || ''
+    ).trim();
+
+    return roleName;
+  }
+
+  private toDisplayRoleName(roleName: string): string {
+    const cleaned = String(roleName || '').trim();
+    if (!cleaned) return 'Admin';
+    return cleaned
+      .replace(/[_\-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
+
+  private computeUpdatedObjectionFields(item: any): string[] {
+    const objections = Array.isArray(item?.objections) ? item.objections : [];
+    const resolved = objections
+      .filter((o: any) => !!o && (o?.isResolved === true || o?.is_resolved === true))
+      .map((o: any) => String(o?.fieldName || o?.field_name || '').trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(resolved));
+  }
+
+  resolveObjections(row: NewLicenseItem): void {
+    if (!this.isLicenseeUser()) return;
+    if (row.statusGroup !== 'objection') return;
+
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    this.dialog.open(ResolveObjectionsDialogComponent, {
+      width: 'min(980px, 95vw)',
+      maxWidth: '95vw',
+      data: { applicationId }
+    }).afterClosed().subscribe((updated: boolean) => {
+      if (updated) {
+        this.loadData();
+      }
+    });
+  }
+
+  viewObjectionDetails(row: NewLicenseItem): void {
+    if (this.isLicenseeUser()) return;
+    if (!row.hasObjectionHistory) return;
+
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    this.dialog.open(ObjectionDetailsDialogComponent, {
+      width: 'min(820px, 92vw)',
+      maxWidth: '92vw',
+      data: { applicationId }
+    });
   }
 
   private normalizePaymentStatus(value: string): string {
@@ -548,6 +767,8 @@ export class NewLicenseDashboardComponent implements OnInit {
   private simplifyStageForLicensee(statusGroup: NewLicenseItem['statusGroup'], stageValue: any): string {
     if (statusGroup === 'approved') return 'Approved';
     if (statusGroup === 'rejected') return 'Rejected';
+    if (statusGroup === 'objection') return 'Objection by Admin';
+    if (statusGroup === 'awaiting-payment') return 'Awaiting Payment';
 
     const raw = String(stageValue ?? '').toLowerCase();
     const stageId = Number.parseInt(raw, 10);
@@ -565,15 +786,35 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private calculateCounts(rows: NewLicenseItem[]): NewLicenseCounts {
-    const next: NewLicenseCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
+    const next: NewLicenseCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 };
     for (const row of rows || []) {
       if (row?.statusGroup === 'applied') next.applied += 1;
       else if (row?.statusGroup === 'pending') next.pending += 1;
       else if (row?.statusGroup === 'objection') next.objection += 1;
       else if (row?.statusGroup === 'approved') next.approved += 1;
       else if (row?.statusGroup === 'rejected') next.rejected += 1;
+      else if (row?.statusGroup === 'awaiting-payment') next.awaitingPayment = (next.awaitingPayment || 0) + 1;
     }
     return next;
+  }
+
+  private deriveNewLicenseNaNumber(applicationId: string, item: any): string {
+    const direct = String(item?.license_id || item?.licenseId || item?.license_number || item?.licenseNumber || '').trim();
+    if (direct) return direct;
+
+    const id = String(applicationId || '').trim();
+    if (id.startsWith('NA/')) return id;
+    if (id.startsWith('NLI/')) return `NA/${id.slice(4)}`;
+    return '';
+  }
+
+  private escapeHtml(text: string): string {
+    return String(text || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private syncActiveSummaryFilter(): void {

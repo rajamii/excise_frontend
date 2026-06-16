@@ -1,0 +1,59 @@
+.container-fluid {
+  padding-top: 10px;
+}
+
+mat-card {
+  mat-card-header {
+    padding: 12px;
+    background-color: #1c2b78;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 500;
+    justify-content: space-between;
+
+    button {
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.2s;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      mat-icon {
+        font-size: 18px;
+        height: 18px;
+        width: 18px;
+      }
+    }
+  }
+
+  mat-card-content {
+    padding: 15px;
+
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+
+      mat-table {
+        min-width: 700px;
+      }
+    }
+  }
+}
+
+.no-data {
+  text-align: center;
+  padding: 24px;
+  color: #888;
+}
+

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -10,7 +10,10 @@ export class LicenseApplicationService {
 
   private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private readonly salesmanBarmanUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`;
+  private readonly renewalLicenseUrl = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
   private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
+  private readonly workflowUrl = `${environment.apiBaseUrl}/auth`;
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocumentsSubject = new BehaviorSubject<Map<string, File>>(new Map());
@@ -357,6 +360,15 @@ export class LicenseApplicationService {
       if (keyInfoData.existing_site_license) {
         formData.append('existing_site_license', String(keyInfoData.existing_site_license));
       }
+
+      const pachwai = keyInfoData.pachwai ?? keyInfoData.pachwai_flag ?? keyInfoData.pachwai_selected;
+      if (typeof pachwai === 'boolean') {
+        formData.append('pachwai', pachwai ? 'true' : 'false');
+      }
+      const draughtBeer = keyInfoData.draught_beer ?? keyInfoData.draughtBeer;
+      if (typeof draughtBeer === 'boolean') {
+        formData.append('draught_beer', draughtBeer ? 'true' : 'false');
+      }
     }
 
     // ✅ 3. APPLICANT DETAILS
@@ -619,6 +631,11 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseUrl}/apply/draft/`, formData);
   }
 
+  forceSubmitNewLicenseApplication(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(String(applicationId || '').trim());
+    return this.http.post(`${this.newLicenseUrl}/force-submit/${encodedId}/`, {});
+  }
+
   private formatDate(value: any): string {
     if (value instanceof Date) {
       const year = value.getFullYear();
@@ -693,6 +710,13 @@ export class LicenseApplicationService {
     return this.http.get(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`);
   }
 
+  revertSiteEnquiryReport(applicationId: string, remarks: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.siteEnquiryUrl}/${encodedId}/site-enquiry/revert/`, {
+      remarks: remarks || ''
+    });
+  }
+
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(
@@ -737,7 +761,17 @@ export class LicenseApplicationService {
 
   resolveObjections(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/resolve-objections/`, formData);
+    return this.http.post(`${this.workflowUrl}/${encodedId}/resolve-objections/`, formData, {
+      responseType: 'text',
+      headers: new HttpHeaders({ Accept: 'application/json' })
+    }).pipe(
+      map((text: any) => {
+        const raw = String(text ?? '').trim();
+        if (!raw) return {};
+        if (raw.startsWith('<')) return { _raw: raw };
+        try { return JSON.parse(raw); } catch { return { _raw: raw }; }
+      })
+    );
   }
 
   deleteApplication(applicationId: string): Observable<any> {
@@ -785,6 +819,11 @@ export class LicenseApplicationService {
     return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/`);
   }
 
+  getSalesmanBarmanFinalLicenseData(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.salesmanBarmanUrl}/final-license/${encodedId}/`);
+  }
+
   getNewFinalLicensePassportPhoto(applicationId: string): Observable<Blob> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
@@ -795,6 +834,11 @@ export class LicenseApplicationService {
     return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
   }
 
+  getSalesmanBarmanFinalLicensePassportPhoto(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.salesmanBarmanUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
+  }
+
   getNewFinalLicenseQrCode(applicationId: string): Observable<Blob> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
@@ -803,6 +847,11 @@ export class LicenseApplicationService {
   getOldFinalLicenseQrCode(applicationId: string): Observable<Blob> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.oldLicenseUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
+  }
+
+  getSalesmanBarmanFinalLicenseQrCode(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.salesmanBarmanUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
   }
 
   getNewLicenseObjections(applicationId: string): Observable<any> {
@@ -831,7 +880,17 @@ export class LicenseApplicationService {
 
   resolveNewLicenseObjections(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/resolve-objections/`, formData);
+    // Resolve objections is handled by the workflow API, not the transactional app endpoints.
+    return this.http.post(`${this.workflowUrl}/${encodedId}/resolve-objections/`, formData, {
+      responseType: 'text'
+    }).pipe(
+      map((text: any) => {
+        const raw = String(text ?? '').trim();
+        if (!raw) return {};
+        if (raw.startsWith('<')) return { _raw: raw };
+        try { return JSON.parse(raw); } catch { return { _raw: raw }; }
+      })
+    );
   }
 
   payNewLicenseFee(applicationId: string, formData: FormData): Observable<any> {
@@ -842,6 +901,21 @@ export class LicenseApplicationService {
   payNewLicenseSecurityFee(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-security-fee/`, {});
+  }
+
+  getLicenseRenewalApplicationById(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.renewalLicenseUrl}/detail/${encodedId}/`);
+  }
+
+  payLicenseRenewalFee(applicationId: string, formData: FormData): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-license-fee/`, formData);
+  }
+
+  payLicenseRenewalSecurityFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-security-fee/`, {});
   }
 
   getNewLicenseDashboardCounts(): Observable<any> {
@@ -910,5 +984,17 @@ export class LicenseApplicationService {
   renewNewLicense(licenseId: string): Observable<any> {
     const encodedId = encodeURIComponent(licenseId);
     return this.http.post(`${this.newLicenseUrl}/renew/${encodedId}/`, {});
+  }
+
+  /**
+   * Initiate a renewal tracking application (LRA/...) for an existing license.
+   * Backend: transactional/license_renewal_application/renew/<license_id>/
+   */
+  initiateLicenseRenewalApplication(licenseId: string, options?: any): Observable<any> {
+    const encodedId = encodeURIComponent(licenseId);
+    return this.http.post(
+      `${environment.apiBaseUrl}/transactional/license_renewal_application/renew/${encodedId}/`,
+      options || {}
+    );
   }
 }

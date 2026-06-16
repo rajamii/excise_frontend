@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
+import { RoleService } from '../../../../../core/services/role.service';
 
 const normalizeActionTokens = (actions: any): string[] => {
   if (!Array.isArray(actions)) return [];
@@ -52,6 +53,7 @@ export class HologramrequestComponent implements OnInit {
   currentPage: number = 1;
 
   private hologramService = inject(HologramDataService);
+  private roleService = inject(RoleService);
 
   constructor(
     private router: Router,
@@ -377,9 +379,53 @@ End of Application
     return this.filteredHologramRequestList.reduce((total, request) => total + (request.totalHolograms || 0), 0);
   }
 
+  /** True when the current user is a licensee (not an admin). */
+  private isLicenseeUser(): boolean {
+    return this.roleService.isLicenseeRole();
+  }
+
+  /** True when the current user is a commissioner-level admin. */
+  private isCommissionerUser(): boolean {
+    return this.roleService.hasAnyRoleByName(['commissioner', 'joint_commissioner', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+  }
+
+  /** True when the current user is a permit-section admin. */
+  private isPermitSectionUser(): boolean {
+    return this.roleService.hasAnyRoleByName(['permit-section', 'permit section', 'permit_section']);
+  }
+
+  /** True when the current user is an IT-cell admin. */
+  private isItCellUser(): boolean {
+    return this.roleService.hasAnyRoleByName(['it-cell', 'it_cell', 'itcell']);
+  }
+
+  /**
+   * Visibility rule for admin users:
+   * - Show the record if the admin has actions to take (allowedActions non-empty) — it's their turn.
+   * - Show the record if it has already passed through their stage (historical) — they already acted.
+   * - Hide the record if it hasn't reached their stage yet.
+   * Licensee users always see all their own records.
+   */
+  private isVisibleToCurrentAdmin(request: any): boolean {
+    if (this.isLicenseeUser()) return true;
+
+    const actions = normalizeActionTokens(request?.allowedActions || request?.allowed_actions || []);
+    if (actions.length > 0) return true;
+
+    const combined = `${String(request?.status ?? '')} ${String(request?.currentStageName ?? '')}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (this.isCommissionerUser() && combined.includes('commissioner')) return true;
+    if (this.isPermitSectionUser() && combined.includes('permitsection')) return true;
+    if (this.isItCellUser() && combined.includes('itcell')) return true;
+
+    return false;
+  }
+
   // Filter methods
   applyFilters(): void {
     this.summaryHologramRequestList = this.hologramRequestList.filter(request => {
+      // Admin visibility: only show records at or past this admin's stage
+      if (!this.isVisibleToCurrentAdmin(request)) return false;
+
       let matchesDate = true;
       let matchesMonth = true;
 

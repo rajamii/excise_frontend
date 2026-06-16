@@ -199,6 +199,18 @@ export function filterRowsForSupplyChainSidebarMenus(rows: any[]): any[] {
     if (isAwaitingLicenseFeePaymentPending(item)) {
       return false;
     }
+
+    // If backend provides validity hints for issued licenses, honor them so menus
+    // are hidden automatically when license expires or becomes inactive.
+    const hasLic = !!(item?.license_id ?? item?.licenseId);
+    if (hasLic) {
+      const canAccess = item?.can_access_supply_chain ?? item?.canAccessSupplyChain;
+      const isValidNow = item?.is_valid_now ?? item?.isValidNow;
+      if (canAccess === false || isValidNow === false) {
+        return false;
+      }
+    }
+
     const licId = item?.license_id ?? item?.licenseId;
     if (licId) {
       const src = str(item?.source_object_id ?? item?.sourceObjectId ?? '');

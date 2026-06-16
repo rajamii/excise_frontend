@@ -770,3 +770,673 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 
 .docs-modal  { position: fixed !important; inset: 0 !important; z-index: 9001 !important; }
 .doc-viewer  { position: fixed !important; inset: 0 !important; z-index: 9101 !important; }
+
+// ── Proceed to Pay modal ────────────────────────────────────────────────────
+.swal2-popup.swal-proceed-popup {
+  border-radius: 16px !important;
+  padding: 28px 24px 24px !important;
+  box-shadow: 0 20px 60px rgba(6, 95, 70, 0.18) !important;
+  border: 1px solid #d1fae5 !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal2-html-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal2-actions {
+  margin-top: 20px !important;
+  gap: 12px !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal-proceed-confirm,
+.swal2-popup.swal-proceed-popup .swal-proceed-cancel {
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 10px 28px !important;
+  letter-spacing: 0.3px !important;
+  border: none !important;
+  transition: filter 0.2s ease, transform 0.15s ease !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal-proceed-confirm:hover {
+  filter: brightness(1.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+.swal2-popup.swal-proceed-popup .swal-proceed-cancel:hover {
+  filter: brightness(0.92) !important;
+  transform: translateY(-1px) !important;
+}
+// ────────────────────────────────────────────────────────────────────────────
+
+
+/* ════════════════════════════════════════════════════════════════
+   RENEW LICENSE OPTIONS POPUP — Global styles (SweetAlert2 renders
+   into <body> so component SCSS won't reach it — must be global)
+   ════════════════════════════════════════════════════════════════ */
+
+// ── SweetAlert2 wrapper ──────────────────────────────────────────
+.rl-swal-popup {
+  padding: 0 !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  box-shadow:
+    0 32px 80px rgba(30, 27, 75, 0.18),
+    0 8px 24px rgba(15, 23, 42, 0.12) !important;
+  width: 620px !important;
+  max-width: 96vw !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  animation: rlPopupIn 0.30s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+}
+
+@keyframes rlPopupIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.rl-swal-actions {
+  padding: 16px 26px 26px !important;
+  gap: 12px !important;
+  margin-top: 0 !important;
+  position: relative !important;
+  z-index: 10 !important;
+  background: #ffffff !important;
+}
+
+.rl-confirm-btn {
+  border-radius: 12px !important;
+  padding: 12px 26px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1px !important;
+  box-shadow: 0 4px 14px rgba(67, 56, 202, 0.28) !important;
+  transition: all 0.2s ease !important;
+  background: linear-gradient(135deg, #3730a3 0%, #4338ca 60%, #4f46e5 100%) !important;
+  border: none !important;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(67, 56, 202, 0.38) !important;
+    transform: translateY(-1px) !important;
+    background: linear-gradient(135deg, #312e81 0%, #3730a3 60%, #4338ca 100%) !important;
+  }
+  &:active { transform: translateY(0) !important; }
+}
+
+.rl-cancel-btn {
+  border-radius: 12px !important;
+  padding: 12px 26px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  opacity: 1 !important;
+
+  &:hover, &:focus {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+    border-color: #94a3b8 !important;
+    opacity: 1 !important;
+  }
+}
+
+// ── Modal container ──────────────────────────────────────────────
+.rl-modal {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-align: left;
+}
+
+// ── Header ──────────────────────────────────────────────────────
+.rl-header {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #3730a3 80%, #4338ca 100%);
+  padding: 26px 26px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -45px; right: -45px;
+    width: 150px; height: 150px;
+    background: radial-gradient(circle, rgba(165, 180, 252, 0.18) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -25px; left: 50px;
+    width: 100px; height: 100px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+}
+
+.rl-header-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #e0e7ff;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  position: relative;
+  z-index: 1;
+}
+
+.rl-header-text {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.rl-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #eef2ff;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+.rl-subtitle {
+  font-size: 12.5px;
+  color: rgba(224, 231, 255, 0.62);
+  margin: 0;
+  font-weight: 400;
+}
+
+// ── License ID banner ────────────────────────────────────────────
+.rl-license-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f3ff;
+  border-bottom: 1px solid #ddd6fe;
+  padding: 11px 26px;
+  flex-wrap: wrap;
+}
+
+.rl-license-banner-icon {
+  color: #6d28d9;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.rl-license-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5b21b6;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+}
+
+.rl-license-id {
+  font-family: 'SFMono-Regular', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #312e81;
+  background: #ffffff;
+  border: 1.5px solid #c4b5fd;
+  padding: 3px 12px;
+  border-radius: 7px;
+  letter-spacing: 0.4px;
+}
+
+// ── Body ─────────────────────────────────────────────────────────
+.rl-body {
+  padding: 20px 26px 8px;
+  background: #fafafa;
+}
+
+.rl-field-group {
+  margin-bottom: 18px;
+}
+
+.rl-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4338ca;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 9px;
+}
+
+// ── Mode of Operation radio cards ────────────────────────────────
+.rl-mode-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 9px;
+}
+
+.rl-mode-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  user-select: none;
+
+  &:hover {
+    border-color: #a5b4fc;
+    background: #f5f3ff;
+  }
+
+  &.is-selected {
+    border-color: #059669;
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+    box-shadow: 0 3px 12px rgba(5, 150, 105, 0.14);
+
+    .rl-mode-check-box {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      border-color: #059669;
+      box-shadow: 0 3px 10px rgba(5, 150, 105, 0.40), 0 0 0 3px rgba(16, 185, 129, 0.14);
+    }
+    .rl-mode-tick { opacity: 1; }
+    .rl-mode-label { color: #064e3b; font-weight: 700; }
+  }
+}
+
+.rl-mode-check-box {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.rl-mode-tick {
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.rl-mode-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  transition: color 0.2s;
+}
+
+.rl-mode-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #059669;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  padding: 2px 7px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+// ── Custom select (keep for fallback) ────────────────────────────
+.rl-select-wrap {
+  position: relative;
+}
+
+.rl-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #ffffff;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 11px;
+  padding: 12px 42px 12px 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #1e1b4b;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+
+  &:focus {
+    border-color: #6d28d9;
+    box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.10);
+    background: #ffffff;
+  }
+
+  option {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+    background: #ffffff;
+  }
+}
+
+.rl-select-arrow {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6d28d9;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+// ── SBM Warning ──────────────────────────────────────────────────
+.rl-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 11px;
+  padding: 12px 14px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #d97706;
+  border-radius: 10px;
+
+  svg { flex-shrink: 0; margin-top: 1px; color: #d97706; }
+}
+
+.rl-warning-title {
+  margin: 0 0 2px 0;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #b45309;
+}
+
+.rl-warning-text {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+// ── Section divider ───────────────────────────────────────────────
+.rl-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ddd6fe, transparent);
+  margin: 0 0 18px 0;
+}
+
+// ── Checkbox cards ────────────────────────────────────────────────
+.rl-checks-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.rl-check-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 16px;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+
+  &:hover {
+    border-color: #a5b4fc;
+    background: #f5f3ff;
+    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.08);
+  }
+
+  &.is-checked {
+    border-color: #6d28d9;
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    box-shadow: 0 3px 12px rgba(109, 40, 217, 0.12);
+
+    .rl-check-box {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      border-color: #059669;
+      box-shadow: 0 3px 12px rgba(5, 150, 105, 0.45), 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+    .rl-check-tick { opacity: 1; }
+    .rl-check-name { color: #1e1b4b; font-weight: 700; }
+    .rl-check-fee {
+      color: #4338ca;
+      background: #ede9fe;
+      border-color: #a5b4fc;
+      font-weight: 800;
+    }
+  }
+}
+
+.rl-check-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.rl-check-box {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.rl-check-tick {
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.rl-check-content {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rl-check-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #374151;
+  transition: all 0.2s;
+}
+
+.rl-check-fee {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #6b7280;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  padding: 3px 12px;
+  border-radius: 100px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+// ── Fee Breakdown section ─────────────────────────────────────────
+.rl-fee-breakdown-group {
+  margin-bottom: 0;
+}
+
+.rl-location-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 100px;
+  padding: 4px 12px;
+  margin-bottom: 12px;
+
+  svg { color: #0284c7; flex-shrink: 0; }
+}
+
+
+
+// ── Fee Summary Bar ───────────────────────────────────────────────
+.rl-fee-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #3730a3 100%);
+  border-top: 1px solid rgba(165, 180, 252, 0.15);
+  padding: 16px 26px;
+  position: relative;
+  z-index: 1;
+}
+
+.rl-fee-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  svg { flex-shrink: 0; color: rgba(199, 210, 254, 0.45); }
+}
+
+.rl-fee-summary-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #e0e7ff;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.rl-fee-summary-sublabel {
+  font-size: 10px;
+  color: rgba(199, 210, 254, 0.55);
+  margin-top: 2px;
+}
+
+.rl-fee-total-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.rl-fee-currency {
+  font-size: 16px;
+  font-weight: 700;
+  color: #c7d2fe;
+}
+
+.rl-fee-total {
+  font-size: 28px;
+  font-weight: 800;
+  color: #eef2ff;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rl-fee-note {
+  font-size: 11px;
+  color: rgba(199, 210, 254, 0.40);
+  margin-left: 4px;
+}
+
+// ── Fee rows with background ──────────────────────────────────────
+.rl-fee-rows {
+  background: #f5f3ff;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.rl-fee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  font-size: 13px;
+  background: #f5f3ff;
+  border-bottom: 1px solid #ede9fe;
+
+  &:last-child { border-bottom: none; }
+
+  &:first-child {
+    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+  }
+
+  &--total {
+    background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%) !important;
+    border-top: 1.5px solid #c7d2fe;
+  }
+}
+
+.rl-fee-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #4338ca;
+  font-weight: 600;
+
+  svg { color: #6d28d9; }
+
+  &--late {
+    color: #d97706;
+    svg { color: #d97706; }
+  }
+
+  &--total {
+    color: #3730a3;
+    font-weight: 800;
+    svg { color: #4338ca; }
+  }
+}
+
+.rl-fee-row-amt {
+  font-weight: 800;
+  color: #3730a3;
+  font-size: 14px;
+
+  &--late { color: #d97706; }
+
+  &--total {
+    font-size: 15px;
+    color: #1e1b4b;
+  }
+}
+
+.rl-fee-row-empty {
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+}

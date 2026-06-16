@@ -2,7 +2,6 @@ import { Component, Inject } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
-import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
 import { LicenseService } from '../../../../../core/services/license.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
@@ -23,7 +22,6 @@ export class PrintApplicationComponent {
   constructor(
     public dialogRef: MatDialogRef<PrintApplicationComponent>,
     private licenseApplicationService: LicenseApplicationService,
-    private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private licenseService: LicenseService,
     private router: Router,
     @Inject(MAT_DIALOG_DATA) public data: any
@@ -42,13 +40,16 @@ export class PrintApplicationComponent {
     return /^\d+$/.test(value.trim());
   }
 
-  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | '' {
+  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('SBM/')) return 'salesman-barman';
+    if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('NA/')) return 'new-license';
     if (id.startsWith('LA/')) return 'license-renewal';
+    if (id.startsWith('SB/')) return 'salesman-barman';
     return '';
   }
 
@@ -140,12 +141,18 @@ export class PrintApplicationComponent {
   }
 
   canPrint(): boolean {
+    if (this.getApplicationType() === 'salesman-barman') {
+      return true;
+    }
     const count = this.getPrintCount();
     if (count < 5) return true;
     return this.getIsPrintFeePaid();
   }
 
   needsPayment(): boolean {
+    if (this.getApplicationType() === 'salesman-barman') {
+      return false;
+    }
     return this.getPrintCount() >= 5 && !this.getIsPrintFeePaid();
   }
 
@@ -190,10 +197,6 @@ export class PrintApplicationComponent {
     // Route to correct print endpoint based on application type
     switch (appType) {
       case 'salesman-barman':
-        
-        printObservable = this.salesmanBarmanService.printRegistration(this.getPrintApiId());
-        break;
-
       case 'new-license':
       case 'license-renewal':
       default:
@@ -222,10 +225,10 @@ export class PrintApplicationComponent {
         }
 
         // License applications should go to the final license view after recording a print.
-        if ((appType || '').toLowerCase() === 'new-license' || (appType || '').toLowerCase() === 'license-renewal') {
+        if (['new-license', 'license-renewal', 'salesman-barman'].includes((appType || '').toLowerCase())) {
           const inferredType = this.inferApiTypeFromId(finalLicenseId || '');
           this.dialogRef.close(true);
-          void this.router.navigate(['/licensee/final-license'], {
+          void this.router.navigate(['/final-license'], {
             queryParams: {
               applicationId: finalLicenseId,
               type: inferredType || appType,
@@ -250,10 +253,10 @@ export class PrintApplicationComponent {
         // If the master License record is not found yet, don't block user from viewing the final license details.
         // This avoids getting stuck on "No License matches the given query."
         const appTypeLower = String(appType || '').toLowerCase();
-        if ((appTypeLower === 'new-license' || appTypeLower === 'license-renewal') && Number(err?.status) === 404) {
+        if ((appTypeLower === 'new-license' || appTypeLower === 'license-renewal' || appTypeLower === 'salesman-barman') && Number(err?.status) === 404) {
           const inferredType = this.inferApiTypeFromId(finalLicenseId || '');
           this.dialogRef.close(true);
-          void this.router.navigate(['/licensee/final-license'], {
+          void this.router.navigate(['/final-license'], {
             queryParams: {
               applicationId: finalLicenseId,
               type: inferredType || appType,

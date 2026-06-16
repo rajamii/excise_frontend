@@ -1,0 +1,188 @@
+<div class="container-fluid">
+  <mat-card>
+    <mat-card-header class="page-card-header">
+      <div class="page-title">Brands (Brand Warehouse)</div>
+      <button matButton="filled" (click)="onAddStock()">
+        <mat-icon>add</mat-icon> Add
+      </button>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <!-- Search filter bar -->
+      <div class="search-bar">
+        <div class="search-group">
+          <select class="search-field-select" [(ngModel)]="searchField" (ngModelChange)="onSearchChange()">
+            @for (opt of searchFieldOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          <div class="search-input-wrap">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input
+              class="search-input"
+              type="text"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchChange()"
+              [placeholder]="'Search by ' + getSearchFieldLabel()"
+            />
+            @if (searchQuery) {
+              <button class="search-clear-btn" (click)="searchQuery = ''; onSearchChange()" matTooltip="Clear">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <mat-tab-group>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon style="font-size:18px;height:18px;width:18px;margin-right:6px;vertical-align:middle;">inventory_2</mat-icon>
+            Stock
+          </ng-template>
+          <div class="table-container">
+            <mat-table [dataSource]="pagedRows">
+              <ng-container matColumnDef="licenseId">
+                <mat-header-cell *matHeaderCellDef>License</mat-header-cell>
+                <mat-cell *matCellDef="let item" [matTooltip]="item.license_id || ''" matTooltipPosition="above">
+                  {{ getLicenseName(item.license_id) }}
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="brandName">
+                <mat-header-cell *matHeaderCellDef>Brand</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.brand_name || '—' }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="sizeMl">
+                <mat-header-cell *matHeaderCellDef>Size (ml)</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="ml-chip">{{ item.capacity_size || 0 }} ml</span>
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="currentStock">
+                <mat-header-cell *matHeaderCellDef>Stock Available</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.current_stock || 0 }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <button matIconButton color="primary" (click)="onEditStock(item)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDelete(item)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="stockColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: stockColumns"></mat-row>
+            </mat-table>
+
+            @if (rows.length === 0) {
+              <div class="no-data">No brand warehouse rows found.</div>
+            }
+
+            <mat-paginator
+              [length]="rows.length"
+              [pageIndex]="currentPage"
+              [pageSize]="pageSize"
+              [pageSizeOptions]="[10, 15, 30, 40]"
+              (page)="onPageChange($event)"
+              aria-label="Select page">
+            </mat-paginator>
+          </div>
+        </mat-tab>
+
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon style="font-size:18px;height:18px;width:18px;margin-right:6px;vertical-align:middle;">sell</mat-icon>
+            Prices
+          </ng-template>
+          <div class="table-container">
+            <mat-table [dataSource]="pagedRows">
+              <ng-container matColumnDef="licenseId">
+                <mat-header-cell *matHeaderCellDef>License</mat-header-cell>
+                <mat-cell *matCellDef="let item" [matTooltip]="item.license_id || ''" matTooltipPosition="above">
+                  {{ getLicenseName(item.license_id) }}
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="brandName">
+                <mat-header-cell *matHeaderCellDef>Brand</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.brand_name || '—' }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="sizeMl">
+                <mat-header-cell *matHeaderCellDef>Size (ml)</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="ml-chip">{{ item.capacity_size || 0 }} ml</span>
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="exFactory">
+                <mat-header-cell *matHeaderCellDef>Ex-Factory/Case</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.ex_factory_price_rs_per_case || 0 }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="exciseDuty">
+                <mat-header-cell *matHeaderCellDef>Excise Duty/Case</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.excise_duty_rs_per_case || 0 }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="eduCess">
+                <mat-header-cell *matHeaderCellDef>Edu. Cess/Case</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.education_cess_rs_per_case || 0 }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="addlDuty">
+                <mat-header-cell *matHeaderCellDef>Addl. Duty/Case</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.additional_excise_duty_rs_per_case || 0 }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="addl125">
+                <mat-header-cell *matHeaderCellDef>Addl. Duty 12.5%/Case</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.additional_excise_duty_12_5_percent_rs_per_case || 0 }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="mrp">
+                <mat-header-cell *matHeaderCellDef>MRP/Bottle</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.mrp_rs_per_bottle || 0 }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <button matIconButton color="primary" (click)="onEditPrices(item)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="priceColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: priceColumns"></mat-row>
+            </mat-table>
+
+            @if (rows.length === 0) {
+              <div class="no-data">No brand warehouse rows found.</div>
+            }
+
+            <mat-paginator
+              [length]="rows.length"
+              [pageIndex]="currentPage"
+              [pageSize]="pageSize"
+              [pageSizeOptions]="[10, 15, 30, 40]"
+              (page)="onPageChange($event)"
+              aria-label="Select page">
+            </mat-paginator>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>
+

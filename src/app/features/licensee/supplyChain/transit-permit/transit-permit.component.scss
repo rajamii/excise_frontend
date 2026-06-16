@@ -1480,16 +1480,13 @@ small.text-muted {
 
 .ml-info-sidebar {
   position: fixed;
-  top: 50%;
+  top: 15%;           // Pushed down from the top edge
   right: 0;
-  transform: translateY(-50%);
   z-index: 1000;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-  // Ensure sidebar doesn't go off-screen and stays centered
   max-height: 80vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;  // Align to top of the fixed area
 
   // Dynamic positioning based on content
   .ml-info-sidebar-content {
@@ -1502,7 +1499,11 @@ small.text-muted {
   width: 220px; // Reduced further for compact size
 
   min-height: auto;
+  // Use a fixed max-height so the body can scroll inside it
+  max-height: 75vh;
   height: auto;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
   border-radius: 16px 0 0 16px; // Slightly smaller radius
   box-shadow:
@@ -1511,7 +1512,7 @@ small.text-muted {
     inset 1px 1px 0 rgba(255, 255, 255, 0.8);
   transform: translateX(100%);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: visible;
+  overflow: hidden;
   border: 2px solid transparent;
   background-clip: padding-box;
 
@@ -1603,9 +1604,27 @@ small.text-muted {
 
 .ml-info-sidebar-body {
   padding: 8px; // More compact padding
-  height: auto;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // Fill available height between header and footer, scroll when content overflows
+  max-height: calc(75vh - 120px); // 120px accounts for header + footer heights
   background: linear-gradient(145deg, #f8fafc 0%, #ffffff 50%, #f8fafc 100%);
+
+  // Thin custom scrollbar
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(14, 165, 233, 0.05);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(14, 165, 233, 0.35);
+    border-radius: 4px;
+    &:hover {
+      background: rgba(14, 165, 233, 0.6);
+    }
+  }
 }
 
 .ml-info-sidebar-item {
@@ -1792,6 +1811,43 @@ small.text-muted {
   }
 }
 
+// Scroll-more indicator
+.ml-scroll-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 5px 0 3px;
+  background: linear-gradient(to bottom, rgba(248, 250, 252, 0) 0%, rgba(14, 165, 233, 0.12) 100%);
+  cursor: pointer;
+  border-top: 1px solid rgba(14, 165, 233, 0.15);
+  flex-shrink: 0;
+
+  i {
+    font-size: 0.85rem;
+    color: #0ea5e9;
+    animation: bounceDown 1.4s ease-in-out infinite;
+  }
+
+  span {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #0ea5e9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &:hover {
+    background: rgba(14, 165, 233, 0.1);
+  }
+}
+
+@keyframes bounceDown {
+  0%, 100% { transform: translateY(0); opacity: 0.7; }
+  50%       { transform: translateY(4px); opacity: 1; }
+}
+
 // Toggle button (when collapsed)
 .ml-info-toggle {
   position: absolute;
@@ -1889,16 +1945,15 @@ small.text-muted {
 // Responsive Design - Compact & Centered
 @media (max-width: 768px) {
   .ml-info-sidebar {
-    top: 50%; // Keep centered vertically
+    top: 12%;
     bottom: auto;
     right: 0;
-    transform: translateY(-50%); // Center vertically
-    max-height: 70vh; // Smaller on mobile
+    max-height: 70vh;
   }
 
   .ml-info-sidebar-content {
     width: 260px; // Slightly smaller on mobile
-    max-height: 65vh;
+    max-height: 70vh;
     border-radius: 14px 0 0 14px;
 
     &::before {
@@ -1937,8 +1992,9 @@ small.text-muted {
 
   .ml-info-sidebar-body {
     padding: 8px;
-    max-height: calc(65vh - 60px); // Account for header and footer
+    max-height: calc(70vh - 120px); // Account for header and footer on mobile
     overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .ml-info-sidebar-item {

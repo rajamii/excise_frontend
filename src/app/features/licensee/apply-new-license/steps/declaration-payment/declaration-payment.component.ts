@@ -43,6 +43,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   private photoSub?: Subscription;
   feeAmount = 0;
   isSubmitting = false;
+  readonly canForceSubmit =
+    !environment.production ||
+    (typeof window !== 'undefined' &&
+      ['localhost', '127.0.0.1', '::1'].includes(String(window.location?.hostname || '').toLowerCase()));
   draftApplicationId: string | null = null;
   submittedApplicationId: string | null = null;
   sbmApplicationId: string | null = null;
@@ -1110,6 +1114,107 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
           confirmButtonText: 'OK'
         });
       }
+    });
+  }
+
+  forceSubmit(): void {
+    if (!this.canForceSubmit) {
+      Swal.fire('Disabled', 'Force submit is only available in non-production builds.', 'info');
+      return;
+    }
+
+    const validation = this.validateRequiredData();
+    if (!validation.valid) {
+      Swal.fire({
+        title: 'Missing Required Fields',
+        html: `<div style="text-align: left;">
+          <p>The following required fields are missing:</p>
+          <ul style="color: #d32f2f;">
+            ${validation.missingFields.map((f: string) => `<li>${f}</li>`).join('')}
+          </ul>
+          <p style="margin-top: 12px; font-size: 14px;">Please go back and complete all required fields.</p>
+        </div>`,
+        icon: 'error'
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: 'Force submit?',
+      text: 'This will bypass BillDesk and mark the application fee as paid (localhost testing only).',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Force Submit',
+      cancelButtonText: 'Cancel',
+    }).then((confirm) => {
+      if (!confirm.isConfirmed) return;
+
+      this.isSubmitting = true;
+
+      const doForce = (applicationId: string) => {
+        this.licenseAppService.forceSubmitNewLicenseApplication(applicationId).subscribe({
+          next: (res: any) => {
+            const submittedId = String(res?.application_id || res?.applicationId || applicationId || '').trim();
+            this.submittedApplicationId = submittedId || applicationId;
+            try {
+              if (this.submittedApplicationId) {
+                sessionStorage.setItem('new_license_submitted_application_id', this.submittedApplicationId);
+              }
+              const sbmId = String(res?.sbm_application_id || '').trim();
+              if (sbmId) sessionStorage.setItem('new_license_sbm_application_id', sbmId);
+              if (res?.sbm_submitted) sessionStorage.setItem('new_license_sbm_submitted', '1');
+            } catch {
+              // no-op
+            }
+            this.isSubmitting = false;
+            Swal.fire('Submitted', 'Application force submitted successfully.', 'success');
+            this.cdr.detectChanges();
+          },
+          error: (err: any) => {
+            this.isSubmitting = false;
+            const message =
+              err?.error?.detail ||
+              err?.error?.message ||
+              err?.message ||
+              'Force submit failed.';
+            Swal.fire('Error', String(message), 'error');
+          }
+        });
+      };
+
+      const existingDraft = String(this.draftApplicationId || '').trim();
+      if (existingDraft) {
+        doForce(existingDraft);
+        return;
+      }
+
+      const formData = this.licenseAppService.prepareNewLicenseFormData();
+      this.licenseAppService.createNewLicenseApplicationDraft(formData).subscribe({
+        next: (response: any) => {
+          const applicationId = String(response?.application_id || response?.applicationId || '').trim();
+          if (!applicationId) {
+            this.isSubmitting = false;
+            Swal.fire('Error', 'Unable to create application draft (missing Application ID).', 'error');
+            return;
+          }
+          this.draftApplicationId = applicationId;
+          try {
+            sessionStorage.setItem('new_license_draft_application_id', applicationId);
+          } catch {
+            // no-op
+          }
+          doForce(applicationId);
+        },
+        error: (err: any) => {
+          this.isSubmitting = false;
+          const message =
+            err?.error?.detail ||
+            err?.error?.message ||
+            err?.message ||
+            'Unable to create application draft.';
+          Swal.fire('Error', String(message), 'error');
+        }
+      });
     });
   }
 

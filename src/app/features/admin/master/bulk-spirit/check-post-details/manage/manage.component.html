@@ -1,0 +1,24 @@
+<div class="dialog-wrapper">
+  <h2 mat-dialog-title>
+    <mat-icon class="title-icon">location_on</mat-icon>
+    {{ isEditMode ? 'Edit Check Post' : 'Add Check Post' }}
+  </h2>
+
+  <div mat-dialog-content class="form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Check Post Name</mat-label>
+      <input matInput [(ngModel)]="row.checkPostName" placeholder="e.g. Rangpo Checkpost" />
+    </mat-form-field>
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button class="btn-cancel" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+      Cancel
+    </button>
+    <button class="btn-save" (click)="onSave()">
+      <mat-icon>save</mat-icon>
+      {{ isEditMode ? 'Update' : 'Save' }}
+    </button>
+  </div>
+</div>

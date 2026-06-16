@@ -127,6 +127,14 @@ export const routes: Routes = [
       ).then((m) => m.UnifiedSupplyChainViewComponent),
   },
   {
+    path: "final-license",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/final-license/final-license.component"
+      ).then((m) => m.FinalLicenseComponent),
+  },
+  {
     path: "dev-local-sales-register",
     canActivate: [UserRouteAccessService],
     data: { devOnly: true, requiredPermission: "licensee.module.view" },

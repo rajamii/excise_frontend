@@ -17,6 +17,8 @@ import Swal from 'sweetalert2';
 import { RoleService } from '../../../../core/services/role.service';
 import { User } from '../../../../core/models/dashboard.models';
 import { AccountService } from '../../../../core/services/account.service';
+import { DashboardConfigService } from '../../../../core/services/dashboard-config.service';
+import { LicenseMeService } from '../../../../core/services/license-me.service';
 import { environment } from '../../../../../environments/environment';
 import { SidebarPendingBadgeService } from '../../../services/sidebar-pending-badge.service';
 import {
@@ -47,7 +49,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
-  private readonly dashboardConfigApiBase = `${environment.apiBaseUrl}/auth/roles/dashboard-config`;
+  private badgeRefreshReady = false;
+  private badgeRefreshQueued = false;
   
   @ViewChild('sidenav') sidenav?: MatSidenav;
 
@@ -59,17 +62,27 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  /** Whether the Bulk Spirit group is expanded in the sidebar (default: closed) */
+  bulkSpiritExpanded = false;
+  adminHologramExpanded = false;
+  adminBulkSpiritExpanded = false;
+  adminAboutUsExpanded = false;
+  adminContactUsExpanded = false;
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
+
+  myLicenses: any[] = [];
+  selectedLicenseGroupKey = '';
   // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
+  private lastMenuAccessUserKey: string | null = null;
   readonly sidebarSectionLabels: Record<string, string> = {
-    requisition: 'Bulk Spirit Requisition',
-    revalidation: 'Bulk Spirit Revalidation',
-    cancellation: 'Bulk Spirit Cancellation',
+    requisition: 'Requisition',
+    revalidation: 'Revalidation',
+    cancellation: 'Cancellation',
     transit: 'Transit Permit',
-    hologram: 'New Hologram Procurement'
+    hologram: 'New Procurement'
   };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
@@ -77,6 +90,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     section: string;
     label: string;
     icon: string;
+    group?: string;
     hideForSiteAdmin?: boolean;
     hideForPermitSection?: boolean;
     hideForItCell?: boolean;
@@ -86,31 +100,36 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
-    { section: 'requisition', label: 'Bulk Spirit Requisition', icon: 'description' },
-    { section: 'revalidation', label: 'Bulk Spirit Revalidation', icon: 'refresh', hideForPermitSection: true },
-    { section: 'cancellation', label: 'Bulk Spirit Cancellation', icon: 'cancel', hideForPermitSection: true },
-    { section: 'hologram', label: 'New Hologram Procurement', icon: 'qr_code', hideForOic: true },
-    { section: 'commissioner-hologram-working-records', label: 'Hologram Working Records', icon: 'fact_check', showOnlyForCommissioner: true },
-    { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
+    { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
+    { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
+    { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit', hideForPermitSection: true },
+    { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit', hideForPermitSection: true },
     { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
-    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code', hideForOic: true, hideForCommissioner: true },
-    { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
-        { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
-    { section: 'hologram-inventory', label: 'Hologram Inventory', icon: 'inventory_2', showOnlyForOic: true },
-    { section: 'hologram-register', label: 'Hologram Procurement', icon: 'qr_code', hideForCommissioner: true },
-    { section: 'oic-hologram-requests', label: 'Hologram Requests', icon: 'description', showOnlyForOic: true },
-    { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today', hideForCommissioner: true },
-    { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
-    { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
-    { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
-    { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
-    { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForOic: true },
-  ];
+    { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
+    // ── Hologram group (all hologram items consecutive so the header renders correctly) ──
+    { section: 'hologram', label: 'New Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true },
+    { section: 'itcell-hologram', label: 'Procurement', icon: 'qr_code', group: 'Hologram', hideForOic: true, hideForCommissioner: true },
+    { section: 'hologram-register', label: 'Procurement', icon: 'qr_code', group: 'Hologram', hideForCommissioner: true },
+    { section: 'oic-hologram-requests', label: 'Requests', icon: 'description', group: 'Hologram', showOnlyForOic: true },
+    { section: 'hologram-daily-entry', label: 'Daily Entry', icon: 'today', group: 'Hologram', hideForCommissioner: true },
+    { section: 'monthly-hologram-statement', label: 'Monthly Statement', icon: 'description', group: 'Hologram' },
+    { section: 'hologram-inventory', label: 'Inventory', icon: 'inventory_2', group: 'Hologram', showOnlyForOic: true },
+    { section: 'commissioner-hologram-working-records', label: 'Working Records', icon: 'fact_check', group: 'Hologram', showOnlyForCommissioner: true },
+    { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
+    // ── Other ──
+      { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
+      { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
+      { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
+      { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
+      { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
+    ];
 
   constructor(
     private roleService: RoleService,
     private accountService: AccountService,
+    private dashboardConfigService: DashboardConfigService,
+    private licenseMeService: LicenseMeService,
     private router: Router,
     private dialog: MatDialog,
     private http: HttpClient,
@@ -124,13 +143,26 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Initialize user info first
     this.initializeUserAndAuth();
 
+    // Auto-expand admin groups based on current route
+    const currentPath = this.router.url.split('?')[0];
+    if (currentPath.startsWith('/dashboard/admin/hologram')) {
+      this.adminHologramExpanded = true;
+    }
+    if (currentPath.startsWith('/dashboard/admin/bulk-spirit')) {
+      this.adminBulkSpiritExpanded = true;
+    }
+
     // Auto-close the sidebar after navigation from menu selections.
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntil(this.destroy$)
       )
-      .subscribe(() => {
+      .subscribe((event: any) => {
+        const path = (event.urlAfterRedirects || event.url || '').split('?')[0];
+        if (path.startsWith('/dashboard/admin/hologram')) {
+          this.adminHologramExpanded = true;
+        }
         if (this.isSidenavOpen) {
           this.closeSidenav();
         }
@@ -155,7 +187,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       console.log('✅ Found cached user in role service:', cachedUser);
       this.currentUser = cachedUser;
       this.setupInitialSidebarState();
-      this.loadLicenseeMenuAccess();
+      // Avoid double-fetching menu access; auth-state subscription below will rehydrate menus.
       this.loaded = true;
     }
 
@@ -237,8 +269,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
 
     // Hydrate permissions from DB config so new roles work without frontend code changes.
-    this.http
-      .get<any>(`${this.dashboardConfigApiBase}/current/`)
+    this.dashboardConfigService
+      .getCurrentUserDashboardConfigCached()
       .pipe(
         catchError((error) => {
           console.warn('Could not load dashboard-config/current for role permissions:', error);
@@ -269,7 +301,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         this.roleService.setCurrentUser(dbBackedUser);
         this.currentUser = dbBackedUser;
-        this.refreshSidebarBadges(true);
+        // Avoid duplicate badge API calls during login:
+        // the sidenav can be opened before DB-backed config/permissions are hydrated.
+        // Queue a single refresh and run it once config is ready.
+        this.badgeRefreshReady = true;
+        if (this.isSidenavOpen && this.badgeRefreshQueued) {
+          this.badgeRefreshQueued = false;
+          this.refreshSidebarBadges(false, 'full');
+        }
       });
   }
 
@@ -303,8 +342,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   // Method to toggle the sidebar (sidenav) - Fixed to properly track state
   snavToggle(sidenav: any) {
     sidenav.toggle();
-    // Update our state to match the actual sidenav state
-    this.isSidenavOpen = !this.isSidenavOpen;
+    // State is updated by onSidenavStateChange.
     console.log('🔍 Sidebar toggled - new state:', this.isSidenavOpen);
   }
 
@@ -313,7 +351,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isSidenavOpen = isOpen;
 
     if (isOpen) {
-      this.refreshSidebarBadges();
+      if (!this.badgeRefreshReady) {
+        this.badgeRefreshQueued = true;
+        return;
+      }
+      this.refreshSidebarBadges(false, 'full');
     }
     console.log('🔍 Sidebar state changed:', isOpen);
   }
@@ -339,7 +381,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       this.sidenav?.open();
     } finally {
       this.isSidenavOpen = true;
-      this.refreshSidebarBadges();
     }
   }
 
@@ -348,7 +389,30 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return Number(this.pendingBadgeCounts?.[key] || 0);
   }
 
-  private refreshSidebarBadges(force = false): void {
+  /** Total pending badge count across all Bulk Spirit sub-sections visible to the current user */
+  getBulkSpiritTotalBadge(): number {
+    const sections = this.officerSectionItems
+      .filter(item => item.group === 'Bulk Spirit' && this.shouldShowOfficerSectionItem(item))
+      .map(item => item.section);
+    // For licensee users, only requisition has an actionable badge (payment at Approved Commissioner stage)
+    const keys = sections.length > 0 ? sections : (this.isLicenseeUser() ? ['requisition'] : ['requisition', 'revalidation', 'cancellation']);
+    return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
+  }
+
+  /** Total pending badge count across all Hologram sub-sections visible to the current user */
+  getHologramTotalBadge(): number {
+    const sections = this.officerSectionItems
+      .filter(item => item.group === 'Hologram' && this.shouldShowOfficerSectionItem(item))
+      .map(item => item.section);
+    // For licensee users, only hologram procurement has an actionable badge (payment at stage 78)
+    if (this.isLicenseeUser()) {
+      return this.getPendingCount('hologram');
+    }
+    const keys = sections.length > 0 ? sections : ['hologram', 'hologram-request'];
+    return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
+  }
+
+  private refreshSidebarBadges(force = false, mode: 'light' | 'full' = 'light'): void {
     if (this.isSiteAdminUser()) {
       if (Object.keys(this.pendingBadgeCounts || {}).length > 0) {
         this.pendingBadgeCounts = {};
@@ -357,11 +421,38 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
 
-    // For licensee users, show payment-pending badges on New License and Salesman/Barman nav items.
+    // For licensee users, show payment-pending badges on New License, Salesman/Barman,
+    // and supply chain nav items (Bulk Spirit + Hologram sub-sections).
     if (this.isLicenseeUser()) {
-      const licenseeSections = ['new-license', 'salesman-barman-registration'];
+      const hasDbRoute = (pattern: RegExp): boolean => {
+        for (const route of this.dbNavigationRoutes) {
+          if (pattern.test(String(route || ''))) return true;
+        }
+        return false;
+      };
+
+      const licenseeSections: string[] = [];
+      if (hasDbRoute(/new[_-]?license|new_license_application/)) {
+        licenseeSections.push('new-license');
+      }
+      if (hasDbRoute(/license[_-]?renewal|license_renewal_application/)) {
+        licenseeSections.push('license-renewal');
+      }
+      if (hasDbRoute(/salesman|barman|salesman[_-]?barman|salesman_barman/)) {
+        licenseeSections.push('salesman-barman-registration');
+      }
+      // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
+      // Ensure Requisition payment-pending badge still loads in that case.
+      if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {
+        licenseeSections.push('requisition');
+      }
+      // Brewery/distillery licensees can see hologram-related menus; load badge even if routes are missing.
+      if (this.showBreweryOrDistilleryMenus || hasDbRoute(/hologram/)) {
+        licenseeSections.push('hologram');
+      }
+
       this.sidebarPendingBadgeService
-        .refresh(licenseeSections, force)
+        .refresh(licenseeSections, force, { audience: 'licensee', mode })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (counts) => {
@@ -386,7 +477,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     this.sidebarPendingBadgeService
-      .refresh(sections, force)
+      .refresh(sections, force, { mode })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (counts) => {
@@ -528,8 +619,22 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
+  private readonly bulkSpiritSections = new Set(['requisition', 'revalidation', 'cancellation']);
+  private readonly hologramSections = new Set([
+    'hologram', 'hologram-request', 'hologram-daily-entry',
+    'monthly-hologram-statement', 'hologram-inventory',
+    'itcell-hologram', 'hologram-register', 'oic-hologram-requests',
+    'commissioner-hologram-working-records'
+  ]);
+
+  /** Whether the Hologram group is expanded in the sidebar (default: closed) */
+  hologramExpanded = false;
+
   // Navigate to specific supply chain section
   navigateToSupplyChain(section: string): void {
+    // Auto-collapse groups when navigating away from their sub-items
+    if (!this.bulkSpiritSections.has(section)) this.bulkSpiritExpanded = false;
+    if (!this.hologramSections.has(section)) this.hologramExpanded = false;
     this.router.navigate(['/dashboard'], { 
       queryParams: { section: section } 
     });
@@ -540,6 +645,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isLicenseeUser() && !this.showManufacturingWalletNav) {
       return;
     }
+    // Wallet is not a bulk spirit or hologram section — collapse both groups
+    this.bulkSpiritExpanded = false;
+    this.hologramExpanded = false;
 
     const walletView: 'wallets' | 'others' =
       this.isLicenseeUser() && !this.hasBreweryOrDistilleryWalletViews ? 'others' : 'wallets';
@@ -555,6 +663,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   navigateToLicenseeRegistration(type: 'company' | 'collaboration' | 'salesman-barman' | 'label'): void {
+    // Registration sections are not bulk spirit or hologram — collapse both groups
+    this.bulkSpiritExpanded = false;
+    this.hologramExpanded = false;
     const sectionMap: Record<'company' | 'collaboration' | 'salesman-barman' | 'label', string> = {
       company: 'company-registration',
       collaboration: 'company-collaboration',
@@ -571,8 +682,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Navigate to role-specific sections
   navigateToSection(section: string): void {
-    // For all officer roles, navigate to dashboard with section parameter
-    // This keeps the unified layout and sidebar open
+    // Auto-collapse groups when navigating away from their sub-items
+    if (!this.bulkSpiritSections.has(section)) this.bulkSpiritExpanded = false;
+    if (!this.hologramSections.has(section)) this.hologramExpanded = false;
     
   if (section === 'hologram-inventory') {
       // Open hologram inventory as a full page (not inside the dashboard section card)
@@ -777,8 +889,55 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.isDashboardSectionActive('wallet');
   }
 
+  isAdminRouteActive(routePrefix: string): boolean {
+    const currentPath = this.router.url.split('?')[0].split('#')[0];
+    return currentPath === routePrefix || currentPath.startsWith(`${routePrefix}/`);
+  }
+
   getSidebarLabel(section: string, fallbackLabel?: string): string {
     return this.sidebarSectionLabels[section] || fallbackLabel || section;
+  }
+
+  /**
+   * Returns true when the item at `index` is the first item of its group in the array.
+   * The header is shown if this is the first item of the group AND at least one item
+   * in the group is accessible to the current user.
+   */
+  isFirstInGroup(index: number): boolean {
+    const item = this.officerSectionItems[index];
+    if (!item?.group) return false;
+    // Must be the first occurrence of this group in the array
+    for (let i = 0; i < index; i++) {
+      if (this.officerSectionItems[i].group === item.group) return false;
+    }
+    // At least one item in the group must be accessible
+    return this.officerSectionItems.some(
+      it => it.group === item.group && this.canAccessSection(it.section)
+    );
+  }
+
+  isGroupExpanded(group: string): boolean {
+    if (group === 'Bulk Spirit') return this.bulkSpiritExpanded;
+    if (group === 'Hologram') return this.hologramExpanded;
+    return true;
+  }
+
+  toggleGroup(group: string): void {
+    if (group === 'Bulk Spirit') this.bulkSpiritExpanded = !this.bulkSpiritExpanded;
+    else if (group === 'Hologram') this.hologramExpanded = !this.hologramExpanded;
+  }
+
+  getGroupIcon(group: string): string {
+    if (group === 'Bulk Spirit') return 'water_drop';
+    if (group === 'Hologram') return 'qr_code_2';
+    return 'folder';
+  }
+
+  /** Total pending badge for a named group — used on the collapsed group header for all user types */
+  getGroupTotalBadge(group: string): number {
+    if (group === 'Bulk Spirit') return this.getBulkSpiritTotalBadge();
+    if (group === 'Hologram') return this.getHologramTotalBadge();
+    return 0;
   }
 
   // Check if user is licensee/supply chain
@@ -822,41 +981,20 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.hasBreweryOrDistilleryWalletViews = false;
     this.showManufacturingWalletNav = false;
 
-    forkJoin({
-      licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
-        catchError((error) => {
-          console.error('Failed to read /masters/license/me/:', error);
-          return of([]);
-        })
-      ),
-      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(
-        catchError((error) => {
-          console.error('Failed to read /transactional/new_license_application/list-by-status/:', error);
-          return of({ approved: [] });
-        })
-      ),
-      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(
-        catchError((error) => {
-          console.error('Failed to read /transactional/new_license_application/list/:', error);
-          return of([]);
-        })
-      )
-    }).subscribe({
-      next: ({ licenses, approvedPayload, allApplications }) => {
+    const key = String(this.currentUser?.username || this.user?.username || this.user?.login || '').trim() || null;
+    if (key && this.lastMenuAccessUserKey === key && this.myLicenses.length) {
+      return;
+    }
+    this.lastMenuAccessUserKey = key;
+
+    this.licenseMeService.getMyLicenses().subscribe({
+      next: (licenses) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
-        const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
-        const allRows = Array.isArray(allApplications) ? allApplications : [];
-        const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
-        const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
-        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
+        this.myLicenses = licenseRows;
+        this.ensureSelectedLicenseGroup();
 
-        console.log('Menu data sources:', {
-          licenses: licenseRows.length,
-          approvedByStatus: approvedRows.length,
-          approvedFromList: approvedFromAll.length
-        });
-
-        this.applySubtypeMenuRules(combinedRows);
+        // Avoid heavy application list APIs during login; derive menu visibility from issued licenses.
+        this.applySubtypeMenuRules(licenseRows);
       },
       error: (error) => {
         console.error('Failed to evaluate menu access from combined sources:', error);
@@ -864,9 +1002,285 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.showBreweryOrDistilleryMenus = false;
         this.hasBreweryOrDistilleryWalletViews = false;
         this.showManufacturingWalletNav = false;
+        this.myLicenses = [];
+        this.selectedLicenseGroupKey = '';
         this.triggerUiRefresh();
       }
     });
+  }
+
+  private ensureSelectedLicenseGroup(): void {
+    const groups = this.getLicenseGroups();
+    if (groups.length === 0) {
+      this.selectedLicenseGroupKey = '';
+      return;
+    }
+    if (this.selectedLicenseGroupKey && groups.some((g) => g.key === this.selectedLicenseGroupKey)) {
+      return;
+    }
+    const preferred = groups.find((g) => g.items.some((x) => Boolean(x?.is_active ?? x?.isActive)));
+    this.selectedLicenseGroupKey = (preferred || groups[0]).key;
+  }
+
+  get selectedLicenseDisplay(): string {
+    const group = this.getLicenseGroups().find((g) => g.key === this.selectedLicenseGroupKey);
+    if (!group) return '';
+    const active = group.items.find((x) => Boolean(x?.is_active ?? x?.isActive));
+    const best = active || group.items[0];
+    return String(best?.license_id || best?.licenseId || '').trim();
+  }
+
+  openLicenseNumbersPopup(): void {
+    if (!this.isLicenseeUser()) return;
+
+    Swal.fire({
+      title: 'Loading Details',
+      html: 'Please wait...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    this.licenseMeService.getMyLicenses().subscribe({
+      next: (licenses) => {
+        Swal.close();
+        const licenseRows = Array.isArray(licenses) ? licenses : [];
+        this.myLicenses = licenseRows;
+        this.ensureSelectedLicenseGroup();
+        this.applySubtypeMenuRules(licenseRows);
+
+        const groups = this.getLicenseGroups();
+        if (groups.length === 0) {
+          void Swal.fire('License Number', 'No license number is available yet.', 'info');
+          return;
+        }
+
+        const selectHtml = groups.length > 1
+          ? `
+            <div class="lp-filter-row">
+              <label class="lp-filter-label" for="licenseGroup">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+                Filter by License Type
+              </label>
+              <select id="licenseGroup" class="lp-filter-select">
+                ${groups.map((g) => `<option value="${this.escapeHtml(g.key)}">${this.escapeHtml(g.label)}</option>`).join('')}
+              </select>
+            </div>
+          `
+          : '';
+
+        void Swal.fire({
+          html: `
+            <div class="lp-modal">
+              <!-- Header -->
+              <div class="lp-header">
+                <div class="lp-header-icon">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2.5"/>
+                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                    <circle cx="12" cy="14" r="2"/>
+                    <line x1="12" y1="16" x2="12" y2="18"/>
+                  </svg>
+                </div>
+                <div class="lp-header-text">
+                  <h2 class="lp-title">License &amp; Application Numbers</h2>
+                  <p class="lp-subtitle">Your registered license details and renewal history</p>
+                </div>
+                <button class="lp-close-btn" id="lpCloseBtn" type="button" aria-label="Close">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              <!-- Body -->
+              <div class="lp-body">
+                ${selectHtml}
+                <div id="licenseGroupLabel" class="lp-category-badge"></div>
+                <div id="licenseList"></div>
+              </div>
+            </div>
+          `,
+          showConfirmButton: false,
+          showCloseButton: false,
+          padding: 0,
+          background: 'transparent',
+          customClass: { popup: 'lp-swal-popup', htmlContainer: 'lp-swal-html' },
+          didOpen: () => {
+            document.getElementById('lpCloseBtn')?.addEventListener('click', () => Swal.close());
+            const selectEl = document.getElementById('licenseGroup') as HTMLSelectElement | null;
+            const initialKey = groups.some((g) => g.key === this.selectedLicenseGroupKey) ? this.selectedLicenseGroupKey : groups[0].key;
+            if (selectEl) {
+              selectEl.value = initialKey;
+              selectEl.addEventListener('change', () => {
+                this.renderLicensePopupList(groups, selectEl.value);
+              });
+            }
+            this.renderLicensePopupList(groups, initialKey);
+          }
+        });
+      },
+      error: (error) => {
+        Swal.close();
+        console.error('Failed to load license details for popup:', error);
+        void Swal.fire('Error', 'Failed to retrieve license details. Please try again.', 'error');
+      }
+    });
+  }
+
+  private renderLicensePopupList(groups: Array<{ key: string; label: string; items: any[] }>, groupKey: string): void {
+    const labelEl = document.getElementById('licenseGroupLabel');
+    const target = document.getElementById('licenseList');
+    if (!target) return;
+
+    const group = groups.find((g) => g.key === groupKey) || groups[0];
+    this.selectedLicenseGroupKey = group.key;
+    if (labelEl) {
+      labelEl.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        ${this.escapeHtml(group.label || 'License')}
+      `;
+    }
+
+    const items = group.items
+      .map((x) => {
+        const rawDetails = x?.renewalDetails ?? x?.renewal_details ?? [];
+        const details = Array.isArray(rawDetails) ? rawDetails : [];
+        return {
+          id: String(x?.license_id || x?.licenseId || '').trim(),
+          renewalCount: Number(x?.renewalCount ?? x?.renewal_count ?? 0),
+          renewalDetails: details
+        };
+      })
+      .filter((item) => item.id)
+      .sort((a, b) => this.compareLicenseIdsDesc(a.id, b.id));
+
+    if (!items.length) {
+      target.innerHTML = `
+        <div class="lp-empty">
+          <div class="lp-empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <p class="lp-empty-text">No license found for this selection.</p>
+        </div>`;
+      return;
+    }
+
+    const cardsHtml = items.map((item, idx) => {
+      const renewalRows = item.renewalDetails.map((d: any) => {
+        const appId = String(d?.applicationId || d?.application_id || '').trim();
+        const dateVal = String(d?.date || '').trim();
+        return `
+          <div class="lp-renewal-row">
+            <span class="lp-renewal-connector">└</span>
+            <div class="lp-renewal-content">
+              <span class="lp-renewal-label">Renewal Application</span>
+              <code class="lp-renewal-appid">${this.escapeHtml(appId)}</code>
+              ${dateVal ? `<span class="lp-renewal-date">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Renewed on ${this.escapeHtml(dateVal)}
+              </span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="lp-card">
+          <div class="lp-card-header">
+            <div class="lp-card-num-wrap">
+              <span class="lp-card-index">#${idx + 1}</span>
+              <div class="lp-card-num-block">
+                <span class="lp-card-num-label">License Number</span>
+                <code class="lp-license-id">${this.escapeHtml(item.id)}</code>
+              </div>
+            </div>
+            <div class="lp-renewal-badge ${item.renewalCount > 0 ? 'has-renewals' : 'no-renewals'}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              ${item.renewalCount} Renewal${item.renewalCount !== 1 ? 's' : ''}
+            </div>
+          </div>
+          ${renewalRows ? `<div class="lp-renewals-section">${renewalRows}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    target.innerHTML = `<div class="lp-cards-list">${cardsHtml}</div>`;
+    this.triggerUiRefresh();
+  }
+
+  private getLicenseGroups(): Array<{ key: string; label: string; items: any[] }> {
+    const rows = Array.isArray(this.myLicenses) ? this.myLicenses : [];
+    if (rows.length === 0) return [];
+
+    const toText = (v: any) => String(v ?? '').trim();
+    const byKey = new Map<string, { key: string; label: string; items: any[] }>();
+
+    for (const row of rows) {
+      // Exclude inactive salesman/barman licenses
+      const sbRole = toText(row?.salesman_barman_role || row?.salesmanBarmanRole);
+      const isSb = Boolean(sbRole || String(row?.application_type || row?.applicationType || '').toLowerCase().includes('salesman') || String(row?.application_type || row?.applicationType || '').toLowerCase().includes('barman'));
+      const isActive = row?.is_active ?? row?.isActive;
+      if (isSb && isActive === false) {
+        continue;
+      }
+
+      const category = toText(row?.license_category || row?.licenseCategory);
+      const subCategory = toText(row?.license_sub_category || row?.licenseSubCategory);
+      const appType = toText(row?.application_type || row?.applicationType);
+      const labelParts = [category, subCategory].filter(Boolean);
+      let label = labelParts.length ? labelParts.join(' • ') : (appType || 'License');
+      
+      if (sbRole) {
+        label = `${label} • ${sbRole}`;
+      }
+
+      const key = `${label}__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}__${appType}`;
+
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.items.push(row);
+      } else {
+        byKey.set(key, { key, label, items: [row] });
+      }
+    }
+
+    const groups = Array.from(byKey.values());
+    for (const g of groups) {
+      g.items = g.items
+        .filter((x) => String(x?.license_id || x?.licenseId || '').trim())
+        .sort((a, b) => this.compareLicenseIdsDesc(
+          String(a?.license_id || a?.licenseId || ''),
+          String(b?.license_id || b?.licenseId || '')
+        ));
+    }
+
+    return groups.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  private compareLicenseIdsDesc(a: string, b: string): number {
+    const ax = this.parseLicenseIdSortKey(a);
+    const bx = this.parseLicenseIdSortKey(b);
+    if (ax.yearStart !== bx.yearStart) return bx.yearStart - ax.yearStart;
+    if (ax.serial !== bx.serial) return bx.serial - ax.serial;
+    return String(b).localeCompare(String(a));
+  }
+
+  private parseLicenseIdSortKey(id: string): { yearStart: number; serial: number } {
+    const text = String(id || '');
+    const fy = /\/(\d{4})-(\d{2})\//.exec(text);
+    const yearStart = fy ? Number(fy[1]) : 0;
+    const serialMatch = /\/(\d+)\s*$/.exec(text);
+    const serial = serialMatch ? Number(serialMatch[1]) : 0;
+    return { yearStart, serial };
+  }
+
+  private escapeHtml(text: string): string {
+    return String(text || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private applySubtypeMenuRules(rows: any[]): void {
@@ -908,44 +1322,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private computeWalletNavVisible(rows: any[]): boolean {
     const list = Array.isArray(rows) ? rows : [];
 
-    // Index applications by application_id so we can validate license rows (NA/...) against their source stage.
-    const appsById = new Map<string, any>();
     for (const item of list) {
-      const appId = String(item?.application_id ?? item?.applicationId ?? item?.pk ?? '').trim();
-      if (appId) {
-        appsById.set(appId, item);
-      }
-    }
-
-    const isNewLicenseDerivedLicenseRow = (item: any): boolean => {
-      const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim().toUpperCase();
-      return srcId.startsWith('NLI/');
-    };
-
-    for (const item of list) {
-      const hasLicenseId = !!(item?.license_id ?? item?.licenseId);
-
-      // Application rows: use stage-based eligibility directly.
-      const appId = String(item?.application_id ?? item?.applicationId ?? '').trim();
-      if (appId && !hasLicenseId) {
-        if (isLicenseeWalletNavEligible(item)) {
-          return true;
-        }
-        continue;
-      }
-
-      // License rows: always allow existing licensees, but for new-license-derived licenses (source_object_id=NLI/...),
-      // require that the source application is Commissioner-approved.
-      if (hasLicenseId) {
-        if (!isNewLicenseDerivedLicenseRow(item)) {
-          return true;
-        }
-
-        const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim();
-        const srcApp = srcId ? appsById.get(srcId) : undefined;
-        if (srcApp && isLicenseeWalletNavEligible(srcApp)) {
-          return true;
-        }
+      // Wallet becomes visible for licensees when:
+      // - an issued license exists (license_id), OR
+      // - an application reaches awaiting_payment / approved with required selections.
+      if (isLicenseeWalletNavEligible(item)) {
+        return true;
       }
     }
 
@@ -1036,7 +1418,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       '/dashboard/admin/license-titles',
       '/dashboard/admin/license-subcategories',
       '/dashboard/admin/roads',
-      '/dashboard/admin/oic'
+      '/dashboard/admin/oic',
+      '/dashboard/admin/sbi-e-pay'
     ];
 
     const hasAdminNav = adminRoutes.some((route) =>
@@ -1147,6 +1530,19 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   canAccessSection(section: string): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
 
+    // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).
+    if (section === 'officer-activity') {
+      return true;
+    }
+
+    if (section === 'single-window' || section === 'single-window-detail') {
+      return roleId === 3 || roleId === 1;
+    }
+
+    if (section === 'payment-transactions') {
+      return roleId === 3;
+    }
+
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
       return false;
     }
@@ -1156,11 +1552,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    if (this.isPermitSectionUser() && (section === 'new-license' || section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
+    if (this.isPermitSectionUser() && (section === 'new-license' || section === 'license-renewal' || section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
       return false;
     }
 
-    if (this.isItCellUser() && section === 'new-license') {
+    if (this.isItCellUser() && (section === 'new-license' || section === 'license-renewal')) {
       return false;
     }
 
@@ -1169,7 +1565,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
-    if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license' || section === 'hologram')) {
+    if (this.isOicUser() && (section === 'itcell-hologram' || section === 'new-license' || section === 'license-renewal' || section === 'hologram')) {
       return false;
     }
 
@@ -1197,8 +1593,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
+    if (sectionRouteToken === 'license-renewal' && this.canAccessSection('new-license')) {
+      return true;
+    }
+
     const tokenMap: Record<string, string[]> = {
       'new-license': ['new_license', 'new-license', 'license_application', 'new_license_application'],
+      'license-renewal': ['license_renewal_application', 'license-renewal', 'license_renewal', 'license_application', 'new_license_application'],
       'requisition': ['ena_requisition', 'requisition'],
       'revalidation': ['ena_revalidation', 'revalidation'],
       'cancellation': ['ena_cancellation', 'cancellation'],
@@ -1251,4 +1652,3 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return roleName || 'User';
   }
 }
-

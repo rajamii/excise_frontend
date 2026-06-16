@@ -52,6 +52,24 @@
           </div>
         </div>
       </div>
+      <!-- Awaiting Payment Card -->
+      <div class="col-xl col-lg-6 col-md-6" *ngIf="currentSection === 'salesman-barman-registration' && counts.awaitingPayment && counts.awaitingPayment > 0">
+        <div
+          class="summary-card awaiting-payment-requests summary-card-clickable"
+          role="button"
+          tabindex="0"
+          (click)="onCardFilterClick('awaiting-payment')"
+          (keydown.enter)="onCardFilterClick('awaiting-payment')"
+          (keydown.space)="onCardFilterClick('awaiting-payment')"
+          [class.active]="activeCardFilter === 'awaiting-payment'"
+        >
+          <div class="card-icon"><i class="bi bi-credit-card"></i></div>
+          <div class="card-content">
+            <h3 class="card-value">{{ counts.awaitingPayment }}</h3>
+            <p class="card-label">Awaiting Payment</p>
+          </div>
+        </div>
+      </div>
       <div class="col-xl col-lg-6 col-md-6">
         <div
           class="summary-card objection-requests summary-card-clickable"
@@ -188,7 +206,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of pagedRows; let i = index">
+            <tr *ngFor="let row of pagedRows; let i = index"
+                [class.row-needs-action]="needsLicenseeAction(row)">
               <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
               <td class="fw-semibold">{{ row.applicationId }}</td>
               <td>{{ row.submittedOn }}</td>
@@ -208,22 +227,46 @@
                   {{ row.currentStage }}
                 </span>
               </td>
-              <td>
-                <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
-                  <i class="bi bi-eye-fill"></i>
-                </button>
-                <button
-                  *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
-                  class="btn btn-link p-0 action-timeline ms-2"
-                  title="View Timeline"
-                  (click)="viewTimeline(row)"
-                >
-                  <i class="bi bi-clock-history"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+               <td>
+                 <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
+                   <i class="bi bi-eye-fill"></i>
+                 </button>
+                 <button
+                   *ngIf="isLicenseeUser() && currentSection === 'salesman-barman-registration' && row.statusGroup === 'objection'"
+                   class="btn btn-sm btn-fix-objection ms-2"
+                   title="Resolve Objections"
+                   (click)="fixObjections(row)"
+                 >
+                   <i class="bi bi-tools me-1"></i>Fix
+                 </button>
+                  <button
+                    *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration' && row.hasObjectionHistory"
+                    class="btn btn-link p-0 action-eye ms-2"
+                    title="View Objection Details"
+                    (click)="viewObjectionDetails(row)"
+                  >
+                    <i class="bi bi-info-circle-fill"></i>
+                  </button>
+                  <button
+                    *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration'"
+                    class="btn btn-link p-0 action-timeline ms-2"
+                    title="View Timeline"
+                    (click)="viewTimeline(row)"
+                  >
+                    <i class="bi bi-clock-history"></i>
+                  </button>
+                  <button
+                    *ngIf="isCommissionerUser() && currentSection === 'salesman-barman-registration' && row.isPrintFeePaid"
+                    class="btn btn-link p-0 action-print ms-2 text-success"
+                    title="Print License"
+                    (click)="printLicense(row)"
+                  >
+                    <i class="bi bi-printer"></i>
+                  </button>
+                </td>
+             </tr>
+           </tbody>
+         </table>
 
         <div class="pagination-bar" *ngIf="filteredRows.length > 0">
           <div class="page-summary">

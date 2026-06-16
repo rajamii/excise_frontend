@@ -32,8 +32,15 @@ export interface BrandWarehouse {
     brand_type: string;
     brand_id?: number | null;
     brand_name?: string;
+    liquor_type?: number | null;
     current_stock: number;
     capacity_size: number;
+    ex_factory_price_rs_per_case?: number;
+    excise_duty_rs_per_case?: number;
+    education_cess_rs_per_case?: number;
+    additional_excise_duty_rs_per_case?: number;
+    additional_excise_duty_12_5_percent_rs_per_case?: number;
+    mrp_rs_per_bottle?: number;
     total_capacity?: number;
     status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'OVERSTOCKED';
     liquor_data?: number;
@@ -83,7 +90,9 @@ export class BrandWarehouseService {
         if ( 
             normalized.startsWith('NA/') || 
             normalized.startsWith('NLI/') || 
-            normalized.startsWith('LA/') 
+            normalized.startsWith('LA/') ||
+            normalized.startsWith('SB/') ||
+            /^MP[A-Z0-9]+$/i.test(normalized)
         ) { 
             return normalized; 
         } 
@@ -265,8 +274,15 @@ export class BrandWarehouseService {
                     brand_type: brand.brandType || brand.brand_type || '',
                     brand_id: brand.brandId ?? brand.brand_id ?? null,
                     brand_name: brand.brandName || brand.brand_name || '',
+                    liquor_type: brand.liquorType ?? brand.liquor_type ?? null,
                     current_stock: brand.currentStock || brand.current_stock || 0,
                     capacity_size: brand.capacitySize || brand.capacity_size || 0,
+                    ex_factory_price_rs_per_case: Number(brand.exFactoryPriceRsPerCase ?? brand.ex_factory_price_rs_per_case ?? 0),
+                    excise_duty_rs_per_case: Number(brand.exciseDutyRsPerCase ?? brand.excise_duty_rs_per_case ?? 0),
+                    education_cess_rs_per_case: Number(brand.educationCessRsPerCase ?? brand.education_cess_rs_per_case ?? 0),
+                    additional_excise_duty_rs_per_case: Number(brand.additionalExciseDutyRsPerCase ?? brand.additional_excise_duty_rs_per_case ?? 0),
+                    additional_excise_duty_12_5_percent_rs_per_case: Number(brand.additionalExciseDuty125PercentRsPerCase ?? brand.additional_excise_duty_12_5_percent_rs_per_case ?? 0),
+                    mrp_rs_per_bottle: Number(brand.mrpRsPerBottle ?? brand.mrp_rs_per_bottle ?? 0),
                     total_capacity: brand.totalCapacity || brand.total_capacity || 0,
                     status: brand.status || 'OUT_OF_STOCK',
                     liquor_data: brand.liquorData || brand.liquor_data || null,
@@ -535,6 +551,32 @@ export class BrandWarehouseService {
             catchError((error) => {
                 console.error('cancelUtilization error:', error);
                 throw error;
+            })
+        );
+    }
+
+    /**
+     * Get monthly production total from production-summary endpoint
+     */
+    getMonthlyProductionTotal(days: number): Observable<number> {
+        const params = new HttpParams().set('days', days.toString());
+        return this.http.get<any>(
+            `${this.baseUrl}/production-summary/`,
+            { params }
+        ).pipe(
+            map((res: any) => {
+                // API returns camelCase keys via response renderer
+                const val =
+                    res?.summary?.monthProduction ??
+                    res?.summary?.month_production ??
+                    res?.summary?.totalQuantity ??
+                    res?.summary?.total_quantity ??
+                    0;
+                return Number(val) || 0;
+            }),
+            catchError((err) => {
+                console.error('getMonthlyProductionTotal error:', err);
+                return of(0);
             })
         );
     }

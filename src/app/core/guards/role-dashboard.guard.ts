@@ -1,14 +1,13 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { RoleService } from '../services/role.service';
 import { AccountService } from '../services/account.service';
+import { DashboardConfigService } from '../services/dashboard-config.service';
 import { User } from '../models/role.models';
-import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -17,8 +16,8 @@ export class RoleDashboardGuard implements CanActivate {
   constructor(
     private roleService: RoleService,
     private accountService: AccountService,
+    private dashboardConfigService: DashboardConfigService,
     private router: Router,
-    private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -53,7 +52,7 @@ export class RoleDashboardGuard implements CanActivate {
           lastLogin: new Date()
         };
 
-        return this.http.get<any>(`${environment.apiBaseUrl}/auth/roles/dashboard-config/current/`).pipe(
+        return this.dashboardConfigService.getCurrentUserDashboardConfigCached().pipe(
           map((config) => {
             const dbPermissions = Array.isArray(config?.permissions) ? config.permissions : [];
             const dbRoleName = config?.roleName || mappedUser.role?.displayName || 'User';

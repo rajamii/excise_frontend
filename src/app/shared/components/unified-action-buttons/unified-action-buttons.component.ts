@@ -10,6 +10,7 @@ import { ApplicationType } from '../../constants/application.constants';
 import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
 import { AccountService } from '../../../core/services/account.service';
 import Swal from 'sweetalert2';
+import { firstValueFrom } from 'rxjs';
 
 export interface ActionItem {
   id?: number | string;
@@ -285,6 +286,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'FORWARD',
       'RAISE_OBJECTION',
       'REJECT',
+      'VIEW_REMARK',
       'REQUEST_CANCELLATION',
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
@@ -303,6 +305,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'FORWARD',
       'RAISE_OBJECTION',
       'REJECT',
+      'VIEW_REMARK',
       'REQUEST_CANCELLATION',
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
@@ -747,6 +750,23 @@ private getTransitRejectSummary(): {
     }).format(this.toNumber(value));
   }
 
+  private toBool(value: any): boolean {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    const text = String(value ?? '').trim().toLowerCase();
+    return text === 'true' || text === 'yes' || text === '1';
+  }
+
+  private async getPaymentModuleFee(moduleCode: string, fallback: number): Promise<number> {
+    try {
+      const res: any = await firstValueFrom(this.paymentIntegrationService.getPaymentModule(String(moduleCode)));
+      const fee = this.toNumber(res?.license_fee ?? res?.licenseFee ?? res?.licenseFeeAmount ?? res?.amount ?? 0);
+      return Number.isFinite(fee) && fee > 0 ? fee : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
   private escapeHtml(value: string): string {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -826,6 +846,20 @@ private getTransitRejectSummary(): {
     return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
   }
 
+  private isAwaitingRenewalPaymentForLicensee(): boolean {
+    if (this.itemType !== 'license-renewal') return false;
+    if (this.context !== 'licensee') return false;
+    if (!this.isCurrentUserLicensee()) return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
   private isAwaitingSalesmanBarmanPaymentForLicensee(): boolean {
     if (this.itemType !== 'salesman-barman-registration') return false;
     if (this.context !== 'licensee') return false;
@@ -853,7 +887,12 @@ private getTransitRejectSummary(): {
   }
 
   private handleNewLicenseMakePaymentAction(): void {
-    if (!this.isAwaitingNewLicensePaymentForLicensee()) {
+    const isRenewal = this.itemType === 'license-renewal';
+    const isPaymentAllowed = isRenewal
+      ? this.isAwaitingRenewalPaymentForLicensee()
+      : this.isAwaitingNewLicensePaymentForLicensee();
+
+    if (!isPaymentAllowed) {
       Swal.fire('Not Available', 'Payment is only available when the application is awaiting license fee/security deposit payment.', 'info');
       return;
     }
@@ -879,28 +918,122 @@ private getTransitRejectSummary(): {
         source?.['yearlyLicenseFee'] ??
         0
       );
-      const securityFee = this.toNumber(source?.['security_fee_amount'] ?? source?.['securityFeeAmount'] ?? 0);
+      const securityFee = isRenewal ? 0 : this.toNumber(source?.['security_fee_amount'] ?? source?.['securityFeeAmount'] ?? 0);
       return { licenseFee, securityFee, total: licenseFee + securityFee };
     };
 
-    const showProceedModal = (amountSource: any) => {
+    const showProceedModal = async (amountSource: any) => {
       const { licenseFee, securityFee, total } = resolveAmounts(amountSource);
-      Swal.fire({
-        title: 'Proceed to Pay',
-        html: `
-          <div style="text-align:left;">
-            <div style="margin-bottom:8px;">License Fee: <b>₹${this.formatInr(licenseFee)}</b></div>
-            <div style="margin-bottom:8px;">Security Deposit: <b>₹${this.formatInr(securityFee)}</b></div>
-            <div>Total: <b>₹${this.formatInr(total)}</b></div>
-            <div style="margin-top:10px; font-size:12px; color:#6b7280;">
-              You will be taken to Wallet → License Fee / Security Deposit tabs to complete payment.
+
+      const pachwaiSelected = this.toBool(amountSource?.pachwai ?? amountSource?.pachwai_flag ?? amountSource?.pachwai_selected);
+      const draughtSelected = this.toBool(amountSource?.draught_beer ?? amountSource?.draughtBeer ?? amountSource?.draughtbeer);
+
+      let pachwaiFee = 0;
+      let draughtFee = 0;
+      if (pachwaiSelected) pachwaiFee = await this.getPaymentModuleFee('NLI_ADD_PACHWAI', 3000);
+      if (draughtSelected) draughtFee = await this.getPaymentModuleFee('NLI_ADD_DRAUGHT_BEER', 5000);
+
+      const additionalTotal = (pachwaiFee || 0) + (draughtFee || 0);
+      const hasAdditional = additionalTotal > 0;
+      const baseLicenseFee = Math.max(0, licenseFee - additionalTotal);
+      const baseSecurityFee = Math.max(0, securityFee - additionalTotal);
+
+      const feeRow = (label: string, amount: number, accent = false) => `
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    padding:10px 14px; border-radius:8px; margin-bottom:6px;
+                    background:${accent ? '#f0fdf8' : '#f9fafb'};
+                    border:1px solid ${accent ? '#6ee7c7' : '#e5e7eb'};">
+          <span style="color:#374151; font-size:14px;">${label}</span>
+          <span style="font-weight:700; color:${accent ? '#0d6e56' : '#111827'}; font-size:14px;">&#8377;${this.formatInr(amount)}</span>
+        </div>`;
+
+      const breakdownHtml = hasAdditional
+        ? `
+          <div style="margin-top:16px; border-radius:10px; border:1px solid #d1fae5; overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#065f46,#059669); color:#fff; padding:8px 14px; font-size:13px; font-weight:600; letter-spacing:0.5px;">
+              &#9783; Fee Breakup
+            </div>
+            <div style="padding:10px 10px 4px;">
+              ${feeRow('Base License Fee', baseLicenseFee)}
+              ${pachwaiSelected ? feeRow('Pachwai (Additional)', pachwaiFee) : ''}
+              ${draughtSelected ? feeRow('Draught Beer (Additional)', draughtFee) : ''}
+            </div>
+            <div style="padding:6px 14px 10px; font-size:11.5px; color:#6b7280; font-style:italic;">
+              &#9432; Additional charges are applied to both License Fee and Security Deposit.
             </div>
           </div>
+        `
+        : '';
+
+      Swal.fire({
+        title: '',
+        html: `
+          <div style="font-family:'Segoe UI',sans-serif; text-align:left;">
+
+            <!-- Header -->
+            <div style="text-align:center; margin-bottom:20px;">
+              <div style="display:inline-flex; align-items:center; justify-content:center;
+                          width:52px; height:52px; border-radius:50%;
+                          background:linear-gradient(135deg,#065f46,#10b981); margin-bottom:10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
+                </svg>
+              </div>
+              <div style="font-size:20px; font-weight:700; color:#065f46; line-height:1.2;">Proceed to Pay</div>
+              <div style="font-size:12px; color:#6b7280; margin-top:4px;">Review your payment summary before proceeding</div>
+            </div>
+
+            <!-- Fee Summary -->
+            <div style="border-radius:10px; border:1px solid #d1fae5; overflow:hidden; margin-bottom:12px;">
+              <div style="background:#ecfdf5; padding:8px 14px; font-size:12px; font-weight:600;
+                          color:#065f46; letter-spacing:0.6px; text-transform:uppercase;">
+                Payment Summary
+              </div>
+              <div style="padding:10px 10px 4px;">
+                ${feeRow('License Fee', licenseFee, true)}
+                ${securityFee > 0 ? feeRow('Security Deposit', securityFee, true) : ''}
+              </div>
+              <!-- Total -->
+              <div style="display:flex; justify-content:space-between; align-items:center;
+                          padding:12px 14px; background:linear-gradient(135deg,#065f46,#10b981);
+                          border-top:1px solid #6ee7c7;">
+                <span style="color:#d1fae5; font-size:14px; font-weight:600;">Total Payable</span>
+                <span style="color:#ffffff; font-size:18px; font-weight:800;">&#8377;${this.formatInr(total)}</span>
+              </div>
+            </div>
+
+            ${breakdownHtml}
+
+            <!-- Info note -->
+            <div style="margin-top:12px; padding:12px 16px; background:#f0f9ff; border:1px solid #bae6fd;
+                        border-radius:8px; font-size:13px; color:#0369a1; text-align: left; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-weight: 700; display:flex; gap:8px; align-items:center;">
+                <span style="font-size:16px;">&#8505;</span>
+                <span>Important Payment Instructions:</span>
+              </div>
+              <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color:#334155;">
+                <li><b>License Fee:</b> Pay by navigating to the <b>License Fee Wallet</b> tab and clicking <b>Pay Now</b>.</li>
+                ${!isRenewal ? `
+                <li style="background: #fffbeb; padding: 6px 10px; border-radius: 4px; border: 1px solid #fde68a; margin-top: 6px; color: #b45309; list-style-type: none; margin-left: -20px;">
+                  &#9888; &nbsp;<b>Security Deposit:</b> Simply <b>recharge/add money</b> to the <b>Security Deposit Wallet</b>. Recharging is sufficient to mark it as paid, and the amount will remain in your wallet as active security balance (it will not be debited).
+                </li>
+                ` : ''}
+              </ul>
+            </div>
+
+          </div>
         `,
-        icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Proceed',
-        cancelButtonText: 'Cancel'
+        confirmButtonText: '&#10003; &nbsp;Proceed',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#065f46',
+        cancelButtonColor: '#6b7280',
+        customClass: {
+          popup: 'swal-proceed-popup',
+          confirmButton: 'swal-proceed-confirm',
+          cancelButton: 'swal-proceed-cancel'
+        },
+        width: '540px'
       }).then((result) => {
         if (!result.isConfirmed) return;
         this.router.navigate(['/dashboard'], {
@@ -909,19 +1042,17 @@ private getTransitRejectSummary(): {
             action: 'pay',
             tab: 'license_fee',
             id: applicationId,
-            type: 'new-license',
+            type: isRenewal ? 'license-renewal' : 'new-license',
             ref: applicationId,
             referenceNo: applicationId,
             amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
-            securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
-            source: 'new-license'
+            securityAmount: !isRenewal && Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+            source: isRenewal ? 'license-renewal' : 'new-license'
           }
         });
       });
     };
 
-    // Dashboard/list rows often don't carry computed fee fields; fetch full detail
-    // so the modal shows correct amounts.
     Swal.fire({
       title: 'Loading...',
       text: 'Fetching fee amounts',
@@ -929,14 +1060,18 @@ private getTransitRejectSummary(): {
       didOpen: () => Swal.showLoading()
     });
 
-    this.workflowActionService.getNewLicenseApplicationDetail(applicationId).subscribe({
+    const detail$ = isRenewal
+      ? this.workflowActionService.getLicenseRenewalApplicationDetail(applicationId)
+      : this.workflowActionService.getNewLicenseApplicationDetail(applicationId);
+
+    detail$.subscribe({
       next: (detail: any) => {
         Swal.close();
-        showProceedModal(detail || this.item);
+        void showProceedModal(detail || this.item);
       },
       error: () => {
         Swal.close();
-        showProceedModal(this.item);
+        void showProceedModal(this.item);
       }
     });
   }
@@ -1333,7 +1468,7 @@ private getTransitRejectSummary(): {
   }
 
   private getFilteredConfigs(): ActionButtonConfig[] {
-    const include = this.normalizeActionList(this.includeActions);
+    let include = this.normalizeActionList(this.includeActions);
     const exclude = this.normalizeActionList(this.excludeActions);
 
     console.log('🔧 UNIFIED BUTTONS: getFilteredConfigs ->', {
@@ -1345,6 +1480,29 @@ private getTransitRejectSummary(): {
     });
 
     let result = [...this.availableActionConfigs];
+
+    const stageNameForRemark = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    const isRejected = stageNameForRemark.includes('reject');
+    const canShowViewRemark = isRejected && ['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(String(this.itemType || ''));
+    if (canShowViewRemark && !result.some(config => this.normalizeActionName(config.action) === 'VIEW_REMARK')) {
+      result.push({
+        action: 'VIEW_REMARK',
+        label: 'View Remark',
+        icon: 'comment',
+        color: 'info',
+        tooltip: 'View rejection remarks'
+      });
+    }
+
+    if (canShowViewRemark && include.length && !include.includes('VIEW_REMARK')) {
+      include = [...include, 'VIEW_REMARK'];
+    }
 
     // If includeActions specifies VIEW but backend didn't return it, add a safe fallback.
     if (include.includes('VIEW') && !result.some(config => config.action === 'VIEW')) {
@@ -1456,10 +1614,26 @@ private getTransitRejectSummary(): {
       }
     }
 
+    if (this.isAwaitingRenewalPaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay renewal license fee and security deposit from wallet'
+        });
+      }
+    }
+
     // Salesman/Barman: once application is routed to awaiting payment for licensee,
     // show Make Payment (registration fee from license fee wallet).
+    // Also remove any workflow-level PAY action to avoid duplicate payment buttons.
     if (this.isAwaitingSalesmanBarmanPaymentForLicensee()) {
       result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
       if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
         result.unshift({
           action: 'MAKE_PAYMENT',
@@ -1468,6 +1642,40 @@ private getTransitRejectSummary(): {
           color: 'primary',
           tooltip: 'Pay registration fee from license fee wallet'
         });
+      }
+    }
+
+    // Salesman/Barman awaiting payment: always remove the raw PAY workflow action
+    // when a MAKE_PAYMENT button is already present, to prevent duplicate payment buttons.
+    // Also: if stage is awaiting_payment for salesman-barman licensee context but
+    // isAwaitingSalesmanBarmanPaymentForLicensee() returned false (e.g. JWT check edge case),
+    // still inject MAKE_PAYMENT and remove PAY.
+    // NOTE: isCurrentUserLicensee() is required here — the URL source param can be 'licensee'
+    // even when a commissioner opens the link, so we must verify the actual logged-in role.
+    if (this.itemType === 'salesman-barman-registration' && this.context === 'licensee' && this.isCurrentUserLicensee()) {
+      const stageName = String(
+        this.item?.['current_stage_name'] ??
+        this.item?.['currentStageName'] ??
+        this.item?.['current_stage'] ??
+        this.item?.status ??
+        ''
+      ).toLowerCase();
+      const isAtPaymentStage = stageName.includes('awaiting_payment') ||
+        (stageName.includes('awaiting') && stageName.includes('payment'));
+
+      if (isAtPaymentStage) {
+        // Remove PAY — MAKE_PAYMENT is the correct button for licensees
+        result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
+        // Ensure MAKE_PAYMENT is present
+        if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+          result.unshift({
+            action: 'MAKE_PAYMENT',
+            label: 'Make Payment',
+            icon: 'payment',
+            color: 'primary',
+            tooltip: 'Pay registration fee from license fee wallet'
+          });
+        }
       }
     }
 

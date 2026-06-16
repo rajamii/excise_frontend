@@ -11,6 +11,7 @@ import { PaymentIntegrationService } from '../../../../../core/services/payment-
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import {
@@ -25,7 +26,7 @@ interface PaymentItem {
   amount: number;
   hoa: string;
   status: string;
-  procurementType?: string; // For hologram payments to track specific type
+  procurementType?: string;
 }
 
 interface TransitItem {
@@ -160,6 +161,7 @@ const LICENSE_RENEWAL_MODULE_CODE = '002';
 const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
   excise: '',
   brewery: '',
+  distillery: '',
   education: '',
   hologram: '',
   security_deposit: '',
@@ -182,6 +184,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   walletViewMode: WalletViewMode = 'wallets';
   activeTab: WalletTableTab = 'requisition';
   tablePageSizeOptions: number[] = [5, 10, 15];
+
+  modalContext: AddMoneyViewContext | null = null;
+  currentTxnId: string = '';
+  paymentAmount: number = 0;
+
   private tablePageSizeByTab: Record<WalletTableTab, number> = {
     requisition: 5,
     revalidation: 5,
@@ -219,7 +226,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private setCurrentMonthAutomatically(): void {
     const currentDate = new Date();
     const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0'); // Current month as 01-12
-    
+
     this.walletHistoryFilters.month = currentMonth;
     this.applyWalletHistoryFilters();
   }
@@ -280,41 +287,18 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   transitPaymentAgreed = false; // Added for modal agreement
 
   // Sample Data
-  requisitionData: PaymentItem[] = [
-    {
-      id: '1',
-      referenceNo: 'IBPS/03/EXCISE',
-      amount: 8.00,
-      hoa: '0039-00-105-45-01',
-      status: 'Approved'
-    }
-  ];
+  requisitionData: PaymentItem[] = [];
 
-  revalidationData: PaymentItem[] = [
-    {
-      id: '2',
-      referenceNo: 'REV/001/2025',
-      amount: 15.50,
-      hoa: '0039-00-105-45-02',
-      status: 'ApprovedRevalidationByCommissioner'
-    }
-  ];
+  revalidationData: PaymentItem[] = [];
 
-  cancellationData: PaymentItem[] = [
-    {
-      id: '3',
-      referenceNo: 'CAN/001/2025',
-      amount: 25.00,
-      hoa: '0039-00-105-45-03',
-      status: 'ApprovedCancellationByCommissioner'
-    }
-  ];
+  cancellationData: PaymentItem[] = [];
 
   transitData: TransitItem[] = [];
 
   rechargeData: RechargeItem[] = [];
 
   historyData: HistoryItem[] = [];
+
   private optimisticPaymentHistory: HistoryItem[] = [];
 
   hologramData: HologramItem[] = [];
@@ -328,13 +312,18 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     private enaRequisitionService: EnaRequisitionService,
     private paymentIntegrationService: PaymentIntegrationService,
     private licenseApplicationService: LicenseApplicationService,
-    private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService
+    private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
+    private unifiedDashboardService: UnifiedDashboardService
   ) { }
 
   ngOnInit(): void {
     this.loadOptimisticPaymentsFromStorage();
     this.loadPendingPaymentContextFromStorage();
     this.initializeWalletContextAndLoadData();
+    // Wallet summary/recharge/history are loaded via `initializeWalletContextAndLoadData()`, but
+    // module-specific lists (hologram procurements, cancellation, etc.) must be fetched separately.
+    // Without this, the Hologram tab stays empty and "Pay Now" never appears.
+    this.refreshModuleTabData();
 
     // Get query parameters
     this.route.queryParams.subscribe(params => {
@@ -381,6 +370,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // Only default to hologram if no tab is specified or if tab is hologram
         if (!params['tab'] || params['tab'] === 'hologram') {
           this.setActiveTab('hologram');
+          // Deep-link intent is "pay this now" - do not hide rows by month filter.
+          this.tabFilters = { ...this.tabFilters, month: '' };
 
           // Optionally highlight or scroll to the specific hologram item
           setTimeout(() => {
@@ -413,6 +404,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // also retries once data is available.
         this.persistPendingHologramDeepLinkRef(this.pendingHologramAutoPayRefNo);
         this.tryBuildHologramPendingContextFromRefNo(this.pendingHologramAutoPayRefNo, this.pendingHologramAutoPayType);
+        // Ensure procurements are loaded/refreshed after we capture the deep-link intent,
+        // so the Hologram tab can immediately show the pending row + "Pay Now" CTA.
+        this.loadHologramDataFromApi();
 
         // If a pending context already exists (e.g., restored from storage) but is missing the reference,
         // update it immediately so the "Reference" column does not show '-'.
@@ -444,42 +438,42 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   ngOnDestroy(): void {
+    this.unifiedDashboardService.clearUnifiedAppsCache();
     this.cleanupModalArtifacts();
     this.restoreMovedModals();
   }
 
-  private initializeWalletContextAndLoadData(): void {
-    const fromQuery = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
-    if (fromQuery) {
-      this.activeLicenseeId = fromQuery;
-      this.resolveAndApplyModuleTypeForLicense(fromQuery);
-      this.loadWalletDataFromBackend(fromQuery);
-      this.refreshModuleTabData();
-      return;
-    }
+  // payments/paymentconformationpage/payment-confirmation.component.ts
 
-    this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`)
-      .pipe(catchError(() => of([] as MyLicenseRow[])))
-      .subscribe((licenses) => {
-        const rows = Array.isArray(licenses) ? licenses : [];
-        const preferred = this.pickPreferredWalletLicense(rows);
-        const resolvedModuleType = this.resolveModuleTypeFromLicense(preferred);
-        const licenseeId =
-          String(preferred?.license_id ?? preferred?.licenseId ?? '').trim() ||
-          this.resolveActiveLicenseeIdFromSession();
+private initializeWalletContextAndLoadData(): void {
+  // 1. Check if the URL explicitly has an ID (usually for admin views)
+  const fromQuery = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
+  
+  // 2. GET THE SESSION ID FIRST (The source of truth for the logged-in user)
+  const sessionId = this.resolveActiveLicenseeIdFromSession();
 
-        this.applyResolvedModuleType(resolvedModuleType);
+  const licenseeId = fromQuery || sessionId;
 
-        if (!licenseeId) {
-          this.showErrorMessage('Licensee id not found in profile/session. Wallet data cannot be loaded.');
-          return;
-        }
-
-        this.activeLicenseeId = licenseeId;
-        this.loadWalletDataFromBackend(licenseeId);
-        this.refreshModuleTabData();
-      });
+  if (!licenseeId) {
+    this.showErrorMessage('No valid licensee identity found in session.');
+    return;
   }
+
+  this.activeLicenseeId = licenseeId;
+  
+  // Now resolve the module type ONLY for this specific ID, 
+  // don't let it pick a random preferred one from a list.
+  this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`).subscribe((licenses) => {
+      const rows = Array.isArray(licenses) ? licenses : [];
+      // Find the specific row matching the session ID
+      const activeRow = rows.find(r => (r.license_id || r.licenseId) === licenseeId);
+      
+      const resolvedModuleType = this.resolveModuleTypeFromLicense(activeRow);
+      this.applyResolvedModuleType(resolvedModuleType);
+      
+      this.loadWalletDataFromBackend(licenseeId);
+  });
+}
 
   private refreshModuleTabData(): void {
     this.loadHologramDataFromApi();
@@ -922,6 +916,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.isBreweryUser = true;
         if (hoa) {
           this.walletHoaByType.brewery = String(hoa);
+          // Backward compat: some UI actions still use walletType='excise' even for brewery users.
+          // Mirror the brewery HOA into the excise slot so the Payment Details modal auto-fills.
+          if (!String(this.walletHoaByType.excise || '').trim()) {
+            this.walletHoaByType.excise = String(hoa);
+          }
         }
       } else {
         this.exciseWalletBalance += balance;
@@ -1033,14 +1032,26 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
   private resolvePaymentForType(row: any): string {
     const sourceModule = String(this.pickAny(row, ['source_module', 'sourceModule'], '')).toLowerCase();
+    const hoa = String(this.pickAny(row, ['head_of_account', 'headOfAccount'], '') || '').trim();
+    const walletTypeRaw = this.normalizeWalletTypeKey(this.pickAny(row, ['wallet_type', 'walletType'], ''));
+    const walletType = walletTypeRaw || this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(hoa));
     const txnId = String(this.pickAny(row, ['transaction_id', 'transactionId'], '')).toUpperCase();
     const reference = String(this.pickAny(row, ['reference_no', 'referenceNo'], '')).toUpperCase();
 
+    // Prefer explicit wallet type when available (fixes license/security utilization rows
+    // incorrectly showing "Wallet Recharge" in those tabs).
+    if (walletType === 'license_fee') {
+      return 'Licensee Fee Paid';
+    }
+    if (walletType === 'security_deposit') {
+      return 'Security Fee Paid';
+    }
+
     if (sourceModule.includes('security') && sourceModule.includes('deposit')) {
-      return 'Security Deposit';
+      return 'Security Paid';
     }
     if (sourceModule.includes('license') && sourceModule.includes('fee')) {
-      return 'License Fee';
+      return 'Licensee Fee';
     }
     if (sourceModule.includes('hologram_procurement') || txnId.startsWith('HGP-')) {
       return 'Hologram Procurement';
@@ -1052,6 +1063,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return 'Revalidation';
     }
     if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
+      if (txnId.includes('ADDITIONAL_EXCISE')) return 'Transit - Additional Excise';
+      if (txnId.includes('EXCISE_DUTY')) return 'Transit - Excise Duty';
       return 'Transit';
     }
     if (sourceModule.includes('requisition') || txnId.startsWith('REQ-') || reference.startsWith('NHP/') || reference.startsWith('REQ/')) {
@@ -1171,9 +1184,17 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
         console.log('Fetched Hologram Procurements for Payment:', data);
-        this.hologramData = (data || [])
-          .filter(item => this.isForActiveLicense(item))
-          .map(item => {
+        // IMPORTANT:
+        // - For licensee users, the backend already scopes procurements to the logged-in user.
+        // - Many deployments do NOT include `licensee_id` / `user_id` fields in procurement rows
+        //   (often they only have numeric `licensee` ids), so client-side filtering via
+        //   `isForActiveLicense()` can incorrectly hide all rows and the Hologram tab stays empty.
+        // Keep filtering only when an explicit `licenseeId` was requested via query param (admin-style view).
+        const explicitLicenseeId = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
+        const procurements = (data || []) as any[];
+        const filtered = explicitLicenseeId ? procurements.filter(item => this.isForActiveLicense(item)) : procurements;
+
+        this.hologramData = filtered.map(item => {
             const localQty = Number(
               (item as any).requested_local_qty ??
               (item as any).requestedLocalQty ??
@@ -1237,8 +1258,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
               paymentDetails,
               paymentStatus: normalizedStatus
             } as HologramItem;
-          })
-          .filter(item => !!item.referenceNo);
+          }).filter(item => !!item.referenceNo);
 
         if (this.pendingHologramAutoPayRefNo) {
           this.tryBuildHologramPendingContextFromRefNo(
@@ -1259,7 +1279,46 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
 
     const context = this.pendingWalletPaymentContext;
-    if (!context || context.tab !== 'hologram') return;
+    if (!context) return;
+
+    // License fee / security deposit: clear the synthetic "Pending Payment" row after we observe a
+    // successful debit/utilization for the same reference *and* wallet type in wallet history.
+    if (context.tab === 'license_fee' || context.tab === 'security_deposit') {
+      const ref = String(context.referenceNo || '').trim().toUpperCase();
+      if (!ref) return;
+
+      const walletType = String(context.tab).trim().toLowerCase();
+      const hasMatchingPaidTxn = this.historyData.some((txn) => {
+        const txnRef = String(txn?.reference || '').trim().toUpperCase();
+        if (txnRef !== ref) return false;
+
+        const status = String(txn?.status || '').toLowerCase();
+        const isSuccessful = status.includes('success') || status.includes('paid') || status.includes('completed');
+        if (!isSuccessful) return false;
+
+        const type = String(txn?.type || '').toLowerCase();
+        const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+        if (!isDebitLike) return false;
+
+        const txnWalletType = String((txn as any)?.walletType || '').trim().toLowerCase();
+        if (txnWalletType) return txnWalletType === walletType;
+
+        // Fallback for older payloads where walletType isn't available.
+        const paymentFor = String(txn?.paymentFor || '').toLowerCase();
+        if (walletType === 'license_fee') return paymentFor.includes('license');
+        if (walletType === 'security_deposit') return paymentFor.includes('security');
+        return false;
+      });
+
+      if (hasMatchingPaidTxn) {
+        this.pendingWalletPaymentContext = null;
+        this.hasHandledPendingWalletPayment = true;
+        this.clearPendingPaymentContextFromStorage();
+      }
+      return;
+    }
+
+    if (context.tab !== 'hologram') return;
 
     const ref = String(context.referenceNo || '').trim().toUpperCase();
     if (!ref) return;
@@ -1356,7 +1415,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         // Map backend data to PaymentItem interface
         this.cancellationData = allRows.filter(item =>
           this.isForActiveLicense(item) && (
-          this.isCancellationPaymentQueueStatus(item.status)
+            this.isCancellationPaymentQueueStatus(item.status)
           )
         ).map(item => ({
           id: item.id,
@@ -1522,10 +1581,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
-    
+
     // Set current month automatically when opening wallet history
     this.setCurrentMonthAutomatically();
-    
+
     this.updateWalletHistoryPagination();
     const modalEl = document.getElementById('walletHistoryModal');
     if (modalEl) {
@@ -1544,10 +1603,10 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
-    
+
     // Set current month automatically when switching wallets
     this.setCurrentMonthAutomatically();
-    
+
     this.updateWalletHistoryPagination();
   }
 
@@ -1577,27 +1636,27 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   applyWalletHistoryFilters(): void {
     const txns = this.getActiveWalletTxns();
     const f = this.walletHistoryFilters;
-    
+
     this.walletHistoryFiltered = txns.filter(t => {
       // Handle transaction ID filter
       const txnIdOk = f.transactionId ? t.id.toLowerCase().includes(f.transactionId.toLowerCase()) : true;
-      
+
       // Handle monthly filter
       const monthOk = f.month ? this.isTransactionInMonth(t.date, f.month) : true;
-      
+
       // Handle date range filter
       const tDate = t.date;
       const afterFrom = f.from ? tDate >= f.from : true;
       const beforeTo = f.to ? tDate <= f.to : true;
-      
+
       // Handle other filters
       const typeOk = f.type ? t.type === (f.type as any) : true;
       const minOk = f.minAmount ? t.amount >= Number(f.minAmount) : true;
       const maxOk = f.maxAmount ? t.amount <= Number(f.maxAmount) : true;
-      
+
       return txnIdOk && monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
     });
-    
+
     // Reset to first page when filters change
     this.walletHistoryCurrentPage = 1;
     this.updateWalletHistoryPagination();
@@ -1641,43 +1700,43 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const maxVisiblePages = 5;
     const startPage = Math.max(1, this.walletHistoryCurrentPage - Math.floor(maxVisiblePages / 2));
     const endPage = Math.min(this.walletHistoryTotalPages, startPage + maxVisiblePages - 1);
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-    
+
     return pages;
   }
 
   // Monthly filter methods
-  getAvailableMonths(): Array<{value: string, label: string}> {
-    const months: Array<{value: string, label: string}> = [];
-    
+  getAvailableMonths(): Array<{ value: string, label: string }> {
+    const months: Array<{ value: string, label: string }> = [];
+
     // Simple month names from January to December
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    
+
     // Add all months option
     months.push({ value: '', label: 'All Months' });
-    
+
     // Add each month
     monthNames.forEach((monthName, index) => {
       const monthValue = String(index + 1).padStart(2, '0'); // 01, 02, etc.
       months.push({ value: monthValue, label: monthName });
     });
-    
+
     return months;
   }
 
   isTransactionInMonth(transactionDate: string, selectedMonth: string): boolean {
     if (!transactionDate || !selectedMonth) return false;
-    
+
     try {
       // Handle different date formats to extract month number
       let monthNumber: string | undefined;
-      
+
       if (transactionDate.includes('-')) {
         // Format: "2026-03-15" - extract month (03)
         const parts = transactionDate.split('-');
@@ -1697,7 +1756,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           monthNumber = String(date.getMonth() + 1).padStart(2, '0');
         }
       }
-      
+
       return monthNumber === selectedMonth;
     } catch (error) {
       console.warn('Error parsing transaction date:', transactionDate, error);
@@ -1734,10 +1793,38 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
   }
 
+  private isFeePaid(walletType: 'license_fee' | 'security_deposit', referenceNo: string): boolean {
+    const ref = String(referenceNo || '').trim().toUpperCase();
+    if (!ref) return false;
+
+    return this.historyData.some((txn) => {
+      const txnRef = String(txn?.reference || '').trim().toUpperCase();
+      if (txnRef !== ref) return false;
+
+      const status = String(txn?.status || '').toLowerCase();
+      const isSuccessful = status.includes('success') || status.includes('paid') || status.includes('completed');
+      if (!isSuccessful) return false;
+
+      const type = String(txn?.type || '').toLowerCase();
+      const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+      if (!isDebitLike) return false;
+
+      const txnWalletType = String((txn as any)?.walletType || '').trim().toLowerCase();
+      if (txnWalletType) return txnWalletType === walletType;
+
+      const paymentFor = String(txn?.paymentFor || '').toLowerCase();
+      if (walletType === 'license_fee') return paymentFor.includes('license');
+      if (walletType === 'security_deposit') return paymentFor.includes('security');
+      return false;
+    });
+  }
+
   private syncPendingNewLicenseContextToActiveTab(): void {
+    if (!this.walletDataLoaded) return;
+
     const ctx = this.pendingWalletPaymentContext;
     if (!ctx) return;
-    if (String(ctx.itemType || '').trim().toLowerCase() !== 'new-license') return;
+    if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
     if (!this.pendingNewLicenseApplicationId) {
       this.pendingNewLicenseApplicationId = String(ctx.id || '').trim();
     }
@@ -1745,7 +1832,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       this.pendingNewLicenseReferenceNo = String(ctx.referenceNo || '').trim();
     }
 
+    const refNo = this.pendingNewLicenseReferenceNo || ctx.referenceNo;
+
     if (this.activeTab === 'license_fee') {
+      if (this.isFeePaid('license_fee', refNo)) {
+        return;
+      }
       const amount = ctx.tab === 'license_fee'
         ? ctx.amount
         : (this.pendingNewLicenseLicenseFeeAmount || ctx.amount);
@@ -1761,6 +1853,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     }
 
     if (this.activeTab === 'security_deposit') {
+      const isRenewal = String(ctx.itemType || '').trim().toLowerCase() === 'license-renewal'
+                     || String(refNo || '').trim().toUpperCase().startsWith('LRA/');
+      if (isRenewal) {
+        return;
+      }
+      if (this.isFeePaid('security_deposit', refNo)) {
+        return;
+      }
       const amount = ctx.tab === 'security_deposit'
         ? ctx.amount
         : (this.pendingNewLicenseSecurityFeeAmount || ctx.amount);
@@ -1784,6 +1884,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (normalized === 'license_fee' || normalized === 'licensefee') return 'license_fee';
     if (normalized === 'security_deposit' || normalized === 'securitydeposit') return 'security_deposit';
     return null;
+  }
+
+  private isLicenseFeeWorkflowPaymentType(value: any): boolean {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'new-license' || normalized === 'license-renewal';
   }
 
   private capturePendingWalletPaymentContext(params: any): void {
@@ -1816,8 +1921,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    // New license flow: amount can be missing/0 in deep-link; we will resolve from backend.
-    if (type === 'new-license') {
+    // New license / renewal flow: amount can be missing/0 in deep-link; we will resolve from backend.
+    if (this.isLicenseFeeWorkflowPaymentType(type)) {
       this.pendingNewLicenseApplicationId = id;
       this.pendingNewLicenseReferenceNo = referenceNo;
       if (securityAmount > 0) {
@@ -1844,7 +1949,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     if (!applicationId) return;
     if (this.pendingNewLicenseLicenseFeeAmount > 0 && this.pendingNewLicenseSecurityFeeAmount > 0) return;
 
-    this.licenseApplicationService.getNewLicenseApplicationById(applicationId).pipe(
+    const contextType = String(this.pendingWalletPaymentContext?.itemType || '').trim().toLowerCase();
+    const detail$ = contextType === 'license-renewal' || applicationId.toUpperCase().startsWith('LRA/') || applicationId.toUpperCase().startsWith('RSBM/')
+      ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
+      : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
+
+    detail$.pipe(
       timeout(15000),
       catchError(() => of(null))
     ).subscribe((app: any) => {
@@ -1859,7 +1969,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       // If current pending context is for new-license and has 0 amount, update it.
       const ctx = this.pendingWalletPaymentContext;
       if (!ctx) return;
-      if (String(ctx.itemType || '').trim().toLowerCase() !== 'new-license') return;
+      if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
       if (ctx.amount > 0) return;
 
       const resolvedAmount = ctx.tab === 'security_deposit'
@@ -1880,9 +1990,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     // New license deep-link: show Pay Now row even if amount is still resolving.
     if ((tab === 'license_fee' || tab === 'security_deposit')
       && this.pendingWalletPaymentContext
-      && String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() === 'new-license'
+      && this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
       && this.pendingWalletPaymentContext.tab === tab
       && this.activeTab === tab) {
+      if (tab === 'security_deposit') {
+        return false;
+      }
       return true;
     }
 
@@ -1915,6 +2028,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return this.activeTab === tab;
     }
     return context.tab === tab && this.activeTab === tab;
+  }
+
+  showSecurityRechargeAlert(): boolean {
+    if (!this.pendingWalletPaymentContext) return false;
+    const refNo = this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext.referenceNo;
+    if (!refNo) return false;
+
+    const isNewLicense = this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
+      && String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() !== 'license-renewal'
+      && !String(refNo).trim().toUpperCase().startsWith('LRA/');
+
+    if (!isNewLicense) return false;
+
+    return !this.isFeePaid('security_deposit', refNo);
   }
 
   getPendingPaymentModuleLabel(): string {
@@ -1950,6 +2077,43 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
+    if (context.tab === 'license_fee' && context.referenceNo && context.referenceNo.startsWith('SBM/')) {
+      this.isHandlingPendingWalletPayment = true;
+      const sbmId = String(context.id || context.referenceNo).trim();
+      console.log('[SBM Pay] Checking parent license fee status for:', sbmId);
+      this.salesmanBarmanRegistrationService.getSalesmanBarmanDetail(sbmId).subscribe({
+        next: (res: any) => {
+          this.isHandlingPendingWalletPayment = false;
+          console.log('[SBM Pay] Detail response:', {
+            is_parent_license_fee_paid: res?.is_parent_license_fee_paid,
+            new_license_application_id: res?.new_license_application_id,
+            application_id: res?.application_id
+          });
+          if (res && res.is_parent_license_fee_paid === false) {
+            Swal.fire({
+              icon: 'error',
+              title: 'License Fee Unpaid',
+              text: 'Pay the license fee first, then only you can pay for salesman/barman application.'
+            });
+            this.resetPendingPaymentAttemptState();
+            return;
+          }
+
+          this.continueOpenPendingWalletPaymentConfirmation(context);
+        },
+        error: (err) => {
+          console.warn('[SBM Pay] Detail API error, proceeding anyway:', err);
+          this.isHandlingPendingWalletPayment = false;
+          this.continueOpenPendingWalletPaymentConfirmation(context);
+        }
+      });
+      return;
+    }
+
+    this.continueOpenPendingWalletPaymentConfirmation(context);
+  }
+
+  private continueOpenPendingWalletPaymentConfirmation(context: any): void {
     const deductionAmount = Number(context.amount || 0);
     const currentBalance = this.getAvailableBalanceForModuleTab(context.tab);
     if (deductionAmount <= 0) {
@@ -1967,6 +2131,19 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         }
         Swal.fire('Fee Not Configured', 'License fee / security deposit amount is not available for this application.', 'error');
       }
+      if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
+        this.ensurePendingNewLicenseAmountsResolved();
+        const resolvedAmount = context.tab === 'security_deposit'
+          ? this.pendingNewLicenseSecurityFeeAmount
+          : this.pendingNewLicenseLicenseFeeAmount;
+        if (resolvedAmount > 0) {
+          this.pendingWalletPaymentContext = { ...context, amount: resolvedAmount };
+          this.persistPendingPaymentContextToStorage();
+          setTimeout(() => this.openPendingWalletPaymentConfirmation(), 0);
+          return;
+        }
+        Swal.fire('Fee Not Configured', 'Renewal license fee / security deposit amount is not available for this application.', 'error');
+      }
       this.resetPendingPaymentAttemptState();
       return;
     }
@@ -1983,6 +2160,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.pendingWalletPaymentDeclarationAccepted = false;
     this.showPendingWalletConfirmationModal = true;
   }
+
 
   closePendingWalletPaymentConfirmation(): void {
     this.showPendingWalletConfirmationModal = false;
@@ -2062,21 +2240,32 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         this.refreshWalletData();
         this.loadCancellationDataFromApi();
         this.loadHologramDataFromApi();
-        // New-license convenience: when user came from "Proceed to Pay" popup we deep-link into
-        // license_fee first and optionally chain security_deposit next.
-        if (context.tab === 'license_fee' && this.chainedNewLicenseSecurityAmount > 0) {
-          const nextAmount = this.chainedNewLicenseSecurityAmount;
-          this.chainedNewLicenseSecurityAmount = 0;
-          this.pendingWalletPaymentContext = {
-            ...context,
-            tab: 'security_deposit',
-            amount: nextAmount
-          };
-          this.hasHandledPendingWalletPayment = false;
-          this.isHandlingPendingWalletPayment = false;
-          this.setActiveTab('security_deposit');
-          this.persistPendingPaymentContextToStorage();
-          return;
+        this.unifiedDashboardService.clearUnifiedAppsCache();
+        // New-license / renewal convenience: chain payments bidirectionally if one is unpaid
+        const refNo = this.pendingNewLicenseReferenceNo || context.referenceNo;
+        const isLicenseFlow = this.isLicenseFeeWorkflowPaymentType(context.itemType);
+
+        if (isLicenseFlow) {
+          const isRenewal = String(context.itemType || '').trim().toLowerCase() === 'license-renewal'
+                         || String(refNo || '').trim().toUpperCase().startsWith('LRA/');
+          if (context.tab === 'license_fee') {
+            // No manual Pay Now tab redirection for security deposit since it is paid on recharge.
+          } else if (context.tab === 'security_deposit') {
+            const licensePaid = this.isFeePaid('license_fee', refNo);
+            const nextAmount = this.pendingNewLicenseLicenseFeeAmount || 0;
+            if (!licensePaid && nextAmount > 0) {
+              this.pendingWalletPaymentContext = {
+                ...context,
+                tab: 'license_fee',
+                amount: nextAmount
+              };
+              this.hasHandledPendingWalletPayment = false;
+              this.isHandlingPendingWalletPayment = false;
+              this.setActiveTab('license_fee');
+              this.persistPendingPaymentContextToStorage();
+              return;
+            }
+          }
         }
         this.maybeForceRefreshAfterNewLicenseApproval(context);
         this.finishPendingWalletPaymentHandling();
@@ -2109,19 +2298,24 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const typeToken = String(context?.itemType || '').trim().toLowerCase();
     const refToken = String(context?.referenceNo || '').trim().toUpperCase();
     const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/');
-    if (!isNewLicense) return;
+    const isRenewal = typeToken.includes('license-renewal') || refToken.startsWith('LRA/') || refToken.startsWith('RSBM/');
+    if (!isNewLicense && !isRenewal) return;
 
     const applicationId = String(this.pendingNewLicenseApplicationId || context?.id || '').trim();
     if (!applicationId) return;
 
-    const guardKey = `new_license_force_refresh_after_approval_${applicationId}`;
+    const guardKey = `${isRenewal ? 'license_renewal' : 'new_license'}_force_refresh_after_approval_${applicationId}`;
     try {
       if (sessionStorage.getItem(guardKey) === '1') return;
     } catch {
       // ignore storage errors
     }
 
-    this.licenseApplicationService.getNewLicenseApplicationById(applicationId).pipe(
+    const detail$ = isRenewal
+      ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
+      : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
+
+    detail$.pipe(
       timeout(15000),
       catchError(() => of(null))
     ).subscribe((app: any) => {
@@ -2320,8 +2514,14 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         if (String(context.itemType || '').trim().toLowerCase() === 'salesman-barman-registration') {
           return this.salesmanBarmanRegistrationService.payRegistrationLicenseFee(String(context.id));
         }
+        if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
+          return this.licenseApplicationService.payLicenseRenewalFee(String(context.id), new FormData());
+        }
         return this.licenseApplicationService.payNewLicenseFee(String(context.id), new FormData());
       case 'security_deposit':
+        if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
+          return this.licenseApplicationService.payLicenseRenewalSecurityFee(String(context.id));
+        }
         return this.licenseApplicationService.payNewLicenseSecurityFee(String(context.id));
       default:
         return of({});
@@ -2563,13 +2763,158 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   }
 
   addMoney(walletType: string): void {
-    const normalizedWalletType = this.normalizeAddMoneyWalletType(walletType);
-    if (!normalizedWalletType) {
-      this.showErrorMessage(`Unsupported wallet type: ${walletType}`);
+
+    let moduleLabel = 'Wallet Advance';
+    let walletLabel = '';
+    let hoa = '';
+    let modalWalletType: AddMoneyWalletType = 'excise';
+
+    // Use the constants already defined at the top of your file
+    if (walletType === 'license_fee') {
+      walletLabel = 'License Fee Wallet';
+      hoa = LICENSE_FEE_HOA; // '0039-00-800-45-02'
+      modalWalletType = 'license_fee';
+      moduleLabel = 'Manufacturing';
+    } else if (walletType === 'security_deposit') {
+      walletLabel = 'Security Deposit Wallet';
+      hoa = SECURITY_DEPOSIT_HOA_SENTINEL; // 'non'
+      modalWalletType = 'security_deposit';
+      moduleLabel = 'Manufacturing';
+    } else if (walletType === 'excise') {
+      walletLabel = 'Excise Duty';
+      modalWalletType = 'excise';
+      hoa = String(this.walletHoaByType?.excise || '').trim();
+    } else if (walletType === 'education_cess' || walletType === 'education') {
+      walletLabel = 'Education Cess Wallet';
+      modalWalletType = 'education';
+      hoa = String(this.walletHoaByType?.education || '').trim();
+    } else if (walletType === 'hologram') {
+      walletLabel = 'Hologram Wallet';
+      modalWalletType = 'hologram';
+      hoa = String(this.walletHoaByType?.hologram || '').trim();
+    } else {
+      console.warn(`Unsupported wallet type "${walletType}", defaulting to excise.`);
+      walletLabel = 'Excise Duty';
+      modalWalletType = 'excise';
+      hoa = String(this.walletHoaByType?.excise || '').trim();
+    }
+
+    this.modalContext = { walletType: modalWalletType , moduleLabel, walletLabel, hoa };
+    this.currentTxnId = this.generateWalletTransactionId(modalWalletType);
+    if (modalWalletType === 'license_fee') {
+      this.paymentAmount = this.pendingNewLicenseLicenseFeeAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else if (modalWalletType === 'security_deposit') {
+      this.paymentAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else {
+      this.paymentAmount = 0;
+    }
+
+    // Show the modal
+    const modalElement = document.getElementById('addMoneyModal');
+    if (modalElement) {
+      let modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (!modal) modal = new (window as any).bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  // --- ADD THIS: Close Modal Handler ---
+  closeAddMoneyModal(): void {
+    this.modalContext = null;
+    const modalElement = document.getElementById('addMoneyModal');
+    if (modalElement) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+    }
+
+    // Safety cleanup just in case
+    setTimeout(() => {
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+      const backdrops = document.querySelectorAll('.modal-backdrop');
+      backdrops.forEach((backdrop) => backdrop.remove());
+    }, 300);
+  }
+
+
+  onProceedPayment(amount: number): void {
+    if (amount <= 0 || !this.modalContext) return;
+
+    const type = this.modalContext.walletType;
+    const licenseeId = String(this.activeLicenseeId || this.resolveActiveLicenseeIdFromSession() || '').trim();
+
+    if (!licenseeId) {
+      this.showErrorMessage('Unable to proceed: licensee id not found.');
       return;
     }
 
-    this.openUnifiedAddMoneyView(normalizedWalletType);
+    let apiCall$;
+
+    // BRANCHING LOGIC: Determine which backend "door" to open
+    if (type === 'license_fee') {
+      // Hits: /billdesk/initiate/license-fee/
+      apiCall$ = this.paymentIntegrationService.initiateBilldeskLicenseFee({
+        transaction_id: this.currentTxnId,
+        amount: amount,
+        payer_id: licenseeId,
+        payment_module_code: '002' // Standard for License Fee
+      });
+    } else if (type === 'security_deposit') {
+      // Hits: /billdesk/initiate/security-deposit/
+      apiCall$ = this.paymentIntegrationService.initiateBilldeskSecurityDeposit({
+        transaction_id: this.currentTxnId,
+        amount: amount,
+        licensee_id: licenseeId,
+        licensee_name: this.activeLicenseeName || licenseeId,
+        bank_fdr_code: 'SIKFDR',
+        payment_module_code: '002' // Standard for Manufacturing/Security
+      });
+    } else {
+      // Hits: /billdesk/initiate/ (The generic door)
+      apiCall$ = this.paymentIntegrationService.initiateBilldeskWalletRecharge({
+        transaction_id: this.currentTxnId,
+        amount: amount,
+        wallet_type: type,
+        licensee_id: licenseeId,
+        payer_id: licenseeId,
+        head_of_account: this.modalContext.hoa,
+      });
+    }
+
+    apiCall$.subscribe({
+      next: (response: any) => {
+        if (response.already_pending) {
+          Swal.fire('Pending', 'A transaction is already pending.', 'warning');
+          return;
+        }
+
+        this.closeAddMoneyModal();
+
+        // Launch SDK with updated callback for the Success Receipt
+        this.paymentIntegrationService.launchBillDeskSDK(response, (txnResult: any) => {
+          const isSuccess = txnResult && txnResult.auth_status === '0300';
+
+          // Pass queryParams so your success component isn't blank
+          this.router.navigate(['/dashboard/wallet-recharge/success'], {
+            queryParams: {
+              transactionId: response.transaction_id || this.currentTxnId,
+              walletType: type,
+              hoa: this.modalContext?.hoa || '',
+              amount: amount,
+              status: isSuccess ? 'success' : 'failed',
+              createdAt: new Date().toISOString()
+            }
+          });
+        });
+      },
+      error: (err) => {
+        this.closeAddMoneyModal();
+        this.paymentIntegrationService.handleInitiationError(err, this.currentTxnId);
+      }
+    });
   }
 
   private normalizeAddMoneyWalletType(walletType: string): AddMoneyWalletType | null {
@@ -2590,7 +2935,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.cleanupModalArtifacts();
     this.selectedAddMoneyContext = this.getAddMoneyContext(walletType);
     this.addMoneyTransactionId = this.generateWalletTransactionId(walletType);
-    this.addMoneyAmount = 0;
+    if (walletType === 'license_fee') {
+      this.addMoneyAmount = this.pendingNewLicenseLicenseFeeAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else if (walletType === 'security_deposit') {
+      this.addMoneyAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || this.pendingWalletPaymentContext?.amount || 0;
+    } else {
+      this.addMoneyAmount = 0;
+    }
 
     const modalEl = document.getElementById('addMoneyModal');
     if (modalEl) {
@@ -2664,6 +3015,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const prefixByWallet: Record<AddMoneyWalletType, string> = {
       excise: 'EX',
       brewery: 'BR',
+      distillery: 'DI',
       education: 'EC',
       hologram: 'HG',
       security_deposit: 'SD',
@@ -2716,15 +3068,6 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       return;
     }
 
-    // For non-security_deposit and non-license_fee, HOA is mandatory.
-    if (context.walletType !== 'license_fee' && context.walletType !== 'security_deposit') {
-      const headOfAccount = String(context.hoa || '').trim();
-      if (!headOfAccount) {
-        this.showErrorMessage('Unable to proceed: Head Of Account not found.');
-        return;
-      }
-    }
-
     Swal.fire({
       title: 'Redirecting to BillDesk',
       text: 'Preparing payment request...',
@@ -2737,31 +3080,57 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const request$ =
       context.walletType === 'license_fee'
         ? this.paymentIntegrationService.initiateBilldeskLicenseFee({
-            transaction_id: transactionId,
-            amount,
-            payer_id: licenseeId,
-            payment_module_code: LICENSE_RENEWAL_MODULE_CODE
-          })
+          transaction_id: transactionId,
+          amount,
+          payer_id: licenseeId,
+          payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+        })
         : context.walletType === 'security_deposit'
           ? this.paymentIntegrationService.initiateBilldeskSecurityDeposit({
-              transaction_id: transactionId,
-              amount,
-              licensee_id: licenseeId,
-              licensee_name: this.activeLicenseeName || licenseeId,
-              bank_fdr_code: 'SIKFDR',
-              payment_module_code: LICENSE_RENEWAL_MODULE_CODE
-            })
+            transaction_id: transactionId,
+            amount,
+            licensee_id: licenseeId,
+            licensee_name: this.activeLicenseeName || licenseeId,
+            bank_fdr_code: 'SIKFDR',
+            payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+          })
           : this.paymentIntegrationService.initiateBilldeskWalletRecharge({
-              transaction_id: transactionId,
-              wallet_type: walletType,
-              head_of_account: String(context.hoa || '').trim(),
-              amount
-            });
+             transaction_id: transactionId,
+             wallet_type: walletType,
+             licensee_id: licenseeId,
+             payer_id: licenseeId,
+             head_of_account: String(context.hoa || '').trim(),
+             amount
+           });
 
     request$.pipe(timeout(30000)).subscribe({
       next: (response) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
+
+        const merchantId = String((response as any)?.merchantId || (response as any)?.merchant_id || '').trim();
+        const bdOrderId = String((response as any)?.bdOrderId || (response as any)?.bd_order_id || '').trim();
+        const authToken = String((response as any)?.authToken || (response as any)?.auth_token || '').trim();
+
+        // Prefer BillDesk Web SDK when possible so we get a responseHandler callback in the SPA.
+        if (merchantId && bdOrderId && authToken) {
+          this.paymentIntegrationService.launchBillDeskSDK(response as any, (txn: any) => {
+            const isSuccess = txn && String(txn.auth_status || '').trim() === '0300';
+            this.router.navigate(['/dashboard/wallet-recharge/success'], {
+              queryParams: {
+                transactionId: String((response as any)?.transaction_id || (response as any)?.transactionId || this.addMoneyTransactionId || '').trim(),
+                walletType: context.walletType,
+                hoa: String(context.hoa || '').trim(),
+                amount,
+                status: isSuccess ? 'success' : 'failed',
+                createdAt: new Date().toISOString()
+              }
+            });
+            // Refresh wallet after callback (server should have credited on success).
+            setTimeout(() => this.refreshWalletData(), 800);
+          });
+          return;
+        }
 
         const billdeskUrl = String((response as any)?.billdeskUrl || (response as any)?.billdesk_url || '').trim();
         const requestMsg = String((response as any)?.requestMsg || (response as any)?.request_msg || '').trim();
@@ -2810,6 +3179,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = url;
+    form.target = 'billdeskChildWindow';
 
     const input = document.createElement('input');
     input.type = 'hidden';
@@ -2818,6 +3188,13 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
 
     form.appendChild(input);
     document.body.appendChild(form);
+
+    try {
+      // Ensure the payment runs in a child window so the SPA doesn't get replaced/closed by gateway pages.
+      window.open('', 'billdeskChildWindow', 'noopener,noreferrer');
+    } catch {
+      // ignore; form submit will still work (may reuse same tab depending on browser policy)
+    }
     form.submit();
   }
 
@@ -3454,40 +3831,47 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       default:
         rows = [];
     }
-    
+
     // Apply filters
     return this.applyTabFilters(rows);
   }
 
   applyTabFilters(rows: any[]): any[] {
     const f = this.tabFilters;
-    
+
     return rows.filter(row => {
       // Transaction ID filter
       const txnId = row.txnId || row.id || row.reference || '';
       const txnIdOk = f.transactionId ? txnId.toLowerCase().includes(f.transactionId.toLowerCase()) : true;
-      
+
       // Date filters
       const rowDate = row.dateTime || row.date || '';
-      const dateStr = rowDate ? new Date(rowDate).toISOString().split('T')[0] : '';
-      
+      let dateStr = '';
+      if (rowDate) {
+        const parsed = new Date(rowDate);
+        if (!Number.isNaN(parsed.getTime())) {
+          dateStr = parsed.toISOString().split('T')[0];
+        }
+      }
+
       // Month filter
-      const monthOk = f.month ? (dateStr && dateStr.substring(0, 7) === f.month) : true;
-      
+      // If row date is not parseable, do not hide it (important for pending items).
+      const monthOk = f.month ? (!dateStr || dateStr.substring(0, 7) === f.month) : true;
+
       // Date range filter
-      const afterFrom = f.from ? dateStr >= f.from : true;
-      const beforeTo = f.to ? dateStr <= f.to : true;
-      
+      const afterFrom = f.from ? (!dateStr || dateStr >= f.from) : true;
+      const beforeTo = f.to ? (!dateStr || dateStr <= f.to) : true;
+
       // Type filter
       const rowType = String(row.type || row.transactionType || '');
       const rowStatus = String(row.status || '');
-      
+
       let typeOk = true;
       if (f.type) {
         const filterType = f.type.toLowerCase();
         const typeLower = rowType.toLowerCase();
         const statusLower = rowStatus.toLowerCase();
-        
+
         if (filterType === 'refunded') {
           typeOk = typeLower.includes('refund') || statusLower.includes('refund') || typeLower === filterType;
         } else if (filterType === 'credited') {
@@ -3498,12 +3882,12 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
           typeOk = typeLower === filterType || statusLower === filterType;
         }
       }
-      
+
       // Amount filters
       const amount = Number(row.amount || 0);
       const minOk = f.minAmount ? amount >= Number(f.minAmount) : true;
       const maxOk = f.maxAmount ? amount <= Number(f.maxAmount) : true;
-      
+
       return txnIdOk && monthOk && afterFrom && beforeTo && typeOk && minOk && maxOk;
     });
   }
@@ -3597,7 +3981,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   getWalletTypeLabel(walletTypeOrHoa: string): string {
     const type = String(walletTypeOrHoa || '').trim().toLowerCase();
     const inferredType = type || this.inferWalletTypeFromHoa(walletTypeOrHoa);
-    
+
     switch (inferredType) {
       case 'excise':
       case 'brewery':

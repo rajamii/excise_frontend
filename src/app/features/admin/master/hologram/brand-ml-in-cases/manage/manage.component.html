@@ -1,0 +1,31 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    <mat-icon style="font-size:20px;height:20px;width:20px;vertical-align:middle;margin-right:6px;">straighten</mat-icon>
+    {{ isEditMode ? 'Edit' : 'Add' }} Brand ML in Cases
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>ML</mat-label>
+        <input matInput type="number" name="ml" required [(ngModel)]="row.ml" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Pieces in Case</mat-label>
+        <input matInput type="number" name="piecesInCase" required [(ngModel)]="row.piecesInCase" />
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">
+        <mat-icon style="font-size:16px;height:16px;width:16px;margin-right:4px;">save</mat-icon>
+        Save
+      </button>
+      <button matButton="filled" color="warn" (click)="onCancel()">
+        <mat-icon style="font-size:16px;height:16px;width:16px;margin-right:4px;">close</mat-icon>
+        Cancel
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

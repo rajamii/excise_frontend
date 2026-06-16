@@ -44,6 +44,12 @@ export class MasterService {
   private readonly LOCATION_CATEGORY_URL = `${this.BASE_URL}/location-categories`;
   private readonly LOCATION_SUBCATEGORY_URL = `${this.BASE_URL}/location-subcategories`;
   private readonly WARD_URL = `${this.BASE_URL}/wards`;
+  private readonly HOLOGRAM_SUPPLIER_URL = `${environment.apiBaseUrl}/masters/supply_chain/hologram-suppliers`;
+  private readonly BULK_SPIRIT_URL = `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit`;
+  private readonly ENA_DISTILLERY_URL = `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types`;
+  private readonly TRANSIT_PERMIT_URL = `${environment.apiBaseUrl}/masters/supply_chain/transit-permit`;
+  private readonly DISTRIBUTOR_DATA_URL = `${environment.apiBaseUrl}/masters/supply_chain/distributor-data`;
+  private readonly LIQUOR_DATA_URL = `${environment.apiBaseUrl}/masters/supply_chain/liquor-data`;
 
   constructor(private http: HttpClient) {
 
@@ -501,5 +507,77 @@ export class MasterService {
 
   deleteWard(id: number): Observable<any> {
     return this.http.delete(`${this.WARD_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // HOLOGRAM SUPPLIER ENDPOINTS
+  // =========================================================================
+
+  getHologramSuppliers(): Observable<any> {
+    return this.http.get(`${this.HOLOGRAM_SUPPLIER_URL}/`);
+  }
+
+  getHologramSupplier(id: number): Observable<any> {
+    return this.http.get(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/`);
+  }
+
+  createHologramSupplier(data: any): Observable<any> {
+    return this.http.post(`${this.HOLOGRAM_SUPPLIER_URL}/create/`, data);
+  }
+
+  updateHologramSupplier(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/update/`, data);
+  }
+
+  deleteHologramSupplier(id: number): Observable<any> {
+    return this.http.delete(`${this.HOLOGRAM_SUPPLIER_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // HOLOGRAM (TRANSIT PERMIT) MASTER ENDPOINTS
+  // =========================================================================
+
+  getTransitPermitDistributorData(): Observable<any> {
+    return this.http.get(`${this.DISTRIBUTOR_DATA_URL}/`);
+  }
+
+  getBrandMlInCases(): Observable<any> {
+    return this.http.get(`${this.TRANSIT_PERMIT_URL}/brand-ml-in-cases/`);
+  }
+
+  getMasterBottleTypes(activeOnly = false): Observable<any> {
+    const activeFlag = activeOnly ? 'true' : 'false';
+    return this.http.get(`${this.LIQUOR_DATA_URL}/bottle-types/?active_only=${activeFlag}`);
+  }
+
+  getLiquorTypes(): Observable<any> {
+    return this.http.get(`${this.LIQUOR_DATA_URL}/liquor-types/`);
+  }
+
+  getMasterBrands(q = ''): Observable<any> {
+    const query = String(q || '').trim();
+    const suffix = query ? `?q=${encodeURIComponent(query)}` : '';
+    return this.http.get(`${this.LIQUOR_DATA_URL}/master-brands/${suffix}`);
+  }
+
+  getLiquorCategories(includeZero = false): Observable<any> {
+    const flag = includeZero ? 'true' : 'false';
+    return this.http.get(`${this.LIQUOR_DATA_URL}/liquor-categories/?include_zero=${flag}`);
+  }
+
+  createMasterBrand(payload: { brandName: string; factoryId?: number | null; liquorTypeId?: number | null }): Observable<any> {
+    return this.http.post(`${this.LIQUOR_DATA_URL}/master-brands/create/`, payload);
+  }
+
+  // =========================================================================
+  // BULK SPIRIT (ENA) ENDPOINTS
+  // =========================================================================
+
+  getEnaBulkSpiritTypes(): Observable<any> {
+    return this.http.get(`${this.BULK_SPIRIT_URL}/bulk-spirit-types/`);
+  }
+
+  getEnaDistilleries(): Observable<any> {
+    return this.http.get(`${this.ENA_DISTILLERY_URL}/`);
   }
 }

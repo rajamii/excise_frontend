@@ -81,6 +81,22 @@ export interface HologramProcurement {
   };
 }
 
+export interface HologramSupplier {
+  id: number;
+  company_name: string;
+  companyName?: string;
+  name?: string;
+  post: string;
+  address: string;
+  state: string;
+  is_active: boolean;
+}
+
+export interface HologramSupplierListResponse {
+  success: boolean;
+  data: HologramSupplier[];
+}
+
 export interface HologramRequest {
   id?: number;
   refNo?: string;
@@ -223,6 +239,7 @@ export class HologramDataService {
 
   private get procurementApiUrl() { return `${this.apiUrl}/procurement`; }
   private get requestApiUrl() { return `${this.apiUrl}/request`; }
+  private get supplierMasterUrl() { return `${environment.apiBaseUrl}/masters/supply_chain/hologram-suppliers/`; }
 
   constructor() { }
 
@@ -246,6 +263,31 @@ export class HologramDataService {
       target_stage: targetStage,
       remarks: remarks
     });
+  }
+
+  // --- Supplier Master APIs ---
+
+  getHologramSuppliers(activeOnly: boolean = true): Observable<HologramSupplierListResponse> {
+    const params = activeOnly ? new HttpParams().set('active_only', '1') : undefined;
+    return this.http.get<HologramSupplierListResponse>(this.supplierMasterUrl, { params }).pipe(
+      map((resp: any) => {
+        // Backward/variant safety: allow `{data: [...]}` or raw array responses
+        if (Array.isArray(resp)) {
+          return { success: true, data: resp } as HologramSupplierListResponse;
+        }
+        const data = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp?.results) ? resp.results : []);
+        return { success: Boolean(resp?.success ?? true), data } as HologramSupplierListResponse;
+      })
+    );
+  }
+
+  setProcurementSupplier(procurementId: number, supplierId: number): Observable<any> {
+    return this.http.post(`${this.procurementApiUrl}/${procurementId}/set-supplier/`, { supplier_id: supplierId });
+  }
+
+  downloadSupplyOrderLetter(procurementId: number, supplierId: number): Observable<Blob> {
+    const params = new HttpParams().set('supplier_id', String(supplierId));
+    return this.http.get(`${this.procurementApiUrl}/${procurementId}/supply-order-letter/`, { params, responseType: 'blob' });
   }
 
   // --- Request APIs ---

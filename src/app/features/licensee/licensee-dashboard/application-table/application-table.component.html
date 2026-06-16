@@ -13,6 +13,11 @@
       <mat-cell *matCellDef="let element" class="app-id">
         <div class="application-id" [ngClass]="{ 'objection-text': unresolvedObjectionAppIds.has(getApplicationId(element)) }">
           {{ getApplicationId(element) || 'N/A' }}
+          @if (element.raw?.renewal_application_id || element.raw?.renewalApplicationId) {
+            <span class="renewal-badge" style="font-size: 0.85em; color: #1976d2; margin-left: 6px; font-weight: 500;">
+              (Renewed: {{ element.raw?.renewal_application_id || element.raw?.renewalApplicationId }})
+            </span>
+          }
           @if (getApplicationId(element) && unresolvedObjectionAppIds.has(getApplicationId(element))) {
             <mat-icon color="warn" matTooltip="Objection pending">error</mat-icon>
           }

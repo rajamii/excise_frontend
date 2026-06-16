@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ElementRef, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 export type AddMoneyWalletType =
@@ -7,6 +7,7 @@ export type AddMoneyWalletType =
   | 'education'
   | 'hologram'
   | 'brewery'
+  | 'distillery'
   | 'security_deposit'
   | 'license_fee';
 
@@ -24,7 +25,7 @@ export interface AddMoneyViewContext {
   templateUrl: './unified-add-money-modal.component.html',
   styleUrls: ['./unified-add-money-modal.component.scss']
 })
-export class UnifiedAddMoneyModalComponent {
+export class UnifiedAddMoneyModalComponent implements OnInit, OnDestroy {
   @Input() context: AddMoneyViewContext | null = null;
   @Input() transactionId = '';
   @Input() amount = 0;
@@ -32,6 +33,19 @@ export class UnifiedAddMoneyModalComponent {
   @Output() amountChange = new EventEmitter<number>();
   @Output() proceed = new EventEmitter<number>();
   @Output() close = new EventEmitter<void>();
+
+  constructor(private el: ElementRef) {}
+
+  ngOnInit(): void {
+    document.body.appendChild(this.el.nativeElement);
+  }
+
+  // 3. Clean up the DOM to prevent memory leaks when navigating away
+  ngOnDestroy(): void {
+    if (this.el.nativeElement) {
+      this.el.nativeElement.remove();
+    }
+  }
 
   onAmountChange(value: number | string | null): void {
     const parsed = Number(value);

@@ -11,9 +11,13 @@ import { MatDialog } from '@angular/material/dialog';
 import { ViewApplicationComponent } from '../licensee-dashboard/application-table/view-application/view-application.component';
 import { PrintApplicationComponent } from '../licensee-dashboard/application-table/print-application/print-application.component';
 import { NavigationStart, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { of, Subscription } from 'rxjs';
+import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
 import Swal from 'sweetalert2';
+import { TimerConfig, TimerConfigService } from '../../../core/services/timer-config.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-my-licenses',
@@ -27,14 +31,19 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   displayedColumns: string[] = ['slNo', 'applicationId', 'type', 'establishmentName', 'approvalDate', 'actions'];
   isLoading = false;
   private routerSub?: Subscription;
+  private readonly renewalReminderTimerCode = 'LICENSE_RENEWAL_REMINDER_TIMER';
+  private activeRenewalLicenseIds = new Set<string>();
+  private allAppsResult: any = null;
 
   constructor(
     public dialogRef: MatDialogRef<MyLicensesComponent>,
     private unifiedDashboardService: UnifiedDashboardService,
     private licenseApplicationService: LicenseApplicationService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
+    private timerConfigService: TimerConfigService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private http: HttpClient
   ) { }
 
   ngOnInit(): void {
@@ -43,7 +52,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       filter(event => event instanceof NavigationStart)
     ).subscribe((event: any) => {
       const url = String(event?.url || '');
-      if (url.startsWith('/licensee/final-license')) this.closeDialog();
+      if (url.startsWith('/final-license')) this.closeDialog();
     });
 
     this.loadMyLicenses();
@@ -53,19 +62,788 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     this.routerSub?.unsubscribe();
   }
 
+  private renewLicenseUsingTimer(application: UnifiedApplication): void {
+    const fallbackSeconds = 90 * 24 * 60 * 60;
+    const summaryValidUpTo = this.extractValidUpToDate(application.raw || {});
+    const resolvedType = this.resolveApplicationType(application);
+
+    const app$ = summaryValidUpTo
+      ? of(application)
+      : this.unifiedDashboardService.getApplicationDetail(application.applicationId, resolvedType).pipe(
+          catchError(() => of(application))
+        );
+
+    app$
+      .pipe(
+        take(1),
+        switchMap((app) =>
+          forkJoin({
+            app: of(app),
+            timer: this.timerConfigService.getTimerConfig(this.renewalReminderTimerCode, fallbackSeconds).pipe(take(1)),
+            renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)), take(1))
+          })
+        )
+      )
+      .subscribe(({ app, timer, renewalConfig }) => {
+        const raw = app.raw || {};
+        let validUpTo = this.extractValidUpToDate(raw) || summaryValidUpTo;
+
+        // SOP: Block Salesman/Barman renewal if New/Main license renewal is active/required but not initiated
+        if (resolvedType === 'salesman-barman') {
+          const newLicenseApps = this.dataSource.data.filter(item => this.resolveApplicationType(item) === 'new-license');
+          for (const newLicenseApp of newLicenseApps) {
+            let newLicValidUpTo = this.extractValidUpToDate(newLicenseApp.raw || {});
+            if (!newLicValidUpTo && renewalConfig) {
+              const month = renewalConfig.renewal_month || 3;
+              const day = renewalConfig.renewal_day || 31;
+              const now = new Date();
+              let year = now.getFullYear();
+              if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) {
+                  year++;
+              }
+              newLicValidUpTo = new Date(year, month - 1, day, 23, 59, 59);
+            }
+
+            if (newLicValidUpTo) {
+              const isNewLicEligible = this.isRenewalAllowed(newLicValidUpTo, timer);
+              const newLicId = this.extractLicenseId(newLicenseApp.raw || {}, newLicenseApp);
+              const hasActiveRenewal = newLicId ? this.activeRenewalLicenseIds.has(this.normalizeLicenseId(newLicId)) : false;
+
+              if (isNewLicEligible && !hasActiveRenewal) {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Renewal Blocked',
+                  html: `
+                    <p>Renewal of Salesman/Barman registration is not allowed.</p>
+                    <p>Please renew your <strong>New License (${newLicId || 'Main License'})</strong> first.</p>
+                  `
+                });
+                return;
+              }
+            }
+          }
+        }
+
+        if (!validUpTo && renewalConfig) {
+          const month = renewalConfig.renewal_month || 3;
+          const day = renewalConfig.renewal_day || 31;
+          const now = new Date();
+          let year = now.getFullYear();
+          if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) {
+              year++;
+          }
+          validUpTo = new Date(year, month - 1, day, 23, 59, 59);
+        }
+
+        if (validUpTo && !this.isRenewalAllowed(validUpTo, timer)) {
+          const windowLabel = this.getTimerWindowLabel(timer);
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Renewal Request',
+            html: `
+              <p>Renewal not allowed yet. License valid until ${this.formatDDMMYYYY(validUpTo)}.</p>
+              <p>You can renew within the last ${windowLabel} or after expiry.</p>
+            `
+          });
+          return;
+        }
+
+        const renewalId = this.extractLicenseId(raw, app);
+        if (!renewalId) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Cannot Renew',
+            html: `
+              <p><strong>This license cannot be renewed yet.</strong></p>
+              <p>Possible reasons:</p>
+              <ul style="text-align: left; margin: 10px 20px;">
+                <li>The license has not been issued yet</li>
+                <li>The application is still under approval</li>
+                <li>License data is incomplete</li>
+              </ul>
+              <p style="margin-top: 10px;"><small>Application ID: ${app.applicationId}</small></p>
+            `
+          });
+          return;
+        }
+
+        const appType = this.resolveApplicationType(app);
+        if (appType === 'new-license') {
+          // Robust category ID resolution
+          let catId = 0;
+          if (raw.license_category_id) {
+            catId = Number(raw.license_category_id);
+          } else if (raw.licenseCategoryId) {
+            catId = Number(raw.licenseCategoryId);
+          } else if (raw.license_category) {
+            if (typeof raw.license_category === 'object' && raw.license_category !== null) {
+              catId = Number(raw.license_category.id ?? raw.license_category.pk ?? 0);
+            } else {
+              catId = Number(raw.license_category);
+            }
+          } else if (raw.licenseCategory) {
+            if (typeof raw.licenseCategory === 'object' && raw.licenseCategory !== null) {
+              catId = Number(raw.licenseCategory.id ?? raw.licenseCategory.pk ?? 0);
+            } else {
+              catId = Number(raw.licenseCategory);
+            }
+          }
+
+          // Robust category Name resolution
+          let catName = '';
+          if (raw.license_category_name) {
+            catName = String(raw.license_category_name).toLowerCase();
+          } else if (raw.licenseCategoryName) {
+            catName = String(raw.licenseCategoryName).toLowerCase();
+          } else if (raw.license_category && typeof raw.license_category === 'object') {
+            catName = String(raw.license_category.name ?? raw.license_category.license_category ?? '').toLowerCase();
+          } else if (app.licenseCategoryName) {
+            catName = String(app.licenseCategoryName).toLowerCase();
+          }
+
+          const isManufacturingOrHomestay = 
+            catId === 1 || 
+            catName.includes('manufacturing') || 
+            catId === 9 || 
+            catName.includes('homestay');
+
+          if (isManufacturingOrHomestay) {
+            Swal.fire({
+              title: 'Renew License?',
+              html: `
+                <div style="text-align: left; padding: 10px;">
+                  <p>Are you sure you want to renew this license?</p>
+                  <p><strong>License ID:</strong> ${renewalId}</p>
+                  <p><strong>Type:</strong> ${this.getTypeLabel(app)}</p>
+                </div>
+              `,
+              icon: 'question',
+              showCancelButton: true,
+              confirmButtonColor: '#3085d6',
+              cancelButtonColor: '#d33',
+              confirmButtonText: 'Yes, Renew License'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                this.processRenewal(renewalId!, 'new-license');
+              }
+            });
+          } else {
+            const lastModeRaw = String(raw.mode_of_operation ?? raw.modeOfOperation ?? 'Self').trim();
+            let lastMode = 'Self';
+            if (lastModeRaw.toLowerCase() === 'salesman') lastMode = 'Salesman';
+            else if (lastModeRaw.toLowerCase() === 'barman') lastMode = 'Barman';
+
+            const salesmanOnlyIds = [14, 10, 6, 12];
+            const barmanOnlyIds = [13, 3, 4, 5, 7, 8, 11];
+
+            let allowedModes: string[] = [];
+            if (
+              salesmanOnlyIds.includes(catId) || 
+              catName.includes('retail shop') || 
+              catName.includes('departmental store') || 
+              catName.includes('pachwai') || 
+              catName.includes('salesman')
+            ) {
+              allowedModes = ['Self', 'Salesman'];
+            } else if (
+              barmanOnlyIds.includes(catId) || 
+              catName.includes('bar') || 
+              catName.includes('hotel') || 
+              catName.includes('club') || 
+              catName.includes('casino') || 
+              catName.includes('barman')
+            ) {
+              allowedModes = ['Self', 'Barman'];
+            } else {
+              allowedModes = ['Self', 'Salesman', 'Barman'];
+            }
+
+            if (!allowedModes.includes(lastMode)) {
+              lastMode = 'Self';
+            }
+
+            // Check if there are existing SBM licenses linked to this main license across all groups (including failed/pending)
+            let hasSalesmanSbm = false;
+            let hasBarmanSbm = false;
+
+            const allGroups = this.allAppsResult ? [
+              ...(this.allAppsResult.applied || []),
+              ...(this.allAppsResult.pending || []),
+              ...(this.allAppsResult.objection || []),
+              ...(this.allAppsResult.approved || []),
+              ...(this.allAppsResult.awaitingPayment || []),
+              ...(this.allAppsResult.rejected || [])
+            ] : [];
+
+            const sbmApps = allGroups.filter(item => this.resolveApplicationType(item) === 'salesman-barman');
+            for (const sbm of sbmApps) {
+              const sbmRaw = sbm.raw || {};
+              const linkedAppId = String(
+                sbmRaw.newLicenseApplicationId ?? 
+                sbmRaw.new_license_application_id ?? 
+                sbmRaw.newLicenseApplication ?? 
+                sbmRaw.new_license_application ?? 
+                ''
+              ).trim().toUpperCase();
+              
+              const linkedLicenseId = String(
+                sbmRaw.licenseIdDisplay ?? 
+                sbmRaw.license_id_display ?? 
+                sbmRaw.renewalOfLicenseId ?? 
+                sbmRaw.renewal_of_license_id ?? 
+                sbmRaw.license ?? 
+                sbmRaw.licenseId ?? 
+                sbmRaw.license_id ?? 
+                ''
+              ).trim().toUpperCase();
+              
+              const isLinked = (linkedAppId && linkedAppId === app.applicationId.toUpperCase()) || 
+                               (linkedLicenseId && linkedLicenseId === renewalId.toUpperCase());
+
+              if (isLinked) {
+                const sbmRole = String(sbmRaw.role || '').toLowerCase();
+                const stageName = String(sbm.currentStageName || sbm.currentStage || sbmRaw.current_stage?.name || sbmRaw.current_stage_name || '').toLowerCase();
+                const isRejected = stageName === 'rejected' || sbm.currentStage === '105' || sbmRaw.current_stage_id === 105;
+                if (!isRejected) {
+                  if (sbmRole.includes('salesman')) {
+                    hasSalesmanSbm = true;
+                  } else if (sbmRole.includes('barman')) {
+                    hasBarmanSbm = true;
+                  }
+                }
+              }
+            }
+
+            // Gracefully map SBM role if it doesn't match the category's constraint
+            if (hasSalesmanSbm && allowedModes.includes('Salesman')) {
+              // already matches
+            } else if (hasBarmanSbm && allowedModes.includes('Barman')) {
+              // already matches
+            } else if (hasSalesmanSbm && allowedModes.includes('Barman') && !allowedModes.includes('Salesman')) {
+              hasBarmanSbm = true;
+            } else if (hasBarmanSbm && allowedModes.includes('Salesman') && !allowedModes.includes('Barman')) {
+              hasSalesmanSbm = true;
+            }
+
+            // Override default selection if SBM application is present
+            if (hasSalesmanSbm && allowedModes.includes('Salesman')) {
+              lastMode = 'Salesman';
+            } else if (hasBarmanSbm && allowedModes.includes('Barman')) {
+              lastMode = 'Barman';
+            }
+
+            if (!allowedModes.includes(lastMode)) {
+              lastMode = 'Self';
+            }
+
+            const modeOptionsHtml = allowedModes.map(mode => {
+              const selected = mode === lastMode ? 'selected' : '';
+              let label = mode;
+              if (mode === 'Salesman' && hasSalesmanSbm) {
+                label = 'Salesman ✓';
+              } else if (mode === 'Barman' && hasBarmanSbm) {
+                label = 'Barman ✓';
+              }
+              return `<option value="${mode}" ${selected}>${label}</option>`;
+            }).join('');
+
+            const hasAdditionalCharges = [10, 12, 14].includes(catId) || 
+                                         catName.includes('pachwai') || 
+                                         catName.includes('draught beer') || 
+                                         catName.includes('draught_beer') || 
+                                         catName.includes('retail shop');
+
+            const pachwaiChecked = !!(raw.pachwai ?? raw.pachwai_flag ?? raw.pachwai_selected);
+            const draughtBeerChecked = !!(raw.draught_beer ?? raw.draught_beer_flag ?? raw.draught_beer_selected ?? raw.draughtBeer);
+
+            // ── Fee & location data ───────────────────────────────────────────
+            const locationName: string = String(
+              raw.location_name ?? raw.locationName ?? raw.location_description ?? raw.locationDescription ?? ''
+            ).trim();
+            const districtName: string = String(
+              raw.site_district_name ?? raw.siteDistrictName ?? raw.district_name ?? raw.districtName ?? ''
+            ).trim();
+            const locationDisplay = [locationName, districtName].filter(Boolean).join(', ') || null;
+
+            // yearly_license_fee is the TOTAL stored fee including previously-selected additional charges.
+            // To get the base location fee, subtract the additional charges that were previously baked in.
+            const storedTotalFee: number = Number(
+              raw.yearly_license_fee ?? raw.yearlyLicenseFee ??
+              raw.license_fee_amount ?? raw.licenseFeeAmount ?? 0
+            );
+            const renewalAmount: number = Number(
+              raw.renewal_amount ?? raw.renewalAmount ?? 0
+            );
+            const lateFee: number = Number(raw.late_fee ?? raw.lateFee ?? 0);
+            // Security deposit is NOT charged at renewal — excluded intentionally
+
+            // Subtract previously-included additional charges to get the pure base location fee
+            const prevPachwai  = pachwaiChecked      ? 3000 : 0;
+            const prevDraught  = draughtBeerChecked  ? 5000 : 0;
+            const locationFee: number = storedTotalFee - prevPachwai - prevDraught;
+
+            // Estimated total is dynamic: base location fee + whatever the user selects now + late fee
+            // (renewalAmount is added if present as a separate renewal processing fee)
+            const additionalInitial = prevPachwai + prevDraught; // current selection
+            const fixedBase = locationFee + renewalAmount + lateFee;
+            const fixedTotal = fixedBase + additionalInitial; // = storedTotalFee + renewalAmount + lateFee
+
+            // Build fee breakdown rows (only show non-zero)
+            const feeRows: string[] = [];
+            if (locationFee > 0) {
+              feeRows.push(`
+                <div class="rl-fee-row">
+                  <span class="rl-fee-row-label">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Location Fee
+                  </span>
+                  <span class="rl-fee-row-amt">₹${locationFee.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+            if (renewalAmount > 0) {
+              feeRows.push(`
+                <div class="rl-fee-row">
+                  <span class="rl-fee-row-label">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
+                    Renewal Fee
+                  </span>
+                  <span class="rl-fee-row-amt">₹${renewalAmount.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+            if (lateFee > 0) {
+              feeRows.push(`
+                <div class="rl-fee-row">
+                  <span class="rl-fee-row-label rl-fee-row-label--late">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Late Fee
+                  </span>
+                  <span class="rl-fee-row-amt rl-fee-row-amt--late">₹${lateFee.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+            if (feeRows.length > 1) {
+              const breakdownTotal = locationFee + renewalAmount + lateFee;
+              feeRows.push(`
+                <div class="rl-fee-row rl-fee-row--total">
+                  <span class="rl-fee-row-label rl-fee-row-label--total">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Subtotal
+                  </span>
+                  <span class="rl-fee-row-amt rl-fee-row-amt--total">₹${breakdownTotal.toLocaleString('en-IN')}</span>
+                </div>`);
+            }
+
+            const feeBreakdownHtml = (feeRows.length > 0 || locationDisplay) ? `
+              <div class="rl-divider"></div>
+              <div class="rl-field-group rl-fee-breakdown-group">
+                <label class="rl-field-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  Fee Breakdown
+                </label>
+                ${locationDisplay ? `
+                  <div class="rl-location-chip">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    ${locationDisplay}
+                  </div>` : ''}
+                <div class="rl-fee-rows">
+                  ${feeRows.length > 0 ? feeRows.join('') : '<div class="rl-fee-row-empty">Fees will be calculated on submission</div>'}
+                </div>
+              </div>` : '';
+
+            Swal.fire({
+              title: '',
+              html: `
+                <div class="rl-modal">
+
+                  <!-- Header -->
+                  <div class="rl-header">
+                    <div class="rl-header-icon">
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                      </svg>
+                    </div>
+                    <div class="rl-header-text">
+                      <h2 class="rl-title">Renew License</h2>
+                      <p class="rl-subtitle">Review and confirm your renewal options</p>
+                    </div>
+                  </div>
+
+                  <!-- License ID Banner -->
+                  <div class="rl-license-banner">
+                    <div class="rl-license-banner-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                    </div>
+                    <span class="rl-license-label">License ID</span>
+                    <code class="rl-license-id">${renewalId}</code>
+                  </div>
+
+                  <!-- Body -->
+                  <div class="rl-body">
+
+                    <!-- Mode of Operation -->
+                    <div class="rl-field-group">
+                      <label class="rl-field-label">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                        Mode of Operation
+                      </label>
+                      <!-- Hidden real select (used by confirm logic) -->
+                      <select id="swal-mode-of-operation" style="display:none;">
+                        ${modeOptionsHtml}
+                      </select>
+                      <!-- Custom radio cards -->
+                      <div class="rl-mode-grid" id="rl-mode-grid">
+                        ${allowedModes.map(mode => {
+                          let label = mode;
+                          let badge = '';
+                          if (mode === 'Salesman' && hasSalesmanSbm) { label = 'Salesman'; badge = '<span class="rl-mode-badge">Registered ✓</span>'; }
+                          else if (mode === 'Barman' && hasBarmanSbm) { label = 'Barman'; badge = '<span class="rl-mode-badge">Registered ✓</span>'; }
+                          const isSelected = mode === lastMode;
+                          return `
+                            <label class="rl-mode-card ${isSelected ? 'is-selected' : ''}" data-mode="${mode}">
+                              <span class="rl-mode-check-box">
+                                <svg class="rl-mode-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                              </span>
+                              <span class="rl-mode-label">${label}</span>
+                              ${badge}
+                            </label>`;
+                        }).join('')}
+                      </div>
+
+                      <!-- SBM Warning -->
+                      <div id="swal-sbm-warning" class="rl-warning" style="display:none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                          <p class="rl-warning-title">Warning</p>
+                          <p class="rl-warning-text">Choosing "Self" will terminate your active/approved Salesman/Barman registration. No revert back will be allowed after you proceed.</p>
+                        </div>
+                      </div>
+
+                      <!-- Custom inline validation error (replaces Swal.showValidationMessage to avoid state lock) -->
+                      <div id="rl-custom-error" style="display:none; align-items:center; gap:8px; margin-top:10px; padding:10px 14px; background:#fff5f5; color:#c53030; border:1px solid #fed7d7; border-radius:8px; font-size:0.85rem; font-weight:600;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span id="rl-custom-error-text"></span>
+                      </div>
+                    </div>
+
+                    <!-- Additional Charges -->
+                    ${hasAdditionalCharges ? `
+                      <div class="rl-divider"></div>
+                      <div class="rl-field-group">
+                        <label class="rl-field-label">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                          Additional Charges
+                        </label>
+                        <div class="rl-checks-grid">
+                          <label class="rl-check-card" id="rl-pachwai-card">
+                            <input type="checkbox" id="swal-pachwai" class="rl-check-input" ${pachwaiChecked ? 'checked' : ''}>
+                            <span class="rl-check-box">
+                              <svg class="rl-check-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <div class="rl-check-content">
+                              <span class="rl-check-name">Pachwai</span>
+                              <span class="rl-check-fee">+₹3,000</span>
+                            </div>
+                          </label>
+
+                          <label class="rl-check-card" id="rl-draught-card">
+                            <input type="checkbox" id="swal-draught-beer" class="rl-check-input" ${draughtBeerChecked ? 'checked' : ''}>
+                            <span class="rl-check-box">
+                              <svg class="rl-check-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <div class="rl-check-content">
+                              <span class="rl-check-name">Draught Beer</span>
+                              <span class="rl-check-fee">+₹5,000</span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    ` : ''}
+
+                    <!-- Fee Breakdown (location + base fees) -->
+                    ${feeBreakdownHtml}
+
+                  </div>
+
+                  <!-- Live Fee Summary Bar -->
+                  <div class="rl-fee-summary">
+                    <div class="rl-fee-summary-left">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                      <div>
+                        <div class="rl-fee-summary-label">Estimated Total</div>
+                        <div class="rl-fee-summary-sublabel">Recalculated by server on submit</div>
+                      </div>
+                    </div>
+                    <div class="rl-fee-total-wrap">
+                      <span class="rl-fee-currency">₹</span>
+                      <span class="rl-fee-total" id="rl-fee-total">${fixedTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+
+                  <!-- Actions Footer -->
+                  <div style="display: flex; justify-content: center; padding: 20px 28px 26px; gap: 12px; background: #ffffff;">
+                    <button type="button" id="custom-confirm-btn" style="min-width: 140px; outline: none; border: none; cursor: pointer; border-radius: 12px; padding: 11px 24px; font-size: 14px; font-weight: 700; letter-spacing: 0.2px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35); background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; display: inline-flex; align-items: center; justify-content: center; gap: 7px;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/><polyline points="1 20 1 14 7 14"/></svg>
+                      Submit &amp; Renew
+                    </button>
+                    <button type="button" id="custom-cancel-btn" style="min-width: 120px; outline: none; border: 1.5px solid #e2e8f0; cursor: pointer; border-radius: 12px; padding: 11px 24px; font-size: 14px; font-weight: 600; background: #f1f5f9; color: #475569; display: inline-flex; align-items: center; justify-content: center;">Cancel</button>
+                  </div>
+
+                </div>
+              `,
+              icon: undefined,
+              showConfirmButton: false,
+              showCancelButton: false,
+              allowOutsideClick: true,
+              allowEscapeKey: true,
+              customClass: {
+                popup: 'rl-swal-popup',
+              },
+              padding: 0,
+              didOpen: () => {
+                // Helper: show/hide custom inline error (never touches Swal internals)
+                const showError = (msg: string) => {
+                  const el = document.getElementById('rl-custom-error') as HTMLElement | null;
+                  const txt = document.getElementById('rl-custom-error-text') as HTMLElement | null;
+                  if (el && txt) { txt.textContent = msg; el.style.display = 'flex'; }
+                };
+                const clearError = () => {
+                  const el = document.getElementById('rl-custom-error') as HTMLElement | null;
+                  if (el) { el.style.display = 'none'; }
+                };
+
+                // ── Live fee total ────────────────────────────────────────────
+                const updateFeeTotal = () => {
+                  const pachwaiEl = document.getElementById('swal-pachwai') as HTMLInputElement;
+                  const draughtEl = document.getElementById('swal-draught-beer') as HTMLInputElement;
+                  const totalEl   = document.getElementById('rl-fee-total');
+                  if (totalEl) {
+                    const selectedAdditional = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
+                    totalEl.textContent = (fixedBase + selectedAdditional).toLocaleString('en-IN');
+                  }
+                };
+
+                // ── Additional charge cards ───────────────────────────────────
+                ['rl-pachwai-card', 'rl-draught-card'].forEach(cardId => {
+                  const card  = document.getElementById(cardId);
+                  if (!card) return;
+                  const input = card.querySelector('input') as HTMLInputElement;
+                  if (!input) return;
+                  const update = () => {
+                    card.classList.toggle('is-checked', input.checked);
+                    updateFeeTotal();
+                  };
+                  update();
+                  input.addEventListener('change', update);
+                });
+
+                // ── Mode of operation radio cards ────────────────────────────
+                const selectEl  = document.getElementById('swal-mode-of-operation') as HTMLSelectElement;
+                const warningEl = document.getElementById('swal-sbm-warning') as HTMLDivElement;
+                const grid      = document.getElementById('rl-mode-grid');
+                const confirmBtn = document.getElementById('custom-confirm-btn') as HTMLButtonElement | null;
+                const cancelBtn  = document.getElementById('custom-cancel-btn') as HTMLButtonElement | null;
+
+                const updateModeState = (mode: string) => {
+                  // Show SBM termination warning when Self is chosen and user has active SBM
+                  if (warningEl) {
+                    warningEl.style.display = (mode === 'Self' && (hasSalesmanSbm || hasBarmanSbm)) ? 'flex' : 'none';
+                  }
+                  // Show/hide inline error — never calls Swal.showValidationMessage
+                  if (mode === 'Salesman' && !hasSalesmanSbm) {
+                    showError('Please register the salesman application first before selecting Salesman mode.');
+                    if (confirmBtn) { confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
+                  } else if (mode === 'Barman' && !hasBarmanSbm) {
+                    showError('Please register the barman application first before selecting Barman mode.');
+                    if (confirmBtn) { confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
+                  } else {
+                    clearError();
+                    if (confirmBtn) { confirmBtn.style.opacity = '1'; confirmBtn.style.cursor = 'pointer'; }
+                  }
+                };
+
+                if (grid && selectEl) {
+                  grid.querySelectorAll<HTMLElement>('.rl-mode-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                      const mode = card.dataset['mode'] ?? '';
+                      selectEl.value = mode;
+                      grid.querySelectorAll('.rl-mode-card').forEach(c => c.classList.remove('is-selected'));
+                      card.classList.add('is-selected');
+                      updateModeState(mode);
+                    });
+                  });
+                  // Initial state check — only touches custom DOM, never SweetAlert2 internals
+                  updateModeState(selectEl.value);
+                }
+
+                // ── Cancel button ────────────────────────────────────────────
+                if (cancelBtn) {
+                  cancelBtn.addEventListener('click', () => {
+                    Swal.close();
+                    // Defensive cleanup in case Swal.close() doesn't fully clean up
+                    setTimeout(() => {
+                      try {
+                        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+                        document.documentElement.classList.remove('swal2-shown');
+                        document.querySelectorAll('.swal2-container').forEach(el => (el as HTMLElement).remove());
+                      } catch { /* ignore */ }
+                    }, 50);
+                  });
+                }
+
+                // ── Confirm button ───────────────────────────────────────────
+                if (confirmBtn) {
+                  confirmBtn.addEventListener('click', () => {
+                    const mode = selectEl?.value || 'Self';
+                    const pachwai = (document.getElementById('swal-pachwai') as HTMLInputElement)?.checked || false;
+                    const draughtBeer = (document.getElementById('swal-draught-beer') as HTMLInputElement)?.checked || false;
+
+                    if (mode === 'Salesman' && !hasSalesmanSbm) {
+                      showError('Please register/fill the salesman application first to opt for Salesman.');
+                      return;
+                    }
+                    if (mode === 'Barman' && !hasBarmanSbm) {
+                      showError('Please register/fill the barman application first to opt for Barman.');
+                      return;
+                    }
+
+                    Swal.close();
+                    this.processRenewal(renewalId!, 'new-license', {
+                      mode_of_operation: mode,
+                      pachwai: pachwai,
+                      draught_beer: draughtBeer
+                    });
+                  });
+                }
+              }
+            });
+          }
+        } else {
+          Swal.fire({
+            title: 'Renew License?',
+            html: `
+              <div style="text-align: left; padding: 10px;">
+                <p>Are you sure you want to renew this license?</p>
+                <p><strong>License ID:</strong> ${renewalId}</p>
+                <p><strong>Type:</strong> ${this.getTypeLabel(app)}</p>
+              </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, Renew License'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              this.processRenewal(renewalId!, appType);
+            }
+          });
+        }
+      });
+  }
+
+  private resolveApplicationType(application: UnifiedApplication): UnifiedApplication['type'] {
+    const explicit = (application as any)?.type;
+    if (explicit === 'license-renewal' || explicit === 'new-license' || explicit === 'salesman-barman' || explicit === 'company-registration') {
+      return explicit;
+    }
+
+    const id = String((application as any)?.applicationId || '').trim().toUpperCase();
+    if (id.startsWith('NLI/')) return 'new-license';
+    if (id.startsWith('LIC/')) return 'license-renewal';
+    if (id.startsWith('LRA/')) return 'license-renewal';
+    if (id.startsWith('RSBM/')) return 'license-renewal';
+    if (id.startsWith('SBM/')) return 'salesman-barman';
+    return 'new-license';
+  }
+
+  private extractValidUpToDate(raw: any): Date | null {
+    const value =
+      raw?.valid_up_to ??
+      raw?.validUpTo ??
+      raw?.valid_upto ??
+      raw?.valid_until ??
+      raw?.validUntil ??
+      null;
+
+    if (!value) return null;
+    if (value instanceof Date) return value;
+
+    const str = String(value).trim();
+    if (!str) return null;
+
+    const dmY = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+    if (dmY) {
+      const dd = Number(dmY[1]);
+      const mm = Number(dmY[2]);
+      const yyyy = Number(dmY[3]);
+      const dt = new Date(yyyy, mm - 1, dd);
+      return Number.isFinite(dt.getTime()) ? dt : null;
+    }
+
+    const dt = new Date(str);
+    return Number.isFinite(dt.getTime()) ? dt : null;
+  }
+
+  private isRenewalAllowed(validUpTo: Date, timer: TimerConfig): boolean {
+    const validMs = validUpTo.getTime();
+    const now = Date.now();
+    if (!Number.isFinite(validMs)) return true;
+
+    const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
+    if (!windowMs) return true;
+
+    if (now > validMs) return true;
+
+    const eligibleFrom = validMs - windowMs;
+    return now >= eligibleFrom;
+  }
+
+  private formatDDMMYYYY(date: Date): string {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(date.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  private getTimerWindowLabel(timer: TimerConfig): string {
+    const unitRaw = String(timer?.delay_unit ?? '').toLowerCase().trim();
+    const value = Number(timer?.delay_value ?? 0);
+    if (Number.isFinite(value) && value > 0 && unitRaw) {
+      const unit = unitRaw.endsWith('s') ? unitRaw.slice(0, -1) : unitRaw;
+      return `${value} ${unit}${value === 1 ? '' : 's'}`;
+    }
+
+    const seconds = Math.max(0, Number(timer?.delay_seconds ?? 0) || 0);
+    if (!seconds) return '0 days';
+    if (seconds % (24 * 60 * 60) === 0) {
+      const days = seconds / (24 * 60 * 60);
+      return `${days} day${days === 1 ? '' : 's'}`;
+    }
+    return `${seconds} second${seconds === 1 ? '' : 's'}`;
+  }
+
   loadMyLicenses(): void {
     this.isLoading = true;
     this.unifiedDashboardService.getUnifiedApplicationsByStatus(true).subscribe({
       next: (result: any) => {
+        this.allAppsResult = result;
         const approvedApps = result.approved || [];
+        this.activeRenewalLicenseIds = this.collectActiveRenewalLicenseIds(result);
+        
+        // Filter out LRA (License Renewal) and RSBM (Renewed Salesman Barman) applications
+        const filteredApps = approvedApps.filter((app: UnifiedApplication) => {
+          const id = String(app.applicationId || '').trim().toUpperCase();
+          return !id.startsWith('LRA/') && !id.startsWith('RSBM/');
+        });
         
         // 🔍 DEBUG: Log the first approved app to see structure
-        if (approvedApps.length > 0) {
-          console.log('📋 Sample approved application:', approvedApps[0]);
-          console.log('📋 Sample raw data:', approvedApps[0].raw);
+        if (filteredApps.length > 0) {
+          console.log('📋 Sample approved application:', filteredApps[0]);
+          console.log('📋 Sample raw data:', filteredApps[0].raw);
         }
         
-        const sortedApps = approvedApps.sort((a: UnifiedApplication, b: UnifiedApplication) => {
+        const sortedApps = filteredApps.sort((a: UnifiedApplication, b: UnifiedApplication) => {
           const dateA = this.getApprovalDate(a);
           const dateB = this.getApprovalDate(b);
           return dateB.getTime() - dateA.getTime();
@@ -117,6 +895,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     });
   }
 
+  canPrintLicense(application: UnifiedApplication): boolean {
+    return this.resolveApplicationType(application) !== 'salesman-barman';
+  }
+
   printLicense(application: UnifiedApplication): void {
     const appId = application.applicationId;
     const appType = application.type;
@@ -144,6 +926,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   }
 
   renewLicense(application: UnifiedApplication): void {
+    // Dynamic renewal eligibility window (from DB timer config).
+    // Falls back to 90 days if timer config is missing/unavailable.
+    this.renewLicenseUsingTimer(application);
+    return;
     const raw = application.raw || {};
     
     // 🔍 COMPREHENSIVE DEBUG LOGGING
@@ -198,6 +984,35 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     });
   }
 
+  canShowRenewButton(application: UnifiedApplication): boolean {
+    const licenseId = this.extractLicenseId(application.raw || {}, application);
+    if (!licenseId) return false;
+    return !this.activeRenewalLicenseIds.has(this.normalizeLicenseId(licenseId));
+  }
+
+  private collectActiveRenewalLicenseIds(result: any): Set<string> {
+    const ids = new Set<string>();
+    const activeGroups = [
+      ...(result?.applied || []),
+      ...(result?.pending || []),
+      ...(result?.objection || []),
+      ...(result?.awaitingPayment || [])
+    ];
+
+    for (const app of activeGroups) {
+      if (app?.type !== 'license-renewal') continue;
+      const raw = app.raw || {};
+      const oldLicenseId = String(raw?.old_license_id || raw?.oldLicenseId || '').trim();
+      if (oldLicenseId) ids.add(this.normalizeLicenseId(oldLicenseId));
+    }
+
+    return ids;
+  }
+
+  private normalizeLicenseId(value: string): string {
+    return String(value || '').trim().toUpperCase();
+  }
+
   /**
    * ✅ FIXED: Extract the License ID from the raw data
    * According to the database schema:
@@ -210,8 +1025,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   private extractLicenseId(raw: any, application: UnifiedApplication): string | null {
     console.log('🔍 extractLicenseId called with:', { raw, application });
     
-    // First, determine the expected license ID prefix based on application type
-    const expectedPrefix = this.getExpectedLicensePrefix(application.type);
+    const appId = String(application.applicationId || raw.application_id || raw.applicationId || '').trim().toUpperCase();
+    const expectedPrefix = appId.startsWith('RSBM/') ? 'SB/' : this.getExpectedLicensePrefix(application.type);
     console.log('  Expected license prefix:', expectedPrefix);
     
     // CRITICAL: For approved applications, check renewalOf field first
@@ -310,7 +1125,6 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     // LIC/101/2025-26/0001 -> LA/101/2025-26/0001
     // NLI/101/2025-26/0001 -> NA/101/2025-26/0001
     // SBM/101/2025-26/0001 -> SB/101/2025-26/0001
-    const appId = application.applicationId;
     if (appId) {
       console.log('  Attempting to derive license ID from application ID:', appId);
       let derivedLicenseId = null;
@@ -350,7 +1164,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private processRenewal(renewalId: string, type: UnifiedApplication['type']): void {
+  private processRenewal(renewalId: string, type: UnifiedApplication['type'], options?: any): void {
     Swal.fire({ 
       title: 'Processing Renewal...', 
       html: '<p>Please wait while we initiate your license renewal.</p>',
@@ -367,8 +1181,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       console.log('🔄 Using License Renewal (old) endpoint');
       renewalObservable = this.licenseApplicationService.renewLicense(renewalId);
     } else if (type === 'new-license') {
-      console.log('🔄 Using New License renewal endpoint');
-      renewalObservable = this.licenseApplicationService.renewNewLicense(renewalId);
+      console.log('🔄 Using License Renewal Application (LRA) endpoint');
+      renewalObservable = this.licenseApplicationService.initiateLicenseRenewalApplication(renewalId, options);
     } else {
       Swal.fire({ 
         icon: 'info', 
@@ -382,11 +1196,13 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       next: (response: any) => {
         console.log('✅ Renewal response:', response);
         
-        const newAppId = response.application?.application_id || 
-                        response.application?.applicationId || 
-                        response.applicationId ||
-                        response.application_id ||
-                        'N/A';
+        const newAppId =
+          response?.application?.application_id ||
+          response?.application?.applicationId ||
+          response?.applicationId ||
+          response?.application_id ||
+          response?.applicationId ||
+          'N/A';
         
         Swal.fire({ 
           icon: 'success', 
@@ -400,17 +1216,11 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               </p>
             </div>
           `, 
-          confirmButtonText: 'Go to Dashboard',
-          showCancelButton: true,
-          cancelButtonText: 'Stay Here'
-        }).then((result) => { 
-          if (result.isConfirmed) { 
-            this.closeDialog();
-            // ✅ FIXED: Navigate to the correct licensee dashboard route
-            this.router.navigate(['/licensee/dashboard']);
-          } else {
-            this.loadMyLicenses();
-          }
+          confirmButtonText: 'Back',
+          confirmButtonColor: '#3085d6',
+          allowOutsideClick: false
+        }).then(() => { 
+          this.closeDialog();
         });
       },
       error: (error: any) => {

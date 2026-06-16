@@ -15,10 +15,6 @@
           <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i>
           Refresh
         </button>
-        <button class="btn btn-primary" (click)="exportToExcel()">
-          <i class="bi bi-file-earmark-excel"></i>
-          Export Excel
-        </button>
       </div>
     </div>
   </div>
@@ -37,17 +33,6 @@
         </div>
       </div>
 
-      <!-- Total Capacity -->
-      <div class="overview-card capacity-card">
-        <div class="card-icon">
-          <i class="bi bi-cup-straw"></i>
-        </div>
-        <div class="card-content">
-          <h3>{{ warehouseOverview.totalCapacity | number }}</h3>
-          <p>Total Capacity (Bottles)</p>
-        </div>
-      </div>
-
       <!-- Current Stock -->
       <div class="overview-card stock-card">
         <div class="card-icon">
@@ -59,49 +44,32 @@
         </div>
       </div>
 
-      <!-- Today's Production -->
+      <!-- This Month's Production -->
       <div class="overview-card production-card">
         <div class="card-icon">
           <i class="bi bi-plus-circle"></i>
         </div>
         <div class="card-content">
           <h3>{{ warehouseOverview.todayProduction | number }}</h3>
-          <p>Today's Production</p>
+          <p>This Month's Production</p>
         </div>
       </div>
 
-      <!-- Today's Consumption -->
+      <!-- This Month's Consumption -->
       <div class="overview-card consumption-card">
         <div class="card-icon">
           <i class="bi bi-dash-circle"></i>
         </div>
         <div class="card-content">
           <h3>{{ warehouseOverview.todayConsumption | number }}</h3>
-          <p>Today's Consumption</p>
+          <p>This Month's Consumption</p>
         </div>
       </div>
 
-      <!-- Low Stock Alerts -->
-      <div class="overview-card alert-card low-stock">
-        <div class="card-icon">
-          <i class="bi bi-exclamation-triangle"></i>
-        </div>
-        <div class="card-content">
-          <h3>{{ warehouseOverview.lowStockAlerts }}</h3>
-          <p>Low Stock Alerts</p>
-        </div>
-      </div>
 
-      <!-- Out of Stock -->
-      <div class="overview-card alert-card out-stock">
-        <div class="card-icon">
-          <i class="bi bi-x-circle"></i>
-        </div>
-        <div class="card-content">
-          <h3>{{ warehouseOverview.outOfStockAlerts }}</h3>
-          <p>Out of Stock</p>
-        </div>
-      </div>
+      <!-- Low Stock Alerts and Out of Stock removed -->
+
+
     </div>
   </div>
 
@@ -195,17 +163,6 @@
     </div>
   </div>
 
-  <!-- Results Summary -->
-  <div class="results-summary">
-    <div class="summary-info">
-      <span class="results-count">
-        Showing {{ paginatedStocks.length }} of {{ filteredStocks.length }} brands
-      </span>
-      <span class="total-stock">
-        Total Stock: {{ getTotalStock() | number }} units
-      </span>
-    </div>
-  </div>
 
   <!-- Warehouse Table -->
   <div class="warehouse-table-container">
@@ -215,9 +172,9 @@
           <tr class="table-header">
             <th>Brand Details</th>
             <th>Pack Sizes & Stock</th>
+            <th>Number of Cases</th>
             <th>Total Utilized</th>
             <th>Total Stock</th>
-            <th>Overall Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -249,7 +206,7 @@
             <td class="pack-sizes-cell">
               <div class="pack-sizes-grid">
                 <div *ngFor="let packSize of getPackSizeKeys(brand.packSizes)" class="pack-size-item"
-                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK'"
+                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK' || brand.packSizes[packSize].status === 'OVERSTOCKED'"
                   [class.low-stock]="brand.packSizes[packSize].status === 'LOW_STOCK'"
                   [class.out-of-stock]="brand.packSizes[packSize].status === 'OUT_OF_STOCK'">
                   <div class="pack-size-header">
@@ -261,6 +218,43 @@
                     <span class="stock-number">{{ brand.packSizes[packSize].currentStock | number }}</span>
                     <span class="stock-label">units</span>
                   </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Number of Cases (dynamic from brand_ml_in_cases) -->
+            <td class="cases-cell">
+              <div class="cases-grid">
+                <div *ngFor="let packSize of getPackSizeKeys(brand.packSizes)" class="case-item"
+                  [class.case-missing]="!getPiecesInCase(packSize)"
+                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK' || brand.packSizes[packSize].status === 'OVERSTOCKED'"
+                  [class.low-stock]="brand.packSizes[packSize].status === 'LOW_STOCK'"
+                  [class.out-of-stock]="brand.packSizes[packSize].status === 'OUT_OF_STOCK'">
+                  <div class="case-item-header">
+                    <span class="ml-pill">{{ packSize }}ml</span>
+                  </div>
+                  <ng-container *ngIf="getPiecesInCase(packSize) as piecesInCase; else noCaseConfig">
+                    <div class="cases-info">
+                      <div class="cases-number">
+                        ≈ {{ getCasesForUnits(brand.packSizes[packSize].currentStock, packSize) | number:'1.0-0' }}
+                      </div>
+                      <div class="cases-label">cases</div>
+                      <div class="case-rule">
+                        <i class="bi bi-box-seam"></i>
+                        1 case = {{ piecesInCase | number }} bottles
+                      </div>
+                    </div>
+                  </ng-container>
+                  <ng-template #noCaseConfig>
+                    <div class="cases-missing">
+                      <div class="cases-number">--</div>
+                      <div class="cases-label">cases</div>
+                      <div class="case-rule">
+                        <i class="bi bi-info-circle"></i>
+                        ML config missing
+                      </div>
+                    </div>
+                  </ng-template>
                 </div>
               </div>
             </td>
@@ -282,17 +276,6 @@
                   <small>of {{ brand.totalCapacity | number }} capacity</small>
                 </div>
               </div>
-            </td>
-
-            <!-- Overall Status -->
-            <td class="status-cell">
-              <span class="status-badge" [class]="'badge-' + getStatusColor(brand.overallStatus)">
-                <i class="bi" [class.bi-check-circle]="brand.overallStatus === 'IN_STOCK'"
-                  [class.bi-exclamation-triangle]="brand.overallStatus === 'LOW_STOCK'"
-                  [class.bi-x-circle]="brand.overallStatus === 'OUT_OF_STOCK'"
-                  [class.bi-arrow-up]="brand.overallStatus === 'OVERSTOCKED'"></i>
-                {{ brand.overallStatus.replace('_', ' ') }}
-              </span>
             </td>
 
             <!-- Actions -->

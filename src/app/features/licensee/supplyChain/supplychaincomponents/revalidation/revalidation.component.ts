@@ -194,6 +194,9 @@ export class RevalidationComponent implements OnInit {
     });
 
     this.summaryRevalidationData = this.revlidationData.filter(item => {
+      // Admin visibility: only show records at or past this admin's stage
+      if (!this.isVisibleToCurrentAdmin(item)) return false;
+
       const submissionDate =
         this.parseDate(item.submissionDateRaw) ||
         this.parseDate(item.submissionDate);
@@ -562,6 +565,25 @@ export class RevalidationComponent implements OnInit {
     return this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
   }
 
+  /**
+   * Visibility rule for admin users:
+   * - Show the record if the admin has actions to take (allowedActions non-empty) — it's their turn.
+   * - Show the record if it has already passed through their stage (historical) — they already acted.
+   * - Hide the record if it hasn't reached their stage yet.
+   * Licensee users always see all their own records.
+   */
+  isVisibleToCurrentAdmin(item: TableData): boolean {
+    if (!this.isCommissioner() && !this.isPermitSection()) return true;
+
+    if ((item.allowedActions?.length ?? 0) > 0) return true;
+
+    const combined = `${String(item.status ?? '')} ${String((item as any).currentStageName ?? '')}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (this.isCommissioner() && combined.includes('commissioner')) return true;
+    if (this.isPermitSection() && combined.includes('permitsection')) return true;
+
+    return false;
+  }
+
   getUserType(): 'commissioner' | 'permit-section' | 'licensee' {
     if (this.isCommissioner()) return 'commissioner';
     if (this.isPermitSection()) return 'permit-section';
@@ -767,6 +789,35 @@ export class RevalidationComponent implements OnInit {
 
   private normalizeToken(value: any): string {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  /**
+   * Returns the CSS modifier class for the status badge based on stage ID and status name.
+   * Stage IDs: 47 = Approved By Commissioner, 48 = Rejected By Commissioner,
+   *            63 = Forwarded To Commissioner, 64 = IMPORT PERMIT EXTENDS 45 DAYS
+   */
+  getStatusBadgeClass(item: TableData): string {
+    const stageId = Number(item?.currentStage ?? -1);
+    const status = this.normalizeToken(item?.status);
+
+    // Match by stage ID first (most reliable)
+    if (stageId === 47) return 'status-approved';
+    if (stageId === 48) return 'status-rejected';
+    if (stageId === 63) return 'status-forwarded';
+    if (stageId === 64) return 'status-extended';
+
+    // Fallback: match by status name keywords
+    if (status.includes('approvedbycommissioner') || status.includes('approvedcommissioner')) return 'status-approved';
+    if (status.includes('rejectedbycommissioner') || status.includes('rejectedcommissioner')) return 'status-rejected';
+    if (status.includes('forwardedtocommissioner') || status.includes('forwardedcommissioner')) return 'status-forwarded';
+    if (status.includes('importpermitextends') || status.includes('extends45')) return 'status-extended';
+    if (status.includes('approv') || status.includes('issued')) return 'status-approved';
+    if (status.includes('reject') || status.includes('cancel')) return 'status-rejected';
+    if (status.includes('invalid') || status.includes('expire')) return 'status-expired';
+    if (status.includes('pending')) return 'status-pending';
+    if (status.includes('forward') || status.includes('submit') || status.includes('review') || status.includes('process')) return 'status-forwarded';
+
+    return 'status-default';
   }
 
 }
