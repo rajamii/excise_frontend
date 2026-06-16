@@ -122,6 +122,8 @@ export class WalletRechargeSuccessComponent {
         tab: 'recharge',
         source: 'wallet-recharge-success'
       }
+    }).then(() => {
+      window.location.reload();
     });
   }
 
@@ -132,6 +134,8 @@ export class WalletRechargeSuccessComponent {
         tab: 'history',
         source: 'wallet-recharge-success'
       }
+    }).then(() => {
+      window.location.reload();
     });
   }
 }
