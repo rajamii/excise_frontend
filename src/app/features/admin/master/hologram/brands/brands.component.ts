@@ -20,9 +20,9 @@ type LiquorCategoryRow = { id: number; sizeMl: number };
   styleUrl: './brands.component.scss',
 })
 export class BrandsComponent implements OnInit {
-  stockColumns: string[] = ['licenseId', 'brandName', 'sizeMl', 'currentStock', 'actions'];
+  stockColumns: string[] = ['licenseId', 'brandName', 'liquorType', 'sizeMl', 'currentStock', 'actions'];
   priceColumns: string[] = [
-    'licenseId', 'brandName', 'sizeMl',
+    'licenseId', 'brandName', 'liquorType', 'sizeMl',
     'exFactory', 'exciseDuty', 'eduCess', 'addlDuty', 'addl125', 'mrp', 'actions',
   ];
 
@@ -37,12 +37,13 @@ export class BrandsComponent implements OnInit {
   private licenseNameMap = new Map<string, string>();
 
   // ── Search filter ──────────────────────────────────────────────────────────
-  searchField: 'license_id' | 'brand_name' | 'capacity_size' = 'license_id';
+  searchField: 'license_id' | 'brand_name' | 'brand_type' | 'capacity_size' = 'license_id';
   searchQuery = '';
 
-  readonly searchFieldOptions: { value: 'license_id' | 'brand_name' | 'capacity_size'; label: string }[] = [
+  readonly searchFieldOptions: { value: 'license_id' | 'brand_name' | 'brand_type' | 'capacity_size'; label: string }[] = [
     { value: 'license_id',    label: 'License'   },
     { value: 'brand_name',    label: 'Brand'     },
+    { value: 'brand_type',    label: 'Liquor Type' },
     { value: 'capacity_size', label: 'Size (ml)' },
   ];
 
