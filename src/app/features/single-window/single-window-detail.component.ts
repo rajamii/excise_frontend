@@ -42,6 +42,9 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
       } else {
         this.error = 'Invalid application or licensee parameter.';
       }
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, 0);
+      }
     });
   }
 

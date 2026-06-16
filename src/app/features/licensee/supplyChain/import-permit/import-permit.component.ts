@@ -117,6 +117,8 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     purpose: '',
   };
 
+  allBulkSpiritTypes: any[] = [];
+  availableStrengths: string[] = [];
   bulkSpiritTypes: BulkSpiritType[] = [];
   distilleries: Distillery[] = [];
   checkposts: Checkpost[] = [];
@@ -257,22 +259,22 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
 
     this.SupplyChainService.getBulkSpiritTypes(licenseSubCategoryId).subscribe({
       next: (types) => {
-        const unique = new Map<string, BulkSpiritType>();
-        (types || []).forEach((type: any) => {
-          const key = String(
+        this.allBulkSpiritTypes = (types || []).map((type: any) => ({
+          ...type,
+          bulkSpiritKindType: String(
             type?.bulkSpiritKindType ?? type?.bulk_spirit_kind_type ?? ''
-          ).trim().toLowerCase();
+          ).trim(),
+          strength: String(type?.strength ?? '').trim(),
+        }));
+
+        const unique = new Map<string, BulkSpiritType>();
+        this.allBulkSpiritTypes.forEach((type) => {
+          const key = type.bulkSpiritKindType.toLowerCase();
           if (!key || unique.has(key)) {
             return;
           }
 
-          unique.set(key, {
-            ...type,
-            bulkSpiritKindType: String(
-              type?.bulkSpiritKindType ?? type?.bulk_spirit_kind_type ?? ''
-            ).trim(),
-            strength: String(type?.strength ?? '').trim(),
-          });
+          unique.set(key, type);
         });
 
         this.bulkSpiritTypes = Array.from(unique.values());
@@ -432,36 +434,63 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
    * Handles changes to the bulk spirit type selection
    */
   onBulkSpiritTypeChange(): void {
+    this.formData.strengthTo = '';
+    this.availableStrengths = [];
+    this.selectedPricePerBl = 0;
+    this.calculateTotal();
+
     if (!this.formData.bulkSpiritType) {
-      this.formData.strengthTo = '';
       this.bulkSpiritKindType = '';
+      return;
+    }
+
+    // Filter available strengths for the selected bulk spirit type
+    const matchingTypes = this.allBulkSpiritTypes.filter(
+      (type) =>
+        type.bulkSpiritKindType.toLowerCase() ===
+        this.formData.bulkSpiritType.toLowerCase()
+    );
+
+    // Map and deduplicate strengths
+    const strengthsSet = new Set<string>();
+    matchingTypes.forEach((type) => {
+      const strength = type.strength || '';
+      if (strength) {
+        strengthsSet.add(strength);
+      }
+    });
+    this.availableStrengths = Array.from(strengthsSet);
+
+    // If there is only one strength, select it automatically
+    if (this.availableStrengths.length === 1) {
+      this.formData.strengthTo = this.availableStrengths[0];
+      this.onStrengthChange();
+    }
+  }
+
+  onStrengthChange(): void {
+    if (!this.formData.bulkSpiritType || !this.formData.strengthTo) {
       this.selectedPricePerBl = 0;
       this.calculateTotal();
       return;
     }
 
-    // Find the selected spirit type
-    const selectedType = this.bulkSpiritTypes.find(
+    // Find the selected spirit type matching both kind type and strength
+    const selectedType = this.allBulkSpiritTypes.find(
       (type) =>
-        (type.bulkSpiritKindType) ===
-        this.formData.bulkSpiritType
+        type.bulkSpiritKindType.toLowerCase() === this.formData.bulkSpiritType.toLowerCase() &&
+        type.strength === this.formData.strengthTo
     );
 
     if (selectedType) {
-      // Set the strength values from the selected type
-      this.formData.strengthTo = selectedType.strength || '';
-      this.bulkSpiritKindType =
-        selectedType.bulkSpiritKindType || '';
+      this.bulkSpiritKindType = selectedType.bulkSpiritKindType || '';
       const rawPrice = (selectedType as any).priceBl ?? (selectedType as any).price_bl ?? 0;
       const parsedPrice = Number(rawPrice);
       this.selectedPricePerBl = Number.isFinite(parsedPrice) ? parsedPrice : 0;
-      this.calculateTotal();
     } else {
-      this.formData.strengthTo = '';
-      this.bulkSpiritKindType = '';
       this.selectedPricePerBl = 0;
-      this.calculateTotal();
     }
+    this.calculateTotal();
   }
 
   onLiftedFromChange(): void {
@@ -741,6 +770,10 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     }
     if (!this.formData.bulkSpiritType) {
       this.errorMessage = 'Please select bulk spirit type';
+      return false;
+    }
+    if (!this.formData.strengthTo) {
+      this.errorMessage = 'Please select strength';
       return false;
     }
     if (!this.formData.liftedFrom) {
