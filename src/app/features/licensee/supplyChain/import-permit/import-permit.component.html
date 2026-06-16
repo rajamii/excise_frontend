@@ -1,4 +1,4 @@
-﻿<div class="bg-light min-vh-100">
+<div class="bg-light min-vh-100">
   <!-- Government Header -->
 
   <br />
@@ -79,7 +79,13 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Strength:</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.strengthTo" readonly />
+                  <select class="form-select" [(ngModel)]="formData.strengthTo" (change)="onStrengthChange()"
+                    [disabled]="!formData.bulkSpiritType || isLoading" required>
+                    <option value="">Select Strength</option>
+                    <option *ngFor="let strength of availableStrengths" [value]="strength">
+                      {{ strength }}
+                    </option>
+                  </select>
                 </div>
               </div>
 
