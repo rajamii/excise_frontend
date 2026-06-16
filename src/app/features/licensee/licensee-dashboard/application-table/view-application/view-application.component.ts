@@ -667,6 +667,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
               confirmButtonText: 'OK'
             }).then(() => {
               this.dialogRef.close(true);
+              window.location.reload();
             });
           },
           error: (err) => {
