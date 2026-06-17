@@ -23,13 +23,6 @@ import {
 import { getDeviceMetadata } from '../../shared/utils/device-utils';
 import Swal from 'sweetalert2';
 
-// Centralized SDK definition
-declare global {
-  interface Window {
-    loadBillDeskSdk: (config: any) => void;
-  }
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -41,7 +34,7 @@ export class PaymentIntegrationService {
   private paymentStatusSource = new Subject<{ status: string, applicationId: string }>();
   paymentStatus$ = this.paymentStatusSource.asObservable();
 
-  private readonly billdeskRetryStateKey = 'new_license_billdesk_retry_state_v1';
+  private readonly gatewayRetryStateKey = 'new_license_billdesk_retry_state_v1';
   private readonly billdeskCooldownSeconds = 15 * 60;
 
   constructor(private http: HttpClient) { }
@@ -211,7 +204,7 @@ export class PaymentIntegrationService {
 
   private readRetryState(): Record<string, { failures: number; cooldownUntil?: number }> {
     try {
-      const raw = String(localStorage.getItem(this.billdeskRetryStateKey) || '').trim();
+      const raw = String(localStorage.getItem(this.gatewayRetryStateKey) || '').trim();
       if (!raw) return {};
       const parsed = JSON.parse(raw);
       return parsed && typeof parsed === 'object' ? parsed : {};
@@ -222,7 +215,7 @@ export class PaymentIntegrationService {
 
   private writeRetryState(state: Record<string, { failures: number; cooldownUntil?: number }>): void {
     try {
-      localStorage.setItem(this.billdeskRetryStateKey, JSON.stringify(state || {}));
+      localStorage.setItem(this.gatewayRetryStateKey, JSON.stringify(state || {}));
     } catch {
       // no-op
     }

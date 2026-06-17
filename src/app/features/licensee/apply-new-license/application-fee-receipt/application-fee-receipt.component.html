@@ -1,10 +1,24 @@
 <div class="receipt-page">
-    <div class="receipt-card" [class.failed]="statusKind === 'failed'">
+  <div class="receipt-card" 
+       [class.failed]="statusKind === 'failed'" 
+       [class.success]="statusKind === 'success'" 
+       [class.pending]="statusKind === 'pending'">
+       
     <div class="receipt-header">
       <div class="title-block">
-        <h2 class="title">{{ headerTitle }}</h2>
+        <h2 class="title">
+          <span *ngIf="statusKind === 'success'">✅ </span>
+          <span *ngIf="statusKind === 'failed'">❌ </span>
+          <span *ngIf="statusKind === 'pending'">⏳ </span>
+          {{ headerTitle }}
+        </h2>
         <div class="status-row">
-          <span class="status-pill" [class.failed]="statusKind === 'failed'">{{ statusLabel }}</span>
+          <span class="status-pill" 
+                [class.failed]="statusKind === 'failed'"
+                [class.success]="statusKind === 'success'"
+                [class.pending]="statusKind === 'pending'">
+            {{ statusLabel }}
+          </span>
         </div>
       </div>
       <div class="meta-block">
@@ -18,56 +32,58 @@
         <div class="col">
           <div class="field">
             <div class="label">Application ID</div>
-            <div class="value mono">{{ vm.applicationId || '-' }}</div>
+            <div class="value mono">{{ vm.applicationId || 'N/A' }}</div>
           </div>
           <div class="field">
             <div class="label">Transaction ID</div>
-            <div class="value mono">{{ vm.transactionId || '-' }}</div>
+            <div class="value mono">{{ vm.transactionId || 'N/A' }}</div>
           </div>
           <div class="field">
             <div class="label">Head Of Account</div>
-            <div class="value mono">{{ vm.hoa || '-' }}</div>
+            <div class="value mono">{{ vm.hoa || 'N/A' }}</div>
           </div>
         </div>
         <div class="col amount-col">
-          <div class="amount-box">
-            <div class="amount-label">Amount</div>
-            <div class="amount-value">₹ {{ formattedAmount }}</div>
+          <div class="amount-box" *ngIf="vm.amount > 0 || statusKind === 'success'">
+            <div class="amount-label">Amount Paid</div>
+            <div class="amount-value" [style.color]="statusKind === 'failed' ? '#d32f2f' : '#2e7d32'">
+              ₹ {{ formattedAmount }}
+            </div>
             <div class="amount-note">Application Fee</div>
           </div>
         </div>
       </div>
 
-      <div class="alert" *ngIf="statusKind === 'failed'">
-        <div class="alert-title">Failure Reason</div>
-        <div class="alert-body">{{ vm.reason || 'Payment could not be completed.' }}</div>
+      <div class="alert" *ngIf="statusKind === 'failed'" style="background: #ffebee; border-left: 4px solid #d32f2f; padding: 12px; margin-top: 16px;">
+        <div class="alert-title" style="color: #d32f2f; font-weight: bold;">Failure Reason</div>
+        <div class="alert-body" style="color: #b71c1c;">{{ vm.reason || 'Payment could not be completed by the bank. Please try again.' }}</div>
       </div>
 
       <div class="note" *ngIf="statusKind === 'success'">
         <div class="note-title">Application Submission</div>
         <div class="note-body">
-          Auto-submitted: <b>{{ autoSubmittedLabel }}</b>
+          Auto-submitted: <b style="color: #2e7d32;">{{ autoSubmittedLabel }}</b>
           <span *ngIf="vm.autoSubmitError"> ({{ vm.autoSubmitError }})</span>
         </div>
       </div>
 
-      <div class="note" *ngIf="statusKind === 'success' && vm.autoSubmitted === '1'">
+      <div class="note" *ngIf="statusKind === 'success' && vm.autoSubmitted === '1' && vm.sbmApplicationId">
         <div class="note-title">Salesman/Barman Submission</div>
         <div class="note-body">
           Submitted with New License: <b>{{ sbmSubmittedLabel }}</b>
-          <span *ngIf="vm.sbmApplicationId"> (Application ID: <span class="mono">{{ vm.sbmApplicationId }}</span>)</span>
+          <span> (Application ID: <span class="mono">{{ vm.sbmApplicationId }}</span>)</span>
           <span *ngIf="vm.sbmSubmitError"> ({{ vm.sbmSubmitError }})</span>
         </div>
       </div>
 
-      <div class="note" *ngIf="statusKind === 'pending'">
-        <div class="note-title">Next Step</div>
-        <div class="note-body">
-          Your payment is not confirmed yet. Please wait for some time and check the status from <b>New License Management</b>.
+      <div class="note" *ngIf="statusKind === 'pending'" style="background: #fff8e1; border-left: 4px solid #ffb300; padding: 12px; margin-top: 16px;">
+        <div class="note-title" style="color: #f57f17; font-weight: bold;">Next Step</div>
+        <div class="note-body" style="color: #ff6f00;">
+          Your payment is currently processing with SBIePay. Please wait for some time and check the status from <b>New License Management</b>. Do not attempt to pay again immediately.
         </div>
       </div>
 
-      <div class="disclaimer">
+      <div class="disclaimer" style="margin-top: 24px; font-size: 0.85rem; color: #666;">
         <b>Note:</b> Please keep this slip for your records. For any payment issues, contact the Excise Department support.
       </div>
     </div>
@@ -78,4 +94,3 @@
     </div>
   </div>
 </div>
-

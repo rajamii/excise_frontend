@@ -50,15 +50,28 @@ export class ApplicationFeeReceiptComponent {
     private router: Router
   ) {
     this.route.queryParamMap.subscribe((params) => {
+      // Get status from either old or new gateway keys
+      const rawStatus = params.get('status') || params.get('orderStatus') || 'processing';
+
       this.vm = {
-        applicationId: String(params.get('applicationId') || params.get('payerId') || '').trim(),
-        transactionId: String(params.get('transactionId') || '').trim(),
-        amount: Number(params.get('amount') || 0),
+        // Fallback to session storage if not in URL (set during the declaration step)
+        applicationId: String(params.get('applicationId') || params.get('payerId') || sessionStorage.getItem('new_license_draft_application_id') || '').trim(),
+
+        // Map old transactionId OR new orderRefNumber
+        transactionId: String(params.get('transactionId') || params.get('orderRefNumber') || '').trim(),
+
+        // Map old amount OR new orderAmount
+        amount: Number(params.get('amount') || params.get('orderAmount') || 0),
+
         hoa: String(params.get('hoa') || '').trim(),
-        status: String(params.get('status') || 'success').trim(),
-        reason: String(params.get('reason') || '').trim(),
-        createdAt: String(params.get('createdAt') || '').trim(),
-        autoSubmitted: String(params.get('autoSubmitted') || '0').trim(),
+        status: String(rawStatus).trim(),
+        reason: String(params.get('reason') || params.get('errorDescription') || '').trim(),
+
+        // Default to current time if missing
+        createdAt: String(params.get('createdAt') || new Date().toISOString()).trim(),
+
+        // If payment is successful, the backend workflow auto-submits it now
+        autoSubmitted: String(params.get('autoSubmitted') || (rawStatus.toLowerCase() === 'success' ? '1' : '0')).trim(),
         autoSubmitError: String(params.get('autoSubmitError') || '').trim(),
         sbmSubmitted: String(params.get('sbmSubmitted') || '0').trim(),
         sbmApplicationId: String(params.get('sbmApplicationId') || '').trim(),
