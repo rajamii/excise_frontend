@@ -22,8 +22,9 @@
           <input formControlName="middleName" placeholder="Middle Name" />
           <input formControlName="lastName" placeholder="Last Name" required />
 
-          <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" inputmode="numeric"
-            autocomplete="tel" required (input)="sanitizePhoneNumberInput('registration', $event)" />
+          <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required
+            inputmode="numeric" (keypress)="allowOnlyDigits($event)"
+            (input)="sanitizePhoneInput($event, 'registration')" (keydown.enter)="onRegistrationPhoneEnter($event)" />
 
           <button mat-raised-button color="primary" class="filled-button" type="button" (click)="sendRegistrationOtp()"
             [disabled]="isSendingOtp || 
@@ -132,7 +133,7 @@
             </mat-icon>
           </div>
 
-          <app-captcha [formGroup]="registrationForm"></app-captcha>
+          <!-- <app-captcha [formGroup]="registrationForm"></app-captcha> -->
 
           <!-- Final Register Button -->
           <button mat-raised-button color="primary" class="filled-button" (click)="onRegister()"
@@ -194,7 +195,7 @@
           </mat-icon>
         </div>
 
-        <app-captcha [formGroup]="loginForm"></app-captcha>
+        <!-- <app-captcha [formGroup]="loginForm"></app-captcha> -->
 
         @if (loginError) {
         <div class="error-box">
@@ -210,7 +211,7 @@
         </div>
         }
 
-        <button matButton="filled" class="filled-button" type="submit" [disabled]="loginForm.invalid">Sign In</button>
+        <button matButton="filled" class="filled-button" type="submit" [disabled]="loginForm.get('username')?.invalid || loginForm.get('password')?.invalid">Sign In</button>
 
         <div class="forgot-password-container">
           <a routerLink="/forgot-password" class="forgot-link" tabindex="0">
@@ -223,7 +224,7 @@
         @if (!isPasswordMode) {
         @if (!otpSent) {
         <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric"
-          autocomplete="tel" required (input)="sanitizePhoneNumberInput('login', $event)"
+          autocomplete="tel" required (input)="sanitizePhoneInput($event, 'login')"
           (keydown.enter)="onOtpPhoneEnter($event)" />
         <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
           [disabled]="isSendingOtp">Send OTP</button>
@@ -312,11 +313,10 @@
     </div>
   </div>
 
-  @if (!isPasswordMode && otpSent && loginOtpPreview) {
-  <aside class="otp-preview-box" aria-live="polite">
-    <span class="otp-preview-label">Login OTP</span>
-    <span class="otp-preview-value">{{ loginOtpPreview }}</span>
-    <span class="otp-preview-note">Use this OTP to complete sign in.</span>
-  </aside>
-  }
-</div>
+@if (!isPasswordMode && otpSent && loginOtpPreview) {
+<aside class="otp-preview-box" aria-live="polite">
+  <span class="otp-preview-label">Login OTP</span>
+  <span class="otp-preview-value">{{ loginOtpPreview }}</span>
+  <span class="otp-preview-note">Use this OTP to complete sign in.</span>
+</aside>
+}

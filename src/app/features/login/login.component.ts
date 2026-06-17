@@ -7,7 +7,7 @@ import {
 } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MaterialModule } from '../../shared/material.module';
-import { CaptchaComponent } from '../../shared/components/captcha/captcha.component';
+// import { CaptchaComponent } from '../../shared/components/captcha/captcha.component';
 import { BaseComponent } from '../../base/base.components';
 import { BaseDependency } from '../../base/dependency/base.dependency';
 import { NgOtpInputModule } from 'ng-otp-input';
@@ -26,7 +26,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule, MatProgressSpinnerModule, RouterLink, CommonModule, ReactiveFormsModule],
+  imports: [MaterialModule, NgOtpInputModule, MatProgressSpinnerModule, RouterLink, CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -79,8 +79,8 @@ export class LoginComponent extends BaseComponent {
       password: [''],
       phoneNumber: ['', Validators.pattern(PatternConstants.MOBILE)],
       otp: [''],
-      response: ['', Validators.required],
-      hashkey: ['', Validators.required],
+      response: [''],
+      hashkey: [''],
     });
 
     this.registrationForm = this.fb.group(
@@ -453,10 +453,19 @@ export class LoginComponent extends BaseComponent {
 
     this.authService.sendOtp(formData).subscribe({
       next: (response) => {
+        const otpId = this.extractOtpId(response);
+        if (!otpId) {
+          this.setLoginErrors(['OTP request succeeded but server response was incomplete. Please try again.']);
+          this.isSendingOtp = false;
+          return;
+        }
+
         this.otpSent = true;
-        this.otpIndex = response.otpId;
-        this.loginOtpPreview = response.otp ? String(response.otp) : null;
-        console.log('OTP:', response.otp);
+        this.otpIndex = otpId;
+        this.loginOtpPreview = this.extractOtpPreview(response);
+        this.showOtpSuccessPopup(
+          response?.message || 'OTP sent successfully to your registered mobile number.'
+        );
         this.isSendingOtp = false;
       },
       error: (err) => {
@@ -492,11 +501,20 @@ export class LoginComponent extends BaseComponent {
       purpose: 'register'
     }).subscribe({
       next: (res: any) => {
-        this.registrationOtpId = res.otpId;
+        const otpId = this.extractOtpId(res);
+        if (!otpId) {
+          this.registrationError = true;
+          this.registrationErrorMessages = ['OTP request succeeded but server response was incomplete. Please try again.'];
+          this.isSendingOtp = false;
+          return;
+        }
+
+        this.registrationOtpId = otpId;
         this.registrationOtpSent = true;
+        this.showOtpSuccessPopup(
+          res?.message || 'OTP sent successfully to your mobile number.'
+        );
         this.isSendingOtp = false;
-        //debug log
-        console.log('Registration OTP sent. OTP:', res.otp);
       },
       error: (err) => {
         this.isSendingOtp = false;
@@ -538,8 +556,9 @@ export class LoginComponent extends BaseComponent {
         this.registrationForm.get('subdivision')?.setValidators(Validators.required);
         this.registrationForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
         this.registrationForm.get('confirmPassword')?.setValidators(Validators.required);
-        this.registrationForm.get('hashkey')?.setValidators(Validators.required);
-        this.registrationForm.get('response')?.setValidators(Validators.required);
+        // Comment out captcha validators for audit compliance
+        // this.registrationForm.get('hashkey')?.setValidators(Validators.required);
+        // this.registrationForm.get('response')?.setValidators(Validators.required);
 
         // Update validity of all controls
         Object.keys(this.registrationForm.controls).forEach(key => {
@@ -639,8 +658,8 @@ export class LoginComponent extends BaseComponent {
   }
 
   private loginWithPassword(): void {
-    if (this.loginForm.invalid) {
-      this.setLoginErrors(['Enter valid user ID, password, and captcha to continue.']);
+    if (this.loginForm.get('username')?.invalid || this.loginForm.get('password')?.invalid) {
+      this.setLoginErrors(['Enter valid user ID and password to continue.']);
       return;
     }
 
@@ -836,6 +855,80 @@ export class LoginComponent extends BaseComponent {
     });
   }
 
+  private showOtpSuccessPopup(message: string): void {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && typeof active.blur === 'function') {
+      active.blur();
+    }
+
+    Swal.fire({
+      position: 'center',
+      icon: 'success',
+      title: 'OTP Sent',
+      text: message,
+      showConfirmButton: false,
+      timer: 2200,
+      timerProgressBar: true,
+      returnFocus: false,
+    });
+  }
+
+  private extractOtpId(payload: any): string | null {
+    return payload?.otpId || payload?.otp_id || payload?.data?.otpId || payload?.data?.otp_id || null;
+  }
+
+  private extractOtpPreview(payload: any): string | null {
+    const otp = payload?.otp ?? payload?.otp_value ?? payload?.data?.otp;
+    return otp ? String(otp) : null;
+  }
+
+  allowOnlyDigits(event: KeyboardEvent): void {
+    const allowedControlKeys = [
+      'Backspace',
+      'Delete',
+      'ArrowLeft',
+      'ArrowRight',
+      'Tab',
+      'Home',
+      'End'
+    ];
+
+    if (allowedControlKeys.includes(event.key)) {
+      return;
+    }
+
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  sanitizePhoneInput(event: Event, target: 'login' | 'registration'): void {
+    const input = event.target as HTMLInputElement;
+    const digitsOnly = (input.value || '').replace(/\D/g, '').slice(0, 10);
+    input.value = digitsOnly;
+
+    if (target === 'login') {
+      this.loginForm.controls['phoneNumber'].setValue(digitsOnly, { emitEvent: false });
+      return;
+    }
+
+    this.registrationForm.controls['phoneNumber'].setValue(digitsOnly, { emitEvent: false });
+  }
+
+  onLoginPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.isPasswordMode && !this.otpSent) {
+      this.sendOtp();
+    }
+  }
+
+  onRegistrationPhoneEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.registrationOtpSent && !this.registrationComplete) {
+      this.sendRegistrationOtp();
+    }
+  }
+
   private mapLoginErrors(err: HttpErrorResponse | any, flow: 'password' | 'sendOtp' | 'verifyOtp'): string[] {
     const backendMessages = this.extractErrorMessages(err?.error);
     const status = err?.status;
@@ -853,9 +946,10 @@ export class LoginComponent extends BaseComponent {
       if (status === 404 || hasAny(['user not found', 'does not exist', 'not registered', 'unregistered'])) {
         return ['User ID is not registered. Please sign up first.'];
       }
-      if (hasAny(['captcha', 'invalid response'])) {
-        return ['Captcha verification failed. Please solve captcha again.'];
-      }
+      // Commented out for captcha removal
+      // if (hasAny(['captcha', 'invalid response'])) {
+      //   return ['Captcha verification failed. Please solve captcha again.'];
+      // }
     }
 
     if (flow === 'sendOtp') {
@@ -869,7 +963,7 @@ export class LoginComponent extends BaseComponent {
         return ['This mobile number is not registered. Please sign up first.'];
       }
       if (status === 429 || hasAny(['too many', 'rate limit'])) {
-        return ['Too many OTP requests. Please wait and try again.'];
+        return ['OTP request limit reached (15 attempts). Please try again after 15 minutes.'];
       }
     }
 
@@ -937,7 +1031,8 @@ export class LoginComponent extends BaseComponent {
     if (this.registrationForm.get('subdivision')?.invalid) messages.push('Subdivision is required.');
     if (this.registrationForm.get('panNumber')?.invalid) messages.push('PAN number is required.');
     if (this.registrationForm.get('address')?.invalid) messages.push('Address is required.');
-    if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
+    // Commented out for captcha removal
+    // if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
 
     return messages.length > 0 ? Array.from(new Set(messages)) : ['Please check the form and try again.'];
   }
@@ -954,7 +1049,7 @@ export class LoginComponent extends BaseComponent {
         return ['This mobile number is already registered. Please sign in instead.'];
       }
       if (status === 429 || hasAny(['too many', 'rate limit'])) {
-        return ['Too many OTP requests. Please wait and try again.'];
+        return ['OTP request limit reached (15 attempts). Please try again after 15 minutes.'];
       }
     }
 
@@ -974,9 +1069,10 @@ export class LoginComponent extends BaseComponent {
       if (hasAny(['password', 'match'])) {
         return ['Password and confirm password must match.'];
       }
-      if (hasAny(['captcha', 'invalid response'])) {
-        return ['Captcha verification failed. Please solve captcha again.'];
-      }
+      // Commented out for captcha removal
+      // if (hasAny(['captcha', 'invalid response'])) {
+      //   return ['Captcha verification failed. Please solve captcha again.'];
+      // }
     }
 
     if (backendMessages.length > 0) {
