@@ -280,18 +280,9 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.users.view' }
       },
-      {
-        path: 'admin/sbi-e-pay',
-        loadComponent: () =>
-          import('../admin/master/sbi-e-pay/sbi-e-pay.component').then((m) => m.SbiEPayComponent),
-        canActivate: [UserRouteAccessService],
-        data: { authorities: ['site_admin'] }
-      },
       // Backward-compatible aliases for old paths under /dashboard/*
       { path: 'users', redirectTo: 'admin/users', pathMatch: 'full' },
-      { path: 'sbi-e-pay', redirectTo: 'admin/sbi-e-pay', pathMatch: 'full' },
       { path: 'roles', redirectTo: 'admin/roles', pathMatch: 'full' },
-      // ✅ COMMENTED OUT: District redirect (matches commented route above)
       { path: 'districts', redirectTo: 'admin/districts', pathMatch: 'full' },
       { path: 'subdivisions', redirectTo: 'admin/subdivisions', pathMatch: 'full' },
       { path: 'police-stations', redirectTo: 'admin/police-stations', pathMatch: 'full' },

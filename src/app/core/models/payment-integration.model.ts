@@ -180,22 +180,27 @@ export interface PaymentStatusUpdatePayload {
   responseTxndate?: string;
 }
 
-export interface BilldeskWalletRechargeInitiatePayload {
+// Replace the Billdesk interfaces with these:
+
+export interface SBIePayInitiateResponse {
+  success: boolean;
+  transaction_id: string;
+  transactionUrl: string;
+  application_id?: string;
+  sbi_order_ref?: string;
+}
+
+export interface SBIePayWalletRechargeInitiatePayload {
   transaction_id: string;
   wallet_type: string;
   licensee_id?: string;
   payer_id?: string;
   head_of_account?: string;
   amount: number;
+  payment_module_code?: string;
 }
 
-export interface BilldeskWalletRechargeInitiateResponse {
-  billdeskUrl: string;
-  requestMsg: string;
-  transactionId: string;
-}
-
-export interface BilldeskLicenseFeeInitiatePayload {
+export interface SBIePayLicenseFeeInitiatePayload {
   transaction_id: string;
   amount: number;
   payer_id?: string;
@@ -204,20 +209,16 @@ export interface BilldeskLicenseFeeInitiatePayload {
   requisition_id_no?: string;
 }
 
-export interface BilldeskSecurityDepositInitiatePayload {
+export interface SBIePaySecurityDepositInitiatePayload {
   transaction_id: string;
   amount: number;
   licensee_id: string;
   licensee_name?: string;
-  bank_fdr_code?: string;
-  license_type?: string;
-  district?: string;
+  account_holder_name?: string;
   payment_module_code?: string;
-  application_id?: string;
-  requisition_id_no?: string;
 }
 
-export interface BilldeskNewLicenseApplicationFeeInitiatePayload {
+export interface SBIePayNewLicenseApplicationFeeInitiatePayload {
   application_id: string;
   amount?: number;
   payment_module_code?: string;

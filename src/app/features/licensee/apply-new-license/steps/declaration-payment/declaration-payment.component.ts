@@ -21,13 +21,6 @@ interface UploadedDocumentView {
   fileName: string;
 }
 
-// Declare the global BillDesk function so TypeScript doesn't throw errors
-declare global {
-  interface Window {
-    loadBillDeskSdk: (config: any) => void;
-  }
-}
-
 @Component({
   selector: 'app-declaration-payment',
   standalone: true,
@@ -1221,8 +1214,9 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   onPayClick() {
     if (!this.draftApplicationId) return;
 
-  this.isProcessing = true;
-   
+    this.isProcessing = true;
+    this.isSubmitting = true;
+
     // Prefer backend-resolved amount from DB; send amount only if we have a valid fee value.
     const amountToSend = this.feeAmount && this.feeAmount > 0 ? this.feeAmount : undefined;
 
@@ -1232,152 +1226,22 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         this.isSubmitting = false;
         Swal.close();
 
-      // Check for SDK Parameters
-      const hasSDKParams = (response?.bd_order_id || response?.bdOrderId) && 
-                           (response?.auth_token || response?.authToken);
-
-      if (hasSDKParams) {
-        try {
-          // Use the shared service method
-          this.paymentService.launchBillDeskSDK(response, (txn) => {
-            if (txn.status === 'success' || txn.status === '0300') {
-              this.submittedApplicationId = this.draftApplicationId;
-              this.cdr.detectChanges();
-            } else {
-              Swal.fire('Payment Incomplete', 'The payment was cancelled or declined.', 'error');
-            }
-          });
-        } catch (err) {
-          Swal.fire('Error', 'Payment SDK failed to load.', 'error');
+        if (response.success && response.transactionUrl) {
+          // Redirect the user directly to the SBI ePay checkout page.
+          // Because our backend sbiepay_response sends a fallback window.location.href,
+          // the user will be smoothly redirected back to your success URL.
+          window.location.href = response.transactionUrl;
+        } else {
+          Swal.fire('Error', 'Missing transaction URL from gateway.', 'error');
         }
-        return;
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        this.isSubmitting = false;
+        this.paymentService.handleInitiationError(err);
       }
-
-      // FALLBACK: Traditional Redirect (for mock/old testing)[cite: 1]
-      const billdeskUrl = String(response?.billdesk_url || response?.billdeskUrl || '').trim();
-      const requestMsg = String(response?.request_msg || response?.requestMsg || '').trim();
-
-      if (billdeskUrl && requestMsg) {
-        this.submitToBillDesk(billdeskUrl, requestMsg);
-      } else {
-        Swal.fire('Error', 'Missing gateway parameters.', 'error');
-      }
-    },
-    error: (err) => {
-      this.handlePaymentCallback(err); // Centralize error popups if possible
-    }
-  });
-}
-
-  // private launchBillDesk(apiData: any) {
-  //   // 1. Prepare the flow config object required by the SDK
-  //   const flow_config = {
-  //     merchantId: apiData.merchantId,
-  //     bdOrderId: apiData.bdOrderId,
-  //     authToken: apiData.authToken,
-  //     childWindow: true,
-  //     returnUrl: environment.payment.callbackUrl, // MUST match the backend 'ru' EXACTLY
-  //     retryCount: 3
-  //   };
-
-  //   // 2. Prepare the main config object[cite: 1]
-  //   const config = {
-  //     flowType: "payments",
-  //     flowConfig: flow_config,
-  //     responseHandler: (txn: any) => this.handlePaymentCallback(txn) // Captures popup closure
-  //   };
-
-  //   // 3. Invoke the globally scoped SDK method
-  //   if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
-  //     window.loadBillDeskSdk(config);
-  //   } else {
-  //     console.error('BillDesk SDK is not loaded in the window object.');
-  //     Swal.fire('Error', 'Payment SDK failed to load. Please ensure SDK scripts are in index.html.', 'error');
-  //   }
-  // }
-
-  private handlePaymentCallback(txn: any) {
-    console.log("BillDesk Callback received. Status:", txn.status);
-
-    // Billdesk auth_status for a successful transaction is '0300'[cite: 1]
-    if (txn.status === 'success' || txn.status === '0300') {
-      // The backend has already received the webhook and verified the JWS.
-      // Transition the user to the success screen:
-      this.submittedApplicationId = this.draftApplicationId;
-      this.cdr.detectChanges();
-    } else {
-      // Handles cancellations, 3DS failures, or declined cards
-      Swal.fire('Payment Incomplete', 'Your payment was cancelled or declined. Please try again.', 'error');
-    }
+    });
   }
-
-
-  private submitToBillDesk(url: string, requestMsg: string): void {
-    try {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = url;
-
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'msg';
-      input.value = requestMsg;
-
-      form.appendChild(input);
-      document.body.appendChild(form);
-      form.submit();
-    } catch (e) {
-      console.error('❌ BillDesk redirect failed:', e);
-      this.isSubmitting = false;
-      Swal.fire('Error', 'Unable to redirect to BillDesk. Please try again.', 'error');
-    }
-  }
-
-  // private extractRetryAfterSeconds(err: any): number {
-  //   const httpStatus = Number(err?.status || 0);
-  //   if (httpStatus !== 409) return 0;
-  //   const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
-  //   const seconds = Number(raw);
-  //   return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
-  // }
-
-  // private showBilldeskPendingRetryPopup(retryAfterSeconds: number): void {
-  //   const totalSeconds = Math.max(1, Math.floor(retryAfterSeconds));
-  //   const format = (seconds: number) => {
-  //     const s = Math.max(0, Math.floor(seconds));
-  //     const mm = String(Math.floor(s / 60)).padStart(2, '0');
-  //     const ss = String(s % 60).padStart(2, '0');
-  //     return `${mm}:${ss}`;
-  //   };
-
-  //   let interval: any;
-  //   Swal.fire({
-  //     icon: 'info',
-  //     title: 'Payment Pending',
-  //     html:
-  //       `<div style="text-align:left">` +
-  //       `<div>Your last BillDesk application-fee payment is still pending.</div>` +
-  //       `<div>Please try again after <b>${format(totalSeconds)}</b>.</div>` +
-  //       `</div>`,
-  //     confirmButtonText: 'Cancel',
-  //     showConfirmButton: true,
-  //     allowOutsideClick: false,
-  //     timer: totalSeconds * 1000,
-  //     timerProgressBar: true,
-  //     didOpen: () => {
-  //       const container = Swal.getHtmlContainer();
-  //       const countdownEl = container ? (container.querySelector('b') as HTMLElement | null) : null;
-  //       interval = setInterval(() => {
-  //         const left = Swal.getTimerLeft();
-  //         if (left === null || left === undefined) return;
-  //         if (countdownEl) countdownEl.textContent = format(Math.ceil(left / 1000));
-  //       }, 250);
-  //     },
-  //     willClose: () => {
-  //       if (interval) clearInterval(interval);
-  //     }
-  //   });
-  // }
 
   private clearApplicationData(): void {
     const sections = [
