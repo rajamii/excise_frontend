@@ -55,6 +55,11 @@
                 <mat-cell *matCellDef="let item">{{ item.brand_name || '—' }}</mat-cell>
               </ng-container>
 
+              <ng-container matColumnDef="liquorType">
+                <mat-header-cell *matHeaderCellDef>Liquor Type</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.brand_type || '—' }}</mat-cell>
+              </ng-container>
+
               <ng-container matColumnDef="sizeMl">
                 <mat-header-cell *matHeaderCellDef>Size (ml)</mat-header-cell>
                 <mat-cell *matCellDef="let item">
@@ -115,6 +120,11 @@
               <ng-container matColumnDef="brandName">
                 <mat-header-cell *matHeaderCellDef>Brand</mat-header-cell>
                 <mat-cell *matCellDef="let item">{{ item.brand_name || '—' }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="liquorType">
+                <mat-header-cell *matHeaderCellDef>Liquor Type</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.brand_type || '—' }}</mat-cell>
               </ng-container>
 
               <ng-container matColumnDef="sizeMl">
