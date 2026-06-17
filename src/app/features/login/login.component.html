@@ -133,7 +133,7 @@
             </mat-icon>
           </div>
 
-          <app-captcha [formGroup]="registrationForm"></app-captcha>
+          <!-- <app-captcha [formGroup]="registrationForm"></app-captcha> -->
 
           <!-- Final Register Button -->
           <button mat-raised-button color="primary" class="filled-button" (click)="onRegister()"
@@ -195,7 +195,7 @@
           </mat-icon>
         </div>
 
-        <app-captcha [formGroup]="loginForm"></app-captcha>
+        <!-- <app-captcha [formGroup]="loginForm"></app-captcha> -->
 
         @if (loginError) {
         <div class="error-box">
@@ -211,7 +211,7 @@
         </div>
         }
 
-        <button matButton="filled" class="filled-button" type="submit" [disabled]="loginForm.invalid">Sign In</button>
+        <button matButton="filled" class="filled-button" type="submit" [disabled]="loginForm.get('username')?.invalid || loginForm.get('password')?.invalid">Sign In</button>
 
         <div class="forgot-password-container">
           <a routerLink="/forgot-password" class="forgot-link" tabindex="0">

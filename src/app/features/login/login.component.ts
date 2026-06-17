@@ -7,7 +7,7 @@ import {
 } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MaterialModule } from '../../shared/material.module';
-import { CaptchaComponent } from '../../shared/components/captcha/captcha.component';
+// import { CaptchaComponent } from '../../shared/components/captcha/captcha.component';
 import { BaseComponent } from '../../base/base.components';
 import { BaseDependency } from '../../base/dependency/base.dependency';
 import { NgOtpInputModule } from 'ng-otp-input';
@@ -26,7 +26,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule, MatProgressSpinnerModule, RouterLink, CommonModule, ReactiveFormsModule],
+  imports: [MaterialModule, NgOtpInputModule, MatProgressSpinnerModule, RouterLink, CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -79,8 +79,8 @@ export class LoginComponent extends BaseComponent {
       password: [''],
       phoneNumber: ['', Validators.pattern(PatternConstants.MOBILE)],
       otp: [''],
-      response: ['', Validators.required],
-      hashkey: ['', Validators.required],
+      response: [''],
+      hashkey: [''],
     });
 
     this.registrationForm = this.fb.group(
@@ -556,8 +556,9 @@ export class LoginComponent extends BaseComponent {
         this.registrationForm.get('subdivision')?.setValidators(Validators.required);
         this.registrationForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
         this.registrationForm.get('confirmPassword')?.setValidators(Validators.required);
-        this.registrationForm.get('hashkey')?.setValidators(Validators.required);
-        this.registrationForm.get('response')?.setValidators(Validators.required);
+        // Comment out captcha validators for audit compliance
+        // this.registrationForm.get('hashkey')?.setValidators(Validators.required);
+        // this.registrationForm.get('response')?.setValidators(Validators.required);
 
         // Update validity of all controls
         Object.keys(this.registrationForm.controls).forEach(key => {
@@ -657,8 +658,8 @@ export class LoginComponent extends BaseComponent {
   }
 
   private loginWithPassword(): void {
-    if (this.loginForm.invalid) {
-      this.setLoginErrors(['Enter valid user ID, password, and captcha to continue.']);
+    if (this.loginForm.get('username')?.invalid || this.loginForm.get('password')?.invalid) {
+      this.setLoginErrors(['Enter valid user ID and password to continue.']);
       return;
     }
 
@@ -945,9 +946,10 @@ export class LoginComponent extends BaseComponent {
       if (status === 404 || hasAny(['user not found', 'does not exist', 'not registered', 'unregistered'])) {
         return ['User ID is not registered. Please sign up first.'];
       }
-      if (hasAny(['captcha', 'invalid response'])) {
-        return ['Captcha verification failed. Please solve captcha again.'];
-      }
+      // Commented out for captcha removal
+      // if (hasAny(['captcha', 'invalid response'])) {
+      //   return ['Captcha verification failed. Please solve captcha again.'];
+      // }
     }
 
     if (flow === 'sendOtp') {
@@ -1029,7 +1031,8 @@ export class LoginComponent extends BaseComponent {
     if (this.registrationForm.get('subdivision')?.invalid) messages.push('Subdivision is required.');
     if (this.registrationForm.get('panNumber')?.invalid) messages.push('PAN number is required.');
     if (this.registrationForm.get('address')?.invalid) messages.push('Address is required.');
-    if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
+    // Commented out for captcha removal
+    // if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
 
     return messages.length > 0 ? Array.from(new Set(messages)) : ['Please check the form and try again.'];
   }
@@ -1066,9 +1069,10 @@ export class LoginComponent extends BaseComponent {
       if (hasAny(['password', 'match'])) {
         return ['Password and confirm password must match.'];
       }
-      if (hasAny(['captcha', 'invalid response'])) {
-        return ['Captcha verification failed. Please solve captcha again.'];
-      }
+      // Commented out for captcha removal
+      // if (hasAny(['captcha', 'invalid response'])) {
+      //   return ['Captcha verification failed. Please solve captcha again.'];
+      // }
     }
 
     if (backendMessages.length > 0) {
