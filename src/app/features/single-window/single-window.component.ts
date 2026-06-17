@@ -326,6 +326,41 @@ export class SingleWindowComponent implements OnInit {
           id: result.id
         }
       });
+    } else if (result.type === 'payment') {
+      if (result.meta && result.meta.target_type && result.meta.target_id) {
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'single-window-detail',
+            type: result.meta.target_type,
+            id: result.meta.target_id,
+            targetId: result.id
+          }
+        });
+      } else {
+        const appId = (result.meta && result.meta.application_id) || result.application_id;
+        if (appId) {
+          const isApplication = appId.includes('/') || appId.startsWith('NLI') || appId.startsWith('NLA') || appId.startsWith('LRA') || appId.startsWith('SBM');
+          if (isApplication) {
+            this.router.navigate(['/dashboard'], {
+              queryParams: {
+                section: 'single-window-detail',
+                type: 'new_license_app',
+                id: appId,
+                targetId: result.id
+              }
+            });
+          } else {
+            const userId = result.meta && result.meta.user_id;
+            this.router.navigate(['/dashboard'], {
+              queryParams: {
+                section: 'single-window-detail',
+                type: 'licensee',
+                id: userId || appId
+              }
+            });
+          }
+        }
+      }
     } else {
       // Check if there is an associated NLA application ID
       const appId = (result.meta && result.meta.application_id) || result.application_id;

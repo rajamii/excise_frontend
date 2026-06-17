@@ -95,13 +95,15 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
             if (renewalMatch) {
               this.selectedWorkflowAppId = renewalMatch.application_id;
               this.selectedWorkflowApp = renewalMatch;
-              this.activeTab = 1; // Auto-switch to Workflow Tracking tab
+              this.activeTab = 3; // Auto-switch to Payment Details tab
             } else {
               const sbmMatch = this.detailData.salesman_barman_applications?.find((s: any) => s.application_id === this.targetId);
               if (sbmMatch) {
                 this.selectedWorkflowAppId = sbmMatch.application_id;
                 this.selectedWorkflowApp = sbmMatch;
-                this.activeTab = 1; // Auto-switch to Workflow Tracking tab
+                this.activeTab = 3; // Auto-switch to Payment Details tab
+              } else {
+                this.activeTab = 3; // Auto-switch to Payment Details tab for main application
               }
             }
           }
@@ -109,6 +111,9 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
           // For other application types, detailData is the application itself
           this.selectedWorkflowAppId = this.detailData.application_id;
           this.selectedWorkflowApp = this.detailData;
+          if (this.targetId) {
+            this.activeTab = 3; // Auto-switch to Payment Details tab
+          }
         }
 
         // Setup the consolidated list of application payment states
