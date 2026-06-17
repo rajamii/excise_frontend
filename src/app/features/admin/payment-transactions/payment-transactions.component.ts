@@ -29,6 +29,30 @@ export class PaymentTransactionsComponent implements OnInit {
   pageSizeOptions = [10, 25, 50, 100];
   error: string | null = null;
 
+  // Advanced Filters
+  showAdvancedFilters = false;
+  filterDay = '';
+  filterMonth = '';
+  filterYear = '';
+  filterModule = '';
+
+  daysList: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
+  monthsList = [
+    { value: 1, name: 'January' },
+    { value: 2, name: 'February' },
+    { value: 3, name: 'March' },
+    { value: 4, name: 'April' },
+    { value: 5, name: 'May' },
+    { value: 6, name: 'June' },
+    { value: 7, name: 'July' },
+    { value: 8, name: 'August' },
+    { value: 9, name: 'September' },
+    { value: 10, name: 'October' },
+    { value: 11, name: 'November' },
+    { value: 12, name: 'December' }
+  ];
+  yearsList: number[] = [2024, 2025, 2026, 2027];
+
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
@@ -60,6 +84,22 @@ export class PaymentTransactionsComponent implements OnInit {
       params.status = this.selectedStatus;
     }
 
+    if (this.filterDay) {
+      params.day = this.filterDay;
+    }
+
+    if (this.filterMonth) {
+      params.month = this.filterMonth;
+    }
+
+    if (this.filterYear) {
+      params.year = this.filterYear;
+    }
+
+    if (this.filterModule) {
+      params.module = this.filterModule;
+    }
+
     this.http.get<any>(`${environment.apiBaseUrl}/transactional/payment-gateway/billdesk/transactions/`, { params })
       .subscribe({
         next: (response) => {
@@ -86,6 +126,24 @@ export class PaymentTransactionsComponent implements OnInit {
 
   clearSearch() {
     this.searchQuery = '';
+    this.pageIndex = 0;
+    this.loadTransactions();
+  }
+
+  toggleAdvancedFilters() {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  onFilterChange() {
+    this.pageIndex = 0;
+    this.loadTransactions();
+  }
+
+  clearFilters() {
+    this.filterDay = '';
+    this.filterMonth = '';
+    this.filterYear = '';
+    this.filterModule = '';
     this.pageIndex = 0;
     this.loadTransactions();
   }

@@ -35,6 +35,13 @@ export class SingleWindowComponent implements OnInit {
   filterYear = '';
   filterCategory = '';
   filterRole = '';
+  filterModule = '';
+
+  modulesList = [
+    { value: '001', label: 'Application Fee' },
+    { value: '002', label: 'Renewal Fee' },
+    { value: '999', label: 'Wallet Recharge' }
+  ];
 
   daysList: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
   monthsList = [
@@ -238,6 +245,7 @@ export class SingleWindowComponent implements OnInit {
     this.filterYear = '';
     this.filterCategory = '';
     this.filterRole = '';
+    this.filterModule = '';
     this.onFilterChange();
   }
 
@@ -286,6 +294,7 @@ export class SingleWindowComponent implements OnInit {
       if (this.filterYear) params.year = this.filterYear;
       if (this.filterCategory) params.category = this.filterCategory;
       if (this.filterRole) params.role = this.filterRole;
+      if (this.filterModule) params.module = this.filterModule;
     }
 
     this.http.get<any>(`${environment.apiBaseUrl}/transactional/single-window/search/`, {

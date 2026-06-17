@@ -89,6 +89,62 @@
               <option value="P">Pending</option>
             </select>
           </div>
+
+          <!-- Advanced Filters Toggle Button -->
+          <button type="button" class="advanced-filter-toggle" [class.active]="showAdvancedFilters" (click)="toggleAdvancedFilters()">
+            <mat-icon>{{ showAdvancedFilters ? 'filter_alt_off' : 'filter_alt' }}</mat-icon>
+            <span>Advanced Filters</span>
+          </button>
+        </div>
+
+        <!-- Advanced Filters Panel -->
+        <div class="advanced-filters-panel" *ngIf="showAdvancedFilters">
+          <div class="filters-grid">
+            <!-- Day Filter -->
+            <div class="filter-item">
+              <label>Day</label>
+              <select [(ngModel)]="filterDay" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Days</option>
+                <option *ngFor="let day of daysList" [value]="day">{{ day }}</option>
+              </select>
+            </div>
+
+            <!-- Month Filter -->
+            <div class="filter-item">
+              <label>Month</label>
+              <select [(ngModel)]="filterMonth" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Months</option>
+                <option *ngFor="let m of monthsList" [value]="m.value">{{ m.name }}</option>
+              </select>
+            </div>
+
+            <!-- Year Filter -->
+            <div class="filter-item">
+              <label>Year</label>
+              <select [(ngModel)]="filterYear" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Years</option>
+                <option *ngFor="let y of yearsList" [value]="y">{{ y }}</option>
+              </select>
+            </div>
+
+            <!-- Module/Category Filter -->
+            <div class="filter-item">
+              <label>Module / Category</label>
+              <select [(ngModel)]="filterModule" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Categories</option>
+                <option value="001">Application Fee</option>
+                <option value="002">Renewal Fee</option>
+                <option value="999">Wallet Recharge</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filters-actions" *ngIf="filterDay || filterMonth || filterYear || filterModule">
+            <button type="button" class="reset-filters-btn" (click)="clearFilters()">
+              <mat-icon>filter_alt_off</mat-icon>
+              <span>Reset Filters</span>
+            </button>
+          </div>
         </div>
 
         <!-- Hint chips -->

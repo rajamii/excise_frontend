@@ -139,6 +139,15 @@
               </select>
             </div>
 
+            <!-- Module / Category Filter (payment mode only) -->
+            <div class="filter-item" *ngIf="searchMode === 'payment'">
+              <label>Module / Category</label>
+              <select [(ngModel)]="filterModule" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Categories</option>
+                <option *ngFor="let mod of modulesList" [value]="mod.value">{{ mod.label }}</option>
+              </select>
+            </div>
+
             <!-- Category Filter (registry mode only) -->
             <div class="filter-item" *ngIf="searchMode === 'registry'">
               <label>License Category</label>
