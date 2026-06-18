@@ -63,6 +63,13 @@
               ],
               "outputHashing": "all"
             },
+            "audit": {
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": true,
+              "namedChunks": true,
+              "extractLicenses": true
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
@@ -76,6 +83,9 @@
           "configurations": {
             "production": {
               "buildTarget": "excise_frontend:build:production"
+            },
+            "audit": {
+              "buildTarget": "excise_frontend:build:audit"
             },
             "development": {
               "buildTarget": "excise_frontend:build:development"
