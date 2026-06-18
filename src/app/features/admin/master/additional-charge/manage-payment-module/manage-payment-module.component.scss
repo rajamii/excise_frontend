@@ -1,0 +1,24 @@
+.container-fluid {
+  padding: 0;
+
+  h2 {
+    color: #fff;
+    background-color: #1C2B78;
+    margin: 0;
+    padding: 16px 24px;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  mat-dialog-content {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  mat-dialog-actions {
+    padding: 16px 24px;
+    gap: 10px;
+  }
+}

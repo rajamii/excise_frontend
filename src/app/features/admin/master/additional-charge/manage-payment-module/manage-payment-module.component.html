@@ -1,0 +1,53 @@
+<div class="container-fluid p-0">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} Payment Module
+  </h2>
+
+  <mat-dialog-content class="manage-form">
+    <!-- Module Code -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Module Code</mat-label>
+      <input
+        matInput
+        [(ngModel)]="module.moduleCode"
+        [disabled]="isEditMode"
+        required
+        placeholder="e.g. NLI_ADD_PACHWAI"
+      />
+    </mat-form-field>
+
+    <!-- Module Description -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Description</mat-label>
+      <input
+        matInput
+        [(ngModel)]="module.moduleDesc"
+        required
+        placeholder="e.g. New License (Additional Charge) - Pachwai"
+      />
+    </mat-form-field>
+
+    <!-- License Fee -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Amount (₹)</mat-label>
+      <input
+        matInput
+        type="number"
+        [(ngModel)]="module.licenseFee"
+        placeholder="e.g. 3000.00"
+      />
+    </mat-form-field>
+
+    <!-- Active Status -->
+    <div class="mt-2 mb-2">
+      <mat-checkbox [(ngModel)]="module.visibilityStatus">
+        Active
+      </mat-checkbox>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>
