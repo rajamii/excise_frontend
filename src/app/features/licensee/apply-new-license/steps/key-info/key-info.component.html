@@ -79,12 +79,16 @@
             <div class="additional-charges-inline">
               <label class="field-label">Additional Charges</label>
               <div class="charges-checkboxes">
-                <mat-checkbox formControlName="pachwai">
-                  Pachwai (₹{{ pachwaiAmount() }})
-                </mat-checkbox>
-                <mat-checkbox formControlName="draughtBeer">
-                  Draught Beer (₹{{ draughtBeerAmount() }})
-                </mat-checkbox>
+                @if (showPachwai()) {
+                  <mat-checkbox formControlName="pachwai">
+                    Pachwai (₹{{ pachwaiAmount() }})
+                  </mat-checkbox>
+                }
+                @if (showDraughtBeer()) {
+                  <mat-checkbox formControlName="draughtBeer">
+                    Draught Beer (₹{{ draughtBeerAmount() }})
+                  </mat-checkbox>
+                }
               </div>
             </div>
           }

@@ -267,6 +267,25 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/license-categories/${id}/delete/`);
   }
 
+  // ========================== ADDITIONAL CHARGE CONFIG MANAGEMENT ==========================
+
+  getAdditionalChargeConfigs(categoryId?: number): Observable<any[]> {
+    const params = categoryId ? `?category_id=${categoryId}` : '';
+    return this.http.get<any[]>(`${this.mastersUrl}/additional-charge-configs/${params}`);
+  }
+
+  addAdditionalChargeConfig(config: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/additional-charge-configs/create/`, config);
+  }
+
+  updateAdditionalChargeConfig(id: number, changes: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/additional-charge-configs/${id}/update/`, changes);
+  }
+
+  deleteAdditionalChargeConfig(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/additional-charge-configs/${id}/delete/`);
+  }
+
   // ========================== LICENSE SUBCATEGORY MANAGEMENT ==========================
 
   // Adds a new license subcategory

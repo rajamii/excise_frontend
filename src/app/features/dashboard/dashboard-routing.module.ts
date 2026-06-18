@@ -108,6 +108,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_categories.view' }
       },
       {
+        path: 'admin/additional-charges',
+        loadComponent: () =>
+          import('../admin/master/additional-charge/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
         path: 'admin/license-titles',
         loadComponent: () =>
           import('../admin/master/license-title/list/list.component').then((m) => m.ListComponent),
@@ -298,6 +305,7 @@ const routes: Routes = [
       { path: 'license-validity-period', redirectTo: 'admin/license-validity-period', pathMatch: 'full' },
       { path: 'license-types', redirectTo: 'admin/license-types', pathMatch: 'full' },
       { path: 'license-categories', redirectTo: 'admin/license-categories', pathMatch: 'full' },
+      { path: 'additional-charges', redirectTo: 'admin/additional-charges', pathMatch: 'full' },
       { path: 'license-titles', redirectTo: 'admin/license-titles', pathMatch: 'full' },
       { path: 'license-subcategories', redirectTo: 'admin/license-subcategories', pathMatch: 'full' },
       { path: 'license-terms', redirectTo: 'admin/license-terms', pathMatch: 'full' },

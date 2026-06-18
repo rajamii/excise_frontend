@@ -1,0 +1,42 @@
+<div class="container-fluid p-0">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} Additional Charge Configuration
+  </h2>
+
+  <mat-dialog-content class="manage-form">
+    <!-- Category -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>License Category</mat-label>
+      <mat-select [(ngModel)]="config.category" [disabled]="isEditMode" required>
+        @for (cat of licenseCategories; track cat.id) {
+          <mat-option [value]="cat.id">
+            {{ cat.licenseCategory }}
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Charge Type -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Charge Type</mat-label>
+      <mat-select [(ngModel)]="config.chargeType" [disabled]="isEditMode" required>
+        <mat-option value="pachwai">Pachwai</mat-option>
+        <mat-option value="draught_beer">Draught Beer</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+
+
+    <!-- Active Status -->
+    <div class="mt-2 mb-2">
+      <mat-checkbox [(ngModel)]="config.isActive">
+        Active
+      </mat-checkbox>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>

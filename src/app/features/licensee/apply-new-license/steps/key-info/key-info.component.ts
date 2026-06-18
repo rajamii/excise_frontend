@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -7,6 +7,7 @@ import { PatternConstants } from '../../../../../shared/constants/pattern.consta
 import { MasterService } from '../../../../../core/services/master.service';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { LicenseSubcategory } from '../../../../../core/models/license-subcategory.model';
+import { AdminService } from '../../../../admin/admin.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 
 @Component({
@@ -20,11 +21,12 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   keyInfoForm: FormGroup;
 
-  // Additional charges (from master payment module)
-  shouldShowAdditionalCharges = signal(false);
+  // Additional charges (from master additional charge configurations)
+  showPachwai = signal(false);
+  showDraughtBeer = signal(false);
   pachwaiAmount = signal<number>(3000);
   draughtBeerAmount = signal<number>(5000);
-  private readonly additionalChargeCategoryIds = new Set<number>([1, 10, 12, 14]);
+  shouldShowAdditionalCharges = computed(() => this.showPachwai() || this.showDraughtBeer());
   
   // Store ALL subcategories from API
   private allSubCategories: LicenseSubcategory[] = [];
@@ -49,6 +51,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private masterService: MasterService,
+    private adminService: AdminService,
     private paymentService: PaymentIntegrationService,
     private cdr: ChangeDetectorRef
   ) {
@@ -95,19 +98,16 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       .subscribe(categoryId => {
         console.log('📂 Category changed to:', categoryId);
         const subCategoryCtrl = this.keyInfoForm.get('licenseSubCategory');
-        const showExtras = !!categoryId && this.additionalChargeCategoryIds.has(Number(categoryId));
-        this.shouldShowAdditionalCharges.set(showExtras);
-        if (!showExtras) {
-          this.keyInfoForm.patchValue({ pachwai: false, draughtBeer: false }, { emitEvent: false });
-        }
 
         if (categoryId) {
           subCategoryCtrl?.enable();
           this.filterSubCategories(categoryId);
+          this.loadCategoryAdditionalCharges(Number(categoryId));
         } else {
           subCategoryCtrl?.disable();
           this.licenseSubCategories = [];
           this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
+          this.loadCategoryAdditionalCharges(0);
         }
       });
     this.loadAdditionalChargeAmounts();
@@ -222,6 +222,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     if (categoryId && this.licenseCategories.some(c => c.id === categoryId)) {
       this.keyInfoForm.patchValue({ licenseCategory: categoryId }, { emitEvent: false });
       
+      this.loadCategoryAdditionalCharges(Number(categoryId));
+
       // Trigger filtering after a short delay to ensure subcategories are loaded
       setTimeout(() => {
         if (this.allSubCategories.length > 0) {
@@ -288,24 +290,54 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     sessionStorage.setItem('keyInfoData', JSON.stringify(backendData));
   }
 
-  private loadAdditionalChargeAmounts(): void {
-    this.paymentService.getPaymentModule('NLI_ADD_PACHWAI').subscribe({
-      next: (res: any) => {
-        const amount = Number(res?.license_fee ?? res?.licenseFee ?? res?.fee ?? res?.amount);
-        if (isFinite(amount) && amount > 0) this.pachwaiAmount.set(amount);
-      },
-      error: () => {
-        // keep defaults
-      }
-    });
+  loadCategoryAdditionalCharges(categoryId: number): void {
+    if (!categoryId) {
+      this.showPachwai.set(false);
+      this.showDraughtBeer.set(false);
+      this.keyInfoForm.patchValue({ pachwai: false, draughtBeer: false }, { emitEvent: false });
+      return;
+    }
 
-    this.paymentService.getPaymentModule('NLI_ADD_DRAUGHT_BEER').subscribe({
-      next: (res: any) => {
-        const amount = Number(res?.license_fee ?? res?.licenseFee ?? res?.fee ?? res?.amount);
-        if (isFinite(amount) && amount > 0) this.draughtBeerAmount.set(amount);
+    this.adminService.getAdditionalChargeConfigs(categoryId).subscribe({
+      next: (configs: any[]) => {
+        let hasPachwai = false;
+        let hasDraughtBeer = false;
+
+        configs.forEach(config => {
+          if (config.chargeType === 'pachwai') {
+            if (config.isActive) {
+              this.showPachwai.set(true);
+              hasPachwai = true;
+            } else {
+              this.showPachwai.set(false);
+            }
+          } else if (config.chargeType === 'draught_beer') {
+            if (config.isActive) {
+              this.showDraughtBeer.set(true);
+              hasDraughtBeer = true;
+            } else {
+              this.showDraughtBeer.set(false);
+            }
+          }
+        });
+
+        // If a config is missing or deactivated, clear its checked state
+        if (!hasPachwai) {
+          this.showPachwai.set(false);
+          this.keyInfoForm.patchValue({ pachwai: false }, { emitEvent: false });
+        }
+        if (!hasDraughtBeer) {
+          this.showDraughtBeer.set(false);
+          this.keyInfoForm.patchValue({ draughtBeer: false }, { emitEvent: false });
+        }
+
+        this.cdr.detectChanges();
       },
-      error: () => {
-        // keep defaults
+      error: (err: any) => {
+        console.error('Failed to load additional charge configs', err);
+        this.showPachwai.set(false);
+        this.showDraughtBeer.set(false);
+        this.keyInfoForm.patchValue({ pachwai: false, draughtBeer: false }, { emitEvent: false });
       }
     });
   }
@@ -407,5 +439,27 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
    */
   goBack(): void {
     this.back.emit();
+  }
+
+  private loadAdditionalChargeAmounts(): void {
+    this.paymentService.getPaymentModule('NLI_ADD_PACHWAI').subscribe({
+      next: (res: any) => {
+        const amount = Number(res?.license_fee ?? res?.licenseFee ?? res?.fee ?? res?.amount);
+        if (isFinite(amount) && amount > 0) this.pachwaiAmount.set(amount);
+      },
+      error: () => {
+        this.pachwaiAmount.set(3000);
+      }
+    });
+
+    this.paymentService.getPaymentModule('NLI_ADD_DRAUGHT_BEER').subscribe({
+      next: (res: any) => {
+        const amount = Number(res?.license_fee ?? res?.licenseFee ?? res?.fee ?? res?.amount);
+        if (isFinite(amount) && amount > 0) this.draughtBeerAmount.set(amount);
+      },
+      error: () => {
+        this.draughtBeerAmount.set(5000);
+      }
+    });
   }
 }
