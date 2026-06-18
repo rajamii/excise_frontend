@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, map, tap, shareReplay } from 'rxjs/operators';
 
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
@@ -42,7 +42,37 @@ export class SidebarPendingBadgeService {
 
     const tasks: Record<string, Observable<number>> = {};
     for (const section of normalized) {
-      tasks[section] = this.fetchPendingCount(section, audience, mode).pipe(catchError(() => of(0)));
+      const isDashboardSection =
+        audience === 'licensee' &&
+        (section === 'new-license' ||
+         section === 'license-renewal' ||
+         section === 'license-renewal-application' ||
+         section === 'salesman-barman-registration' ||
+         section === 'salesman-barman' ||
+         section === 'company-registration' ||
+         section === 'company-collaboration');
+
+      if (isDashboardSection) {
+        const urlMap: Record<string, string> = {
+          'new-license': `${this.apiBase}/new_license_application/dashboard-counts/`,
+          'license-renewal': `${this.apiBase}/license_renewal_application/dashboard-counts/`,
+          'license-renewal-application': `${this.apiBase}/license_renewal_application/dashboard-counts/`,
+          'salesman-barman-registration': `${this.apiBase}/salesman_barman/dashboard-counts/`,
+          'salesman-barman': `${this.apiBase}/salesman_barman/dashboard-counts/`,
+          'company-registration': `${this.apiBase}/company-registration/dashboard-counts/`,
+          'company-collaboration': `${this.apiBase}/company-collaboration/dashboard-counts/`
+        };
+        const url = urlMap[section];
+        const detail$ = this.fetchDashboardCountsDetail(url, audience).pipe(shareReplay(1));
+
+        tasks[section] = detail$.pipe(map(d => d.total));
+        tasks[`${section}:payment`] = detail$.pipe(map(d => d.payment));
+      } else {
+        tasks[section] = this.fetchPendingCount(section, audience, mode).pipe(catchError(() => of(0)));
+        if (audience === 'licensee' && (section === 'requisition' || section === 'hologram')) {
+          tasks[`${section}:payment`] = tasks[section];
+        }
+      }
     }
 
     return forkJoin(tasks).pipe(
@@ -51,6 +81,30 @@ export class SidebarPendingBadgeService {
         this.lastCounts = counts;
         this.lastFetchMs = Date.now();
       })
+    );
+  }
+
+  private fetchDashboardCountsDetail(url: string, audience: BadgeAudience): Observable<{ total: number; payment: number }> {
+    return this.http.get<any>(url).pipe(
+      map((counts) => {
+        const pending = Number(counts?.pending || 0);
+        if (audience !== 'licensee') return { total: pending, payment: 0 };
+
+        const objection = Number(counts?.objection || 0);
+        const awaitingPayment = Number(
+          counts?.awaitingPayment ??
+            counts?.awaiting_payment ??
+            counts?.paymentPending ??
+            counts?.payment_pending ??
+            0
+        );
+
+        return {
+          total: awaitingPayment + objection,
+          payment: awaitingPayment
+        };
+      }),
+      catchError(() => of({ total: 0, payment: 0 }))
     );
   }
 

@@ -1,4 +1,4 @@
-﻿/* Simple Government Portal Layout - Exact Match */
+/* Simple Government Portal Layout - Exact Match */
 
 :host {
   display: flex;
@@ -960,6 +960,31 @@
         margin-left: auto !important;
         margin-right: 6px !important;
         flex-shrink: 0 !important;
+      }
+
+      &--payment {
+        min-width: 20px !important;
+        height: 18px !important;
+        padding: 0 4px !important;
+        border-radius: 999px !important;
+        background: linear-gradient(135deg, #fd7e14 0%, #e55a00 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 5px rgba(235, 90, 0, 0.4) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-left: 6px !important;
+
+        mat-icon, .mat-icon {
+          font-size: 13px !important;
+          width: 13px !important;
+          height: 13px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          margin: 0 !important;
+          color: #ffffff !important;
+        }
       }
     }
   }

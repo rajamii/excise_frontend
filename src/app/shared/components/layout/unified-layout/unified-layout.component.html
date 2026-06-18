@@ -39,6 +39,7 @@
               <mat-icon class="nav-icon">add_business</mat-icon>
               <span class="nav-text">New License</span>
               <span class="nav-badge" *ngIf="getPendingCount('new-license') as pending">{{ pending }}</span>
+              <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('new-license:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>
 
             <!-- License Renewal Applications -->
@@ -46,6 +47,7 @@
               <mat-icon class="nav-icon">autorenew</mat-icon>
               <span class="nav-text">License Renewal</span>
               <span class="nav-badge" *ngIf="getPendingCount('license-renewal') as pending">{{ pending }}</span>
+              <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('license-renewal:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>
 
             <!-- Wallet -->
@@ -69,6 +71,7 @@
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Requisition</span>
                   <span class="nav-badge" *ngIf="getPendingCount('requisition') as cnt">{{ cnt }}</span>
+                  <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('requisition:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 </button>
                 <button class="nav-item nav-item--sub bulk-spirit-sub-item" *ngIf="!isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
                   <mat-icon class="nav-icon">refresh</mat-icon>
@@ -104,6 +107,7 @@
                   <mat-icon class="nav-icon">qr_code</mat-icon>
                   <span class="nav-text">New Procurement</span>
                   <span class="nav-badge" *ngIf="getPendingCount('hologram') as cnt">{{ cnt }}</span>
+                  <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('hologram:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 </button>
                 <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
                   <mat-icon class="nav-icon">add_box</mat-icon>
@@ -185,6 +189,7 @@
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
               <span class="nav-badge" *ngIf="getPendingCount('salesman-barman-registration') as pending">{{ pending }}</span>
+              <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('salesman-barman-registration:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>
             <button class="nav-item label-registration-nav-item" (click)="navigateToLicenseeRegistration('label')" [class.active]=
             "isDashboardSectionActive('label-registration')">
