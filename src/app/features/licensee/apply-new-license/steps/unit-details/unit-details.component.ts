@@ -29,9 +29,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   errorMessages = {
     companyName:        signal(''),
     companyAddress:     signal(''),
-    companyPan:         signal(''),
-    companyCin:         signal(''),
-    incorporationDate:  signal(''),
+    companyGst:         signal(''),
     companyPhoneNumber: signal(''),
     companyEmail:       signal(''),
   };
@@ -47,9 +45,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     this.unitDetailsForm = this.fb.group({
       companyName:        new FormControl(storedValues.companyName,        [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       companyAddress:     new FormControl(storedValues.companyAddress,     [Validators.required]),
-      companyPan:         new FormControl(storedValues.companyPan,         [Validators.required, Validators.pattern(PatternConstants.PAN)]),
-      companyCin:         new FormControl(storedValues.companyCin,         [Validators.required, Validators.pattern(PatternConstants.CIN)]),
-      incorporationDate:  new FormControl(storedValues.incorporationDate ?? null, [Validators.required]),
+      companyGst:         new FormControl(storedValues.companyGst,         [Validators.required, Validators.pattern(PatternConstants.GST)]),
       companyPhoneNumber: new FormControl(storedValues.companyPhoneNumber, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
       companyEmail:       new FormControl(storedValues.companyEmail,       [Validators.required, Validators.pattern(PatternConstants.EMAIL)])
     });
@@ -60,8 +56,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    FormUtils.capitalize(this.unitDetailsForm.get('companyPan')!, this.destroy$);
-    FormUtils.capitalize(this.unitDetailsForm.get('companyCin')!, this.destroy$);
+    FormUtils.capitalize(this.unitDetailsForm.get('companyGst')!, this.destroy$);
     this.autoFillFromProfiles(); // ✅ UPDATED
   }
 
@@ -142,13 +137,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     }
 
     // ── From licensee profile ──────────────────────────────────────
-    // The licensee profile contains panNumber which should pre-fill companyPan.
-    if (licensee) {
-      if (!this.unitDetailsForm.get('companyPan')?.value && licensee.panNumber) {
-        fillData.companyPan = licensee.panNumber.toUpperCase();
-        console.log('✅ companyPan ←', licensee.panNumber);
-      }
-    }
+    // (No pre-filling required for GST number as it is company-specific)
 
     if (Object.keys(fillData).length === 0) {
       console.log('⚠️ No new data to fill in unit details');
@@ -182,18 +171,11 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
 
     formData.company_name    = formData.companyName;
     formData.company_address = formData.companyAddress;
-    formData.company_pan     = formData.companyPan?.toUpperCase();
-    formData.company_cin     = formData.companyCin?.toUpperCase();
+    formData.company_gst     = formData.companyGst?.toUpperCase();
     formData.company_email   = formData.companyEmail;
 
     if (formData.companyPhoneNumber) {
       formData.company_phone_number = String(formData.companyPhoneNumber).replace(/\D/g, '');
-    }
-    if (formData.incorporationDate) {
-      const date = new Date(formData.incorporationDate);
-      if (!isNaN(date.getTime())) {
-        formData.incorporation_date = date.toISOString().split('T')[0];
-      }
     }
 
     console.log('💾 Saving Unit Details:', formData);
@@ -208,8 +190,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
     } else if (control?.hasError('pattern')) {
-      if      (field === 'companyPan')         this.errorMessages[field].set('Invalid PAN format (e.g., ABCDE1234F)');
-      else if (field === 'companyCin')         this.errorMessages[field].set('Invalid CIN format');
+      if      (field === 'companyGst')         this.errorMessages[field].set('Invalid GST format (e.g., 22AAAAA1111A1Z1)');
       else if (field === 'companyPhoneNumber') this.errorMessages[field].set('Invalid phone number format');
       else if (field === 'companyEmail')       this.errorMessages[field].set('Invalid email format');
       else                                      this.errorMessages[field].set('Invalid format');

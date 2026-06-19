@@ -81,9 +81,7 @@ export class NewLicenseApplication {
   //Company Details
   companyName!: string;
   companyAddress!: string;
-  companyPan!: string;
-  companyCin!: string;
-  incorporationDate!: string;
+  companyGst!: string;
   companyPhoneNumber!: string;
   companyEmail!: string;
 

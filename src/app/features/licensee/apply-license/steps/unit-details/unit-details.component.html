@@ -38,37 +38,13 @@
           }
         </mat-form-field>
 
-        <!-- PAN Field -->
+        <!-- GST Number Field -->
         <mat-form-field appearance="outline">
-          <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter Company PAN" type="text" formControlName="company_pan" required/>
-          @if (unitDetailsForm.controls['company_pan'].invalid) {
+          <mat-label>GST Number</mat-label>
+          <input matInput placeholder="Enter Company GST Number (e.g., 22AAAAA1111A1Z1)" type="text" formControlName="company_gst" required/>
+          @if (unitDetailsForm.controls['company_gst'].invalid) {
             <mat-error>
-              {{ getErrorMessage('company_pan') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- CIN Field -->
-        <mat-form-field appearance="outline">
-          <mat-label>CIN Number</mat-label>
-          <input matInput placeholder="Enter Company CIN" type="text" formControlName="company_cin" required/>
-          @if (unitDetailsForm.controls['company_cin'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('company_cin') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Incorporation Date Field with Date Picker -->
-        <mat-form-field appearance="outline">
-          <mat-label>Incorporation Date</mat-label>
-          <input matInput [matDatepicker]="incorporationDate" formControlName="incorporation_date" required>
-          <mat-datepicker-toggle matIconSuffix [for]="incorporationDate"></mat-datepicker-toggle>
-          <mat-datepicker #incorporationDate></mat-datepicker>
-          @if (unitDetailsForm.controls['incorporation_date'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('incorporation_date') }}
+              {{ getErrorMessage('company_gst') }}
             </mat-error>
           }
         </mat-form-field>

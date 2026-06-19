@@ -59,9 +59,7 @@ export interface LicenseApplication {
   // Company/Unit details
   company_name?: string;
   company_address?: string;
-  company_pan?: string;
-  company_cin?: string;
-  incorporation_date?: string;
+  company_gst?: string;
   company_phone_number?: string;
   company_email?: string;
 

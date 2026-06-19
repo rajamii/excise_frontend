@@ -44,44 +44,13 @@
           }
         </mat-form-field>
 
-        <!-- PAN Field -->
+        <!-- GST Number Field -->
         <mat-form-field appearance="outline">
-          <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter Company PAN" type="text" formControlName="companyPan" required/>
-          @if (unitDetailsForm.controls['companyPan'].invalid) {
+          <mat-label>GST Number</mat-label>
+          <input matInput placeholder="Enter Company GST Number (e.g., 22AAAAA1111A1Z1)" type="text" formControlName="companyGst" required/>
+          @if (unitDetailsForm.controls['companyGst'].invalid) {
             <mat-error>
-              {{ getErrorMessage('companyPan') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- CIN Field -->
-        <mat-form-field appearance="outline">
-          <mat-label>CIN Number</mat-label>
-          <input matInput placeholder="Enter Company CIN" type="text" formControlName="companyCin" required/>
-          @if (unitDetailsForm.controls['companyCin'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('companyCin') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Incorporation Date Field with Date Picker -->
-        <mat-form-field appearance="outline">
-          <mat-label>Incorporation Date</mat-label>
-          <input
-            matInput
-            [matDatepicker]="incorporationDate"
-            formControlName="incorporationDate"
-            placeholder="Select Incorporation Date"
-            aria-label="Incorporation Date"
-            title="Incorporation Date"
-            required>
-          <mat-datepicker-toggle matIconSuffix [for]="incorporationDate"></mat-datepicker-toggle>
-          <mat-datepicker #incorporationDate></mat-datepicker>
-          @if (unitDetailsForm.controls['incorporationDate'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('incorporationDate') }}
+              {{ getErrorMessage('companyGst') }}
             </mat-error>
           }
         </mat-form-field>
