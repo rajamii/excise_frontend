@@ -1,46 +1,48 @@
 <div class="container-fluid p-0">
   <h2 mat-dialog-title align="center">
-    {{ isEditMode ? 'Edit' : 'Add' }} Payment Module
+    {{ isEditMode ? 'Edit' : 'Add' }} Location
   </h2>
 
   <mat-dialog-content class="manage-form">
-    <!-- Module Code -->
+    <!-- Location Code -->
     <mat-form-field appearance="outline" class="w-100 mt-2">
-      <mat-label>Module Code</mat-label>
+      <mat-label>Location Code</mat-label>
       <input
         matInput
-        [(ngModel)]="module.moduleCode"
+        type="number"
+        [(ngModel)]="location.locationCode"
         [disabled]="isEditMode"
         required
-        placeholder="e.g. NLI_ADD_PACHWAI"
+        placeholder="e.g. 5001"
       />
     </mat-form-field>
 
-    <!-- Module Description -->
+    <!-- Location Description -->
     <mat-form-field appearance="outline" class="w-100 mt-2">
       <mat-label>Description</mat-label>
       <input
         matInput
-        [(ngModel)]="module.moduleDesc"
+        [(ngModel)]="location.locationDescription"
         required
-        placeholder="e.g. New License (Additional Charge) - Pachwai"
+        placeholder="e.g. Siliguri Retail Shop"
       />
     </mat-form-field>
 
-    <!-- License Fee -->
+    <!-- District -->
     <mat-form-field appearance="outline" class="w-100 mt-2">
-      <mat-label>Amount (₹)</mat-label>
-      <input
-        matInput
-        type="number"
-        [(ngModel)]="module.licenseFee"
-        placeholder="e.g. 3000.00"
-      />
+      <mat-label>District</mat-label>
+      <mat-select [(ngModel)]="location.districtCode" required>
+        @for (dist of districts; track dist.id) {
+          <mat-option [value]="dist.districtCode">
+            {{ dist.district }} ({{ dist.districtCode }})
+          </mat-option>
+        }
+      </mat-select>
     </mat-form-field>
 
     <!-- Active Status -->
     <div class="mt-2 mb-2">
-      <mat-checkbox [(ngModel)]="module.visibilityStatus">
+      <mat-checkbox [(ngModel)]="location.isActive">
         Active
       </mat-checkbox>
     </div>

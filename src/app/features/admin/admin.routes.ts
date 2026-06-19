@@ -148,6 +148,17 @@ const routes: Routes = [
             },
           },
           {
+            path: 'locations',
+            loadComponent: () =>
+              import('./master/location/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.license_categories.view',
+            },
+          },
+          {
             path: 'license-titles',
             loadComponent: () =>
               import('./master/license-title/list/list.component').then(

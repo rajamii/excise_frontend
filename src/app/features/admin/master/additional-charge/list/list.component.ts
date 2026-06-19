@@ -4,10 +4,11 @@ import { MatDialog } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { AdditionalChargeConfig } from '../../../../../core/models/additional-charge-config.model';
-import { PaymentModule } from '../../../../../core/models/payment-module.model';
+import { LicenseFee } from '../../../../../core/models/license-fee.model';
 import { AdminService } from '../../../admin.service';
+import { MasterService } from '../../../../../core/services/master.service';
 import { ManageComponent } from '../manage/manage.component';
-import { ManagePaymentModuleComponent } from '../manage-payment-module/manage-payment-module.component';
+import { ManageLicenseFeeComponent } from '../manage-license-fee/manage-license-fee.component';
 
 @Component({
   selector: 'app-additional-charge-list',
@@ -17,33 +18,30 @@ import { ManagePaymentModuleComponent } from '../manage-payment-module/manage-pa
   styleUrl: './list.component.scss'
 })
 export class ListComponent implements OnInit {
+  // Tab 1: Additional Charge Mappings
   displayedColumns: string[] = ['categoryName', 'chargeType', 'isActive', 'actions'];
   configs: AdditionalChargeConfig[] = [];
 
-  paymentModuleColumns: string[] = ['moduleCode', 'moduleDesc', 'licenseFee', 'visibilityStatus', 'actions'];
-  paymentModules: PaymentModule[] = [];
+  // Tab 2: License Fees
+  licenseFeeColumns: string[] = ['category', 'subcategory', 'location', 'fee', 'security', 'renewal', 'lateFee', 'status', 'actions'];
+  licenseFees: LicenseFee[] = [];
 
   constructor(
     private adminService: AdminService,
+    private masterService: MasterService,
     private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
     this.loadConfigs();
-    this.loadPaymentModules();
+    this.loadLicenseFees();
   }
 
+  // ========================== Tab 1: Category Mapping configurations ==========================
   loadConfigs(): void {
     this.adminService.getAdditionalChargeConfigs().subscribe({
       next: (data) => this.configs = data,
       error: () => Swal.fire('Error', 'Failed to load additional charge configurations.', 'error')
-    });
-  }
-
-  loadPaymentModules(): void {
-    this.adminService.getPaymentModules().subscribe({
-      next: (data) => this.paymentModules = data,
-      error: () => Swal.fire('Error', 'Failed to load payment modules.', 'error')
     });
   }
 
@@ -92,47 +90,54 @@ export class ListComponent implements OnInit {
     });
   }
 
-  // ========================== Master Payment Module CRUD Handlers ==========================
-
-  onAddPaymentModule(): void {
-    const dialogRef = this.dialog.open(ManagePaymentModuleComponent, {
-      width: '500px',
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) this.loadPaymentModules();
+  // ========================== Tab 2: License Fee configurations ==========================
+  loadLicenseFees(): void {
+    this.masterService.getLicenseFees().subscribe({
+      next: (data: any) => (this.licenseFees = data),
+      error: () => Swal.fire('Error', 'Failed to load license fees.', 'error')
     });
   }
 
-  onEditPaymentModule(module: PaymentModule): void {
-    const dialogRef = this.dialog.open(ManagePaymentModuleComponent, {
-      width: '500px',
-      data: module
+  onAddLicenseFee(): void {
+    const dialogRef = this.dialog.open(ManageLicenseFeeComponent, {
+      width: '650px',
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) this.loadPaymentModules();
+      if (result) this.loadLicenseFees();
     });
   }
 
-  onDeletePaymentModule(module: PaymentModule): void {
+  onEditLicenseFee(fee: LicenseFee): void {
+    const dialogRef = this.dialog.open(ManageLicenseFeeComponent, {
+      width: '650px',
+      data: fee
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) this.loadLicenseFees();
+    });
+  }
+
+  onDeleteLicenseFee(fee: LicenseFee): void {
     Swal.fire({
       title: 'Are you sure?',
-      text: `Delete payment module "${module.moduleDesc}" (${module.moduleCode})?`,
+      text: `Deactivate license fee configuration?`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Delete',
+      confirmButtonText: 'Deactivate',
     }).then(result => {
       if (result.isConfirmed) {
-        this.adminService.deletePaymentModule(module.moduleCode).subscribe({
+        this.masterService.deleteLicenseFee(fee.id).subscribe({
           next: () => {
-            Swal.fire('Deleted!', 'Payment module deleted.', 'success');
-            this.loadPaymentModules();
+            Swal.fire('Deactivated!', 'License fee configuration deactivated.', 'success');
+            this.loadLicenseFees();
           },
-          error: () => Swal.fire('Error', 'Failed to delete payment module.', 'error')
+          error: () => Swal.fire('Error', 'Failed to deactivate license fee.', 'error')
         });
       }
     });
   }
 }
+
 

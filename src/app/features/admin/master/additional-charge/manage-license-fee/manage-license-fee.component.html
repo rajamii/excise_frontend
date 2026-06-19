@@ -1,0 +1,118 @@
+<div class="container-fluid p-0">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} License Fee Config
+  </h2>
+
+  <mat-dialog-content class="manage-form">
+    <div class="row">
+      <!-- Category -->
+      <div class="col-md-6 mt-2">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>License Category</mat-label>
+          <mat-select [(ngModel)]="feeRecord.licenseCategory" (selectionChange)="onCategoryChange()" required>
+            @for (cat of categories; track cat.id) {
+              <mat-option [value]="cat.id">
+                {{ cat.licenseCategory }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Subcategory -->
+      <div class="col-md-6 mt-2">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>License Subcategory</mat-label>
+          <mat-select [(ngModel)]="feeRecord.licenseSubcategory" [disabled]="!feeRecord.licenseCategory" required>
+            @for (sub of filteredSubcategories; track sub.id) {
+              <mat-option [value]="sub.id">
+                {{ sub.description }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Location -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Location Code / Description (Optional)</mat-label>
+      <mat-select [(ngModel)]="feeRecord.locationCode">
+        <mat-option [value]="null">-- Global (No specific location restriction) --</mat-option>
+        @for (loc of locations; track loc.id) {
+          <mat-option [value]="loc.locationCode">
+            {{ loc.locationDescription }} (Code: {{ loc.locationCode }})
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="row">
+      <!-- License Fee -->
+      <div class="col-md-6 mt-2">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>License Fee (₹)</mat-label>
+          <input
+            matInput
+            type="number"
+            [(ngModel)]="feeRecord.licenseFee"
+            placeholder="e.g. 5000.00"
+          />
+        </mat-form-field>
+      </div>
+
+      <!-- Security Amount -->
+      <div class="col-md-6 mt-2">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Security Deposit (₹)</mat-label>
+          <input
+            matInput
+            type="number"
+            [(ngModel)]="feeRecord.securityAmount"
+            placeholder="e.g. 10000.00"
+          />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Renewal Amount -->
+      <div class="col-md-6 mt-2">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Renewal Amount (₹)</mat-label>
+          <input
+            matInput
+            type="number"
+            [(ngModel)]="feeRecord.renewalAmount"
+            placeholder="e.g. 3000.00"
+          />
+        </mat-form-field>
+      </div>
+
+      <!-- Late Fee -->
+      <div class="col-md-6 mt-2">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Late Fee (₹)</mat-label>
+          <input
+            matInput
+            type="number"
+            [(ngModel)]="feeRecord.lateFee"
+            placeholder="e.g. 500.00"
+          />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Active Status -->
+    <div class="mt-2 mb-2">
+      <mat-checkbox [(ngModel)]="feeRecord.isActive">
+        Active
+      </mat-checkbox>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>

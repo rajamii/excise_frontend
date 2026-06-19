@@ -115,6 +115,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_categories.view' }
       },
       {
+        path: 'admin/locations',
+        loadComponent: () =>
+          import('../admin/master/location/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
         path: 'admin/license-titles',
         loadComponent: () =>
           import('../admin/master/license-title/list/list.component').then((m) => m.ListComponent),

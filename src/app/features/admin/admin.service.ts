@@ -20,7 +20,6 @@ import { ActiveLicense } from '../../core/models/active-license.model';
 import { TransitPermitDistributorData } from '../../core/models/transit-permit-distributor-data.model';
 import { BrandMlInCases } from '../../core/models/brand-ml-in-cases.model';
 import { MasterBottleType } from '../../core/models/master-bottle-type.model';
-import { PaymentModule } from '../../core/models/payment-module.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -285,24 +284,6 @@ export class AdminService {
 
   deleteAdditionalChargeConfig(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/additional-charge-configs/${id}/delete/`);
-  }
-
-  // ========================== MASTER PAYMENT MODULE MANAGEMENT ==========================
-
-  getPaymentModules(): Observable<PaymentModule[]> {
-    return this.http.get<PaymentModule[]>(`${this.mastersUrl}/payment-modules/`);
-  }
-
-  addPaymentModule(module: PaymentModule): Observable<any> {
-    return this.http.post(`${this.mastersUrl}/payment-modules/create/`, module);
-  }
-
-  updatePaymentModule(code: string, changes: Partial<PaymentModule>): Observable<any> {
-    return this.http.put(`${this.mastersUrl}/payment-modules/${code}/update/`, changes);
-  }
-
-  deletePaymentModule(code: string): Observable<any> {
-    return this.http.delete(`${this.mastersUrl}/payment-modules/${code}/delete/`);
   }
 
   // ========================== LICENSE SUBCATEGORY MANAGEMENT ==========================
