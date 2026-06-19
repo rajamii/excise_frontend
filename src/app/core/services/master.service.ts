@@ -39,6 +39,7 @@ export class MasterService {
   private readonly ROAD_URL = `${this.BASE_URL}/roads`;
   private readonly LOCATION_URL = `${this.BASE_URL}/locations`;
   private readonly LICENSE_FEE_URL = `${this.BASE_URL}/license-fees`;
+  private readonly FIXED_FEE_URL = `${this.BASE_URL}/fixed-fees`;
 
   // ✅ NEW: Endpoints for the 3 new tables
   private readonly LOCATION_CATEGORY_URL = `${this.BASE_URL}/location-categories`;
@@ -579,5 +580,21 @@ export class MasterService {
 
   getEnaDistilleries(): Observable<any> {
     return this.http.get(`${this.ENA_DISTILLERY_URL}/`);
+  }
+
+  // =========================================================================
+  // FIXED FEES ENDPOINTS
+  // =========================================================================
+
+  getFixedFees(): Observable<any> {
+    return this.http.get(`${this.FIXED_FEE_URL}/`);
+  }
+
+  getFixedFee(code: string): Observable<any> {
+    return this.http.get(`${this.FIXED_FEE_URL}/${code}/`);
+  }
+
+  updateFixedFee(code: string, data: any): Observable<any> {
+    return this.http.put(`${this.FIXED_FEE_URL}/${code}/update/`, data);
   }
 }
