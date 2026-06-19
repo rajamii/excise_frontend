@@ -222,14 +222,8 @@ export class LicenseApplicationService {
       if (unitDetailsData.company_address) {
         formData.append('company_address', String(unitDetailsData.company_address));
       }
-      if (unitDetailsData.company_pan) {
-        formData.append('company_pan', String(unitDetailsData.company_pan));
-      }
-      if (unitDetailsData.company_cin) {
-        formData.append('company_cin', String(unitDetailsData.company_cin));
-      }
-      if (unitDetailsData.incorporation_date) {
-        formData.append('incorporation_date', String(unitDetailsData.incorporation_date));
+      if (unitDetailsData.company_gst) {
+        formData.append('company_gst', String(unitDetailsData.company_gst));
       }
       if (unitDetailsData.company_phone_number) {
         formData.append('company_phone_number', String(unitDetailsData.company_phone_number));
@@ -570,14 +564,8 @@ export class LicenseApplicationService {
       if (unitDetailsData.company_address) {
         formData.append('company_address', String(unitDetailsData.company_address));
       }
-      if (unitDetailsData.company_pan) {
-        formData.append('company_pan', String(unitDetailsData.company_pan));
-      }
-      if (unitDetailsData.company_cin) {
-        formData.append('company_cin', String(unitDetailsData.company_cin));
-      }
-      if (unitDetailsData.incorporation_date) {
-        formData.append('incorporation_date', this.formatDate(unitDetailsData.incorporation_date));
+      if (unitDetailsData.company_gst) {
+        formData.append('company_gst', String(unitDetailsData.company_gst));
       }
       if (unitDetailsData.company_phone_number) {
         formData.append('company_phone_number', String(unitDetailsData.company_phone_number));
