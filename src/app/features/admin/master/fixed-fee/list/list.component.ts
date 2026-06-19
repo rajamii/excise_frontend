@@ -15,7 +15,7 @@ import { ManageComponent } from '../manage/manage.component';
   styleUrl: './list.component.scss'
 })
 export class ListComponent implements OnInit {
-  displayedColumns: string[] = ['feeCode', 'feeDesc', 'amount', 'status', 'actions'];
+  displayedColumns: string[] = ['feeDesc', 'amount', 'status', 'actions'];
   fixedFees: FixedFee[] = [];
 
   constructor(
