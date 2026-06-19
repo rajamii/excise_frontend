@@ -172,6 +172,17 @@ export interface UnifiedApplicationData {
     yearly_license_fee?: string | number;
     yearlyLicenseFee?: string | number;
 
+    // Company specific fields for new-license flow
+    company_name?: string;
+    company_address?: string;
+    company_gst?: string;
+    company_phone_number?: string;
+    company_email?: string;
+    companyAddress?: string;
+    companyGst?: string;
+    companyPhoneNumber?: string;
+    companyEmail?: string;
+
     // Company registration specific fields
     brandType?: string;
     license?: string;

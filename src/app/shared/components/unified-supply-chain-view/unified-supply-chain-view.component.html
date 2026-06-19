@@ -876,22 +876,60 @@
                         </table>
                     </div>
                 </div>
-                <div class="section-card mb-4">
+                <div class="section-card mb-4" *ngIf="applicationData.companyName || applicationData.company_name || applicationData.companyGst || applicationData.company_gst">
                     <h5 class="section-title">Company Details</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Company Name</td>
-                                    <td>{{ applicationData.companyName || 'Not Applicable' }}</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Company Name</td>
+                                    <td>
+                                        {{ applicationData.companyName || applicationData.company_name || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_name')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Registered Office Address</td>
+                                    <td>
+                                        {{ applicationData.companyAddress || applicationData.company_address || applicationData.officeAddress || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_address')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">GST Number</td>
+                                    <td>
+                                        {{ applicationData.companyGst || applicationData.company_gst || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_gst')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Company Mobile Number</td>
-                                    <td>{{ applicationData.companyMobileNumber || 'Not Applicable' }}</td>
+                                    <td>
+                                        {{ applicationData.companyMobileNumber || applicationData.company_phone_number || applicationData.companyPhoneNumber || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_phone_number')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Company Email</td>
-                                    <td>{{ applicationData.companyEmailId || 'Not Applicable' }}</td>
+                                    <td>
+                                        {{ applicationData.companyEmailId || applicationData.company_email || applicationData.companyEmail || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_email')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
