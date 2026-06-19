@@ -1,13 +1,14 @@
 <div class="container-fluid">
   <mat-card>
-    <mat-card-header>
+
+    <mat-card-header class="page-card-header">
       <div class="page-title">Locations</div>
       <button matButton="filled" (click)="onAdd()">
         <mat-icon>add</mat-icon> Add Location
       </button>
     </mat-card-header>
 
-    <mat-card-content>
+    <mat-card-content class="page-card-content">
       <div class="table-container">
         <mat-table [dataSource]="locations">
 
