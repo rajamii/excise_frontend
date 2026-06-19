@@ -1,62 +1,186 @@
 <div class="container-fluid">
-  <mat-card>
+  <mat-tab-group>
+    <!-- Tab 1: Locations -->
+    <mat-tab label="Locations">
+      <mat-card class="mt-3">
+        <mat-card-header>
+          <div class="page-title">Locations</div>
+          <button matButton="filled" (click)="onAdd()">
+            <mat-icon>add</mat-icon> Add Location
+          </button>
+        </mat-card-header>
 
-    <mat-card-header class="page-card-header">
-      <div class="page-title">Locations</div>
-      <button matButton="filled" (click)="onAdd()">
-        <mat-icon>add</mat-icon> Add Location
-      </button>
-    </mat-card-header>
+        <mat-card-content>
+          <div class="table-container">
+            <mat-table [dataSource]="locations">
 
-    <mat-card-content class="page-card-content">
-      <div class="table-container">
-        <mat-table [dataSource]="locations">
+              <!-- Location Code -->
+              <ng-container matColumnDef="locationCode">
+                <mat-header-cell *matHeaderCellDef> Location Code </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.locationCode }} </mat-cell>
+              </ng-container>
 
-          <!-- Location Code -->
-          <ng-container matColumnDef="locationCode">
-            <mat-header-cell *matHeaderCellDef> Location Code </mat-header-cell>
-            <mat-cell *matCellDef="let item"> {{ item.locationCode }} </mat-cell>
-          </ng-container>
+              <!-- Description -->
+              <ng-container matColumnDef="locationDescription">
+                <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.locationDescription }} </mat-cell>
+              </ng-container>
 
-          <!-- Description -->
-          <ng-container matColumnDef="locationDescription">
-            <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
-            <mat-cell *matCellDef="let item"> {{ item.locationDescription }} </mat-cell>
-          </ng-container>
+              <!-- District -->
+              <ng-container matColumnDef="district">
+                <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.district }} </mat-cell>
+              </ng-container>
 
-          <!-- District -->
-          <ng-container matColumnDef="district">
-            <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
-            <mat-cell *matCellDef="let item"> {{ item.district }} </mat-cell>
-          </ng-container>
+              <!-- Status -->
+              <ng-container matColumnDef="status">
+                <mat-header-cell *matHeaderCellDef> Status </mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
+                    {{ item.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </mat-cell>
+              </ng-container>
 
-          <!-- Status -->
-          <ng-container matColumnDef="status">
-            <mat-header-cell *matHeaderCellDef> Status </mat-header-cell>
-            <mat-cell *matCellDef="let item">
-              <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
-                {{ item.isActive ? 'Active' : 'Inactive' }}
-              </span>
-            </mat-cell>
-          </ng-container>
+              <!-- Actions -->
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <button matIconButton color="primary" (click)="onEdit(item)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDelete(item)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
 
-          <!-- Actions -->
-          <ng-container matColumnDef="actions">
-            <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
-            <mat-cell *matCellDef="let item">
-              <button matIconButton color="primary" (click)="onEdit(item)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button matIconButton color="warn" (click)="onDelete(item)">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </mat-cell>
-          </ng-container>
+              <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+            </mat-table>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
 
-          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-        </mat-table>
-      </div>
-    </mat-card-content>
-  </mat-card>
+    <!-- Tab 2: Location Categories -->
+    <mat-tab label="Location Categories">
+      <mat-card class="mt-3">
+        <mat-card-header>
+          <div class="page-title">Location Categories</div>
+          <button matButton="filled" (click)="onAddCategory()">
+            <mat-icon>add</mat-icon> Add Category
+          </button>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="table-container">
+            <mat-table [dataSource]="locationCategories">
+
+              <!-- Category Name -->
+              <ng-container matColumnDef="categoryName">
+                <mat-header-cell *matHeaderCellDef> Category Name </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.categoryName }} </mat-cell>
+              </ng-container>
+
+              <!-- Description -->
+              <ng-container matColumnDef="description">
+                <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.description || 'N/A' }} </mat-cell>
+              </ng-container>
+
+              <!-- Status -->
+              <ng-container matColumnDef="status">
+                <mat-header-cell *matHeaderCellDef> Status </mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
+                    {{ item.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </mat-cell>
+              </ng-container>
+
+              <!-- Actions -->
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <button matIconButton color="primary" (click)="onEditCategory(item)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDeleteCategory(item)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="categoryColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: categoryColumns;"></mat-row>
+            </mat-table>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+
+    <!-- Tab 3: Location Subcategories -->
+    <mat-tab label="Location Subcategories">
+      <mat-card class="mt-3">
+        <mat-card-header>
+          <div class="page-title">Location Subcategories</div>
+          <button matButton="filled" (click)="onAddSubcategory()">
+            <mat-icon>add</mat-icon> Add Subcategory
+          </button>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="table-container">
+            <mat-table [dataSource]="locationSubcategories">
+
+              <!-- Subcategory Name -->
+              <ng-container matColumnDef="subcategoryName">
+                <mat-header-cell *matHeaderCellDef> Subcategory Name </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.subcategoryName }} </mat-cell>
+              </ng-container>
+
+              <!-- Parent Category -->
+              <ng-container matColumnDef="categoryName">
+                <mat-header-cell *matHeaderCellDef> Parent Category </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.categoryName || 'N/A' }} </mat-cell>
+              </ng-container>
+
+              <!-- Description -->
+              <ng-container matColumnDef="description">
+                <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
+                <mat-cell *matCellDef="let item"> {{ item.description || 'N/A' }} </mat-cell>
+              </ng-container>
+
+              <!-- Status -->
+              <ng-container matColumnDef="status">
+                <mat-header-cell *matHeaderCellDef> Status </mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
+                    {{ item.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </mat-cell>
+              </ng-container>
+
+              <!-- Actions -->
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <button matIconButton color="primary" (click)="onEditSubcategory(item)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDeleteSubcategory(item)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="subcategoryColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: subcategoryColumns;"></mat-row>
+            </mat-table>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+  </mat-tab-group>
 </div>
