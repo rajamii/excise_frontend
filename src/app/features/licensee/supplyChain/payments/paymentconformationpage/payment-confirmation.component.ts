@@ -1797,7 +1797,8 @@ private initializeWalletContextAndLoadData(): void {
     const ref = String(referenceNo || '').trim().toUpperCase();
     if (!ref) return false;
 
-    return this.historyData.some((txn) => {
+    const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
+    return merged.some((txn) => {
       const txnRef = String(txn?.reference || '').trim().toUpperCase();
       if (txnRef !== ref) return false;
 
@@ -1929,6 +1930,13 @@ private initializeWalletContextAndLoadData(): void {
         this.pendingNewLicenseSecurityFeeAmount = securityAmount;
       }
       this.ensurePendingNewLicenseAmountsResolved();
+      if (this.isBrowser) {
+        sessionStorage.setItem('pendingNewLicenseApplicationId', id);
+        sessionStorage.setItem('pendingNewLicenseReferenceNo', referenceNo);
+        if (securityAmount > 0) {
+          sessionStorage.setItem('pendingNewLicenseSecurityFeeAmount', String(securityAmount));
+        }
+      }
     }
 
     this.pendingWalletPaymentContext = {
@@ -2031,17 +2039,28 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   showSecurityRechargeAlert(): boolean {
-    if (!this.pendingWalletPaymentContext) return false;
-    const refNo = this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext.referenceNo;
+    const refNo = this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext?.referenceNo;
     if (!refNo) return false;
 
-    const isNewLicense = this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
-      && String(this.pendingWalletPaymentContext.itemType || '').trim().toLowerCase() !== 'license-renewal'
-      && !String(refNo).trim().toUpperCase().startsWith('LRA/');
-
+    const isNewLicense = !String(refNo).trim().toUpperCase().startsWith('LRA/');
     if (!isNewLicense) return false;
 
+    const type = this.pendingWalletPaymentContext?.itemType || 'new-license';
+    const isLicenseFee = this.isLicenseFeeWorkflowPaymentType(type)
+      && String(type).trim().toLowerCase() !== 'license-renewal';
+    if (!isLicenseFee) return false;
+
     return !this.isFeePaid('security_deposit', refNo);
+  }
+
+  get pendingNewLicenseRef(): string {
+    return this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext?.referenceNo || '';
+  }
+
+  isLicenseFeePaidForPendingNewLicense(): boolean {
+    const refNo = this.pendingNewLicenseRef;
+    if (!refNo) return false;
+    return this.isFeePaid('license_fee', refNo);
   }
 
   getPendingPaymentModuleLabel(): string {
@@ -2394,6 +2413,13 @@ private initializeWalletContextAndLoadData(): void {
   private loadPendingPaymentContextFromStorage(): void {
     if (!this.isBrowser) return;
     try {
+      const storedAppId = sessionStorage.getItem('pendingNewLicenseApplicationId');
+      const storedRefNo = sessionStorage.getItem('pendingNewLicenseReferenceNo');
+      const storedSecAmount = sessionStorage.getItem('pendingNewLicenseSecurityFeeAmount');
+      if (storedAppId) this.pendingNewLicenseApplicationId = storedAppId;
+      if (storedRefNo) this.pendingNewLicenseReferenceNo = storedRefNo;
+      if (storedSecAmount) this.pendingNewLicenseSecurityFeeAmount = Number(storedSecAmount) || 0;
+
       const raw = sessionStorage.getItem(this.pendingPaymentStorageKey);
       if (!raw) return;
       const parsed = JSON.parse(raw);
@@ -2587,6 +2613,18 @@ private initializeWalletContextAndLoadData(): void {
     this.pendingHologramAutoPayType = '';
     this.clearPendingPaymentContextFromStorage();
     this.clearPendingHologramDeepLinkRef();
+
+    const refNo = this.pendingNewLicenseReferenceNo;
+    if (refNo && this.isFeePaid('license_fee', refNo) && this.isFeePaid('security_deposit', refNo)) {
+      if (this.isBrowser) {
+        sessionStorage.removeItem('pendingNewLicenseApplicationId');
+        sessionStorage.removeItem('pendingNewLicenseReferenceNo');
+        sessionStorage.removeItem('pendingNewLicenseSecurityFeeAmount');
+      }
+      this.pendingNewLicenseApplicationId = '';
+      this.pendingNewLicenseReferenceNo = '';
+      this.pendingNewLicenseSecurityFeeAmount = 0;
+    }
 
     this.router.navigate([], {
       relativeTo: this.route,
