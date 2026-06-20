@@ -11,10 +11,19 @@
     <app-key-info (back)="stepper.previous()" (next)="stepper.next()"></app-key-info>
   </mat-step>
 
-  <!-- Step 3: Applicant Details -->
-  <mat-step label="Applicant Details">
-    <app-applicant-details (back)="stepper.previous()" (next)="stepper.next()"></app-applicant-details>
-  </mat-step>
+  <!-- Step 3: Applicant Details (Only if Individual Type) -->
+  @if (!isCompanyType) {
+    <mat-step label="Applicant Details">
+      <app-applicant-details (back)="stepper.previous()" (next)="stepper.next()"></app-applicant-details>
+    </mat-step>
+  }
+
+  <!-- Step 4: Company Details (Only if Company Type - shifted here) -->
+  @if (isCompanyType) {
+    <mat-step label="Company Details">
+      <app-unit-details (back)="stepper.previous()" (next)="stepper.next()"></app-unit-details>
+    </mat-step>
+  }
 
   @if (shouldShowMemberDetailsStep) {
     <mat-step [label]="memberDetailsStepLabel">
@@ -22,17 +31,10 @@
     </mat-step>
   }
 
-  <!-- Step 4: Site Details & Documents Combined -->
+  <!-- Step 5: Site Details & Documents Combined -->
   <mat-step label="Site Details">
     <app-site-details (back)="stepper.previous()" (next)="stepper.next()"></app-site-details>
   </mat-step>
-
-  <!-- Step 5: Company Details (Only if licenseType is 'Company') -->
-  @if (isCompanyType) {
-    <mat-step label="Company Details">
-      <app-unit-details (back)="stepper.previous()" (next)="stepper.next()"></app-unit-details>
-    </mat-step>
-  }
 
   <!-- Step 6: Declaration & Payment -->
   <mat-step label="Declaration & Payment">

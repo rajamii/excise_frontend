@@ -77,6 +77,126 @@
           }
         </mat-form-field>
 
+        <!-- PAN No Field -->
+        <mat-form-field appearance="outline">
+          <mat-label>PAN No</mat-label>
+          <input matInput placeholder="Enter PAN No" type="text" formControlName="pan" required />
+          @if (unitDetailsForm.controls['pan'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('pan') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Nationality Field -->
+        <mat-form-field appearance="outline">
+          <mat-label>Nationality</mat-label>
+          <mat-select formControlName="nationality" required>
+            @for (nat of nationalities; track nat) {
+              <mat-option [value]="nat">{{ nat }}</mat-option>
+            }
+          </mat-select>
+          @if (unitDetailsForm.controls['nationality'].invalid) {
+            <mat-error>
+              This field is required
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Present Address -->
+        <mat-form-field appearance="outline">
+          <mat-label>Present Address</mat-label>
+          <textarea matInput
+            placeholder="Enter Present Address"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="4"
+            formControlName="presentAddress"
+            required></textarea>
+          @if (unitDetailsForm.controls['presentAddress'].invalid) {
+            <mat-error>
+              This field is required
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Permanent Address -->
+        <mat-form-field appearance="outline">
+          <mat-label>Permanent Address</mat-label>
+          <textarea matInput
+            placeholder="Enter Permanent Address"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="4"
+            formControlName="permanentAddress"
+            required></textarea>
+          @if (unitDetailsForm.controls['permanentAddress'].invalid) {
+            <mat-error>
+              This field is required
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Present and Permanent Address same checkbox -->
+        <div class="checkbox-same">
+          <mat-checkbox (change)="copyPresentToPermanent($event.checked)">
+            Present and Permanent Address are same
+          </mat-checkbox>
+        </div>
+
+        <!-- Mode of Operation Dropdown (rendered conditionally) -->
+        @if (shouldShowModeOfOperationDropdown()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Mode of Operation</mat-label>
+            <mat-select formControlName="modeOfOperation">
+              @for (mode of modesOfOperation; track mode.value) {
+                <mat-option [value]="mode.value">{{ mode.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+
+      </div>
+
+      <!-- Upload Documents Section -->
+      <h5 class="section-title">Upload Documents</h5>
+      <div class="documents-upload-container">
+        <div class="document-upload-row">
+          <div class="document-info">
+            <span class="document-label">
+              {{ panCardDoc.label }}
+              @if (panCardDoc.required) { <span class="required">*</span> }
+            </span>
+            <span class="document-formats">Supported File Formats: {{ panCardDoc.formats }}</span>
+          </div>
+          <div class="document-actions">
+            <input
+              type="file"
+              [id]="panCardDoc.name"
+              (change)="onPanCardSelect($event)"
+              [accept]="panCardDoc.formats"
+              [attr.aria-label]="'Upload ' + panCardDoc.label"
+              title="Upload {{ panCardDoc.label }}"
+              class="hidden-file-input" />
+            <label
+              [for]="panCardDoc.name"
+              mat-raised-button
+              color="primary"
+              class="file-upload-button">
+              <mat-icon class="file-upload-icon">upload_file</mat-icon>
+              Choose File
+            </label>
+
+            @if (panCardDoc.fileUrl) {
+              <button mat-icon-button color="accent" (click)="viewPanCard()" type="button">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            }
+            @if (panCardDoc.file) {
+              <span class="file-name">{{ panCardDoc.file.name }}</span>
+            }
+          </div>
+        </div>
       </div>
     </mat-card-content>
 
@@ -88,9 +208,15 @@
       <!-- Reset form values -->
       <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
 
-      <!-- Proceed to next step, disabled if form is invalid -->
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!unitDetailsForm.valid" type="button">Next</button>
+      <!-- Proceed to next step, disabled if form is invalid or PAN card is not uploaded -->
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!unitDetailsForm.valid || !isPanCardUploaded()" type="button">Next</button>
     </mat-card-actions>
+
+    @if (!isPanCardUploaded()) {
+      <div class="required-doc-warning">
+        Upload all required documents to proceed.
+      </div>
+    }
 
   </mat-card>
 </form>

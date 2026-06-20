@@ -366,74 +366,107 @@ export class LicenseApplicationService {
     }
 
     // ✅ 3. APPLICANT DETAILS
-    if (applicantDetailsData) {
-      if (applicantDetailsData.applicant_name) {
-        formData.append('applicant_name', String(applicantDetailsData.applicant_name));
+    if (isIndividualApplication) {
+      if (applicantDetailsData) {
+        if (applicantDetailsData.applicant_name) {
+          formData.append('applicant_name', String(applicantDetailsData.applicant_name));
+        }
+        if (applicantDetailsData.father_husband_name) {
+          formData.append('father_husband_name', String(applicantDetailsData.father_husband_name));
+        }
+        if (applicantDetailsData.dob) {
+          formData.append('dob', this.formatDate(applicantDetailsData.dob));
+        }
+        if (applicantDetailsData.gender) {
+          formData.append('gender', String(applicantDetailsData.gender));
+        }
+        if (applicantDetailsData.nationality) {
+          formData.append('nationality', String(applicantDetailsData.nationality));
+        }
+        if (applicantDetailsData.residential_status) {
+          formData.append('residential_status', String(applicantDetailsData.residential_status));
+        }
+        if (applicantDetailsData.present_address) {
+          formData.append('present_address', String(applicantDetailsData.present_address));
+        }
+        if (applicantDetailsData.permanent_address) {
+          formData.append('permanent_address', String(applicantDetailsData.permanent_address));
+        }
+        if (applicantDetailsData.pan) {
+          formData.append('pan', String(applicantDetailsData.pan));
+        }
+        if (applicantDetailsData.email) {
+          formData.append('email', String(applicantDetailsData.email));
+        }
+        if (applicantDetailsData.mobile_number) {
+          formData.append('mobile_number', String(applicantDetailsData.mobile_number));
+        }
+        if (applicantDetailsData.mode_of_operation) {
+          formData.append('mode_of_operation', String(applicantDetailsData.mode_of_operation));
+        }
+        if (isIndividualApplication && applicantDetailsData.coi_rc_ss) {
+          formData.append('coi_rc_ss', String(applicantDetailsData.coi_rc_ss));
+        }
+        if (applicantDetailsData.has_sikkim_certificate) {
+          const hasSikkimCertificate = isIndividualApplication ? applicantDetailsData.has_sikkim_certificate : 'No';
+          formData.append('has_sikkim_certificate', String(hasSikkimCertificate));
+        }
+        if (applicantDetailsData.has_excise_license) {
+          formData.append('has_excise_license', String(applicantDetailsData.has_excise_license));
+        }
+        if (applicantDetailsData.existing_license_category_id) {
+          formData.append('existing_license_category_id', String(applicantDetailsData.existing_license_category_id));
+        }
+        if (applicantDetailsData.existing_license_no) {
+          formData.append('existing_license_no', String(applicantDetailsData.existing_license_no));
+        }
+        if (applicantDetailsData.family_excise_license) {
+          formData.append('family_excise_license', String(applicantDetailsData.family_excise_license));
+        }
+        if (applicantDetailsData.family_license_category_id) {
+          formData.append('family_license_category_id', String(applicantDetailsData.family_license_category_id));
+        }
+        if (applicantDetailsData.family_license_no) {
+          formData.append('family_license_no', String(applicantDetailsData.family_license_no));
+        }
+        if (applicantDetailsData.criminal_conviction) {
+          formData.append('criminal_conviction', String(applicantDetailsData.criminal_conviction));
+        }
+        if (applicantDetailsData.marital_status) {
+          formData.append('marital_status', String(applicantDetailsData.marital_status));
+        }
       }
-      if (applicantDetailsData.father_husband_name) {
-        formData.append('father_husband_name', String(applicantDetailsData.father_husband_name));
+    } else {
+      // For Company Applications, map shifted applicant fields from unitDetailsData
+      if (unitDetailsData) {
+        if (unitDetailsData.pan) {
+          formData.append('pan', String(unitDetailsData.pan));
+        }
+        if (unitDetailsData.nationality) {
+          formData.append('nationality', String(unitDetailsData.nationality));
+        }
+        if (unitDetailsData.present_address) {
+          formData.append('present_address', String(unitDetailsData.present_address));
+        }
+        if (unitDetailsData.permanent_address) {
+          formData.append('permanent_address', String(unitDetailsData.permanent_address));
+        }
+        if (unitDetailsData.mode_of_operation) {
+          formData.append('mode_of_operation', String(unitDetailsData.mode_of_operation));
+        }
       }
-      if (applicantDetailsData.dob) {
-        formData.append('dob', this.formatDate(applicantDetailsData.dob));
-      }
-      if (applicantDetailsData.gender) {
-        formData.append('gender', String(applicantDetailsData.gender));
-      }
-      if (applicantDetailsData.nationality) {
-        formData.append('nationality', String(applicantDetailsData.nationality));
-      }
-      if (applicantDetailsData.residential_status) {
-        formData.append('residential_status', String(applicantDetailsData.residential_status));
-      }
-      if (applicantDetailsData.present_address) {
-        formData.append('present_address', String(applicantDetailsData.present_address));
-      }
-      if (applicantDetailsData.permanent_address) {
-        formData.append('permanent_address', String(applicantDetailsData.permanent_address));
-      }
-      if (applicantDetailsData.pan) {
-        formData.append('pan', String(applicantDetailsData.pan));
-      }
-      if (applicantDetailsData.email) {
-        formData.append('email', String(applicantDetailsData.email));
-      }
-      if (applicantDetailsData.mobile_number) {
-        formData.append('mobile_number', String(applicantDetailsData.mobile_number));
-      }
-      if (applicantDetailsData.mode_of_operation) {
-        formData.append('mode_of_operation', String(applicantDetailsData.mode_of_operation));
-      }
-      if (isIndividualApplication && applicantDetailsData.coi_rc_ss) {
-        formData.append('coi_rc_ss', String(applicantDetailsData.coi_rc_ss));
-      }
-      if (applicantDetailsData.has_sikkim_certificate) {
-        const hasSikkimCertificate = isIndividualApplication ? applicantDetailsData.has_sikkim_certificate : 'No';
-        formData.append('has_sikkim_certificate', String(hasSikkimCertificate));
-      }
-      if (applicantDetailsData.has_excise_license) {
-        formData.append('has_excise_license', String(applicantDetailsData.has_excise_license));
-      }
-      if (applicantDetailsData.existing_license_category_id) {
-        formData.append('existing_license_category_id', String(applicantDetailsData.existing_license_category_id));
-      }
-      if (applicantDetailsData.existing_license_no) {
-        formData.append('existing_license_no', String(applicantDetailsData.existing_license_no));
-      }
-      if (applicantDetailsData.family_excise_license) {
-        formData.append('family_excise_license', String(applicantDetailsData.family_excise_license));
-      }
-      if (applicantDetailsData.family_license_category_id) {
-        formData.append('family_license_category_id', String(applicantDetailsData.family_license_category_id));
-      }
-      if (applicantDetailsData.family_license_no) {
-        formData.append('family_license_no', String(applicantDetailsData.family_license_no));
-      }
-      if (applicantDetailsData.criminal_conviction) {
-        formData.append('criminal_conviction', String(applicantDetailsData.criminal_conviction));
-      }
-      if (applicantDetailsData.marital_status) {
-        formData.append('marital_status', String(applicantDetailsData.marital_status));
-      }
+
+      // Explicitly set Individual-only fields to empty/default on backend
+      formData.append('applicant_name', '');
+      formData.append('father_husband_name', '');
+      formData.append('dob', '');
+      formData.append('gender', '');
+      formData.append('residential_status', '');
+      formData.append('marital_status', '');
+      formData.append('has_sikkim_certificate', 'No');
+      formData.append('has_excise_license', 'No');
+      formData.append('family_excise_license', 'No');
+      formData.append('criminal_conviction', 'No');
     }
 
     // ✅ 4. SITE DETAILS - CRITICAL: Convert IDs to CODES

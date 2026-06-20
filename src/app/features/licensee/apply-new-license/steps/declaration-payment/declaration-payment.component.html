@@ -53,7 +53,7 @@
       }
 
       <!-- Applicant Details Section -->
-      @if (applicantDetailsData.length > 0) {
+      @if (!isCompanyType && applicantDetailsData.length > 0) {
         <div class="info-section">
           <div class="section-header">
             <mat-icon>person</mat-icon>
@@ -73,7 +73,7 @@
       }
 
       <!-- Applicant Photo -->
-      @if (passPhotoUrl) {
+      @if (!isCompanyType && passPhotoUrl) {
         <div class="info-section">
           <div class="section-header">
             <mat-icon>photo_camera</mat-icon>

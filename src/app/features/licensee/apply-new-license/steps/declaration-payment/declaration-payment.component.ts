@@ -306,6 +306,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   private get selectedModeOfOperation(): string {
+    if (this.isCompanyType) {
+      const unitData = this.getParsedSession<any>('unitDetailsData');
+      return String(unitData?.mode_of_operation ?? unitData?.modeOfOperation ?? '').trim();
+    }
     const applicantData = this.getParsedSession<ApplicantDeclarationData>('applicantDetailsData');
     return String(applicantData?.mode_of_operation ?? applicantData?.modeOfOperation ?? '').trim();
   }
@@ -920,6 +924,13 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         missingFields.push('Date of Birth Proof');
       } else {
         console.log('✅ DOB Proof OK');
+      }
+    } else {
+      if (!docs.get('pan_card')) {
+        console.error('Missing: PAN Card');
+        missingFields.push('PAN Card');
+      } else {
+        console.log('PAN Card OK');
       }
     }
 

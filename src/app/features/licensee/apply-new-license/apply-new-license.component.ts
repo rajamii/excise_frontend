@@ -121,6 +121,12 @@ export class ApplyNewLicenseComponent implements OnInit, AfterViewInit {
   }
 
   private get selectedModeOfOperation(): string {
+    if (this.isCompanyType) {
+      const unitDetails = this.getParsedSession<any>('unitDetailsData');
+      return String(
+        unitDetails?.mode_of_operation ?? unitDetails?.modeOfOperation ?? ''
+      ).trim();
+    }
     const applicantDetails = this.getParsedSession<ApplicantDetailsStepData>('applicantDetailsData');
     return String(
       applicantDetails?.mode_of_operation ?? applicantDetails?.modeOfOperation ?? ''
