@@ -739,12 +739,12 @@
                     </ng-template>
                 </div>
                 @if (isNewLicenseOrRenewal()) {
-                <div class="section-card mb-4">
+                <div class="section-card mb-4" *ngIf="!isCompanyType()">
                     <h5 class="section-title">Applicant Information</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Applicant Name</td>
                                     <td>
                                         {{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}
@@ -754,7 +754,7 @@
                                         </ng-container>
                                     </td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Father/Husband Name</td>
                                     <td>{{ applicationData.father_husband_name || applicationData.fatherHusbandName || 'Not available' }}</td>
                                 </tr>
@@ -762,11 +762,11 @@
                                     <td class="fw-semibold bg-light">PAN</td>
                                     <td>{{ applicationData.pan || 'Not available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">DOB</td>
                                     <td>{{ applicationData.dob || 'Not Available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Gender</td>
                                     <td>{{ applicationData.gender || 'Not Available' }}</td>
                                 </tr>
@@ -774,7 +774,7 @@
                                     <td class="fw-semibold bg-light">Nationality</td>
                                     <td>{{ applicationData.nationality || 'Not Available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Residential Status</td>
                                     <td>{{ applicationData.residential_status || applicationData.residentialStatus || 'Not Available' }}</td>
                                 </tr>
@@ -790,29 +790,116 @@
                                     <td class="fw-semibold bg-light">Permanent Address</td>
                                     <td>{{ applicationData.permanent_address || applicationData.permanentAddress || 'Not Available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Email</td>
                                     <td>{{ applicationData.email || 'Not available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Mobile Number</td>
                                     <td>{{ applicationData.mobile_number || applicationData.mobileNumber || 'Not available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Has Sikkim Certificate</td>
                                     <td>{{ applicationData.has_sikkim_certificate || applicationData.hasSikkimCertificate || applicationData.sikkimSubject || 'Not Available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Has Excise License</td>
                                     <td>{{ applicationData.has_excise_license || applicationData.hasExciseLicense || 'Not Available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Family Has Excise License</td>
                                     <td>{{ applicationData.family_excise_license || applicationData.familyExciseLicense || 'Not Available' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="!isCompanyType()">
                                     <td class="fw-semibold bg-light">Criminal Conviction</td>
                                     <td>{{ applicationData.criminal_conviction || applicationData.criminalConviction || 'Not Available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Company Details Section (Rendered above License & Site Details for Company Applications) -->
+                <div class="section-card mb-4" *ngIf="isCompanyType() && (applicationData.companyName || applicationData.company_name || applicationData.companyGst || applicationData.company_gst)">
+                    <h5 class="section-title">Company Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Company Name</td>
+                                    <td>
+                                        {{ applicationData.companyName || applicationData.company_name || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_name')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Registered Office Address</td>
+                                    <td>
+                                        {{ applicationData.companyAddress || applicationData.company_address || applicationData.officeAddress || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_address')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">GST Number</td>
+                                    <td>
+                                        {{ applicationData.companyGst || applicationData.company_gst || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_gst')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Mobile Number</td>
+                                    <td>
+                                        {{ applicationData.companyMobileNumber || applicationData.company_phone_number || applicationData.companyPhoneNumber || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_phone_number')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Email</td>
+                                    <td>
+                                        {{ applicationData.companyEmailId || applicationData.company_email || applicationData.companyEmail || 'Not Applicable' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('company_email')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN</td>
+                                    <td>
+                                        {{ applicationData.pan || 'Not available' }}
+                                        <ng-container [ngSwitch]="objectionStateForField('pan')">
+                                            <span *ngSwitchCase="'unresolved'" class="badge bg-warning text-dark ms-2">OBJECTED</span>
+                                            <span *ngSwitchCase="'resolved'" class="badge bg-info text-dark ms-2">UPDATED</span>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Nationality</td>
+                                    <td>{{ applicationData.nationality || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Mode of Operation</td>
+                                    <td>{{ applicationData.mode_of_operation || applicationData.modeOfOperation || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Present Address</td>
+                                    <td>{{ applicationData.present_address || applicationData.presentAddress || applicationData.address || 'Not Available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Permanent Address</td>
+                                    <td>{{ applicationData.permanent_address || applicationData.permanentAddress || 'Not Available' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -876,7 +963,7 @@
                         </table>
                     </div>
                 </div>
-                <div class="section-card mb-4" *ngIf="applicationData.companyName || applicationData.company_name || applicationData.companyGst || applicationData.company_gst">
+                <div class="section-card mb-4" *ngIf="!isCompanyType() && (applicationData.companyName || applicationData.company_name || applicationData.companyGst || applicationData.company_gst)">
                     <h5 class="section-title">Company Details</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">

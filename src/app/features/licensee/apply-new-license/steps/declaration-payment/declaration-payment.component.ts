@@ -361,12 +361,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       { title: 'Application Type', data: this.selectLicenseData },
       { title: 'Basic Information', data: this.keyInfoData },
       { title: 'Applicant Details', data: this.applicantDetailsData },
-      { title: 'Site Details', data: this.siteDetailsData },
       {
         title: 'Company Details',
         data: this.unitDetailsData,
         condition: () => this.isCompanyType
-      }
+      },
+      { title: 'Site Details', data: this.siteDetailsData }
     ];
   }
 

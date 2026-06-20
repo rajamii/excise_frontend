@@ -104,15 +104,15 @@
         </div>
       }
 
-      <!-- Site Details Section -->
-      @if (siteDetailsData.length > 0) {
+      <!-- Company Details Section (only for Company type) -->
+      @if (isCompanyType && unitDetailsData.length > 0) {
         <div class="info-section">
           <div class="section-header">
-            <mat-icon>location_on</mat-icon>
-            <h3>Site Details</h3>
+            <mat-icon>business</mat-icon>
+            <h3>Company Details</h3>
           </div>
           <div class="details-grid">
-            @for (item of siteDetailsData; track item.key) {
+            @for (item of unitDetailsData; track item.key) {
               @if (item.value) {
                 <div class="detail-item" [class.full-width]="item.key.includes('Address')">
                   <span class="label">{{ item.key }}:</span>
@@ -124,15 +124,15 @@
         </div>
       }
 
-      <!-- Company Details Section (only for Company type) -->
-      @if (isCompanyType && unitDetailsData.length > 0) {
+      <!-- Site Details Section -->
+      @if (siteDetailsData.length > 0) {
         <div class="info-section">
           <div class="section-header">
-            <mat-icon>business</mat-icon>
-            <h3>Company Details</h3>
+            <mat-icon>location_on</mat-icon>
+            <h3>Site Details</h3>
           </div>
           <div class="details-grid">
-            @for (item of unitDetailsData; track item.key) {
+            @for (item of siteDetailsData; track item.key) {
               @if (item.value) {
                 <div class="detail-item" [class.full-width]="item.key.includes('Address')">
                   <span class="label">{{ item.key }}:</span>
