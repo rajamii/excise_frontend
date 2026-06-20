@@ -21,6 +21,61 @@ interface BrandDetail {
   manufacturingUnit: string;
 }
 
+// Rejection Confirmation Dialog
+@Component({
+  selector: 'app-rejection-confirmation-dialog',
+  standalone: true,
+  imports: [MaterialModule, CommonModule, FormsModule],
+  template: `
+    <div class="rejection-dialog">
+      <h2 mat-dialog-title class="dialog-title">
+        <mat-icon color="warn">warning</mat-icon> Confirm Rejection
+      </h2>
+      <div mat-dialog-content>
+        <div class="alert-message">
+          <p><strong>Warning:</strong> You are about to reject Transit Permit <strong>{{data.billNo}}</strong>.</p>
+          <p>Please note that:</p>
+          <ul>
+            <li>The deducted wallet amount will be <strong>refunded</strong> to the licensee.</li>
+            <li>The utilized stock (bottles/cases) will be <strong>restored</strong> to the Brand Warehouse.</li>
+          </ul>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Reason for Rejection</mat-label>
+          <textarea matInput [(ngModel)]="remarks" placeholder="Enter remarks..." rows="3" required></textarea>
+        </mat-form-field>
+      </div>
+      <div mat-dialog-actions align="end">
+        <button mat-button mat-dialog-close>Cancel</button>
+        <button mat-raised-button color="warn" [mat-dialog-close]="{confirmed: true, remarks: remarks}" [disabled]="!remarks">
+          I Agree and Confirm
+        </button>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .rejection-dialog { padding: 0; max-width: 500px; }
+    .dialog-title {
+      display: flex; align-items: center; gap: 8px;
+      margin: 0; padding: 16px 24px;
+      background-color: #ffebee; color: #c62828;
+      border-bottom: 1px solid #ffcdd2;
+    }
+    .alert-message {
+      background-color: #fff8e1; color: #f57f17;
+      padding: 16px; border-radius: 8px; margin: 20px 0;
+      border: 1px solid #ffecb3;
+      p { margin: 8px 0; }
+      ul { margin-top: 8px; padding-left: 20px; }
+    }
+    .full-width { width: 100%; }
+  `]
+})
+export class RejectionConfirmationDialogComponent {
+  remarks: string = '';
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { billNo: string }) { }
+}
+
 @Component({
   selector: 'app-oic-transit-permit',
   imports: [MaterialModule, CommonModule],
@@ -376,660 +431,283 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
   selector: 'app-brand-details-dialog',
   standalone: true,
   imports: [MaterialModule, CommonModule],
-  animations: [
-    trigger('fadeInUp', [
-      state('in', style({ opacity: 1, transform: 'translateY(0)' })),
-      transition('void => *', [
-        style({ opacity: 0, transform: 'translateY(20px)' }),
-        animate('0.4s cubic-bezier(0.25, 0.8, 0.25, 1)')
-      ])
-    ])
-  ],
   template: `
-    <div class="brand-details-dialog">
-      <div class="dialog-header">
-        <div class="header-content">
-          <mat-icon class="header-icon">inventory_2</mat-icon>
-          <h2>Brand Details for {{ data.refNo }}</h2>
+    <!-- Header (outside mat-dialog-content so it's always visible) -->
+    <div class="bdd-header">
+      <div class="bdd-header-left">
+        <div class="bdd-header-icon">
+          <mat-icon>inventory_2</mat-icon>
         </div>
-        <button mat-icon-button mat-dialog-close class="close-btn" matTooltip="Close">
-          <mat-icon>close</mat-icon>
+        <div class="bdd-header-text">
+          <div class="bdd-header-title">Brand Details</div>
+          <div class="bdd-header-sub">{{ data.refNo }}</div>
+        </div>
+      </div>
+      <button mat-icon-button mat-dialog-close class="bdd-close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- Scrollable body -->
+    <mat-dialog-content class="bdd-body">
+
+      <!-- Summary cards -->
+      <div class="bdd-stats">
+        <div class="bdd-stat-card">
+          <div class="bdd-stat-icon ref-icon"><mat-icon>tag</mat-icon></div>
+          <div>
+            <div class="bdd-stat-label">Reference No.</div>
+            <div class="bdd-stat-value ref">{{ data.refNo }}</div>
+          </div>
+        </div>
+        <div class="bdd-stat-card">
+          <div class="bdd-stat-icon prod-icon"><mat-icon>category</mat-icon></div>
+          <div>
+            <div class="bdd-stat-label">Total Products</div>
+            <div class="bdd-stat-value green">{{ data.totalProducts }}</div>
+          </div>
+        </div>
+        <div class="bdd-stat-card">
+          <div class="bdd-stat-icon cases-icon"><mat-icon>inventory</mat-icon></div>
+          <div>
+            <div class="bdd-stat-label">Total Cases</div>
+            <div class="bdd-stat-value teal">{{ data.totalCases }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section heading -->
+      <div class="bdd-section-title">
+        <span class="bdd-accent-bar"></span>Brand Information
+      </div>
+
+      <!-- Table -->
+      <div class="bdd-table-wrap">
+          
+        <mat-table [dataSource]="data.brands">
+          <ng-container matColumnDef="slNo">
+            <mat-header-cell *matHeaderCellDef>#</mat-header-cell>
+            <mat-cell *matCellDef="let e">
+              <span class="bdd-serial">{{ e.slNo }}</span>
+            </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="brand">
+            <mat-header-cell *matHeaderCellDef>Brand</mat-header-cell>
+            <mat-cell *matCellDef="let e">
+              <div class="bdd-brand-name">{{ e.brand }}</div>
+            </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="size">
+            <mat-header-cell *matHeaderCellDef>Size (ml)</mat-header-cell>
+            <mat-cell *matCellDef="let e">
+              <span class="bdd-chip blue">{{ e.size }}</span>
+            </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="cases">
+            <mat-header-cell *matHeaderCellDef>Cases</mat-header-cell>
+            <mat-cell *matCellDef="let e">
+              <span class="bdd-chip green">{{ e.cases }}</span>
+            </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="bottleType">
+            <mat-header-cell *matHeaderCellDef>Bottle Type</mat-header-cell>
+            <mat-cell *matCellDef="let e">{{ e.bottleType }}</mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="brandOwner">
+            <mat-header-cell *matHeaderCellDef>Brand Owner</mat-header-cell>
+            <mat-cell *matCellDef="let e">{{ e.brandOwner }}</mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="liquorType">
+            <mat-header-cell *matHeaderCellDef>Liquor Type</mat-header-cell>
+            <mat-cell *matCellDef="let e">
+              <span class="bdd-liquor" [ngClass]="getLiquorTypeClass(e.liquorType)">{{ e.liquorType }}</span>
+            </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="manufacturingUnit">
+            <mat-header-cell *matHeaderCellDef>Manufacturing Unit</mat-header-cell>
+            <mat-cell *matCellDef="let e">{{ e.manufacturingUnit }}</mat-cell>
+          </ng-container>
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+        </mat-table>
+      </div>
+
+    </mat-dialog-content>
+
+    <!-- Footer (outside scroll area) -->
+    <mat-dialog-actions class="bdd-footer">
+      <div class="bdd-footer-info">
+        <mat-icon>check_circle</mat-icon>
+        <span>All brand details are verified and up-to-date</span>
+      </div>
+      <div class="bdd-footer-actions">
+        <button mat-button mat-dialog-close class="bdd-btn-close">
+          <mat-icon>close</mat-icon> Close
+        </button>
+        <button mat-raised-button class="bdd-btn-export">
+          <mat-icon>file_download</mat-icon> Export Details
         </button>
       </div>
-
-      <div class="dialog-body">
-        <div class="dialog-stats">
-          <div class="stat-card" [@fadeInUp]="'in'">
-            <div class="stat-label">REFERENCE NUMBER</div>
-            <div class="stat-value ref-number">{{ data.refNo }}</div>
-          </div>
-          <div class="stat-card" [@fadeInUp]="'in'" style="animation-delay: 0.1s;">
-            <div class="stat-label">TOTAL PRODUCTS</div>
-            <div class="stat-value total-products">{{ data.totalProducts }}</div>
-          </div>
-          <div class="stat-card" [@fadeInUp]="'in'" style="animation-delay: 0.2s;">
-            <div class="stat-label">TOTAL CASES</div>
-            <div class="stat-value total-cases">{{ data.totalCases }}</div>
-          </div>
-        </div>
-
-        <div class="table-container" [@fadeInUp]="'in'" style="animation-delay: 0.3s;">
-          <div class="table-header">
-            <h3>Brand Information</h3>
-            <div class="table-actions">
-              <button mat-icon-button matTooltip="Refresh">
-                <mat-icon>refresh</mat-icon>
-              </button>
-              <button mat-icon-button matTooltip="Print">
-                <mat-icon>print</mat-icon>
-              </button>
-            </div>
-          </div>
-          
-          <div class="table-wrapper">
-            <mat-table [dataSource]="data.brands" class="brand-table">
-              
-              <!-- Serial Number Column -->
-              <ng-container matColumnDef="slNo">
-                <mat-header-cell *matHeaderCellDef class="serial-header">#</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="serial-cell">
-                  <div class="serial-number">{{ element.slNo }}</div>
-                </mat-cell>
-              </ng-container>
-
-              <!-- Brand Column -->
-              <ng-container matColumnDef="brand">
-                <mat-header-cell *matHeaderCellDef>Brand</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="brand-cell">
-                  <div class="brand-info">
-                    <div class="brand-name">{{ element.brand }}</div>
-                    <div class="brand-subtitle">Premium Quality</div>
-                  </div>
-                </mat-cell>
-              </ng-container>
-
-              <!-- Size Column -->
-              <ng-container matColumnDef="size">
-                <mat-header-cell *matHeaderCellDef>Size (ml)</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="size-cell">
-                  <div class="size-container">
-                    <mat-icon class="size-icon">local_drink</mat-icon>
-                    <span class="size-badge">{{ element.size }}</span>
-                  </div>
-                </mat-cell>
-              </ng-container>
-
-              <!-- Cases Column -->
-              <ng-container matColumnDef="cases">
-                <mat-header-cell *matHeaderCellDef>Cases</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="cases-cell">
-                  <div class="cases-container">
-                    <mat-icon class="cases-icon">inventory</mat-icon>
-                    <span class="cases-badge">{{ element.cases }}</span>
-                  </div>
-                </mat-cell>
-              </ng-container>
-
-              <!-- Bottle Type Column -->
-              <ng-container matColumnDef="bottleType">
-                <mat-header-cell *matHeaderCellDef>Bottle Type</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="bottle-cell">
-                  <div class="bottle-info">
-                    <mat-icon class="bottle-icon">wine_bar</mat-icon>
-                    <span>{{ element.bottleType }}</span>
-                  </div>
-                </mat-cell>
-              </ng-container>
-
-              <!-- Brand Owner Column -->
-              <ng-container matColumnDef="brandOwner">
-                <mat-header-cell *matHeaderCellDef>Brand Owner</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="owner-cell">
-                  <div class="owner-info">
-                    <mat-icon class="owner-icon">business</mat-icon>
-                    <span>{{ element.brandOwner }}</span>
-                  </div>
-                </mat-cell>
-              </ng-container>
-
-              <!-- Liquor Type Column -->
-              <ng-container matColumnDef="liquorType">
-                <mat-header-cell *matHeaderCellDef>Liquor Type</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="liquor-cell">
-                  <span class="liquor-badge" [ngClass]="getLiquorTypeClass(element.liquorType)">
-                    {{ element.liquorType }}
-                  </span>
-                </mat-cell>
-              </ng-container>
-
-              <!-- Manufacturing Unit Column -->
-              <ng-container matColumnDef="manufacturingUnit">
-                <mat-header-cell *matHeaderCellDef>Manufacturing Unit</mat-header-cell>
-                <mat-cell *matCellDef="let element" class="manufacturing-cell">
-                  <div class="manufacturing-info">
-                    <mat-icon class="manufacturing-icon">factory</mat-icon>
-                    <span>{{ element.manufacturingUnit }}</span>
-                  </div>
-                </mat-cell>
-              </ng-container>
-
-              <mat-header-row *matHeaderRowDef="displayedColumns" class="table-header-row"></mat-header-row>
-              <mat-row *matRowDef="let row; columns: displayedColumns;" class="table-data-row"></mat-row>
-            </mat-table>
-          </div>
-        </div>
-      </div>
-
-      <div class="dialog-footer" [@fadeInUp]="'in'" style="animation-delay: 0.4s;">
-        <div class="footer-info">
-          <mat-icon>info</mat-icon>
-          <span>All brand details are verified and up-to-date</span>
-        </div>
-        <div class="footer-actions">
-          <button mat-button mat-dialog-close class="close-button">
-            <mat-icon>close</mat-icon>
-            Close
-          </button>
-          <button mat-raised-button color="primary" class="export-button">
-            <mat-icon>file_download</mat-icon>
-            Export Details
-          </button>
-        </div>
-      </div>
-    </div>
+    </mat-dialog-actions>
   `,
   styles: [`
-    .brand-details-dialog {
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
-      
-      .dialog-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: linear-gradient(135deg, #00bcd4 0%, #00acc1 50%, #0097a7 100%);
-        color: white;
-        padding: 20px 24px;
-        margin: -24px -24px 0 -24px;
-        box-shadow: 0 4px 8px rgba(0, 188, 212, 0.3);
-        
-        .header-content {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          
-          .header-icon {
-            font-size: 28px;
-            width: 28px;
-            height: 28px;
-            animation: pulse 2s infinite;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-          }
-          
-          h2 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 600;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-          }
-        }
-        
-        .close-btn {
-          color: white;
-          transition: all 0.3s ease;
-          background: rgba(255,255,255,0.1);
-          border-radius: 50%;
-          
-          &:hover {
-            transform: rotate(90deg) scale(1.1);
-            background: rgba(255,255,255,0.2);
-          }
-        }
-      }
-      
-      .dialog-body {
-        flex: 1;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        
-        .dialog-stats {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 20px;
-          padding: 24px 0;
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          margin: 0 -24px;
-          padding-left: 24px;
-          padding-right: 24px;
-          
-          .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            
-            &::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              height: 4px;
-              background: linear-gradient(90deg, #2196f3, #00bcd4, #4caf50);
-            }
-            
-            &:hover {
-              transform: translateY(-4px);
-              box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            }
-            
-            .stat-label {
-              font-size: 11px;
-              color: #666;
-              font-weight: 600;
-              margin-bottom: 12px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            
-            .stat-value {
-              font-size: 28px;
-              font-weight: 700;
-              
-              &.ref-number {
-                color: #1976d2;
-                text-shadow: 0 1px 2px rgba(25, 118, 210, 0.2);
-              }
-              
-              &.total-products {
-                color: #388e3c;
-                text-shadow: 0 1px 2px rgba(56, 142, 60, 0.2);
-              }
-              
-              &.total-cases {
-                color: #00acc1;
-                text-shadow: 0 1px 2px rgba(0, 172, 193, 0.2);
-              }
-            }
-          }
-        }
-        
-        .table-container {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          margin: 20px 0;
-          
-          .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding: 0 4px;
-            
-            h3 {
-              margin: 0;
-              color: #333;
-              font-size: 18px;
-              font-weight: 600;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-              
-              &::before {
-                content: '';
-                width: 4px;
-                height: 20px;
-                background: linear-gradient(135deg, #2196f3, #00bcd4);
-                border-radius: 2px;
-              }
-            }
-            
-            .table-actions {
-              display: flex;
-              gap: 8px;
-              
-              button {
-                color: #666;
-                transition: all 0.3s ease;
-                
-                &:hover {
-                  color: #2196f3;
-                  transform: scale(1.1);
-                }
-              }
-            }
-          }
-          
-          .table-wrapper {
-            flex: 1;
-            overflow: auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
-            
-            .brand-table {
-              width: 100%;
-              
-              .table-header-row {
-                background: linear-gradient(135deg, #37474f 0%, #455a64 100%);
-                
-                .mat-mdc-header-cell {
-                  color: white;
-                  font-weight: 600;
-                  font-size: 13px;
-                  padding: 16px 12px;
-                  border-right: 1px solid #546e7a;
-                  text-transform: uppercase;
-                  letter-spacing: 0.5px;
-                  
-                  &:last-child {
-                    border-right: none;
-                  }
-                  
-                  &.serial-header {
-                    width: 60px;
-                    text-align: center;
-                  }
-                }
-              }
-              
-              .table-data-row {
-                transition: all 0.3s ease;
-                border-bottom: 1px solid #f0f0f0;
-                
-                &:hover {
-                  background-color: #f8f9fa;
-                  transform: scale(1.01);
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }
-                
-                &:nth-child(even) {
-                  background-color: #fafafa;
-                }
-                
-                .mat-mdc-cell {
-                  padding: 16px 12px;
-                  font-size: 13px;
-                  border-right: 1px solid #f0f0f0;
-                  
-                  &:last-child {
-                    border-right: none;
-                  }
-                }
-              }
-              
-              .serial-cell {
-                text-align: center;
-                
-                .serial-number {
-                  background: linear-gradient(135deg, #2196f3, #1976d2);
-                  color: white;
-                  width: 28px;
-                  height: 28px;
-                  border-radius: 50%;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-weight: 600;
-                  font-size: 12px;
-                  margin: 0 auto;
-                  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
-                }
-              }
-              
-              .brand-cell {
-                .brand-info {
-                  .brand-name {
-                    color: #1976d2;
-                    font-weight: 600;
-                    font-size: 14px;
-                    margin-bottom: 2px;
-                  }
-                  
-                  .brand-subtitle {
-                    color: #666;
-                    font-size: 11px;
-                    font-style: italic;
-                  }
-                }
-              }
-              
-              .size-cell, .cases-cell {
-                .size-container, .cases-container {
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  
-                  .size-icon, .cases-icon {
-                    font-size: 16px;
-                    width: 16px;
-                    height: 16px;
-                    color: #666;
-                  }
-                }
-              }
-              
-              .size-badge {
-                background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-                color: #1976d2;
-                padding: 6px 12px;
-                border-radius: 16px;
-                font-size: 11px;
-                font-weight: 600;
-                border: 1px solid #2196f3;
-                transition: all 0.3s ease;
-                
-                &:hover {
-                  background: linear-gradient(135deg, #1976d2, #1565c0);
-                  color: white;
-                  transform: scale(1.05);
-                }
-              }
-              
-              .cases-badge {
-                background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
-                color: #2e7d32;
-                padding: 6px 12px;
-                border-radius: 16px;
-                font-size: 11px;
-                font-weight: 600;
-                border: 1px solid #4caf50;
-                transition: all 0.3s ease;
-                
-                &:hover {
-                  background: linear-gradient(135deg, #2e7d32, #1b5e20);
-                  color: white;
-                  transform: scale(1.05);
-                }
-              }
-              
-              .bottle-cell, .owner-cell, .manufacturing-cell {
-                .bottle-info, .owner-info, .manufacturing-info {
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  
-                  .bottle-icon, .owner-icon, .manufacturing-icon {
-                    font-size: 16px;
-                    width: 16px;
-                    height: 16px;
-                    color: #666;
-                  }
-                }
-              }
-              
-              .liquor-badge {
-                padding: 6px 12px;
-                border-radius: 16px;
-                font-size: 11px;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                
-                &.type-whisky {
-                  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-                  color: #f57c00;
-                  border: 1px solid #ff9800;
-                }
-                
-                &.brandy {
-                  background: linear-gradient(135deg, #fce4ec, #f8bbd9);
-                  color: #c2185b;
-                  border: 1px solid #e91e63;
-                }
-                
-                &.type-rum {
-                  background: linear-gradient(135deg, #efebe9, #d7ccc8);
-                  color: #5d4037;
-                  border: 1px solid #795548;
-                }
-                
-                &.type-beer {
-                  background: linear-gradient(135deg, #fffde7, #fff9c4);
-                  color: #fbc02d;
-                  border: 1px solid #fdd835;
-                }
-                
-                &.type-vodka {
-                  background: linear-gradient(135deg, #f3e5f5, #e1bee7);
-                  color: #7b1fa2;
-                  border: 1px solid #8e24aa;
-                }
-                
-                &.type-wine {
-                  background: linear-gradient(135deg, #ffebee, #ffcdd2);
-                  color: #c62828;
-                  border: 1px solid #e57373;
-                }
-                
-                &.type-generic {
-                  background: linear-gradient(135deg, #e0e0e0, #bdbdbd);
-                  color: #616161;
-                  border: 1px solid #9e9e9e;
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      .dialog-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 0 0 0;
-        border-top: 2px solid #f0f0f0;
-        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-        margin: 0 -24px -24px -24px;
-        padding: 20px 24px;
-        
-        .footer-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #666;
-          font-size: 13px;
-
-          mat-icon {
-            font-size: 16px;
-            width: 16px;
-            height: 16px;
-            color: #4caf50;
-          }
-        }
-        
-        .footer-actions {
-          display: flex;
-          gap: 12px;
-          
-          .close-button, .export-button {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            
-            &:hover {
-              transform: translateY(-2px);
-            }
-
-            mat-icon {
-              font-size: 18px;
-              width: 18px;
-              height: 18px;
-            }
-          }
-          
-          .export-button {
-            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
-            
-            &:hover {
-              box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
-            }
-          }
-        }
-      }
+    /* ── Host & layout ───────────────────────────── */
+    :host {
+      display: flex; flex-direction: column;
+      max-height: 85vh; overflow: hidden;
     }
 
-    @keyframes pulse {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.05);
-      }
-      100% {
-        transform: scale(1);
-      }
+    /* ── Header ──────────────────────────────────── */
+    .bdd-header {
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, #1C2B78 0%, #2d3f9e 60%, #1a3a6e 100%);
+      color: #fff;
+      padding: 20px 28px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .bdd-header::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #34d399, #3b82f6, #a78bfa);
+    }
+    .bdd-header-left { display: flex; align-items: center; gap: 16px; }
+    .bdd-header-icon {
+      width: 50px; height: 50px; border-radius: 14px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.25);
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .bdd-header-icon mat-icon { font-size: 26px; width: 26px; height: 26px; color: #fff; }
+    .bdd-header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .bdd-header-sub {
+      font-size: 13px; opacity: 0.8; font-family: 'Courier New', monospace;
+      margin-top: 2px; background: rgba(255,255,255,0.12);
+      display: inline-block; padding: 1px 8px; border-radius: 4px;
+    }
+    .bdd-close {
+      color: #fff !important; background: rgba(255,255,255,0.12) !important;
+      border-radius: 50% !important;
+    }
+    .bdd-close:hover { background: rgba(255,255,255,0.25) !important; }
+
+    /* ── Scrollable body ─────────────────────────── */
+    .bdd-body {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 24px 28px !important;
+      max-height: calc(85vh - 160px);
     }
 
-    @keyframes fadeInUp {
-      0% {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    /* ── Stat cards ──────────────────────────────── */
+    .bdd-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 14px; margin-bottom: 24px;
     }
+    .bdd-stat-card {
+      display: flex; align-items: center; gap: 14px;
+      background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 12px; padding: 16px 18px;
+      box-shadow: 0 2px 8px rgba(28,43,120,0.07);
+    }
+    .bdd-stat-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .bdd-stat-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .ref-icon   { background: #eff6ff; } .ref-icon mat-icon   { color: #1C2B78; }
+    .prod-icon  { background: #f0fdf4; } .prod-icon mat-icon  { color: #16a34a; }
+    .cases-icon { background: #ecfeff; } .cases-icon mat-icon { color: #0891b2; }
+    .bdd-stat-label {
+      font-size: 10px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px;
+    }
+    .bdd-stat-value { font-size: 18px; font-weight: 700; }
+    .bdd-stat-value.ref   { color: #1C2B78; font-size: 14px; font-family: monospace; }
+    .bdd-stat-value.green { color: #16a34a; }
+    .bdd-stat-value.teal  { color: #0891b2; }
 
-    @media (max-width: 768px) {
-      .brand-details-dialog {
-        .dialog-body {
-          .dialog-stats {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-          
-          .table-container {
-            .table-wrapper {
-              .brand-table {
-                min-width: 900px;
-              }
-            }
-          }
-        }
-        
-        .dialog-footer {
-          flex-direction: column;
-          gap: 16px;
-          align-items: stretch;
-          
-          .footer-actions {
-            justify-content: center;
-          }
-        }
-      }
+    /* ── Section title ───────────────────────────── */
+    .bdd-section-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; font-weight: 700; color: #1e293b;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .bdd-accent-bar { width: 4px; height: 16px; background: #1C2B78; border-radius: 3px; }
+
+    /* ── Table ───────────────────────────────────── */
+    .bdd-table-wrap {
+      border-radius: 10px; border: 1px solid #e2e8f0;
+      overflow: hidden; overflow-x: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    mat-table { width: 100%; min-width: 880px; background: #fff; }
+    mat-header-row {
+      background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+      min-height: 46px;
+    }
+    mat-header-cell {
+      color: #cbd5e1 !important; font-size: 11px !important;
+      font-weight: 700 !important; text-transform: uppercase;
+      letter-spacing: 0.07em; background: transparent !important;
+      border-bottom: none !important; padding: 0 16px;
+    }
+    mat-row {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.12s ease;
+      min-height: 54px;
+    }
+    mat-row:hover { background: #f0f5ff !important; }
+    mat-row:nth-child(even) { background: #fafbff; }
+    mat-row:last-child { border-bottom: none; }
+    mat-cell { font-size: 13px; color: #334155; padding: 0 16px; }
+
+    /* ── Cell helpers ────────────────────────────── */
+    .bdd-serial {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #1C2B78; color: #fff;
+      font-size: 12px; font-weight: 700;
+    }
+    .bdd-brand-name { color: #1C2B78; font-weight: 600; font-size: 13px; line-height: 1.4; }
+    .bdd-chip {
+      display: inline-block; padding: 3px 11px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+    .bdd-chip.blue  { background: #dbeafe; color: #1d4ed8; }
+    .bdd-chip.green { background: #dcfce7; color: #15803d; }
+    .bdd-liquor {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .bdd-liquor.type-whisky  { background: #fff7ed; color: #c2410c; }
+    .bdd-liquor.type-beer    { background: #fefce8; color: #a16207; }
+    .bdd-liquor.type-rum     { background: #fdf4ff; color: #7e22ce; }
+    .bdd-liquor.type-vodka   { background: #f0fdf4; color: #15803d; }
+    .bdd-liquor.type-wine    { background: #fff1f2; color: #be123c; }
+    .bdd-liquor.type-generic { background: #f1f5f9; color: #475569; }
+
+    /* ── Footer ──────────────────────────────────── */
+    .bdd-footer {
+      display: flex !important; align-items: center; justify-content: space-between;
+      padding: 14px 28px !important; margin: 0 !important;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc; flex-shrink: 0;
+      min-height: 56px;
+    }
+    .bdd-footer-info {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #64748b;
+    }
+    .bdd-footer-info mat-icon { font-size: 15px; width: 15px; height: 15px; color: #16a34a; }
+    .bdd-footer-actions { display: flex; gap: 10px; }
+    .bdd-btn-close { color: #64748b !important; border: 1px solid #e2e8f0 !important; border-radius: 8px !important; }
+    .bdd-btn-export {
+      background: #1C2B78 !important; color: #fff !important;
+      border-radius: 8px !important;
+      box-shadow: 0 2px 8px rgba(28,43,120,0.3) !important;
     }
   `]
 })
@@ -1051,76 +729,4 @@ export class BrandDetailsDialogComponent {
     if (lower.includes('wine')) return 'type-wine';
     return 'type-generic';
   }
-}
-
-// Rejection Confirmation Dialog
-@Component({
-  selector: 'app-rejection-confirmation-dialog',
-  standalone: true,
-  imports: [MaterialModule, CommonModule, FormsModule],
-  template: `
-    <div class="rejection-dialog">
-      <h2 mat-dialog-title class="dialog-title">
-        <mat-icon color="warn">warning</mat-icon> Confirm Rejection
-      </h2>
-      <div mat-dialog-content>
-        <div class="alert-message">
-          <p><strong>Warning:</strong> You are about to reject Transit Permit <strong>{{data.billNo}}</strong>.</p>
-          <p>Please note that:</p>
-          <ul>
-            <li>The deducted wallet amount will be <strong>refunded</strong> to the licensee.</li>
-            <li>The utilized stock (bottles/cases) will be <strong>restored</strong> to the Brand Warehouse.</li>
-          </ul>
-        </div>
-        
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Reason for Rejection</mat-label>
-          <textarea matInput [(ngModel)]="remarks" placeholder="Enter remarks..." rows="3" required></textarea>
-        </mat-form-field>
-      </div>
-      <div mat-dialog-actions align="end">
-        <button mat-button mat-dialog-close>Cancel</button>
-        <button mat-raised-button color="warn" [mat-dialog-close]="{confirmed: true, remarks: remarks}" [disabled]="!remarks">
-          I Agree and Confirm
-        </button>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .rejection-dialog {
-      padding: 0;
-      max-width: 500px;
-    }
-    .dialog-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0;
-      padding: 16px 24px;
-      background-color: #ffebee;
-      color: #c62828;
-      border-bottom: 1px solid #ffcdd2;
-    }
-    .alert-message {
-      background-color: #fff8e1;
-      color: #f57f17;
-      padding: 16px;
-      border-radius: 8px;
-      margin: 20px 0;
-      border: 1px solid #ffecb3;
-      
-      p { margin: 8px 0; }
-      ul {
-        margin-top: 8px;
-        padding-left: 20px;
-      }
-    }
-    .full-width {
-      width: 100%;
-    }
-  `]
-})
-export class RejectionConfirmationDialogComponent {
-  remarks: string = '';
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { billNo: string }) { }
 }
