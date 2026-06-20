@@ -711,67 +711,69 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     const applicantData = this.getParsedSession('applicantDetailsData');
     console.log('Applicant Data:', applicantData);
 
-    if (!applicantData?.applicant_name) {
-      console.error('Missing: Applicant Name');
-      missingFields.push('Applicant Name');
-    } else {
-      console.log('Applicant Name OK');
-    }
-
-    if (!applicantData?.father_husband_name) {
-      console.error('Missing: Father/Husband Name');
-      missingFields.push('Father/Husband Name');
-    } else {
-      console.log('Father/Husband Name OK');
-    }
-
-    if (!applicantData?.dob) {
-      console.error('Missing: Date of Birth');
-      missingFields.push('Date of Birth');
-    } else {
-      console.log('DOB OK');
-    }
-
-    if (!applicantData?.gender) {
-      console.error('Missing: Gender');
-      missingFields.push('Gender');
-    } else {
-      console.log('Gender OK');
-    }
-
-    if (!applicantData?.email) {
-      console.error('Missing: Email');
-      missingFields.push('Email');
-    } else {
-      console.log('Email OK');
-    }
-
-    if (!applicantData?.mobile_number) {
-      console.error('Missing: Mobile Number');
-      missingFields.push('Mobile Number');
-    } else {
-      console.log('Mobile Number OK');
-    }
-
-    if (this.requiresNationalityDocument && !applicantData?.coi_rc_ss) {
-      missingFields.push('Certificate Type');
-    }
-
-    if (applicantData?.has_excise_license === 'Yes') {
-      if (!applicantData?.existing_license_category_id) {
-        missingFields.push('Existing License Category');
+    if (!this.isCompanyType) {
+      if (!applicantData?.applicant_name) {
+        console.error('Missing: Applicant Name');
+        missingFields.push('Applicant Name');
+      } else {
+        console.log('Applicant Name OK');
       }
-      if (!applicantData?.existing_license_no) {
-        missingFields.push('Existing License Number');
-      }
-    }
 
-    if (applicantData?.family_excise_license === 'Yes') {
-      if (!applicantData?.family_license_category_id) {
-        missingFields.push('Family License Category');
+      if (!applicantData?.father_husband_name) {
+        console.error('Missing: Father/Husband Name');
+        missingFields.push('Father/Husband Name');
+      } else {
+        console.log('Father/Husband Name OK');
       }
-      if (!applicantData?.family_license_no) {
-        missingFields.push('Family License Number');
+
+      if (!applicantData?.dob) {
+        console.error('Missing: Date of Birth');
+        missingFields.push('Date of Birth');
+      } else {
+        console.log('DOB OK');
+      }
+
+      if (!applicantData?.gender) {
+        console.error('Missing: Gender');
+        missingFields.push('Gender');
+      } else {
+        console.log('Gender OK');
+      }
+
+      if (!applicantData?.email) {
+        console.error('Missing: Email');
+        missingFields.push('Email');
+      } else {
+        console.log('Email OK');
+      }
+
+      if (!applicantData?.mobile_number) {
+        console.error('Missing: Mobile Number');
+        missingFields.push('Mobile Number');
+      } else {
+        console.log('Mobile Number OK');
+      }
+
+      if (this.requiresNationalityDocument && !applicantData?.coi_rc_ss) {
+        missingFields.push('Certificate Type');
+      }
+
+      if (applicantData?.has_excise_license === 'Yes') {
+        if (!applicantData?.existing_license_category_id) {
+          missingFields.push('Existing License Category');
+        }
+        if (!applicantData?.existing_license_no) {
+          missingFields.push('Existing License Number');
+        }
+      }
+
+      if (applicantData?.family_excise_license === 'Yes') {
+        if (!applicantData?.family_license_category_id) {
+          missingFields.push('Family License Category');
+        }
+        if (!applicantData?.family_license_no) {
+          missingFields.push('Family License Number');
+        }
       }
     }
 
@@ -887,36 +889,38 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       missingFields.push('Trade License Covered');
     }
 
-    const passPhoto = this.licenseAppService.getPassPhoto();
-    if (!passPhoto) {
-      console.error('Missing: Passport Photo');
-      missingFields.push('Passport Photo');
-    } else {
-      console.log('Passport Photo OK:', passPhoto.name);
-    }
-
     const docs = this.licenseAppService.getAllSiteDocuments();
     console.log('Documents:', Array.from(docs.keys()));
 
-    if (!docs.get('pan_card')) {
-      console.error('Missing: PAN Card');
-      missingFields.push('PAN Card');
-    } else {
-      console.log('PAN Card OK');
-    }
+    if (!this.isCompanyType) {
+      const passPhoto = this.licenseAppService.getPassPhoto();
+      if (!passPhoto) {
+        console.error('Missing: Passport Photo');
+        missingFields.push('Passport Photo');
+      } else {
+        console.log('Passport Photo OK:', passPhoto.name);
+      }
 
-    if (this.requiresNationalityDocument && !docs.get('sikkim_certificate')) {
-      console.error('❌ Missing: Sikkim Certificate');
-      missingFields.push('COI / RC / SS Document');
-    } else {
-      console.log('Sikkim Certificate OK');
-    }
+      if (!docs.get('pan_card')) {
+        console.error('Missing: PAN Card');
+        missingFields.push('PAN Card');
+      } else {
+        console.log('PAN Card OK');
+      }
 
-    if (!docs.get('dob_proof')) {
-      console.error('❌ Missing: Date of Birth Proof');
-      missingFields.push('Date of Birth Proof');
-    } else {
-      console.log('✅ DOB Proof OK');
+      if (this.requiresNationalityDocument && !docs.get('sikkim_certificate')) {
+        console.error('❌ Missing: Sikkim Certificate');
+        missingFields.push('COI / RC / SS Document');
+      } else {
+        console.log('Sikkim Certificate OK');
+      }
+
+      if (!docs.get('dob_proof')) {
+        console.error('❌ Missing: Date of Birth Proof');
+        missingFields.push('Date of Birth Proof');
+      } else {
+        console.log('✅ DOB Proof OK');
+      }
     }
 
     console.log('🔍 Validation Result:', { valid: missingFields.length === 0, missingFields });
