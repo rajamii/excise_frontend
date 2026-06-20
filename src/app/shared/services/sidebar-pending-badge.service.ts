@@ -179,6 +179,7 @@ export class SidebarPendingBadgeService {
         if (mode === 'light') return of(0);
         return this.supplyChainService.getTransitPermits().pipe(
           map((items) => this.toArray(items)),
+          map((items) => this.uniqueByBillNo(items)),
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL']))
         );
 
@@ -610,5 +611,16 @@ export class SidebarPendingBadgeService {
     if (isInitial) return 'PENDING';
 
     return 'UNDER_PROCESS';
+  }
+
+  private uniqueByBillNo(items: any[]): any[] {
+    const seen = new Set<string>();
+    return (items || []).filter((item) => {
+      const billNo = String(item?.bill_no ?? item?.billNo ?? '').trim();
+      if (!billNo) return true;
+      if (seen.has(billNo)) return false;
+      seen.add(billNo);
+      return true;
+    });
   }
 }

@@ -279,7 +279,16 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     // Officer-in-charge primarily handles transit permit terminations
     this.supplyChainService.getTransitPermits().subscribe({
       next: (data: any[]) => {
-        const transits: OfficerData[] = data
+        const seen = new Set<string>();
+        const uniqueData = (data || []).filter((item: any) => {
+          const billNo = String(item?.billNo || item?.bill_no || '').trim();
+          if (!billNo) return true;
+          if (seen.has(billNo)) return false;
+          seen.add(billNo);
+          return true;
+        });
+
+        const transits: OfficerData[] = uniqueData
           .filter((item: any) => this.requiresOfficerReview(item.status))
           .map((item: any) => ({
             id: item.id,
@@ -303,11 +312,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   }
 
   private requiresOfficerReview(status: string): boolean {
-    const statusLower = status?.toLowerCase() || '';
-    return statusLower.includes('active') || 
-           statusLower.includes('in_transit') ||
-           statusLower.includes('approved') ||
-           statusLower.includes('issued');
+    return true;
   }
 
   private formatDate(dateValue: any): string {
