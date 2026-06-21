@@ -56,6 +56,10 @@ export class AuthService {
     }));
   }
 
+  checkUserExists(username: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/check-username/`, { username });
+  }
+
   sendRegistrationOtp(request: { phoneNumber: string; purpose?: 'register' }): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/`, request);
   }

@@ -44,6 +44,11 @@ export class LoginComponent extends BaseComponent {
   otpAutoSubmitted = false;
   isSendingOtp = false;
 
+  // Username check state (password flow)
+  usernameChecked = false;
+  isCheckingUsername = false;
+  usernameNotFound = false;
+
   // Registration related properties
   registrationOtpSent = false;
   registrationOtpAutoSubmitted = false;
@@ -297,6 +302,9 @@ export class LoginComponent extends BaseComponent {
     this.otpIndex = null;
     this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
+    this.usernameChecked = false;
+    this.isCheckingUsername = false;
+    this.usernameNotFound = false;
     this.loginForm.reset();
     this.clearLoginErrors();
     this.setValidators();
@@ -425,6 +433,61 @@ export class LoginComponent extends BaseComponent {
     });
   }
 
+  checkUsername(): void {
+    const username = String(this.loginForm.value.username || '').trim();
+    if (!username) {
+      this.usernameNotFound = true;
+      return;
+    }
+    if (this.isLocallyBlockedByUsername(username)) {
+      this.usernameNotFound = true;
+      this.usernameChecked = false;
+      return;
+    }
+    this.isCheckingUsername = true;
+    this.usernameNotFound = false;
+    this.clearLoginErrors();
+
+    this.authService.checkUserExists(username).subscribe({
+      next: (res: any) => {
+        this.isCheckingUsername = false;
+        if (res?.active === false) {
+          // Account exists but inactive
+          this.usernameChecked = false;
+          this.usernameNotFound = false;
+          this.setLoginErrors(['Your account is inactive. Please contact the administrator.']);
+        } else {
+          // User exists and is active — show password field
+          this.usernameChecked = true;
+          this.usernameNotFound = false;
+        }
+      },
+      error: (err) => {
+        this.isCheckingUsername = false;
+        if (err?.status === 404) {
+          this.usernameNotFound = true;
+          this.usernameChecked = false;
+        } else if (err?.status === 403) {
+          this.usernameNotFound = false;
+          this.usernameChecked = false;
+          this.setLoginErrors(['Your account is inactive. Please contact the administrator.']);
+        } else {
+          this.usernameNotFound = false;
+          this.usernameChecked = false;
+          this.setLoginErrors(['Could not verify User ID. Please try again.']);
+        }
+      }
+    });
+  }
+
+  resetUsername(): void {
+    this.usernameChecked = false;
+    this.usernameNotFound = false;
+    this.isCheckingUsername = false;
+    this.loginForm.patchValue({ username: '', password: '' });
+    this.clearLoginErrors();
+  }
+
   sendOtp(): void {
     if (this.isSendingOtp) {
       return;
@@ -437,12 +500,15 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (phoneControl.invalid) {
-      this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
+      // Inline-only — no Swal for simple format errors
+      this.loginError = true;
+      this.loginErrorMessages = ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
       return;
     }
 
     if (this.isLocallyBlockedByPhone(sanitizedPhoneNumber)) {
-      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+      this.loginError = true;
+      this.loginErrorMessages = ['This user has been deleted and is not allowed to log in from this system.'];
       return;
     }
 
@@ -461,7 +527,15 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
-        this.setLoginErrors(this.mapLoginErrors(err, 'sendOtp'));
+        const messages = this.mapLoginErrors(err, 'sendOtp');
+        const isNotRegistered = messages.some(m => m.toLowerCase().includes('not registered') || m.toLowerCase().includes('sign up'));
+        // Show inline only for "not registered"; Swal for everything else
+        if (isNotRegistered) {
+          this.loginError = true;
+          this.loginErrorMessages = messages;
+        } else {
+          this.setLoginErrors(messages);
+        }
         this.loginOtpPreview = null;
         this.isSendingOtp = false;
       },
@@ -826,6 +900,11 @@ export class LoginComponent extends BaseComponent {
   }
 
   private showErrorPopup(messages: string[]): void {
+    const text = messages.join('\n').toLowerCase();
+    // Show inline only for "not registered" — no popup needed, message is clear
+    if (text.includes('not registered') || text.includes('sign up first')) {
+      return;
+    }
     Swal.fire({
       icon: 'error',
       title: 'Login Error',
