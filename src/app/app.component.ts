@@ -34,9 +34,9 @@ import { UiLoadingService } from './core/services/ui-loading.service';
 export class AppComponent implements OnInit, OnDestroy {
 
   title = 'excise_frontend';
-  //showHeaderFooter = true; // Default to showing header/footer
   showCarousel = false;
   isOffline = typeof navigator !== 'undefined' ? !navigator.onLine : false;
+  isLoginRoute = false;  // tracks if we're on /login so we can show the back button
 
   @HostListener('window:offline')
   setNetworkOffline() {
@@ -61,6 +61,8 @@ export class AppComponent implements OnInit, OnDestroy {
     // Listen for route changes to toggle header/footer visibility
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       this.updateLayoutVisibility();
+      const path = this.normalizePath(this.router.url);
+      this.isLoginRoute = path.startsWith('/login');
     });
 
     this.router.events
@@ -100,6 +102,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.inactivityService.stopWatching();
+  }
+
+  goToHome(): void {
+    this.router.navigate(['/']);
   }
 
   private updateLayoutVisibility() {

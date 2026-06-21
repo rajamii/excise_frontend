@@ -1,10 +1,5 @@
 <div class="auth-page">
 
-  <!-- Back to home -->
-  <button type="button" class="back-btn" (click)="goToHome()">
-    <mat-icon>arrow_back</mat-icon> Back to Home
-  </button>
-
   <div class="auth-card" [class.show-signup]="isRightPanelActive">
 
     <!-- ════════════════ SIGN IN SIDE ════════════════ -->
@@ -115,20 +110,27 @@
               </div>
 
               @if (loginError) {
-                <div class="alert-box" [class.alert-warn]="loginErrorMessages[0]?.includes('not registered')" [class.alert-error]="!loginErrorMessages[0]?.includes('not registered')">
-                  <mat-icon>{{ loginErrorMessages[0]?.includes('not registered') ? 'info' : 'error_outline' }}</mat-icon>
-                  <div>
-                    @for (msg of loginErrorMessages; track msg) {
-                      <div>{{ msg }}</div>
-                    }
-                    @if (loginErrorMessages[0]?.includes('not registered')) {
-                      <a (click)="switchToSignUp()">Sign Up now →</a>
-                    }
+                <ng-container *ngIf="loginErrorMessages[0] as firstMsg">
+                  <div class="alert-box"
+                    [class.alert-warn]="firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist')"
+                    [class.alert-error]="!(firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist'))">
+                    <mat-icon>{{ (firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist')) ? 'info' : 'error_outline' }}</mat-icon>
+                    <div>
+                      @for (msg of loginErrorMessages; track msg) {
+                        <div>{{ msg }}</div>
+                      }
+                      @if (firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist')) {
+                        <a (click)="switchToSignUp()" style="cursor:pointer;font-weight:700;text-decoration:underline;margin-top:4px;display:inline-block;">
+                          Sign Up now →
+                        </a>
+                      }
+                    </div>
                   </div>
-                </div>
+                </ng-container>
               }
 
-              <button type="button" class="btn-primary" (click)="sendOtp()" [disabled]="isSendingOtp || loginForm.controls['phoneNumber'].invalid">
+              <button type="button" class="btn-primary" (click)="sendOtp()"
+                [disabled]="isSendingOtp || (loginForm.controls['phoneNumber'].value?.length !== 10)">
                 @if (isSendingOtp) {
                   <mat-spinner diameter="18"></mat-spinner> Sending OTP...
                 } @else {

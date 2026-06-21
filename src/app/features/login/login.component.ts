@@ -347,9 +347,14 @@ export class LoginComponent extends BaseComponent {
     }
 
     const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
-    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: false });
+    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: true });
     targetForm.get('phoneNumber')?.markAsDirty();
     targetForm.get('phoneNumber')?.updateValueAndValidity();
+
+    // Clear stale login errors as the user types a new number
+    if (form === 'login') {
+      this.clearLoginErrors();
+    }
   }
 
   onOtpPhoneEnter(event: Event): void {
@@ -495,12 +500,9 @@ export class LoginComponent extends BaseComponent {
 
     const phoneControl = this.loginForm.controls['phoneNumber'];
     const sanitizedPhoneNumber = String(phoneControl.value || '').replace(/\D/g, '').slice(0, 10);
-    if (phoneControl.value !== sanitizedPhoneNumber) {
-      phoneControl.setValue(sanitizedPhoneNumber);
-    }
 
-    if (phoneControl.invalid) {
-      // Inline-only — no Swal for simple format errors
+    // Only block if obviously invalid (less than 10 digits or doesn't start with 6-9)
+    if (sanitizedPhoneNumber.length < 10 || !/^[6-9]/.test(sanitizedPhoneNumber)) {
       this.loginError = true;
       this.loginErrorMessages = ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
       return;
@@ -512,6 +514,7 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
+    // Valid format — clear errors and call backend
     this.isSendingOtp = true;
     this.clearLoginErrors();
     const phoneNumber = sanitizedPhoneNumber;
@@ -520,22 +523,16 @@ export class LoginComponent extends BaseComponent {
     this.authService.sendOtp(formData).subscribe({
       next: (response) => {
         this.otpSent = true;
-        this.otpIndex = response.otpId;
+        this.otpIndex = response.otpId ?? response.otp_id ?? null;
         this.loginOtpPreview = response.otp ? String(response.otp) : null;
-        console.log('OTP:', response.otp);
         this.isSendingOtp = false;
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
         const messages = this.mapLoginErrors(err, 'sendOtp');
-        const isNotRegistered = messages.some(m => m.toLowerCase().includes('not registered') || m.toLowerCase().includes('sign up'));
-        // Show inline only for "not registered"; Swal for everything else
-        if (isNotRegistered) {
-          this.loginError = true;
-          this.loginErrorMessages = messages;
-        } else {
-          this.setLoginErrors(messages);
-        }
+        // Always inline for OTP flow — no Swal popup
+        this.loginError = true;
+        this.loginErrorMessages = messages;
         this.loginOtpPreview = null;
         this.isSendingOtp = false;
       },
@@ -750,7 +747,7 @@ export class LoginComponent extends BaseComponent {
     if (typeof errorObj !== 'object') return [];
 
     return Object.entries(errorObj).flatMap(([key, val]) => {
-      if (key === 'detail' || key === 'message' || key === 'non_field_errors') {
+      if (key === 'detail' || key === 'message' || key === 'error' || key === 'non_field_errors') {
         if (Array.isArray(val)) {
           return val.map((v) => String(v));
         }
@@ -941,11 +938,11 @@ export class LoginComponent extends BaseComponent {
       if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
         return ['Your account is inactive. Contact administrator for login.'];
       }
+      if (status === 404 || hasAny(['user not found', 'not registered', 'does not exist', 'no user', 'not found'])) {
+        return ['This mobile number is not registered. Please sign up first.'];
+      }
       if (hasAny(['invalid phone', 'invalid mobile', 'phone number', 'mobile number', 'format'])) {
         return ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
-      }
-      if (status === 404 || hasAny(['user not found', 'not registered', 'does not exist'])) {
-        return ['This mobile number is not registered. Please sign up first.'];
       }
       if (status === 429 || hasAny(['too many', 'rate limit'])) {
         return ['Too many OTP requests. Please wait and try again.'];

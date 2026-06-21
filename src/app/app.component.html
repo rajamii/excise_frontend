@@ -86,3 +86,10 @@
 
   <app-footer></app-footer>
 </div>
+
+<!-- Back button lives here at root level so position:fixed is never broken by a parent filter/transform -->
+@if (isLoginRoute) {
+  <button type="button" class="global-back-btn" (click)="goToHome()">
+    <span class="back-arrow">←</span> Back to Home
+  </button>
+}
