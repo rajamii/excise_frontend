@@ -177,10 +177,16 @@ button {
     margin-top: auto;
     padding: 0 18px !important;
     border-radius: 6px !important;
-    background-color: var(--brand) !important;
+    background: linear-gradient(120deg, #064e3b 0%, #0d9488 100%) !important;
     color: #ffffff !important;
     font-weight: 700;
     letter-spacing: 0;
+    transition: opacity 150ms ease, box-shadow 150ms ease !important;
+
+    &:hover {
+        opacity: 0.88;
+        box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35) !important;
+    }
 }
 
 .about-us {
@@ -232,16 +238,24 @@ button {
         }
 
         p:nth-child(2) {
-            color: var(--brand);
+            color: #0d9488;
             font-weight: 600;
         }
     }
 }
 
 .whats-current {
+    // Make the card content a flex column so the button stays pinned at the bottom
+    mat-card-content {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; // prevent the content area itself from growing
+    }
+
     .calculator-link {
         display: flex;
         align-items: center;
+        flex-shrink: 0;
         min-height: 44px;
         margin-bottom: 18px;
         padding: 0 14px;
@@ -253,15 +267,41 @@ button {
     }
 
     h6 {
+        flex-shrink: 0;
         margin: 0 0 8px;
         font-size: clamp(16px, 1vw, 19px);
         font-weight: 700;
     }
 
+    .notifications {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0; // critical for nested flex scroll
+        overflow: hidden;
+    }
+
     .notifications-grid-container {
+        flex: 1;
         display: grid;
-        margin-bottom: 18px;
+        align-content: start;
+        overflow-y: auto;
+        margin-bottom: 14px;
         border-top: 1px solid var(--line);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(6, 182, 212, 0.4) rgba(6, 182, 212, 0.08);
+
+        &::-webkit-scrollbar {
+            width: 4px;
+        }
+        &::-webkit-scrollbar-track {
+            background: rgba(6, 182, 212, 0.06);
+            border-radius: 4px;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.38);
+            border-radius: 4px;
+        }
     }
 
     .notification {
@@ -285,6 +325,12 @@ button {
             font-size: clamp(11px, 0.72vw, 13px);
             white-space: nowrap;
         }
+    }
+
+    // Pin the View All button at the bottom
+    button {
+        flex-shrink: 0;
+        margin-top: 0;
     }
 }
 
