@@ -13,7 +13,7 @@ interface Particle3D {
   vz: number;
   rx: number; // 2D rotation angle
   vrx: number; // 2D rotation speed
-  type: 'box' | 'barrel' | 'bottle' | 'glass' | 'can' | 'truck' | 'hologram' | 'number';
+  type: 'box' | 'barrel' | 'bottle' | 'glass' | 'can' | 'truck' | 'rupee' | 'number';
   color: string;
   scale: number;
   textVal?: string;
@@ -164,8 +164,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const numbersList = ['QUARTER', 'ML', 'SPIRIT', 'ML', 'BL', 'GOV', 'BARREL', 'VOL', 'SIKKIM', 'EXCISE'];
 
-    const particleTypes: ('box' | 'barrel' | 'bottle' | 'glass' | 'can' | 'truck' | 'hologram' | 'number')[] = [
-      'box', 'barrel', 'bottle', 'glass', 'can', 'truck', 'hologram', 'number'
+    const particleTypes: ('box' | 'barrel' | 'bottle' | 'glass' | 'can' | 'truck' | 'rupee' | 'number')[] = [
+      'box', 'barrel', 'bottle', 'glass', 'can', 'truck', 'rupee', 'number'
     ];
 
     // Generate particles: Exactly 4 followers (bottle, truck, glass, barrel) orbit smoothly
@@ -210,7 +210,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         vrx: (Math.random() - 0.5) * 0.015,
         type: type,
         color: colorBase,
-        scale: type === 'truck' ? 36 : type === 'hologram' ? 32 : type === 'number' ? 1.0 : 28,
+        scale: type === 'truck' ? 36 : type === 'rupee' ? 32 : type === 'number' ? 1.0 : 28,
         isFollower: false
       };
 
@@ -440,20 +440,20 @@ function draw2DIcon(ctx: CanvasRenderingContext2D, type: string, size: number): 
       ctx.stroke();
       break;
     }
-    case 'hologram': {
-      // Holographic radar / target HUD icon
-      ctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.22, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(-size * 0.6, 0); ctx.lineTo(-size * 0.35, 0);
-      ctx.moveTo(size * 0.35, 0); ctx.lineTo(size * 0.6, 0);
-      ctx.moveTo(0, -size * 0.6); ctx.lineTo(0, -size * 0.35);
-      ctx.moveTo(0, size * 0.35); ctx.lineTo(0, size * 0.6);
+    case 'rupee': {
+      // Indian Rupee symbol (₹)
+      // Top bar
+      ctx.moveTo(-size * 0.28, -size * 0.42);
+      ctx.lineTo(size * 0.28, -size * 0.42);
+      
+      // Middle bar
+      ctx.moveTo(-size * 0.28, -size * 0.18);
+      ctx.lineTo(size * 0.18, -size * 0.18);
+      
+      // Curve and leg
+      ctx.moveTo(-size * 0.08, -size * 0.42);
+      ctx.bezierCurveTo(size * 0.28, -size * 0.42, size * 0.28, size * 0.08, -size * 0.08, size * 0.08);
+      ctx.lineTo(size * 0.22, size * 0.48);
       ctx.stroke();
       break;
     }
