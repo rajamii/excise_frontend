@@ -833,6 +833,48 @@ $warn-text:     #92400e;
   position: relative;
   z-index: 10;
   margin-top: 20px;
+
+  // Animated orange spinning border
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 25px;
+    background: conic-gradient(
+      from var(--border-angle, 0deg),
+      transparent 0deg,
+      transparent 70deg,
+      #f97316 90deg,
+      #fdba74 110deg,
+      #fff7ed 120deg,
+      #fdba74 130deg,
+      #f97316 150deg,
+      transparent 170deg,
+      transparent 360deg
+    );
+    animation: borderSpin 2.5s linear infinite;
+    z-index: -1;
+    border-radius: 26px;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 23px;
+    background: transparent;
+    z-index: -1;
+  }
+}
+
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes borderSpin {
+  to { --border-angle: 360deg; }
 }
 
 // ── The flippable card ────────────────────────────────
