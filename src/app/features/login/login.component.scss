@@ -58,15 +58,15 @@ $warn-text:     #92400e;
   position: relative;
   overflow: hidden;
 
-  // Animated aurora wash behind content — warm amber/gold
+  // Animated aurora wash behind content — vibrant sunset purple/pink
   &::before {
     content: '';
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse at 15% 25%, rgba(217,119,70,0.10) 0%, transparent 55%),
-      radial-gradient(ellipse at 85% 75%, rgba(251,191,36,0.08) 0%, transparent 55%),
-      radial-gradient(ellipse at 50% 50%, rgba(180,83,9,0.05) 0%, transparent 70%);
+      radial-gradient(ellipse at 15% 25%, rgba(168,85,247,0.15) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 75%, rgba(236,72,153,0.12) 0%, transparent 55%),
+      radial-gradient(ellipse at 50% 50%, rgba(244,63,94,0.08) 0%, transparent 70%);
     animation: auroraPan 10s ease-in-out infinite alternate;
     z-index: 0;
   }
@@ -87,7 +87,7 @@ $warn-text:     #92400e;
 
 .s-orb-1 {
   width: 260px; height: 260px;
-  background: radial-gradient(circle at 35% 35%, rgba(217,119,70,0.28), rgba(251,191,36,0.12) 55%, transparent 75%);
+  background: radial-gradient(circle at 35% 35%, rgba(168,85,247,0.30), rgba(236,72,153,0.15) 55%, transparent 75%);
   filter: blur(38px);
   top: -60px; left: -60px;
   animation-duration: 9s;
@@ -95,7 +95,7 @@ $warn-text:     #92400e;
 }
 .s-orb-2 {
   width: 200px; height: 200px;
-  background: radial-gradient(circle at 40% 40%, rgba(180,83,9,0.22), rgba(217,119,70,0.12) 55%, transparent 75%);
+  background: radial-gradient(circle at 40% 40%, rgba(244,63,94,0.25), rgba(168,85,247,0.15) 55%, transparent 75%);
   filter: blur(32px);
   bottom: -40px; right: -40px;
   animation-duration: 12s;
@@ -103,7 +103,7 @@ $warn-text:     #92400e;
 }
 .s-orb-3 {
   width: 150px; height: 150px;
-  background: radial-gradient(circle at 40% 40%, rgba(251,191,36,0.18), transparent 70%);
+  background: radial-gradient(circle at 40% 40%, rgba(236,72,153,0.20), transparent 70%);
   filter: blur(28px);
   top: 45%; left: 55%;
   animation-duration: 7s;
@@ -149,8 +149,8 @@ $warn-text:     #92400e;
   height: 45%;
   transform-origin: center bottom;
   background-image:
-    linear-gradient(rgba(217,119,70,0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(217,119,70,0.18) 1px, transparent 1px);
+    linear-gradient(rgba(168,85,247,0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.18) 1px, transparent 1px);
   background-size: 40px 40px;
   animation: sGridScroll 4s linear infinite;
   mask-image: radial-gradient(ellipse 75% 55% at 50% 100%, black 20%, transparent 75%);
@@ -171,7 +171,7 @@ $warn-text:     #92400e;
   position: absolute;
   display: block;
   border-radius: 50%;
-  background: rgba(251,191,36,0.50);
+  background: rgba(236,72,153,0.50);
   animation: sParticleRise linear infinite;
   opacity: 0;
 }
@@ -206,15 +206,15 @@ $warn-text:     #92400e;
 }
 .s-ring-1 {
   width: 220px; height: 220px;
-  border-color: rgba(217,119,70,0.20);
+  border-color: rgba(168,85,247,0.20);
   margin: -110px 0 0 -110px;
   animation-duration: 5s;
   animation-delay: 0s;
-  box-shadow: 0 0 20px rgba(251,191,36,0.06) inset;
+  box-shadow: 0 0 20px rgba(236,72,153,0.06) inset;
 }
 .s-ring-2 {
   width: 380px; height: 380px;
-  border-color: rgba(251,191,36,0.10);
+  border-color: rgba(236,72,153,0.10);
   margin: -190px 0 0 -190px;
   animation-duration: 8s;
   animation-delay: -3s;
@@ -249,15 +249,15 @@ $warn-text:     #92400e;
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 90%, rgba(251, 146, 60, 0.35) 0%, transparent 70%),
-    radial-gradient(circle at 15% 30%, rgba(245, 158, 11, 0.15) 0%, transparent 55%),
-    radial-gradient(circle at 85% 25%, rgba(251, 146, 60, 0.12) 0%, transparent 55%),
-    radial-gradient(circle at 70% 60%, rgba(180, 83, 9, 0.10) 0%, transparent 50%),
+    radial-gradient(circle at 50% 90%, rgba(244, 63, 94, 0.45) 0%, transparent 70%),
+    radial-gradient(circle at 15% 30%, rgba(168, 85, 247, 0.25) 0%, transparent 55%),
+    radial-gradient(circle at 85% 25%, rgba(249, 115, 22, 0.22) 0%, transparent 55%),
+    radial-gradient(circle at 70% 60%, rgba(236, 72, 153, 0.20) 0%, transparent 50%),
     linear-gradient(180deg,
-      #1e080d 0%,    // Deep burgundy-black
-      #330f16 25%,   // Deep dark burgundy
-      #4d1a24 50%,   // Dark wine-red
-      #1e080d 100%
+      #1e1b4b 0%,    // Deep Indigo
+      #31114c 25%,   // Deep Purple
+      #5a1854 50%,   // Plum/Magenta
+      #1e1b4b 100%
     );
 }
 
@@ -290,7 +290,7 @@ $warn-text:     #92400e;
 .silo-cap {
   width: 96px;
   height: 24px;
-  background: linear-gradient(90deg, #7c3f25, #d97746, #f3a37e, #7c3f25);
+  background: linear-gradient(90deg, #4c1d95, #8b5cf6, #c4b5fd, #4c1d95);
   border-radius: 48px 48px 0 0;
   border-bottom: 2px solid rgba(0,0,0,0.2);
 }
@@ -299,14 +299,14 @@ $warn-text:     #92400e;
   width: 90px;
   height: 130px;
   background: linear-gradient(90deg,
-    #5c2c18 0%,
-    #7c3f25 25%,
-    #b25e36 50%,
-    #d97746 75%,
-    #5c2c18 100%
+    #2e1065 0%,
+    #4c1d95 25%,
+    #7c3aed 50%,
+    #8b5cf6 75%,
+    #2e1065 100%
   );
   border-radius: 0 0 24px 24px;
-  border: 2px solid rgba(217, 119, 70, 0.4);
+  border: 2px solid rgba(139, 92, 246, 0.4);
   position: relative;
   box-shadow: 
     0 12px 30px rgba(0,0,0,0.6),
@@ -323,7 +323,7 @@ $warn-text:     #92400e;
   width: 30px;
   height: 30px;
   background: #f1f5f9;
-  border: 2.5px solid #7c3f25;
+  border: 2.5px solid #4c1d95;
   border-radius: 50%;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
   display: flex;
@@ -361,7 +361,7 @@ $warn-text:     #92400e;
   width: 14px;
   height: 60px;
   background: rgba(0,0,0,0.4);
-  border: 1.5px solid #7c3f25;
+  border: 1.5px solid #4c1d95;
   border-radius: 7px;
   overflow: hidden;
   box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
@@ -372,8 +372,8 @@ $warn-text:     #92400e;
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(180deg, #ffcc00 0%, #d97706 100%);
-  box-shadow: 0 0 8px rgba(251,191,36,0.6);
+  background: linear-gradient(180deg, #f472b6 0%, #db2777 100%);
+  box-shadow: 0 0 8px rgba(219, 39, 119, 0.6);
   border-top: 1.5px solid #fff;
   border-radius: 0 0 6px 6px;
   animation: liquidBubble 5s ease-in-out infinite alternate;
@@ -392,14 +392,14 @@ $warn-text:     #92400e;
   margin-top: 8px;
   font-size: 9px;
   font-weight: 800;
-  color: #ff6b35;
+  color: #f472b6;
   letter-spacing: 1px;
   text-transform: uppercase;
   background: rgba(15, 23, 42, 0.7);
   padding: 2px 8px;
   border-radius: 4px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  border: 1px solid rgba(251,191,36,0.2);
+  border: 1px solid rgba(219, 39, 119, 0.2);
 }
 
 // ── Factory building ──────────────────────────────────
@@ -413,18 +413,18 @@ $warn-text:     #92400e;
   opacity: 0.85;
 
   rect, ellipse, path {
-    &[fill^="rgba(8,22,55"]   { fill: rgba(38, 14, 20, 0.90) !important; } // Dark wine-black
-    &[fill^="rgba(10,28,65"]  { fill: rgba(56, 21, 29, 0.92) !important; } // Deep burgundy
-    &[fill^="rgba(12,32,72"]  { fill: rgba(38, 14, 20, 0.94) !important; }
-    &[fill^="rgba(12,30,68"]  { fill: rgba(48, 18, 25, 0.93) !important; }
-    &[fill^="rgba(14,38,85"]  { fill: rgba(42, 16, 22, 0.91) !important; }
-    &[fill^="rgba(15,40,90"]  { fill: rgba(74, 26, 36, 0.88) !important; } // Wine-red
-    &[fill^="rgba(18,48,110"] { fill: rgba(94, 35, 47, 0.82) !important; } // Warm burgundy-rust
-    &[fill^="rgba(22,58,130"] { fill: rgba(122, 48, 63, 0.88) !important; } // Rose-copper
+    &[fill^="rgba(8,22,55"]   { fill: rgba(15, 12, 41, 0.90) !important; } // Dark indigo
+    &[fill^="rgba(10,28,65"]  { fill: rgba(22, 18, 55, 0.92) !important; } // Deep purple
+    &[fill^="rgba(12,32,72"]  { fill: rgba(30, 25, 75, 0.94) !important; }
+    &[fill^="rgba(12,30,68"]  { fill: rgba(35, 29, 85, 0.93) !important; }
+    &[fill^="rgba(14,38,85"]  { fill: rgba(40, 35, 95, 0.91) !important; }
+    &[fill^="rgba(15,40,90"]  { fill: rgba(50, 45, 110, 0.88) !important; } // Violet
+    &[fill^="rgba(18,48,110"] { fill: rgba(60, 55, 130, 0.82) !important; } // Light Violet
+    &[fill^="rgba(22,58,130"] { fill: rgba(75, 65, 155, 0.88) !important; } // Vibrant Violet
   }
 
   path {
-    &[stroke^="rgba(40,80,180"] { stroke: rgba(234, 88, 12, 0.55) !important; } // Glowing warm amber/copper
+    &[stroke^="rgba(40,80,180"] { stroke: rgba(219, 39, 119, 0.55) !important; } // Glowing pink
   }
 }
 
@@ -435,9 +435,9 @@ $warn-text:     #92400e;
   left: 0;
   width: 100%;
   height: 12px;
-  background: linear-gradient(180deg, rgba(28,10,0,0.95), rgba(10,3,0,1));
+  background: linear-gradient(180deg, rgba(15,12,41,0.95), rgba(5,4,15,1));
   z-index: 2;
-  box-shadow: 0 -2px 12px rgba(251,191,36,0.08);
+  box-shadow: 0 -2px 12px rgba(139, 92, 246, 0.08);
 }
 
 // ── Chimneys & smoke ──────────────────────────────────
@@ -487,21 +487,21 @@ $warn-text:     #92400e;
   width: 52px; height: 90px;
   border-radius: 26px 26px 8px 8px;
   background: linear-gradient(135deg,
-    #7c3f25 0%,
-    #a85635 30%,
-    #d97746 50%,
-    #7c3f25 100%
+    #2e1065 0%,
+    #4c1d95 30%,
+    #8b5cf6 50%,
+    #2e1065 100%
   );
-  border: 1.5px solid rgba(217, 119, 70, 0.45);
+  border: 1.5px solid rgba(139, 92, 246, 0.45);
   position: relative;
   overflow: hidden;
-  box-shadow: 2px 6px 18px rgba(0,0,0,0.5), inset -4px 0 12px rgba(0,0,0,0.4), 0 0 12px rgba(217, 119, 70, 0.15);
+  box-shadow: 2px 6px 18px rgba(0,0,0,0.5), inset -4px 0 12px rgba(0,0,0,0.4), 0 0 12px rgba(139, 92, 246, 0.15);
 }
 .tank-fill {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 55%;
-  background: linear-gradient(180deg, rgba(251,191,36,0.85) 0%, rgba(245,158,11,0.95) 100%);
+  background: linear-gradient(180deg, rgba(236,72,153,0.85) 0%, rgba(219,39,119,0.95) 100%);
   border-radius: 0 0 6px 6px;
   animation: tankFill 4s ease-in-out infinite alternate;
 }
@@ -509,7 +509,7 @@ $warn-text:     #92400e;
   0%   { height: 35%; opacity: 0.7; }
   100% { height: 68%; opacity: 1;   }
 }
-.tank-2 .tank-fill { animation-delay: -1.3s; background: linear-gradient(180deg, rgba(15,118,110,0.60) 0%, rgba(8,80,70,0.80) 100%); }
+.tank-2 .tank-fill { animation-delay: -1.3s; background: linear-gradient(180deg, rgba(56,189,248,0.60) 0%, rgba(2,132,199,0.80) 100%); }
 .tank-3 .tank-fill { animation-delay: -2.6s; }
 
 .tank-shine {
@@ -529,14 +529,14 @@ $warn-text:     #92400e;
 }
 .tank-base {
   width: 58px; height: 10px;
-  background: linear-gradient(90deg, #2d1100, #3a1800, #2d1100);
+  background: linear-gradient(90deg, #1e1b4b, #312e81, #1e1b4b);
   border-radius: 0 0 4px 4px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
   border: 1px solid rgba(255,255,255,0.05);
 }
 .tank-pipe {
   width: 6px; height: 20px;
-  background: linear-gradient(90deg, #7c3f25, #d97746, #7c3f25);
+  background: linear-gradient(90deg, #4c1d95, #8b5cf6, #4c1d95);
   border-radius: 3px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
@@ -566,9 +566,9 @@ $warn-text:     #92400e;
 .conveyor-track {
   position: absolute;
   inset: 0;
-  background: rgba(28,10,0,0.92);
-  border-top:    2px solid rgba(217, 119, 70, 0.40);
-  border-bottom: 2px solid rgba(217, 119, 70, 0.20);
+  background: rgba(15,12,41,0.92);
+  border-top:    2px solid rgba(139, 92, 246, 0.40);
+  border-bottom: 2px solid rgba(139, 92, 246, 0.20);
   overflow: hidden;
 }
 .conveyor-belt {
@@ -578,8 +578,8 @@ $warn-text:     #92400e;
     90deg,
     transparent 0px,
     transparent 28px,
-    rgba(217, 119, 70, 0.22) 28px,
-    rgba(217, 119, 70, 0.22) 32px
+    rgba(139, 92, 246, 0.22) 28px,
+    rgba(139, 92, 246, 0.22) 32px
   );
   animation: beltScroll 0.8s linear infinite;
 }
@@ -592,9 +592,9 @@ $warn-text:     #92400e;
   position: absolute;
   top: -8px;
   width: 22px; height: 54px;
-  background: linear-gradient(90deg, #3a1800, #7c3f25, #3a1800);
+  background: linear-gradient(90deg, #1e1b4b, #4c1d95, #1e1b4b);
   border-radius: 11px;
-  border: 1.5px solid rgba(217,119,70,0.40);
+  border: 1.5px solid rgba(139, 92, 246, 0.40);
   z-index: 4;
   box-shadow: 0 0 10px rgba(0,0,0,0.4);
 }
