@@ -23,8 +23,8 @@
 .home-grid {
     --brand:          #1c2b78;
     --brand-deep:     #14205f;
-    --header-start:   #1c2b78;
-    --header-end:     #3451b2;
+    --header-start:   #064e3b;
+    --header-end:     #0d9488;
     --header-accent:  #f59e0b;
     --ink:            #0f172a;
     --muted:          #475569;
@@ -103,42 +103,47 @@ mat-card.grid-card {
         display: flex;
         align-items: center;
         gap: 10px;
-        min-height: clamp(56px, 4.2vw, 68px);
+        min-height: clamp(52px, 4vw, 64px);
         padding: 0 clamp(16px, 1.6vw, 24px);
         border-radius: 16px 16px 0 0;
         background:
-            linear-gradient(105deg, rgba(255,255,255,0.14) 0%, transparent 40%),
-            linear-gradient(135deg, var(--header-start) 0%, var(--header-end) 100%);
+            linear-gradient(120deg,
+                var(--header-start) 0%,
+                var(--header-end) 60%,
+                rgba(16, 185, 129, 0.85) 100%);
         color: #ffffff;
-        font-size: clamp(15px, 1.1vw, 19px);
+        font-size: clamp(14px, 1.05vw, 18px);
         font-weight: 700;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
         line-height: 1.2;
         position: relative;
         overflow: hidden;
 
-        // Glossy sheen across header
+        // Diagonal light slash
         &::before {
             content: '';
             position: absolute;
-            top: 0; left: -20%; right: 0;
-            height: 55%;
-            background: linear-gradient(180deg, rgba(255,255,255,0.12), transparent);
-            border-radius: 16px 16px 0 0;
+            top: -30%;
+            left: -10%;
+            width: 55%;
+            height: 200%;
+            background: linear-gradient(115deg, rgba(255,255,255,0.13) 0%, transparent 60%);
+            transform: skewX(-18deg);
             pointer-events: none;
         }
 
-        // Amber bottom border
+        // Teal-to-amber shimmer line at bottom
         &::after {
             content: '';
             position: absolute;
             bottom: 0; left: 0; right: 0;
             height: 3px;
             background: linear-gradient(90deg,
-                transparent 0%,
-                var(--header-accent) 20%,
-                #fde68a 50%,
-                var(--header-accent) 80%,
+                var(--header-end) 0%,
+                #34d399 30%,
+                var(--header-accent) 65%,
+                #fde68a 85%,
                 transparent 100%);
         }
     }
