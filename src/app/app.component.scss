@@ -351,9 +351,9 @@
   100% { transform: scale(1.6); opacity: 0; }
 }
 
-/* --- Global fixed Back to Home button (login route only) --- */
+/* --- Global absolute Back to Home button (login route only) --- */
 .global-back-btn {
-  position: fixed;
+  position: absolute;
   top: 130px;
   left: 20px;
   z-index: 9000;
