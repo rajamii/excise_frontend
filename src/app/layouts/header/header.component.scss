@@ -22,9 +22,12 @@ nav {
     &::before {
         content: '';
         position: absolute;
-        top: -40px; left: -40px;
-        width: 260px; height: 140px;
-        background: radial-gradient(ellipse, rgba(255,255,255,0.06), transparent 70%);
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60%;
+        height: 160%;
+        background: radial-gradient(ellipse at center, rgba(99,130,220,0.18) 0%, transparent 65%);
         pointer-events: none;
     }
     &::after {
