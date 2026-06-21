@@ -102,10 +102,11 @@
 
   </div><!-- /factory-bg -->
 
-  <div class="auth-card" [class.show-signup]="isRightPanelActive">
+  <div class="auth-container">
+    <div class="auth-card" [class.flipped]="isRightPanelActive">
 
-    <!-- ════════════════ SIGN IN SIDE ════════════════ -->
-    <div class="auth-panel signin-panel">
+      <!-- ════════════════ SIGN IN FACE (FRONT) ════════════════ -->
+      <div class="card-face card-front auth-panel signin-panel">
       <!-- ░░ 3-D animated layer inside the Sign In box ░░ -->
       <div class="signin-scene" aria-hidden="true">
         <div class="s-orb s-orb-1"></div>
@@ -245,8 +246,9 @@
 
       <div class="panel-inner">
 
-        <div class="panel-logo">
-          <img src="assets/icons/fav-icon.png" alt="Sikkim Excise" />
+        <div class="panel-logo-greeting">
+          <img src="assets/icons/fav-icon-black.png" alt="Sikkim Excise" class="panel-logo-img" />
+          <h2 class="greeting-text">Hello!</h2>
         </div>
         <h2 class="panel-title">Sign In</h2>
         <p class="panel-sub">Sikkim State Excise Department</p>
@@ -425,11 +427,17 @@
           Don't have an account?
           <button type="button" class="link-btn" (click)="switchToSignUp()">Sign Up</button>
         </div>
+
+        <!-- Helpdesk info compact -->
+        <div class="panel-footer-help">
+          <span><mat-icon>call</mat-icon> 03592-203963</span>
+          <span><mat-icon>email</mat-icon> helpdesk-excise&#64;sikkim.gov.in</span>
+        </div>
       </div>
     </div>
 
-    <!-- ════════════════ SIGN UP SIDE ════════════════ -->
-    <div class="auth-panel signup-panel">
+    <!-- ════════════════ SIGN UP FACE (BACK) ════════════════ -->
+    <div class="card-face card-back auth-panel signup-panel">
       <!-- ░░ 3-D animated layer inside the Sign Up box ░░ -->
       <div class="signup-scene" aria-hidden="true">
         <div class="s-orb s-orb-1"></div>
@@ -568,6 +576,10 @@
       </div>
 
       <div class="panel-inner">
+        <div class="panel-logo-greeting">
+          <img src="assets/icons/fav-icon-black.png" alt="Sikkim Excise" class="panel-logo-img" />
+          <h2 class="greeting-text">Hello!</h2>
+        </div>
         <h2 class="panel-title">Create Account</h2>
         <p class="panel-sub">Register as a Licensee</p>
 
@@ -762,45 +774,15 @@
           Already have an account?
           <button type="button" class="link-btn" (click)="switchToSignIn()">Sign In</button>
         </div>
-      </div>
-    </div>
 
-    <!-- ════════════════ OVERLAY ════════════════ -->
-    <div class="overlay-side">
-      <div class="overlay-bg">
-
-        <!-- Shown when sign-in is active (right side) → prompts sign-up -->
-        <div class="overlay-content overlay-right-content">
-          <img src="assets/icons/fav-icon.png" alt="Logo" class="overlay-logo" />
-          <div class="overlay-main">
-            <h2>Hello!</h2>
-            <p>Register now and apply for licenses</p>
-            <button class="btn-outline" (click)="switchToSignUp()">Sign Up</button>
-          </div>
-          <div class="helpdesk">
-            <strong>HELP DESK</strong>
-            <div><mat-icon>call</mat-icon> 03592-203963</div>
-            <div><mat-icon>email</mat-icon> helpdesk-excise&#64;sikkim.gov.in</div>
-          </div>
+        <!-- Helpdesk info compact -->
+        <div class="panel-footer-help">
+          <span><mat-icon>call</mat-icon> 03592-203963</span>
+          <span><mat-icon>email</mat-icon> helpdesk-excise&#64;sikkim.gov.in</span>
         </div>
-
-        <!-- Shown when sign-up is active (left side) → prompts sign-in -->
-        <div class="overlay-content overlay-left-content">
-          <img src="assets/icons/fav-icon.png" alt="Logo" class="overlay-logo" />
-          <div class="overlay-main">
-            <h2>Welcome Back!</h2>
-            <p>Login, if you already have an account</p>
-            <button class="btn-outline" (click)="switchToSignIn()">Sign In</button>
-          </div>
-          <div class="helpdesk">
-            <strong>HELP DESK</strong>
-            <div><mat-icon>call</mat-icon> 03592-203963</div>
-            <div><mat-icon>email</mat-icon> helpdesk-excise&#64;sikkim.gov.in</div>
-          </div>
-        </div>
-
       </div>
     </div>
 
   </div>
+</div>
 </div>

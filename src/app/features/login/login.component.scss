@@ -663,49 +663,59 @@ $warn-text:     #92400e;
   &:hover { background: $primary-dk; }
 }
 
-// ── Main card — glassmorphism lift ────────────────────
-.auth-card {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  width: 940px;
+// ── Perspective container ─────────────────────────────
+.auth-container {
+  perspective: 1500px;
+  width: 530px;
   max-width: 96vw;
-  min-height: 600px;
+  height: 660px;
+  position: relative;
+  z-index: 10;
+  margin-top: 20px;
+}
+
+// ── The flippable card ────────────────────────────────
+.auth-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  &.flipped {
+    transform: rotateY(180deg);
+  }
+}
+
+// ── Card face (shared front & back) ───────────────────
+.card-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   border-radius: 22px;
-  overflow: hidden;
   box-shadow:
     0 32px 80px rgba(0,0,0,0.55),
     0 4px 20px rgba(0,0,0,0.30),
     0 0 0 1px rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.97);
-  position: relative;
-  z-index: 10;
-  // Subtle 3D tilt on load
-  animation: cardEntry 0.9s cubic-bezier(0.22,1,0.36,1) both;
-}
-
-@keyframes cardEntry {
-  from {
-    opacity: 0;
-    transform: perspective(1200px) rotateX(6deg) translateY(40px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: perspective(1200px) rotateX(0deg) translateY(0) scale(1);
-  }
-}
-
-// ── Panel shared ──────────────────────────────────────
-.auth-panel {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.98);
   overflow: hidden;
-  // default: sign-in occupies column 1, overlay column 2
 }
 
+.card-front {
+  z-index: 2;
+  transform: rotateY(0deg);
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
 
 .panel-inner {
   height: 100%;
-  min-height: 600px;
-  padding: 36px 40px 28px;
+  padding: 52px 42px 24px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -715,81 +725,50 @@ $warn-text:     #92400e;
   &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
 }
 
-.panel-logo {
-  text-align: center; margin-bottom: 10px;
-  img { width: 54px; height: 54px; object-fit: contain; }
+.panel-logo-greeting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 22px;
+
+  .panel-logo-img {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
+    transition: transform 0.3s ease;
+    margin-bottom: 10px;
+    
+    &:hover {
+      transform: scale(1.06) rotate(2deg);
+    }
+  }
+
+  .greeting-text {
+    font-size: 28px;
+    font-weight: 800;
+    color: $primary;
+    margin-top: 0;
+    margin-bottom: 0;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #0f766e 0%, #0891b2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
 }
 .panel-title {
-  font-size: 23px; font-weight: 700; color: $text;
-  text-align: center; margin: 0 0 3px;
+  font-size: 22px; font-weight: 700; color: $text;
+  text-align: center; margin: 12px 0 6px;
 }
 .panel-sub {
-  font-size: 13px; color: $muted; text-align: center; margin: 0 0 20px;
-}
-
-// ── Sign-in / Sign-up panel placement ────────────────
-.signin-panel  { grid-column: 1; grid-row: 1; }
-.signup-panel  { grid-column: 1; grid-row: 1; display: none; }
-.overlay-side  { grid-column: 2; grid-row: 1; }
-
-// Show-signup: hide sign-in, show sign-up in col 1; flip overlay
-.show-signup {
-  .signin-panel  { display: none; }
-  .signup-panel  { display: block; }
-  .overlay-side  { grid-column: 1; grid-row: 1; }   // overlay moves to left
-  .auth-panel.signup-panel { grid-column: 2; }       // signup content on right
-}
-
-// ── Overlay ───────────────────────────────────────────
-.overlay-side {
-  position: relative;
-  overflow: hidden;
-  border-radius: 0;
-}
-.overlay-bg {
-  width: 100%; height: 100%; min-height: 600px;
-  background:
-    linear-gradient(rgba(0,0,0,0.18), rgba(0,0,0,0.22)),
-    url('../../../assets/images/login/overlay.jpg') no-repeat center / cover;
-  display: flex; align-items: center; justify-content: center;
-}
-.overlay-content {
-  padding: 32px 28px; text-align: center; color: #fff;
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: space-between;
-  height: 100%; width: 100%;
-  box-sizing: border-box;
-
-  h2 { font-size: 32px; font-weight: 700; margin: 0 0 8px; }
-  p  { font-size: 15px; opacity: 0.92; margin: 0 0 20px; }
-}
-
-.overlay-main {
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
-}
-.overlay-logo { width: 90px; height: 90px; object-fit: contain; opacity: 0.9; }
-
-// hide the wrong overlay content
-.overlay-right-content { display: flex; }
-.overlay-left-content  { display: none; }
-.show-signup {
-  .overlay-right-content { display: none; }
-  .overlay-left-content  { display: flex; }
-}
-
-.helpdesk {
-  margin-top: 4px; font-size: 12px; opacity: 0.88;
-  display: flex; flex-direction: column; gap: 5px;
-  strong { font-size: 13px; letter-spacing: 1px; }
-  div { display: flex; align-items: center; justify-content: center; gap: 5px; }
-  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+  font-size: 13.5px; color: $muted; text-align: center; margin: 0 0 26px;
 }
 
 // ── Mode toggle ───────────────────────────────────────
 .mode-toggle {
   position: relative; display: flex;
   background: #f1f5f9; border-radius: 10px;
-  overflow: hidden; margin-bottom: 18px; height: 40px;
+  overflow: hidden; margin-bottom: 24px; height: 40px;
 
   button {
     flex: 1; z-index: 2; border: none; background: transparent;
@@ -806,10 +785,10 @@ $warn-text:     #92400e;
 }
 
 // ── Form & fields ─────────────────────────────────────
-form { display: flex; flex-direction: column; gap: 11px; }
+form { display: flex; flex-direction: column; gap: 14px; }
 
 .field-group {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 6px;
   label {
     font-size: 11.5px; font-weight: 600; color: $muted;
     text-transform: uppercase; letter-spacing: 0.5px;
@@ -834,7 +813,7 @@ form { display: flex; flex-direction: column; gap: 11px; }
   }
   input {
     flex: 1; border: none; background: transparent;
-    padding: 11px 12px; font-size: 14px; color: $text;
+    padding: 12px 14px; font-size: 14.5px; color: $text;
     outline: none; min-width: 0;
     &::placeholder { color: #b0bec5; }
   }
@@ -850,13 +829,13 @@ form { display: flex; flex-direction: column; gap: 11px; }
 // ── Buttons ───────────────────────────────────────────
 .btn-primary {
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; padding: 12px;
+  width: 100%; padding: 13px 16px;
   background: $primary; color: #fff;
   border: none; border-radius: 10px;
-  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-size: 14.5px; font-weight: 600; cursor: pointer;
   transition: background 0.18s, transform 0.1s;
-  margin-top: 4px;
-  box-shadow: 0 2px 10px rgba(15,118,110,0.25);
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(15,118,110,0.25);
 
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
   mat-spinner { --mdc-circular-progress-active-indicator-color: #fff; }
@@ -908,7 +887,7 @@ form { display: flex; flex-direction: column; gap: 11px; }
 // ── User chip ─────────────────────────────────────────
 .user-chip {
   display: flex; align-items: center; gap: 8px;
-  background: $primary-lt; border: 1px solid rgba(15,118,110,0.25);
+  background: $primary-lt; border: 1px solid rgba(15, 118, 110, 0.25);
   border-radius: 10px; padding: 10px 14px;
   font-size: 14px; font-weight: 600; color: $primary;
   mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -952,6 +931,25 @@ form { display: flex; flex-direction: column; gap: 11px; }
   font-size: 13px; color: $muted;
   display: flex; align-items: center; justify-content: center; gap: 5px;
 }
+.panel-footer-help {
+  margin-top: 12px;
+  font-size: 11px;
+  color: $muted;
+  text-align: center;
+  border-top: 1px dashed $border;
+  padding-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    mat-icon { font-size: 13px; width: 13px; height: 13px; }
+  }
+}
 .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .full-select { width: 100%; }
 
@@ -972,16 +970,7 @@ form { display: flex; flex-direction: column; gap: 11px; }
 }
 
 // ── Responsive ────────────────────────────────────────
-@media (max-width: 780px) {
-  .auth-card {
-    grid-template-columns: 1fr;
-    width: 100%; max-width: 440px; min-height: unset;
-  }
-  .overlay-side { display: none !important; }
-  .signin-panel, .signup-panel { grid-column: 1 !important; display: block; }
-  .signup-panel { display: none; }
-  .show-signup .signup-panel { display: block; }
-  .show-signup .signin-panel { display: none; }
-  .panel-inner { min-height: unset; padding: 28px 22px 20px; }
+@media (max-width: 480px) {
+  .panel-inner { padding: 28px 20px 20px; }
   .name-row { grid-template-columns: 1fr; }
 }
