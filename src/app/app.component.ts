@@ -37,6 +37,7 @@ export class AppComponent implements OnInit, OnDestroy {
   showCarousel = false;
   isOffline = typeof navigator !== 'undefined' ? !navigator.onLine : false;
   isLoginRoute = false;  // tracks if we're on /login so we can show the back button
+  isForgotPasswordRoute = false; // tracks if we're on /forgot-password to hide layout chrome
 
   @HostListener('window:offline')
   setNetworkOffline() {
@@ -63,6 +64,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.updateLayoutVisibility();
       const path = this.normalizePath(this.router.url);
       this.isLoginRoute = path.startsWith('/login');
+      this.isForgotPasswordRoute = path.startsWith('/forgot-password');
     });
 
     this.router.events
