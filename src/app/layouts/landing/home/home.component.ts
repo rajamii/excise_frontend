@@ -73,10 +73,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private animationFrameId?: number;
   private resizeListener?: () => void;
   private mouseMoveListener?: (e: MouseEvent) => void;
-  private mouseX: number = 0;
-  private mouseY: number = 0;
-  private targetMouseX: number = 0;
-  private targetMouseY: number = 0;
   private mouseXRaw: number = 0;
   private mouseYRaw: number = 0;
   private particles: Particle3D[] = [];
@@ -152,8 +148,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Track mouse coordinates for parallax and attraction
     this.mouseMoveListener = (e: MouseEvent) => {
-      this.targetMouseX = (e.clientX / window.innerWidth) * 2 - 1;
-      this.targetMouseY = (e.clientY / window.innerHeight) * 2 - 1;
       this.mouseXRaw = e.clientX;
       this.mouseYRaw = e.clientY;
     };
@@ -168,35 +162,43 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       'rgba(16, 185, 129, '   // Bright Emerald Green
     ];
 
-    const numbersList = ['QUARTER', 'BL', 'ML','SPIRIT','DEPOT', 'GOVT', 'CASE', 'SEMS', '%', 'VOL', 'SIKKIM', 'EXCISE'];
+    const numbersList = ['0', '1', '100', '2026', '24/7', 'PROOF', '%', 'VOL', 'SIKKIM', 'EXCISE'];
 
     const particleTypes: ('box' | 'barrel' | 'bottle' | 'glass' | 'can' | 'truck' | 'hologram' | 'number')[] = [
       'box', 'barrel', 'bottle', 'glass', 'can', 'truck', 'hologram', 'number'
     ];
 
-    // Generate particles (rich count, scattered all over the page)
-    const count = 70;
-    let followerCount = 0;
+    // Generate particles: Exactly 4 followers (bottle, truck, glass, barrel) orbit smoothly
+    const followerTypes: ('bottle' | 'truck' | 'glass' | 'barrel')[] = ['bottle', 'truck', 'glass', 'barrel'];
+    const sharedOrbitSpeed = 0.006; // identical speed to keep 90 degree spacing stable
+    const sharedOrbitRadius = 80;   // 80px distance around the cursor (not too near, not too far)
+    for (let i = 0; i < followerTypes.length; i++) {
+      const type = followerTypes[i];
+      const colorBase = colors[Math.floor(Math.random() * colors.length)];
+      this.particles.push({
+        x: 0, // Start close to center cursor
+        y: 0,
+        z: 200 + Math.random() * 150,
+        vx: 0,
+        vy: 0,
+        vz: (Math.random() - 0.5) * 0.15,
+        rx: Math.random() * Math.PI * 2,
+        vrx: (Math.random() - 0.5) * 0.015,
+        type: type,
+        color: colorBase,
+        scale: type === 'truck' ? 36 : 28,
+        isFollower: true,
+        orbitAngle: (i * Math.PI * 2) / 4, // Perfect 90 degree spacing
+        orbitRadius: sharedOrbitRadius,
+        orbitSpeed: sharedOrbitSpeed
+      });
+    }
 
-    for (let i = 0; i < count; i++) {
+    // Generate the remaining 66 regular background particles drifting freely
+    const bgCount = 66;
+    for (let i = 0; i < bgCount; i++) {
       const type = particleTypes[i % particleTypes.length];
       const colorBase = colors[Math.floor(Math.random() * colors.length)];
-      
-      // Exactly 3 followers: one bottle, one truck, and one glass
-      let isFollower = false;
-      if (followerCount < 3) {
-        if (followerCount === 0 && type === 'bottle') {
-          isFollower = true;
-          followerCount++;
-        } else if (followerCount === 1 && type === 'truck') {
-          isFollower = true;
-          followerCount++;
-        } else if (followerCount === 2 && type === 'glass') {
-          isFollower = true;
-          followerCount++;
-        }
-      }
-      
       const particle: Particle3D = {
         x: (Math.random() - 0.5) * canvas.width * 1.5,
         y: (Math.random() - 0.5) * canvas.height * 1.5,
@@ -205,19 +207,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         vy: (Math.random() - 0.5) * 0.45,
         vz: (Math.random() - 0.5) * 0.25,
         rx: Math.random() * Math.PI * 2,
-        vrx: (Math.random() - 0.5) * 0.015, // Slow rotation
+        vrx: (Math.random() - 0.5) * 0.015,
         type: type,
         color: colorBase,
         scale: type === 'truck' ? 36 : type === 'hologram' ? 32 : type === 'number' ? 1.0 : 28,
-        isFollower: isFollower,
-        orbitAngle: Math.random() * Math.PI * 2,
-        orbitRadius: 130 + Math.random() * 80, // Farther away from cursor (130px to 210px)
-        orbitSpeed: (Math.random() > 0.5 ? 1 : -1) * (0.003 + Math.random() * 0.004) // slow orbiting
+        isFollower: false
       };
 
       if (type === 'number') {
         particle.textVal = numbersList[Math.floor(Math.random() * numbersList.length)];
-        particle.scale = 14 + Math.random() * 8; // base font size
+        particle.scale = 14 + Math.random() * 8;
       }
 
       this.particles.push(particle);
@@ -229,16 +228,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Lerp mouse coordinates for smooth parallax
-      this.mouseX += (this.targetMouseX - this.mouseX) * 0.05;
-      this.mouseY += (this.targetMouseY - this.mouseY) * 0.05;
-
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-
-      // Parallax offsets based on mouse position
-      const camOffsetX = this.mouseX * 70;
-      const camOffsetY = this.mouseY * 50;
 
       // Sort particles by Z-depth (painters algorithm) so back elements render first
       this.particles.sort((a, b) => b.z - a.z);
@@ -252,16 +243,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           p.orbitAngle = (p.orbitAngle || 0) + (p.orbitSpeed || 0.005);
 
           // Cursor target in 3D world coordinates at the particle's depth p.z
-          const cursorWorldX = (this.mouseXRaw - centerX) / projScale - camOffsetX;
-          const cursorWorldY = (this.mouseYRaw - centerY) / projScale - camOffsetY;
+          const cursorWorldX = (this.mouseXRaw - centerX) / projScale;
+          const cursorWorldY = (this.mouseYRaw - centerY) / projScale;
 
           // Target is offset in a circle around the cursor
-          const targetX = cursorWorldX + Math.cos(p.orbitAngle) * (p.orbitRadius || 120) / projScale;
-          const targetY = cursorWorldY + Math.sin(p.orbitAngle) * (p.orbitRadius || 120) / projScale;
+          const targetX = cursorWorldX + Math.cos(p.orbitAngle) * (p.orbitRadius || 80) / projScale;
+          const targetY = cursorWorldY + Math.sin(p.orbitAngle) * (p.orbitRadius || 80) / projScale;
 
-          // Ultra slow-motion nice tracking (lerp divisor 0.02)
-          p.x += (targetX - p.x) * 0.02;
-          p.y += (targetY - p.y) * 0.02;
+          // Smooth tracking (lerp divisor 0.035)
+          p.x += (targetX - p.x) * 0.035;
+          p.y += (targetY - p.y) * 0.035;
 
           p.z += p.vz;
           p.rx += p.vrx;
@@ -288,9 +279,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           if (p.z > 750) p.z = 150;
         }
 
-        // Project center of object to screen
-        const wx = p.x + camOffsetX;
-        const wy = p.y + camOffsetY;
+        // Project center of object to screen (no camera parallax offsets!)
+        const wx = p.x;
+        const wy = p.y;
         const wz = p.z;
 
         if (wz <= 50) continue; 
