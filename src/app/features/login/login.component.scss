@@ -49,6 +49,7 @@ $warn-text:     #92400e;
   pointer-events: none;
   z-index: 0;
   border-radius: inherit;
+  clip-path: inset(0 round 22px); // Clip all 3D children to avoid spilling outside card
 }
 
 // ── Animated aurora background gradient ───────────────
@@ -248,14 +249,13 @@ $warn-text:     #92400e;
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 80%, rgba(217, 119, 6, 0.20) 0%, transparent 65%),
-    radial-gradient(circle at 10% 20%, rgba(15, 118, 110, 0.16) 0%, transparent 50%),
-    radial-gradient(circle at 90% 30%, rgba(8, 145, 178, 0.14) 0%, transparent 50%),
+    radial-gradient(circle at 50% 90%, rgba(217, 119, 70, 0.25) 0%, transparent 70%),
+    radial-gradient(circle at 15% 30%, rgba(245, 158, 11, 0.08) 0%, transparent 55%),
+    radial-gradient(circle at 85% 25%, rgba(148, 163, 184, 0.08) 0%, transparent 55%),
     linear-gradient(180deg,
-      #080f1d 0%,
-      #0e1628 35%,
-      #131e35 70%,
-      #172643 100%
+      #0f172a 0%,    // Slate 900
+      #1e293b 45%,   // Slate 800
+      #0f172a 100%
     );
 }
 
@@ -411,12 +411,16 @@ $warn-text:     #92400e;
   opacity: 0.85;
 
   rect, path {
-    &[fill^="rgba(8,22,55"] { fill: rgba(14, 24, 44, 0.88); }
-    &[fill^="rgba(10,28,65"] { fill: rgba(18, 30, 54, 0.90); }
-    &[fill^="rgba(12,32,72"] { fill: rgba(22, 36, 62, 0.92); }
-    &[fill^="rgba(15,40,90"] { fill: rgba(28, 44, 76, 0.85); }
-    &[fill^="rgba(18,48,110"] { fill: rgba(35, 54, 94, 0.80); }
-    &[fill^="rgba(22,58,130"] { fill: rgba(45, 68, 114, 0.85); }
+    &[fill^="rgba(8,22,55"] { fill: rgba(15, 23, 42, 0.90); }    // Slate 900
+    &[fill^="rgba(10,28,65"] { fill: rgba(30, 41, 59, 0.92); }   // Slate 800
+    &[fill^="rgba(12,32,72"] { fill: rgba(15, 23, 42, 0.94); }
+    &[fill^="rgba(15,40,90"] { fill: rgba(51, 65, 85, 0.88); }   // Slate 700
+    &[fill^="rgba(18,48,110"] { fill: rgba(71, 85, 105, 0.82); }  // Slate 600
+    &[fill^="rgba(22,58,130"] { fill: rgba(100, 116, 139, 0.88); } // Slate 500
+  }
+
+  path {
+    &[stroke^="rgba(40,80,180"] { stroke: rgba(217, 119, 70, 0.55); } // Change blue pipes to industrial copper
   }
 }
 
@@ -601,7 +605,7 @@ $warn-text:     #92400e;
   display: flex;
   gap: 32px;
   padding-left: 24px;
-  animation: bottlesMove 5s linear infinite;
+  animation: bottlesMove 30s linear infinite;
   white-space: nowrap;
 }
 @keyframes bottlesMove {
