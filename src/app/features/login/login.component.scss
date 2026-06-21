@@ -227,6 +227,143 @@ $warn-text:     #92400e;
   z-index: 1;
 }
 
+// ══════════════════════════════════════════════════════
+// ░░  FLOATING BOTTLES & BEER GLASSES (3-D depth)  ░░
+// ══════════════════════════════════════════════════════
+
+.float-icon {
+  position: absolute;
+  pointer-events: none;
+  svg { display: block; width: 100%; height: 100%; }
+}
+
+// ── Bottle 1 — LARGE, top-left anchor, drifts right+down ─
+.fi-1 {
+  width: 72px; height: 72px;
+  top: 6%; left: 4%;
+  opacity: 0.78;
+  animation: drift1 9s ease-in-out infinite;
+}
+@keyframes drift1 {
+  0%   { transform: translate(0px,   0px)  perspective(500px) rotateY(-15deg) rotateX(8deg)  rotateZ(0deg);   }
+  20%  { transform: translate(18px, -22px) perspective(500px) rotateY(-5deg)  rotateX(12deg) rotateZ(3deg);   }
+  45%  { transform: translate(32px,  14px) perspective(500px) rotateY(-20deg) rotateX(4deg)  rotateZ(-2deg);  }
+  65%  { transform: translate(8px,   28px) perspective(500px) rotateY(-8deg)  rotateX(10deg) rotateZ(2deg);   }
+  85%  { transform: translate(-10px, 10px) perspective(500px) rotateY(-18deg) rotateX(6deg)  rotateZ(-1deg);  }
+  100% { transform: translate(0px,   0px)  perspective(500px) rotateY(-15deg) rotateX(8deg)  rotateZ(0deg);   }
+}
+
+// ── Bottle 2 — SMALL, bottom-right, drifts left+up ───────
+.fi-2 {
+  width: 40px; height: 40px;
+  bottom: 10%; right: 5%;
+  opacity: 0.50;
+  animation: drift2 13s ease-in-out infinite;
+  animation-delay: -4s;
+}
+@keyframes drift2 {
+  0%   { transform: translate(0px,   0px)   perspective(500px) rotateY(12deg)  rotateX(-5deg) rotateZ(0deg);   }
+  25%  { transform: translate(-20px, -28px) perspective(500px) rotateY(4deg)   rotateX(-10deg) rotateZ(-3deg); }
+  50%  { transform: translate(-35px, -10px) perspective(500px) rotateY(20deg)  rotateX(-3deg) rotateZ(2deg);   }
+  75%  { transform: translate(-12px,  16px) perspective(500px) rotateY(8deg)   rotateX(-8deg) rotateZ(-1.5deg);}
+  100% { transform: translate(0px,   0px)   perspective(500px) rotateY(12deg)  rotateX(-5deg) rotateZ(0deg);   }
+}
+
+// ── Bottle 3 — MEDIUM, mid-right, drifts left+up+down ────
+.fi-3 {
+  width: 56px; height: 56px;
+  top: 38%; right: 4%;
+  opacity: 0.58;
+  animation: drift3 11s ease-in-out infinite;
+  animation-delay: -2s;
+}
+@keyframes drift3 {
+  0%   { transform: translate(0px,   0px)   perspective(500px) rotateY(20deg) rotateX(4deg)  rotateZ(0deg);  }
+  30%  { transform: translate(-28px, -20px) perspective(500px) rotateY(8deg)  rotateX(10deg) rotateZ(4deg);  }
+  55%  { transform: translate(-40px,  8px)  perspective(500px) rotateY(26deg) rotateX(2deg)  rotateZ(-2deg); }
+  80%  { transform: translate(-15px,  22px) perspective(500px) rotateY(14deg) rotateX(7deg)  rotateZ(2deg);  }
+  100% { transform: translate(0px,   0px)   perspective(500px) rotateY(20deg) rotateX(4deg)  rotateZ(0deg);  }
+}
+
+// ── Bottle 4 — TINY, top-right (far depth) ───────────────
+.fi-4 {
+  width: 30px; height: 30px;
+  top: 5%; right: 12%;
+  opacity: 0.32;
+  animation: drift4 17s ease-in-out infinite;
+  animation-delay: -7s;
+}
+@keyframes drift4 {
+  0%   { transform: translate(0px,   0px)   perspective(500px) rotateY(-8deg) rotateX(-4deg) rotateZ(0deg);  }
+  35%  { transform: translate(25px, -15px)  perspective(500px) rotateY(-18deg) rotateX(-8deg) rotateZ(-3deg);}
+  65%  { transform: translate(-18px, 20px)  perspective(500px) rotateY(-3deg)  rotateX(-2deg) rotateZ(2deg); }
+  100% { transform: translate(0px,   0px)   perspective(500px) rotateY(-8deg)  rotateX(-4deg) rotateZ(0deg); }
+}
+
+// ── Beer Glass 1 — LARGE, bottom-left, drifts up+right ───
+.fi-5 {
+  width: 78px; height: 78px;
+  bottom: 8%; left: 3%;
+  opacity: 0.72;
+  animation: drift5 10s ease-in-out infinite;
+  animation-delay: -1s;
+}
+@keyframes drift5 {
+  0%   { transform: translate(0px,   0px)   perspective(500px) rotateY(16deg)  rotateX(-6deg)  rotateZ(0deg);  }
+  20%  { transform: translate(22px, -30px)  perspective(500px) rotateY(6deg)   rotateX(-10deg) rotateZ(-3deg); }
+  45%  { transform: translate(38px, -18px)  perspective(500px) rotateY(22deg)  rotateX(-3deg)  rotateZ(2.5deg);}
+  70%  { transform: translate(14px, -36px)  perspective(500px) rotateY(10deg)  rotateX(-8deg)  rotateZ(-1deg); }
+  100% { transform: translate(0px,   0px)   perspective(500px) rotateY(16deg)  rotateX(-6deg)  rotateZ(0deg);  }
+}
+
+// ── Beer Glass 2 — MEDIUM, top-right, drifts left+down ───
+.fi-6 {
+  width: 58px; height: 58px;
+  top: 8%; right: 4%;
+  opacity: 0.58;
+  animation: drift6 12s ease-in-out infinite;
+  animation-delay: -5s;
+}
+@keyframes drift6 {
+  0%   { transform: translate(0px,   0px)   perspective(500px) rotateY(-14deg) rotateX(7deg)  rotateZ(0deg);  }
+  25%  { transform: translate(-24px,  20px) perspective(500px) rotateY(-4deg)  rotateX(12deg) rotateZ(3deg);  }
+  55%  { transform: translate(-36px,  36px) perspective(500px) rotateY(-20deg) rotateX(4deg)  rotateZ(-2deg); }
+  80%  { transform: translate(-10px,  15px) perspective(500px) rotateY(-10deg) rotateX(9deg)  rotateZ(1deg);  }
+  100% { transform: translate(0px,   0px)   perspective(500px) rotateY(-14deg) rotateX(7deg)  rotateZ(0deg);  }
+}
+
+// ── Beer Glass 3 — SMALL, mid-left, drifts right+up ──────
+.fi-7 {
+  width: 42px; height: 42px;
+  top: 50%; left: 4%;
+  opacity: 0.42;
+  animation: drift7 14s ease-in-out infinite;
+  animation-delay: -3s;
+}
+@keyframes drift7 {
+  0%   { transform: translate(0px,   0px)   perspective(500px) rotateY(10deg)  rotateX(3deg)  rotateZ(0deg);  }
+  30%  { transform: translate(30px, -22px)  perspective(500px) rotateY(2deg)   rotateX(8deg)  rotateZ(-2.5deg);}
+  60%  { transform: translate(18px, -38px)  perspective(500px) rotateY(16deg)  rotateX(1deg)  rotateZ(2deg);  }
+  85%  { transform: translate(8px,  -12px)  perspective(500px) rotateY(6deg)   rotateX(6deg)  rotateZ(-1deg); }
+  100% { transform: translate(0px,   0px)   perspective(500px) rotateY(10deg)  rotateX(3deg)  rotateZ(0deg);  }
+}
+
+// ── Beer Glass 4 — TINY, bottom-center (far) ─────────────
+.fi-8 {
+  width: 32px; height: 32px;
+  bottom: 4%; left: 40%;
+  opacity: 0.30;
+  animation: drift8 19s ease-in-out infinite;
+  animation-delay: -9s;
+}
+@keyframes drift8 {
+  0%   { transform: translate(0px,   0px)   perspective(500px) rotateY(-6deg)  rotateX(-4deg) rotateZ(0deg);  }
+  40%  { transform: translate(-22px, -18px) perspective(500px) rotateY(-16deg) rotateX(-8deg) rotateZ(-2deg); }
+  70%  { transform: translate(18px,  -28px) perspective(500px) rotateY(-2deg)  rotateX(-2deg) rotateZ(2.5deg);}
+  100% { transform: translate(0px,   0px)   perspective(500px) rotateY(-6deg)  rotateX(-4deg) rotateZ(0deg);  }
+}
+
+
 // ── Back button ───────────────────────────────────────
 .back-btn {
   position: sticky;
