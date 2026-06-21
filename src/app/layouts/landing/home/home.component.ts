@@ -7,7 +7,7 @@ import { HttpClient } from '@angular/common/http';
   selector: 'app-home',
   imports: [MaterialModule],
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss'] // Corrected styleUrls
+  styleUrl: './home.component.scss'
 })
 export class HomeComponent implements OnInit{
   selectedLink: string = '';
