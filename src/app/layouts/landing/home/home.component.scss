@@ -23,8 +23,8 @@
 .home-grid {
     --brand:          #1c2b78;
     --brand-deep:     #14205f;
-    --header-start:   #064e3b;
-    --header-end:     #0d9488;
+    --header-start:   #0a7c5c;
+    --header-end:     #14b8a6;
     --header-accent:  #f59e0b;
     --ink:            #0f172a;
     --muted:          #475569;
@@ -141,7 +141,7 @@ mat-card.grid-card {
             height: 3px;
             background: linear-gradient(90deg,
                 var(--header-end) 0%,
-                #34d399 30%,
+                #5eead4 30%,
                 var(--header-accent) 65%,
                 #fde68a 85%,
                 transparent 100%);
@@ -177,7 +177,7 @@ button {
     margin-top: auto;
     padding: 0 18px !important;
     border-radius: 6px !important;
-    background: linear-gradient(120deg, #064e3b 0%, #0d9488 100%) !important;
+    background: linear-gradient(120deg, #0a7c5c 0%, #14b8a6 100%) !important;
     color: #ffffff !important;
     font-weight: 700;
     letter-spacing: 0;
@@ -238,7 +238,7 @@ button {
         }
 
         p:nth-child(2) {
-            color: #0d9488;
+            color: #14b8a6;
             font-weight: 600;
         }
     }
