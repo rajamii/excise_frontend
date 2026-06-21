@@ -16,7 +16,7 @@ nav {
             #1a3070 75%,
             #0d1f6b 100%) !important;
     color: #ffffff;
-    border-bottom: 2px solid rgba(99, 179, 237, 0.20);
+    border-bottom: 2px solid rgba(245, 158, 11, 0.45);
     box-shadow: 0 4px 20px rgba(15, 23, 68, 0.40);
 
     &::before {
@@ -90,7 +90,7 @@ nav {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    background: linear-gradient(90deg, #ffffff, #e0eaff);
+    background: linear-gradient(90deg, #ffffff, #fde68a);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -99,11 +99,14 @@ nav {
 .navbar-version {
     font-size: clamp(0.65rem, 1.5vw, 0.78rem);
     font-weight: 500;
-    color: rgba(255,255,255,0.65);
     letter-spacing: 0.8px;
     text-transform: uppercase;
     margin-top: 2px;
     white-space: nowrap;
+    background: linear-gradient(90deg, #fde68a, #ffffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .nav-links-container {

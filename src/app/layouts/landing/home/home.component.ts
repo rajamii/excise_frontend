@@ -162,7 +162,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       'rgba(16, 185, 129, '   // Bright Emerald Green
     ];
 
-    const numbersList = ['0', '1', '100', '2026', '24/7', 'PROOF', '%', 'VOL', 'SIKKIM', 'EXCISE'];
+    const numbersList = ['QUARTER', 'ML', 'SPIRIT', 'ML', 'BL', 'GOV', 'BARREL', 'VOL', 'SIKKIM', 'EXCISE'];
 
     const particleTypes: ('box' | 'barrel' | 'bottle' | 'glass' | 'can' | 'truck' | 'hologram' | 'number')[] = [
       'box', 'barrel', 'bottle', 'glass', 'can', 'truck', 'hologram', 'number'
