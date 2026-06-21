@@ -43,6 +43,8 @@ export class LoginComponent extends BaseComponent {
   loginOtpPreview: string | null = null;
   otpAutoSubmitted = false;
   isSendingOtp = false;
+  otpShakeActive = false;
+  regOtpShakeActive = false;
 
   // Username check state (password flow)
   usernameChecked = false;
@@ -619,8 +621,20 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         this.registrationError = true;
-        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'verifyOtp');
+        const msgs = this.mapRegistrationErrors(err, 'verifyOtp');
+        this.registrationErrorMessages = msgs;
         this.registrationOtpControl.setValue('');
+        // Shake OTP input and show popup for wrong OTP
+        this.regOtpShakeActive = true;
+        setTimeout(() => { this.regOtpShakeActive = false; }, 700);
+        Swal.fire({
+          icon: 'error',
+          title: 'Wrong OTP',
+          text: msgs.join('\n'),
+          confirmButtonText: 'Retry',
+          allowOutsideClick: true,
+          allowEscapeKey: true
+        });
       }
     });
   }
@@ -792,9 +806,13 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         console.error('OTP verification error:', err);
-        this.setLoginErrors(this.mapLoginErrors(err, 'verifyOtp'));
+        const msgs = this.mapLoginErrors(err, 'verifyOtp');
+        this.setLoginErrors(msgs);
         this.otpAutoSubmitted = false;
         this.otpControl.setValue('');
+        // Shake the OTP input to give visual feedback
+        this.otpShakeActive = true;
+        setTimeout(() => { this.otpShakeActive = false; }, 700);
       },
     });
   }

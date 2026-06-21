@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, HostListener, DOCUMENT } from '@angular/core';
 import {
   Router,
   NavigationCancel,
@@ -57,6 +57,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private dialog = inject(MatDialog);
   readonly loading = inject(UiLoadingService);
   private wasAuthenticated = false;
+  private doc = inject(DOCUMENT);
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
@@ -65,6 +66,12 @@ export class AppComponent implements OnInit, OnDestroy {
       const path = this.normalizePath(this.router.url);
       this.isLoginRoute = path.startsWith('/login');
       this.isForgotPasswordRoute = path.startsWith('/forgot-password');
+      // Toggle body class for login-specific dark background
+      if (this.isLoginRoute || this.isForgotPasswordRoute) {
+        this.doc.body.classList.add('login-page');
+      } else {
+        this.doc.body.classList.remove('login-page');
+      }
     });
 
     this.router.events

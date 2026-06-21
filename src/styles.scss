@@ -6,6 +6,8 @@
 
 * { font-family: 'Poppins', sans-serif; }
 body{ background-color: #EDF7FE; }
+/* Login route gets the deep amber-charcoal factory atmosphere */
+body.login-page { background-color: #1e080d; }
 
 @media print {
   @page {
