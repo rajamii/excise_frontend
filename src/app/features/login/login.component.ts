@@ -620,6 +620,7 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         this.registrationError = true;
         this.registrationErrorMessages = this.mapRegistrationErrors(err, 'verifyOtp');
+        this.registrationOtpControl.setValue('');
       }
     });
   }
@@ -793,6 +794,7 @@ export class LoginComponent extends BaseComponent {
         console.error('OTP verification error:', err);
         this.setLoginErrors(this.mapLoginErrors(err, 'verifyOtp'));
         this.otpAutoSubmitted = false;
+        this.otpControl.setValue('');
       },
     });
   }
@@ -953,15 +955,16 @@ export class LoginComponent extends BaseComponent {
       if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
         return ['Your account is inactive. Contact administrator for login.'];
       }
-      if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp'])) {
-        return ['Invalid OTP. Enter the correct OTP and try again.'];
-      }
       if (hasAny(['expired otp', 'otp expired', 'expired'])) {
         return ['OTP has expired. Please request a new OTP.'];
+      }
+      if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp', 'wrong otp', 'does not match', 'mismatch', 'invalid'])) {
+        return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
       }
       if (status === 404 || hasAny(['not registered', 'user not found'])) {
         return ['This mobile number is not registered. Please sign up first.'];
       }
+      return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
     }
 
     if (backendMessages.length > 0) {
@@ -1035,12 +1038,13 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'verifyOtp') {
-      if (status === 400 || status === 401 || hasAny(['invalid otp', 'incorrect otp', 'otp is invalid'])) {
-        return ['Invalid OTP. Enter the correct OTP and try again.'];
-      }
       if (hasAny(['expired otp', 'otp expired', 'expired'])) {
         return ['OTP has expired. Please request a new OTP.'];
       }
+      if (status === 400 || status === 401 || hasAny(['invalid otp', 'incorrect otp', 'otp is invalid', 'wrong otp', 'does not match', 'mismatch', 'invalid'])) {
+        return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
+      }
+      return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
     }
 
     if (flow === 'register') {

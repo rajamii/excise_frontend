@@ -728,7 +728,7 @@
 
             <div class="otp-input-wrap">
               <label>Enter 4-digit OTP</label>
-              <ng-otp-input (onInputChange)="onRegistrationOtpChange($event)"
+              <ng-otp-input [formControl]="registrationOtpControl" (onInputChange)="onRegistrationOtpChange($event)"
                 [config]="{ length: 4, allowNumbersOnly: true, inputStyles: { width: '56px', height: '56px', fontSize: '22px', fontWeight: '700', borderRadius: '10px', border: '2px solid #d1d5db' } }">
               </ng-otp-input>
             </div>
