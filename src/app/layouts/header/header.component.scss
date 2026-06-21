@@ -1,64 +1,155 @@
-nav{
+nav {
     padding: 0;
     display: flex;
     flex-direction: column;
 }
 
-.navbar-container{
+.navbar-container {
     width: 100%;
-    padding: 0.5rem 2rem;
-    background-color: #1C2B78 !important;
+    position: relative;
+    overflow: hidden;
+
+    // Rich gradient background
+    background:
+        linear-gradient(105deg,
+            #0a1547 0%,
+            #1c2b78 30%,
+            #1e3a8a 55%,
+            #1a3070 75%,
+            #0d1f6b 100%) !important;
     color: #ffffff;
-    width: 100%;
+
+    // Bottom border glow
+    border-bottom: 2px solid rgba(99, 179, 237, 0.20);
+
+    box-shadow:
+        0 4px 20px rgba(15, 23, 68, 0.40),
+        0 1px 0 rgba(255, 255, 255, 0.06) inset;
+
+    // Decorative radial glow — top left
+    &::before {
+        content: '';
+        position: absolute;
+        top: -40px; left: -40px;
+        width: 260px; height: 140px;
+        background: radial-gradient(ellipse, rgba(255,255,255,0.06), transparent 70%);
+        pointer-events: none;
+    }
+
+    // Decorative radial glow — right side
+    &::after {
+        content: '';
+        position: absolute;
+        top: -20px; right: -20px;
+        width: 200px; height: 120px;
+        background: radial-gradient(ellipse, rgba(245,158,11,0.08), transparent 70%);
+        pointer-events: none;
+    }
 
     .container-fluid {
-        padding: 0 !important;
+        padding: 0 4rem !important;
         max-width: 100%;
-        display:flex;
+        display: flex;
         justify-content: space-between;
         align-items: center;
+        position: relative;
+        z-index: 1;
     }
 
     .logo-img {
-        height: 80px;
-        width: 80px;
+        height: 72px;
+        width: 72px;
         display: inline-block;
-        padding-block: 8px;        
+        padding: 4px;
         background-size: contain;
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+        transition: transform 0.2s ease;
+
+        &:hover { transform: scale(1.05); }
     }
 
     .header-logo {
-        padding-right: 15px;
+        padding-right: 14px;
         display: flex;
         align-items: center;
         cursor: pointer;
     }
 
     .header-text {
-        padding-top:17px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         color: #ffffff;
     }
 
     .navbar-title {
-        font-size: 1.4rem;
-        font-weight: 500;
-        line-height: 1.2;
-        padding-left: 10px;
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: 0.2px;
+        background: linear-gradient(90deg, #ffffff, #e0eaff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .navbar-version {
-        padding-left: 10px;
-    }
-    .navbar-brand{
-        display:flex;
-        flex-wrap: wrap
-    }
-    .nav-links-container{  
-        display: flex;
-        button{
-            font-family: 'Poppins', sans-serif;
-            color: #ffffff;
-        }
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: rgba(255,255,255,0.65);
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        margin-top: 2px;
     }
 
+    .navbar-brand {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 0;
+    }
+
+    .nav-links-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        button {
+            font-family: 'Poppins', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 26px;
+            border-radius: 40px;
+            border: 1.5px solid rgba(20,184,166,0.6);
+            background: rgba(13,148,136,0.20);
+            color: #5eead4;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s ease, border-color 0.2s ease,
+                        box-shadow 0.2s ease, transform 0.15s ease, color 0.2s ease;
+
+            mat-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+                color: #5eead4;
+                transition: color 0.2s ease;
+            }
+
+            &:hover {
+                background: #0f766e;
+                border-color: #14b8a6;
+                color: #ffffff;
+                box-shadow: 0 4px 18px rgba(15,118,110,0.45);
+                transform: translateY(-1px);
+                mat-icon { color: #ffffff; }
+            }
+
+            &:active { transform: translateY(0); }
+        }
+    }
 }

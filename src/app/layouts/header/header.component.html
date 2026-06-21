@@ -1,32 +1,34 @@
 <nav class="navbar navbar-dark navbar-expand-md">
-  <div class = "navbar-container">
+  <div class="navbar-container">
     <div class="container-fluid">
 
-      <a class="navbar-brand logo" >
+      <!-- Logo + Title -->
+      <a class="navbar-brand logo">
         <div class="header-logo">
-          <img class="logo-img" src = "assets/icons/fav-icon.png" (click)="home()">
+          <img class="logo-img" src="assets/icons/fav-icon.png" (click)="home()" alt="SEMS Logo" />
         </div>
         <div class="header-text">
-          <span class="navbar-title">Sikkim Excise Management System (SEMS)</span><br>
+          <span class="navbar-title">Sikkim Excise Management System (SEMS)</span>
           <span class="navbar-version">Government of Sikkim</span>
         </div>
       </a>
 
+      <!-- Sign In / Sign Out -->
       <div class="nav-links-container">
         @if (!isLoggedIn) {
-          <button matButton (click)="login()">
+          <button (click)="login()">
             <mat-icon>login</mat-icon>
             <span class="text">Sign In</span>
           </button>
         }
-
         @if (isLoggedIn) {
-          <button matButton (click)="logout()">
+          <button (click)="logout()">
             <mat-icon>logout</mat-icon>
             <span class="text">Sign Out</span>
           </button>
         }
       </div>
+
     </div>
   </div>
 </nav>
