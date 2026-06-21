@@ -171,7 +171,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     // Generate particles: Exactly 4 followers (bottle, truck, glass, barrel) orbit smoothly
     const followerTypes: ('bottle' | 'truck' | 'glass' | 'barrel')[] = ['bottle', 'truck', 'glass', 'barrel'];
     const sharedOrbitSpeed = 0.006; // identical speed to keep 90 degree spacing stable
-    const sharedOrbitRadius = 80;   // 80px distance around the cursor (not too near, not too far)
+    const sharedOrbitRadius = 115;   // 115px distance around the cursor (clear space around pointer)
     for (let i = 0; i < followerTypes.length; i++) {
       const type = followerTypes[i];
       const colorBase = colors[Math.floor(Math.random() * colors.length)];
