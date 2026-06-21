@@ -248,15 +248,156 @@ $warn-text:     #92400e;
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 30%, rgba(251,191,36,0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(15,118,110,0.15) 0%, transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(217, 119, 6, 0.20) 0%, transparent 65%),
+    radial-gradient(circle at 10% 20%, rgba(15, 118, 110, 0.16) 0%, transparent 50%),
+    radial-gradient(circle at 90% 30%, rgba(8, 145, 178, 0.14) 0%, transparent 50%),
     linear-gradient(180deg,
-      #0d1f3c 0%,
-      #102240 25%,
-      #0f2a4a 55%,
-      #1a3a5c 80%,
-      #1e4060 100%
+      #080f1d 0%,
+      #0e1628 35%,
+      #131e35 70%,
+      #172643 100%
     );
+}
+
+// ── Top brewery storage silos ──────────────────────────
+.top-silos {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  z-index: 2;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 5%;
+  pointer-events: none;
+}
+
+.silo {
+  width: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  
+  &.silo-1 { transform: translateY(-40px); }
+  &.silo-2 { transform: translateY(-20px); }
+  &.silo-3 { transform: translateY(-35px); }
+}
+
+.silo-cap {
+  width: 96px;
+  height: 24px;
+  background: linear-gradient(90deg, #7c3f25, #d97746, #f3a37e, #7c3f25);
+  border-radius: 48px 48px 0 0;
+  border-bottom: 2px solid rgba(0,0,0,0.2);
+}
+
+.silo-body {
+  width: 90px;
+  height: 130px;
+  background: linear-gradient(90deg,
+    #5c2c18 0%,
+    #7c3f25 25%,
+    #b25e36 50%,
+    #d97746 75%,
+    #5c2c18 100%
+  );
+  border-radius: 0 0 24px 24px;
+  border: 2px solid rgba(217, 119, 70, 0.4);
+  position: relative;
+  box-shadow: 
+    0 12px 30px rgba(0,0,0,0.6),
+    inset -8px 0 20px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.silo-gauge {
+  position: absolute;
+  top: 15px;
+  width: 30px;
+  height: 30px;
+  background: #f1f5f9;
+  border: 2.5px solid #7c3f25;
+  border-radius: 50%;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px dashed rgba(0,0,0,0.15);
+  }
+
+  .gauge-needle {
+    width: 2px;
+    height: 10px;
+    background: #dc2626;
+    transform-origin: bottom center;
+    transform: rotate(45deg);
+    animation: gaugeWiggle 3s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes gaugeWiggle {
+  0% { transform: rotate(-60deg); }
+  50% { transform: rotate(20deg); }
+  100% { transform: rotate(50deg); }
+}
+
+.silo-glass-tube {
+  position: absolute;
+  bottom: 18px;
+  width: 14px;
+  height: 60px;
+  background: rgba(0,0,0,0.4);
+  border: 1.5px solid #7c3f25;
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+}
+
+.beer-level {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #ffcc00 0%, #d97706 100%);
+  box-shadow: 0 0 8px rgba(251,191,36,0.6);
+  border-top: 1.5px solid #fff;
+  border-radius: 0 0 6px 6px;
+  animation: liquidBubble 5s ease-in-out infinite alternate;
+
+  &.level-1 { height: 75%; animation-duration: 4s; }
+  &.level-2 { height: 45%; animation-duration: 6s; }
+  &.level-3 { height: 85%; animation-duration: 5s; }
+}
+
+@keyframes liquidBubble {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(3px); }
+}
+
+.silo-label {
+  margin-top: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #ff6b35;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  border: 1px solid rgba(251,191,36,0.2);
 }
 
 // ── Factory building ──────────────────────────────────
@@ -267,6 +408,16 @@ $warn-text:     #92400e;
   width: 100%;
   height: 55%;
   z-index: 1;
+  opacity: 0.85;
+
+  rect, path {
+    &[fill^="rgba(8,22,55"] { fill: rgba(14, 24, 44, 0.88); }
+    &[fill^="rgba(10,28,65"] { fill: rgba(18, 30, 54, 0.90); }
+    &[fill^="rgba(12,32,72"] { fill: rgba(22, 36, 62, 0.92); }
+    &[fill^="rgba(15,40,90"] { fill: rgba(28, 44, 76, 0.85); }
+    &[fill^="rgba(18,48,110"] { fill: rgba(35, 54, 94, 0.80); }
+    &[fill^="rgba(22,58,130"] { fill: rgba(45, 68, 114, 0.85); }
+  }
 }
 
 // ── Ground surface ────────────────────────────────────
@@ -276,7 +427,7 @@ $warn-text:     #92400e;
   left: 0;
   width: 100%;
   height: 12px;
-  background: linear-gradient(180deg, rgba(10,30,65,0.95), rgba(5,18,42,1));
+  background: linear-gradient(180deg, rgba(14,24,44,0.95), rgba(7,14,30,1));
   z-index: 2;
   box-shadow: 0 -2px 12px rgba(251,191,36,0.08);
 }
@@ -284,7 +435,7 @@ $warn-text:     #92400e;
 // ── Chimneys & smoke ──────────────────────────────────
 .chimney {
   position: absolute;
-  bottom: 48%;
+  bottom: 38%;
   width: 16px;
   z-index: 3;
 }
@@ -320,28 +471,29 @@ $warn-text:     #92400e;
   flex-direction: column;
   align-items: center;
 }
-.tank-1 { bottom: 32%; left: 8%;  }
-.tank-2 { bottom: 30%; left: 38%; }
-.tank-3 { bottom: 31%; right: 10%;}
+.tank-1 { bottom: 16%; left: 8%;  }
+.tank-2 { bottom: 14%; left: 38%; }
+.tank-3 { bottom: 15%; right: 10%;}
 
 .tank-body {
   width: 52px; height: 90px;
   border-radius: 26px 26px 8px 8px;
   background: linear-gradient(135deg,
-    rgba(30,70,140,0.75) 0%,
-    rgba(15,50,110,0.88) 40%,
-    rgba(8,30,75,0.92)  100%
+    #7c3f25 0%,
+    #a85635 30%,
+    #d97746 50%,
+    #7c3f25 100%
   );
-  border: 1.5px solid rgba(60,120,220,0.35);
+  border: 1.5px solid rgba(217, 119, 70, 0.45);
   position: relative;
   overflow: hidden;
-  box-shadow: 2px 6px 18px rgba(0,0,0,0.4), inset -4px 0 12px rgba(0,0,0,0.25);
+  box-shadow: 2px 6px 18px rgba(0,0,0,0.5), inset -4px 0 12px rgba(0,0,0,0.4), 0 0 12px rgba(217, 119, 70, 0.15);
 }
 .tank-fill {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 55%;
-  background: linear-gradient(180deg, rgba(251,191,36,0.65) 0%, rgba(200,140,10,0.80) 100%);
+  background: linear-gradient(180deg, rgba(251,191,36,0.85) 0%, rgba(245,158,11,0.95) 100%);
   border-radius: 0 0 6px 6px;
   animation: tankFill 4s ease-in-out infinite alternate;
 }
@@ -369,15 +521,16 @@ $warn-text:     #92400e;
 }
 .tank-base {
   width: 58px; height: 10px;
-  background: rgba(10,30,70,0.90);
+  background: linear-gradient(90deg, #1e293b, #334155, #1e293b);
   border-radius: 0 0 4px 4px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.05);
 }
 .tank-pipe {
   width: 6px; height: 20px;
-  background: linear-gradient(90deg, rgba(40,80,160,0.60), rgba(60,100,200,0.40));
+  background: linear-gradient(90deg, #7c3f25, #d97746, #7c3f25);
   border-radius: 3px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 
 // ── Rotating gears ────────────────────────────────────
@@ -385,9 +538,9 @@ $warn-text:     #92400e;
   position: absolute;
   z-index: 3;
 }
-.gear-1 { width: 70px; height: 70px; bottom: 28%; left: 3%;   animation: gearSpin 6s linear infinite; }
-.gear-2 { width: 52px; height: 52px; bottom: 26%; left: 27%;  animation: gearSpin 4s linear infinite reverse; }
-.gear-3 { width: 42px; height: 42px; bottom: 27%; right: 28%; animation: gearSpin 5s linear infinite; }
+.gear-1 { width: 70px; height: 70px; bottom: 18%; left: 3%;   animation: gearSpin 6s linear infinite; }
+.gear-2 { width: 52px; height: 52px; bottom: 16%; left: 27%;  animation: gearSpin 4s linear infinite reverse; }
+.gear-3 { width: 42px; height: 42px; bottom: 17%; right: 28%; animation: gearSpin 5s linear infinite; }
 
 @keyframes gearSpin {
   from { transform: rotate(0deg);   }
@@ -397,7 +550,7 @@ $warn-text:     #92400e;
 // ── Conveyor belt ─────────────────────────────────────
 .conveyor-wrap {
   position: absolute;
-  bottom: 13%;
+  bottom: 4%;
   left: 0; right: 0;
   height: 38px;
   z-index: 3;
@@ -405,9 +558,9 @@ $warn-text:     #92400e;
 .conveyor-track {
   position: absolute;
   inset: 0;
-  background: rgba(8,25,60,0.85);
-  border-top:    2px solid rgba(60,110,200,0.40);
-  border-bottom: 2px solid rgba(30,70,140,0.50);
+  background: rgba(15,23,42,0.90);
+  border-top:    2px solid rgba(217, 119, 70, 0.40);
+  border-bottom: 2px solid rgba(217, 119, 70, 0.20);
   overflow: hidden;
 }
 .conveyor-belt {
@@ -417,8 +570,8 @@ $warn-text:     #92400e;
     90deg,
     transparent 0px,
     transparent 28px,
-    rgba(40,80,180,0.22) 28px,
-    rgba(40,80,180,0.22) 32px
+    rgba(217, 119, 70, 0.22) 28px,
+    rgba(217, 119, 70, 0.22) 32px
   );
   animation: beltScroll 0.8s linear infinite;
 }
@@ -431,9 +584,9 @@ $warn-text:     #92400e;
   position: absolute;
   top: -8px;
   width: 22px; height: 54px;
-  background: linear-gradient(90deg, rgba(30,70,140,0.80), rgba(60,110,210,0.60), rgba(30,70,140,0.80));
+  background: linear-gradient(90deg, #334155, #64748b, #334155);
   border-radius: 11px;
-  border: 1.5px solid rgba(80,140,240,0.40);
+  border: 1.5px solid rgba(148,163,184,0.40);
   z-index: 4;
   box-shadow: 0 0 10px rgba(0,0,0,0.4);
 }
@@ -486,14 +639,14 @@ $warn-text:     #92400e;
   animation: bubbleRise ease-in infinite;
   box-shadow: 0 0 6px rgba(251,191,36,0.40);
 }
-.bbl-1 { width:8px; height:8px;  bottom:24%; left:12%;  animation-duration:2.8s; animation-delay:0s;   }
-.bbl-2 { width:5px; height:5px;  bottom:26%; left:18%;  animation-duration:3.2s; animation-delay:-0.8s;}
-.bbl-3 { width:7px; height:7px;  bottom:23%; left:42%;  animation-duration:2.5s; animation-delay:-1.5s;}
-.bbl-4 { width:4px; height:4px;  bottom:25%; left:48%;  animation-duration:3.5s; animation-delay:-0.4s;}
-.bbl-5 { width:9px; height:9px;  bottom:24%; right:14%; animation-duration:3.0s; animation-delay:-1.0s;}
-.bbl-6 { width:5px; height:5px;  bottom:27%; right:20%; animation-duration:2.2s; animation-delay:-2.0s;}
-.bbl-7 { width:6px; height:6px;  bottom:22%; left:30%;  animation-duration:3.8s; animation-delay:-0.6s;}
-.bbl-8 { width:4px; height:4px;  bottom:26%; right:35%; animation-duration:2.6s; animation-delay:-1.8s;}
+.bbl-1 { width:8px; height:8px;  bottom:12%; left:12%;  animation-duration:2.8s; animation-delay:0s;   }
+.bbl-2 { width:5px; height:5px;  bottom:14%; left:18%;  animation-duration:3.2s; animation-delay:-0.8s;}
+.bbl-3 { width:7px; height:7px;  bottom:11%; left:42%;  animation-duration:2.5s; animation-delay:-1.5s;}
+.bbl-4 { width:4px; height:4px;  bottom:13%; left:48%;  animation-duration:3.5s; animation-delay:-0.4s;}
+.bbl-5 { width:9px; height:9px;  bottom:12%; right:14%; animation-duration:3.0s; animation-delay:-1.0s;}
+.bbl-6 { width:5px; height:5px;  bottom:15%; right:20%; animation-duration:2.2s; animation-delay:-2.0s;}
+.bbl-7 { width:6px; height:6px;  bottom:10%; left:30%;  animation-duration:3.8s; animation-delay:-0.6s;}
+.bbl-8 { width:4px; height:4px;  bottom:14%; right:35%; animation-duration:2.6s; animation-delay:-1.8s;}
 
 @keyframes bubbleRise {
   0%   { transform: translateY(0)    scale(0.6); opacity: 0.8; }
