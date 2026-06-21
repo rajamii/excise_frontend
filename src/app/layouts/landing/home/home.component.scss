@@ -5,6 +5,19 @@
         radial-gradient(ellipse at 85% 70%, rgba(245,158,11,0.07) 0%, transparent 50%),
         linear-gradient(160deg, #eef2ff 0%, #f0f4ff 40%, #fef9ee 100%);
     min-height: 100%;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.bg-3d-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    display: block;
 }
 
 .home-grid {
@@ -18,13 +31,15 @@
     --line:           #e2e8f0;
     --surface:        #ffffff;
 
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: clamp(20px, 1.8vw, 32px);
-    width: 100%;
-    max-width: 1780px;
+    width: 90%;
+    max-width: 1350px;
     margin: 0 auto;
-    padding: clamp(24px, 2.8vw, 40px) clamp(16px, 2vw, 40px);
+    padding: clamp(24px, 2.8vw, 40px) 0;
     color: var(--ink);
     font-size: clamp(13px, 0.82vw, 15px);
 }
@@ -303,14 +318,14 @@ button {
 @media (max-width: 1180px) {
     .home-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        padding-inline: clamp(12px, 2.6vw, 26px);
+        width: 88%;
     }
 }
 
 @media (max-width: 700px) {
     .home-grid {
         grid-template-columns: minmax(0, 1fr);
-        padding-inline: 14px;
+        width: 85%;
     }
 
     .grid-card {
