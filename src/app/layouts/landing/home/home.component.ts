@@ -169,7 +169,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       'rgba(245, 110, 11, ',  // Bright Glowing Orange
       'rgba(99, 102, 241, ',  // Neon Violet/Indigo
       'rgba(6, 182, 212, ',   // Glowing Teal/Cyan
-      'rgba(16, 185, 129, '   // Bright Emerald Green
+      'rgba(16, 185, 129, ',
+      'rgba(234, 179, 8, ',    // Bright Gold   // Bright Emerald Green
     ];
 
     const numbersList = ['QUARTER', 'ML', 'SPIRIT', 'ML', 'BL', 'GOV', 'BARREL', 'VOL', 'SIKKIM', 'EXCISE'];
