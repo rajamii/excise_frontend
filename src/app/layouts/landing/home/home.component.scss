@@ -317,30 +317,98 @@ button {
         white-space: nowrap;
         width: max-content;
 
+        // Base pill styles
         button {
-            border: 1px solid rgba(28, 43, 120, 0.15);
             border-radius: 20px;
-            background: rgba(255, 255, 255, 0.4);
-            padding: 6px 14px;
-            color: var(--brand);
+            padding: 5px 15px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s ease-in-out;
+            transition: all 0.22s ease-in-out;
             outline: none;
+            letter-spacing: 0.3px;
+            position: relative;
+            overflow: hidden;
 
-            &:hover {
-                background: rgba(6, 182, 212, 0.1);
-                border-color: rgba(6, 182, 212, 0.4);
+            // shimmer sweep on hover
+            &::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
+                transform: translateX(-100%);
+                transition: transform 0.4s ease;
+                border-radius: inherit;
             }
-
-            &.active {
-                background: linear-gradient(135deg, var(--header-start) 0%, var(--header-end) 100%);
-                color: #ffffff;
-                border-color: transparent;
-                box-shadow: 0 4px 10px rgba(6, 182, 212, 0.25);
+            &:hover::after {
+                transform: translateX(100%);
             }
         }
+
+        // ── All ─────────────────────────────────────────────────────
+        button:nth-child(1) {
+            background: rgba(100, 116, 139, 0.12);
+            border: 1.5px solid rgba(100, 116, 139, 0.35);
+            color: #475569;
+            &:hover  { background: rgba(100,116,139,0.22); border-color: #64748b; color: #1e293b; }
+            &.active { background: linear-gradient(135deg,#475569 0%,#64748b 100%); color:#fff; border-color:transparent; box-shadow:0 4px 12px rgba(71,85,105,0.35); }
+        }
+
+        // ── Acts ─────────────────────────────────────────────────────
+        button:nth-child(2) {
+            background: rgba(99, 102, 241, 0.10);
+            border: 1.5px solid rgba(99, 102, 241, 0.30);
+            color: #4f46e5;
+            &:hover  { background: rgba(99,102,241,0.18); border-color: #6366f1; }
+            &.active { background: linear-gradient(135deg,#4f46e5 0%,#818cf8 100%); color:#fff; border-color:transparent; box-shadow:0 4px 12px rgba(99,102,241,0.38); }
+        }
+
+        // ── Rules ────────────────────────────────────────────────────
+        button:nth-child(3) {
+            background: rgba(16, 185, 129, 0.10);
+            border: 1.5px solid rgba(16, 185, 129, 0.30);
+            color: #059669;
+            &:hover  { background: rgba(16,185,129,0.18); border-color: #10b981; }
+            &.active { background: linear-gradient(135deg,#059669 0%,#34d399 100%); color:#fff; border-color:transparent; box-shadow:0 4px 12px rgba(16,185,129,0.38); }
+        }
+
+        // ── Circulars ────────────────────────────────────────────────
+        button:nth-child(4) {
+            background: rgba(6, 182, 212, 0.10);
+            border: 1.5px solid rgba(6, 182, 212, 0.30);
+            color: #0891b2;
+            &:hover  { background: rgba(6,182,212,0.18); border-color: #06b6d4; }
+            &.active { background: linear-gradient(135deg,#0891b2 0%,#22d3ee 100%); color:#fff; border-color:transparent; box-shadow:0 4px 12px rgba(6,182,212,0.38); }
+        }
+
+        // ── Notifications ─────────────────────────────────────────── (the star)
+        button:nth-child(5) {
+            background: rgba(239, 68, 68, 0.10);
+            border: 1.5px solid rgba(239, 68, 68, 0.30);
+            color: #dc2626;
+            &:hover  { background: rgba(239,68,68,0.18); border-color: #ef4444; }
+            &.active {
+                background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+                color: #fff;
+                border-color: transparent;
+                box-shadow: 0 4px 14px rgba(239,68,68,0.42);
+                animation: pulse-red 1.8s ease-in-out infinite;
+            }
+        }
+
+        // ── License Info ─────────────────────────────────────────────
+        button:nth-child(6) {
+            background: rgba(245, 158, 11, 0.10);
+            border: 1.5px solid rgba(245, 158, 11, 0.30);
+            color: #b45309;
+            &:hover  { background: rgba(245,158,11,0.18); border-color: #f59e0b; }
+            &.active { background: linear-gradient(135deg,#d97706 0%,#fbbf24 100%); color:#fff; border-color:transparent; box-shadow:0 4px 12px rgba(245,158,11,0.38); }
+        }
+    }
+
+    @keyframes pulse-red {
+        0%, 100% { box-shadow: 0 4px 14px rgba(239,68,68,0.42); }
+        50%       { box-shadow: 0 4px 22px rgba(239,68,68,0.70), 0 0 0 4px rgba(239,68,68,0.12); }
     }
 
     h6 {
