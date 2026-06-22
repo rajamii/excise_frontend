@@ -120,6 +120,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // ── Other ──
       { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
       { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
+      { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
       { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
       { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
       { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
@@ -1518,6 +1519,21 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     ].some((token) => normalizedRole.includes(token));
   }
 
+  private canAccessCompanyRegistrationWorkflow(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if ([1, 3, 5, 10].includes(roleId)) {
+      return true;
+    }
+
+    const normalizedRole = this.getNormalizedRoleName();
+    return [
+      'singlewindow',
+      'permitsection',
+      'commissioner',
+      'siteadmin'
+    ].some((token) => normalizedRole.includes(token));
+  }
+
   canAccessSection(section: string): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
 
@@ -1532,6 +1548,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     if (section === 'payment-transactions') {
       return roleId === 3;
+    }
+
+    if (section === 'company-registration' && this.canAccessCompanyRegistrationWorkflow()) {
+      return true;
+    }
+
+    if (section === 'company-collaboration' && this.canAccessCompanyCollaborationWorkflow()) {
+      return true;
     }
 
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
@@ -1569,9 +1593,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
-    if (section === 'company-collaboration' && this.canAccessCompanyCollaborationWorkflow()) {
-      return true;
-    }
 
     const sectionRouteToken = String(section || '').trim().toLowerCase();
     if (this.dbNavigationRoutes.has(sectionRouteToken)) {
