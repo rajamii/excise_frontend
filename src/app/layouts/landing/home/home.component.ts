@@ -64,12 +64,18 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get displayedNotifications(): any[] {
+    let items: any[];
+
     if (this.selectedHomeCategory === 'all') {
-      return this.allNotifications.slice(0, 6);
+      items = [...this.allNotifications];
+    } else {
+      items = this.allNotifications.filter(item => item.category === this.selectedHomeCategory);
     }
-    return this.allNotifications
-      .filter(item => item.category === this.selectedHomeCategory)
-      .slice(0, 6);
+
+    // Always keep bullet notifications pinned at the very top regardless of selected tab
+    const bullets = items.filter(item => item.category === 'bullet');
+    const others  = items.filter(item => item.category !== 'bullet');
+    return [...bullets, ...others].slice(0, 6);
   }
 
   filterHomeCategory(cat: string): void {
@@ -79,13 +85,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadNotifications(): void {
     this.whatsCurrentService.getWhatsCurrent().subscribe({
       next: (data) => {
-        this.allNotifications = data.map(item => ({
+        const mapped = data.map(item => ({
           title: item.title,
           date: item.date,
           category: item.category,
           message: item.message,
           link: item.file ? (String(item.file).startsWith('http') ? item.file : `${environment.apiBaseUrl}${item.file}`) : ''
         }));
+        // Store with bullets always first globally
+        const bullets = mapped.filter(i => i.category === 'bullet');
+        const others  = mapped.filter(i => i.category !== 'bullet');
+        this.allNotifications = [...bullets, ...others];
       },
       error: (err) => {
         console.error('Failed to load notifications dynamically:', err);

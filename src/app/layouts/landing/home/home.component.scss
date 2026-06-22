@@ -411,6 +411,23 @@ button {
         50%       { box-shadow: 0 4px 22px rgba(239,68,68,0.70), 0 0 0 4px rgba(239,68,68,0.12); }
     }
 
+    @keyframes bullet-glow-pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0),
+                        3px 0 12px rgba(245, 158, 11, 0.08);
+        }
+        50% {
+            box-shadow: 0 2px 14px rgba(245, 158, 11, 0.22),
+                        3px 0 18px rgba(245, 158, 11, 0.18);
+        }
+    }
+
+    @keyframes bullet-dot-bounce {
+        0%, 100% { transform: translateY(0);    }
+        45%       { transform: translateY(-3px); }
+        55%       { transform: translateY(-3px); }
+    }
+
     h6 {
         flex-shrink: 0;
         margin: 0 0 8px;
@@ -518,22 +535,48 @@ button {
         }
 
         &.bullet-notification {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.04) 100%);
-            border-left: 4px solid #f59e0b;
+            position: relative;
+            background: linear-gradient(135deg,
+                rgba(245, 158, 11, 0.18) 0%,
+                rgba(251, 191, 36, 0.10) 50%,
+                rgba(245, 158, 11, 0.06) 100%);
+            border-left: 5px solid #f59e0b;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.25);
             padding-left: 12px;
-            border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+            animation: bullet-glow-pulse 2.4s ease-in-out infinite;
+
+            // Glowing left-edge shimmer strip
+            &::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 5px;
+                background: linear-gradient(180deg, #fbbf24, #f59e0b, #d97706);
+                border-radius: 0 2px 2px 0;
+            }
 
             .bullet-dot {
                 color: #d97706;
+                font-size: 20px;
+                animation: bullet-dot-bounce 1.8s ease-in-out infinite;
             }
 
             .title {
-                color: #b45309;
-                font-weight: 700;
+                color: #92400e;
+                font-weight: 800;
+                font-size: clamp(12px, 0.82vw, 14px);
             }
 
             .message {
                 color: #78350f;
+                font-weight: 500;
+            }
+
+            .date {
+                color: #b45309;
+                font-weight: 600;
             }
 
             .view-document-icon {
@@ -541,7 +584,11 @@ button {
             }
 
             &:hover {
-                background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(251, 191, 36, 0.08) 100%) !important;
+                background: linear-gradient(135deg,
+                    rgba(245, 158, 11, 0.26) 0%,
+                    rgba(251, 191, 36, 0.16) 50%,
+                    rgba(245, 158, 11, 0.10) 100%) !important;
+                box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) inset !important;
             }
         }
     }
