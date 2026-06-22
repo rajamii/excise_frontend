@@ -24,7 +24,9 @@
           <!-- Category Column -->
           <ng-container matColumnDef="category">
             <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ getCategoryLabel(row.category) }}</mat-cell>
+            <mat-cell *matCellDef="let row">
+              <span class="category-chip" [class]="'cat-' + row.category">{{ getCategoryLabel(row.category) }}</span>
+            </mat-cell>
           </ng-container>
 
           <!-- Date Column -->
@@ -77,6 +79,13 @@
               <button matIconButton color="primary" (click)="onEdit(row)" title="Edit Record">
                 <mat-icon>edit</mat-icon>
               </button>
+              <button 
+                matIconButton 
+                [color]="row.isActive ? 'warn' : 'accent'"
+                (click)="onToggleStatus(row)" 
+                [title]="row.isActive ? 'Deactivate (hide from home page)' : 'Activate (show on home page)'">
+                <mat-icon>{{ row.isActive ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
               <button matIconButton color="warn" (click)="onDelete(row)" title="Delete Record">
                 <mat-icon>delete</mat-icon>
               </button>
@@ -89,7 +98,8 @@
 
         @if (dataSource.length === 0) {
           <div class="empty-state">
-            No records found. Click "Add Update" to create one.
+            <mat-icon>article</mat-icon>
+            <p>No records found. Click "Add Update" to create one.</p>
           </div>
         }
       </div>

@@ -4,20 +4,38 @@
 
 mat-card {
     mat-card-header {
-        padding: 12px;
-        background-color: #1C2B78;
+        padding: 12px 20px;
+        background: linear-gradient(90deg, #1C2B78 0%, #2d3f9e 100%);
         color: #ffffff;
         font-size: 24px;
         font-weight: 500;
-        justify-content: space-between;   
+        display: flex;
+        justify-content: space-between;
         align-items: center;
 
         .page-title {
-            font-size: 24px;
-            font-weight: 500;
+            font-size: 20px;
+            font-weight: 600;
             color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            padding: 0 16px !important;
+            transition: all 0.2s ease !important;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.25) !important;
+                border-color: rgba(255, 255, 255, 0.5) !important;
+            }
         }
     }
+
     mat-card-content {
         padding: 15px;
 
@@ -90,21 +108,23 @@ mat-card {
 
 .status-badge {
   display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
   color: #fff;
   text-align: center;
-  background-color: #cbd5e0;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
 
   &.active {
-    background-color: #38a169;
+    background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
   }
 
   &:not(.active) {
-    background-color: #e53e3e;
+    background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
   }
 }
 

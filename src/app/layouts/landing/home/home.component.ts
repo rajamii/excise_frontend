@@ -178,34 +178,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       'box', 'barrel', 'bottle', 'glass', 'can', 'truck', 'rupee', 'number'
     ];
 
-    // Generate particles: Exactly 4 followers (bottle, truck, glass, barrel) orbit smoothly
-    const followerTypes: ('bottle' | 'truck' | 'glass' | 'barrel')[] = ['bottle', 'truck', 'glass', 'barrel'];
-    const sharedOrbitSpeed = 0.006; // identical speed to keep 90 degree spacing stable
-    const sharedOrbitRadius = 115;   // 115px distance around the cursor (clear space around pointer)
-    for (let i = 0; i < followerTypes.length; i++) {
-      const type = followerTypes[i];
-      const colorBase = colors[Math.floor(Math.random() * colors.length)];
-      this.particles.push({
-        x: 0, // Start close to center cursor
-        y: 0,
-        z: 200 + Math.random() * 150,
-        vx: 0,
-        vy: 0,
-        vz: (Math.random() - 0.5) * 0.15,
-        rx: Math.random() * Math.PI * 2,
-        vrx: (Math.random() - 0.5) * 0.015,
-        type: type,
-        color: colorBase,
-        scale: type === 'truck' ? 36 : 28,
-        isFollower: true,
-        orbitAngle: (i * Math.PI * 2) / 4, // Perfect 90 degree spacing
-        orbitRadius: sharedOrbitRadius,
-        orbitSpeed: sharedOrbitSpeed
-      });
-    }
-
-    // Generate the remaining 66 regular background particles drifting freely
-    const bgCount = 66;
+    // Generate the remaining 125 regular background particles drifting freely
+    const bgCount = 125;
     for (let i = 0; i < bgCount; i++) {
       const type = particleTypes[i % particleTypes.length];
       const colorBase = colors[Math.floor(Math.random() * colors.length)];
@@ -248,46 +222,22 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         const depthRatio = 1 - (p.z - 150) / 600;
         const projScale = focalLength / p.z;
 
-        if (p.isFollower) {
-          // Increment the orbit angle slowly
-          p.orbitAngle = (p.orbitAngle || 0) + (p.orbitSpeed || 0.005);
+        // Regular background particles drift freely
+        p.x += p.vx;
+        p.y += p.vy;
+        p.z += p.vz;
+        p.rx += p.vrx;
 
-          // Cursor target in 3D world coordinates at the particle's depth p.z
-          const cursorWorldX = (this.mouseXRaw - centerX) / projScale;
-          const cursorWorldY = (this.mouseYRaw - centerY) / projScale;
+        // Wrap around screen boundaries
+        const xLimit = canvas.width * 0.75 + 100;
+        const yLimit = canvas.height * 0.75 + 100;
 
-          // Target is offset in a circle around the cursor
-          const targetX = cursorWorldX + Math.cos(p.orbitAngle) * (p.orbitRadius || 80) / projScale;
-          const targetY = cursorWorldY + Math.sin(p.orbitAngle) * (p.orbitRadius || 80) / projScale;
-
-          // Smooth tracking (lerp divisor 0.035)
-          p.x += (targetX - p.x) * 0.035;
-          p.y += (targetY - p.y) * 0.035;
-
-          p.z += p.vz;
-          p.rx += p.vrx;
-
-          // Slowly float Z-depth back and forth
-          if (p.z < 200) p.vz = Math.abs(p.vz);
-          if (p.z > 600) p.vz = -Math.abs(p.vz);
-        } else {
-          // Regular background particles drift freely
-          p.x += p.vx;
-          p.y += p.vy;
-          p.z += p.vz;
-          p.rx += p.vrx;
-
-          // Wrap around screen boundaries
-          const xLimit = canvas.width * 0.75 + 100;
-          const yLimit = canvas.height * 0.75 + 100;
-
-          if (p.x < -xLimit) p.x = xLimit;
-          if (p.x > xLimit) p.x = -xLimit;
-          if (p.y < -yLimit) p.y = yLimit;
-          if (p.y > yLimit) p.y = -yLimit;
-          if (p.z < 150) p.z = 750;
-          if (p.z > 750) p.z = 150;
-        }
+        if (p.x < -xLimit) p.x = xLimit;
+        if (p.x > xLimit) p.x = -xLimit;
+        if (p.y < -yLimit) p.y = yLimit;
+        if (p.y > yLimit) p.y = -yLimit;
+        if (p.z < 150) p.z = 750;
+        if (p.z > 750) p.z = 150;
 
         // Project center of object to screen (no camera parallax offsets!)
         const wx = p.x;

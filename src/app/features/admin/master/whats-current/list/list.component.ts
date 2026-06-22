@@ -34,6 +34,7 @@ export class ListComponent implements OnInit {
       next: (data) => {
         this.dataSource = data.map((item: any) => ({
           ...item,
+          // Backend returns both is_active and isActive; normalize to isActive
           isActive: item.isActive !== undefined ? item.isActive : item.is_active
         }));
       },
@@ -58,7 +59,7 @@ export class ListComponent implements OnInit {
       act: 'Acts',
       rule: 'Rules',
       circular: 'Circulars',
-      bullet: 'Bullet Notifications',
+      bullet: 'Bullet Notif.',
       license: 'License Info'
     };
     return labels[category] || category;
@@ -66,7 +67,7 @@ export class ListComponent implements OnInit {
 
   onAdd(): void {
     const dialogRef = this.dialog.open(ManageComponent, {
-      width: '600px',
+      width: '620px',
       data: { record: null }
     });
 
@@ -77,12 +78,48 @@ export class ListComponent implements OnInit {
 
   onEdit(record: WhatsCurrent): void {
     const dialogRef = this.dialog.open(ManageComponent, {
-      width: '600px',
+      width: '620px',
       data: { record }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) this.loadData();
+    });
+  }
+
+  onToggleStatus(record: WhatsCurrent): void {
+    const newStatus = !record.isActive;
+    const actionLabel = newStatus ? 'Activate' : 'Deactivate';
+
+    Swal.fire({
+      title: `${actionLabel} Record?`,
+      text: `This will ${newStatus ? 'show' : 'hide'} "${record.title}" on the home page.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: actionLabel,
+      confirmButtonColor: newStatus ? '#38a169' : '#e53e3e'
+    }).then(result => {
+      if (result.isConfirmed && record.id !== undefined) {
+        const payload = this.whatsCurrentService.toFormData({
+          category: record.category,
+          date: record.date,
+          title: record.title,
+          message: record.message || '',
+          isActive: newStatus
+        });
+
+        this.whatsCurrentService.updateWhatsCurrent(record.id, payload).subscribe({
+          next: () => {
+            Swal.fire(
+              `${actionLabel}d!`,
+              `Record has been ${newStatus ? 'activated and is now visible' : 'deactivated and hidden'} on the home page.`,
+              'success'
+            );
+            this.loadData();
+          },
+          error: () => Swal.fire('Error', `Failed to ${actionLabel.toLowerCase()} record.`, 'error')
+        });
+      }
     });
   }
 

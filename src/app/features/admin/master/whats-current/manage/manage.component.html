@@ -1,5 +1,6 @@
 <div class="container-fluid">
   <h2 mat-dialog-title align="center">
+    <mat-icon style="vertical-align: middle; margin-right: 8px; font-size: 22px;">{{ isEditMode ? 'edit_note' : 'add_circle' }}</mat-icon>
     {{ isEditMode ? 'Edit' : 'Add' }} What's Current Update
   </h2>
 
@@ -45,10 +46,13 @@
     </div>
 
     <!-- Active Status Toggle -->
-    <div class="field-group">
-      <mat-slide-toggle [(ngModel)]="record.isActive" name="isActive" color="primary">
-        Active Status (Shows on Landing Page)
-      </mat-slide-toggle>
+    <div class="field-group toggle-group">
+      <mat-icon class="toggle-icon">{{ record.isActive ? 'visibility' : 'visibility_off' }}</mat-icon>
+      <div class="toggle-label">
+        <span class="toggle-title">Visibility on Home Page</span>
+        <span class="toggle-hint">{{ record.isActive ? 'Currently active — visible to users' : 'Currently inactive — hidden from home page' }}</span>
+      </div>
+      <mat-slide-toggle [(ngModel)]="record.isActive" name="isActive" color="primary"></mat-slide-toggle>
     </div>
 
     <!-- File Upload Field -->
@@ -74,7 +78,12 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="center">
-    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
-    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    <button matButton="filled" color="primary" (click)="onSave()">
+      <mat-icon>save</mat-icon> {{ isEditMode ? 'Update' : 'Save' }}
+    </button>
+    <button matButton="filled" color="warn" (click)="onCancel()">
+      <mat-icon>close</mat-icon> Cancel
+    </button>
   </mat-dialog-actions>
+
 </div>
