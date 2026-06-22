@@ -32,10 +32,18 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
   isSubmitting:   boolean   = false;
   applicationId:  string | null = null;
 
-  companyDetails: { key: string; value: any }[] = [];
-  membersList: MemberEntry[] = [];
-  companyDocuments: { key: string; label: string; file: File; fileUrl: string }[] = [];
-  summaryData: { key: string; value: any }[] = [];
+  // Caching variables to prevent change detection errors while remaining reactive to stepper step changes
+  private lastCompanyDetailsRaw = '';
+  private cachedCompanyDetails: { key: string; value: any }[] = [];
+
+  private lastMembersRaw = '';
+  private cachedMembersList: MemberEntry[] = [];
+
+  private lastDocsSignature = '';
+  private cachedCompanyDocuments: { key: string; label: string; file: File; fileUrl: string }[] = [];
+
+  private lastSummarySignature = '';
+  private cachedSummaryData: { key: string; value: any }[] = [];
 
   // ── Human-readable labels for company/license fields ────────────────────────
   readonly companyLabels: Partial<Record<keyof Company, string>> = {
@@ -69,7 +77,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.loadData();
+    // No-op: data is loaded reactively via cached getters when Angular checks the view
   }
 
   ngOnDestroy(): void {
@@ -77,50 +85,91 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Data Loading
+  // Data accessors with caching to prevent change detection loops
   // ─────────────────────────────────────────────────────────────────
-  private loadData(): void {
-    // 1. Company details
-    this.companyDetails = this.parseSession<Partial<Company>>('companyDetails', this.companyLabels);
 
-    // 2. Members list
-    try {
-      const raw = sessionStorage.getItem('companyMembersList');
-      if (raw) {
-        const list = JSON.parse(raw) as MemberEntry[];
-        this.membersList = list.filter(
-          m => m && typeof m.memberName === 'string' && m.memberName.trim() !== ''
-        );
-      } else {
-        const single = sessionStorage.getItem('memberDetails');
-        if (single) {
-          const m = JSON.parse(single) as MemberEntry;
-          this.membersList = (m && typeof m.memberName === 'string' && m.memberName.trim() !== '') ? [m] : [];
-        }
-      }
-    } catch {
-      this.membersList = [];
+  /** Company / license fields from sessionStorage */
+  get companyDetails(): { key: string; value: any }[] {
+    const raw = sessionStorage.getItem('companyDetails') || '';
+    if (raw !== this.lastCompanyDetailsRaw) {
+      this.lastCompanyDetailsRaw = raw;
+      this.cachedCompanyDetails = this.parseSession<Partial<Company>>('companyDetails', this.companyLabels);
     }
+    return this.cachedCompanyDetails;
+  }
 
-    // 3. Documents
+  /** ALL saved members — filters out any empty/corrupted entries */
+  get membersList(): MemberEntry[] {
+    const raw = sessionStorage.getItem('companyMembersList') || sessionStorage.getItem('memberDetails') || '';
+    if (raw !== this.lastMembersRaw) {
+      this.lastMembersRaw = raw;
+      try {
+        const rawList = sessionStorage.getItem('companyMembersList');
+        if (rawList) {
+          const list = JSON.parse(rawList) as MemberEntry[];
+          this.cachedMembersList = list.filter(
+            m => m && typeof m.memberName === 'string' && m.memberName.trim() !== ''
+          );
+        } else {
+          const single = sessionStorage.getItem('memberDetails');
+          if (single) {
+            const m = JSON.parse(single) as MemberEntry;
+            this.cachedMembersList = (m && typeof m.memberName === 'string' && m.memberName.trim() !== '') ? [m] : [];
+          } else {
+            this.cachedMembersList = [];
+          }
+        }
+      } catch {
+        this.cachedMembersList = [];
+      }
+    }
+    return this.cachedMembersList;
+  }
+
+  /** Documents uploaded (from the service) with blob URLs.
+   *  Always rebuilt fresh when files change. */
+  get companyDocuments(): { key: string; label: string; file: File; fileUrl: string }[] {
     const docs = this.companyRegistrationService.getCompanyDocuments();
-    this.fileUrls.forEach(u => URL.revokeObjectURL(u));
-    this.fileUrls = [];
-    this.companyDocuments = Object.entries(docs)
-      .filter(([, file]) => file instanceof File)
-      .map(([key, file]) => {
-        const url = URL.createObjectURL(file!);
-        this.fileUrls.push(url);
-        return {
-          key,
-          label:   this.documentLabels[key] || key,
-          file:    file!,
-          fileUrl: url
-        };
-      });
+    const signature = Object.entries(docs)
+      .map(([k, f]) => f instanceof File ? `${k}:${f.name}:${f.size}` : `${k}:null`)
+      .join('|');
 
-    // 4. Summary
-    this.summaryData = this.generateSummaryData();
+    if (signature !== this.lastDocsSignature) {
+      this.lastDocsSignature = signature;
+      
+      // Revoke old URLs
+      this.fileUrls.forEach(u => URL.revokeObjectURL(u));
+      this.fileUrls = [];
+
+      this.cachedCompanyDocuments = Object.entries(docs)
+        .filter(([, file]) => file instanceof File)
+        .map(([key, file]) => {
+          const url = URL.createObjectURL(file!);
+          this.fileUrls.push(url);
+          return {
+            key,
+            label:   this.documentLabels[key] || key,
+            file:    file!,
+            fileUrl: url
+          };
+        });
+    }
+    return this.cachedCompanyDocuments;
+  }
+
+  /** Quick-summary data */
+  get summaryData(): { key: string; value: any }[] {
+    // Force evaluation of dependencies to ensure cache is hot
+    const cd = this.companyDetails;
+    const members = this.membersList;
+    const docs = this.companyDocuments;
+    
+    const signature = `${cd.length}|${members.length}|${docs.length}|${cd.map(i => `${i.key}:${i.value}`).join(',')}`;
+    if (signature !== this.lastSummarySignature) {
+      this.lastSummarySignature = signature;
+      this.cachedSummaryData = this.generateSummaryData();
+    }
+    return this.cachedSummaryData;
   }
 
   private generateSummaryData(): { key: string; value: any }[] {

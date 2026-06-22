@@ -429,22 +429,39 @@ export class RegistrationManagementComponent implements OnInit {
     forkJoin({
       counts: this.http
         .get<any>(`${this.companyApiBase}/dashboard-counts/`)
-        .pipe(catchError(() => of({ approved: 0, pending: 0, rejected: 0, objection: 0 }))),
+        .pipe(catchError(() => of({ approved: 0, pending: 0, rejected: 0, objection: 0, awaiting_payment: 0 }))),
       grouped: this.http
         .get<any>(`${this.companyApiBase}/list-by-status/`)
-        .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [], objection: [] })))
+        .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [], objection: [], awaiting_payment: [] })))
     }).subscribe({
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenCompanyGroupedData(grouped);
-        this.counts = {
-          newApplication: 0,
+        
+        // Normalize backend awaiting_payment to awaitingPayment for resolveCounts
+        const rawCounts = {
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number(counts?.objection || 0),
           rejected: Number(counts?.rejected || 0),
-          awaitingPayment: 0
+          awaitingPayment: Number(counts?.awaiting_payment || counts?.awaitingPayment || 0)
         };
+        this.counts = this.resolveCounts(this.allRows, rawCounts);
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+
+        // Auto-select active tab if default filter is not set
+        if (this.activeCardFilter === '') {
+          if (this.counts.objection > 0) {
+            this.activeCardFilter = 'objection';
+            this.statusFilter = 'objection';
+          } else if (this.counts.awaitingPayment > 0) {
+            this.activeCardFilter = 'awaiting-payment';
+            this.statusFilter = 'awaiting-payment';
+          } else if (this.counts.pending > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          }
+        }
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -518,24 +535,37 @@ export class RegistrationManagementComponent implements OnInit {
     establishmentName: string;
     currentStage: string;
     currentStageRaw: string;
-    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment';
+    hasObjectionHistory?: boolean;
+    hasObjectionUpdate?: boolean;
   }> {
     const mapGroup = (
       items: any[] | undefined,
-      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'
+      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment'
     ) => {
       if (!Array.isArray(items)) return [];
       return items.map((item: any) => {
         const rawStage = this.resolveCompanyStage(item);
+        const currentStageId = item?.current_stage_id ?? item?.currentStageId ?? item?.current_stage;
+
+        const computedStage = this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(rawStage, statusGroup, currentStageId)
+          : this.formatStageName(rawStage || 'submitted');
+
+        let finalStatusGroup = statusGroup;
+        if (this.isLicenseeUser() && computedStage === 'Awaiting Payment') {
+          finalStatusGroup = 'awaiting-payment';
+        }
+
         return {
           id: String(item?.id ?? item?.applicationId ?? item?.application_id ?? ''),
           applicationId: String(item?.applicationId ?? item?.application_id ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.paymentDate ?? item?.payment_date),
           applicantName: String(item?.memberName ?? item?.member_name ?? 'N/A'),
           establishmentName: String(item?.companyName ?? item?.company_name ?? 'N/A'),
-          currentStage: this.formatStageName(rawStage || 'submitted'),
+          currentStage: computedStage,
           currentStageRaw: String(rawStage || 'submitted'),
-          statusGroup
+          statusGroup: finalStatusGroup
         };
       });
     };
@@ -545,7 +575,9 @@ export class RegistrationManagementComponent implements OnInit {
       ...mapGroup(grouped?.approved, 'approved'),
       ...mapGroup(grouped?.rejected, 'rejected'),
       ...mapGroup(grouped?.objection, 'objection'),
-      ...mapGroup(grouped?.applied, 'pending')
+      ...mapGroup(grouped?.applied, 'pending'),
+      ...mapGroup(grouped?.awaiting_payment, 'awaiting-payment'),
+      ...mapGroup(grouped?.awaitingPayment, 'awaiting-payment')
     ];
 
     const seen = new Set<string>();

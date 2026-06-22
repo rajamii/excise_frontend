@@ -3452,7 +3452,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         // Do not rely on URL/query-param "source" to determine licensee UX.
         // Admin/Officer users can navigate from licensee-like routes but must still see real workflow stage.
         if (!this.roleService.isLicenseeRole()) return false;
-        return this.isNewLicense() || this.isSalesmanBarmanRegistration();
+        return this.isNewLicense() || this.isSalesmanBarmanRegistration() || this.isCompanyRegistration();
     }
 
     private simplifyStageForLicensee(stageValue: string, statusValue: string): 'Pending' | 'Awaiting Payment' | 'Approved' | 'Rejected' {

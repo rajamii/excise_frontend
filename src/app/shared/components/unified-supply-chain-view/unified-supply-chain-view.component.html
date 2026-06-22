@@ -1270,14 +1270,6 @@
                                      </td>
                                  </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Payment ID</td>
-                                    <td>{{ applicationData.paymentId || 'Not available' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Payment Date</td>
-                                    <td>{{ applicationData.paymentDate | date: "dd-MM-yyyy" }}</td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Payment Amount</td>
                                     <td class="text-success fw-bold">Rs {{ applicationData.paymentAmount || applicationData.brAmount || 0 }}</td>
                                 </tr>

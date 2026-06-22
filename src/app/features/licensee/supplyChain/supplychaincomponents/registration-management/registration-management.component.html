@@ -53,7 +53,7 @@
         </div>
       </div>
       <!-- Awaiting Payment Card -->
-      <div class="col-xl col-lg-6 col-md-6" *ngIf="currentSection === 'salesman-barman-registration' && counts.awaitingPayment && counts.awaitingPayment > 0">
+      <div class="col-xl col-lg-6 col-md-6" *ngIf="(currentSection === 'salesman-barman-registration' || currentSection === 'company-registration') && counts.awaitingPayment && counts.awaitingPayment > 0">
         <div
           class="summary-card awaiting-payment-requests summary-card-clickable"
           role="button"
