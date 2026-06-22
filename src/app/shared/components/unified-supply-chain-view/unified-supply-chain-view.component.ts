@@ -3704,6 +3704,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 { label: 'Residential Certificate', keys: ['residential_certificate', 'residentialCertificate'] },
                 { label: 'Date of Birth Proof', keys: ['dateof_birth_proof', 'dateofBirthProof'] }
             ];
+        } else if (this.applicationType === 'company-registration' || id.startsWith('COMP/')) {
+            docFields = [
+                { label: 'Excise License issued by the Excise Authority', keys: ['exciseLicense', 'excise_license'] },
+                { label: 'Deed of Partnership', keys: ['deedOfPartnership', 'deed_of_partnership'] },
+                { label: 'Memorandum & Article of Association', keys: ['memorandumOfAssociation', 'memorandum_of_association'] },
+                { label: 'Undertaking (Sikkim Excise Act, 1992)', keys: ['undertaking'] }
+            ];
         } else {
             return;
         }
