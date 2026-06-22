@@ -6,6 +6,19 @@ import Swal from 'sweetalert2';
 import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
 import { Router } from '@angular/router';
 
+// ── MemberEntry matches the interface in member-details.component.ts ──────────
+export interface MemberEntry {
+  memberName:         string;
+  memberDesignation:  string;
+  memberMobileNumber: string;
+  memberEmailId?:     string;
+  memberAddress:      string;
+  fatherName?:        string;
+  dob?:               string;
+  gender?:            string;
+  nationality?:       string;
+}
+
 @Component({
   selector: 'app-submit-application',
   imports: [MaterialModule, FormsModule],
@@ -13,45 +26,36 @@ import { Router } from '@angular/router';
   styleUrl: './submit-application.component.scss'
 })
 export class SubmitApplicationComponent implements OnDestroy {
-  fileUrls: string[] = [];
-  acceptTerms: boolean = false;
-  isSubmitting: boolean = false;
-  applicationId: string | null = null;
 
-  // Cache for company documents to prevent recreating URLs
-  private cachedDocuments: { key: keyof CompanyDocuments; file: File; fileUrl: string }[] = [];
+  fileUrls:       string[]  = [];
+  acceptTerms:    boolean   = false;
+  isSubmitting:   boolean   = false;
+  applicationId:  string | null = null;
 
-  // Human-readable labels for company fields
-  readonly companyRegistrationLabels: Partial<Record<keyof Company, string>> = {
-    brandType: 'Brand Type',
-    license: 'License',
-    applicationYear: 'Application Year',
-    companyName: 'Company Name',
-    pan: 'PAN',
-    officeAddress: 'Office Address',
-    country: 'Country',
-    state: 'State',
-    factoryAddress: 'Factory Address',
-    pinCode: 'PIN Code',
+  // ── Human-readable labels for company/license fields ────────────────────────
+  readonly companyLabels: Partial<Record<keyof Company, string>> = {
+    brandType:           'Brand Type',
+    license:             'License',
+    applicationYear:     'Application Year',
+    companyName:         'Company Name',
+    pan:                 'PAN',
+    officeAddress:       'Office Address',
+    country:             'Country',
+    state:               'State',
+    factoryAddress:      'Factory Address',
+    pinCode:             'PIN Code',
     companyMobileNumber: 'Company Mobile Number',
-    companyEmailId: 'Company Email Id',
-    memberName: 'Member Name',
-    memberDesignation: 'Member Designation',
-    memberMobileNumber: 'Member Mobile Number',
-    memberEmailId: 'Member Email Id',
-    memberAddress: 'Member Address',
-    paymentId: 'Payment Id',
-    paymentDate: 'Payment Date',
-    paymentAmount: 'Payment Amount',
-    paymentRemarks: 'Payment Remarks'
+    companyEmailId:      'Company Email Id',
   };
 
-  // Human-readable labels for uploaded documents
-  readonly documentLabels: Partial<Record<keyof CompanyDocuments, string>> = {
-    undertaking: 'Undertaking'
+  // ── Human-readable labels for uploaded documents ─────────────────────────────
+  readonly documentLabels: Record<string, string> = {
+    exciseLicense:          'Excise License issued by the Excise Authority',
+    deedOfPartnership:      'Deed of Partnership',
+    memorandumOfAssociation:'Memorandum & Article of Association',
+    undertaking:            'Undertaking (Sikkim Excise Act, 1992)',
   };
 
-  // Output event emitter to notify parent about "back" action
   @Output() back = new EventEmitter<void>();
 
   constructor(
@@ -63,151 +67,122 @@ export class SubmitApplicationComponent implements OnDestroy {
     this.fileUrls.forEach(url => URL.revokeObjectURL(url));
   }
 
-  // Get formatted company details from session storage for display
-  get companyDetails() {
-    return this.getGroupedEntries<Partial<Company>>('companyDetails', this.companyRegistrationLabels);
+  // ─────────────────────────────────────────────────────────────────
+  // Data accessors
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Company / license fields from sessionStorage */
+  get companyDetails(): { key: string; value: any }[] {
+    return this.parseSession<Partial<Company>>('companyDetails', this.companyLabels);
   }
 
-  // Get formatted member details from session storage for display
-  get memberDetails() {
-    return this.getGroupedEntries<Partial<Company>>('memberDetails', this.companyRegistrationLabels);
+  /** ALL saved members — filters out any empty/corrupted entries */
+  get membersList(): MemberEntry[] {
+    try {
+      const raw = sessionStorage.getItem('companyMembersList');
+      if (raw) {
+        const list = JSON.parse(raw) as MemberEntry[];
+        return list.filter(
+          m => m && typeof m.memberName === 'string' && m.memberName.trim() !== ''
+        );
+      }
+      // Fallback: single member stored the old way
+      const single = sessionStorage.getItem('memberDetails');
+      if (single) {
+        const m = JSON.parse(single) as MemberEntry;
+        return (m && typeof m.memberName === 'string' && m.memberName.trim() !== '') ? [m] : [];
+      }
+    } catch { /* ignore */ }
+    return [];
   }
 
-  // Get formatted payment details from session storage for display
-  get paymentDetails() {
-    return this.getGroupedEntries<Partial<Company>>('paymentDetails', this.companyRegistrationLabels);
-  }
-
-  // Get uploaded document metadata (filename) for preview display
-  get companyDocuments(): { key: keyof CompanyDocuments; file: File; fileUrl: string }[] {
-    // Return cached documents if already created
-    if (this.cachedDocuments.length > 0) {
-      return this.cachedDocuments;
-    }
-
+  /** Documents uploaded (from the service) with blob URLs.
+   *  Always rebuilt fresh — no stale cache — so all 4 docs are shown. */
+  get companyDocuments(): { key: string; label: string; file: File; fileUrl: string }[] {
     const docs = this.companyRegistrationService.getCompanyDocuments();
-    this.fileUrls = [];
-  
-    this.cachedDocuments = Object.entries(docs).map(([key, file]) => {
-      const url = URL.createObjectURL(file!);
-      this.fileUrls.push(url);
-      return {
-        key: key as keyof CompanyDocuments,
-        file: file!,
-        fileUrl: url
-      };
-    });
 
-    return this.cachedDocuments;
+    // Revoke any previously created URLs to avoid memory leaks
+    this.fileUrls.forEach(u => URL.revokeObjectURL(u));
+    this.fileUrls = [];
+
+    return Object.entries(docs)
+      .filter(([, file]) => file instanceof File)
+      .map(([key, file]) => {
+        const url = URL.createObjectURL(file!);
+        this.fileUrls.push(url);
+        return {
+          key,
+          label:   this.documentLabels[key] || key,
+          file:    file!,
+          fileUrl: url
+        };
+      });
   }
 
-  // Get summary data for the application summary section
+  // ─────────────────────────────────────────────────────────────────
+  // Quick-summary bar (top of page)
+  // ─────────────────────────────────────────────────────────────────
   getSummaryData(): { key: string; value: any }[] {
     const summary: { key: string; value: any }[] = [];
-    
-    // Add key company details
-    const appYearData = this.companyDetails.find(item => item.key === 'Application Year');
-    if (appYearData) summary.push({ key: 'Application Year', value: appYearData.value });
-    
-    const brandTypeData = this.companyDetails.find(item => item.key === 'Brand Type');
-    if (brandTypeData) summary.push({ key: 'Brand Type', value: brandTypeData.value });
-    
-    const companyNameData = this.companyDetails.find(item => item.key === 'Company Name');
-    if (companyNameData) summary.push({ key: 'Company Name', value: companyNameData.value });
-    
-    const panData = this.companyDetails.find(item => item.key === 'PAN');
-    if (panData) summary.push({ key: 'PAN', value: panData.value });
-    
-    // Add key member details
-    const memberNameData = this.memberDetails.find(item => item.key === 'Member Name');
-    if (memberNameData) summary.push({ key: 'Member Name', value: memberNameData.value });
-    
-    const memberMobileData = this.memberDetails.find(item => item.key === 'Member Mobile Number');
-    if (memberMobileData) summary.push({ key: 'Contact Number', value: memberMobileData.value });
-    
-    // Add payment amount
-    const paymentAmountData = this.paymentDetails.find(item => item.key === 'Payment Amount');
-    if (paymentAmountData) summary.push({ key: 'Payment Amount', value: `₹${paymentAmountData.value}` });
-    
-    // Add application date
+
+    const find = (arr: { key: string; value: any }[], label: string) =>
+      arr.find(i => i.key === label)?.value;
+
+    const cd = this.companyDetails;
+    if (find(cd, 'Application Year'))    summary.push({ key: 'Application Year',    value: find(cd, 'Application Year') });
+    if (find(cd, 'Company Name'))        summary.push({ key: 'Company Name',        value: find(cd, 'Company Name') });
+    if (find(cd, 'PAN'))                 summary.push({ key: 'PAN',                 value: find(cd, 'PAN') });
+    if (find(cd, 'Brand Type'))          summary.push({ key: 'Brand Type',          value: find(cd, 'Brand Type') });
+
+    const members = this.membersList;
+    if (members.length > 0) {
+      summary.push({ key: 'Total Members',  value: members.length });
+      summary.push({ key: 'Primary Member', value: members[0].memberName });
+    }
+
+    summary.push({ key: 'Total Documents Uploaded', value: this.companyDocuments.length });
     summary.push({ key: 'Application Date', value: new Date().toLocaleDateString('en-GB') });
-    
+
     return summary;
   }
 
-  // Utility to convert sessionStorage data into label-value pairs for display
-  private getGroupedEntries<T extends Record<string, any>>(
-    groupKey: string,
+  // ─────────────────────────────────────────────────────────────────
+  // Utility
+  // ─────────────────────────────────────────────────────────────────
+  private parseSession<T extends Record<string, any>>(
+    key: string,
     labels: Record<string, string>
   ): { key: string; value: any }[] {
-    const storedData = sessionStorage.getItem(groupKey);
-    if (!storedData) return [];
-
     try {
-      const parsedData: T = JSON.parse(storedData);
-      return Object.keys(parsedData).map(key => ({
-        key: labels[key] || key,
-        value: parsedData[key]
-      }));
-    } catch (error) {
-      console.error(`Error parsing sessionStorage key "${groupKey}":`, error);
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return [];
+      const obj: T = JSON.parse(raw);
+      return Object.entries(obj)
+        .filter(([, v]) => v !== null && v !== undefined && v !== '')
+        .map(([k, v]) => ({ key: labels[k] || k, value: v }));
+    } catch {
       return [];
     }
   }
 
-  // View file in new tab
-  viewFile(doc: { key: keyof CompanyDocuments; file: File; fileUrl: string }) {
-    console.log('Attempting to view file:', doc);
-    
-    if (!doc) {
-      console.error('No document provided');
-      Swal.fire('Error', 'Document not found.', 'error');
-      return;
-    }
-
-    // Use existing fileUrl from cached documents
-    if (doc.fileUrl) {
-      console.log('Opening fileUrl:', doc.fileUrl);
-      const newWindow = window.open(doc.fileUrl, '_blank');
-      
-      if (!newWindow) {
-        Swal.fire('Error', 'Pop-up blocked. Please allow pop-ups for this site.', 'warning');
-      }
-      return;
-    }
-
-    // Fallback: create new URL from file if fileUrl is missing
-    if (doc.file) {
-      console.log('Creating new URL from file');
-      try {
-        const url = URL.createObjectURL(doc.file);
-        const newWindow = window.open(url, '_blank');
-        
-        if (!newWindow) {
-          Swal.fire('Error', 'Pop-up blocked. Please allow pop-ups for this site.', 'warning');
-        }
-        
-        // Clean up after a delay
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-      } catch (error) {
-        console.error('Error creating object URL:', error);
-        Swal.fire('Error', 'Unable to open the file. Please try again.', 'error');
-      }
-      return;
-    }
-
-    console.error('No file or fileUrl available');
-    Swal.fire('Error', 'File not found. Please try uploading again.', 'error');
+  // ─────────────────────────────────────────────────────────────────
+  // File viewer
+  // ─────────────────────────────────────────────────────────────────
+  viewFile(doc: { file: File; fileUrl: string }) {
+    const url = doc.fileUrl || URL.createObjectURL(doc.file);
+    const w = window.open(url, '_blank');
+    if (!w) Swal.fire('Warning', 'Pop-up blocked. Please allow pop-ups for this site.', 'warning');
   }
 
-  // Submit the full application: company, member, payment, and documents
+  // ─────────────────────────────────────────────────────────────────
+  // Submit
+  // ─────────────────────────────────────────────────────────────────
   async submit(): Promise<void> {
     if (!this.acceptTerms) {
-      Swal.fire('Warning', 'Please accept the terms and conditions to proceed.', 'warning');
+      Swal.fire('Warning', 'Please accept the declaration to proceed.', 'warning');
       return;
     }
 
-    // Show confirmation dialog
     const confirm = await Swal.fire({
       title: 'Confirm Submission',
       text: 'Are you sure you want to submit this application?',
@@ -223,91 +198,63 @@ export class SubmitApplicationComponent implements OnDestroy {
     this.isSubmitting = true;
 
     try {
-      // Parse all stored data from sessionStorage
       const companyDetails: Partial<Company> = JSON.parse(sessionStorage.getItem('companyDetails') || '{}');
-      const memberDetails: Partial<Company> = JSON.parse(sessionStorage.getItem('memberDetails') || '{}');
-      const paymentDetails: Partial<Company> = JSON.parse(sessionStorage.getItem('paymentDetails') || '{}');
+      const membersList: MemberEntry[]        = JSON.parse(sessionStorage.getItem('companyMembersList') || '[]');
+      const docs = this.companyRegistrationService.getCompanyDocuments();
 
-      // Get uploaded files from service
-      const companyRegistrationDocuments = this.companyRegistrationService.getCompanyDocuments();
-
-      // Ensure nothing is missing
-      if (!companyDetails || !memberDetails || !paymentDetails || !companyRegistrationDocuments) {
-        Swal.fire('Error', 'Missing application data. Please complete the form.', 'error');
-        this.isSubmitting = false;
-        return;
-      }
-
-      // Build the FormData object for the API
       const formData = new FormData();
-      const combinedDetails = { ...companyDetails, ...memberDetails, ...paymentDetails };
 
-      // Append form fields to FormData (convert camelCase to snake_case)
-      Object.entries(combinedDetails).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          const snakeCaseKey = this.camelToSnake(key);
-          formData.append(snakeCaseKey, value.toString());
-        }
+      // Append company fields
+      Object.entries(companyDetails).forEach(([k, v]) => {
+        if (v != null) formData.append(this.camelToSnake(k), v.toString());
       });
 
-      // Append document files to FormData
-      for (const [key, file] of Object.entries(companyRegistrationDocuments)) {
-        if (file instanceof File) {
-          formData.append(key, file);
-        }
+      // Append all members as JSON array
+      formData.append('members', JSON.stringify(membersList));
+
+      // Append documents
+      for (const [k, file] of Object.entries(docs)) {
+        if (file instanceof File) formData.append(k, file);
       }
 
-      // Make API call to submit form using the correct method
       this.companyRegistrationService.applyCompanyRegistration(formData).subscribe({
         next: (response) => {
-          // Extract application ID from response and set it to show success view
           this.applicationId = response.applicationId || response.application_id;
-          
-          // Show SweetAlert for immediate feedback
           Swal.fire({
             icon: 'success',
-            title: 'Success!',
-            text: `Application ID: ${this.applicationId}`,
-            confirmButtonText: 'OK'
+            title: 'Application Submitted!',
+            text: `Your Application ID: ${this.applicationId}`,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#1C2B78'
           });
-
           this.isSubmitting = false;
         },
         error: (err) => {
-          // On failure: show error message
-          console.error('Submission failed:', err);
-          const message = err?.error?.detail || err?.error?.message || 'Failed to submit application.';
-          Swal.fire('Error', message, 'error');
+          const msg = err?.error?.detail || err?.error?.message || 'Failed to submit application.';
+          Swal.fire('Error', msg, 'error');
           this.isSubmitting = false;
         }
       });
 
-    } catch (error) {
-      console.error('Unexpected error during submission:', error);
+    } catch (err) {
+      console.error('Unexpected submission error:', err);
       Swal.fire('Error', 'An unexpected error occurred.', 'error');
       this.isSubmitting = false;
     }
   }
 
-  // Emit "back" event to previous step
-  goBack() {
-    this.back.emit();
-  }
+  // ─────────────────────────────────────────────────────────────────
+  // Navigation
+  // ─────────────────────────────────────────────────────────────────
+  goBack() { this.back.emit(); }
 
-  // Navigate to dashboard and clear all application data
   goToDashboard() {
-    // Clear all session data
     sessionStorage.clear();
-    
-    // Clear documents from service
     this.companyRegistrationService.clearCompanyDocuments();
-    
-    // Navigate to dashboard
     this.router.navigate(['/dashboard']);
   }
 
-  // Utility: Convert camelCase to snake_case for backend API
   private camelToSnake(str: string): string {
-    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    return str.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
   }
 }

@@ -1,52 +1,355 @@
-mat-card{  
-    mat-card-header{
-        padding: 12px;
-        border-radius: 8px 8px 0 0;
-        background-color: #1C2B78;
-        color: #ffffff;
-        font-size: 24px;
-        font-weight: 500;
-        align-items: center;
-        justify-content: space-between; 
-        .validation{
-            font-size: 12px;
-            color: #ff1313;
-            font-style: italic;
-        }  
-    }
-    mat-card-content{
-        .form-field-container{
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px 40px;
-            padding-top: 20px;
-            justify-items: center;
-            align-items: start;
-            mat-form-field{
-                width: 100%;
-                mat-label{
-                    font-size: 14px;
-                }
-                textarea {
-                    resize: vertical;
-                    min-height: 40px;
-                }
-                input::placeholder, textarea::placeholder{
-                    font-size: 13px;
-                }
-            }
-        }
-    }
-    mat-card-actions{
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-    }
+// ═══════════════════════════════════════════════════════════════
+//  Member-Details Step – Premium Styles
+// ═══════════════════════════════════════════════════════════════
+
+$primary:   #1C2B78;
+$accent:    #4f5fa8;
+$danger:    #e53935;
+$surface:   #f4f6fb;
+$border:    #dde2f1;
+$text-main: #1a2340;
+$text-mute: #6b7a9e;
+
+// ── Wrapper ──────────────────────────────────────────────────────
+.member-details-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 8px 0 16px;
 }
 
-@media(max-width: 633px){
-    mat-card mat-card-content .form-field-container{
-        grid-template-columns: 1fr 1fr;
-    }
+// ── Saved-members section ────────────────────────────────────────
+.saved-members-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
+.saved-members-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: $primary;
+  padding: 0 4px;
+
+  mat-icon {
+    font-size: 22px;
+    height: 22px;
+    width: 22px;
+    color: $accent;
+  }
+}
+
+// ── Grid of member cards ─────────────────────────────────────────
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+// ── Single member card ───────────────────────────────────────────
+.member-card {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #ffffff;
+  border: 1.5px solid $border;
+  border-radius: 14px;
+  padding: 18px 16px 14px;
+  box-shadow: 0 2px 12px rgba($primary, 0.07);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 6px 24px rgba($primary, 0.13);
+    border-color: $accent;
+    transform: translateY(-2px);
+  }
+
+  &.editing {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba($primary, 0.12);
+  }
+}
+
+// Numbered badge
+.member-badge {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $primary, $accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .badge-num {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+}
+
+// Member info
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+
+  .person-icon {
+    font-size: 34px;
+    height: 34px;
+    width: 34px;
+    color: $accent;
+  }
+
+  .member-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: $text-main;
+    line-height: 1.2;
+  }
+
+  .member-designation {
+    font-size: 12px;
+    color: $text-mute;
+    margin-top: 2px;
+  }
+}
+
+.member-meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+  color: $text-mute;
+  word-break: break-word;
+
+  &.full-width {
+    align-items: flex-start;
+  }
+
+  .meta-icon {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    color: $accent;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+}
+
+// Card action buttons
+.member-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .edit-btn {
+    color: $primary;
+    &:hover { background: rgba($primary, 0.08); }
+  }
+
+  .delete-btn {
+    color: $danger;
+    &:hover { background: rgba($danger, 0.08); }
+  }
+}
+
+// ── Add-another button row ───────────────────────────────────────
+.add-another-row {
+  display: flex;
+  justify-content: flex-start;
+
+  .add-another-btn {
+    border: 2px dashed $accent;
+    border-radius: 10px;
+    padding: 8px 20px;
+    font-weight: 600;
+    color: $primary;
+    transition: background 0.2s ease, border-color 0.2s ease;
+
+    mat-icon { margin-right: 6px; vertical-align: middle; }
+
+    &:hover {
+      background: rgba($primary, 0.06);
+      border-color: $primary;
+    }
+  }
+}
+
+// ── Form Card ────────────────────────────────────────────────────
+.form-card {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid $border;
+  box-shadow: 0 4px 20px rgba($primary, 0.08) !important;
+
+  mat-card-header {
+    padding: 14px 20px;
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(135deg, $primary 0%, $accent 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+
+      mat-icon { font-size: 22px; height: 22px; width: 22px; }
+    }
+
+    .validation {
+      font-size: 12px;
+      color: rgba(#fff, 0.8);
+      font-style: italic;
+    }
+  }
+
+  mat-card-content {
+    padding: 20px 20px 4px;
+  }
+}
+
+// ── Form Grid ────────────────────────────────────────────────────
+.form-field-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px 32px;
+  padding-top: 16px;
+  align-items: start;
+
+  mat-form-field {
+    width: 100%;
+
+    mat-label { font-size: 13px; }
+    input::placeholder, textarea::placeholder { font-size: 13px; }
+    textarea { resize: vertical; min-height: 42px; }
+  }
+
+  .full-span { grid-column: 1 / -1; }
+}
+
+// ── Profile Section ──────────────────────────────────────────────
+.profile-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba($primary,0.03), rgba($accent,0.06));
+  border-radius: 12px;
+  border: 1.5px solid $border;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: $primary;
+  margin-bottom: 4px;
+
+  .sub-label {
+    font-size: 11px;
+    font-weight: 400;
+    color: $text-mute;
+    margin-left: 4px;
+  }
+}
+
+// ── Warning Banner ───────────────────────────────────────────────
+.no-profile-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 18px;
+  margin-top: 20px;
+  background: rgba(#ff6f00, 0.06);
+  border: 1.5px solid rgba(#ff6f00, 0.3);
+  border-radius: 10px;
+  color: #7a4a00;
+  font-size: 13px;
+  line-height: 1.5;
+
+  mat-icon {
+    color: #f57c00;
+    font-size: 22px;
+    height: 22px;
+    width: 22px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
+// ── Form Actions ─────────────────────────────────────────────────
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px !important;
+  border-top: 1px solid $border;
+  background: $surface;
+
+  .save-btn {
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    padding: 0 24px;
+    height: 42px;
+    border-radius: 8px;
+
+    mat-icon { margin-right: 6px; }
+  }
+}
+
+// ── Navigation Actions ───────────────────────────────────────────
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid $border;
+
+  .next-btn {
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    padding: 0 28px;
+    height: 44px;
+    border-radius: 8px;
+
+    mat-icon { margin-left: 6px; }
+  }
+}
+
+// ── Responsive ───────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .form-field-container { grid-template-columns: 1fr 1fr; }
+  .members-grid         { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .form-field-container { grid-template-columns: 1fr; }
+  .member-card          { flex-direction: column; }
+  .member-actions       { flex-direction: row; margin-top: 8px; }
+  .nav-actions          { flex-wrap: wrap; }
+}

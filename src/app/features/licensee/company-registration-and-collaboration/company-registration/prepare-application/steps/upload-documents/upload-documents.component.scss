@@ -4,24 +4,28 @@ mat-card {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   
   mat-card-header {
-    padding: 12px;
+    padding: 14px 20px;
     border-radius: 8px 8px 0 0;
-    background-color: #1C2B78;
+    background: linear-gradient(135deg, #1C2B78 0%, #4f5fa8 100%);
     color: #ffffff;
-    font-size: 24px;
-    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: space-between;
     
     .heading {
-      font-size: 24px;
-      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+
+      mat-icon { font-size: 22px; height: 22px; width: 22px; }
     }
     
     .validation {
       font-size: 12px;
-      color: #ff1313;
+      color: rgba(255,255,255,0.75);
       font-style: italic;
     }
   }
@@ -107,25 +111,36 @@ mat-card {
             }
           }
 
-                 .doc-type-cell {
+          // Required star and optional badge in doc-type column
+          .required-star {
+            color: #e53935;
+            font-weight: 700;
+            font-size: 15px;
+          }
+
+          .optional-badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 1px 8px;
+            border-radius: 20px;
+            background: rgba(79, 95, 168, 0.12);
+            color: #4f5fa8;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            vertical-align: middle;
+          }
+
+          // Document name cell layout
+          .doc-type-cell {
             display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            gap: 6px;
+            flex-direction: column;
+            gap: 4px;
             max-width: 600px;
-            flex-wrap: wrap;
 
             .doc-name {
               color: #333;
               font-size: 14px;
-              line-height: 1.5;
-              flex: 1;
-            }
-
-            .required {
-              color: #ff1313;
-              font-weight: 700;
-              font-size: 16px;
               line-height: 1.5;
             }
 
@@ -133,10 +148,6 @@ mat-card {
               color: #5b5858;
               font-size: 12px;
               font-style: italic;
-              padding: 2px 8px;
-              border-radius: 4px;
-              display: inline-block;
-              width: 100%;
             }
           }
 
@@ -178,8 +189,17 @@ mat-card {
                 box-shadow: 0 4px 8px rgba(28, 43, 120, 0.3);
               }
 
-              &:active {
-                transform: translateY(0);
+              &:active { transform: translateY(0); }
+
+              // ✅ Green state when a file has been chosen
+              &.has-file {
+                background-color: #2e7d32;
+                box-shadow: 0 2px 4px rgba(46, 125, 50, 0.3);
+
+                &:hover {
+                  background-color: #1b5e20;
+                  box-shadow: 0 4px 8px rgba(46, 125, 50, 0.4);
+                }
               }
 
               mat-icon {
@@ -247,140 +267,6 @@ mat-card {
         }
       }
 
-      .form-field-container {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px 40px;
-        padding: 20px 0;
-        align-items: start;
-
-        mat-form-field {
-          width: 100%;
-
-          &.full-width {
-            grid-column: span 3;
-          }
-
-          ::ng-deep {
-            .mat-mdc-form-field-wrapper {
-              padding-bottom: 0;
-            }
-
-            .mat-mdc-text-field-wrapper {
-              background-color: white;
-            }
-
-            mat-label {
-              font-size: 14px;
-              font-weight: 500;
-            }
-
-            .mat-mdc-form-field-hint-wrapper,
-            .mat-mdc-form-field-error-wrapper {
-              padding: 0;
-            }
-          }
-
-          textarea {
-            resize: vertical;
-            min-height: 70px;
-            line-height: 1.5;
-          }
-
-          input::placeholder,
-          textarea::placeholder {
-            font-size: 13px;
-            color: #999;
-          }
-
-          .example-right-align {
-            text-align: right;
-          }
-
-          input[type="number"] {
-            &::-webkit-inner-spin-button,
-            &::-webkit-outer-spin-button {
-              opacity: 1;
-            }
-          }
-        }
-      }
-
-      .payment-info-card {
-        background: linear-gradient(135deg, #f8f9ff 0%, #fff5f5 100%);
-        border-left: 4px solid #1C2B78;
-        border-radius: 8px;
-        padding: 20px;
-        margin-top: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-
-        .info-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #e0e0e0;
-
-          mat-icon {
-            color: #1C2B78;
-            font-size: 28px;
-            width: 28px;
-            height: 28px;
-          }
-
-          h4 {
-            margin: 0;
-            color: #1C2B78;
-            font-weight: 600;
-            font-size: 18px;
-          }
-        }
-
-        .info-content {
-          .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
-
-            &:last-child {
-              border-bottom: none;
-            }
-
-            &.highlight {
-              background: linear-gradient(135deg, #1C2B78 0%, #2a3d8f 100%);
-              color: white;
-              padding: 16px 20px;
-              border-radius: 8px;
-              margin-top: 12px;
-              border-bottom: none;
-              box-shadow: 0 4px 8px rgba(28, 43, 120, 0.3);
-
-              .label,
-              .value {
-                color: white;
-                font-weight: 700;
-                font-size: 17px;
-              }
-            }
-
-            .label {
-              font-weight: 500;
-              color: #555;
-              font-size: 14px;
-            }
-
-            .value {
-              font-weight: 600;
-              color: #1C2B78;
-              font-size: 15px;
-              text-align: right;
-            }
-          }
-        }
-      }
     }
   }
   
