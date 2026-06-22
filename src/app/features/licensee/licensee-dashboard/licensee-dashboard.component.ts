@@ -587,16 +587,16 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   getAwaitingPaymentBreakdownText(): string {
     const parts: string[] = [];
     if (this.awaitingPaymentBreakdown.newLicense > 0) {
-      parts.push('New License');
+      parts.push(`New License (${this.awaitingPaymentBreakdown.newLicense})`);
     }
     if (this.awaitingPaymentBreakdown.licenseRenewal > 0) {
-      parts.push('Renewal');
+      parts.push(`Renewal (${this.awaitingPaymentBreakdown.licenseRenewal})`);
     }
     if (this.awaitingPaymentBreakdown.salesmanBarman > 0) {
-      parts.push('Salesman/Barman');
+      parts.push(`Salesman/Barman (${this.awaitingPaymentBreakdown.salesmanBarman})`);
     }
     if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
-      parts.push('Company Reg');
+      parts.push(`Company Registration (${this.awaitingPaymentBreakdown.companyRegistration})`);
     }
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }

@@ -47,7 +47,18 @@
         <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
         <div class="label">Awaiting Payment</div>
         <div class="sub-label">
-          <span class="payment-count">{{ getAwaitingPaymentBreakdownText() }}</span>
+          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.newLicense > 0">
+            New License ({{ awaitingPaymentBreakdown.newLicense }})
+          </span>
+          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.licenseRenewal > 0">
+            Renewal ({{ awaitingPaymentBreakdown.licenseRenewal }})
+          </span>
+          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.salesmanBarman > 0">
+            Salesman/Barman ({{ awaitingPaymentBreakdown.salesmanBarman }})
+          </span>
+          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.companyRegistration > 0">
+            Company Registration ({{ awaitingPaymentBreakdown.companyRegistration }})
+          </span>
         </div>
       </mat-card>
     }

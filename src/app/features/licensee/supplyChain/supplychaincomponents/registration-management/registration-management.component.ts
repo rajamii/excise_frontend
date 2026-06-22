@@ -895,7 +895,7 @@ export class RegistrationManagementComponent implements OnInit {
       pending: Number(rawCounts?.pending || rawCounts?.applied || 0),
       objection: Number(rawCounts?.objection || 0),
       rejected: Number(rawCounts?.rejected || 0),
-      awaitingPayment: Number(rawCounts?.awaitingPayment || 0)
+      awaitingPayment: Number(rawCounts?.awaitingPayment || rawCounts?.awaiting_payment || 0)
     };
   }
 
@@ -908,8 +908,11 @@ export class RegistrationManagementComponent implements OnInit {
   } {
     return rows.reduce(
       (acc, row) => {
-        if (row.statusGroup in acc) {
-          (acc as any)[row.statusGroup] += 1;
+        const group = String(row.statusGroup || '').toLowerCase();
+        if (group === 'awaiting-payment' || group === 'awaiting_payment') {
+          acc.awaitingPayment += 1;
+        } else if (group === 'approved' || group === 'pending' || group === 'objection' || group === 'rejected') {
+          (acc as any)[group] += 1;
         }
         return acc;
       },

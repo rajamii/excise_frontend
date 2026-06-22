@@ -211,7 +211,7 @@ export class UnifiedDashboardService {
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal']));
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration']));
     const cacheKey = enabledTypes.slice().sort().join('|');
 
     if (!forceRefresh && this.unifiedAppsCache$ && this.unifiedAppsCacheKey === cacheKey) {
@@ -289,55 +289,58 @@ export class UnifiedDashboardService {
     this.unifiedAppsCacheKey = cacheKey;
 
     this.unifiedAppsCache$ = forkJoin(requests).pipe(
-        map((responses) => {
-          const getResponse = (t: UnifiedApplication['type']): any => {
-            const idx = types.indexOf(t);
-            return idx >= 0 ? responses[idx] : { applied: [], pending: [], approved: [], rejected: [] };
-          };
+      map((responses) => {
+        const getResponse = (t: UnifiedApplication['type']): any => {
+          const idx = types.indexOf(t);
+          return idx >= 0 ? responses[idx] : { applied: [], pending: [], approved: [], rejected: [] };
+        };
 
-          const renewal = getResponse('license-renewal');
-          const newLic = getResponse('new-license');
-          const salesman = getResponse('salesman-barman');
-          const company = getResponse('company-registration');
-          const normalize = (data: any, type: UnifiedApplication['type']) => {
-            if (!data) {
-              return { applied: [], pending: [], objection: [], approved: [], rejected: [], awaitingPayment: [] };
-            }
+        const renewal = getResponse('license-renewal');
+        const newLic = getResponse('new-license');
+        const salesman = getResponse('salesman-barman');
+        const company = getResponse('company-registration');
 
-            const hasStatusStructure = (
-              data.hasOwnProperty('applied') ||
-              data.hasOwnProperty('pending') ||
-              data.hasOwnProperty('objection') ||
-              data.hasOwnProperty('approved') ||
-              data.hasOwnProperty('rejected')
-            );
+        const normalize = (data: any, type: UnifiedApplication['type']) => {
+          if (!data) {
+            return { applied: [], pending: [], objection: [], approved: [], rejected: [], awaitingPayment: [] };
+          }
 
-            if (!hasStatusStructure) {
-              console.error(`${type}: Missing status structure`);
-              return { applied: [], pending: [], objection: [], approved: [], rejected: [], awaitingPayment: [] };
-            }
+          const hasStatusStructure = (
+            data.hasOwnProperty('applied') ||
+            data.hasOwnProperty('pending') ||
+            data.hasOwnProperty('objection') ||
+            data.hasOwnProperty('approved') ||
+            data.hasOwnProperty('rejected') ||
+            data.hasOwnProperty('awaitingPayment') ||
+            data.hasOwnProperty('awaiting_payment')
+          );
 
-            const extractArray = (statusData: any, statusName: string): UnifiedApplication[] => {
-              if (!Array.isArray(statusData)) return [];
-              
-              return statusData.map((app: any) => {
+          if (!hasStatusStructure) {
+            console.error(`${type}: Missing status structure`);
+            return { applied: [], pending: [], objection: [], approved: [], rejected: [], awaitingPayment: [] };
+          }
+
+          const extractArray = (statusData: any, statusName: string): UnifiedApplication[] => {
+            if (!Array.isArray(statusData)) return [];
+            
+            return statusData.map((app: any) => {
               const applicationId = 
                 app.application_id ||
                 app.applicationId ||
                 app.id ||
                 '';
 
-                let currentStage = this.toStageToken(app);
-                const currentStageId = app.current_stage_id || app.currentStageId || null;
+              let currentStage = this.toStageToken(app);
+              const currentStageId = app.current_stage_id || app.currentStageId || null;
 
-                const unifiedApp: UnifiedApplication = {
-                  type,
-                  applicationId: String(applicationId),
-                  currentStage: String(currentStage || ''),
-                  currentStageName: app.current_stage_name || app.currentStageName || 'Unknown',
-                  isApproved: app.is_approved ?? app.isApproved ?? false,
-                  establishmentName: app.establishment_name || app.establishmentName || app.company_name || app.companyName || null,
-                  applicantFullName: this.getApplicantName(app, type),
+              const unifiedApp: UnifiedApplication = {
+                type,
+                applicationId: String(applicationId),
+                currentStage: String(currentStage || ''),
+                currentStageName: app.current_stage_name || app.currentStageName || 'Unknown',
+                isApproved: app.is_approved ?? app.isApproved ?? false,
+                establishmentName: app.establishment_name || app.establishmentName || app.company_name || app.companyName || null,
+                applicantFullName: this.getApplicantName(app, type),
                 mobileNumber: app.mobile_number || app.mobileNumber || app.company_mobile_number || app.companyMobileNumber || '',
                 email: app.email || app.emailId || app.email_id || app.company_email_id || app.companyEmailId || '',
                 licenseCategoryName: this.getLicenseCategoryName(app),
@@ -353,22 +356,27 @@ export class UnifiedDashboardService {
             });
           };
 
-           return {
-             applied: extractArray(data.applied, 'applied'),
-             pending: extractArray(data.pending, 'pending'),
-             objection: extractArray((data as any).objection, 'objection'),
-             approved: extractArray(data.approved, 'approved'),
-             rejected: extractArray(data.rejected, 'rejected'),
-             awaitingPayment: []
-           };
-         };
+          const extractAwaitingPayment = (): UnifiedApplication[] => {
+            const awaiting = data.awaitingPayment ?? data.awaiting_payment ?? [];
+            if (!Array.isArray(awaiting)) return [];
+            return extractArray(awaiting, 'awaiting-payment');
+          };
+
+          return {
+            applied: extractArray(data.applied, 'applied'),
+            pending: extractArray(data.pending, 'pending'),
+            objection: extractArray((data as any).objection, 'objection'),
+            approved: extractArray(data.approved, 'approved'),
+            rejected: extractArray(data.rejected, 'rejected'),
+            awaitingPayment: extractAwaitingPayment()
+          };
+        };
 
         const normalizedRenewal = normalize(renewal, 'license-renewal');
         const normalizedNewLic = normalize(newLic, 'new-license');
         const normalizedSalesman = normalize(salesman, 'salesman-barman');
-        const normalizedCompany = normalize(company, 'company-registration'); // ✅ ADDED
+        const normalizedCompany = normalize(company, 'company-registration');
 
-        // FIXED: Include company applications in aggregation
         let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied];
         let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending];
         const allObjection = [...normalizedRenewal.objection, ...normalizedNewLic.objection, ...normalizedSalesman.objection, ...normalizedCompany.objection];
@@ -382,11 +390,11 @@ export class UnifiedDashboardService {
           const stageId = app.raw?.current_stage_id || app.raw?.currentStageId;
           const isAwaitingByName = stage === 'awaiting_payment' || stage.includes('awaiting') || stage === 'awaiting payment';
           const isAwaitingById = 
-            stageId === 23 || stageId === 31 || stageId === 109 || stageId === 119 || 
-            Number(stageId) === 23 || Number(stageId) === 31 || Number(stageId) === 109 || Number(stageId) === 119;
+            stageId === 23 || stageId === 31 || stageId === 109 || stageId === 119 || stageId === 122 || 
+            Number(stageId) === 23 || Number(stageId) === 31 || Number(stageId) === 109 || Number(stageId) === 119 || Number(stageId) === 122;
           return isAwaitingByName || isAwaitingById;
         };
-        
+
         const stillPending = allPending.filter(app => {
           if (isAwaitingPayment(app)) {
             awaitingPaymentApps.push(app);
@@ -410,6 +418,14 @@ export class UnifiedDashboardService {
           }
           return true;
         });
+
+        const directAwaiting = [
+          ...normalizedRenewal.awaitingPayment,
+          ...normalizedNewLic.awaitingPayment,
+          ...normalizedSalesman.awaitingPayment,
+          ...normalizedCompany.awaitingPayment
+        ];
+        awaitingPaymentApps.push(...directAwaiting);
 
         return {
           applied: uniqueByKey(stillApplied),
