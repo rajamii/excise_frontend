@@ -3,6 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { MaterialModule } from '../../../shared/material.module';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { WhatsCurrentService } from '../../../core/services/whats-current.service';
+import { environment } from '../../../../environments/environment';
 
 interface Particle3D {
   x: number;
@@ -31,43 +33,13 @@ interface Particle3D {
 })
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('bgCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('pillsScroll') pillsScroll!: ElementRef<HTMLDivElement>;
 
   selectedLink: string = '';
   markdownContent: string = '';
   isBrowser: boolean;
-
-  notifications = [
-    {
-      title: 'Circular Regarding Settlement of Excise License',
-      date: '04/02/2025',
-      link: 'https://example.com'
-    },
-    {
-      title: 'DRY DAY NOTIFICATION',
-      date: '23/12/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'Office order no 226/Excise dated 11/09/2024 regarding Grievance cell',
-      date: '11/09/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'Gazette No 394 regarding suspension on issue of New Foreign Liquor Retail License',
-      date: '14/08/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'Notification No 01/Excise regarding License Renewal for FY 2024-25',
-      date: '08/02/2024',
-      link: 'https://example.com'
-    },
-    {
-      title: 'DRY DAY NOTIFICATION 2024',
-      date: '08/01/2024',
-      link: 'https://example.com'
-    }
-  ];
+  selectedHomeCategory: string = 'all';
+  allNotifications: any[] = [];
 
   // 3D/Parallax Canvas engine properties
   private animationFrameId?: number;
@@ -80,6 +52,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private router: Router, 
     private http: HttpClient,
+    private whatsCurrentService: WhatsCurrentService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -87,6 +60,43 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadMarkdown();
+    this.loadNotifications();
+  }
+
+  get displayedNotifications(): any[] {
+    if (this.selectedHomeCategory === 'all') {
+      return this.allNotifications.slice(0, 6);
+    }
+    return this.allNotifications
+      .filter(item => item.category === this.selectedHomeCategory)
+      .slice(0, 6);
+  }
+
+  filterHomeCategory(cat: string): void {
+    this.selectedHomeCategory = cat;
+  }
+
+  loadNotifications(): void {
+    this.whatsCurrentService.getWhatsCurrent().subscribe({
+      next: (data) => {
+        this.allNotifications = data.map(item => ({
+          title: item.title,
+          date: item.date,
+          category: item.category,
+          message: item.message,
+          link: item.file ? (String(item.file).startsWith('http') ? item.file : `${environment.apiBaseUrl}${item.file}`) : ''
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to load notifications dynamically:', err);
+      }
+    });
+  }
+
+  scrollPills(amount: number): void {
+    if (this.pillsScroll) {
+      this.pillsScroll.nativeElement.scrollBy({ left: amount, behavior: 'smooth' });
+    }
   }
 
   ngAfterViewInit(): void {

@@ -11,19 +11,49 @@
   <mat-card class = "whats-current grid-card">
     <mat-card-header>What's Current</mat-card-header>
     <mat-card-content class = "card-container">
-      <div button (click)="navigateToExternal('https://example.com')" class="calculator-link styled-link">
-        Duty Fees MRP Calculator
+      
+      <!-- Swipable Category Pills Wrapper with Scroll Arrows -->
+      <div class="category-pills-wrapper">
+        <button class="scroll-arrow left" (click)="scrollPills(-100)" aria-label="Scroll category pills left">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+
+        <div class="category-pills-scroll" #pillsScroll>
+          <div class="category-pills">
+            <button [class.active]="selectedHomeCategory === 'all'" (click)="filterHomeCategory('all')">All</button>
+            <button [class.active]="selectedHomeCategory === 'act'" (click)="filterHomeCategory('act')">Acts</button>
+            <button [class.active]="selectedHomeCategory === 'rule'" (click)="filterHomeCategory('rule')">Rules</button>
+            <button [class.active]="selectedHomeCategory === 'circular'" (click)="filterHomeCategory('circular')">Circulars</button>
+            <button [class.active]="selectedHomeCategory === 'bullet'" (click)="filterHomeCategory('bullet')">Notifications</button>
+            <button [class.active]="selectedHomeCategory === 'license'" (click)="filterHomeCategory('license')">License Info</button>
+          </div>
+        </div>
+
+        <button class="scroll-arrow right" (click)="scrollPills(100)" aria-label="Scroll category pills right">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
       </div>
+
       <div class="notifications">
         <h6>Notifications</h6>
         <div class="notifications-grid-container">
-          @for (note of notifications; track note) {
+          @for (note of displayedNotifications; track note) {
             <div
               class="notification styled-link"
-              (click)="navigateToExternal(note.link)"
+              [class.bullet-notification]="note.category === 'bullet'"
+              (click)="note.link ? navigateToExternal(note.link) : null"
+              [style.cursor]="note.link ? 'pointer' : 'default'"
             >
-              <div class="title">{{ note.title }}</div>
-              <div class="date">{{ note.date }}</div>
+              <div class="title-container">
+                <span class="bullet-dot">&bull;</span>
+                <div class="title-text">
+                  <div class="title" [title]="note.title">{{ note.title }}</div>
+                  @if (note.category === 'bullet' && note.message) {
+                    <div class="message">{{ note.message }}</div>
+                  }
+                </div>
+              </div>
+              <div class="date">{{ note.date | date: 'dd/MM/yyyy' }}</div>
             </div>
           }
         </div>

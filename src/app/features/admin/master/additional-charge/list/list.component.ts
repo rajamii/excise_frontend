@@ -18,11 +18,13 @@ import { ManageLicenseFeeComponent } from '../manage-license-fee/manage-license-
   styleUrl: './list.component.scss'
 })
 export class ListComponent implements OnInit {
-  // Tab 1: Additional Charge Mappings
+  activeTab = 0;
+
+  // Tab 0: Additional Charge Mappings
   displayedColumns: string[] = ['categoryName', 'chargeType', 'isActive', 'actions'];
   configs: AdditionalChargeConfig[] = [];
 
-  // Tab 2: License Fees
+  // Tab 1: License Fees
   licenseFeeColumns: string[] = ['category', 'subcategory', 'location', 'fee', 'security', 'renewal', 'lateFee', 'status', 'actions'];
   licenseFees: LicenseFee[] = [];
 
@@ -37,7 +39,11 @@ export class ListComponent implements OnInit {
     this.loadLicenseFees();
   }
 
-  // ========================== Tab 1: Category Mapping configurations ==========================
+  onTabChange(event: any): void {
+    this.activeTab = event.index;
+  }
+
+  // ========================== Tab 0: Category Mapping configurations ==========================
   loadConfigs(): void {
     this.adminService.getAdditionalChargeConfigs().subscribe({
       next: (data) => this.configs = data,
@@ -90,7 +96,7 @@ export class ListComponent implements OnInit {
     });
   }
 
-  // ========================== Tab 2: License Fee configurations ==========================
+  // ========================== Tab 1: License Fee configurations ==========================
   loadLicenseFees(): void {
     this.masterService.getLicenseFees().subscribe({
       next: (data: any) => (this.licenseFees = data),

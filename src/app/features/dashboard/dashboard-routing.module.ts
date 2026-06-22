@@ -156,6 +156,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.roads.view' }
       },
       {
+        path: 'admin/whats-current',
+        loadComponent: () =>
+          import('../admin/master/whats-current/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/hologram-suppliers',
         loadComponent: () =>
           import('../admin/master/hologram-supplier/list/list.component').then((m) => m.ListComponent),

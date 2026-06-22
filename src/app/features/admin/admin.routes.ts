@@ -203,6 +203,17 @@ const routes: Routes = [
             },
           },
           {
+            path: 'whats-current',
+            loadComponent: () =>
+              import('./master/whats-current/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.license_categories.view',
+            },
+          },
+          {
             path: 'hologram-suppliers',
             loadComponent: () =>
               import('./master/hologram-supplier/list/list.component').then(

@@ -1,11 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { ActivatedRoute } from '@angular/router';
+import { WhatsCurrentService } from '../../../../core/services/whats-current.service';
+import { environment } from '../../../../../environments/environment';
 
 interface Notification {
   date: string;
   subject: string;
   category: string;
+  file?: string;
 }
 
 @Component({
@@ -18,14 +21,7 @@ export class HomeLinksComponent implements OnInit{
   page: string | null= '';
   selectedCategory: string = 'all';
 
-  notifications: Notification[] = [
-    { date: '26/09/1974', subject: 'Circular Regarding Settlement of Excise License for the Year 2025-2026', category: 'circular' },
-    { date: '26/09/1974', subject: 'DRY DAY NOTIFIATION - 2025', category: 'circular' },
-    { date: '14/08/2024', subject: 'Gazette No 394 - Suspension on issue of New Foreign Liquor Retail License', category: 'act' },
-    { date: '08/02/2024', subject: 'Notification No 01/Excise - License Renewal for FY 2024-25', category: 'rule' },
-    { date: '01/12/2023', subject: 'Notification No 31/Ex - License Fees and others', category: 'act' },
-    { date: '20/05/2023', subject: 'Notification No 25/Excise - Departmental Promotional Committee Members', category: 'rule' },
-  ];
+  notifications: Notification[] = [];
 
   displayedColumns: string[] = ['date', 'subject', 'download'];
 
@@ -33,9 +29,29 @@ export class HomeLinksComponent implements OnInit{
     this.route.paramMap.subscribe(params => {
       this.page = params.get('page');
     });
+    this.loadNotifications();
   }
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(
+    private route: ActivatedRoute,
+    private whatsCurrentService: WhatsCurrentService
+  ) {}
+
+  loadNotifications() {
+    this.whatsCurrentService.getWhatsCurrent().subscribe({
+      next: (data) => {
+        this.notifications = data.map(item => ({
+          date: item.date,
+          subject: item.title,
+          category: item.category,
+          file: item.file ? String(item.file) : undefined
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to load notifications dynamically:', err);
+      }
+    });
+  }
 
   get filteredNotifications(): Notification[] {
     if (this.selectedCategory === 'all') {
@@ -45,7 +61,14 @@ export class HomeLinksComponent implements OnInit{
   }
 
   downloadFile(notification: Notification) {
-    alert(`Downloading file: ${notification.subject}`);
+    if (notification.file) {
+      const url = notification.file.startsWith('http')
+        ? notification.file
+        : `${environment.apiBaseUrl}${notification.file}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('No document attached.');
+    }
   }
   
   raidsColumns: string[] = ['photo', 'caption'];

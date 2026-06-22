@@ -1,0 +1,80 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} What's Current Update
+  </h2>
+
+  <mat-dialog-content>
+    <div class="row">
+      <!-- Category Field -->
+      <div class="col-md-6 field-group">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Category</mat-label>
+          <mat-select [(ngModel)]="record.category" name="category" required>
+            <mat-option value="act">Acts</mat-option>
+            <mat-option value="rule">Rules</mat-option>
+            <mat-option value="circular">Circulars</mat-option>
+            <mat-option value="bullet">Bullet Notifications</mat-option>
+            <mat-option value="license">License Info</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Date Field -->
+      <div class="col-md-6 field-group">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Date</mat-label>
+          <input matInput type="date" [(ngModel)]="record.date" name="date" required>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Title / Subject Field -->
+    <div class="field-group">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Title / Subject</mat-label>
+        <input matInput [(ngModel)]="record.title" name="title" required placeholder="Enter notification title or subject">
+      </mat-form-field>
+    </div>
+
+    <!-- Optional Message/Ticker Content -->
+    <div class="field-group">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Message / Details (Optional)</mat-label>
+        <textarea matInput [(ngModel)]="record.message" name="message" rows="3" placeholder="Enter additional details or ticker text (useful for bullet notifications)"></textarea>
+      </mat-form-field>
+    </div>
+
+    <!-- Active Status Toggle -->
+    <div class="field-group">
+      <mat-slide-toggle [(ngModel)]="record.isActive" name="isActive" color="primary">
+        Active Status (Shows on Landing Page)
+      </mat-slide-toggle>
+    </div>
+
+    <!-- File Upload Field -->
+    <div class="file-upload-section field-group">
+      <label class="upload-label">PDF Document Upload (Optional)</label>
+      <div class="upload-controls">
+        <input
+          type="file"
+          id="pdf-upload"
+          accept="application/pdf"
+          class="hidden-file-input"
+          (change)="onFileSelected($event)">
+        
+        <label for="pdf-upload" class="file-picker-btn">
+          <mat-icon>cloud_upload</mat-icon> Choose PDF
+        </label>
+
+        <span class="file-name-display" [title]="getFileDisplay()">
+          {{ getFileDisplay() || 'No file selected' }}
+        </span>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>
