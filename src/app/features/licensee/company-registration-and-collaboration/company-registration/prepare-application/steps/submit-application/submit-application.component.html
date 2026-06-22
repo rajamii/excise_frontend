@@ -19,14 +19,14 @@
     @if (!applicationId) {
 
       <!-- ── Quick Summary Bar ─────────────────────────────────────── -->
-      @if (getSummaryData().length > 0) {
+      @if (summaryData.length > 0) {
         <div class="info-section summary-section">
           <div class="section-header">
             <mat-icon>summarize</mat-icon>
             <h3>Application Summary</h3>
           </div>
           <div class="summary-chips">
-            @for (item of getSummaryData(); track item.key) {
+            @for (item of summaryData; track item.key) {
               <div class="chip">
                 <span class="chip-label">{{ item.key }}</span>
                 <span class="chip-value">{{ item.value }}</span>
@@ -66,7 +66,7 @@
           </div>
 
           <div class="members-preview-grid">
-            @for (member of membersList; track member; let i = $index) {
+            @for (member of membersList; track $index; let i = $index) {
               <div class="member-preview-card">
 
                 <!-- Badge + Name row -->

@@ -11,6 +11,7 @@ import { PaymentIntegrationService } from '../../../../../core/services/payment-
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { CompanyRegistrationService } from '../../../../../core/services/company-registration.service';
 import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
@@ -313,6 +314,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     private paymentIntegrationService: PaymentIntegrationService,
     private licenseApplicationService: LicenseApplicationService,
     private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
+    private companyRegistrationService: CompanyRegistrationService,
     private unifiedDashboardService: UnifiedDashboardService
   ) { }
 
@@ -2539,6 +2541,9 @@ private initializeWalletContextAndLoadData(): void {
       case 'license_fee':
         if (String(context.itemType || '').trim().toLowerCase() === 'salesman-barman-registration') {
           return this.salesmanBarmanRegistrationService.payRegistrationLicenseFee(String(context.id));
+        }
+        if (String(context.itemType || '').trim().toLowerCase() === 'company-registration') {
+          return this.companyRegistrationService.payCompanyRegistrationFee(String(context.id));
         }
         if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
           return this.licenseApplicationService.payLicenseRenewalFee(String(context.id), new FormData());

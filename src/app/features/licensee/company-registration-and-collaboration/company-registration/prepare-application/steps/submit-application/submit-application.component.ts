@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnDestroy, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, OnDestroy, Output } from '@angular/core';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { Company, CompanyDocuments } from '../../../../../../../core/models/company.model';
 import { FormsModule } from '@angular/forms';
@@ -25,12 +25,17 @@ export interface MemberEntry {
   templateUrl: './submit-application.component.html',
   styleUrl: './submit-application.component.scss'
 })
-export class SubmitApplicationComponent implements OnDestroy {
+export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
   fileUrls:       string[]  = [];
   acceptTerms:    boolean   = false;
   isSubmitting:   boolean   = false;
   applicationId:  string | null = null;
+
+  companyDetails: { key: string; value: any }[] = [];
+  membersList: MemberEntry[] = [];
+  companyDocuments: { key: string; label: string; file: File; fileUrl: string }[] = [];
+  summaryData: { key: string; value: any }[] = [];
 
   // ── Human-readable labels for company/license fields ────────────────────────
   readonly companyLabels: Partial<Record<keyof Company, string>> = {
@@ -63,49 +68,45 @@ export class SubmitApplicationComponent implements OnDestroy {
     private router: Router
   ) {}
 
+  ngOnInit(): void {
+    this.loadData();
+  }
+
   ngOnDestroy(): void {
     this.fileUrls.forEach(url => URL.revokeObjectURL(url));
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Data accessors
+  // Data Loading
   // ─────────────────────────────────────────────────────────────────
+  private loadData(): void {
+    // 1. Company details
+    this.companyDetails = this.parseSession<Partial<Company>>('companyDetails', this.companyLabels);
 
-  /** Company / license fields from sessionStorage */
-  get companyDetails(): { key: string; value: any }[] {
-    return this.parseSession<Partial<Company>>('companyDetails', this.companyLabels);
-  }
-
-  /** ALL saved members — filters out any empty/corrupted entries */
-  get membersList(): MemberEntry[] {
+    // 2. Members list
     try {
       const raw = sessionStorage.getItem('companyMembersList');
       if (raw) {
         const list = JSON.parse(raw) as MemberEntry[];
-        return list.filter(
+        this.membersList = list.filter(
           m => m && typeof m.memberName === 'string' && m.memberName.trim() !== ''
         );
+      } else {
+        const single = sessionStorage.getItem('memberDetails');
+        if (single) {
+          const m = JSON.parse(single) as MemberEntry;
+          this.membersList = (m && typeof m.memberName === 'string' && m.memberName.trim() !== '') ? [m] : [];
+        }
       }
-      // Fallback: single member stored the old way
-      const single = sessionStorage.getItem('memberDetails');
-      if (single) {
-        const m = JSON.parse(single) as MemberEntry;
-        return (m && typeof m.memberName === 'string' && m.memberName.trim() !== '') ? [m] : [];
-      }
-    } catch { /* ignore */ }
-    return [];
-  }
+    } catch {
+      this.membersList = [];
+    }
 
-  /** Documents uploaded (from the service) with blob URLs.
-   *  Always rebuilt fresh — no stale cache — so all 4 docs are shown. */
-  get companyDocuments(): { key: string; label: string; file: File; fileUrl: string }[] {
+    // 3. Documents
     const docs = this.companyRegistrationService.getCompanyDocuments();
-
-    // Revoke any previously created URLs to avoid memory leaks
     this.fileUrls.forEach(u => URL.revokeObjectURL(u));
     this.fileUrls = [];
-
-    return Object.entries(docs)
+    this.companyDocuments = Object.entries(docs)
       .filter(([, file]) => file instanceof File)
       .map(([key, file]) => {
         const url = URL.createObjectURL(file!);
@@ -117,12 +118,12 @@ export class SubmitApplicationComponent implements OnDestroy {
           fileUrl: url
         };
       });
+
+    // 4. Summary
+    this.summaryData = this.generateSummaryData();
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Quick-summary bar (top of page)
-  // ─────────────────────────────────────────────────────────────────
-  getSummaryData(): { key: string; value: any }[] {
+  private generateSummaryData(): { key: string; value: any }[] {
     const summary: { key: string; value: any }[] = [];
 
     const find = (arr: { key: string; value: any }[], label: string) =>
@@ -209,7 +210,19 @@ export class SubmitApplicationComponent implements OnDestroy {
         if (v != null) formData.append(this.camelToSnake(k), v.toString());
       });
 
-      // Append all members as JSON array
+      // Extract and append primary member fields individually (required by backend model schema)
+      const primaryMember = membersList[0];
+      if (primaryMember) {
+        formData.append('member_name', primaryMember.memberName);
+        formData.append('member_designation', primaryMember.memberDesignation);
+        formData.append('member_mobile_number', primaryMember.memberMobileNumber);
+        formData.append('member_address', primaryMember.memberAddress);
+        if (primaryMember.memberEmailId) {
+          formData.append('member_email_id', primaryMember.memberEmailId);
+        }
+      }
+
+      // Append all members as JSON array (if needed in future or for other fields)
       formData.append('members', JSON.stringify(membersList));
 
       // Append documents

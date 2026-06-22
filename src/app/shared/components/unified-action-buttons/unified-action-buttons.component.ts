@@ -784,6 +784,8 @@ private getTransitRejectSummary(): {
       case 'MAKE_PAYMENT':
         if (this.itemType === 'salesman-barman-registration') {
           this.handleSalesmanBarmanMakePaymentAction();
+        } else if (this.itemType === 'company-registration') {
+          this.handleCompanyRegistrationMakePaymentAction();
         } else {
           this.handleNewLicenseMakePaymentAction();
         }
@@ -862,6 +864,20 @@ private getTransitRejectSummary(): {
 
   private isAwaitingSalesmanBarmanPaymentForLicensee(): boolean {
     if (this.itemType !== 'salesman-barman-registration') return false;
+    if (this.context !== 'licensee') return false;
+    if (!this.isCurrentUserLicensee()) return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
+  private isAwaitingCompanyRegistrationPaymentForLicensee(): boolean {
+    if (this.itemType !== 'company-registration') return false;
     if (this.context !== 'licensee') return false;
     if (!this.isCurrentUserLicensee()) return false;
     const stageName = String(
@@ -1139,6 +1155,79 @@ private getTransitRejectSummary(): {
               referenceNo: applicationId,
               amount: fee,
               source: 'salesman-barman-registration'
+            }
+          });
+        });
+      },
+      error: () => {
+        Swal.close();
+        Swal.fire('Error', 'Unable to fetch registration fee. Please try again later.', 'error');
+      }
+    });
+  }
+
+  private handleCompanyRegistrationMakePaymentAction(): void {
+    if (!this.isAwaitingCompanyRegistrationPaymentForLicensee()) {
+      Swal.fire('Not Available', 'Payment is only available when the application is awaiting registration fee payment.', 'info');
+      return;
+    }
+
+    const applicationId = String(
+      this.item?.['application_id'] ??
+      this.item?.['applicationId'] ??
+      this.item?.referenceNo ??
+      this.item?.refNo ??
+      this.item?.id ??
+      ''
+    ).trim();
+    if (!applicationId) {
+      Swal.fire('Error', 'Application ID is missing for payment.', 'error');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Loading...',
+      text: 'Fetching registration fee',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.paymentIntegrationService.getPaymentModule('009').subscribe({
+      next: (module: any) => {
+        Swal.close();
+        let fee = this.toNumber(module?.license_fee ?? module?.licenseFee ?? module?.licenseFeeAmount ?? 0);
+        if (!fee || fee <= 0) {
+          fee = 5000.00; // Fallback default
+        }
+
+        Swal.fire({
+          title: 'Proceed to Pay',
+          html: `
+            <div style="text-align:left;">
+              <div style="margin-bottom:8px;">Registration Fee: <b>₹${this.formatInr(fee)}</b></div>
+              <div>Total: <b>₹${this.formatInr(fee)}</b></div>
+              <div style="margin-top:10px; font-size:12px; color:#6b7280;">
+                You will be taken to Wallet → License Fee tab to complete payment.
+              </div>
+            </div>
+          `,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Proceed',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+          this.router.navigate(['/dashboard'], {
+            queryParams: {
+              section: 'wallet',
+              action: 'pay',
+              tab: 'license_fee',
+              id: applicationId,
+              type: 'company-registration',
+              ref: applicationId,
+              referenceNo: applicationId,
+              amount: fee,
+              source: 'company-registration'
             }
           });
         });
@@ -1645,6 +1734,23 @@ private getTransitRejectSummary(): {
       }
     }
 
+    // Company Registration: once application is routed to awaiting payment for licensee,
+    // show Make Payment (registration fee from license fee wallet).
+    // Also remove any workflow-level PAY or APPROVE action to avoid duplicate payment buttons.
+    if (this.isAwaitingCompanyRegistrationPaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay company registration fee from license fee wallet'
+        });
+      }
+    }
+
     // Salesman/Barman awaiting payment: always remove the raw PAY workflow action
     // when a MAKE_PAYMENT button is already present, to prevent duplicate payment buttons.
     // Also: if stage is awaiting_payment for salesman-barman licensee context but
@@ -1674,6 +1780,32 @@ private getTransitRejectSummary(): {
             icon: 'payment',
             color: 'primary',
             tooltip: 'Pay registration fee from license fee wallet'
+          });
+        }
+      }
+    }
+
+    if (this.itemType === 'company-registration' && this.context === 'licensee' && this.isCurrentUserLicensee()) {
+      const stageName = String(
+        this.item?.['current_stage_name'] ??
+        this.item?.['currentStageName'] ??
+        this.item?.['current_stage'] ??
+        this.item?.status ??
+        ''
+      ).toLowerCase();
+      const isAtPaymentStage = stageName.includes('awaiting_payment') ||
+        (stageName.includes('awaiting') && stageName.includes('payment'));
+
+      if (isAtPaymentStage) {
+        result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
+        result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+        if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+          result.unshift({
+            action: 'MAKE_PAYMENT',
+            label: 'Make Payment',
+            icon: 'payment',
+            color: 'primary',
+            tooltip: 'Pay company registration fee from license fee wallet'
           });
         }
       }

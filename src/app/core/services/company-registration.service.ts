@@ -88,4 +88,10 @@ export class CompanyRegistrationService {
   clearCompanyDocuments(): void {
     this.companyDocs = {};
   }
+
+  // Pay company registration fee via wallet
+  payCompanyRegistrationFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/detail/${encodedId}/pay-license-fee/`, {});
+  }
 }
