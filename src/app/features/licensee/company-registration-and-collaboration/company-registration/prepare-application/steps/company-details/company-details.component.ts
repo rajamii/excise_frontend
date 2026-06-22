@@ -10,6 +10,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../../../environments/environment';
 import { AccountService } from '../../../../../../../core/services/account.service';
 import { MasterService } from '../../../../../../../core/services/master.service';
+import { LicenseMeService } from '../../../../../../../core/services/license-me.service';
 
 interface LicenseType {
   id: number;
@@ -35,6 +36,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
   companyDetailsForm: FormGroup;
 
   licenses: LicenseType[] = [];
+  myActiveLicenses: any[] = [];
   isLoadingLicenses: boolean = true;
   applicationYears: string[] = ['2025-2026'];
   countries: string[] = ['India', 'Nepal', 'Bhutan', 'China'];
@@ -65,14 +67,19 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     private http:           HttpClient,
     private accountService: AccountService,
     private masterService:  MasterService,       // ✅ NEW: for licensee profile
+    private licenseMeService: LicenseMeService,   // ✅ NEW: for user active licenses
     private cdr:            ChangeDetectorRef
   ) {
     const storedValues = this.getFromSessionStorage();
+    const currentFinYear = this.getCurrentFinancialYear();
+    if (!this.applicationYears.includes(currentFinYear)) {
+      this.applicationYears.push(currentFinYear);
+    }
 
     this.companyDetailsForm = this.fb.group({
       brandType:           new FormControl(storedValues.brandType,           [Validators.required]),
       license:             new FormControl(storedValues.license,             Validators.required),
-      applicationYear:     new FormControl(storedValues.applicationYear,     Validators.required),
+      applicationYear:     new FormControl(storedValues.applicationYear || currentFinYear,     Validators.required),
       companyName:         new FormControl(storedValues.companyName,         [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       pan:                 new FormControl(storedValues.pan,                 [Validators.required, Validators.pattern(PatternConstants.PAN)]),
       officeAddress:       new FormControl(storedValues.officeAddress,       [Validators.required, Validators.maxLength(1000)]),
@@ -84,12 +91,36 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       companyEmailId:      new FormControl(storedValues.companyEmailId,      [Validators.pattern(PatternConstants.EMAIL)])
     });
 
+    this.companyDetailsForm.get('license')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(val => {
+        if (val) {
+          const matched = this.myActiveLicenses.find(l => {
+            const id = l.licenseId || l.license_id;
+            return id === val;
+          });
+          if (matched) {
+            const estName = matched.establishmentName || matched.establishment_name;
+            if (estName) {
+              this.companyDetailsForm.patchValue({ companyName: estName });
+            }
+          }
+        }
+      });
+
     this.companyDetailsForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.saveToSessionStorage();
         this.updateAllErrorMessages();
       });
+  }
+
+  getCurrentFinancialYear(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    return month >= 4 ? `${year}-${(year + 1) % 100}` : `${year - 1}-${year % 100}`;
   }
 
   ngOnInit() {
@@ -238,12 +269,35 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
   private loadLicenseTypes() {
     this.isLoadingLicenses = true;
-    const apiUrl = `${environment.apiBaseUrl}/masters/core/license-types/`;
-    this.http.get<LicenseType[]>(apiUrl)
+    this.licenseMeService.getMyLicenses()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next:  (data)  => { this.licenses = data; this.isLoadingLicenses = false; },
-        error: (error) => { console.error('❌ Error fetching license types:', error); this.isLoadingLicenses = false; }
+        next: (data) => {
+          // Filter approved and active licenses supporting both camelCase and snake_case, excluding salesman/barman
+          this.myActiveLicenses = (data || []).filter(l => {
+            const approved = l.isApproved !== undefined ? l.isApproved : (l.is_approved !== undefined ? l.is_approved : false);
+            const expired = l.isExpired !== undefined ? l.isExpired : l.is_expired;
+            const id = l.licenseId || l.license_id || '';
+            const isSalesmanBarman = (l.sourceType || l.source_type) === 'salesman_barman' || id.startsWith('SB/');
+            return approved && !expired && !isSalesmanBarman;
+          });
+          console.log('✅ Loaded my active licenses:', this.myActiveLicenses);
+          this.isLoadingLicenses = false;
+
+          // Auto-catch if exactly 1 active license exists
+          if (this.myActiveLicenses.length === 1) {
+            const singleLicense = this.myActiveLicenses[0].licenseId || this.myActiveLicenses[0].license_id;
+            this.companyDetailsForm.patchValue({ license: singleLicense });
+            console.log('✅ Auto-caught single license:', singleLicense);
+          }
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('❌ Error fetching active licenses:', error);
+          this.myActiveLicenses = [];
+          this.isLoadingLicenses = false;
+          this.cdr.detectChanges();
+        }
       });
   }
 

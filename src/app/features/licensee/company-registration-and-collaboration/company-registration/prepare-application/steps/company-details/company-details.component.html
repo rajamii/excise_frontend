@@ -33,8 +33,8 @@
             @if (isLoadingLicenses) {
               <mat-option disabled>Loading...</mat-option>
             } @else {
-              @for (license of licenses; track license.id) {
-                <mat-option [value]="license.licenseType">{{ license.licenseType }}</mat-option>
+              @for (lic of myActiveLicenses; track (lic.licenseId || lic.license_id)) {
+                <mat-option [value]="lic.licenseId || lic.license_id">{{ lic.licenseId || lic.license_id }}</mat-option>
               }
             }
           </mat-select>
