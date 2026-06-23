@@ -43,8 +43,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  // ✅ Track whether we found a licensee profile
-  hasLicenseeProfile = false;
+  // ✅ (profile warning removed)
 
   errorMessages = {
     memberName:        signal(''),
@@ -93,11 +92,6 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     if (this.members.length > 0) {
       this.isFormOpen = false;
     }
-
-    // Only load the licensee profile indicator (no auto-fill of editable fields)
-    setTimeout(() => {
-      this.checkLicenseeProfile();
-    }, 100);
   }
 
   ngOnDestroy() {
@@ -253,18 +247,6 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     this.isFormOpen = false;
     this.memberDetailsForm.markAsUntouched();
     this.cdr.detectChanges();
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // Check licensee profile (display warning only – no auto-fill)
-  // ─────────────────────────────────────────────────────────────────
-  private checkLicenseeProfile(): void {
-    this.masterService.getMyLicenseeProfile()
-      .pipe(catchError(() => of(null)), takeUntil(this.destroy$))
-      .subscribe(profile => {
-        this.hasLicenseeProfile = !!profile;
-        this.cdr.detectChanges();
-      });
   }
 
   // Kept for edit flow: fills licensee read-only fields when editing an existing member
