@@ -51,22 +51,6 @@
         </div>
       }
     </div>
-  } @else {
-    <div [formGroup]="form" class="general-remarks-wrap">
-      <mat-form-field appearance="outline" class="general-remarks">
-        <mat-label>Objection Remarks</mat-label>
-        <textarea matInput rows="4" formControlName="generalRemarks" placeholder="Describe the objections in detail..."></textarea>
-      </mat-form-field>
-    </div>
-  }
-
-  @if (candidates.length) {
-    <div [formGroup]="form" class="general-remarks-wrap mt-4">
-      <mat-form-field appearance="outline" class="general-remarks">
-        <mat-label>General Remarks (Optional)</mat-label>
-        <textarea matInput rows="2" formControlName="generalRemarks" placeholder="Add any general feedback for the applicant..."></textarea>
-      </mat-form-field>
-    </div>
   }
 </mat-dialog-content>
 

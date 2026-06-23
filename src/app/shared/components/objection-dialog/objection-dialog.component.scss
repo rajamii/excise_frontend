@@ -22,7 +22,7 @@
 
 .dialog-content-container {
   padding: 20px;
-  background: #f8fafc;
+  background: #eef2f7;
   width: 100%;
   max-height: 70vh;
   box-sizing: border-box;
@@ -33,10 +33,10 @@
     width: 6px;
   }
   &::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: #e2e8f0;
   }
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #94a3b8;
     border-radius: 3px;
   }
 }
@@ -79,23 +79,24 @@
 
 .candidate-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid #cbd5e1;
+  border: 1.5px solid #cbd5e1;
+  border-left: 5px solid #94a3b8;
   border-radius: 10px;
   padding: 12px 16px;
   transition: all 0.25s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
 
   &:hover {
-    border-left-color: #94a3b8;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    border-left-color: #64748b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+    background: #f8fafc;
   }
 
   &.active {
     border-color: #fde68a;
     border-left-color: #f59e0b;
-    background: #fdfbeb;
-    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.12);
+    background: #fefce8;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.15);
   }
 }
 

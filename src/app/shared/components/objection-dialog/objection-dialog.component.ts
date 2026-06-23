@@ -350,8 +350,7 @@ export class ObjectionDialogComponent implements OnInit {
    *  AND no row is in an incomplete state (remark filled but checkbox unticked). */
   get canSubmit(): boolean {
     if (this.candidates.length === 0) {
-      // No field candidates — require general remarks
-      return String(this.form.get('generalRemarks')?.value || '').trim().length > 0;
+      return false; // no candidates, nothing to submit
     }
 
     let hasValidRow = false;
@@ -387,26 +386,16 @@ export class ObjectionDialogComponent implements OnInit {
   onSubmit(): void {
     const objections: Array<{ field: string; remarks: string }> = [];
 
-    if (this.candidates.length) {
-      this.candidates.forEach((c, idx) => {
-        const row = this.rows.at(idx) as FormGroup;
-        const selected = !!row.get('selected')?.value;
-        const remarks = String(row.get('remarks')?.value || '').trim();
-        if (!selected) return;
-        if (!remarks) return;
-        objections.push({ field: c.field, remarks });
-      });
-    }
+    this.candidates.forEach((c, idx) => {
+      const row = this.rows.at(idx) as FormGroup;
+      const selected = !!row.get('selected')?.value;
+      const remarks = String(row.get('remarks')?.value || '').trim();
+      if (!selected || !remarks) return;
+      objections.push({ field: c.field, remarks });
+    });
 
-    const generalRemarks = String(this.form.get('generalRemarks')?.value || '').trim();
-    if (objections.length === 0) {
-      if (!generalRemarks) {
-        this.form.get('generalRemarks')?.setErrors({ required: true });
-        return;
-      }
-      objections.push({ field: 'general', remarks: generalRemarks });
-    }
+    if (objections.length === 0) return;
 
-    this.dialogRef.close({ objections, generalRemarks });
+    this.dialogRef.close({ objections });
   }
 }
