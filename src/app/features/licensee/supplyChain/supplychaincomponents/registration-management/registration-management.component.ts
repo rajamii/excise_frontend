@@ -305,7 +305,7 @@ export class RegistrationManagementComponent implements OnInit {
 
   viewObjectionDetails(row: { id: string; applicationId: string; statusGroup?: string; hasObjectionHistory?: boolean }): void {
     if (!this.isAdminUser()) return;
-    if (this.currentSection !== 'salesman-barman-registration') return;
+    if (this.currentSection !== 'salesman-barman-registration' && this.currentSection !== 'company-registration') return;
     const hasHistory = Boolean((row as any)?.hasObjectionHistory) || String((row as any)?.statusGroup || '').toLowerCase() === 'objection';
     if (!hasHistory) return;
 
@@ -565,6 +565,15 @@ export class RegistrationManagementComponent implements OnInit {
           finalStatusGroup = 'awaiting-payment';
         }
 
+        const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
+        const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
+        const hasHistoryFromTxn = transactions.some((t: any) => /objection/i.test(txnText(t)));
+        const hasUpdateFromTxn = transactions.some((t: any) => /resolve|correct|update/i.test(txnText(t)) && /objection/i.test(txnText(t)));
+        const hasObjectionHistory = statusGroup === 'objection' ||
+          Boolean(item?.has_objection_history ?? item?.hasObjectionHistory ?? item?.has_objection ?? item?.hasObjection ?? item?.has_objections ?? item?.hasObjections) ||
+          hasHistoryFromTxn;
+        const hasObjectionUpdate = Boolean(item?.has_objection_update ?? item?.hasObjectionUpdate) || hasUpdateFromTxn;
+
         return {
           id: String(item?.id ?? item?.applicationId ?? item?.application_id ?? ''),
           applicationId: String(item?.applicationId ?? item?.application_id ?? item?.id ?? 'N/A'),
@@ -573,7 +582,9 @@ export class RegistrationManagementComponent implements OnInit {
           establishmentName: String(item?.companyName ?? item?.company_name ?? 'N/A'),
           currentStage: computedStage,
           currentStageRaw: String(rawStage || 'submitted'),
-          statusGroup: finalStatusGroup
+          statusGroup: finalStatusGroup,
+          hasObjectionHistory,
+          hasObjectionUpdate
         };
       });
     };

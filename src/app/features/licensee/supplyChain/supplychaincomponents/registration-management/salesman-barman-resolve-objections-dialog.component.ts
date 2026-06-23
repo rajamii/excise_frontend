@@ -84,7 +84,17 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
 
             <mat-form-field appearance="outline" class="w-100" *ngIf="!isFileField(obj.fieldName, currentValue(obj.fieldName))">
               <mat-label>Corrected Value</mat-label>
-              <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+              <ng-container *ngIf="isBrandTypeField(obj.fieldName); else regularInput">
+                <select matNativeControl [formControlName]="obj.fieldName">
+                  <option value="" disabled>-- Choose Option --</option>
+                  <option value="Manufactured in Sikkim">Manufactured in Sikkim</option>
+                  <option value="Imported from other States/Country">Imported from other States/Country</option>
+                  <option value="Bottled in Sikkim (Collaboration)">Bottled in Sikkim (Collaboration)</option>
+                </select>
+              </ng-container>
+              <ng-template #regularInput>
+                <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+              </ng-template>
               <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
                 {{ errorText(obj.fieldName) }}
               </mat-error>
@@ -211,6 +221,11 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
       v.endsWith('.doc') ||
       v.endsWith('.docx')
     );
+  }
+
+  isBrandTypeField(fieldName: string): boolean {
+    const key = String(fieldName || '').toLowerCase();
+    return key === 'brandtype' || key === 'brand_type';
   }
 
   isDocumentPath(value: unknown): boolean {

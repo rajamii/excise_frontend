@@ -240,7 +240,7 @@
                    <i class="bi bi-tools me-1"></i>Fix
                  </button>
                   <button
-                    *ngIf="isAdminUser() && currentSection === 'salesman-barman-registration' && row.hasObjectionHistory"
+                    *ngIf="isAdminUser() && (currentSection === 'salesman-barman-registration' || currentSection === 'company-registration') && row.hasObjectionHistory"
                     class="btn btn-link p-0 action-eye ms-2"
                     title="View Objection Details"
                     (click)="viewObjectionDetails(row)"
