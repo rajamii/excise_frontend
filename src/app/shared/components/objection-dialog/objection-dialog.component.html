@@ -1,70 +1,79 @@
-<h2 mat-dialog-title>{{ data.title || 'Raise Objection' }}</h2>
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon class="title-icon">warning_amber</mat-icon>
+  <span>{{ data.title || 'Raise Objection' }}</span>
+</h2>
 
-<mat-dialog-content class="content">
-  <div class="hint">
-    Select the wrong fields and add remarks. Only checked fields with remarks will be sent.
+<mat-dialog-content class="dialog-content-container">
+  <div class="header-hint">
+    <mat-icon class="info-icon">info_outline</mat-icon>
+    <span>Select the fields containing errors and add specific remarks for the applicant.</span>
   </div>
 
   @if (candidates.length) {
-    <div class="objection-table">
-      <div class="objection-row header">
-        <div class="objection-col check"></div>
-        <div class="objection-col field">Field</div>
-        <div class="objection-col value">Current Value</div>
-        <div class="objection-col remarks">Remarks</div>
-      </div>
-
+    <div class="cards-list">
       @for (c of candidates; track c.field; let i = $index) {
-        <div class="objection-row" [formGroup]="rowGroup(i)">
-          <div class="objection-col check">
-            <mat-checkbox formControlName="selected"></mat-checkbox>
-          </div>
-          <div class="objection-col field" [title]="c.label">{{ c.label }}</div>
-          <div class="objection-col value">
-            <div class="value-wrap" [title]="c.value">
-              <span class="value-text">{{ c.value }}</span>
-              @if (isFilePath(c.value)) {
-                <button
-                  mat-icon-button
-                  type="button"
-                  class="preview-btn"
-                  aria-label="View document"
-                  (click)="openPreview(c.value)"
-                >
-                  <mat-icon>visibility</mat-icon>
-                </button>
-              }
+        <div class="candidate-card" [class.active]="rowGroup(i).get('selected')?.value" [formGroup]="rowGroup(i)">
+          <div class="card-main">
+            <div class="card-selection">
+              <mat-checkbox formControlName="selected" color="warn"></mat-checkbox>
+            </div>
+            
+            <div class="card-details">
+              <span class="field-badge">{{ c.label }}</span>
+              <div class="current-val-wrap">
+                <span class="val-label">Current Value:</span>
+                <span class="val-text">{{ c.value }}</span>
+                @if (isFilePath(c.value)) {
+                  <button
+                    mat-button
+                    color="primary"
+                    type="button"
+                    class="doc-preview-button"
+                    (click)="openPreview(c.value)"
+                  >
+                    <mat-icon>visibility</mat-icon>
+                    Preview
+                  </button>
+                }
+              </div>
             </div>
           </div>
-          <div class="objection-col remarks">
-            <mat-form-field appearance="outline" class="remarks-field">
-              <mat-label>Remark</mat-label>
-              <input matInput formControlName="remarks" placeholder="Enter remark" />
-            </mat-form-field>
+
+          <div class="card-remarks-wrapper" [class.show]="rowGroup(i).get('selected')?.value">
+            <div class="remarks-box-inner">
+              <mat-form-field appearance="outline" class="remarks-field">
+                <mat-label>Specify Objection Remarks</mat-label>
+                <input matInput formControlName="remarks" placeholder="Explain the issue with this field..." />
+                <mat-icon matSuffix class="remarks-icon">edit_note</mat-icon>
+              </mat-form-field>
+            </div>
           </div>
         </div>
       }
     </div>
   } @else {
-    <div [formGroup]="form">
+    <div [formGroup]="form" class="general-remarks-wrap">
       <mat-form-field appearance="outline" class="general-remarks">
         <mat-label>Objection Remarks</mat-label>
-        <textarea matInput rows="3" formControlName="generalRemarks" placeholder="Enter remarks"></textarea>
+        <textarea matInput rows="4" formControlName="generalRemarks" placeholder="Describe the objections in detail..."></textarea>
       </mat-form-field>
     </div>
   }
 
   @if (candidates.length) {
-    <div [formGroup]="form">
+    <div [formGroup]="form" class="general-remarks-wrap mt-4">
       <mat-form-field appearance="outline" class="general-remarks">
-        <mat-label>General Remarks (optional)</mat-label>
-        <textarea matInput rows="2" formControlName="generalRemarks" placeholder="Optional overall note"></textarea>
+        <mat-label>General Remarks (Optional)</mat-label>
+        <textarea matInput rows="2" formControlName="generalRemarks" placeholder="Add any general feedback for the applicant..."></textarea>
       </mat-form-field>
     </div>
   }
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
-  <button mat-button type="button" (click)="onCancel()">Cancel</button>
-  <button mat-raised-button color="warn" type="button" (click)="onSubmit()" [disabled]="!canSubmit">Raise Objection</button>
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-button type="button" class="btn-cancel" (click)="onCancel()">Cancel</button>
+  <button mat-raised-button color="warn" type="button" class="btn-submit" (click)="onSubmit()" [disabled]="!canSubmit">
+    <mat-icon>send</mat-icon>
+    <span>Raise Objection</span>
+  </button>
 </mat-dialog-actions>

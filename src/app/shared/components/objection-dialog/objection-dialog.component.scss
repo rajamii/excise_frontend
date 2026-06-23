@@ -1,110 +1,251 @@
-.content {
-  width: min(1100px, 92vw);
-}
-
-.hint {
-  margin-bottom: 12px;
-  color: rgba(0, 0, 0, 0.7);
-  font-size: 13px;
-}
-
-.objection-table {
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.objection-row {
-  display: grid;
-  grid-template-columns: 44px 320px minmax(200px, 1fr) 340px;
-  gap: 12px;
-  align-items: center;
-  padding: 10px 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.objection-row.header {
-  border-top: 0;
-  background: linear-gradient(90deg, rgba(25, 118, 210, 0.08), rgba(76, 175, 80, 0.06));
-  font-weight: 600;
-}
-
-.objection-row:not(.header):nth-child(even) {
-  background: rgba(0, 0, 0, 0.012);
-}
-
-.objection-col.field {
-  color: rgba(0, 0, 0, 0.78);
-  background: rgba(25, 118, 210, 0.04);
-  border-radius: 8px;
-  padding: 6px 8px;
-  word-break: break-word;
-}
-
-.objection-col.value {
-  min-width: 0;
-}
-
-.objection-col.remarks {
-  background: rgba(255, 193, 7, 0.06);
-  border-radius: 10px;
-  padding: 4px 6px;
-}
-
-.value-wrap {
+.dialog-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(76, 175, 80, 0.04);
+  gap: 10px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: #fff;
+  padding: 16px 24px;
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  .title-icon {
+    color: #fbbf24;
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+    animation: pulse 2s infinite ease-in-out;
+  }
+}
+
+.dialog-content-container {
+  padding: 20px;
+  background: #f8fafc;
+  width: 100%;
+  max-height: 70vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+
+  // Flush scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+}
+
+// Strip Material's own internal padding so scrollbar sits flush with dialog edge
+::ng-deep .mat-mdc-dialog-content {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+::ng-deep .mat-mdc-dialog-surface {
+  overflow: hidden !important;
+}
+
+.header-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
   border-radius: 8px;
-  padding: 6px 8px;
-  min-width: 0;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: #1e40af;
+  font-size: 0.875rem;
+
+  .info-icon {
+    color: #2563eb;
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+  }
 }
 
-.value-text {
-  min-width: 0;
-  white-space: pre-wrap;
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.candidate-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 12px 16px;
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    border-left-color: #94a3b8;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  }
+
+  &.active {
+    border-color: #fde68a;
+    border-left-color: #f59e0b;
+    background: #fdfbeb;
+    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.12);
+  }
+}
+
+.card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.card-selection {
+  padding-top: 4px;
+}
+
+.card-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-badge {
+  align-self: flex-start;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.775rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+
+  .candidate-card.active & {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+  }
+}
+
+.current-val-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.val-label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.val-text {
+  color: #334155;
+  font-weight: 600;
   word-break: break-word;
-  color: rgba(0, 0, 0, 0.75);
 }
 
-.preview-btn {
-  flex: 0 0 auto;
-  transform: scale(1.1);
-  color: #1976d2;
+.doc-preview-button {
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  height: auto;
+  min-height: 28px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid #bfdbfe;
+
+  &:hover {
+    background: #dbeafe;
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+  }
+}
+
+.card-remarks-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease-out, opacity 0.3s ease-out;
+  opacity: 0;
+  overflow: hidden;
+
+  &.show {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-top: 12px;
+  }
+}
+
+.remarks-box-inner {
+  overflow: hidden;
+  padding-top: 2px;
 }
 
 .remarks-field {
   width: 100%;
+
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    background-color: #fff !important;
+  }
+}
+
+.remarks-icon {
+  color: #fbbf24;
+}
+
+.general-remarks-wrap {
+  margin-top: 20px;
 }
 
 .general-remarks {
   width: 100%;
-  margin-top: 12px;
 }
 
-@media (max-width: 900px) {
-  .objection-row {
-    grid-template-columns: 34px 1fr;
-    grid-template-areas:
-      "check field"
-      "value value"
-      "remarks remarks";
+.dialog-actions {
+  padding: 16px 20px !important;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  gap: 12px;
+}
+
+.btn-cancel {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 8px 18px;
+}
+
+.btn-submit {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 8px 20px;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+
+  mat-icon {
+    margin-right: 6px;
   }
+}
 
-  .objection-col.check { grid-area: check; }
-  .objection-col.field { grid-area: field; }
-  .objection-col.value { grid-area: value; }
-  .objection-col.remarks { grid-area: remarks; }
-
-  .objection-col.field {
-    white-space: normal;
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
   }
-
-  .value-text {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-    word-break: break-word;
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
   }
 }
