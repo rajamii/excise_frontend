@@ -1,4 +1,7 @@
-<h2 mat-dialog-title>Objection Details</h2>
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon class="title-icon">gavel</mat-icon>
+  <span>Objection Details</span>
+</h2>
 
 <mat-dialog-content class="content">
   @if (isLoading) {
@@ -11,107 +14,119 @@
   } @else if (unresolved.length === 0 && resolved.length === 0) {
     <div class="empty">No objections found.</div>
   } @else {
+
     @if (unresolved.length > 0) {
-      <div class="section-title">Unresolved</div>
+      <div class="section-header unresolved-header">
+        <mat-icon>error_outline</mat-icon>
+        <span>Unresolved &nbsp;·&nbsp; {{ unresolved.length }} field(s) need correction</span>
+      </div>
       <div class="list">
         @for (obj of unresolved; track obj) {
-          <div class="item">
-            <div class="top">
-              <div class="field">{{ label(obj.fieldName) }}</div>
-              <div class="meta">
-                @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
-                @if (obj.raisedAt) { <span>On: {{ obj.raisedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
-              </div>
-            </div>
-            <div class="remark">{{ obj.remarks }}</div>
-            @if (obj.beforeContent) {
-              <div class="changes one">
-                <div class="change">
-                  <div class="label">Current</div>
-                  <div class="value">
-                    <span class="text">{{ obj.beforeContent }}</span>
-                    @if (isDocumentValue(obj.beforeContent)) {
-                      <button
-                        mat-icon-button
-                        type="button"
-                        class="eye"
-                        (click)="previewDocument(label(obj.fieldName) + ' (Current)', obj.beforeContent)"
-                        title="Preview document"
-                      >
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                    }
-                  </div>
+          <div class="item item-red">
+            <div class="item-accent-bar red-bar"></div>
+            <div class="item-body">
+              <div class="top">
+                <div class="field">
+                  <mat-icon class="field-icon red-icon">cancel</mat-icon>
+                  {{ label(obj.fieldName) }}
+                </div>
+                <div class="meta">
+                  @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
+                  @if (obj.raisedAt) { <span>On: {{ obj.raisedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
                 </div>
               </div>
-            }
+              <div class="remark remark-red">
+                <mat-icon class="remark-icon">comment</mat-icon>
+                {{ obj.remarks }}
+              </div>
+              @if (obj.beforeContent) {
+                <div class="changes one">
+                  <div class="change change-current">
+                    <div class="change-label">Current Value</div>
+                    <div class="value">
+                      <span class="text">{{ obj.beforeContent }}</span>
+                      @if (isDocumentValue(obj.beforeContent)) {
+                        <button mat-icon-button type="button" class="eye"
+                          (click)="previewDocument(label(obj.fieldName) + ' (Current)', obj.beforeContent)"
+                          title="Preview document">
+                          <mat-icon>visibility</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
         }
       </div>
     }
 
     @if (resolved.length > 0) {
-      <div class="section-title">Resolved</div>
+      <div class="section-header resolved-header" [class.mt-section]="unresolved.length > 0">
+        <mat-icon>check_circle_outline</mat-icon>
+        <span>Resolved &nbsp;·&nbsp; {{ resolved.length }} field(s) corrected</span>
+      </div>
       <div class="list">
         @for (obj of resolved; track obj) {
-          <div class="item resolved">
-            <div class="top">
-              <div class="field">
-                {{ label(obj.fieldName) }}
-                <span class="badge bg-info text-dark ms-2">UPDATED</span>
+          <div class="item item-green">
+            <div class="item-accent-bar green-bar"></div>
+            <div class="item-body">
+              <div class="top">
+                <div class="field">
+                  <mat-icon class="field-icon green-icon">check_circle</mat-icon>
+                  {{ label(obj.fieldName) }}
+                  <span class="badge-updated">UPDATED</span>
+                </div>
+                <div class="meta">
+                  @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
+                  @if (obj.resolvedByName) { <span>Updated by: {{ obj.resolvedByName }}</span> }
+                  @if (obj.resolvedAt) { <span>On: {{ obj.resolvedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
+                </div>
               </div>
-              <div class="meta">
-                @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
-                @if (obj.resolvedByName) { <span>Updated by: {{ obj.resolvedByName }}</span> }
-                @if (obj.resolvedAt) { <span>On: {{ obj.resolvedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
+              <div class="remark remark-green">
+                <mat-icon class="remark-icon">comment</mat-icon>
+                {{ obj.remarks }}
               </div>
+              @if (obj.beforeContent || obj.afterContent) {
+                <div class="changes">
+                  <div class="change change-before">
+                    <div class="change-label">Before</div>
+                    <div class="value">
+                      <span class="text">{{ obj.beforeContent || '-' }}</span>
+                      @if (isDocumentValue(obj.beforeContent)) {
+                        <button mat-icon-button type="button" class="eye"
+                          (click)="previewDocument(label(obj.fieldName) + ' (Before)', obj.beforeContent)"
+                          title="Preview document">
+                          <mat-icon>visibility</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                  <div class="change change-after">
+                    <div class="change-label">After</div>
+                    <div class="value">
+                      <span class="text">{{ obj.afterContent || '-' }}</span>
+                      @if (isDocumentValue(obj.afterContent)) {
+                        <button mat-icon-button type="button" class="eye"
+                          (click)="previewDocument(label(obj.fieldName) + ' (After)', obj.afterContent)"
+                          title="Preview document">
+                          <mat-icon>visibility</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
             </div>
-            <div class="remark">{{ obj.remarks }}</div>
-            @if (obj.beforeContent || obj.afterContent) {
-              <div class="changes">
-                <div class="change">
-                  <div class="label">Before</div>
-                  <div class="value">
-                    <span class="text">{{ obj.beforeContent || '-' }}</span>
-                    @if (isDocumentValue(obj.beforeContent)) {
-                      <button
-                        mat-icon-button
-                        type="button"
-                        class="eye"
-                        (click)="previewDocument(label(obj.fieldName) + ' (Before)', obj.beforeContent)"
-                        title="Preview document"
-                      >
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                    }
-                  </div>
-                </div>
-                <div class="change">
-                  <div class="label">After</div>
-                  <div class="value">
-                    <span class="text">{{ obj.afterContent || '-' }}</span>
-                    @if (isDocumentValue(obj.afterContent)) {
-                      <button
-                        mat-icon-button
-                        type="button"
-                        class="eye"
-                        (click)="previewDocument(label(obj.fieldName) + ' (After)', obj.afterContent)"
-                        title="Preview document"
-                      >
-                        <mat-icon>visibility</mat-icon>
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
           </div>
         }
       </div>
     }
+
   }
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
-  <button mat-button type="button" (click)="close()">Close</button>
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-flat-button type="button" class="btn-close" (click)="close()">Close</button>
 </mat-dialog-actions>
