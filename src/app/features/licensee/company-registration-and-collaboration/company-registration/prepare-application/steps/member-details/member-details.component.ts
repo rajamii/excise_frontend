@@ -1,10 +1,9 @@
 import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Subject, forkJoin, of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { takeUntil, catchError } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
-import { AccountService } from '../../../../../../../core/services/account.service';
 import { MasterService } from '../../../../../../../core/services/master.service';
 
 export interface MemberEntry {
@@ -60,10 +59,9 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   };
 
   constructor(
-    private fb:             FormBuilder,
-    private accountService: AccountService,
-    private masterService:  MasterService,
-    private cdr:            ChangeDetectorRef
+    private fb:           FormBuilder,
+    private masterService: MasterService,
+    private cdr:          ChangeDetectorRef
   ) {
     this.memberDetailsForm = this.fb.group({
       // ── Editable fields ──────────────────────────────────────────
@@ -73,7 +71,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       memberEmailId:      new FormControl('', [Validators.pattern(PatternConstants.EMAIL)]),
       memberAddress:      new FormControl('', [Validators.required, Validators.maxLength(500)]),
 
-      // ── Licensee profile fields (pre-filled, disabled) ───────────
+      // ── Licensee profile fields (removed – section no longer shown)
       fatherName:         new FormControl({ value: '', disabled: true }),
       dob:                new FormControl({ value: '', disabled: true }),
       gender:             new FormControl({ value: '', disabled: true }),
@@ -96,8 +94,9 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       this.isFormOpen = false;
     }
 
+    // Only load the licensee profile indicator (no auto-fill of editable fields)
     setTimeout(() => {
-      this.autoFillFromProfiles();
+      this.checkLicenseeProfile();
     }, 100);
   }
 
@@ -257,73 +256,19 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Auto-fill from profiles
+  // Check licensee profile (display warning only – no auto-fill)
   // ─────────────────────────────────────────────────────────────────
-  private autoFillFromProfiles(): void {
-    // Only auto-fill if no members exist yet (first-time open)
-    if (this.members.length > 0) return;
-
-    forkJoin({
-      userProfile:     this.fetchUserProfile(),
-      licenseeProfile: this.masterService.getMyLicenseeProfile().pipe(catchError(() => of(null)))
-    })
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: ({ userProfile, licenseeProfile }) => {
-        this.fillForm(userProfile, licenseeProfile);
-      },
-      error: (err) => console.error('❌ Member auto-fill error:', err)
-    });
+  private checkLicenseeProfile(): void {
+    this.masterService.getMyLicenseeProfile()
+      .pipe(catchError(() => of(null)), takeUntil(this.destroy$))
+      .subscribe(profile => {
+        this.hasLicenseeProfile = !!profile;
+        this.cdr.detectChanges();
+      });
   }
 
-  private fetchUserProfile() {
-    let cached = this.accountService.getUserProfileSync();
-    if (!cached) {
-      try {
-        const stored = localStorage.getItem('currentUser');
-        if (stored) cached = JSON.parse(stored);
-      } catch { /* ignore */ }
-    }
-    return cached
-      ? of(cached)
-      : this.accountService.identity(true).pipe(catchError(() => of(null)));
-  }
-
-  private fillForm(user: any, licensee: any): void {
-    const fillData: any = {};
-
-    if (user) {
-      const parts = [
-        user.firstName  || user.first_name  || '',
-        user.middleName || user.middle_name || '',
-        user.lastName   || user.last_name   || '',
-      ].filter(Boolean);
-      if (parts.length) fillData.memberName = parts.join(' ');
-      if (user.phoneNumber || user.phone_number) fillData.memberMobileNumber = user.phoneNumber || user.phone_number;
-      if (user.email) fillData.memberEmailId = user.email;
-      if (user.address) fillData.memberAddress = user.address;
-      fillData.memberDesignation = 'Director';
-    }
-
-    if (licensee) {
-      this.hasLicenseeProfile = true;
-      const disabledFields = ['fatherName', 'dob', 'gender', 'nationality'];
-      disabledFields.forEach(f => this.memberDetailsForm.get(f)?.enable({ emitEvent: false }));
-
-      if (licensee.fatherName)   fillData.fatherName  = licensee.fatherName;
-      if (licensee.dob)          fillData.dob         = licensee.dob;
-      if (licensee.genderDisplay)fillData.gender      = licensee.genderDisplay;
-      if (licensee.nationality)  fillData.nationality = licensee.nationality;
-
-      this.memberDetailsForm.patchValue(fillData, { emitEvent: false });
-      disabledFields.forEach(f => this.memberDetailsForm.get(f)?.disable({ emitEvent: false }));
-    } else {
-      this.hasLicenseeProfile = false;
-      this.memberDetailsForm.patchValue(fillData, { emitEvent: false });
-    }
-
-    this.cdr.detectChanges();
-  }
+  // Kept for edit flow: fills licensee read-only fields when editing an existing member
+  private fillReadOnlyProfileFields(_licensee: any): void { /* no-op: profile section removed */ }
 
   // ─────────────────────────────────────────────────────────────────
   // Validation helpers

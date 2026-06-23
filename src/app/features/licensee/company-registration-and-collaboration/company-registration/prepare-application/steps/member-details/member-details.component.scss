@@ -250,32 +250,6 @@ $text-mute: #6b7a9e;
   .full-span { grid-column: 1 / -1; }
 }
 
-// ── Profile Section ──────────────────────────────────────────────
-.profile-section {
-  margin-top: 24px;
-  padding: 20px;
-  background: linear-gradient(135deg, rgba($primary,0.03), rgba($accent,0.06));
-  border-radius: 12px;
-  border: 1.5px solid $border;
-}
-
-.section-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: $primary;
-  margin-bottom: 4px;
-
-  .sub-label {
-    font-size: 11px;
-    font-weight: 400;
-    color: $text-mute;
-    margin-left: 4px;
-  }
-}
-
 // ── Warning Banner ───────────────────────────────────────────────
 .no-profile-warning {
   display: flex;
@@ -326,7 +300,7 @@ $text-mute: #6b7a9e;
   display: flex;
   align-items: center;
   gap: 12px;
-  justify-content: flex-end;
+  justify-content: center;
   padding-top: 8px;
   border-top: 1px solid $border;
 

@@ -158,43 +158,6 @@
 
           </div>
 
-          <!-- ── LICENSEE PROFILE (read-only, auto-filled) ─────────── -->
-          @if (hasLicenseeProfile) {
-            <div class="section profile-section">
-              <div class="section-heading">
-                <mat-icon style="color:#1C2B78;">person_pin</mat-icon>
-                Licensee Profile Details
-                <span class="sub-label">(auto-filled · read-only)</span>
-              </div>
-
-              <div class="form-field-container">
-                <mat-form-field appearance="outline">
-                  <mat-label>Father's Name</mat-label>
-                  <input matInput formControlName="fatherName" readonly />
-                  <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Date of Birth</mat-label>
-                  <input matInput formControlName="dob" readonly />
-                  <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Gender</mat-label>
-                  <input matInput formControlName="gender" readonly />
-                  <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Nationality</mat-label>
-                  <input matInput formControlName="nationality" readonly />
-                  <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
-                </mat-form-field>
-              </div>
-            </div>
-          }
-
           <!-- ── WARNING: No licensee profile found ─────────────────── -->
           @if (!hasLicenseeProfile) {
             <div class="no-profile-warning">
@@ -247,7 +210,7 @@
             color="primary"
             class="next-btn"
             (click)="proceedToNext()"
-            [disabled]="members.length === 0 && memberDetailsForm.invalid">
+            [disabled]="members.length === 0">
       Next
       <mat-icon>arrow_forward</mat-icon>
     </button>
