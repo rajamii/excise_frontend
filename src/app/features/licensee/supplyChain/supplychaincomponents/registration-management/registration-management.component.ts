@@ -315,6 +315,7 @@ export class RegistrationManagementComponent implements OnInit {
     this.dialog.open(ObjectionDetailsDialogComponent, {
       width: 'min(980px, 96vw)',
       maxWidth: '96vw',
+      panelClass: 'objection-details-dialog',
       data: { applicationId }
     });
   }

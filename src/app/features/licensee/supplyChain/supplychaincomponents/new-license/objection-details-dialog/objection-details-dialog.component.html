@@ -1,54 +1,54 @@
-<h2 mat-dialog-title class="dialog-title">
-  <mat-icon class="title-icon">gavel</mat-icon>
-  <span>Objection Details</span>
-</h2>
+<div class="od-wrapper">
 
-<mat-dialog-content class="content">
-  @if (isLoading) {
-    <div class="state">
-      <mat-spinner diameter="44"></mat-spinner>
-      <div>Loading objections...</div>
-    </div>
-  } @else if (error) {
-    <div class="error">{{ error }}</div>
-  } @else if (unresolved.length === 0 && resolved.length === 0) {
-    <div class="empty">No objections found.</div>
-  } @else {
+  <!-- Header -->
+  <div class="od-header">
+    <mat-icon class="od-header-icon">gavel</mat-icon>
+    <span>Objection Details</span>
+  </div>
 
-    @if (unresolved.length > 0) {
-      <div class="section-header unresolved-header">
-        <mat-icon>error_outline</mat-icon>
-        <span>Unresolved &nbsp;·&nbsp; {{ unresolved.length }} field(s) need correction</span>
+  <!-- Scrollable body -->
+  <div class="od-body">
+    @if (isLoading) {
+      <div class="od-state">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>Loading objections...</span>
       </div>
-      <div class="list">
-        @for (obj of unresolved; track obj) {
-          <div class="item item-red">
-            <div class="item-accent-bar red-bar"></div>
-            <div class="item-body">
-              <div class="top">
-                <div class="field">
-                  <mat-icon class="field-icon red-icon">cancel</mat-icon>
+    } @else if (error) {
+      <div class="od-alert od-alert-error">{{ error }}</div>
+    } @else if (unresolved.length === 0 && resolved.length === 0) {
+      <div class="od-alert od-alert-empty">No objections found.</div>
+    } @else {
+
+      @if (unresolved.length > 0) {
+        <div class="od-section-label od-section-red">
+          <mat-icon>error_outline</mat-icon>
+          <span>Unresolved &nbsp;·&nbsp; {{ unresolved.length }} field(s) need correction</span>
+        </div>
+        <div class="od-list">
+          @for (obj of unresolved; track obj) {
+            <div class="od-card od-card-red">
+              <div class="od-top">
+                <div class="od-field">
+                  <mat-icon class="od-fi od-fi-red">cancel</mat-icon>
                   {{ label(obj.fieldName) }}
                 </div>
-                <div class="meta">
+                <div class="od-meta">
                   @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
                   @if (obj.raisedAt) { <span>On: {{ obj.raisedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
                 </div>
               </div>
-              <div class="remark remark-red">
-                <mat-icon class="remark-icon">comment</mat-icon>
+              <div class="od-remark od-remark-red">
+                <mat-icon class="od-ri">comment</mat-icon>
                 {{ obj.remarks }}
               </div>
               @if (obj.beforeContent) {
-                <div class="changes one">
-                  <div class="change change-current">
-                    <div class="change-label">Current Value</div>
-                    <div class="value">
-                      <span class="text">{{ obj.beforeContent }}</span>
+                <div class="od-diff od-diff-one">
+                  <div class="od-diff-box od-diff-before">
+                    <div class="od-diff-label">Current Value</div>
+                    <div class="od-diff-val">
+                      <span>{{ obj.beforeContent }}</span>
                       @if (isDocumentValue(obj.beforeContent)) {
-                        <button mat-icon-button type="button" class="eye"
-                          (click)="previewDocument(label(obj.fieldName) + ' (Current)', obj.beforeContent)"
-                          title="Preview document">
+                        <button mat-icon-button type="button" (click)="previewDocument(label(obj.fieldName) + ' (Current)', obj.beforeContent)">
                           <mat-icon>visibility</mat-icon>
                         </button>
                       }
@@ -57,60 +57,53 @@
                 </div>
               }
             </div>
-          </div>
-        }
-      </div>
-    }
+          }
+        </div>
+      }
 
-    @if (resolved.length > 0) {
-      <div class="section-header resolved-header" [class.mt-section]="unresolved.length > 0">
-        <mat-icon>check_circle_outline</mat-icon>
-        <span>Resolved &nbsp;·&nbsp; {{ resolved.length }} field(s) corrected</span>
-      </div>
-      <div class="list">
-        @for (obj of resolved; track obj) {
-          <div class="item item-green">
-            <div class="item-accent-bar green-bar"></div>
-            <div class="item-body">
-              <div class="top">
-                <div class="field">
-                  <mat-icon class="field-icon green-icon">check_circle</mat-icon>
+      @if (resolved.length > 0) {
+        <div class="od-section-label od-section-green" [class.od-mt]="unresolved.length > 0">
+          <mat-icon>check_circle_outline</mat-icon>
+          <span>Resolved &nbsp;·&nbsp; {{ resolved.length }} field(s) corrected</span>
+        </div>
+        <div class="od-list">
+          @for (obj of resolved; track obj) {
+            <div class="od-card od-card-green">
+              <div class="od-top">
+                <div class="od-field">
+                  <mat-icon class="od-fi od-fi-green">check_circle</mat-icon>
                   {{ label(obj.fieldName) }}
-                  <span class="badge-updated">UPDATED</span>
+                  <span class="od-badge">UPDATED</span>
                 </div>
-                <div class="meta">
+                <div class="od-meta">
                   @if (obj.raisedByName) { <span>Raised by: {{ obj.raisedByName }}</span> }
                   @if (obj.resolvedByName) { <span>Updated by: {{ obj.resolvedByName }}</span> }
                   @if (obj.resolvedAt) { <span>On: {{ obj.resolvedAt | date:'dd-MMM-yyyy, h:mm a' }}</span> }
                 </div>
               </div>
-              <div class="remark remark-green">
-                <mat-icon class="remark-icon">comment</mat-icon>
+              <div class="od-remark od-remark-green">
+                <mat-icon class="od-ri">comment</mat-icon>
                 {{ obj.remarks }}
               </div>
               @if (obj.beforeContent || obj.afterContent) {
-                <div class="changes">
-                  <div class="change change-before">
-                    <div class="change-label">Before</div>
-                    <div class="value">
-                      <span class="text">{{ obj.beforeContent || '-' }}</span>
+                <div class="od-diff">
+                  <div class="od-diff-box od-diff-before">
+                    <div class="od-diff-label">Before</div>
+                    <div class="od-diff-val">
+                      <span>{{ obj.beforeContent || '-' }}</span>
                       @if (isDocumentValue(obj.beforeContent)) {
-                        <button mat-icon-button type="button" class="eye"
-                          (click)="previewDocument(label(obj.fieldName) + ' (Before)', obj.beforeContent)"
-                          title="Preview document">
+                        <button mat-icon-button type="button" (click)="previewDocument(label(obj.fieldName) + ' (Before)', obj.beforeContent)">
                           <mat-icon>visibility</mat-icon>
                         </button>
                       }
                     </div>
                   </div>
-                  <div class="change change-after">
-                    <div class="change-label">After</div>
-                    <div class="value">
-                      <span class="text">{{ obj.afterContent || '-' }}</span>
+                  <div class="od-diff-box od-diff-after">
+                    <div class="od-diff-label">After</div>
+                    <div class="od-diff-val">
+                      <span>{{ obj.afterContent || '-' }}</span>
                       @if (isDocumentValue(obj.afterContent)) {
-                        <button mat-icon-button type="button" class="eye"
-                          (click)="previewDocument(label(obj.fieldName) + ' (After)', obj.afterContent)"
-                          title="Preview document">
+                        <button mat-icon-button type="button" (click)="previewDocument(label(obj.fieldName) + ' (After)', obj.afterContent)">
                           <mat-icon>visibility</mat-icon>
                         </button>
                       }
@@ -119,14 +112,16 @@
                 </div>
               }
             </div>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      }
+
     }
+  </div>
 
-  }
-</mat-dialog-content>
+  <!-- Footer -->
+  <div class="od-footer">
+    <button mat-flat-button type="button" class="od-close-btn" (click)="close()">Close</button>
+  </div>
 
-<mat-dialog-actions align="end" class="dialog-actions">
-  <button mat-flat-button type="button" class="btn-close" (click)="close()">Close</button>
-</mat-dialog-actions>
+</div>

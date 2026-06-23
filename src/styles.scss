@@ -1442,3 +1442,25 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   font-style: italic;
   text-align: center;
 }
+
+// ── Objection Details dialog — global Material overrides ─────────────────────
+.objection-details-dialog {
+
+  // Strip the dialog surface's own padding so our wrapper controls layout fully
+  .mdc-dialog__surface,
+  .mat-mdc-dialog-surface {
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+  }
+
+  // Remove any inner container padding
+  .mat-mdc-dialog-container {
+    padding: 0 !important;
+  }
+
+  .mat-mdc-dialog-content {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

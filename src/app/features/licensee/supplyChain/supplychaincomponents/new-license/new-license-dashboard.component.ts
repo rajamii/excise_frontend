@@ -704,6 +704,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.dialog.open(ObjectionDetailsDialogComponent, {
       width: 'min(820px, 92vw)',
       maxWidth: '92vw',
+      panelClass: 'objection-details-dialog',
       data: { applicationId }
     });
   }
