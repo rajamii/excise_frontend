@@ -343,7 +343,11 @@ export class LicenseComponent implements OnInit, OnDestroy {
           console.log('✅ Fetched licensees:', data);
           console.log('📊 Total licensees found:', data.length);
 
-          this.filteredLicensees = data;
+          // Exclude SB-type (salesman/barman) licenses from the selection list
+          this.filteredLicensees = data.filter(l => {
+            const id = String(l.licenseeId || l.id || '');
+            return !id.toUpperCase().startsWith('SB/') && !id.toUpperCase().startsWith('SBM/');
+          });
 
           if (data.length > 0) {
             this.applicationForm.get('licensee')?.enable();
