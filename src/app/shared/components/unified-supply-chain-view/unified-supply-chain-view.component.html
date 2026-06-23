@@ -1314,23 +1314,6 @@
                 </div>
                 }
 
-                <div class="section-card mb-4">
-                    <h5 class="section-title">Payment Information</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light detail-label-cell">Payment Amount</td>
-                                    <td class="text-success fw-bold">Rs {{ applicationData.paymentAmount || applicationData.brAmount || 0 }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Payment Remarks</td>
-                                    <td>{{ applicationData.paymentRemarks || 'Not available' }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
                 }
 
                 @if (isCompanyCollaboration()) {
