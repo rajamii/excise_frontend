@@ -13,9 +13,11 @@ import { UnifiedDashboardService } from '../../../../../core/services/unified-da
 import { Objection } from '../../../../../core/models/license-application.model';
 import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
+import { environment } from '../../../../../../environments/environment';
 
 export interface SalesmanBarmanResolveObjectionsDialogData {
   applicationId: string;
+  appType?: 'salesman-barman' | 'company-registration';
 }
 
 @Component({
@@ -53,39 +55,59 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
           No unresolved objections found.
         </div>
 
-         <form *ngIf="unresolvedObjections.length" [formGroup]="form" class="sb-form">
-           <div class="sb-field" *ngFor="let obj of unresolvedObjections">
-             <div class="sb-field-header">
-               <div class="sb-field-name">{{ label(obj.fieldName) }}</div>
-               <div class="sb-field-remark">{{ obj.remarks }}</div>
-             </div>
- 
-             <mat-form-field appearance="outline" class="w-100">
-               <mat-label>Corrected Value</mat-label>
-               <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
-               <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
-                 {{ errorText(obj.fieldName) }}
-               </mat-error>
-             </mat-form-field>
-           </div>
-         </form>
-       </ng-container>
-     </div>
- 
-     <div mat-dialog-actions align="end">
-       <button mat-button type="button" (click)="close()">Cancel</button>
-       <button
-         *ngIf="unresolvedObjections.length"
-         mat-raised-button
-         color="primary"
-         type="button"
-         (click)="submit()"
-         [disabled]="isSubmitDisabled"
-       >
-         Submit
-       </button>
-     </div>
-   `,
+        <form *ngIf="unresolvedObjections.length" [formGroup]="form" class="sb-form">
+          <div class="sb-field" *ngFor="let obj of unresolvedObjections">
+            <div class="sb-field-header mb-1">
+              <div class="sb-field-name">{{ label(obj.fieldName) }}</div>
+              <div class="sb-field-remark text-danger fw-semibold d-flex align-items-center">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;">error</mat-icon>
+                <span>{{ obj.remarks }}</span>
+              </div>
+            </div>
+
+            <div class="sb-current mb-2" *ngIf="currentValue(obj.fieldName) as cv">
+              <span class="fw-semibold text-muted small">Current: </span>
+              <ng-container *ngIf="isDocumentPath(cv); else textVal">
+                <a [href]="getDocumentUrl(cv)" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center py-1">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;">description</mat-icon>
+                  View Document
+                </a>
+              </ng-container>
+              <ng-template #textVal>
+                <span class="text-dark small">{{ cv }}</span>
+              </ng-template>
+            </div>
+
+            <div class="file-upload-row my-2" *ngIf="isFileField(obj.fieldName, currentValue(obj.fieldName))">
+              <input type="file" (change)="onFileSelected(obj.fieldName, $event)" class="form-control" />
+            </div>
+
+            <mat-form-field appearance="outline" class="w-100" *ngIf="!isFileField(obj.fieldName, currentValue(obj.fieldName))">
+              <mat-label>Corrected Value</mat-label>
+              <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+              <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
+                {{ errorText(obj.fieldName) }}
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </form>
+      </ng-container>
+    </div>
+
+    <div mat-dialog-actions align="end">
+      <button mat-button type="button" (click)="close()">Cancel</button>
+      <button
+        *ngIf="unresolvedObjections.length"
+        mat-raised-button
+        color="primary"
+        type="button"
+        (click)="submit()"
+        [disabled]="isSubmitDisabled"
+      >
+        Submit
+      </button>
+    </div>
+  `,
   styles: [`
     .sb-resolve-content { min-width: min(920px, 92vw); }
     .sb-loading { display:flex; align-items:center; padding: 8px 0; }
@@ -95,7 +117,8 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
     .sb-field { border:1px solid #e5e7eb; border-radius: 12px; padding: 12px; background:#fff; }
     .sb-field-header { display:flex; flex-direction:column; gap: 4px; margin-bottom: 10px; }
     .sb-field-name { font-weight: 700; color:#111827; }
-    .sb-field-remark { color:#6b7280; font-size: 13px; white-space: pre-wrap; }
+    .sb-field-remark { color:#dc2626; font-size: 13px; white-space: pre-wrap; display: flex; align-items: center; }
+    .sb-current { background: #f9fafb; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #d1d5db; }
   `]
 })
 export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
@@ -121,8 +144,9 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
       return;
     }
 
+    const appType = this.data?.appType || 'salesman-barman';
     const objections$ = this.unifiedService.getObjections(appId).pipe(catchError(() => of([] as any)));
-    const application$ = this.unifiedService.getApplicationDetail(appId, 'salesman-barman').pipe(catchError(() => of(null)));
+    const application$ = this.unifiedService.getApplicationDetail(appId, appType).pipe(catchError(() => of(null)));
 
     forkJoin({ objections: objections$, application: application$ }).subscribe({
       next: ({ objections, application }) => {
@@ -131,7 +155,12 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
 
         const group: Record<string, FormControl<any>> = {};
         for (const obj of this.unresolvedObjections) {
-          group[obj.fieldName] = new FormControl<any>('', { validators: this.validatorsForField(obj.fieldName) });
+          const current = this.currentValue(obj.fieldName);
+          if (this.isFileField(obj.fieldName, current)) {
+            group[obj.fieldName] = new FormControl<any>(null, { validators: [Validators.required] });
+          } else {
+            group[obj.fieldName] = new FormControl<any>('', { validators: this.validatorsForField(obj.fieldName) });
+          }
         }
         this.form = new FormGroup(group);
         this.isLoading = false;
@@ -162,6 +191,63 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
       .join(' ');
   }
 
+  currentValue(fieldName: string): any {
+    return this.pickValue(fieldName, this.application);
+  }
+
+  isFileField(fieldName: string, value: unknown): boolean {
+    const key = String(fieldName || '').toLowerCase();
+    if (key.includes('photo') || key.includes('certificate') || key.includes('document') || key.endsWith('_doc') || key.includes('deed') || key.includes('association') || key.includes('undertaking')) return true;
+
+    if (typeof value !== 'string') return false;
+    const v = value.toLowerCase();
+    return (
+      v.includes('/media/') ||
+      v.endsWith('.pdf') ||
+      v.endsWith('.jpg') ||
+      v.endsWith('.jpeg') ||
+      v.endsWith('.png') ||
+      v.endsWith('.webp') ||
+      v.endsWith('.doc') ||
+      v.endsWith('.docx')
+    );
+  }
+
+  isDocumentPath(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    const v = value.toLowerCase();
+    return (
+      v.includes('/media/') ||
+      v.endsWith('.pdf') ||
+      v.endsWith('.jpg') ||
+      v.endsWith('.jpeg') ||
+      v.endsWith('.png') ||
+      v.endsWith('.webp') ||
+      v.endsWith('.doc') ||
+      v.endsWith('.docx')
+    );
+  }
+
+  getDocumentUrl(value: unknown): string {
+    if (typeof value !== 'string') return '#';
+    const url = value.trim();
+    if (!url) return '#';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${base}${path}`;
+  }
+
+  onFileSelected(fieldName: string, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+    if (!file) return;
+    const ctrl = this.form.get(fieldName) as FormControl<any> | null;
+    ctrl?.setValue(file);
+    ctrl?.markAsDirty();
+    ctrl?.markAsTouched();
+  }
+
   close(): void {
     this.dialogRef.close(false);
   }
@@ -176,11 +262,18 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
   private allCorrectedValuesProvidedAndChanged(): boolean {
     for (const obj of this.unresolvedObjections) {
       const ctrl = this.form.get(obj.fieldName) as FormControl<any> | null;
-      const corrected = String(ctrl?.value ?? '').trim();
-      if (!corrected) return false;
+      const corrected = ctrl?.value;
+      if (corrected === null || corrected === undefined) return false;
+
+      if (corrected instanceof File) {
+        continue;
+      }
+
+      const correctedStr = String(corrected).trim();
+      if (!correctedStr) return false;
 
       const original = this.originalValueFor(obj);
-      if (corrected === original) return false;
+      if (correctedStr === original) return false;
     }
     return true;
   }
@@ -232,7 +325,7 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
     const lower = key.toLowerCase();
     const validators: ValidatorFn[] = [Validators.required];
 
-    if (lower === 'firstname' || lower === 'middlename' || lower === 'lastname' || lower === 'fatherhusbandname' || lower === 'father_husband_name') {
+    if (lower.includes('name')) {
       validators.push(Validators.pattern(PatternConstants.NAME));
       return validators;
     }
@@ -247,22 +340,22 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
       return validators;
     }
 
-    if (lower === 'mobilenumber' || lower === 'mobile_number') {
+    if (lower.includes('mobile') || lower.includes('phone')) {
       validators.push(Validators.pattern(PatternConstants.MOBILE));
       return validators;
     }
 
-    if (lower === 'emailid' || lower === 'email_id' || lower.includes('email')) {
+    if (lower.includes('email')) {
       validators.push(Validators.pattern(PatternConstants.EMAIL));
       return validators;
     }
 
-    if (lower === 'address') {
+    if (lower.includes('address')) {
       validators.push(Validators.pattern(PatternConstants.ADDRESS));
       return validators;
     }
 
-    if (lower === 'pincode' || lower === 'pin_code') {
+    if (lower.includes('pincode') || lower.includes('pin_code')) {
       validators.push(Validators.pattern(PatternConstants.PINCODE));
       return validators;
     }
@@ -298,7 +391,8 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
     const formData = FormDataUtil.buildFormData(payload);
 
     this.isLoading = true;
-    this.unifiedService.resolveObjections(appId, 'salesman-barman', formData).subscribe({
+    const appType = this.data?.appType || 'salesman-barman';
+    this.unifiedService.resolveObjections(appId, appType, formData).subscribe({
       next: () => {
         this.isLoading = false;
         void Swal.fire('Success', 'Corrections submitted successfully.', 'success');

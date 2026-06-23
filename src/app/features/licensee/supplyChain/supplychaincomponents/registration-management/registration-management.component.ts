@@ -321,19 +321,25 @@ export class RegistrationManagementComponent implements OnInit {
 
   fixObjections(row: { id: string; applicationId: string; statusGroup?: string }): void {
     if (!this.isLicenseeUser()) return;
-    if (this.currentSection !== 'salesman-barman-registration') return;
+    if (this.currentSection !== 'salesman-barman-registration' && this.currentSection !== 'company-registration') return;
     if (String((row as any)?.statusGroup || '').toLowerCase() !== 'objection') return;
 
     const applicationId = String(row.applicationId || row.id || '').trim();
     if (!applicationId) return;
 
+    const appType = this.currentSection === 'company-registration' ? 'company-registration' : 'salesman-barman';
+
     this.dialog.open(SalesmanBarmanResolveObjectionsDialogComponent, {
       width: 'min(1020px, 96vw)',
       maxWidth: '96vw',
-      data: { applicationId }
+      data: { applicationId, appType }
     }).afterClosed().subscribe((ok) => {
       if (ok) {
-        this.loadSalesmanBarmanData();
+        if (appType === 'company-registration') {
+          this.loadCompanyData();
+        } else {
+          this.loadSalesmanBarmanData();
+        }
       }
     });
   }
