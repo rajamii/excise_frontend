@@ -54,6 +54,7 @@ export interface UnifiedApplicationData {
     referenceNo: string;
     submissionDate: Date;
     status: string;
+    members?: any[];
 
     // Workflow fields
     currentStage?: number;

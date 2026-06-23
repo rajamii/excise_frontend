@@ -1214,8 +1214,47 @@
                     </div>
                 </div>
 
+                @if (applicationData.members && applicationData.members.length > 0) {
                 <div class="section-card mb-4">
-                    <h5 class="section-title">Authorized Member & Payment Information</h5>
+                    <h5 class="section-title">Authorized Member Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Member Name</th>
+                                    <th>Designation</th>
+                                    <th>Mobile Number</th>
+                                    <th>Email ID</th>
+                                    <th>Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let member of applicationData.members; let i = index">
+                                    <td>{{ i + 1 }}</td>
+                                    <td>
+                                        {{ member.memberName || member.member_name || 'Not available' }}
+                                    </td>
+                                    <td>
+                                        {{ member.memberDesignation || member.member_designation || 'Not available' }}
+                                    </td>
+                                    <td>
+                                        {{ member.memberMobileNumber || member.member_mobile_number || 'Not available' }}
+                                    </td>
+                                    <td>
+                                        {{ member.memberEmailId || member.member_email_id || 'Not available' }}
+                                    </td>
+                                    <td>
+                                        {{ member.memberAddress || member.member_address || 'Not available' }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                } @else {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Authorized Member Information</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
@@ -1269,8 +1308,19 @@
                                          </ng-container>
                                      </td>
                                  </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Payment Information</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Payment Amount</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Payment Amount</td>
                                     <td class="text-success fw-bold">Rs {{ applicationData.paymentAmount || applicationData.brAmount || 0 }}</td>
                                 </tr>
                                 <tr>
