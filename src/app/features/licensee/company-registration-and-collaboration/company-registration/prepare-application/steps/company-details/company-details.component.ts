@@ -52,8 +52,6 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     license:             signal(''),
     applicationYear:     signal(''),
     companyName:         signal(''),
-    pan:                 signal(''),
-    officeAddress:       signal(''),
     country:             signal(''),
     state:               signal(''),
     factoryAddress:      signal(''),
@@ -81,8 +79,6 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       license:             new FormControl(storedValues.license,             Validators.required),
       applicationYear:     new FormControl(storedValues.applicationYear || currentFinYear,     Validators.required),
       companyName:         new FormControl(storedValues.companyName,         [Validators.required, Validators.pattern(PatternConstants.NAME)]),
-      pan:                 new FormControl(storedValues.pan,                 [Validators.required, Validators.pattern(PatternConstants.PAN)]),
-      officeAddress:       new FormControl(storedValues.officeAddress,       [Validators.required, Validators.maxLength(1000)]),
       country:             new FormControl(storedValues.country,             [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       state:               new FormControl(storedValues.state,               [Validators.required]),
       factoryAddress:      new FormControl(storedValues.factoryAddress,      [Validators.required, Validators.maxLength(500)]),
@@ -124,7 +120,6 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    FormUtils.capitalize(this.companyDetailsForm.get('pan')!, this.destroy$);
     this.loadLicenseTypes();
 
     // ✅ Auto-fill after short delay to ensure form is ready
@@ -189,19 +184,10 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       if (!this.companyDetailsForm.get('companyEmailId')?.value && user.email) {
         fillData.companyEmailId = user.email;
       }
-      if (!this.companyDetailsForm.get('officeAddress')?.value && user.address) {
-        fillData.officeAddress = user.address;
-      }
     }
 
     // ── From licensee profile ──────────────────────────────────────
     if (licensee) {
-      // ✅ Auto-fill PAN from licensee profile
-      if (!this.companyDetailsForm.get('pan')?.value && licensee.panNumber) {
-        fillData.pan = licensee.panNumber;
-        console.log(`✅ Auto-filled PAN: ${licensee.panNumber}`);
-      }
-
       const nationality: string = (licensee.nationality || '').trim().toLowerCase();
 
       // Map nationality → country dropdown

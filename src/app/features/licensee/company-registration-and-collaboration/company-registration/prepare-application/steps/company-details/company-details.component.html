@@ -71,33 +71,9 @@
           }
         </mat-form-field>
 
-        <!-- PAN Input -->
-        <mat-form-field appearance="outline">
-          <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter PAN" type="text" formControlName="pan" required/>
-          @if (companyDetailsForm.controls['pan'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('pan') }}
-            </mat-error>
-          }
-        </mat-form-field>
+        <!-- PAN Input — REMOVED -->
 
-        <!-- Registered Office Address -->
-        <mat-form-field appearance="outline">
-          <mat-label>Registered Office Address</mat-label>
-          <textarea matInput placeholder="Enter Registered Office Address (max 1000 characters)"
-            formControlName="officeAddress"
-            cdkTextareaAutosize
-            #autosize="cdkTextareaAutosize"
-            cdkAutosizeMinRows="1"
-            cdkAutosizeMaxRows="5">
-          </textarea>
-          @if (companyDetailsForm.controls['officeAddress'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('officeAddress') }}
-            </mat-error>
-          }
-        </mat-form-field>
+        <!-- Registered Office Address — REMOVED -->
 
       </div>
 
