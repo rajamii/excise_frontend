@@ -16,7 +16,7 @@
 
 .objection-row {
   display: grid;
-  grid-template-columns: 44px 240px minmax(260px, 1fr) 340px;
+  grid-template-columns: 44px 320px minmax(200px, 1fr) 340px;
   gap: 12px;
   align-items: center;
   padding: 10px 12px;
@@ -38,9 +38,7 @@
   background: rgba(25, 118, 210, 0.04);
   border-radius: 8px;
   padding: 6px 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .objection-col.value {
@@ -65,9 +63,8 @@
 
 .value-text {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  word-break: break-word;
   color: rgba(0, 0, 0, 0.75);
 }
 

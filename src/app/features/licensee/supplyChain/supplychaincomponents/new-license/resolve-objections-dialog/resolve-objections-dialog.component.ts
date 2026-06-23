@@ -107,6 +107,29 @@ export class ResolveObjectionsDialogComponent implements OnInit {
   }
 
   label(fieldName: string): string {
+    const raw = String(fieldName || '').trim();
+    if (raw.includes('::')) {
+      const parts = raw.split('::');
+      const key = parts[0];
+      const indexStr = parts[1];
+      const idx = parseInt(indexStr, 10);
+      if (!isNaN(idx) && this.application) {
+        const arr = this.pickValue(key, this.application);
+        if (Array.isArray(arr) && arr[idx]) {
+          const m = arr[idx];
+          const name = m.name || m.memberName || m.member_name || '';
+          const desig = m.designation || m.memberDesignation || m.member_designation || '';
+          const labelParts = [];
+          if (name) labelParts.push(name);
+          if (desig) labelParts.push(`(${desig})`);
+          return labelParts.length > 0
+            ? `Member Details [${idx + 1}]: ${labelParts.join(' ')}`
+            : `Member Details [${idx + 1}]`;
+        }
+      }
+      return `Member Details [${idx + 1}]`;
+    }
+
     return String(fieldName || '')
       .replace(/[_\-]+/g, ' ')
       .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -119,6 +142,33 @@ export class ResolveObjectionsDialogComponent implements OnInit {
   }
 
   currentValue(fieldName: string): any {
+    const raw = String(fieldName || '').trim();
+    if (raw.includes('::')) {
+      const parts = raw.split('::');
+      const key = parts[0];
+      const indexStr = parts[1];
+      const idx = parseInt(indexStr, 10);
+      if (!isNaN(idx) && this.application) {
+        const arr = this.pickValue(key, this.application);
+        if (Array.isArray(arr) && arr[idx]) {
+          const m = arr[idx];
+          const name = m.name || m.memberName || m.member_name || '';
+          const desig = m.designation || m.memberDesignation || m.member_designation || '';
+          const mob = m.mobile || m.mobileNumber || m.memberMobileNumber || m.member_mobile_number || '';
+          const email = m.email || m.emailId || m.memberEmailId || m.member_email_id || '';
+          const addr = m.address || m.memberAddress || m.member_address || '';
+          
+          const valParts = [];
+          if (name) valParts.push(`Name: ${name}`);
+          if (desig) valParts.push(`Designation: ${desig}`);
+          if (mob) valParts.push(`Mob: ${mob}`);
+          if (email) valParts.push(`Email: ${email}`);
+          if (addr) valParts.push(`Addr: ${addr}`);
+          return valParts.join('\n');
+        }
+      }
+      return null;
+    }
     return this.pickValue(fieldName, this.application);
   }
 

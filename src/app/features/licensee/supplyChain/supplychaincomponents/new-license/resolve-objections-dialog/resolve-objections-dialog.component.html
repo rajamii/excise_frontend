@@ -35,7 +35,7 @@
                 View Document
               </a>
             } @else {
-              <span class="current-value">{{ cv }}</span>
+              <span class="current-value" style="white-space: pre-wrap;">{{ cv }}</span>
             }
           </div>
 
@@ -46,7 +46,8 @@
            } @else {
              <mat-form-field appearance="outline" class="field-input">
                <mat-label>Correct Value</mat-label>
-               <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+               <textarea matInput *ngIf="obj.fieldName.toLowerCase().includes('address')" [formControlName]="obj.fieldName" rows="3"></textarea>
+               <input matInput *ngIf="!obj.fieldName.toLowerCase().includes('address')" [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
                <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
                  {{ errorText(obj.fieldName) }}
                </mat-error>

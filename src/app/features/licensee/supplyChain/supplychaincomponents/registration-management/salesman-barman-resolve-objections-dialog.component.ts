@@ -74,7 +74,7 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
                 </a>
               </ng-container>
               <ng-template #textVal>
-                <span class="text-dark small">{{ cv }}</span>
+                <span class="text-dark small" style="white-space: pre-wrap;">{{ cv }}</span>
               </ng-template>
             </div>
 
@@ -93,7 +93,8 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
                 </select>
               </ng-container>
               <ng-template #regularInput>
-                <input matInput [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+                <textarea matInput *ngIf="obj.fieldName.toLowerCase().includes('address')" [formControlName]="obj.fieldName" rows="3"></textarea>
+                <input matInput *ngIf="!obj.fieldName.toLowerCase().includes('address')" [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
               </ng-template>
               <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
                 {{ errorText(obj.fieldName) }}
@@ -128,7 +129,7 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
     .sb-field-header { display:flex; flex-direction:column; gap: 4px; margin-bottom: 10px; }
     .sb-field-name { font-weight: 700; color:#111827; }
     .sb-field-remark { color:#dc2626; font-size: 13px; white-space: pre-wrap; display: flex; align-items: center; }
-    .sb-current { background: #f9fafb; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #d1d5db; }
+    .sb-current { background: #f9fafb; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #d1d5db; white-space: pre-wrap; }
   `]
 })
 export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
@@ -190,6 +191,29 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
   }
 
   label(fieldName: string): string {
+    const raw = String(fieldName || '').trim();
+    if (raw.includes('::')) {
+      const parts = raw.split('::');
+      const key = parts[0];
+      const indexStr = parts[1];
+      const idx = parseInt(indexStr, 10);
+      if (!isNaN(idx) && this.application) {
+        const arr = this.pickValue(key, this.application);
+        if (Array.isArray(arr) && arr[idx]) {
+          const m = arr[idx];
+          const name = m.name || m.memberName || m.member_name || '';
+          const desig = m.designation || m.memberDesignation || m.member_designation || '';
+          const labelParts = [];
+          if (name) labelParts.push(name);
+          if (desig) labelParts.push(`(${desig})`);
+          return labelParts.length > 0
+            ? `Member Details [${idx + 1}]: ${labelParts.join(' ')}`
+            : `Member Details [${idx + 1}]`;
+        }
+      }
+      return `Member Details [${idx + 1}]`;
+    }
+
     return String(fieldName || '')
       .replace(/[_\-]+/g, ' ')
       .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -202,6 +226,33 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
   }
 
   currentValue(fieldName: string): any {
+    const raw = String(fieldName || '').trim();
+    if (raw.includes('::')) {
+      const parts = raw.split('::');
+      const key = parts[0];
+      const indexStr = parts[1];
+      const idx = parseInt(indexStr, 10);
+      if (!isNaN(idx) && this.application) {
+        const arr = this.pickValue(key, this.application);
+        if (Array.isArray(arr) && arr[idx]) {
+          const m = arr[idx];
+          const name = m.name || m.memberName || m.member_name || '';
+          const desig = m.designation || m.memberDesignation || m.member_designation || '';
+          const mob = m.mobile || m.mobileNumber || m.memberMobileNumber || m.member_mobile_number || '';
+          const email = m.email || m.emailId || m.memberEmailId || m.member_email_id || '';
+          const addr = m.address || m.memberAddress || m.member_address || '';
+          
+          const valParts = [];
+          if (name) valParts.push(`Name: ${name}`);
+          if (desig) valParts.push(`Designation: ${desig}`);
+          if (mob) valParts.push(`Mob: ${mob}`);
+          if (email) valParts.push(`Email: ${email}`);
+          if (addr) valParts.push(`Addr: ${addr}`);
+          return valParts.join('\n');
+        }
+      }
+      return null;
+    }
     return this.pickValue(fieldName, this.application);
   }
 

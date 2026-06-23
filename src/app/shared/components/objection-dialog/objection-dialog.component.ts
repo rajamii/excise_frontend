@@ -174,6 +174,8 @@ export class ObjectionDialogComponent implements OnInit {
       'created_at', 'updated_at', 'createdAt', 'updatedAt',
       'application_id', 'applicationId', 'applicationID',
       'referenceNo', 'reference_no',
+      'applicationYear', 'application_year', 'ApplicationYear',
+      'brAmount', 'br_amount', 'BrAmount',
 
       // ── Computed / auto-assigned — user never enters these ──────────────────
       // Applicant identity (derived from the user account, not the form)
@@ -275,7 +277,47 @@ export class ObjectionDialogComponent implements OnInit {
       const value = source[key];
 
       // Skip large / complex shapes.
-      if (Array.isArray(value)) continue;
+      if (Array.isArray(value)) {
+        if (key === 'members' || key === 'memberList' || key === 'membersList') {
+          value.forEach((m: any, idx: number) => {
+            const name = m.name || m.memberName || m.member_name || '';
+            const desig = m.designation || m.memberDesignation || m.member_designation || '';
+            
+            const identParts = [];
+            if (name) identParts.push(name);
+            if (desig && desig.toLowerCase() !== name.toLowerCase()) {
+              identParts.push(`(${desig})`);
+            }
+            const ident = identParts.length > 0 ? identParts.join(' ') : `Member ${idx + 1}`;
+
+            const fieldsToCheck = [
+              { prop: 'name', alias: ['name', 'memberName', 'member_name'], label: 'Name' },
+              { prop: 'designation', alias: ['designation', 'memberDesignation', 'member_designation'], label: 'Designation' },
+              { prop: 'mobile', alias: ['mobile', 'mobileNumber', 'memberMobileNumber', 'member_mobile_number'], label: 'Mobile' },
+              { prop: 'email', alias: ['email', 'emailId', 'memberEmailId', 'member_email_id'], label: 'Email' },
+              { prop: 'address', alias: ['address', 'memberAddress', 'member_address'], label: 'Address' }
+            ];
+
+            fieldsToCheck.forEach(f => {
+              let fieldVal = '';
+              for (const a of f.alias) {
+                if (m[a] !== undefined && m[a] !== null) {
+                  fieldVal = String(m[a]).trim();
+                  break;
+                }
+              }
+              if (fieldVal) {
+                candidates.push({
+                  field: `${key}::${idx}::${f.prop}`,
+                  label: `Member [${idx + 1}] - ${f.label} (${ident})`,
+                  value: fieldVal
+                });
+              }
+            });
+          });
+        }
+        continue;
+      }
 
       const keyStr = String(key || '');
       const keyLower = keyStr.toLowerCase();
