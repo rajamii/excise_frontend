@@ -263,6 +263,14 @@
                   >
                     <i class="bi bi-printer"></i>
                   </button>
+                  <button
+                    *ngIf="currentSection === 'company-registration' && row.statusGroup === 'approved'"
+                    class="btn btn-link p-0 action-print ms-2 text-success"
+                    title="Print Certificate"
+                    (click)="printLicense(row)"
+                  >
+                    <i class="bi bi-printer"></i>
+                  </button>
                 </td>
              </tr>
            </tbody>

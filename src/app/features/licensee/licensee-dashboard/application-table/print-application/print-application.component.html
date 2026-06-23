@@ -1,20 +1,23 @@
 <div class="dialog-container" align="center">
-  <h2 mat-dialog-title>Print License</h2>
+  <h2 mat-dialog-title>{{ getApplicationType() === 'company-registration' ? 'Print Certificate' : 'Print License' }}</h2>
 
   <mat-dialog-content class="print-dialog-content">
     <!-- Warning message about print limitations -->
-    <p class="print-warning">
+    <p class="print-warning" *ngIf="getApplicationType() !== 'company-registration'">
       The printing of license is limited to 5 nos, if lost a duplicate copy can be printed only after payment of Rs. 500/- per copy.
     </p>
+    <p class="print-warning" *ngIf="getApplicationType() === 'company-registration'">
+      Click the button below to view and print your Certificate of Company Registration.
+    </p>
 
-    <p class="print-count">
+    <p class="print-count" *ngIf="getApplicationType() !== 'company-registration'">
       No. of times license printed by licensee:
       <strong [ngClass]="{ 'over-limit': getPrintCount() >= 5 }">
         {{ getPrintCount() }}
       </strong>
     </p>
 
-    <p class="print-count" *ngIf="getPrintCount() >= 5">
+    <p class="print-count" *ngIf="getApplicationType() !== 'company-registration' && getPrintCount() >= 5">
       Duplicate print fee status:
       <strong [ngClass]="{ 'over-limit': !getIsPrintFeePaid() }">
         {{ getIsPrintFeePaid() ? 'Paid (1 copy)' : 'Not paid' }}
@@ -25,7 +28,7 @@
   <mat-dialog-actions align="center">
     <!-- ✅ SIMPLIFIED: Only check print count, not approval status -->
     <button matButton="filled" color="primary" [disabled]="!canPrint() || printing" (click)="onPrint()">
-      Print License
+      {{ getApplicationType() === 'company-registration' ? 'Print Certificate' : 'Print License' }}
     </button>
 
     <button matButton="outlined" (click)="onPay()" *ngIf="needsPayment()" [disabled]="paying">

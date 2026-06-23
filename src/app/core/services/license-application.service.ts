@@ -11,6 +11,7 @@ export class LicenseApplicationService {
   private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
   private readonly salesmanBarmanUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`;
+  private readonly companyRegistrationUrl = `${environment.apiBaseUrl}/transactional/company-registration`;
   private readonly renewalLicenseUrl = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
   private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
   private readonly workflowUrl = `${environment.apiBaseUrl}/auth`;
@@ -845,6 +846,11 @@ export class LicenseApplicationService {
     return this.http.get(`${this.salesmanBarmanUrl}/final-license/${encodedId}/`);
   }
 
+  getCompanyRegistrationFinalLicenseData(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.companyRegistrationUrl}/final-license/${encodedId}/`);
+  }
+
   getNewFinalLicensePassportPhoto(applicationId: string): Observable<Blob> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.newLicenseUrl}/final-license/${encodedId}/passport-photo/`, { responseType: 'blob' });
@@ -873,6 +879,11 @@ export class LicenseApplicationService {
   getSalesmanBarmanFinalLicenseQrCode(applicationId: string): Observable<Blob> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.salesmanBarmanUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
+  }
+
+  getCompanyRegistrationFinalLicenseQrCode(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.companyRegistrationUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
   }
 
   getNewLicenseObjections(applicationId: string): Observable<any> {

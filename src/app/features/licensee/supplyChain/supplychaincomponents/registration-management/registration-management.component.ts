@@ -361,11 +361,13 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
-    this.unifiedDashboardService.getApplicationDetail(appId, 'salesman-barman').subscribe({
+    const type = this.currentSection === 'salesman-barman-registration' ? 'salesman-barman' : 'company-registration';
+
+    this.unifiedDashboardService.getApplicationDetail(appId, type).subscribe({
       next: (fullApp: any) => {
         const formattedApp = {
           ...fullApp,
-          type: 'salesman-barman',
+          type: type,
           applicationId: appId,
           raw: fullApp
         };
@@ -378,7 +380,7 @@ export class RegistrationManagementComponent implements OnInit {
         console.error('Error fetching application details:', err);
         const formattedApp = {
           ...row,
-          type: 'salesman-barman',
+          type: type,
           applicationId: appId,
           raw: row
         };

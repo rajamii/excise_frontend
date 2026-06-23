@@ -40,13 +40,14 @@ export class PrintApplicationComponent {
     return /^\d+$/.test(value.trim());
   }
 
-  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | '' {
+  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | 'company-registration' | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
     if (id.startsWith('SBM/')) return 'salesman-barman';
     if (id.startsWith('RSBM/')) return 'license-renewal';
+    if (id.startsWith('COMP/')) return 'company-registration';
     if (id.startsWith('NA/')) return 'new-license';
     if (id.startsWith('LA/')) return 'license-renewal';
     if (id.startsWith('SB/')) return 'salesman-barman';
@@ -141,7 +142,7 @@ export class PrintApplicationComponent {
   }
 
   canPrint(): boolean {
-    if (this.getApplicationType() === 'salesman-barman') {
+    if (this.getApplicationType() === 'salesman-barman' || this.getApplicationType() === 'company-registration') {
       return true;
     }
     const count = this.getPrintCount();
@@ -150,7 +151,7 @@ export class PrintApplicationComponent {
   }
 
   needsPayment(): boolean {
-    if (this.getApplicationType() === 'salesman-barman') {
+    if (this.getApplicationType() === 'salesman-barman' || this.getApplicationType() === 'company-registration') {
       return false;
     }
     return this.getPrintCount() >= 5 && !this.getIsPrintFeePaid();
@@ -191,6 +192,18 @@ export class PrintApplicationComponent {
 
     const finalLicenseId = this.getFinalLicenseId();
     const appType = this.getApplicationType();
+
+    if (appType === 'company-registration') {
+      this.dialogRef.close(true);
+      void this.router.navigate(['/final-license'], {
+        queryParams: {
+          applicationId: finalLicenseId,
+          type: appType,
+          returnUrl: this.data?.returnUrl || '',
+        }
+      });
+      return;
+    }
 
     let printObservable;
 
