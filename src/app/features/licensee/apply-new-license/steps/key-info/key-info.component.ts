@@ -25,7 +25,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   pachwaiAmount = signal<number>(3000);
   draughtBeerAmount = signal<number>(5000);
   private readonly additionalChargeCategoryIds = new Set<number>([1, 10, 12, 14]);
-  
+
   // Store ALL subcategories from API
   private allSubCategories: LicenseSubcategory[] = [];
 
@@ -82,10 +82,10 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-       
+
     // Load categories first
     this.loadDropdownData();
-    
+
     // Load all subcategories
     this.loadAllSubCategories();
 
@@ -93,7 +93,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     this.keyInfoForm.get('licenseCategory')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(categoryId => {
-        console.log('📂 Category changed to:', categoryId);
         const subCategoryCtrl = this.keyInfoForm.get('licenseSubCategory');
         const showExtras = !!categoryId && this.additionalChargeCategoryIds.has(Number(categoryId));
         this.shouldShowAdditionalCharges.set(showExtras);
@@ -118,7 +117,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  
+
   //Load license categories from API
   private loadDropdownData(): void {
     this.masterService.getLicenseCategories().subscribe({
@@ -127,7 +126,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           id: item.id ?? 0,
           licenseCategory: item.licenseCategory,
           description: item.description ?? ''
-        }));        
+        }));
         sessionStorage.setItem('licenseCategories', JSON.stringify(this.licenseCategories));
         this.restoreCategoryIfNeeded();
       },
@@ -139,12 +138,11 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   private loadAllSubCategories(): void {
     this.masterService.getLicenseSubcategories().subscribe({
       next: (data: any[]) => {
-        console.log('📦 Raw subcategories from API:', data);
-        
+
         this.allSubCategories = data.map(d => {
           // Handle multiple possible field names for category foreign key
           let categoryId: number;
-          
+
           if (d.license_category_id !== undefined && d.license_category_id !== null) {
             categoryId = Number(d.license_category_id);
           } else if (d.category !== undefined && d.category !== null) {
@@ -163,13 +161,13 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
             console.warn('No category field found in subcategory:', d);
             categoryId = 0;
           }
-            
+
           const subcategory: LicenseSubcategory = {
             id: d.id ?? 0,
             description: d.description ?? '',
             category: categoryId
           };
-          
+
           return subcategory;
         });
 
@@ -178,7 +176,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         if (currentCategory) {
           this.filterSubCategories(currentCategory);
         }
-        
+
         sessionStorage.setItem('licenseSubcategories', JSON.stringify(this.allSubCategories));
         this.restoreSubcategoryIfNeeded();
       },
@@ -218,10 +216,10 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   private restoreCategoryIfNeeded(): void {
     const stored = this.getFromSessionStorage();
     const categoryId = stored['licenseCategory'];
-    
+
     if (categoryId && this.licenseCategories.some(c => c.id === categoryId)) {
       this.keyInfoForm.patchValue({ licenseCategory: categoryId }, { emitEvent: false });
-      
+
       // Trigger filtering after a short delay to ensure subcategories are loaded
       setTimeout(() => {
         if (this.allSubCategories.length > 0) {
@@ -237,7 +235,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   private restoreSubcategoryIfNeeded(): void {
     const stored = this.getFromSessionStorage();
     const subCategoryId = stored['licenseSubCategory'];
-    
+
     if (subCategoryId && this.licenseSubCategories.length > 0) {
       const isValid = this.licenseSubCategories.some(s => s.id === subCategoryId);
       if (isValid) {
@@ -259,7 +257,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
    */
   private saveToSessionStorage(): void {
     const formData = this.keyInfoForm.getRawValue();
-    
+
     // Map to backend field names
     const backendData = {
       // Keep original for restoration
@@ -270,7 +268,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       existingSiteLicense: formData.siteType === 'Existing' ? formData.existingSiteLicense : null,
       pachwai: !!formData.pachwai,
       draughtBeer: !!formData.draughtBeer,
-       
+
       // Backend field names (PrimaryKeyRelatedField expects IDs)
       license_category: formData.licenseCategory,
       license_category_name: this.getLicenseCategoryName(formData.licenseCategory),
@@ -283,7 +281,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       pachwai_selected: !!formData.pachwai,
       draught_beer: !!formData.draughtBeer,
     };
-    
+
     console.log('Saving Key Info:', backendData);
     sessionStorage.setItem('keyInfoData', JSON.stringify(backendData));
   }
@@ -327,7 +325,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
    */
   private updateErrorMessage(field: keyof typeof this.errorMessages): void {
     const control = this.keyInfoForm.get(field);
-    
+
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
     } else if (control?.hasError('pattern')) {

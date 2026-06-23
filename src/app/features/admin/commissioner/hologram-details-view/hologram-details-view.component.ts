@@ -108,9 +108,7 @@ export class HologramDetailsViewComponent {
       this.editedExportQty,
       this.editedDefenceQty
     ).subscribe({
-      next: (response) => {
-        console.log('Quantities updated successfully:', response);
-        
+      next: (response) => {        
         // Update current modal data with response
         if (this.application) {
           this.application.localQtyLakh = this.editedLocalQty;
@@ -144,13 +142,10 @@ export class HologramDetailsViewComponent {
 
   // Payment calculation methods for hologram details
   getTotalHolograms(hologram: any): number {
-    // Returns total pieces (data is already in pieces, not Lakh)
     return (hologram?.localQtyLakh || 0) + (hologram?.exportQtyLakh || 0) + (hologram?.defenceQtyLakh || 0);
   }
 
   calculateWalletPayment(hologram: any): number {
-    // Wallet payment: ₹0.15 per hologram piece (only payment required)
-    // Data is already in pieces, no conversion needed
     const totalPieces = this.getTotalHolograms(hologram);
     return totalPieces * 0.15;
   }

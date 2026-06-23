@@ -910,13 +910,11 @@ export class CommissionerDashboardComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
-    console.log('🎯 Commissioner Dashboard (role-components) initialized');
     this.resolveCurrentUserRole();
     if (this.embeddedHologramOnly) {
       this.selectedApplicationType = 'hologram';
       this.loadHolograms();
     } else {
-      console.log('📊 Loading all applications for Commissioner review...');
       this.loadAllApplications();
       this.loadUnifiedDashboardCounts();
     }

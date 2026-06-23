@@ -17,9 +17,8 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
     private authService: AuthService // Service to handle API calls including refresh
   ) {}
 
-  /**
-   * Intercepts HTTP requests to attach access token and handle token expiration (401).
-   */
+
+  // Intercepts HTTP requests to attach access token and handle token expiration (401).
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (isPlatformBrowser(this.platformId)) {
       const token = localStorage.getItem('access');
@@ -52,9 +51,7 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
     return next.handle(req);
   }
 
-  /**
-   * Adds Authorization header with Bearer token to outgoing requests.
-   */
+  // Adds Authorization header with Bearer token to outgoing requests.
   private addToken(request: HttpRequest<any>, token: string): HttpRequest<any> {
     return request.clone({
       setHeaders: {
@@ -63,9 +60,7 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
     });
   }
 
-  /**
-   * Handles 401 Unauthorized errors by refreshing the access token if possible.
-   */
+  // Handles 401 Unauthorized errors by refreshing the access token if possible.
   private handle401Error(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (!this.isRefreshing) {
       this.isRefreshing = true;
@@ -84,7 +79,6 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
       return this.authService.refreshToken().pipe(
         switchMap((response: any) => {
           this.isRefreshing = false;
-          console.log('Received refresh response:', response);
 
           // Accept either response.access or response.new_access_token
           const newAccessToken = response.access || response.new_access_token;
@@ -121,12 +115,10 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
     }
   }
 
-  /**
-   * Clears stored tokens and optionally triggers logout logic.
-   */
+
   private logoutAndRedirect() {
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
-    this.authService.logout(); // Optionally call backend logout endpoint
+    this.authService.logout();
   }
 }

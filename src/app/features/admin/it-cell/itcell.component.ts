@@ -80,12 +80,9 @@ export class ITCELLComponent implements OnInit {
   private router = inject(Router);
 
   ngOnInit(): void {
-    console.log('🚀 IT Cell component initializing...');
 
     // Check for tab parameter in query params
     this.route.queryParams.subscribe(params => {
-      console.log('📋 Query params received:', params);
-
       // Determine if we should show the full interface or clean view
       if (params['section'] === 'itcell-hologram' || params['section'] === 'process-flow') {
         this.showFullInterface = false; // Clean view for sidenav navigation
@@ -94,37 +91,29 @@ export class ITCELLComponent implements OnInit {
       }
 
       if (params['tab'] === 'process-flow' || params['section'] === 'process-flow') {
-        console.log('🔄 Switching to Process Flow tab');
         this.selectedTabIndex = 1; // Switch to Process Flow tab
       } else if (params['tab'] === 'hologram' || params['section'] === 'itcell-hologram') {
-        console.log('📊 Switching to Hologram Management tab');
         this.selectedTabIndex = 0; // Switch to Hologram Management tab
       } else {
-        console.log('📊 Using default Hologram Management tab');
         this.selectedTabIndex = 0; // Default to Hologram Management tab
       }
-      console.log('📑 Selected tab index:', this.selectedTabIndex);
-      console.log('🎨 Show full interface:', this.showFullInterface);
     });
 
     this.loadHologramData();
   }
 
   private loadHologramData(): void {
-    console.log('🔍 Loading hologram data...');
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
-        console.log('✅ Hologram data received:', data);
         this.hologramData = data.map((item: any) => ({
           ...item,
-          // Map API fields to UI expected fields
           refNo: item.refNo,
           date: item.date,
           companyName: item.licenseeName || item.manufacturingUnit,
           localQtyLakh: Number(item.localQty),
           exportQtyLakh: Number(item.exportQty),
           defenceQtyLakh: Number(item.defenceQty),
-          status: item.status, // Uses status name from backend
+          status: item.status,
           paymentStatus: item.paymentStatus || item.payment_status || item?.paymentDetails?.payment_status || item?.payment_details?.payment_status || '',
           paymentDetails: item.paymentDetails || item.payment_details || null,
           allowedActions: item.allowedActions || [],
@@ -132,12 +121,11 @@ export class ITCELLComponent implements OnInit {
           editedByCommissioner: !!(item.editHistory || item.edit_history),
           editHistory: item.editHistory || item.edit_history || null
         }));
-        console.log('📊 Processed hologram data:', this.hologramData);
         this.applyFilters();
         this.maybeAutoSelectPendingBucket();
       },
       error: (err) => {
-        console.error('❌ Error loading holograms:', err);
+        console.error('Error loading holograms:', err);
         // Show user-friendly error message
         alert('Failed to load hologram data. Please check your connection and try again.');
       }

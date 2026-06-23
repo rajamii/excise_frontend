@@ -443,22 +443,15 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     return Object.prototype.hasOwnProperty.call(data, baseField) || Object.prototype.hasOwnProperty.call(data, idField);
   }
 
-  /**
-   * ✅ FIXED: Get display value - checks for Name field first, then looks up in master data
-   */
   private getDisplayValue(field: string, value: any, allData: Record<string, any>): string {
     if (!value && value !== 0) return '';
 
     const normalized = field.toLowerCase().replace(/_/g, '');
 
-    console.log(`🔍 getDisplayValue called for field: ${field}, normalized: ${normalized}, value:`, value);
-
-    // PRIORITY 1: Check if there's a corresponding Name field in the data
-
     const possibleNameFields = [
-      `${field}Name`,           // exact match with Name suffix
-      `${field}_name`,          // snake_case with _name
-      field.replace(/_/g, '') + 'Name',  // no underscore + Name
+      `${field}Name`,
+      `${field}_name`,
+      field.replace(/_/g, '') + 'Name',
       `${this.toSnakeCase(field)}_name`
     ];
 
@@ -471,18 +464,15 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
     for (const nameField of possibleNameFields) {
       if (allData[nameField]) {
-        console.log(`Found name field ${nameField} for ${field}:`, allData[nameField]);
         return allData[nameField];
       }
     }
 
-    // PRIORITY 2: Look up in master data if it's an ID field
     try {
       let masterData: any[] = [];
       let masterKey = '';
       let displayField = '';
 
-      // Determine which master data to use based on normalized field name
       if (normalized === 'licensetype') {
         masterKey = 'licenseTypes';
         displayField = 'licenseType';
@@ -531,33 +521,24 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       // If we identified a master data source, look it up
       if (masterKey) {
         const rawData = sessionStorage.getItem(masterKey);
-        console.log(`Looking up ${masterKey} in sessionStorage:`, rawData ? 'Found' : 'Not found');
-
         if (rawData) {
           masterData = JSON.parse(rawData);
-          console.log(`${masterKey} contains ${masterData.length} items`);
 
-          // Try matching by id (as number or string)
           let item = masterData.find(d => d.id === Number(value) || d.id === value);
 
           if (item) {
-            // Try multiple possible field names
+
             const name = this.getItemDisplayName(item, displayField);
             if (name) {
-              console.log(`Found ${displayField} in ${masterKey}:`, name);
               return name;
             }
           } else {
             console.warn(`No item found in ${masterKey} with id: ${value}`);
-            console.log('Available items:', masterData.slice(0, 3));
           }
         } else {
           console.warn(`${masterKey} not found in sessionStorage`);
         }
       }
-
-      // PRIORITY 3: Return the original value if no lookup found
-      console.log(`ℹReturning original value for ${field}:`, value);
       return value.toString();
 
     } catch (e) {
@@ -645,14 +626,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     });
 
     const photoFile = this.licenseAppService.getPassPhoto();
-    console.log('Pass Photo file:', photoFile ? `${photoFile.name} (${photoFile.size} bytes)` : 'MISSING');
 
     const siteDocuments = this.licenseAppService.getAllSiteDocuments();
-    console.log('Site Documents:', siteDocuments.size, 'files');
     siteDocuments.forEach((file: File, name: string) => {
-      console.log(`  - ${name}: ${file.name} (${file.size} bytes)`);
     });
-
     console.groupEnd();
   }
 
@@ -662,43 +639,36 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     console.group('VALIDATING REQUIRED DATA');
 
     const selectData = this.getParsedSession('selectLicenseData');
-    console.log('Select License Data:', selectData);
     if (!selectData?.licenseType && !selectData?.license_type) {
       console.error('Missing: License Type');
       missingFields.push('License Type');
     } else {
-      console.log('License Type OK');
     }
 
     const keyData = this.getParsedSession('keyInfoData');
-    console.log('Key Info Data:', keyData);
 
     if (!keyData?.license_category) {
       console.error('Missing: License Category');
       missingFields.push('License Category');
     } else {
-      console.log('License Category OK:', keyData.license_category);
     }
 
     if (!keyData?.license_sub_category) {
       console.error('Missing: License Sub Category');
       missingFields.push('License Sub Category');
     } else {
-      console.log('License Sub Category OK:', keyData.license_sub_category);
     }
 
     if (!keyData?.establishment_name) {
       console.error('Missing: Establishment Name');
       missingFields.push('Establishment Name');
     } else {
-      console.log('Establishment Name OK');
     }
 
     if (!keyData?.site_type) {
       console.error('Missing: Site Type');
       missingFields.push('Site Type');
     } else {
-      console.log('Site Type OK');
     }
 
     if (keyData?.site_type === 'Existing' && !keyData?.existing_site_license) {
@@ -706,48 +676,42 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
 
     const applicantData = this.getParsedSession('applicantDetailsData');
-    console.log('Applicant Data:', applicantData);
 
     if (!applicantData?.applicant_name) {
       console.error('Missing: Applicant Name');
       missingFields.push('Applicant Name');
     } else {
-      console.log('Applicant Name OK');
     }
 
     if (!applicantData?.father_husband_name) {
       console.error('Missing: Father/Husband Name');
       missingFields.push('Father/Husband Name');
     } else {
-      console.log('Father/Husband Name OK');
     }
 
     if (!applicantData?.dob) {
       console.error('Missing: Date of Birth');
       missingFields.push('Date of Birth');
     } else {
-      console.log('DOB OK');
+
     }
 
     if (!applicantData?.gender) {
       console.error('Missing: Gender');
       missingFields.push('Gender');
     } else {
-      console.log('Gender OK');
     }
 
     if (!applicantData?.email) {
       console.error('Missing: Email');
       missingFields.push('Email');
     } else {
-      console.log('Email OK');
     }
 
     if (!applicantData?.mobile_number) {
       console.error('Missing: Mobile Number');
       missingFields.push('Mobile Number');
     } else {
-      console.log('Mobile Number OK');
     }
 
     if (this.requiresNationalityDocument && !applicantData?.coi_rc_ss) {
@@ -795,90 +759,77 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
 
     const siteData = this.getParsedSession('siteDetailsData');
-    console.log('Site Details Data:', siteData);
 
     if (!siteData?.district) {
       console.error('Missing: Site District');
       missingFields.push('Site District');
     } else {
-      console.log('Site District OK:', siteData.district);
     }
 
     if (!siteData?.subdivision) {
       console.error('Missing: Site Subdivision');
       missingFields.push('Site Subdivision');
     } else {
-      console.log('Site Subdivision OK:', siteData.subdivision);
     }
 
     if (!siteData?.police_station) {
       console.error('Missing: Police Station');
       missingFields.push('Police Station');
     } else {
-      console.log('Police Station OK:', siteData.police_station);
     }
 
     if (!siteData?.road) {
       console.error('Missing: Road Name');
       missingFields.push('Road Name');
     } else {
-      console.log('Road OK:', siteData.road);
     }
 
     if (!siteData?.location_category) {
       console.error('Missing: Location Category');
       missingFields.push('Location Category');
     } else {
-      console.log('Location Category OK');
     }
 
     if (!siteData?.location) {
       console.error('Missing: Location Name');
       missingFields.push('Location Name');
     } else {
-      console.log('Location Name OK');
     }
 
     if (!siteData?.ward) {
       console.error('Missing: Ward Name');
       missingFields.push('Ward Name');
     } else {
-      console.log('Ward Name OK');
     }
 
     if (!siteData?.address) {
       console.error('Missing: Business Address');
       missingFields.push('Business Address');
     } else {
-      console.log('Business Address OK');
     }
 
     if (!siteData?.pin_code) {
       console.error('Missing: PIN Code');
       missingFields.push('PIN Code');
     } else {
-      console.log('PIN Code OK');
     }
 
     if (!siteData?.construction_type) {
       console.error('Missing: Construction Type');
       missingFields.push('Construction Type');
     } else {
-      console.log('Construction Type OK');
     }
 
     if (!siteData?.site_owned) {
       console.error('Missing: Site Ownership');
       missingFields.push('Site Ownership');
     } else {
-      console.log('Site Ownership OK');
     }
 
     if (!siteData?.trade_license_covered) {
       console.error('Missing: Trade License Covered');
       missingFields.push('Trade License Covered');
     } else {
-      console.log('Trade License Covered OK');
     }
     if (siteData?.trade_license_covered === 'No') {
       missingFields.push('Trade License Covered');
@@ -889,34 +840,28 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.error('Missing: Passport Photo');
       missingFields.push('Passport Photo');
     } else {
-      console.log('Passport Photo OK:', passPhoto.name);
     }
 
     const docs = this.licenseAppService.getAllSiteDocuments();
-    console.log('Documents:', Array.from(docs.keys()));
 
     if (!docs.get('pan_card')) {
       console.error('Missing: PAN Card');
       missingFields.push('PAN Card');
     } else {
-      console.log('PAN Card OK');
     }
 
     if (this.requiresNationalityDocument && !docs.get('sikkim_certificate')) {
-      console.error('❌ Missing: Sikkim Certificate');
+      console.error('Missing: Sikkim Certificate');
       missingFields.push('COI / RC / SS Document');
     } else {
-      console.log('Sikkim Certificate OK');
     }
 
     if (!docs.get('dob_proof')) {
-      console.error('❌ Missing: Date of Birth Proof');
+      console.error('Missing: Date of Birth Proof');
       missingFields.push('Date of Birth Proof');
     } else {
-      console.log('✅ DOB Proof OK');
     }
 
-    console.log('🔍 Validation Result:', { valid: missingFields.length === 0, missingFields });
     if (siteData?.site_owned === 'Yes' && !docs.get('parcha')) {
       missingFields.push('Parcha');
     }
@@ -949,7 +894,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       }
     }
 
-    console.log('Validation result (final):', { valid: missingFields.length === 0, missingFields });
     console.groupEnd();
 
     return {
@@ -966,7 +910,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
 
     if (this.isSubmitting) {
-      console.log('Already submitting, ignoring click');
       return;
     }
 
@@ -995,11 +938,9 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       cancelButtonText: 'Cancel',
     }).then((confirm) => {
       if (!confirm.isConfirmed) {
-        console.log('User cancelled submission');
         return;
       }
 
-      console.log('User confirmed, proceeding with submission');
       this.isSubmitting = true;
 
       try {
@@ -1034,51 +975,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
             } catch {
               // no-op
             }
-
-            // this.paymentService.initiateBilldeskNewLicenseApplicationFee({
-            //   application_id: applicationId,
-            //   amount: Number(this.feeAmount || 500),
-            //   payment_module_code: '001'
-            // }).pipe(timeout(30000)).subscribe({
-            //   next: (initRes: any) => {
-            //     Swal.close();
-            //     const billdeskUrl = String(initRes?.billdeskUrl || initRes?.billdesk_url || '').trim();
-            //     const requestMsg = String(initRes?.requestMsg || initRes?.request_msg || '').trim();
-            //     if (!billdeskUrl || !requestMsg) {
-            //       this.isSubmitting = false;
-            //       Swal.fire('Error', 'BillDesk initiation failed: missing gateway parameters.', 'error');
-            //       return;
-            //     }
-            //     this.submitToBillDesk(billdeskUrl, requestMsg);
-            //   },
-            //   error: (err: any) => {
-            //     Swal.close();
-            //     console.error('BillDesk initiation failed:', err);
-
-            //     const retrySeconds = this.extractRetryAfterSeconds(err);
-            //     if (retrySeconds > 0) {
-            //       this.isSubmitting = false;
-            //       this.showBilldeskPendingRetryPopup(retrySeconds);
-            //       return;
-            //     }
-
-            //     if (String(err?.name || '').toLowerCase() === 'timeouterror') {
-            //       this.isSubmitting = false;
-            //       Swal.fire('Timeout', 'BillDesk initiation timed out. Please try again.', 'error');
-            //       return;
-            //     }
-
-            //     const message =
-            //       err?.error?.detail ||
-            //       err?.error?.message ||
-            //       err?.message ||
-            //       'Unable to initiate BillDesk payment.';
-
-            //     this.isSubmitting = false;
-            //     Swal.fire('Error', String(message), 'error');
-            //   }
-            // });
-
             this.onPayClick();
           },
           error: (err: any) => {
@@ -1217,7 +1113,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     this.isProcessing = true;
     this.isSubmitting = true;
 
-    // Prefer backend-resolved amount from DB; send amount only if we have a valid fee value.
     const amountToSend = this.feeAmount && this.feeAmount > 0 ? this.feeAmount : undefined;
 
     this.paymentService.initiateNewLicenseFee(this.draftApplicationId, amountToSend).subscribe({
@@ -1227,9 +1122,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         Swal.close();
 
         if (response.success && response.transactionUrl) {
-          // Redirect the user directly to the SBI ePay checkout page.
-          // Because our backend sbiepay_response sends a fallback window.location.href,
-          // the user will be smoothly redirected back to your success URL.
           window.location.href = response.transactionUrl;
         } else {
           Swal.fire('Error', 'Missing transaction URL from gateway.', 'error');
@@ -1258,8 +1150,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     });
 
     this.licenseAppService.clearAllDocuments();
-
-    console.log('Application data cleared successfully');
   }
 
   private formatErrorMessage(err: any): string {

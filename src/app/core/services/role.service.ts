@@ -25,7 +25,6 @@ export class RoleService {
   };
 
   constructor() {
-    // Try to restore user from session storage first.
     this.restoreUserFromStorage();
   }
 
@@ -42,13 +41,11 @@ export class RoleService {
 
   private restoreUserFromStorage(): void {
     try {
-      // Never restore a role-context user when we don't have auth tokens.
-      // This prevents stale sidebars/menus showing up after a fresh login.
       if (!this.hasAuthTokens()) {
         try {
           sessionStorage.removeItem('currentUser');
-        } catch {
-          // ignore
+        } catch (error) {
+          console.warn('Failed to remove user from storage:', error);
         }
         this.currentUserSubject.next(null);
         return;
@@ -57,9 +54,6 @@ export class RoleService {
       const storedUser = sessionStorage.getItem('currentUser');
       if (storedUser) {
         const user = JSON.parse(storedUser);
-
-        // If we know the authenticated username, ensure it matches what we're restoring.
-        // If it doesn't, drop the sessionStorage user so the dashboard can hydrate from `/me/`.
         const authUsername = String(localStorage.getItem('username') || '').trim();
         const storedUsername = String(user?.username || '').trim();
         if (authUsername && storedUsername && authUsername !== storedUsername) {
@@ -67,39 +61,19 @@ export class RoleService {
           this.currentUserSubject.next(null);
           return;
         }
-        console.log('✅ Restored user from session storage:', user);
         this.currentUserSubject.next(user);
       }
     } catch (error) {
-      console.warn('⚠️ Failed to restore user from storage:', error);
+      console.warn('Failed to restore user from storage:', error);
     }
   }
 
   private saveUserToStorage(user: User): void {
     try {
       sessionStorage.setItem('currentUser', JSON.stringify(user));
-      console.log('✅ Saved user to session storage');
     } catch (error) {
-      console.warn('⚠️ Failed to save user to storage:', error);
+      console.warn('Failed to save user to storage:', error);
     }
-  }
-
-  private initializeCurrentUser(): void {
-    // This would typically come from authentication service
-    // For now, using mock data
-    const mockUser: User = {
-      id: 1,
-      username: 'admin',
-      email: 'admin@excise.gov',
-      fullName: 'System Administrator',
-      roleId: 1,
-      role: this.getRoleById(1)!,
-      permissions: this.getPermissionsByRoleId(1),
-      isActive: true,
-      lastLogin: new Date()
-    };
-    
-    this.currentUserSubject.next(mockUser);
   }
 
   getCurrentUser(): User | null {
@@ -108,7 +82,6 @@ export class RoleService {
 
   setCurrentUser(user: User): void {
     this.currentUserSubject.next(user);
-    // Save to session storage for persistence across page refreshes
     this.saveUserToStorage(user);
   }
 
@@ -116,8 +89,8 @@ export class RoleService {
     this.currentUserSubject.next(null);
     try {
       sessionStorage.removeItem('currentUser');
-    } catch {
-      // ignore
+    } catch (error) {
+      console.warn('Failed to clear user from storage:', error);
     }
   }
 
@@ -180,8 +153,6 @@ export class RoleService {
     const targetRole = this.getRoleById(targetRoleId);
 
     if (!currentRole || !targetRole) return false;
-
-    // Higher hierarchy (lower number) can access lower hierarchy (higher number)
     return currentRole.hierarchy <= targetRole.hierarchy;
   }
 

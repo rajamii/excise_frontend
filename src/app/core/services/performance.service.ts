@@ -141,7 +141,6 @@ export class PerformanceService {
       const renderTime = endTime - startTime;
       
       this.updateMetrics({ renderTime });
-      console.log(`${componentName} render time: ${renderTime.toFixed(2)}ms`);
     });
   }
 
@@ -216,7 +215,6 @@ export class PerformanceService {
       console.group('Bundle Analysis');
       jsResources.forEach(resource => {
         const size = resource.transferSize || resource.encodedBodySize;
-        console.log(`${resource.name}: ${(size / 1024).toFixed(2)} KB`);
       });
       console.groupEnd();
     }

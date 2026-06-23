@@ -31,10 +31,8 @@ export class ActionConfigService {
 
     constructor(private http: HttpClient) {}
 
-    /**
-     * Get all action configurations from backend workflow system
-     * This replaces all hardcoded action configuration methods
-     */
+
+    // Get all action configurations from backend workflow system
     getActionConfigurations(): Observable<{ [key: string]: ActionButtonConfig }> {
         return this.http.get<ActionConfigResponse>(`${this.apiUrl}/action-configs/`).pipe(
             map(response => {
@@ -44,37 +42,31 @@ export class ActionConfigService {
                     response.data.forEach(config => {
                         configMap[config.action] = config;
                     });
-                    console.log('🔧 ACTION CONFIG SERVICE: Loaded configs from backend:', configMap);
                     return configMap;
                 }
-                console.warn('🔧 ACTION CONFIG SERVICE: Backend response invalid, using fallback');
                 return this.getFallbackActionConfigs();
             }),
             catchError(error => {
-                console.warn('🔧 ACTION CONFIG SERVICE: Failed to load from backend, using fallback:', error);
                 return of(this.getFallbackActionConfigs());
             })
         );
     }
 
-    /**
-     * Get specific action configurations for given actions
-     */
+
+    //  Get specific action configurations for given actions
     getActionConfigsForActions(actions: string[]): Observable<ActionButtonConfig[]> {
         return this.getActionConfigurations().pipe(
             map(configMap => {
                 const configs = actions
                     .map(action => configMap[action])
                     .filter(config => config !== undefined);
-                console.log('🔧 ACTION CONFIG SERVICE: Filtered configs for actions:', { actions, configs });
                 return configs;
             })
         );
     }
 
-    /**
-     * Get contextual action configurations (non-workflow actions like VIEW, PAY, PRINT)
-     */
+ 
+    // Get contextual action configurations (non-workflow actions like VIEW, PAY, PRINT)
     getContextualActionConfigs(): Observable<{ [key: string]: ActionButtonConfig }> {
         return this.http.get<ActionConfigResponse>(`${this.apiUrl}/contextual-action-configs/`).pipe(
             map(response => {
@@ -83,22 +75,18 @@ export class ActionConfigService {
                     response.data.forEach(config => {
                         configMap[config.action] = config;
                     });
-                    console.log('🔧 ACTION CONFIG SERVICE: Loaded contextual configs from backend:', configMap);
                     return configMap;
                 }
-                console.warn('🔧 ACTION CONFIG SERVICE: Backend contextual response invalid, using fallback');
                 return this.getFallbackContextualConfigs();
             }),
             catchError(error => {
-                console.warn('🔧 ACTION CONFIG SERVICE: Failed to load contextual configs from backend, using fallback:', error);
                 return of(this.getFallbackContextualConfigs());
             })
         );
     }
 
-    /**
-     * Get workflow action configurations (APPROVE, REJECT, etc.)
-     */
+    
+    // Get workflow action configurations (APPROVE, REJECT, etc.)
     getWorkflowActionConfigs(): Observable<{ [key: string]: ActionButtonConfig }> {
         return this.http.get<ActionConfigResponse>(`${this.apiUrl}/workflow-action-configs/`).pipe(
             map(response => {
@@ -107,23 +95,17 @@ export class ActionConfigService {
                     response.data.forEach(config => {
                         configMap[config.action] = config;
                     });
-                    console.log('🔧 ACTION CONFIG SERVICE: Loaded workflow configs from backend:', configMap);
                     return configMap;
                 }
-                console.warn('🔧 ACTION CONFIG SERVICE: Backend workflow response invalid, using fallback');
                 return this.getFallbackWorkflowConfigs();
             }),
             catchError(error => {
-                console.warn('🔧 ACTION CONFIG SERVICE: Failed to load workflow configs from backend, using fallback:', error);
                 return of(this.getFallbackWorkflowConfigs());
             })
         );
     }
 
-    /**
-     * Comprehensive fallback action configurations if backend is unavailable
-     * This should match the backend configurations exactly
-     */
+    // Comprehensive fallback action configurations if backend is unavailable
     private getFallbackActionConfigs(): { [key: string]: ActionButtonConfig } {
         return {
             // Merge workflow and contextual configs
@@ -132,9 +114,7 @@ export class ActionConfigService {
         };
     }
 
-    /**
-     * Fallback workflow action configurations (should come from backend workflow system)
-     */
+    // Fallback workflow action configurations (should come from backend workflow system)
     private getFallbackWorkflowConfigs(): { [key: string]: ActionButtonConfig } {
         return {
             'APPROVE': { 
@@ -242,9 +222,7 @@ export class ActionConfigService {
         };
     }
 
-    /**
-     * Fallback contextual action configurations (non-workflow actions)
-     */
+    // Fallback contextual action configurations (non-workflow actions)
     private getFallbackContextualConfigs(): { [key: string]: ActionButtonConfig } {
         return {
             'VIEW': { 

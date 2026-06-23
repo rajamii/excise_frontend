@@ -3,7 +3,6 @@ import { isPlatformBrowser } from '@angular/common';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
-
 import { RoleService } from '../services/role.service';
 import { AccountService } from '../services/account.service';
 import { DashboardConfigService } from '../services/dashboard-config.service';
@@ -89,8 +88,6 @@ export class RoleDashboardGuard implements CanActivate {
       this.router.navigate(['/accessdenied']);
       return false;
     }
-
-    console.log(`Dashboard access granted for user: ${currentUser.username} (Role ID: ${currentUser.roleId})`);
     return true;
   }
 }

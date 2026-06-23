@@ -41,7 +41,7 @@ export class RealtimeDataService implements OnDestroy {
   public notifications$ = this.notificationsSubject.asObservable();
   public systemAlerts$ = this.systemAlertsSubject.asObservable();
 
-  private readonly WS_ENDPOINT = 'ws://localhost:8080/ws'; // Configure based on environment
+  private readonly WS_ENDPOINT = 'ws://localhost:8080/ws';
   private readonly RECONNECT_INTERVAL = 5000;
   private readonly MAX_RECONNECT_ATTEMPTS = 10;
   private readonly HEARTBEAT_INTERVAL = 30000;
@@ -73,7 +73,6 @@ export class RealtimeDataService implements OnDestroy {
         url: this.WS_ENDPOINT,
         openObserver: {
           next: () => {
-            console.log('✅ WebSocket connected');
             this.updateConnectionStatus({ 
               isConnected: true, 
               lastConnected: new Date(),
@@ -83,7 +82,6 @@ export class RealtimeDataService implements OnDestroy {
         },
         closeObserver: {
           next: () => {
-            console.log('❌ WebSocket disconnected');
             this.updateConnectionStatus({ isConnected: false });
             this.scheduleReconnect();
           }
@@ -112,8 +110,6 @@ export class RealtimeDataService implements OnDestroy {
   }
 
   private handleMessage(message: RealtimeMessage): void {
-    console.log('📨 Received message:', message);
-
     switch (message.type) {
       case 'dashboard_update':
         this.dashboardUpdatesSubject.next(message.payload);
@@ -136,8 +132,6 @@ export class RealtimeDataService implements OnDestroy {
   }
 
   private setupPolling(): void {
-    console.log('🔄 Setting up polling fallback');
-    
     // Poll for dashboard updates every 30 seconds
     interval(30000)
       .pipe(
@@ -205,9 +199,7 @@ export class RealtimeDataService implements OnDestroy {
       return;
     }
 
-    this.reconnectTimer = setTimeout(() => {
-      console.log(`🔄 Attempting to reconnect (${currentStatus.reconnectAttempts + 1}/${this.MAX_RECONNECT_ATTEMPTS})`);
-      
+    this.reconnectTimer = setTimeout(() => {    
       this.updateConnectionStatus({ 
         reconnectAttempts: currentStatus.reconnectAttempts + 1 
       });

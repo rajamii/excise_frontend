@@ -1949,14 +1949,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     const titleFromRoleId = roleNames[this.currentUser?.roleId || 0];
     if (titleFromRoleId) {
-      console.log('✅ Dashboard title from roleId:', this.currentUser?.roleId, '→', titleFromRoleId);
       return titleFromRoleId;
     }
 
-    // Fallback: try to get from account service
     this.accountService.identity().subscribe(user => {
       if (user && (user as any).role) {
-        console.log('⚠️ Fallback dashboard title from account service role id:', (user as any).role.id);
       }
     });
 

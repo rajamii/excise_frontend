@@ -63,30 +63,18 @@ export class LicenseApplicationService {
 
   prepareOldLicenseFormData(): FormData {
     const formData = new FormData();
-    console.group('📦 Preparing OLD LICENSE FormData');
-
+    
     const selectLicenseData = this.getSessionData('selectLicenseData');
     const keyInfoData = this.getSessionData('keyInfoData');
     const addressData = this.getSessionData('addressData');
     const unitDetailsData = this.getSessionData('unitDetailsData');
     const memberDetailsData = this.getSessionData('memberDetailsData');
 
-    console.log('📄 Raw Session Data:');
-    console.log('  selectLicenseData:', selectLicenseData);
-    console.log('  keyInfoData:', keyInfoData);
-    console.log('  addressData:', addressData);
-    console.log('  unitDetailsData:', unitDetailsData);
-    console.log('  memberDetailsData:', memberDetailsData);
-
     const districts = JSON.parse(sessionStorage.getItem('districts') || '[]');
     const subdivisions = JSON.parse(sessionStorage.getItem('subdivisions') || '[]');
     const policeStations = JSON.parse(sessionStorage.getItem('policeStations') || '[]');
 
-    console.log('📊 Master Data:', {
-      districts: districts.length,
-      subdivisions: subdivisions.length,
-      policeStations: policeStations.length
-    });
+
 
     if (selectLicenseData) {
       if (selectLicenseData.excise_district) {
@@ -95,15 +83,13 @@ export class LicenseApplicationService {
         if (district) {
           const code = String(district.districtCode || district.district_code);
           formData.append('excise_district', code);
-          console.log('✅ excise_district:', code);
         } else {
-          console.error('❌ District not found for ID:', districtId);
+          console.error('District not found for ID:', districtId);
         }
       }
 
       if (selectLicenseData.license_category) {
         formData.append('license_category', String(selectLicenseData.license_category));
-        console.log('✅ license_category:', selectLicenseData.license_category);
       }
 
       if (selectLicenseData.excise_subdivision) {
@@ -112,22 +98,19 @@ export class LicenseApplicationService {
         if (subdivision) {
           const code = String(subdivision.subdivisionCode || subdivision.subdivision_code);
           formData.append('excise_subdivision', code);
-          console.log('✅ excise_subdivision:', code);
         } else {
-          console.error('❌ Excise subdivision not found for ID:', subdivisionId);
+          console.error('Excise subdivision not found for ID:', subdivisionId);
         }
       }
 
       if (selectLicenseData.license) {
         formData.append('license', String(selectLicenseData.license));
-        console.log('✅ license:', selectLicenseData.license);
       }
     }
 
     if (keyInfoData) {
       if (keyInfoData.license_type) {
         formData.append('license_type', String(keyInfoData.license_type));
-        console.log('✅ license_type:', keyInfoData.license_type);
       }
       if (keyInfoData.establishment_name) {
         formData.append('establishment_name', String(keyInfoData.establishment_name));
@@ -171,9 +154,8 @@ export class LicenseApplicationService {
         if (subdivision) {
           const code = String(subdivision.subdivisionCode || subdivision.subdivision_code);
           formData.append('site_subdivision', code);
-          console.log('✅ site_subdivision:', code);
         } else {
-          console.error('❌ Site subdivision not found for ID:', subdivisionId);
+          console.error('Site subdivision not found for ID:', subdivisionId);
         }
       }
 
@@ -183,9 +165,8 @@ export class LicenseApplicationService {
         if (policeStation) {
           const code = String(policeStation.policeStationCode || policeStation.police_station_code);
           formData.append('police_station', code);
-          console.log('✅ police_station:', code);
         } else {
-          console.error('❌ Police station not found for ID:', policeStationId);
+          console.error('Police station not found for ID:', policeStationId);
         }
       }
 
@@ -269,12 +250,9 @@ export class LicenseApplicationService {
     const passPhoto = this.getPassPhoto();
     if (passPhoto) {
       formData.append('photo', passPhoto, passPhoto.name);
-      console.log('✅ Photo added:', passPhoto.name);
     } else {
-      console.error('❌ CRITICAL: Missing passport photo!');
+      console.error('CRITICAL: Missing passport photo!');
     }
-
-    console.log('✅ FormData preparation complete');
     console.groupEnd();
 
     return formData;
@@ -282,7 +260,6 @@ export class LicenseApplicationService {
 
   submitOldLicenseApplication(formData: FormData): Observable<any> {
     const url = `${this.oldLicenseUrl}/apply/`;
-    console.log('📤 Submitting OLD LICENSE Application to:', url);
     return this.http.post(url, formData);
   }
 
@@ -291,17 +268,14 @@ export class LicenseApplicationService {
       const data = sessionStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (e) {
-      console.error(`❌ Failed to parse session data for ${key}:`, e);
+      console.error(`Failed to parse session data for ${key}:`, e);
       return null;
     }
   }
 
-  /**
-   * ✅ FINAL FIX FOR NEW LICENSE - Converts IDs to CODES with correct field names
-   */
+  
   prepareNewLicenseFormData(): FormData {
     const formData = new FormData();
-    console.group('📦 Preparing NEW LICENSE FormData');
 
     const selectLicenseData = this.getSessionData('selectLicenseData');
     const keyInfoData = this.getSessionData('keyInfoData');
@@ -310,46 +284,26 @@ export class LicenseApplicationService {
     const siteDetailsData = this.getSessionData('siteDetailsData');
     const unitDetailsData = this.getSessionData('unitDetailsData');
 
-    console.log('📄 Raw Session Data:');
-    console.log('  selectLicenseData:', selectLicenseData);
-    console.log('  keyInfoData:', keyInfoData);
-    console.log('  applicantDetailsData:', applicantDetailsData);
-    console.log('  memberDetailsData:', memberDetailsData);
-    console.log('  siteDetailsData:', siteDetailsData);
-    console.log('  unitDetailsData:', unitDetailsData);
-
-    // ✅ Get master data for code lookups
+    // Get master data for code lookups
     const districts = JSON.parse(sessionStorage.getItem('districts') || '[]');
     const subdivisions = JSON.parse(sessionStorage.getItem('subdivisions') || '[]');
     const policeStations = JSON.parse(sessionStorage.getItem('policeStations') || '[]');
     const roads = JSON.parse(sessionStorage.getItem('roads') || '[]');
 
-    console.log('📊 Master Data:', {
-      districts: districts.length,
-      subdivisions: subdivisions.length,
-      policeStations: policeStations.length,
-      roads: roads.length
-    });
-
-    // ✅ 1. LICENSE TYPE - Send ID as INTEGER
     const selectedLicenseTypeId = Number(selectLicenseData?.licenseType || selectLicenseData?.license_type || 0);
     const isIndividualApplication = selectedLicenseTypeId === 1;
 
     if (selectLicenseData?.licenseType || selectLicenseData?.license_type) {
       const licenseTypeId = selectedLicenseTypeId;
       formData.append('license_type', String(licenseTypeId));
-      console.log('✅ license_type ID:', licenseTypeId);
     }
 
-    // ✅ 2. KEY INFO
     if (keyInfoData) {
       if (keyInfoData.license_category) {
         formData.append('license_category', String(keyInfoData.license_category));
-        console.log('✅ license_category ID:', keyInfoData.license_category);
       }
       if (keyInfoData.license_sub_category) {
         formData.append('license_sub_category', String(keyInfoData.license_sub_category));
-        console.log('✅ license_sub_category ID:', keyInfoData.license_sub_category);
       }
       if (keyInfoData.establishment_name) {
         formData.append('establishment_name', String(keyInfoData.establishment_name));
@@ -371,7 +325,6 @@ export class LicenseApplicationService {
       }
     }
 
-    // ✅ 3. APPLICANT DETAILS
     if (applicantDetailsData) {
       if (applicantDetailsData.applicant_name) {
         formData.append('applicant_name', String(applicantDetailsData.applicant_name));
@@ -442,8 +395,6 @@ export class LicenseApplicationService {
       }
     }
 
-    // ✅ 4. SITE DETAILS - CRITICAL: Convert IDs to CODES
-    // ✅ 3A. MEMBER DETAILS (conditional salesman / barman flow)
     if (memberDetailsData) {
       if (memberDetailsData.member_name) {
         formData.append('member_name', String(memberDetailsData.member_name));
@@ -463,70 +414,59 @@ export class LicenseApplicationService {
     }
 
     if (siteDetailsData) {
-      // site_district - Send CODE as STRING
       if (siteDetailsData.district) {
         const districtId = siteDetailsData.district;
         const district = districts.find((d: any) => d.id === Number(districtId));
         if (district) {
           const code = String(district.districtCode || district.district_code);
           formData.append('site_district', code);
-          console.log('✅ site_district CODE:', code);
         } else {
-          console.error('❌ District not found for ID:', districtId);
+          console.error('District not found for ID:', districtId);
         }
       }
 
-      // site_subdivision - Send CODE as STRING
       if (siteDetailsData.subdivision) {
         const subdivisionId = siteDetailsData.subdivision;
         const subdivision = subdivisions.find((s: any) => s.id === Number(subdivisionId));
         if (subdivision) {
           const code = String(subdivision.subdivisionCode || subdivision.subdivision_code);
           formData.append('site_subdivision', code);
-          console.log('✅ site_subdivision CODE:', code);
         } else {
-          console.error('❌ Subdivision not found for ID:', subdivisionId);
+          console.error('Subdivision not found for ID:', subdivisionId);
         }
       }
 
-      // police_station - Send CODE as STRING
       if (siteDetailsData.police_station) {
         const policeStationId = siteDetailsData.police_station;
         const policeStation = policeStations.find((p: any) => p.id === Number(policeStationId));
         if (policeStation) {
           const code = String(policeStation.policeStationCode || policeStation.police_station_code);
           formData.append('police_station', code);
-          console.log('✅ police_station CODE:', code);
         } else {
-          console.error('❌ Police station not found for ID:', policeStationId);
+          console.error('Police station not found for ID:', policeStationId);
         }
       }
 
-      // ✅ CRITICAL FIX: road_name is CharField, send the road NAME (string), not code
       if (siteDetailsData.road) {
         const roadId = siteDetailsData.road;
         const road = roads.find((r: any) => r.id === Number(roadId));
         if (road) {
           const roadName = String(road.roadName || road.road_name || road.name);
           formData.append('road_name', roadName);
-          console.log('✅ road_name STRING:', roadName);
         } else {
-          console.error('❌ Road not found for ID:', roadId);
+          console.error('Road not found for ID:', roadId);
         }
       }
 
       if (siteDetailsData.location_category) {
         formData.append('location_category', String(siteDetailsData.location_category_name || siteDetailsData.location_category));
       }
-      // ✅ FIXED: Added missing location_subcategory
       if (siteDetailsData.location_subcategory) {
         formData.append('location_subcategory', String(siteDetailsData.location_subcategory));
       }
-      // ✅ FIXED: Use location_name (display name saved by site-details component)
       if (siteDetailsData.location_name) {
         formData.append('location_name', String(siteDetailsData.location_name));
       }
-      // ✅ FIXED: Use ward_name (display name saved by site-details component)
       if (siteDetailsData.ward_name) {
         formData.append('ward_name', String(siteDetailsData.ward_name));
       }
@@ -548,21 +488,16 @@ export class LicenseApplicationService {
       if (siteDetailsData.site_owned) {
         formData.append('site_owned', String(siteDetailsData.site_owned));
       }
-      // ✅ CRITICAL: noc_obtained field
       if (siteDetailsData.noc_obtained !== null && siteDetailsData.noc_obtained !== undefined) {
         formData.append('noc_obtained', String(siteDetailsData.noc_obtained));
-        console.log('✅ noc_obtained:', siteDetailsData.noc_obtained);
       } else if (siteDetailsData.site_owned === 'Yes') {
-        // If site is owned, noc_obtained should be 'No'
         formData.append('noc_obtained', 'No');
-        console.log('✅ noc_obtained (auto): No');
       }
       if (siteDetailsData.trade_license_covered) {
         formData.append('trade_license_covered', String(siteDetailsData.trade_license_covered));
       }
     }
 
-    // ✅ 5. COMPANY DETAILS (optional)
     if (unitDetailsData && Object.keys(unitDetailsData).length > 0) {
       if (unitDetailsData.company_name) {
         formData.append('company_name', String(unitDetailsData.company_name));
@@ -587,13 +522,11 @@ export class LicenseApplicationService {
       }
     }
 
-    // ✅ 6. DOCUMENTS
     const passPhoto = this.getPassPhoto();
     if (passPhoto) {
       formData.append('pass_photo', passPhoto, passPhoto.name);
-      console.log('✅ pass_photo added:', passPhoto.name);
     } else {
-      console.error('❌ CRITICAL: Missing pass_photo!');
+      console.error('CRITICAL: Missing pass_photo!');
     }
 
     const siteDocuments = this.getAllSiteDocuments();
@@ -614,12 +547,8 @@ export class LicenseApplicationService {
         return;
       }
       formData.append(docName, file, file.name);
-      console.log(`✅ ${docName} added:`, file.name);
     });
-
-    console.log('✅ NEW LICENSE FormData preparation complete');
     console.groupEnd();
-
     return formData;
   }
 
@@ -652,7 +581,6 @@ export class LicenseApplicationService {
     return String(value);
   }
 
-  // Other methods remain the same...
   advanceApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.oldLicenseUrl}/${encodedId}/advance/${stageId}/`, {
@@ -968,28 +896,19 @@ export class LicenseApplicationService {
     return this.http.get(`${this.newLicenseUrl}/statistics/`);
   }
 
-  // ✅ RENEWAL METHODS
-  
-  /**
-   * Renew an old license application (license-renewal type)
-   */
+
+  // Renew an old license application (license-renewal type)
   renewLicense(licenseId: string): Observable<any> {
     const encodedId = encodeURIComponent(licenseId);
     return this.http.post(`${this.oldLicenseUrl}/renew/${encodedId}/`, {});
   }
 
-  /**
-   * Renew a new license application (new-license type)
-   */
+  // Renew a new license application (new-license type)
   renewNewLicense(licenseId: string): Observable<any> {
     const encodedId = encodeURIComponent(licenseId);
     return this.http.post(`${this.newLicenseUrl}/renew/${encodedId}/`, {});
   }
 
-  /**
-   * Initiate a renewal tracking application (LRA/...) for an existing license.
-   * Backend: transactional/license_renewal_application/renew/<license_id>/
-   */
   initiateLicenseRenewalApplication(licenseId: string, options?: any): Observable<any> {
     const encodedId = encodeURIComponent(licenseId);
     return this.http.post(

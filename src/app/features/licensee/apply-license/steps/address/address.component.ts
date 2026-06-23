@@ -120,15 +120,8 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
         this.roads = roads;
         this.dataLoaded = true;
         
-        // ✅ CRITICAL: Save to sessionStorage
         sessionStorage.setItem('policeStations', JSON.stringify(policeStations));
         sessionStorage.setItem('roads', JSON.stringify(roads));
-        
-        console.log('✅ Address master data loaded and saved');
-        console.log('  Police Stations:', policeStations.length);
-        console.log('  Roads:', roads.length);
-        
-        // ✅ AUTO-FILL from user profile AFTER data is loaded
         this.autoFillFromUserProfile();
         
         const storedSubdivision = this.addressForm.get('site_subdivision')?.value;
@@ -137,25 +130,21 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
         }
       },
       error: (error) => {
-        console.error('❌ Failed to load address master data:', error);
+        console.error('Failed to load address master data:', error);
       }
     });
   }
 
-  /**
-   * ✅ Auto-fill address from logged-in user profile
-   */
+
   private autoFillFromUserProfile(): void {
     const sessionData = sessionStorage.getItem('addressData');
     if (sessionData) {
-      console.log('📋 Address data already in session, skipping auto-fill');
       return;
     }
 
     const userProfile = this.accountService.getUserProfileSync();
     
     if (!userProfile) {
-      console.log('⚠️ No user profile in memory, fetching from backend...');
       this.accountService.identity(true).subscribe({
         next: (profile) => {
           if (profile) {
@@ -163,33 +152,24 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
           }
         },
         error: (err) => {
-          console.error('❌ Failed to fetch user profile:', err);
+          console.error('Failed to fetch user profile:', err);
         }
       });
     } else {
-      console.log('✅ User profile found in memory, auto-filling address...');
       this.fillFormWithProfile(userProfile);
     }
   }
 
-  /**
-   * Fill form with user profile data
-   */
+
   private fillFormWithProfile(profile: any): void {
     if (!this.dataLoaded) {
-      console.log('⚠️ Cannot auto-fill address: data not loaded yet');
       return;
     }
 
-    console.log('🔍 Auto-filling address with profile:', profile);
-    
-    // Auto-fill business address with user's address
     if (profile.address) {
       this.addressForm.patchValue({
         business_address: profile.address
       }, { emitEvent: true });
-      
-      console.log('✅ Address auto-filled from user profile');
     }
   }
 
@@ -201,18 +181,14 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
     const subdivision = this.subdivisions.find(s => s.id === subdivisionId);
     
     if (!subdivision) {
-      console.warn('⚠️ Subdivision not found for ID:', subdivisionId);
+      console.warn('Subdivision not found for ID:', subdivisionId);
       this.sitePoliceStations = [];
       return;
     }
-
-    console.log('🔍 Filtering police stations for subdivision code:', subdivision.subdivisionCode);
     
     this.sitePoliceStations = this.policeStations.filter(
       ps => ps.subdivisionCode === subdivision.subdivisionCode
     );
-    
-    console.log('✅ Filtered police stations:', this.sitePoliceStations.length);
   }
 
   private getFromSessionStorage(): Partial<LicenseApplication> {
@@ -250,8 +226,6 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
         enrichedData.police_station_code = policeStation.policeStationCode;
       }
     }
-    
-    console.log('💾 Saving address to session:', enrichedData);
     sessionStorage.setItem('addressData', JSON.stringify(enrichedData));
   }
 

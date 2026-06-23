@@ -225,8 +225,6 @@ export class ManageComponent extends BaseComponent implements OnInit {
         payload.confirmPassword = this.user.confirmPassword;
       }
 
-      console.log('payload being sent:', payload);
-
       // Determine which API call to make based on edit mode
       // FIXED: Use this.user.id (number) instead of this.user.username (string)
       const request = this.isEditMode

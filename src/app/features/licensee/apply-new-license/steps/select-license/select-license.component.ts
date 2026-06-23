@@ -59,9 +59,8 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
       next: (data: LicenseType[]) => {
         this.licenseTypes = data;
         
-        // ✅ Save to sessionStorage for later use
+        // Save to sessionStorage for later use
         sessionStorage.setItem('licenseTypes', JSON.stringify(data));
-        console.log('✅ License types loaded and saved:', data.length);
       },
       error: (error) => {
         console.error('❌ Failed to load license types:', error);
@@ -83,8 +82,6 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
       licenseType: formData.licenseType,
       license_type: formData.licenseType
     };
-    
-    console.log('💾 Saving Select License Data:', dataToSave);
     sessionStorage.setItem('selectLicenseData', JSON.stringify(dataToSave));
   }
 

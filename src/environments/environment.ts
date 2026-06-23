@@ -3,10 +3,10 @@ export const environment = {
     // apiBaseUrl: 'https://sems.sikkim.gov.in',
 
 
-    // apiBaseUrl: '',
+    apiBaseUrl: '',
 
 
-     apiBaseUrl: 'http://127.0.0.1:8000',
+    //  apiBaseUrl: 'http://127.0.0.1:8000',
 
     // apiBaseUrl: 'http://10.182.2.181:8000',
 

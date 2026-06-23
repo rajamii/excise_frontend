@@ -3,9 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { EnaRequisitionService } from './ena-requisition.service'; // Assuming same directory
-import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service'; // Correct path verified
-import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service'; // Correct path verified
+import { EnaRequisitionService } from './ena-requisition.service';
 
 export interface WorkflowActionConfig {
   action: string;
@@ -44,33 +42,20 @@ export interface ApplicationWorkflowData {
   providedIn: 'root'
 })
 export class WorkflowActionService {
-  private apiUrl = `${environment.apiBaseUrl}/workflow`;
   private workflowBaseUrl = `${environment.apiBaseUrl}/auth`;
 
   constructor(
     private http: HttpClient,
-    private supplyChainService: SupplyChainService,
     private requisitionService: EnaRequisitionService,
-    private hologramService: HologramDataService
   ) { }
 
-  /**
-   * Get available actions for a specific application/stage
-   * PRODUCTION READY: Fetches actions dynamically from workflow transitions
-   */
-  getAvailableActions(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
-    console.log('?? WORKFLOW ACTION SERVICE: getAvailableActions called with:', data);
 
-    // 1. If actions are already provided (passed from API/list), use them.
-    // New-license details must always ask the backend because approval can move
-    // the application to awaiting_payment while older list/detail data still has
-    // preloaded officer actions.
+  getAvailableActions(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
+
     if (data.type !== 'new-license' && data.allowedActionConfigs && data.allowedActionConfigs.length > 0) {
-      console.log('?? WORKFLOW ACTION SERVICE: Using provided action configs:', data.allowedActionConfigs);
       return of(data.allowedActionConfigs);
     }
 
-    // 2. Otherwise, fetch from backend detail endpoint (no frontend hardcoding)
     return this.fetchActionsFromBackend(data).pipe(
       catchError(error => {
         console.error('?? WORKFLOW ACTION SERVICE: Error getting available actions:', error);
@@ -80,10 +65,6 @@ export class WorkflowActionService {
 
   }
 
-  /**
-   * Fetch full detail for workflow-backed applications (used when list/dashboard
-   * rows don't contain computed fields like license fee amounts).
-   */
   getNewLicenseApplicationDetail(applicationId: string): Observable<any> {
     const encoded = encodeURIComponent(String(applicationId || '').trim());
     if (!encoded) return of(null);
@@ -252,8 +233,6 @@ export class WorkflowActionService {
         tooltip = 'View details';
         requiresConfirmation = false;
       } else if (explicitAction) {
-        // Hide unsupported or internal transition actions from UI buttons
-        // (e.g. REVERT/RESOLVE_OBJECTION paths).
         return null;
       } else if (stageName.includes('objection')) {
         action = 'RAISE_OBJECTION';
@@ -277,10 +256,6 @@ export class WorkflowActionService {
         tooltip = 'Approve this application';
         requiresConfirmation = true;
       } else {
-        // IMPORTANT: Don't infer PAY from stage name (e.g. "payment_pending").
-        // Action must come explicitly from workflow transition action.
-        // Otherwise commissioner/officer stages that forward to payment stage
-        // get wrongly shown as "Pay" instead of "Approve".
         action = 'APPROVE';
         label = 'Approve';
         icon = 'check_circle';
@@ -301,13 +276,9 @@ export class WorkflowActionService {
     }).filter((config): config is WorkflowActionConfig => !!config);
   }
 
-  /**
-   * Execute a workflow action
-   * Signature matches UnifiedSupplyChainViewComponent usage: (data, actionConfig)
-   */
   executeWorkflowAction(
     data: ApplicationWorkflowData,
-    actionConfig: WorkflowActionConfig | string, // Can be object or string
+    actionConfig: WorkflowActionConfig | string,
     comments?: string,
     extraData?: any
   ): Observable<any> {
@@ -324,24 +295,19 @@ export class WorkflowActionService {
 
     switch (data.type) {
       case 'requisition':
-        // Requisition uses APIView with hyphen
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${data.id}/perform-action/`;
         break;
       case 'revalidation':
-        // Revalidation uses ViewSet with underscore
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${data.id}/perform_action/`;
         break;
       case 'cancellation':
-        // Cancellation uses ViewSet with underscore
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${data.id}/perform_action/`;
         break;
       case 'transit':
-        // Transit permits use APIView with action/<id>/ pattern
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/action/${data.id}/`;
         break;
       case 'hologram':
       case 'hologram-procurement':
-        // Hologram uses ViewSet with underscore - procurement endpoint
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${data.id}/perform_action/`;
         break;
       case 'new-license':
@@ -385,13 +351,6 @@ export class WorkflowActionService {
       return of({ success: false, message: `No workflow endpoint configured for ${data.type}` });
     }
 
-    console.log('🔧 WORKFLOW ACTION SERVICE: Executing action:', {
-      type: data.type,
-      id: data.id,
-      action: actionName,
-      endpoint: endpoint,
-      payload: payload
-    });
 
     return this.http.post(endpoint, payload);
   }

@@ -75,11 +75,8 @@ export class AdminService {
 
   constructor(private http: HttpClient) { }
 
-  // ========================== USER MANAGEMENT ==========================
-
   // Add a new user
   addUser(user: UserPayload): Observable<any> {
-    console.log('Adding user:', user);
     return this.http.post(`${this.usersUrl}/users/register/`, user).pipe(
       catchError(err => {
         console.error('registration Error:', err)
@@ -142,8 +139,6 @@ export class AdminService {
   }
 
 
-  // ========================== ROLE MANAGEMENT ==========================
-
   // Adds a new role record
   addRole(role: Role): Observable<any> {
     const payload = {
@@ -166,7 +161,6 @@ export class AdminService {
     if (changes.canDelete) payload.can_delete = changes.canDelete;
     if (changes.rolePrecedence !== undefined) payload.precedence = changes.rolePrecedence;
 
-    // Cleanup camelCase keys if they are still present (optional but cleaner)
     delete payload.canView;
     delete payload.canAdd;
     delete payload.canUpdate;
@@ -182,7 +176,6 @@ export class AdminService {
     return this.http.delete(`${this.usersUrl}/roles/${id}/delete/`);
   }
 
-  // ========================== DISTRICT MANAGEMENT ==========================
 
   // Adds a new district record
   addDistrict(district: District): Observable<any> {
@@ -199,8 +192,6 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/districts/${id}/delete/`);
   }
 
-  // ========================== SUBDIVISION MANAGEMENT ==========================
-
   // Adds a new subdivision
   addSubdivision(subdivision: Subdivision): Observable<any> {
     return this.http.post(`${this.mastersUrl}/subdivisions/create/`, subdivision);
@@ -215,8 +206,6 @@ export class AdminService {
   deleteSubdivision(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/subdivisions/${id}/delete/`);
   }
-
-  // ========================== POLICE STATION MANAGEMENT ==========================
 
   // Adds a new police station
   addPoliceStation(policeStation: PoliceStation): Observable<any> {
@@ -233,8 +222,6 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/police-stations/${id}/delete/`);
   }
 
-  // ========================== LICENSE TYPE MANAGEMENT ==========================
-
   // Adds a new license type
   addLicenseType(licenseType: LicenseType): Observable<any> {
     return this.http.post(`${this.mastersUrl}/license-types/create/`, licenseType);
@@ -249,8 +236,6 @@ export class AdminService {
   deleteLicenseType(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/license-types/${id}/delete/`);
   }
-
-  // ========================== LICENSE CATEGORY MANAGEMENT ==========================
 
   // Adds a new license category
   addLicenseCategory(category: LicenseCategory): Observable<any> {
@@ -267,8 +252,6 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/license-categories/${id}/delete/`);
   }
 
-  // ========================== LICENSE SUBCATEGORY MANAGEMENT ==========================
-
   // Adds a new license subcategory
   addLicenseSubcategory(category: LicenseSubcategory): Observable<any> {
     return this.http.post(`${this.mastersUrl}/license-subcategories/create/`, category);
@@ -283,8 +266,6 @@ export class AdminService {
   deleteLicenseSubcategory(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/license-subcategories/${id}/delete/`);
   }
-
-  // ========================== LICENSE TITLE MANAGEMENT ==========================
 
   // Adds a new license title
   addLicenseTitle(category: LicenseTitle): Observable<any> {
@@ -301,8 +282,6 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/license-titles/${id}/delete/`);
   }
 
-  // ========================== ROAD MANAGEMENT ==========================
-
   // Adds a new road
   addRoad(category: Road): Observable<any> {
     return this.http.post(`${this.mastersUrl}/roads/create/`, category);
@@ -318,8 +297,6 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/roads/${id}/delete/`);
   }
 
-  // ========================== HOLOGRAM SUPPLIER MANAGEMENT ==========================
-
   // Adds a new hologram supplier
   addHologramSupplier(supplier: HologramSupplier): Observable<any> {
     return this.http.post(`${this.supplyChainUrl}/hologram-suppliers/create/`, supplier);
@@ -334,8 +311,6 @@ export class AdminService {
   deleteHologramSupplier(id: number): Observable<any> {
     return this.http.delete(`${this.supplyChainUrl}/hologram-suppliers/${id}/delete/`);
   }
-
-  // ========================== HOLOGRAM (TRANSIT PERMIT) MASTERS ==========================
 
   addTransitPermitDistributorData(payload: TransitPermitDistributorData): Observable<any> {
     return this.http.post(`${this.supplyChainUrl}/distributor-data/`, payload);
@@ -385,8 +360,6 @@ export class AdminService {
     return this.http.delete(`${this.supplyChainUrl}/liquor-data/liquor-types/${id}/`);
   }
 
-  // ========================== LICENSE TERMS (LEGACY CODES) ==========================
-
   getLicenseFormTerms(licenseeCatCode: number, licenseeScatCode: number): Observable<LicenseFormTermsResponse> {
     return this.http.get<LicenseFormTermsResponse>(
       `${this.licenseMastersUrl}/form-terms/?licensee_cat_code=${licenseeCatCode}&licensee_scat_code=${licenseeScatCode}`
@@ -403,8 +376,6 @@ export class AdminService {
       }
     );
   }
-
-  // ========================== BULK SPIRIT (ENA) MANAGEMENT ==========================
 
   getActiveLicenses(): Observable<ActiveLicense[]> {
     return this.http.get<ActiveLicense[]>(`${this.licenseMastersUrl}/active/`);
@@ -434,8 +405,6 @@ export class AdminService {
     return this.http.delete(`${this.supplyChainUrl}/ena-distillery-types/${id}/delete/`);
   }
 
-  // ========================== ENA PURPOSE DETAILS MANAGEMENT ==========================
-
   getEnaPurposeDetails(): Observable<any[]> {
     return this.http.get<any[]>(`${this.supplyChainUrl}/purposes/admin/purposes/`);
   }
@@ -455,8 +424,6 @@ export class AdminService {
   toggleEnaPurposeActive(id: number): Observable<any> {
     return this.http.patch(`${this.supplyChainUrl}/purposes/admin/purposes/${id}/toggle-active/`, {});
   }
-
-  // ========================== CHECK POST DETAILS MANAGEMENT ==========================
 
   getCheckPostDetails(): Observable<any[]> {
     return this.http.get<any[]>(`${this.supplyChainUrl}/checkposts/admin/checkposts/`);

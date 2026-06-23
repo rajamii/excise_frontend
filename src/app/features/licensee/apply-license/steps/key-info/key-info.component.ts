@@ -93,8 +93,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadDropdownData();
-    
-    // ✅ AUTO-FILL from user profile
     this.autoFillFromUserProfile();
   }
 
@@ -103,20 +101,16 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  /**
-   * ✅ Auto-fill contact details from logged-in user profile
-   */
+ 
   private autoFillFromUserProfile(): void {
     const sessionData = sessionStorage.getItem('keyInfoData');
     if (sessionData) {
-      console.log('📋 Key info already in session, skipping auto-fill');
       return;
     }
 
     const userProfile = this.accountService.getUserProfileSync();
     
     if (!userProfile) {
-      console.log('⚠️ No user profile in memory, fetching from backend...');
       this.accountService.identity(true).subscribe({
         next: (profile) => {
           if (profile) {
@@ -124,27 +118,20 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           }
         },
         error: (err) => {
-          console.error('❌ Failed to fetch user profile:', err);
+          console.error('Failed to fetch user profile:', err);
         }
       });
     } else {
-      console.log('✅ User profile found in memory, auto-filling...');
       this.fillFormWithProfile(userProfile);
     }
   }
 
-  /**
-   * Fill form with user profile data
-   */
-  private fillFormWithProfile(profile: any): void {
-    console.log('🔍 Auto-filling key info with profile:', profile);
-    
+
+  private fillFormWithProfile(profile: any): void {    
     this.keyInfoForm.patchValue({
       mobile_number: profile.phoneNumber || profile.phone_number,
       email: profile.email
     }, { emitEvent: true });
-
-    console.log('✅ Key info auto-filled from user profile');
   }
 
   private loadDropdownData(): void {
@@ -152,10 +139,9 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       next: (data: LicenseType[]) => {
         this.licenseTypes = data;
         sessionStorage.setItem('licenseTypes', JSON.stringify(data));
-        console.log('✅ License types loaded and saved:', data.length);
       },
       error: (error) => {
-        console.error('❌ Failed to load license types:', error);
+        console.error('Failed to load license types:', error);
       }
     });
   }
@@ -186,8 +172,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       functioning_status: formData.functioning_status,
       mode_of_operation: formData.mode_of_operation
     };
-
-    console.log('💾 Saving key info to sessionStorage:', enrichedData);
     sessionStorage.setItem('keyInfoData', JSON.stringify(enrichedData));
   }
 

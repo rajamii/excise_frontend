@@ -75,14 +75,11 @@ export class AuthService {
           }
         }
       }),
-      // ✅ Load user profile after registration
+      
+      // Load user profile after registration
       switchMap((response: any) => {
-        console.log('✅ Registration successful, loading user profile...');
         return this.accountService.identity(true).pipe(
-          tap(() => console.log('✅ User profile loaded after registration')),
           catchError(err => {
-            console.warn('⚠️ Registration successful but failed to load profile:', err);
-            // Don't fail the entire registration if profile load fails
             return throwError(() => err);
           }),
           switchMap(() => [response])
@@ -95,9 +92,7 @@ export class AuthService {
     return this.http.post(`${environment.apiBaseUrl}/auth/users/register/licensee/`, data);
   }
 
-  /**
-   * ✅ Login and load user profile
-   */
+  // Login and load user profile
   login(data: any): Observable<any> {
     if (this.isBlockedByUsername(String(data?.username || ''))) {
       return this.blockedUserError();
@@ -109,16 +104,13 @@ export class AuthService {
         if (response?.authenticated_user?.access) {
           localStorage.setItem('access', response.authenticated_user.access);
           localStorage.setItem('refresh', response.authenticated_user.refresh);
-          console.log('✅ Login successful, tokens saved');
         }
       }),
-      // ✅ Load user profile after login
+      
+      // Load user profile after login
       switchMap((response: any) => {
-        console.log('✅ Login successful, loading user profile...');
         return this.accountService.identity(true).pipe(
-          tap(() => console.log('✅ User profile loaded after login')),
           catchError(err => {
-            console.warn('⚠️ Login successful but failed to load profile:', err);
             return throwError(() => err);
           }),
           switchMap(() => [response])
@@ -141,7 +133,6 @@ export class AuthService {
 
     return this.http.post(`${this.baseUrl}/logout/`, { refresh }, { headers }).pipe(
       tap(() => {
-        console.log('✅ Logout successful, clearing app data');
         this.accountService.clearAppData();
       }),
       catchError(error => throwError(() => error))
@@ -155,7 +146,6 @@ export class AuthService {
     return this.http.post(`${this.baseUrl}/token/refresh/`, { refresh: refreshToken }, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
-      tap(response => console.log('✅ Token refresh success:', response)),
       catchError(error => throwError(() => error))
     );
   }
@@ -176,9 +166,7 @@ export class AuthService {
     );
   }
 
-  /**
-   * ✅ Verify OTP and load user profile
-   */
+  // Verify OTP and load user profile
   verifyOtp(
     data: { phoneNumber: string; otp: string; otpId: string },
     options?: { loadProfile?: boolean }
@@ -193,7 +181,6 @@ export class AuthService {
         if (response?.authenticated_user?.access) {
           localStorage.setItem('access', response.authenticated_user.access);
           localStorage.setItem('refresh', response.authenticated_user.refresh);
-          console.log('✅ OTP login successful, tokens saved');
         }
       }),
       switchMap((response: any) => {
@@ -206,12 +193,12 @@ export class AuthService {
     );
   }
 
-  // Step 1: Send email with the reset link
+  // Send email with the reset link
   requestPasswordReset(email: string): Observable<any> {
     return this.http.post(`${this.baseUrl}/password-reset/`, { email });
   }
 
-  // Step 2: Confirm the new password using the token from the email
+  // Confirm the new password using the token from the email
   confirmPasswordReset(payload: { uidb64: string, token: string, new_password: string }): Observable<any> {
     return this.http.post(`${this.baseUrl}/password-reset-confirm/`, payload);
   }
