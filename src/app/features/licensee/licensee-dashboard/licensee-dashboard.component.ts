@@ -431,7 +431,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'LA/');
         if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
         if (appId.startsWith('RSBM/')) return appId.replace('RSBM/', 'SB/');
-        if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/');
+        if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CR/1101/');
       }
       return null;
     }
@@ -439,8 +439,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private isValidLicenseId(licenseId: string): boolean {
     if (!licenseId || typeof licenseId !== 'string') return false;
     const trimmed = licenseId.trim();
-    // ✅ ADDED: 'COMP/' and 'CREG/' prefixes for company registration
-    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
+    // ✅ ADDED: 'COMP/', 'CREG/' and 'CR/' prefixes for company registration
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'CR/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
     const hasValidPrefix = validPrefixes.some(prefix => trimmed.startsWith(prefix));
     if (!hasValidPrefix) return false;
     const parts = trimmed.split('/');
@@ -518,12 +518,14 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         } else if (appId.startsWith('SBM/')) {
           derivedLicenseId = appId.replace('SBM/', 'SB/');
         } else if (appId.startsWith('COMP/')) {
-          derivedLicenseId = appId.replace('COMP/', 'CREG/');
+          derivedLicenseId = appId.replace('COMP/', 'CR/1101/');
         } else if (appId.startsWith('LRA/')) {
           // A renewal application LRA/01/2026-27/... could be renewing an NA/ or LA/ license.
           // Since it's ambiguous, we can add both potential derivations.
           renewedIds.add(appId.replace('LRA/', 'LA/'));
           renewedIds.add(appId.replace('LRA/', 'NA/'));
+        } else if (appId.startsWith('RCR/')) {
+          renewedIds.add(appId.replace('RCR/', 'CR/'));
         } else if (appId.startsWith('RSBM/')) {
           renewedIds.add(appId.replace('RSBM/', 'SB/'));
         }

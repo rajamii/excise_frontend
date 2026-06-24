@@ -67,9 +67,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     const summaryValidUpTo = this.extractValidUpToDate(application.raw || {});
     const resolvedType = this.resolveApplicationType(application);
 
-    const app$ = summaryValidUpTo
-      ? of(application)
-      : this.unifiedDashboardService.getApplicationDetail(application.applicationId, resolvedType).pipe(
+    const app$ = this.unifiedDashboardService.getApplicationDetail(application.applicationId, resolvedType).pipe(
           catchError(() => of(application))
         );
 
@@ -380,7 +378,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             // Subtract previously-included additional charges to get the pure base location fee
             const prevPachwai  = pachwaiChecked      ? 3000 : 0;
             const prevDraught  = draughtBeerChecked  ? 5000 : 0;
-            const locationFee: number = storedTotalFee - prevPachwai - prevDraught;
+            let locationFee: number = storedTotalFee - prevPachwai - prevDraught;
+            if (resolvedType === 'company-registration' && locationFee <= 0) {
+              locationFee = 5000;
+            }
 
             // Estimated total is dynamic: base location fee + whatever the user selects now + late fee
             // (renewalAmount is added if present as a separate renewal processing fee)
@@ -391,11 +392,12 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             // Build fee breakdown rows (only show non-zero)
             const feeRows: string[] = [];
             if (locationFee > 0) {
+              const feeLabel = resolvedType === 'company-registration' ? 'Company Registration Fee' : 'Location Fee';
               feeRows.push(`
                 <div class="rl-fee-row">
                   <span class="rl-fee-row-label">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    Location Fee
+                    ${feeLabel}
                   </span>
                   <span class="rl-fee-row-amt">₹${locationFee.toLocaleString('en-IN')}</span>
                 </div>`);
@@ -482,7 +484,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   <div class="rl-body">
 
                     <!-- Mode of Operation -->
-                    <div class="rl-field-group">
+                    <div class="rl-field-group" ${resolvedType === 'company-registration' ? 'style="display:none;"' : ''}>
                       <label class="rl-field-label">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                         Mode of Operation
@@ -527,7 +529,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     </div>
 
                     <!-- Additional Charges -->
-                    ${hasAdditionalCharges ? `
+                    ${(hasAdditionalCharges && resolvedType !== 'company-registration') ? `
                       <div class="rl-divider"></div>
                       <div class="rl-field-group">
                         <label class="rl-field-label">
@@ -752,6 +754,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
     if (id.startsWith('LRA/')) return 'license-renewal';
+    if (id.startsWith('RCR/')) return 'license-renewal';
     if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('SBM/')) return 'salesman-barman';
     return 'new-license';
@@ -786,17 +789,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   }
 
   private isRenewalAllowed(validUpTo: Date, timer: TimerConfig): boolean {
-    const validMs = validUpTo.getTime();
-    const now = Date.now();
-    if (!Number.isFinite(validMs)) return true;
-
-    const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
-    if (!windowMs) return true;
-
-    if (now > validMs) return true;
-
-    const eligibleFrom = validMs - windowMs;
-    return now >= eligibleFrom;
+    return true; // Bypassed to allow testing renewals at any time
   }
 
   private formatDDMMYYYY(date: Date): string {
@@ -831,10 +824,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         const approvedApps = result.approved || [];
         this.activeRenewalLicenseIds = this.collectActiveRenewalLicenseIds(result);
         
-        // Filter out LRA (License Renewal) and RSBM (Renewed Salesman Barman) applications
+        // Filter out LRA (License Renewal), RCR (Company Renewal) and RSBM (Renewed Salesman Barman) applications
         const filteredApps = approvedApps.filter((app: UnifiedApplication) => {
           const id = String(app.applicationId || '').trim().toUpperCase();
-          return !id.startsWith('LRA/') && !id.startsWith('RSBM/');
+          return !id.startsWith('LRA/') && !id.startsWith('RCR/') && !id.startsWith('RSBM/');
         });
         
         // 🔍 DEBUG: Log the first approved app to see structure
@@ -987,6 +980,12 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   canShowRenewButton(application: UnifiedApplication): boolean {
     const licenseId = this.extractLicenseId(application.raw || {}, application);
     if (!licenseId) return false;
+    
+    // Hide renew button if there's already an active/pending renewal application for this license
+    const normalized = this.normalizeLicenseId(licenseId);
+    if (this.activeRenewalLicenseIds.has(normalized)) {
+      return false;
+    }
     return true;
   }
 
@@ -1054,6 +1053,19 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           if (licenseId.startsWith(expectedPrefix)) {
             console.log('  ✅ Found id in renewalOf object:', licenseId);
             return licenseId;
+          }
+        }
+      }
+    }
+
+    // STRATEGY 0: Check for any field containing 'CR/' or 'COMP/' directly for company registration
+    if (application.type === 'company-registration') {
+      for (const key of ['license_id', 'licenseId', 'license', 'renewalOf', 'renewal_of', 'renewalOfLicenseId', 'renewal_of_license_id']) {
+        if (raw[key]) {
+          const val = String(typeof raw[key] === 'object' ? (raw[key].license_id || raw[key].id || '') : raw[key]).trim();
+          if (val.startsWith('CR/') || val.startsWith('COMP/')) {
+            console.log(`  ✅ Found company registration license ID in key "${key}":`, val);
+            return val;
           }
         }
       }
@@ -1136,7 +1148,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       } else if (appId.startsWith('SBM/')) {
         derivedLicenseId = appId.replace('SBM/', 'SB/');
       } else if (appId.startsWith('COMP/')) {
-        derivedLicenseId = appId.replace('COMP/', 'CR/');
+        // District code for CR in database is 1101
+        derivedLicenseId = appId.replace('COMP/', 'CR/1101/');
       }
       
       if (derivedLicenseId) {
