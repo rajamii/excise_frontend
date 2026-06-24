@@ -578,6 +578,30 @@ export class UnifiedActionsService {
         return of({ success: true, message: 'Redirected to wallet for payment' });
       }
 
+      case 'license-renewal': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const licenseFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.yearly_license_fee ?? item?.yearlyLicenseFee ?? 0);
+        const securityFee = Number(item?.security_fee_amount ?? item?.securityFeeAmount ?? 0);
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'license-renewal',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+            securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+            action: 'pay',
+            source: 'license-renewal'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
+      }
+
       case 'requisition':
       case 'revalidation':
       case 'cancellation':
@@ -665,7 +689,11 @@ export class UnifiedActionsService {
       item?.totalAmount,
       item?.total_amount,
       item?.totalCancellationAmount,
-      item?.total_cancellation_amount
+      item?.total_cancellation_amount,
+      item?.license_fee_amount,
+      item?.licenseFeeAmount,
+      item?.yearly_license_fee,
+      item?.yearlyLicenseFee
     ];
 
     for (const value of candidates) {

@@ -1857,7 +1857,8 @@ private initializeWalletContextAndLoadData(): void {
 
     if (this.activeTab === 'security_deposit') {
       const isRenewal = String(ctx.itemType || '').trim().toLowerCase() === 'license-renewal'
-                     || String(refNo || '').trim().toUpperCase().startsWith('LRA/');
+                     || String(refNo || '').trim().toUpperCase().startsWith('LRA/')
+                     || String(refNo || '').trim().toUpperCase().startsWith('RCR/');
       if (isRenewal) {
         return;
       }
@@ -1960,7 +1961,7 @@ private initializeWalletContextAndLoadData(): void {
     if (this.pendingNewLicenseLicenseFeeAmount > 0 && this.pendingNewLicenseSecurityFeeAmount > 0) return;
 
     const contextType = String(this.pendingWalletPaymentContext?.itemType || '').trim().toLowerCase();
-    const detail$ = contextType === 'license-renewal' || applicationId.toUpperCase().startsWith('LRA/') || applicationId.toUpperCase().startsWith('RSBM/')
+    const detail$ = contextType === 'license-renewal' || applicationId.toUpperCase().startsWith('LRA/') || applicationId.toUpperCase().startsWith('RSBM/') || applicationId.toUpperCase().startsWith('RCR/')
       ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
       : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
 
@@ -2044,7 +2045,8 @@ private initializeWalletContextAndLoadData(): void {
     const refNo = this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext?.referenceNo;
     if (!refNo) return false;
 
-    const isNewLicense = !String(refNo).trim().toUpperCase().startsWith('LRA/');
+    const refNoUpper = String(refNo).trim().toUpperCase();
+    const isNewLicense = !refNoUpper.startsWith('LRA/') && !refNoUpper.startsWith('RCR/');
     if (!isNewLicense) return false;
 
     const type = this.pendingWalletPaymentContext?.itemType || 'new-license';
@@ -2268,7 +2270,8 @@ private initializeWalletContextAndLoadData(): void {
 
         if (isLicenseFlow) {
           const isRenewal = String(context.itemType || '').trim().toLowerCase() === 'license-renewal'
-                         || String(refNo || '').trim().toUpperCase().startsWith('LRA/');
+                         || String(refNo || '').trim().toUpperCase().startsWith('LRA/')
+                         || String(refNo || '').trim().toUpperCase().startsWith('RCR/');
           if (context.tab === 'license_fee') {
             // No manual Pay Now tab redirection for security deposit since it is paid on recharge.
           } else if (context.tab === 'security_deposit') {
@@ -2319,7 +2322,7 @@ private initializeWalletContextAndLoadData(): void {
     const typeToken = String(context?.itemType || '').trim().toLowerCase();
     const refToken = String(context?.referenceNo || '').trim().toUpperCase();
     const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/');
-    const isRenewal = typeToken.includes('license-renewal') || refToken.startsWith('LRA/') || refToken.startsWith('RSBM/');
+    const isRenewal = typeToken.includes('license-renewal') || refToken.startsWith('LRA/') || refToken.startsWith('RSBM/') || refToken.startsWith('RCR/');
     if (!isNewLicense && !isRenewal) return;
 
     const applicationId = String(this.pendingNewLicenseApplicationId || context?.id || '').trim();

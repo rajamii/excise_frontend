@@ -3327,6 +3327,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isNewLicenseOrRenewal(): boolean {
         return this.isNewLicense() || this.isNewLicenseRenewal();
     }
+    isCompanyRegistrationRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const data: any = this.applicationData as any;
+        const oldLicenseSourceType = String(data.old_license_source_type || data.oldLicenseSourceType || '').toLowerCase();
+        return this.applicationType === 'license-renewal' && oldLicenseSourceType === 'company_registration';
+    }
     isCompanyType(): boolean {
         if (!this.applicationData) return false;
         const data: any = this.applicationData as any;

@@ -135,13 +135,38 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
         if (validUpTo && !this.isRenewalAllowed(validUpTo, timer)) {
           const windowLabel = this.getTimerWindowLabel(timer);
+          
+          let windowMs = 0;
+          if (timer && timer.delay_seconds > 0) {
+            windowMs = Math.max(0, Number(timer.delay_ms ?? 0) || 0);
+          } else {
+            const validityDays = timer?.validity_period_days ?? null;
+            if (validityDays !== null && Number.isFinite(Number(validityDays)) && Number(validityDays) > 0) {
+              windowMs = Number(validityDays) * 24 * 60 * 60 * 1000;
+            }
+          }
+          
+          const openDate = new Date(validUpTo.getTime() - windowMs);
+          
           Swal.fire({
             icon: 'error',
             title: 'Invalid Renewal Request',
             html: `
-              <p>Renewal not allowed yet. License valid until ${this.formatDDMMYYYY(validUpTo)}.</p>
-              <p>You can renew within the last ${windowLabel} or after expiry.</p>
-            `
+              <p>Renewal not allowed yet. License valid until <strong>${this.formatDDMMYYYY(validUpTo)}</strong>.</p>
+              <p style="margin-top:10px;">🗓️ <strong>Renewal opens on:</strong> ${this.formatDDMMYYYY(openDate)}</p>
+              <p style="margin-top:10px;background:#dcfce7;border-left:4px solid #16a34a;border-radius:8px;padding:10px 14px;color:#166534;font-size:0.88em;font-weight:600;">✅ You can renew within the last ${windowLabel} or after expiry.</p>
+            `,
+            background: '#fff5f5',
+            color: '#1e293b',
+            confirmButtonText: 'OK, Got it',
+            confirmButtonColor: '#dc2626',
+            customClass: {
+              popup:          'swal-renewal-invalid',
+              title:          'swal-renewal-invalid-title',
+              htmlContainer:  'swal-renewal-invalid-html',
+              confirmButton:  'swal-renewal-invalid-btn',
+              icon:           'swal-renewal-invalid-icon',
+            }
           });
           return;
         }
@@ -789,7 +814,25 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   }
 
   private isRenewalAllowed(validUpTo: Date, timer: TimerConfig): boolean {
-    return true; // Bypassed to allow testing renewals at any time
+    const validMs = validUpTo.getTime();
+    const now = Date.now();
+    if (!Number.isFinite(validMs)) return true;
+
+    let windowMs = 0;
+    if (timer && timer.delay_seconds > 0) {
+      windowMs = Math.max(0, Number(timer.delay_ms ?? 0) || 0);
+    } else {
+      const validityDays = timer?.validity_period_days ?? null;
+      if (validityDays !== null && Number.isFinite(Number(validityDays)) && Number(validityDays) > 0) {
+        windowMs = Number(validityDays) * 24 * 60 * 60 * 1000;
+      }
+    }
+
+    if (!windowMs) return true;
+    if (now > validMs) return true;
+
+    const eligibleFrom = validMs - windowMs;
+    return now >= eligibleFrom;
   }
 
   private formatDDMMYYYY(date: Date): string {
@@ -808,12 +851,28 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     }
 
     const seconds = Math.max(0, Number(timer?.delay_seconds ?? 0) || 0);
-    if (!seconds) return '0 days';
-    if (seconds % (24 * 60 * 60) === 0) {
-      const days = seconds / (24 * 60 * 60);
-      return `${days} day${days === 1 ? '' : 's'}`;
+    if (seconds > 0) {
+      if (seconds % (24 * 60 * 60) === 0) {
+        const days = seconds / (24 * 60 * 60);
+        return `${days} day${days === 1 ? '' : 's'}`;
+      }
+      if (seconds % (60 * 60) === 0) {
+        const hours = seconds / (60 * 60);
+        return `${hours} hour${hours === 1 ? '' : 's'}`;
+      }
+      if (seconds % 60 === 0) {
+        const minutes = seconds / 60;
+        return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+      }
+      return `${seconds} second${seconds === 1 ? '' : 's'}`;
     }
-    return `${seconds} second${seconds === 1 ? '' : 's'}`;
+
+    const validityDays = timer?.validity_period_days ?? null;
+    if (validityDays !== null && Number.isFinite(Number(validityDays)) && Number(validityDays) > 0) {
+      return `${validityDays} days`;
+    }
+
+    return '0 days';
   }
 
   loadMyLicenses(): void {
@@ -1259,9 +1318,28 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             <p style="font-size: 0.85em; color: #999;">Attempted ID: ${renewalId}</p>
           `;
         } else if (error.status === 400) {
-          errorTitle = 'Invalid Renewal Request';
-          const detail = error.error?.detail || error.error?.message || '';
-          errorMessage = detail || 'The renewal request is not valid. Please check the license details.';
+          const errBody = error.error || {};
+          const detail = errBody?.detail || errBody?.message || '';
+          if (errBody?.window_not_open) {
+            // Renewal window not yet open — show a dedicated info dialog
+            const windowStart = errBody?.renewal_window_starts_on
+              ? new Date(errBody.renewal_window_starts_on).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : null;
+            const validUpTo = errBody?.license_valid_up_to
+              ? new Date(errBody.license_valid_up_to).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : null;
+            errorTitle = 'Renewal Window Not Open';
+            errorMessage = `
+              <p>${detail}</p>
+              ${windowStart ? `<p style="margin-top:10px;">🗓️ <strong>Renewal opens:</strong> ${windowStart}</p>` : ''}
+              ${validUpTo ? `<p>📅 <strong>License expires:</strong> ${validUpTo}</p>` : ''}
+              <p style="margin-top:10px;font-size:0.88em;color:#666;">You will be able to renew once the renewal window opens.</p>
+            `;
+          } else {
+            errorTitle = 'Invalid Renewal Request';
+            errorMessage = detail || 'The renewal request is not valid. Please check the license details.';
+          }
+
         } else if (error.status === 403) {
           errorTitle = 'Permission Denied';
           errorMessage = 'You do not have permission to renew this license.';

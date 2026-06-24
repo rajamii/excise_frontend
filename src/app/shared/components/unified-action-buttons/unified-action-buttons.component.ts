@@ -1246,12 +1246,20 @@ private getTransitRejectSummary(): {
   }
 
   private handlePaymentAction(): void {
+    const displayAmount = this.item?.brAmount
+      ?? this.item?.['br_amount']
+      ?? this.item?.['license_fee_amount']
+      ?? this.item?.['licenseFeeAmount']
+      ?? this.item?.['yearly_license_fee']
+      ?? this.item?.['yearlyLicenseFee']
+      ?? this.item?.['amount']
+      ?? 'N/A';
     Swal.fire({
       title: 'Confirm Payment',
       html: `
         <div class="payment-details">
           <p><strong>Application:</strong> ${this.item.referenceNo}</p>
-          <p><strong>Amount:</strong> Rs ${this.item['brAmount'] || 'N/A'}</p>
+          <p><strong>Amount:</strong> Rs ${displayAmount}</p>
           <p><strong>Type:</strong> ${this.itemType}</p>
         </div>
       `,

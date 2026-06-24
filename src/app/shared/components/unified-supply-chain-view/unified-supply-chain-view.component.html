@@ -738,7 +738,7 @@
                         </div>
                     </ng-template>
                 </div>
-                @if (isNewLicenseOrRenewal()) {
+                @if (isNewLicenseOrRenewal() && !isCompanyRegistrationRenewal()) {
                 <div class="section-card mb-4" *ngIf="!isCompanyType()">
                     <h5 class="section-title">Applicant Information</h5>
                     <div class="table-responsive">
@@ -1079,7 +1079,7 @@
 
                 }
 
-                @if (isCompanyRegistration()) {
+                @if (isCompanyRegistration() || isCompanyRegistrationRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Company Registration Details</h5>
                     <div class="table-responsive">
@@ -1559,7 +1559,7 @@
                     </div>
                 </div>
 
-                @if (isNewLicenseRenewal()) {
+                @if (isNewLicenseRenewal() && !isCompanyRegistrationRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Applicant & Establishment Details</h5>
                     <div class="table-responsive">
@@ -1591,7 +1591,7 @@
                 </div>
                 }
 
-                @if (isNewLicenseRenewal()) {
+                @if (isNewLicenseRenewal() && !isCompanyRegistrationRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Site Details</h5>
                     <div class="table-responsive">
@@ -1643,7 +1643,7 @@
                 </div>
                 }
 
-                <div class="section-card mb-4">
+                <div class="section-card mb-4" *ngIf="!isCompanyRegistrationRenewal()">
                     <h5 class="section-title">Renewal Fee & Payment Status</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
