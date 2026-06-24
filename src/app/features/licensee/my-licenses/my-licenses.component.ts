@@ -987,7 +987,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   canShowRenewButton(application: UnifiedApplication): boolean {
     const licenseId = this.extractLicenseId(application.raw || {}, application);
     if (!licenseId) return false;
-    return !this.activeRenewalLicenseIds.has(this.normalizeLicenseId(licenseId));
+    return true;
   }
 
   private collectActiveRenewalLicenseIds(result: any): Set<string> {
@@ -1135,6 +1135,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         derivedLicenseId = appId.replace('NLI/', 'NA/');
       } else if (appId.startsWith('SBM/')) {
         derivedLicenseId = appId.replace('SBM/', 'SB/');
+      } else if (appId.startsWith('COMP/')) {
+        derivedLicenseId = appId.replace('COMP/', 'CR/');
       }
       
       if (derivedLicenseId) {
@@ -1159,6 +1161,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         return 'NA/';
       case 'salesman-barman':
         return 'SB/';
+      case 'company-registration':
+        return 'CR/';
       default:
         return '';
     }
@@ -1180,7 +1184,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     } else if (type === 'license-renewal') {
       console.log('🔄 Using License Renewal (old) endpoint');
       renewalObservable = this.licenseApplicationService.renewLicense(renewalId);
-    } else if (type === 'new-license') {
+    } else if (type === 'new-license' || type === 'company-registration') {
       console.log('🔄 Using License Renewal Application (LRA) endpoint');
       renewalObservable = this.licenseApplicationService.initiateLicenseRenewalApplication(renewalId, options);
     } else {
