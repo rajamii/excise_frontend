@@ -18,6 +18,7 @@ import { TimerConfig, TimerConfigService } from '../../../core/services/timer-co
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { forkJoin } from 'rxjs';
+import { MasterService } from '../../../core/services/master.service';
 
 @Component({
   selector: 'app-my-licenses',
@@ -41,6 +42,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     private licenseApplicationService: LicenseApplicationService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private timerConfigService: TimerConfigService,
+    private masterService: MasterService,
     private dialog: MatDialog,
     private router: Router,
     private http: HttpClient
@@ -380,30 +382,87 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             const draughtBeerChecked = !!(raw.draught_beer ?? raw.draught_beer_flag ?? raw.draught_beer_selected ?? raw.draughtBeer);
 
             // ── Fee & location data ───────────────────────────────────────────
+            const selectedFee = raw.license_fee_selection ?? raw.licenseFeeSelection ?? {};
+            const unwrapId = (value: any): any => {
+              if (!value || typeof value !== 'object') return value;
+              return value.id ?? value.pk ?? value.value ?? value.location_code ?? value.locationCode ?? null;
+            };
+            const toAmount = (value: any): number => {
+              const normalized = String(value ?? '').replace(/,/g, '').trim();
+              const amount = Number(normalized);
+              return Number.isFinite(amount) ? amount : 0;
+            };
             const locationName: string = String(
-              raw.location_name ?? raw.locationName ?? raw.location_description ?? raw.locationDescription ?? ''
+              raw.location_name ??
+              raw.locationName ??
+              raw.location_description ??
+              raw.locationDescription ??
+              selectedFee.location_description ??
+              selectedFee.locationDescription ??
+              ''
             ).trim();
             const districtName: string = String(
-              raw.site_district_name ?? raw.siteDistrictName ?? raw.district_name ?? raw.districtName ?? ''
+              raw.site_district_name ??
+              raw.siteDistrictName ??
+              raw.district_name ??
+              raw.districtName ??
+              selectedFee.district_name ??
+              selectedFee.districtName ??
+              ''
             ).trim();
             const locationDisplay = [locationName, districtName].filter(Boolean).join(', ') || null;
 
             // yearly_license_fee is the TOTAL stored fee including previously-selected additional charges.
             // To get the base location fee, subtract the additional charges that were previously baked in.
-            const storedTotalFee: number = Number(
+            const storedTotalFee: number = toAmount(
               raw.yearly_license_fee ?? raw.yearlyLicenseFee ??
-              raw.license_fee_amount ?? raw.licenseFeeAmount ?? 0
+              raw.license_fee_amount ?? raw.licenseFeeAmount ??
+              raw.license_fee ?? raw.licenseFee ??
+              selectedFee.license_fee ?? selectedFee.licenseFee ??
+              raw.fee_amount ?? 0
             );
-            const renewalAmount: number = Number(
-              raw.renewal_amount ?? raw.renewalAmount ?? 0
+            const renewalAmount: number = toAmount(
+              raw.renewal_amount ?? raw.renewalAmount ??
+              selectedFee.renewal_amount ?? selectedFee.renewalAmount ?? 0
             );
-            const lateFee: number = Number(raw.late_fee ?? raw.lateFee ?? 0);
+            const lateFee: number = toAmount(
+              raw.late_fee ?? raw.lateFee ??
+              selectedFee.late_fee ?? selectedFee.lateFee ?? 0
+            );
             // Security deposit is NOT charged at renewal — excluded intentionally
+
+            const selectedFeeId = toAmount(
+              raw.selected_license_fee_id ??
+              raw.selectedLicenseFeeId ??
+              selectedFee.id ??
+              0
+            );
+            const feeSubcategoryId = toAmount(
+              unwrapId(raw.license_subcategory_id) ??
+              unwrapId(raw.license_sub_category_id) ??
+              unwrapId(raw.licenseSubcategoryId) ??
+              unwrapId(raw.licenseSubCategoryId) ??
+              unwrapId(raw.license_subcategory) ??
+              unwrapId(raw.license_sub_category) ??
+              unwrapId(raw.licenseSubcategory) ??
+              unwrapId(raw.licenseSubCategory) ??
+              selectedFee.license_subcategory_id ??
+              selectedFee.licenseSubcategoryId ??
+              0
+            );
+            const feeLocationCode = String(
+              unwrapId(raw.location_code) ??
+              unwrapId(raw.locationCode) ??
+              unwrapId(raw.location) ??
+              selectedFee.location_code ??
+              selectedFee.locationCode ??
+              ''
+            ).trim();
 
             // Subtract previously-included additional charges to get the pure base location fee
             const prevPachwai  = pachwaiChecked      ? 3000 : 0;
             const prevDraught  = draughtBeerChecked  ? 5000 : 0;
-            let locationFee: number = storedTotalFee - prevPachwai - prevDraught;
+            let locationFee: number = Math.max(0, storedTotalFee - prevPachwai - prevDraught);
             if (resolvedType === 'company-registration' && locationFee <= 0) {
               locationFee = 5000;
             }
@@ -411,22 +470,25 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             // Estimated total is dynamic: base location fee + whatever the user selects now + late fee
             // (renewalAmount is added if present as a separate renewal processing fee)
             const additionalInitial = prevPachwai + prevDraught; // current selection
-            const fixedBase = locationFee + renewalAmount + lateFee;
-            const fixedTotal = fixedBase + additionalInitial; // = storedTotalFee + renewalAmount + lateFee
+            let dynamicLocationFee = locationFee;
+            const getFixedBase = () => dynamicLocationFee + renewalAmount + lateFee;
+            const fixedTotal = getFixedBase() + additionalInitial; // = storedTotalFee + renewalAmount + lateFee
 
-            // Build fee breakdown rows (only show non-zero)
+            // Keep the base fee row visible so the popup always shows the
+            // location-fee portion, even if the backend payload currently
+            // resolves the amount as 0.
             const feeRows: string[] = [];
-            if (locationFee > 0) {
-              const feeLabel = resolvedType === 'company-registration' ? 'Company Registration Fee' : 'Location Fee';
-              feeRows.push(`
-                <div class="rl-fee-row">
-                  <span class="rl-fee-row-label">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    ${feeLabel}
-                  </span>
-                  <span class="rl-fee-row-amt">₹${locationFee.toLocaleString('en-IN')}</span>
-                </div>`);
-            }
+            const feeLabel = resolvedType === 'company-registration'
+              ? 'Company Registration Fee'
+              : 'Location Fee';
+            feeRows.push(`
+              <div class="rl-fee-row">
+                <span class="rl-fee-row-label">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  ${feeLabel}
+                </span>
+                <span class="rl-fee-row-amt" id="rl-location-fee-amount">₹${dynamicLocationFee.toLocaleString('en-IN')}</span>
+              </div>`);
             if (renewalAmount > 0) {
               feeRows.push(`
                 <div class="rl-fee-row">
@@ -448,18 +510,18 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                 </div>`);
             }
             if (feeRows.length > 1) {
-              const breakdownTotal = locationFee + renewalAmount + lateFee;
+              const breakdownTotal = getFixedBase();
               feeRows.push(`
                 <div class="rl-fee-row rl-fee-row--total">
                   <span class="rl-fee-row-label rl-fee-row-label--total">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     Subtotal
                   </span>
-                  <span class="rl-fee-row-amt rl-fee-row-amt--total">₹${breakdownTotal.toLocaleString('en-IN')}</span>
+                  <span class="rl-fee-row-amt rl-fee-row-amt--total" id="rl-fee-subtotal">₹${breakdownTotal.toLocaleString('en-IN')}</span>
                 </div>`);
             }
 
-            const feeBreakdownHtml = (feeRows.length > 0 || locationDisplay) ? `
+            const feeBreakdownHtml = `
               <div class="rl-divider"></div>
               <div class="rl-field-group rl-fee-breakdown-group">
                 <label class="rl-field-label">
@@ -474,7 +536,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                 <div class="rl-fee-rows">
                   ${feeRows.length > 0 ? feeRows.join('') : '<div class="rl-fee-row-empty">Fees will be calculated on submission</div>'}
                 </div>
-              </div>` : '';
+              </div>`;
 
             Swal.fire({
               title: '',
@@ -646,11 +708,135 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   const totalEl   = document.getElementById('rl-fee-total');
                   if (totalEl) {
                     const selectedAdditional = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
-                    totalEl.textContent = (fixedBase + selectedAdditional).toLocaleString('en-IN');
+                    totalEl.textContent = (getFixedBase() + selectedAdditional).toLocaleString('en-IN');
                   }
                 };
 
                 // ── Additional charge cards ───────────────────────────────────
+                const updateFeeBreakdown = () => {
+                  const subtotalEl = document.getElementById('rl-fee-subtotal');
+                  if (subtotalEl) {
+                    subtotalEl.textContent = `₹${getFixedBase().toLocaleString('en-IN')}`;
+                  }
+                };
+
+                const applyAssignedFee = (fee: any) => {
+                  const assignedFee = toAmount(
+                    fee?.licenseFee ??
+                    fee?.license_fee ??
+                    fee?.fee ??
+                    fee?.amount ??
+                    fee?.yearly_license_fee ??
+                    fee?.yearlyLicenseFee
+                  );
+                  if (assignedFee <= 0) return;
+                  dynamicLocationFee = assignedFee;
+                  const amountEl = document.getElementById('rl-location-fee-amount');
+                  if (amountEl) {
+                    amountEl.textContent = `₹${dynamicLocationFee.toLocaleString('en-IN')}`;
+                  }
+                  updateFeeBreakdown();
+                  updateFeeTotal();
+                };
+
+                const normalizeText = (value: any) => String(value ?? '').trim().toLowerCase();
+                const applyAssignedFeeFromMasterList = (response: any) => {
+                  const list = Array.isArray(response)
+                    ? response
+                    : (Array.isArray(response?.results) ? response.results : []);
+                  if (!list.length) return;
+
+                  const normalizedLocation = normalizeText(locationName);
+                  const normalizedDistrict = normalizeText(districtName);
+                  const normalizedCategory = normalizeText(catName);
+
+                  const matches = list.filter((fee: any) => {
+                    const feeCategoryId = toAmount(
+                      fee?.license_category ??
+                      fee?.licenseCategory ??
+                      fee?.license_category_id ??
+                      fee?.licenseCategoryId ??
+                      fee?.license_category?.id ??
+                      fee?.license_category?.pk ??
+                      fee?.licenseCategory?.id ??
+                      fee?.licenseCategory?.pk
+                    );
+                    const feeCategoryName = normalizeText(
+                      fee?.license_category_name ??
+                      fee?.licenseCategoryName ??
+                      fee?.category_name ??
+                      fee?.categoryName ??
+                      fee?.license_category?.license_category ??
+                      fee?.license_category?.name ??
+                      fee?.licenseCategory?.licenseCategory ??
+                      fee?.licenseCategory?.name
+                    );
+                    const feeLocation = normalizeText(
+                      fee?.location_description ??
+                      fee?.locationDescription ??
+                      fee?.location_name ??
+                      fee?.locationName ??
+                      fee?.location?.location_description ??
+                      fee?.location?.locationDescription ??
+                      fee?.location?.name
+                    );
+                    const feeDistrict = normalizeText(fee?.district_name ?? fee?.districtName);
+
+                    const categoryMatches = (catId > 0 && feeCategoryId === catId) ||
+                      (!!normalizedCategory && !!feeCategoryName && (
+                        feeCategoryName === normalizedCategory ||
+                        feeCategoryName.includes(normalizedCategory) ||
+                        normalizedCategory.includes(feeCategoryName)
+                      ));
+                    const locationMatches = !normalizedLocation || !feeLocation ||
+                      feeLocation === normalizedLocation ||
+                      feeLocation.includes(normalizedLocation) ||
+                      normalizedLocation.includes(feeLocation);
+                    const districtMatches = !normalizedDistrict || !feeDistrict ||
+                      feeDistrict === normalizedDistrict ||
+                      feeDistrict.includes(normalizedDistrict) ||
+                      normalizedDistrict.includes(feeDistrict);
+
+                    return categoryMatches && locationMatches && districtMatches;
+                  });
+
+                  if (matches.length) {
+                    applyAssignedFee(matches[0]);
+                  }
+                };
+
+                const loadAssignedFeeFromMasterList = () => {
+                  this.masterService.getLicenseFees()
+                    .pipe(take(1), catchError(() => of([])))
+                    .subscribe(applyAssignedFeeFromMasterList);
+                };
+
+                if (selectedFeeId > 0) {
+                  this.masterService.getLicenseFee(selectedFeeId)
+                    .pipe(take(1), catchError(() => of(null)))
+                    .subscribe((fee) => {
+                      const feeAny = fee as any;
+                      if (feeAny && toAmount(feeAny?.licenseFee ?? feeAny?.license_fee ?? feeAny?.fee ?? feeAny?.amount) > 0) {
+                        applyAssignedFee(feeAny);
+                      } else {
+                        loadAssignedFeeFromMasterList();
+                      }
+                    });
+                } else if (catId > 0 && feeSubcategoryId > 0 && feeLocationCode) {
+                  this.masterService.lookupLicenseFee(catId, feeSubcategoryId, feeLocationCode)
+                    .pipe(take(1), catchError(() => of(null)))
+                    .subscribe((fee) => {
+                      const feeAny = fee as any;
+                      if (feeAny && toAmount(feeAny?.licenseFee ?? feeAny?.license_fee ?? feeAny?.fee ?? feeAny?.amount) > 0) {
+                        applyAssignedFee(feeAny);
+                      } else {
+                        loadAssignedFeeFromMasterList();
+                      }
+                    });
+                } else {
+                  loadAssignedFeeFromMasterList();
+                }
+
                 ['rl-pachwai-card', 'rl-draught-card'].forEach(cardId => {
                   const card  = document.getElementById(cardId);
                   if (!card) return;
