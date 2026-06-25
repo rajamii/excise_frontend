@@ -259,13 +259,12 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          // Filter approved and active licenses supporting both camelCase and snake_case, excluding salesman/barman
+          // Only show NA/ (new license application) licenses — exclude everything else
           this.myActiveLicenses = (data || []).filter(l => {
             const approved = l.isApproved !== undefined ? l.isApproved : (l.is_approved !== undefined ? l.is_approved : false);
             const expired = l.isExpired !== undefined ? l.isExpired : l.is_expired;
             const id = l.licenseId || l.license_id || '';
-            const isSalesmanBarman = (l.sourceType || l.source_type) === 'salesman_barman' || id.startsWith('SB/');
-            return approved && !expired && !isSalesmanBarman;
+            return approved && !expired && id.startsWith('NA/');
           });
           console.log('✅ Loaded my active licenses:', this.myActiveLicenses);
           this.isLoadingLicenses = false;

@@ -97,7 +97,7 @@
 
             <!-- Member Name -->
             <mat-form-field appearance="outline">
-              <mat-label>Member Name *</mat-label>
+              <mat-label>Member Name</mat-label>
               <input matInput placeholder="Enter Member Name" type="text" formControlName="memberName" />
               @if (memberDetailsForm.controls['memberName'].invalid && memberDetailsForm.controls['memberName'].touched) {
                 <mat-error>{{ getErrorMessage('memberName') }}</mat-error>
@@ -106,7 +106,7 @@
 
             <!-- Member Designation -->
             <mat-form-field appearance="outline">
-              <mat-label>Member Designation *</mat-label>
+              <mat-label>Member Designation</mat-label>
               <textarea
                 matInput
                 placeholder="Enter Member Designation"
@@ -123,7 +123,7 @@
 
             <!-- Mobile Number -->
             <mat-form-field appearance="outline">
-              <mat-label>Mobile Number *</mat-label>
+              <mat-label>Mobile Number</mat-label>
               <input matInput placeholder="Enter Mobile Number" type="number" formControlName="memberMobileNumber" />
               @if (memberDetailsForm.controls['memberMobileNumber'].invalid && memberDetailsForm.controls['memberMobileNumber'].touched) {
                 <mat-error>{{ getErrorMessage('memberMobileNumber') }}</mat-error>
@@ -141,7 +141,7 @@
 
             <!-- Member Address -->
             <mat-form-field appearance="outline" class="full-span">
-              <mat-label>Member Address *</mat-label>
+              <mat-label>Member Address</mat-label>
               <textarea
                 matInput
                 placeholder="Enter Member Address (max 500 characters)"
