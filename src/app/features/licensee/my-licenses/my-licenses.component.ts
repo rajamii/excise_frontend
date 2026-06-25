@@ -234,19 +234,56 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
           if (isManufacturingOrHomestay) {
             Swal.fire({
-              title: 'Renew License?',
+              title: '',
               html: `
-                <div style="text-align: left; padding: 10px;">
-                  <p>Are you sure you want to renew this license?</p>
-                  <p><strong>License ID:</strong> ${renewalId}</p>
-                  <p><strong>Type:</strong> ${this.getTypeLabel(app)}</p>
+                <div class="rl-modal">
+                  <div class="rl-header">
+                    <div class="rl-header-icon">
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                      </svg>
+                    </div>
+                    <div class="rl-header-text">
+                      <h2 class="rl-title">Renew License</h2>
+                      <p class="rl-subtitle">Review and confirm your renewal</p>
+                    </div>
+                  </div>
+
+                  <div class="rl-license-banner">
+                    <div class="rl-license-banner-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                    </div>
+                    <span class="rl-license-label">License ID</span>
+                    <code class="rl-license-id">${renewalId}</code>
+                  </div>
+
+                  <div class="rl-body">
+                    <div class="rl-info-row">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1c2b78" stroke-width="2.5"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><polyline points="16 3 12 7 8 3"/></svg>
+                      <span class="rl-info-label">Type</span>
+                      <span class="rl-info-value">${this.getTypeLabel(app)}</span>
+                    </div>
+                    <div class="rl-confirm-note">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      Are you sure you want to proceed with the renewal of this license?
+                    </div>
+                  </div>
                 </div>
               `,
-              icon: 'question',
               showCancelButton: true,
-              confirmButtonColor: '#3085d6',
-              cancelButtonColor: '#d33',
-              confirmButtonText: 'Yes, Renew License'
+              showConfirmButton: true,
+              confirmButtonText: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Yes, Renew',
+              cancelButtonText: 'Cancel',
+              customClass: {
+                popup:         'rl-swal-popup',
+                confirmButton: 'rl-swal-confirm',
+                cancelButton:  'rl-swal-cancel',
+                actions:       'rl-swal-actions',
+              },
+              buttonsStyling: false,
+              focusConfirm: false,
             }).then((result) => {
               if (result.isConfirmed) {
                 this.processRenewal(renewalId!, 'new-license');
@@ -1467,19 +1504,48 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           'N/A';
         
         Swal.fire({ 
-          icon: 'success', 
-          title: 'Renewal Initiated Successfully!', 
+          title: '',
           html: `
-            <div style="text-align: left; padding: 10px;">
-              <p>Your license renewal application has been created and submitted.</p>
-              <p><strong>New Application ID:</strong> ${newAppId}</p>
-              <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+            <div class="rs-modal">
+
+              <!-- Animated success ring -->
+              <div class="rs-success-ring">
+                <svg class="rs-checkmark" viewBox="0 0 52 52">
+                  <circle class="rs-checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                  <path class="rs-checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                </svg>
+              </div>
+
+              <!-- Header -->
+              <div class="rs-header">
+                <h2 class="rs-title">Renewal Initiated Successfully!</h2>
+                <p class="rs-subtitle">Your application has been created and submitted</p>
+              </div>
+
+              <!-- Application ID badge -->
+              <div class="rs-app-id-banner">
+                <div class="rs-app-id-banner-inner">
+                  <span class="rs-app-id-label">New Application ID</span>
+                  <code class="rs-app-id-code">${newAppId}</code>
+                </div>
+              </div>
+
+              <!-- Info note -->
+              <div class="rs-note">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 You can track the status of your renewal application in your dashboard.
-              </p>
+              </div>
+
             </div>
-          `, 
-          confirmButtonText: 'Back',
-          confirmButtonColor: '#3085d6',
+          `,
+          showConfirmButton: true,
+          confirmButtonText: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><polyline points="15 18 9 12 15 6"/></svg>Back to Dashboard',
+          customClass: {
+            popup:         'rs-swal-popup',
+            confirmButton: 'rs-swal-confirm',
+            actions:       'rs-swal-actions',
+          },
+          buttonsStyling: false,
           allowOutsideClick: false
         }).then(() => { 
           this.closeDialog();
