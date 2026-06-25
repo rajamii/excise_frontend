@@ -45,19 +45,10 @@
           }
         </mat-form-field>
 
-        <!-- Application Year Dropdown -->
+        <!-- Application Year - auto set, read only -->
         <mat-form-field appearance="outline">
-          <mat-label>Select Application Year</mat-label>
-          <mat-select formControlName="applicationYear">
-            @for (year of applicationYears; track year) {
-              <mat-option [value]="year">{{ year }}</mat-option>
-            }
-          </mat-select>
-          @if (companyDetailsForm.controls['applicationYear'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('applicationYear') }}
-            </mat-error>
-          }
+          <mat-label>Application Year</mat-label>
+          <input matInput formControlName="applicationYear" readonly />
         </mat-form-field>
 
         <!-- Company Name - FIXED LABEL -->
