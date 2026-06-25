@@ -17,11 +17,11 @@
 }
 
 .wallet-summary-card {
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 1.25rem;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(145deg, #f0f4ff 0%, #e8effe 100%);
+  border: 1.5px solid #c7d4f5;
+  border-radius: 18px;
+  padding: 1.35rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.13), 0 2px 6px rgba(15, 23, 42, 0.07);
   min-height: 220px;
   display: flex;
   flex-direction: column;
@@ -30,9 +30,9 @@
 }
 
 .wallet-summary-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
-  border-color: #cbd5e1;
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+  border-color: #a3b8f0;
 }
 
 .wallet-summary-header {
@@ -130,7 +130,7 @@
 .wallet-summary-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #0f172a;
   line-height: 1.3;
 }
 
@@ -171,22 +171,24 @@
 }
 
 .hologram-card {
-  background: linear-gradient(145deg, #fffdf5 0%, #fff7ed 100%);
-  border-color: #fed7aa;
+  background: linear-gradient(145deg, #fff8e6 0%, #fef0c7 100%);
+  border-color: #f6c86e;
+  box-shadow: 0 8px 24px rgba(180, 120, 10, 0.13);
 }
 
 .excise-card {
-  background: linear-gradient(145deg, #f7fbff 0%, #eef4ff 100%);
-  border-color: #bfd8ff;
+  background: linear-gradient(145deg, #e8f0ff 0%, #d6e4ff 100%);
+  border-color: #93b4f5;
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.13);
 
   .wallet-summary-icon {
-    background: #dbeafe;
+    background: #bfdbfe;
     color: #1d4ed8;
   }
 
   .wallet-summary-tag {
-    background: #dbeafe;
-    border-color: #93c5fd;
+    background: #bfdbfe;
+    border-color: #60a5fa;
     color: #1e40af;
   }
 
@@ -195,22 +197,23 @@
   }
 
   .wallet-summary-meta {
-    color: #475569;
+    color: #3d5a9e;
   }
 }
 
 .education-card {
-  background: linear-gradient(145deg, #f2fffb 0%, #ebfff8 100%);
-  border-color: #a7f3d0;
+  background: linear-gradient(145deg, #e0fdf4 0%, #ccfbf1 100%);
+  border-color: #5eead4;
+  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.13);
 
   .wallet-summary-icon {
-    background: #ccfbf1;
+    background: #99f6e4;
     color: #0f766e;
   }
 
   .wallet-summary-tag {
-    background: #ccfbf1;
-    border-color: #99f6e4;
+    background: #99f6e4;
+    border-color: #2dd4bf;
     color: #115e59;
   }
 
@@ -219,46 +222,48 @@
   }
 
   .wallet-summary-meta {
-    color: #475569;
+    color: #1a7a6e;
   }
 }
 
 .security-deposit-card {
-  background: linear-gradient(145deg, #fff8f0 0%, #fff1e6 100%);
-  border-color: #fcd9a8;
+  background: linear-gradient(145deg, #e8f5f0 0%, #d1ede4 100%);
+  border-color: #4caf8a;
+  box-shadow: 0 8px 24px rgba(20, 120, 80, 0.13);
 
   .wallet-summary-icon {
-    background: #ffe4c4;
-    color: #c2570a;
+    background: #a7dfc7;
+    color: #0f7a52;
   }
 
   .wallet-summary-tag {
-    background: #ffe4c4;
-    border-color: #fdba74;
-    color: #9a3412;
+    background: #a7dfc7;
+    border-color: #4caf8a;
+    color: #0a5c3d;
   }
 
   .wallet-summary-balance {
-    color: #c2570a;
+    color: #0f7a52;
   }
 
   .wallet-summary-meta {
-    color: #475569;
+    color: #1a6e4a;
   }
 }
 
 .license-fee-card {
-  background: linear-gradient(145deg, #faf5ff 0%, #f3e8ff 100%);
-  border-color: #d8b4fe;
+  background: linear-gradient(145deg, #f5f0ff 0%, #ede5ff 100%);
+  border-color: #a78bfa;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.13);
 
   .wallet-summary-icon {
-    background: #ede9fe;
+    background: #ddd6fe;
     color: #7c3aed;
   }
 
   .wallet-summary-tag {
-    background: #ede9fe;
-    border-color: #c4b5fd;
+    background: #ddd6fe;
+    border-color: #a78bfa;
     color: #5b21b6;
   }
 
@@ -267,7 +272,7 @@
   }
 
   .wallet-summary-meta {
-    color: #475569;
+    color: #5b21b6;
   }
 }
 
