@@ -54,10 +54,12 @@ export class HomeLinksComponent implements OnInit{
   }
 
   get filteredNotifications(): Notification[] {
+    // Never show bullet notifications in the public list
+    const nonBullet = this.notifications.filter(n => n.category !== 'bullet');
     if (this.selectedCategory === 'all') {
-      return this.notifications;
+      return nonBullet;
     }
-    return this.notifications.filter(notification => notification.category === this.selectedCategory);
+    return nonBullet.filter(n => n.category === this.selectedCategory);
   }
 
   downloadFile(notification: Notification) {
