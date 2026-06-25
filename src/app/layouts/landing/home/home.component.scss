@@ -671,3 +671,121 @@ button {
         min-height: 260px;
     }
 }
+
+.marquee-banner {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+    border: 1.5px solid #fde047;
+    border-radius: 12px;
+    height: 48px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(202, 138, 4, 0.12);
+    margin-bottom: 8px;
+}
+
+.marquee-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+    color: #ffffff;
+    padding: 0 16px;
+    height: 100%;
+    font-weight: 700;
+    font-size: 14px;
+    z-index: 2;
+    box-shadow: 4px 0 15px rgba(202, 138, 4, 0.30);
+    white-space: nowrap;
+    border-top-left-radius: 11px;
+    border-bottom-left-radius: 11px;
+
+    mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        color: #fff;
+        animation: bell-shake 2.5s ease-in-out infinite;
+    }
+}
+
+.marquee-item {
+    font-size: 14px;
+    font-weight: 600;
+    color: #78350f;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+
+    &:hover {
+        color: #92400e;
+        text-decoration: underline;
+    }
+
+    .item-title {
+        font-weight: 700;
+    }
+
+    .item-message {
+        font-weight: 400;
+        opacity: 0.85;
+    }
+
+    .pdf-indicator {
+        font-size: 11px;
+        font-weight: 700;
+        color: #dc2626;
+        background: rgba(239, 68, 68, 0.12);
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 4px;
+    }
+}
+
+.marquee-separator {
+    color: #fbbf24;
+    font-size: 16px;
+    font-weight: 300;
+}
+
+.marquee-content-wrapper {
+    flex-grow: 1;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.marquee-content {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    position: absolute;
+    will-change: transform;
+    padding-left: 100%;
+    animation: marquee-scroll 45s linear infinite;
+
+    &:hover {
+        animation-play-state: paused;
+    }
+}
+
+@keyframes marquee-scroll {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+}
+
+@keyframes bell-shake {
+    0%, 100% { transform: rotate(0deg); }
+    15%       { transform: rotate(12deg); }
+    30%       { transform: rotate(-10deg); }
+    45%       { transform: rotate(8deg); }
+    60%       { transform: rotate(-6deg); }
+    75%       { transform: rotate(4deg); }
+}
+

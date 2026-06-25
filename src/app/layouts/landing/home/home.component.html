@@ -1,6 +1,32 @@
 <canvas #bgCanvas class="bg-3d-canvas"></canvas>
 <section class="home-grid" aria-label="Excise department highlights">
 
+  @if (bulletNotifications && bulletNotifications.length > 0) {
+    <div class="marquee-banner">
+      <div class="marquee-header">
+        <mat-icon>campaign</mat-icon>
+      </div>
+      <div class="marquee-content-wrapper">
+        <div class="marquee-content">
+          @for (note of bulletNotifications; track note; let last = $last) {
+            <span class="marquee-item" (click)="note.link ? navigateToExternal(note.link) : null" [style.cursor]="note.link ? 'pointer' : 'default'">
+              <span class="item-title">{{ note.title }}</span>
+              @if (note.message) {
+                <span class="item-message"> - {{ note.message }}</span>
+              }
+              @if (note.link) {
+                <span class="pdf-indicator">PDF</span>
+              }
+            </span>
+            @if (!last) {
+              <span class="marquee-separator">|</span>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  }
+
   <mat-card class = "about-us grid-card" id = "about-us">
     <mat-card-header>About Us</mat-card-header>
       <mat-card-content class = "card-container">
@@ -24,7 +50,6 @@
             <button [class.active]="selectedHomeCategory === 'act'" (click)="filterHomeCategory('act')">Acts</button>
             <button [class.active]="selectedHomeCategory === 'rule'" (click)="filterHomeCategory('rule')">Rules</button>
             <button [class.active]="selectedHomeCategory === 'circular'" (click)="filterHomeCategory('circular')">Circulars</button>
-            <button [class.active]="selectedHomeCategory === 'bullet'" (click)="filterHomeCategory('bullet')">Notifications</button>
             <button [class.active]="selectedHomeCategory === 'license'" (click)="filterHomeCategory('license')">License Info</button>
           </div>
         </div>

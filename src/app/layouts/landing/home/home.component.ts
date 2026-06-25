@@ -40,6 +40,14 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   isBrowser: boolean;
   selectedHomeCategory: string = 'all';
   allNotifications: any[] = [];
+  bulletNotifications: any[] = []; // marquee ticker items
+
+  truncateWords(text: string, limit: number): string {
+    if (!text) return '';
+    const words = text.trim().split(/\s+/);
+    if (words.length <= limit) return text;
+    return words.slice(0, limit).join(' ') + '...';
+  }
 
   // 3D/Parallax Canvas engine properties
   private animationFrameId?: number;
@@ -72,10 +80,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       items = this.allNotifications.filter(item => item.category === this.selectedHomeCategory);
     }
 
-    // Always keep bullet notifications pinned at the very top regardless of selected tab
-    const bullets = items.filter(item => item.category === 'bullet');
-    const others  = items.filter(item => item.category !== 'bullet');
-    return [...bullets, ...others].slice(0, 6);
+    return items.slice(0, 6);
   }
 
   filterHomeCategory(cat: string): void {
@@ -92,10 +97,20 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           message: item.message,
           link: item.file ? (String(item.file).startsWith('http') ? item.file : `${environment.apiBaseUrl}${item.file}`) : ''
         }));
-        // Store with bullets always first globally
-        const bullets = mapped.filter(i => i.category === 'bullet');
-        const others  = mapped.filter(i => i.category !== 'bullet');
-        this.allNotifications = [...bullets, ...others];
+        
+        // Extract bullet notifications and truncate to 300 words
+        this.bulletNotifications = mapped.filter(i => i.category === 'bullet').map(item => {
+          if (item.message) {
+            item.message = this.truncateWords(item.message, 300);
+          }
+          if (item.title) {
+            item.title = this.truncateWords(item.title, 300);
+          }
+          return item;
+        });
+
+        // Store other notifications
+        this.allNotifications = mapped.filter(i => i.category !== 'bullet');
       },
       error: (err) => {
         console.error('Failed to load notifications dynamically:', err);
