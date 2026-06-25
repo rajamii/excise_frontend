@@ -1835,3 +1835,62 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
     color: #10b981;
   }
 }
+
+
+// ── Renewal success popup — inline close button ──────────────────────────────
+.rs-close-row {
+  display: flex;
+  justify-content: center;
+  padding: 16px 28px 28px;
+  background: #f0fdf4;
+  border-top: 1px solid #bbf7d0;
+}
+
+.rs-close-btn {
+  display: inline-block;
+  padding: 12px 48px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.35);
+  transition: all 0.2s ease;
+  letter-spacing: 0.2px;
+  position: relative;
+  z-index: 9999;
+
+  &:hover {
+    box-shadow: 0 6px 22px rgba(5, 150, 105, 0.50);
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+  }
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(5, 150, 105, 0.30);
+  }
+}
+
+
+// ── Renewal success popup title & icon colour overrides ─────────────────────
+.swal-renewal-success-title {
+  color: #065f46 !important;
+  font-size: 1.45rem !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+}
+
+.swal-renewal-success-icon {
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+}
+
+.swal-renewal-success-icon .swal2-success-ring {
+  border-color: #a7f3d0 !important;
+}
+
+.swal-renewal-success-icon [class^='swal2-success-line'] {
+  background-color: #10b981 !important;
+}

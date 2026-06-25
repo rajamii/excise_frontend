@@ -1503,51 +1503,80 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           response?.applicationId ||
           'N/A';
         
-        Swal.fire({ 
-          title: '',
+        Swal.fire({
+          icon: 'success',
+          title: 'Renewal Initiated Successfully!',
           html: `
-            <div class="rs-modal">
+            <div style="
+              margin: -16px -24px 0;
+              padding: 0 0 20px;
+              background: linear-gradient(180deg, #dcfce7 0%, #f0fdf4 100%);
+              border-bottom: 1px solid #a7f3d0;
+              text-align: center;
+            ">
+              <p style="margin:0 0 16px;font-size:13.5px;color:#166534;font-weight:500;padding: 0 20px;">
+                Your license renewal application has been created and submitted.
+              </p>
 
-              <!-- Animated success ring -->
-              <div class="rs-success-ring">
-                <svg class="rs-checkmark" viewBox="0 0 52 52">
-                  <circle class="rs-checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
-                  <path class="rs-checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-                </svg>
+              <!-- App ID badge -->
+              <div style="
+                display:inline-flex;
+                align-items:center;
+                gap:10px;
+                background:#ffffff;
+                border:1.5px solid #6ee7b7;
+                border-radius:12px;
+                padding:10px 18px;
+                box-shadow:0 2px 8px rgba(16,185,129,0.12);
+                flex-wrap:wrap;
+                justify-content:center;
+              ">
+                <span style="
+                  font-size:9px;
+                  font-weight:800;
+                  color:#065f46;
+                  text-transform:uppercase;
+                  letter-spacing:1px;
+                  white-space:nowrap;
+                ">✅ New Application ID</span>
+                <code style="
+                  font-family:'Fira Code',monospace;
+                  font-size:13.5px;
+                  font-weight:700;
+                  color:#047857;
+                  background:#ecfdf5;
+                  border:1.5px solid #6ee7b7;
+                  padding:4px 14px;
+                  border-radius:8px;
+                  letter-spacing:0.5px;
+                ">${newAppId}</code>
               </div>
-
-              <!-- Header -->
-              <div class="rs-header">
-                <h2 class="rs-title">Renewal Initiated Successfully!</h2>
-                <p class="rs-subtitle">Your application has been created and submitted</p>
-              </div>
-
-              <!-- Application ID badge -->
-              <div class="rs-app-id-banner">
-                <div class="rs-app-id-banner-inner">
-                  <span class="rs-app-id-label">New Application ID</span>
-                  <code class="rs-app-id-code">${newAppId}</code>
-                </div>
-              </div>
-
-              <!-- Info note -->
-              <div class="rs-note">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                You can track the status of your renewal application in your dashboard.
-              </div>
-
             </div>
+
+            <!-- Tracking note -->
+            <p style="
+              margin:18px 0 0;
+              font-size:12px;
+              color:#059669;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              gap:6px;
+            ">
+              <span>🗂️</span>
+              Track the status of your renewal in your dashboard.
+            </p>
           `,
-          showConfirmButton: true,
-          confirmButtonText: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><polyline points="15 18 9 12 15 6"/></svg>Back to Dashboard',
+          background: '#f0fdf4',
+          color: '#065f46',
+          confirmButtonText: 'Close',
+          confirmButtonColor: '#059669',
+          allowOutsideClick: true,
           customClass: {
-            popup:         'rs-swal-popup',
-            confirmButton: 'rs-swal-confirm',
-            actions:       'rs-swal-actions',
-          },
-          buttonsStyling: false,
-          allowOutsideClick: false
-        }).then(() => { 
+            title: 'swal-renewal-success-title',
+            icon:  'swal-renewal-success-icon',
+          }
+        }).then(() => {
           this.closeDialog();
         });
       },
