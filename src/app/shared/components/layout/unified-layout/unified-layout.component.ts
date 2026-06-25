@@ -1521,7 +1521,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private canAccessCompanyRegistrationWorkflow(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    if ([1, 3, 5, 10].includes(roleId)) {
+    if ([3, 5, 10].includes(roleId)) {
       return true;
     }
 
@@ -1530,7 +1530,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'singlewindow',
       'permitsection',
       'commissioner',
-      'siteadmin'
     ].some((token) => normalizedRole.includes(token));
   }
 
