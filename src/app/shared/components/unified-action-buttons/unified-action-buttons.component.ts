@@ -1049,7 +1049,11 @@ private getTransitRejectSummary(): {
           confirmButton: 'swal-proceed-confirm',
           cancelButton: 'swal-proceed-cancel'
         },
-        width: '540px'
+        width: '540px',
+        didOpen: (popup) => {
+          popup.style.background = 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #ecfdf5 100%)';
+          popup.style.boxShadow = '0 24px 60px rgba(5,150,105,0.18), 0 4px 16px rgba(5,150,105,0.10)';
+        }
       }).then((result) => {
         if (!result.isConfirmed) return;
         this.router.navigate(['/dashboard'], {
