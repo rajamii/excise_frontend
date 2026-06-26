@@ -7,6 +7,7 @@ import { environment } from '../../../../../environments/environment';
 interface Notification {
   date: string;
   subject: string;
+  message?: string;
   category: string;
   file?: string;
 }
@@ -43,6 +44,7 @@ export class HomeLinksComponent implements OnInit{
         this.notifications = data.map(item => ({
           date: item.date,
           subject: item.title,
+          message: item.message,
           category: item.category,
           file: item.file ? String(item.file) : undefined
         }));
@@ -71,6 +73,12 @@ export class HomeLinksComponent implements OnInit{
     } else {
       alert('No document attached.');
     }
+  }
+
+  truncateText(text: string, maxLength: number): string {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
   }
   
   raidsColumns: string[] = ['photo', 'caption'];

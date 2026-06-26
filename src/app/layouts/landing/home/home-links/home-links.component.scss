@@ -38,6 +38,39 @@
     }
 }
 
+.notifications{
+    mat-radio-group {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .subject-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 0;
+        max-width: 100%;
+    }
+    
+    .subject-title {
+        font-weight: 600;
+        color: #1c2b78;
+        font-size: 14px;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+    
+    .subject-message {
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.5;
+        margin-top: 4px;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+}
+
 @media(max-width: 365px){
     .notifications{
         mat-card-content{

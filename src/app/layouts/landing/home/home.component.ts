@@ -49,6 +49,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return words.slice(0, limit).join(' ') + '...';
   }
 
+  truncateText(text: string, maxLength: number): string {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  }
+
   // 3D/Parallax Canvas engine properties
   private animationFrameId?: number;
   private resizeListener?: () => void;
