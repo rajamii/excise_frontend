@@ -566,43 +566,73 @@
 
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 1.5rem;
     }
 
     .stat-card {
-        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-        border-radius: 1rem;
+        border-radius: 1.25rem;
         padding: 0;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        box-shadow: 
+            0 4px 20px rgba(28, 43, 120, 0.08),
+            0 1px 4px rgba(28, 43, 120, 0.06);
         display: flex;
         flex-direction: column;
         transition: all 0.3s ease;
-        border: 1px solid rgba(28, 43, 120, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         cursor: pointer;
         position: relative;
         overflow: hidden;
-        backdrop-filter: blur(10px);
+        transform: translateY(0);
+        min-height: 180px;
 
+        /* Large decorative circle - top right */
         &::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #1C2B78, #2d4aa7);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
+            top: -60px;
+            right: -60px;
+            width: 180px;
+            height: 180px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.4s ease;
+        }
+
+        /* Medium decorative circle - bottom left */
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: -40px;
+            left: -40px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.4s ease;
         }
 
         &:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
-            border-color: rgba(28, 43, 120, 0.2);
+            transform: translateY(-6px);
+            box-shadow: 
+                0 12px 36px rgba(28, 43, 120, 0.15),
+                0 4px 12px rgba(28, 43, 120, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
 
             &::before {
-                transform: scaleX(1);
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+
+            &::after {
+                transform: scale(1.15);
+                opacity: 0.8;
+            }
+
+            .circle-icon {
+                transform: scale(1.08);
             }
 
             .card-footer .view-all {
@@ -616,60 +646,66 @@
             justify-content: space-between;
             align-items: flex-start;
             padding: 1.5rem 1.5rem 0;
+            position: relative;
+            z-index: 1;
         }
 
         .circle-icon {
-            width: 4rem;
-            height: 4rem;
+            width: 3.5rem;
+            height: 3.5rem;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
-            overflow: hidden;
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.12),
+                0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            z-index: 1;
 
+            /* Subtle inner glow */
             &::before {
                 content: '';
                 position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: inherit;
+                inset: 3px;
+                background: rgba(255, 255, 255, 0.2);
                 border-radius: 50%;
-                opacity: 0.1;
-                transform: scale(1.5);
-                transition: transform 0.3s ease;
+                opacity: 0.6;
             }
 
             mat-icon {
-                font-size: 2rem;
-                width: 2rem;
-                height: 2rem;
+                font-size: 1.75rem;
+                width: 1.75rem;
+                height: 1.75rem;
                 color: #fff;
                 z-index: 1;
                 position: relative;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
             }
         }
 
         .card-trend {
             display: flex;
             align-items: center;
-            gap: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.5rem;
-            background: rgba(0, 0, 0, 0.05);
+            gap: 0.35rem;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            padding: 0.4rem 0.75rem;
+            border-radius: 1.5rem;
+            background: rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
 
             &.positive {
                 color: #10b981;
-                background: rgba(16, 185, 129, 0.1);
+                background: rgba(16, 185, 129, 0.08);
+                border: 1px solid rgba(16, 185, 129, 0.15);
             }
 
             &.negative {
                 color: #ef4444;
-                background: rgba(239, 68, 68, 0.1);
+                background: rgba(239, 68, 68, 0.08);
+                border: 1px solid rgba(239, 68, 68, 0.15);
             }
 
             mat-icon {
@@ -680,100 +716,243 @@
         }
 
         .card-content {
-            padding: 0 1.5rem 1rem;
+            padding: 1rem 1.5rem 1rem;
             flex: 1;
+            position: relative;
+            z-index: 1;
         }
 
         .value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: #1c1c1c;
-            line-height: 1.2;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            font-size: 2.25rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.02em;
         }
 
         .label {
-            font-size: 1rem;
-            color: #666;
-            font-weight: 600;
+            font-size: 0.8125rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.08em;
             margin-bottom: 0.5rem;
         }
 
         .sub-info {
             font-size: 0.875rem;
-            color: #888;
-            font-weight: 500;
+            color: rgba(0, 0, 0, 0.6);
+            font-weight: 600;
+            line-height: 1.6;
 
             .payment-count {
                 display: inline-flex;
                 align-items: center;
-                gap: 0.25rem;
-                padding: 0.25rem 0.75rem;
-                background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 152, 0, 0.2) 100%);
-                border-radius: 1rem;
-                border: 1px solid rgba(255, 152, 0, 0.3);
-                font-size: 0.75rem;
-                font-weight: 600;
-                color: #ff9800;
+                gap: 0.35rem;
+                padding: 0.35rem 0.75rem;
+                background: rgba(251, 146, 60, 0.08);
+                border-radius: 1.5rem;
+                border: 1px solid rgba(251, 146, 60, 0.2);
+                font-size: 0.8125rem;
+                font-weight: 700;
+                color: #ea580c;
+                margin-right: 0.5rem;
+                margin-bottom: 0.35rem;
+                transition: all 0.3s ease;
+
+                &:hover {
+                    transform: translateY(-1px);
+                    background: rgba(251, 146, 60, 0.12);
+                }
             }
         }
 
         .card-footer {
             padding: 0 1.5rem 1.5rem;
             margin-top: auto;
+            position: relative;
+            z-index: 1;
 
             .view-all {
                 font-size: 0.875rem;
-                color: #1C2B78;
+                color: rgba(0, 0, 0, 0.7);
                 font-weight: 600;
-                opacity: 0.7;
+                opacity: 0.8;
                 transition: all 0.3s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
             }
         }
 
-        // Color variations
+        // Refined color variations with softer gradients
         .blue-bg {
-            background: linear-gradient(135deg, #1C2B78 0%, #2d4aa7 100%);
+            background: linear-gradient(135deg, #1C2B78 0%, #2563eb 100%);
         }
 
         .red-bg {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
         }
 
         .green-bg {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
         }
 
         .yellow-bg {
-            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
         }
 
         .purple-bg {
-            background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
         }
 
         .indigo-bg {
-            background: linear-gradient(135deg, #6610f2 0%, #520dc2 100%);
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
         }
 
         .orange-bg {
-            background: linear-gradient(135deg, #fd7e14 0%, #e55a00 100%);
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
         }
 
         .teal-bg {
-            background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+            background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        }
+
+        // Card-specific themed backgrounds with light, vibrant gradients
+        &.applied {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            
+            .value {
+                color: #1e40af;
+            }
+            
+            .label {
+                color: #3b82f6;
+            }
+        }
+
+        &.pending {
+            background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
+            
+            .value {
+                color: #ca8a04;
+            }
+            
+            .label {
+                color: #eab308;
+            }
+        }
+
+        &.approved {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            
+            .value {
+                color: #059669;
+            }
+            
+            .label {
+                color: #10b981;
+            }
+        }
+
+        &.rejected {
+            background: linear-gradient(135deg, #fecdd3 0%, #fda4af 100%);
+            
+            .value {
+                color: #dc2626;
+            }
+            
+            .label {
+                color: #f43f5e;
+            }
+        }
+
+        &.awaiting-payment {
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            
+            .value {
+                color: #be185d;
+            }
+            
+            .label {
+                color: #ec4899;
+            }
+        }
+
+        &.objection {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            
+            .value {
+                color: #6366f1;
+            }
+            
+            .label {
+                color: #818cf8;
+            }
         }
     }
 
     &.loading {
-        opacity: 0.6;
+        opacity: 0.7;
         pointer-events: none;
 
         .stat-card {
-            animation: pulse 1.5s ease-in-out infinite;
+            animation: shimmer 1.5s ease-in-out infinite;
+        }
+    }
+}
+
+/* Minimal Keyframe Animations */
+@keyframes shimmer {
+    0% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 0.6;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .stats-container .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-container {
+        margin: 1rem;
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+
+        .stat-card {
+            .circle-icon {
+                width: 4rem;
+                height: 4rem;
+
+                mat-icon {
+                    font-size: 2rem;
+                    width: 2rem;
+                    height: 2rem;
+                }
+            }
+
+            .value {
+                font-size: 2.5rem;
+            }
+
+            .card-header,
+            .card-content,
+            .card-footer {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
         }
     }
 }
