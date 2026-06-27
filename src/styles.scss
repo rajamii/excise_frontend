@@ -1894,3 +1894,11 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 .swal-renewal-success-icon [class^='swal2-success-line'] {
   background-color: #10b981 !important;
 }
+
+// ── Licensee dashboard stat card colored borders ──────────────────────────────
+.stat-card.applied   { border: 2px solid #93a8d4 !important; }
+.stat-card.pending   { border: 2px solid #f6c85e !important; }
+.stat-card.awaiting-payment { border: 2px solid #fdba74 !important; }
+.stat-card.objection { border: 2px solid #c4b5fd !important; }
+.stat-card.approved  { border: 2px solid #6ee7b7 !important; }
+.stat-card.rejected  { border: 2px solid #fca5a5 !important; }
