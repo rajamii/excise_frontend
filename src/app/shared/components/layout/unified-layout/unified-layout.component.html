@@ -436,7 +436,7 @@
       <!-- Left edge trigger: hover near left side to reveal arrow, click to open sidebar -->
       <div
         class="sidenav-edge-trigger"
-        *ngIf="!isSidenavOpen"
+        [class.sidenav-edge-trigger--hidden]="isSidenavOpen"
         (click)="openSidenav()"
         tabindex="0"
         (keydown.enter)="openSidenav()"
@@ -448,8 +448,8 @@
         </button>
       </div>
 
-      <!-- Top Navigation Bar (visible when sidebar is closed) -->
-      <div class="top-nav-bar" *ngIf="!isSidenavOpen">
+      <!-- Top Navigation Bar -->
+      <div class="top-nav-bar" [class.top-nav-bar--hidden]="isSidenavOpen">
         <div class="top-nav-content">
           <!-- Left Section with Hamburger and Logo -->
           <div class="nav-left">
