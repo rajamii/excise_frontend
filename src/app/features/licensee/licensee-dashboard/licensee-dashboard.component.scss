@@ -167,6 +167,48 @@
         &.awaiting-payment {
             border-color: rgba(255, 152, 0, 0.55) !important;
             box-shadow: 0 2px 12px rgba(255, 152, 0, 0.12) !important;
+            background: linear-gradient(135deg, rgba(255,247,237,0.6) 0%, rgba(255,237,213,0.6) 100%) !important;
+            position: relative;
+            overflow: hidden;
+            animation: payment-border-pulse-ld 1.8s ease-in-out infinite;
+
+            // Diagonal shimmer sweep
+            &::after {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -75%;
+                width: 50%;
+                height: 200%;
+                background: linear-gradient(
+                    120deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.45) 50%,
+                    transparent 100%
+                );
+                animation: shimmer-sweep-ld 2.8s ease-in-out infinite;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            // HTML badge styling
+            .action-badge {
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(90deg, #f97316, #fb923c);
+                color: #fff;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.8px;
+                white-space: nowrap;
+                padding: 3px 10px;
+                border-radius: 20px;
+                box-shadow: 0 2px 6px rgba(249,115,22,0.4);
+                z-index: 2;
+            }
+
             .value { color: #c2570a; }
             .label { color: #c2570a; }
         }
@@ -274,6 +316,26 @@
             }
         }
     }
+}
+
+// ========================================
+// AWAITING PAYMENT ANIMATIONS
+// ========================================
+@keyframes payment-border-pulse-ld {
+    0%, 100% {
+        border-color: rgba(249, 115, 22, 0.55);
+        box-shadow: 0 0 0 0 rgba(249, 115, 22, 0), 0 4px 20px rgba(28, 43, 120, 0.08);
+    }
+    50% {
+        border-color: rgba(251, 191, 36, 0.9);
+        box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.18), 0 0 28px rgba(251, 191, 36, 0.4), 0 4px 20px rgba(28, 43, 120, 0.08);
+    }
+}
+
+@keyframes shimmer-sweep-ld {
+    0%   { left: -75%; }
+    60%  { left: 125%; }
+    100% { left: 125%; }
 }
 
 // ========================================

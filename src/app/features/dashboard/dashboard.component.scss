@@ -929,14 +929,51 @@
         }
 
         &.awaiting-payment {
-            background: linear-gradient(135deg, rgba(255,247,237,0.35) 0%, rgba(255,237,213,0.35) 100%);
+            background: linear-gradient(135deg, rgba(255,247,237,0.6) 0%, rgba(255,237,213,0.6) 100%);
             &::before { background: rgba(251, 146, 60, 0.3); }
-            &::after { content: none; }
             border: 2px solid #f97316;
             animation: payment-border-pulse 1.8s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+
+            // Diagonal shimmer sweep
+            &::after {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -75%;
+                width: 50%;
+                height: 200%;
+                background: linear-gradient(
+                    120deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.45) 50%,
+                    transparent 100%
+                );
+                animation: shimmer-sweep 2.8s ease-in-out infinite;
+                pointer-events: none;
+            }
 
             .value { color: #ea580c; }
             .label { color: #f97316; }
+
+            // HTML badge styling
+            .action-badge {
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(90deg, #f97316, #fb923c);
+                color: #fff;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.8px;
+                white-space: nowrap;
+                padding: 3px 10px;
+                border-radius: 20px;
+                box-shadow: 0 2px 6px rgba(249,115,22,0.4);
+                z-index: 2;
+            }
         }
 
 @keyframes payment-border-pulse {
@@ -949,10 +986,16 @@
     50% {
         border-color: #fbbf24;
         box-shadow:
-            0 0 0 5px rgba(249, 115, 22, 0.15),
-            0 0 20px rgba(251, 191, 36, 0.3),
+            0 0 0 6px rgba(249, 115, 22, 0.18),
+            0 0 28px rgba(251, 191, 36, 0.4),
             0 4px 20px rgba(28, 43, 120, 0.08);
     }
+}
+
+@keyframes shimmer-sweep {
+    0%   { left: -75%; }
+    60%  { left: 125%; }
+    100% { left: 125%; }
 }
 
         &.objection {
