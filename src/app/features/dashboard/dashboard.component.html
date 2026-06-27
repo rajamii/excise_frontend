@@ -454,6 +454,27 @@
           </div>
         </mat-card>
 
+        <!-- Approved Stat Card -->
+        <mat-card class="stat-card approved" *ngIf="shouldShowStatCard('approved')">
+          <div class="card-header">
+            <div class="circle-icon green-bg">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="card-trend positive">
+              <mat-icon>trending_up</mat-icon>
+              <span>{{ getStatTrend('approved') }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.approved }}</div>
+            <div class="label">Approved</div>
+            <div class="sub-info">{{ getStatSubInfo('approved') }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
+
         <!-- Objection Stat Card -->
         <mat-card class="stat-card objection" *ngIf="shouldShowStatCard('objection')">
           <div class="card-header">
@@ -474,27 +495,6 @@
           </div>
           <div class="card-footer">
             <button mat-button color="primary" (click)="showTable('objection')">View All →</button>
-          </div>
-        </mat-card>
-
-        <!-- Approved Stat Card -->
-        <mat-card class="stat-card approved" *ngIf="shouldShowStatCard('approved')">
-          <div class="card-header">
-            <div class="circle-icon green-bg">
-              <mat-icon>check_circle</mat-icon>
-            </div>
-            <div class="card-trend positive">
-              <mat-icon>trending_up</mat-icon>
-              <span>{{ getStatTrend('approved') }}%</span>
-            </div>
-          </div>
-          <div class="card-content">
-            <div class="value">{{ dashboardCounts.approved }}</div>
-            <div class="label">Approved</div>
-            <div class="sub-info">{{ getStatSubInfo('approved') }}</div>
-          </div>
-          <div class="card-footer">
-            <span class="view-all">View All →</span>
           </div>
         </mat-card>
 
