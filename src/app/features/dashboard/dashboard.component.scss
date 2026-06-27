@@ -956,11 +956,11 @@
 }
 
         &.objection {
-            background: linear-gradient(135deg, rgba(245,243,255,0.35) 0%, rgba(237,233,254,0.35) 100%);
-            &::before { background: rgba(167, 139, 250, 0.3); }
+            background: linear-gradient(135deg, rgba(255,247,237,0.35) 0%, rgba(255,237,213,0.35) 100%);
+            &::before { background: rgba(251, 146, 60, 0.3); }
             &::after { content: none; }
-            .value { color: #7c3aed; }
-            .label { color: #8b5cf6; }
+            .value { color: #ea580c; }
+            .label { color: #f97316; }
         }
     }
 

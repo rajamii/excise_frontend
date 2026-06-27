@@ -185,6 +185,14 @@
             .label { color: #dc2626; }
         }
 
+        &.objection {
+            border-color: rgba(255, 152, 0, 0.55) !important;
+            box-shadow: 0 2px 12px rgba(255, 152, 0, 0.12) !important;
+            background: linear-gradient(135deg, rgba(255,247,237,0.35) 0%, rgba(255,237,213,0.35) 100%) !important;
+            .value { color: #ea580c; }
+            .label { color: #f97316; }
+        }
+
         .circle-icon {
             width: 56px;
             height: 56px;
@@ -787,7 +795,7 @@ $expiring-date-color:#e65100;
     --mdc-elevated-card-container-color: #fff !important;
   }
   .stat-card.objection.mat-mdc-card {
-    border: 2px solid rgba(147, 51, 234, 0.55) !important;
-    --mdc-elevated-card-container-color: #fff !important;
+    border: 2px solid rgba(255, 152, 0, 0.55) !important;
+    --mdc-elevated-card-container-color: transparent !important;
   }
 }

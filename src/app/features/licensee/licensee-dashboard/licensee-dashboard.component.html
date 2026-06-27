@@ -72,6 +72,15 @@
       <div class="label">Approved</div>
     </mat-card>
 
+    <!-- Objection Stat Card -->
+    <mat-card class="stat-card objection">
+      <div class="circle-icon orange-bg">
+        <mat-icon style="color: white; font-size: 24px; display: flex; align-items: center; justify-content: center;">error_outline</mat-icon>
+      </div>
+      <div class="value">{{ dashboardCounts.objection || 0 }}</div>
+      <div class="label">Objection</div>
+    </mat-card>
+
     <!-- Rejected Stat Card -->
     <mat-card class="stat-card rejected">
       <div class="circle-icon red-bg">
