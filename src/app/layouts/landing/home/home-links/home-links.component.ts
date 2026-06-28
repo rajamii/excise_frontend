@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { ActivatedRoute } from '@angular/router';
 import { WhatsCurrentService } from '../../../../core/services/whats-current.service';
+import { PreventiveRaidsService } from '../../../../core/services/preventive-raids.service';
+import { PreventiveRaid } from '../../../../core/models/preventive-raids.model';
 import { environment } from '../../../../../environments/environment';
 
 interface Notification {
@@ -23,6 +25,7 @@ export class HomeLinksComponent implements OnInit{
   selectedCategory: string = 'all';
 
   notifications: Notification[] = [];
+  preventiveRaids: PreventiveRaid[] = [];
 
   displayedColumns: string[] = ['date', 'subject', 'download'];
 
@@ -31,11 +34,13 @@ export class HomeLinksComponent implements OnInit{
       this.page = params.get('page');
     });
     this.loadNotifications();
+    this.loadRaids();
   }
 
   constructor(
     private route: ActivatedRoute,
-    private whatsCurrentService: WhatsCurrentService
+    private whatsCurrentService: WhatsCurrentService,
+    private raidsService: PreventiveRaidsService
   ) {}
 
   loadNotifications() {
@@ -82,13 +87,24 @@ export class HomeLinksComponent implements OnInit{
   }
   
   raidsColumns: string[] = ['photo', 'caption'];
+  dataSource: PreventiveRaid[] = [];
 
-  dataSource = [
-    {
-      photoUrl: '../../assets/images/main/preventive-raids/preventive-raids.jpg',
-      publishedOn: 'Apr 20 2021 12:00AM',
-      caption: 'Raid conducted by Sikkim State Excise',
-      captionLink: 'Excise Raids on illicit dens in Remote Villages.'
+  loadRaids(): void {
+    this.raidsService.getPreventiveRaids().subscribe({
+      next: (data) => {
+        this.dataSource = data;
+      },
+      error: (err) => {
+        console.error('Failed to load preventive raids:', err);
+      }
+    });
+  }
+
+  getRaidImageUrl(imagePath: string): string {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http') || imagePath.startsWith('assets/')) {
+      return imagePath;
     }
-  ];
+    return `${environment.apiBaseUrl}${imagePath}`;
+  }
 }

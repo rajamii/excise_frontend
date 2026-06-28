@@ -10,7 +10,8 @@ import {
 } from '../../core/models/contact-us.model';
 import {
   ExciseSecretary,
-  HeadOfOrganisation
+  HeadOfOrganisation,
+  AboutUs
 } from '../../core/models/about-us.model';
 
 @Injectable({
@@ -123,6 +124,23 @@ export class InfoPagesService {
 
   deleteExciseSecretary(id: number): Observable<any> {
     return this.http.delete(`${this.aboutUsBaseUrl}/excisesecretaries/delete/${id}/`);
+  }
+
+  // About Us Content
+  getAboutUs(): Observable<AboutUs[]> {
+    return this.http.get<AboutUs[]>(`${this.aboutUsBaseUrl}/content/list/`);
+  }
+
+  createAboutUs(data: Partial<AboutUs>): Observable<AboutUs> {
+    return this.http.post<AboutUs>(`${this.aboutUsBaseUrl}/content/create/`, this.toInfoPageFormData(data));
+  }
+
+  updateAboutUs(id: number, data: Partial<AboutUs>): Observable<AboutUs> {
+    return this.http.put<AboutUs>(`${this.aboutUsBaseUrl}/content/update/${id}/`, this.toInfoPageFormData(data));
+  }
+
+  deleteAboutUs(id: number): Observable<any> {
+    return this.http.delete(`${this.aboutUsBaseUrl}/content/delete/${id}/`);
   }
 
   private toContactUsFormData(data: Record<string, any>): FormData {

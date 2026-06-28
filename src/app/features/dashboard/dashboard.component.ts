@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -140,9 +140,14 @@ import { PaymentTransactionsComponent } from '../admin/payment-transactions/paym
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild(DailyhologramrecordregisterComponent)
   private dailyHologramWorkingRecords?: DailyhologramrecordregisterComponent;
+
+  @ViewChild('bubbleCanvas') bubbleCanvasRef?: ElementRef<HTMLCanvasElement>;
+  private canvasAnimationId?: number;
+  private canvasResizeListener?: () => void;
+  private bubbles: any[] = [];
 
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
@@ -498,10 +503,336 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/licensee/supply-chain'], { queryParams: { section: 'license-renewal' } });
   }
 
-  ngOnDestroy() {
+  ngAfterViewInit() {
+    this.initBubbleEngine();
+  }
 
+  ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    this.stopBubbleEngine();
+  }
+
+  private initBubbleEngine(): void {
+    const canvasRef = this.bubbleCanvasRef;
+    if (!canvasRef) return;
+    const canvas = canvasRef.nativeElement;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resizeCanvas = () => {
+      const parentW = canvas.parentElement?.clientWidth || 0;
+      const parentH = canvas.parentElement?.clientHeight || 0;
+      canvas.width = parentW > 100 ? parentW : window.innerWidth;
+      canvas.height = parentH > 100 ? parentH : window.innerHeight;
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    this.canvasResizeListener = resizeCanvas;
+
+    let mouseX = -1000;
+    let mouseY = -1000;
+    let targetMouseX = -1000;
+    let targetMouseY = -1000;
+
+    const container = canvas.parentElement;
+    const onMouseMove = (e: MouseEvent) => {
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        targetMouseX = e.clientX - rect.left;
+        targetMouseY = e.clientY - rect.top;
+      }
+    };
+
+    const onMouseLeave = () => {
+      targetMouseX = -1000;
+      targetMouseY = -1000;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        this.spawnBubbleBurst(clickX, clickY);
+      }
+    };
+
+    if (container) {
+      container.addEventListener('mousemove', onMouseMove);
+      container.addEventListener('mouseleave', onMouseLeave);
+      container.addEventListener('click', onClick);
+    }
+
+    this.bubbles = [];
+    const totalBubbles = 45;
+    
+    for (let i = 0; i < totalBubbles; i++) {
+      this.bubbles.push(this.createBubble(canvas.width, canvas.height, true));
+    }
+
+    const animate = () => {
+      // If a sub-section is active, clear and pause canvas updates to save CPU
+      if (this.selectedSupplyChainSection) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        this.canvasAnimationId = requestAnimationFrame(animate);
+        return;
+      }
+
+      // Dynamic parent dimensions check to support async height layout changes
+      const parentW = canvas.parentElement?.clientWidth || window.innerWidth;
+      const parentH = canvas.parentElement?.clientHeight || window.innerHeight;
+      
+      if (canvas.width !== parentW || canvas.height !== parentH) {
+        canvas.width = parentW;
+        canvas.height = parentH;
+      }
+
+      if (targetMouseX === -1000) {
+        mouseX = -1000;
+        mouseY = -1000;
+      } else {
+        if (mouseX === -1000) {
+          mouseX = targetMouseX;
+          mouseY = targetMouseY;
+        } else {
+          mouseX += (targetMouseX - mouseX) * 0.1;
+          mouseY += (targetMouseY - mouseY) * 0.1;
+        }
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      this.checkBubbleMerging();
+
+      for (let layer = 1; layer <= 3; layer++) {
+        const layerBubbles = this.bubbles.filter(b => b.layer === layer);
+        
+        for (const b of layerBubbles) {
+          b.y -= b.speedY;
+          b.swayOffset += b.frequency;
+          b.wobble += b.wobbleSpeed;
+
+          let currentX = b.x + Math.sin(b.swayOffset) * b.amplitude;
+
+          if (mouseX !== -1000) {
+            const dx = currentX - mouseX;
+            const dy = b.y - mouseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const radius = 130;
+            if (dist < radius) {
+              const force = (radius - dist) / radius;
+              const angle = Math.atan2(dy, dx);
+              currentX += Math.cos(angle) * force * 3;
+              b.y += Math.sin(angle) * force * 1.5;
+            }
+          }
+
+          if (currentX < -b.size) currentX = canvas.width + b.size;
+          if (currentX > canvas.width + b.size) currentX = -b.size;
+
+          ctx.save();
+          
+          const wobbleScale = 1 + Math.sin(b.wobble) * 0.06 * b.wobbleFactor;
+          const rx = b.size * 0.5 * wobbleScale;
+          const ry = b.size * 0.5 * (2 - wobbleScale);
+
+          if (b.layer === 1) {
+            const grad = ctx.createRadialGradient(currentX, b.y, 0, currentX, b.y, b.size * 0.5);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${b.opacity})`);
+            grad.addColorStop(0.5, `rgba(255, 255, 255, ${b.opacity * 0.4})`);
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(currentX, b.y, b.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.translate(currentX, b.y);
+            ctx.rotate(b.swayOffset * 0.2);
+
+            const sphereGrad = ctx.createRadialGradient(-rx * 0.2, -ry * 0.2, 0, 0, 0, rx);
+            sphereGrad.addColorStop(0, `rgba(255, 255, 255, ${b.opacity * 1.55})`);
+            sphereGrad.addColorStop(0.35, `rgba(251, 191, 36, ${b.opacity * 0.45})`);
+            sphereGrad.addColorStop(0.7, `rgba(245, 158, 11, ${b.opacity * 0.15})`);
+            sphereGrad.addColorStop(0.9, `rgba(255, 255, 255, ${b.opacity * 0.35})`);
+            sphereGrad.addColorStop(1, `rgba(255, 255, 255, ${b.opacity * 0.65})`);
+
+            ctx.fillStyle = sphereGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Softer Amber/Gold outer ring - made slightly more visible and crisp
+            ctx.strokeStyle = `rgba(217, 119, 6, ${b.opacity * 0.85})`;
+            ctx.lineWidth = 1.0;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(-rx * 0.3, -ry * 0.3, rx * 0.4, Math.PI * 1.0, Math.PI * 1.6);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${b.opacity * 2.2})`;
+            ctx.lineWidth = Math.max(1, b.size * 0.08);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+
+          if (b.y < -b.size * 2) {
+            Object.assign(b, this.createBubble(canvas.width, canvas.height, false));
+          }
+        }
+      }
+
+      this.canvasAnimationId = requestAnimationFrame(animate);
+    };
+
+    (canvas as any)._onMouseMove = onMouseMove;
+    (canvas as any)._onMouseLeave = onMouseLeave;
+    (canvas as any)._onClick = onClick;
+    (canvas as any)._container = container;
+
+    this.canvasAnimationId = requestAnimationFrame(animate);
+  }
+
+  private createBubble(width: number, height: number, initSpreading = false): any {
+    const r = Math.random();
+    let layer: 1 | 2 | 3 = 2;
+    let size = 12;
+    let opacity = 0.3;
+    let speedY = 0.6;
+
+    if (r < 0.35) {
+      // Layer 1: background bubbles
+      layer = 1;
+      size = 6 + Math.random() * 6; // 6px to 12px
+      opacity = 0.22 + Math.random() * 0.08; // 0.22 to 0.30
+      speedY = 0.3 + Math.random() * 0.3;
+    } else if (r < 0.85) {
+      // Layer 2: midground bubbles
+      layer = 2;
+      size = 12 + Math.random() * 10; // 12px to 22px
+      opacity = 0.32 + Math.random() * 0.13; // 0.32 to 0.45
+      speedY = 0.5 + Math.random() * 0.4;
+    } else {
+      // Layer 3: foreground large sharp bubbles
+      layer = 3;
+      size = 22 + Math.random() * 10; // 22px to 32px
+      opacity = 0.48 + Math.random() * 0.15; // 0.48 to 0.63
+      speedY = 0.8 + Math.random() * 0.5;
+    }
+
+    const startY = initSpreading 
+      ? Math.random() * height 
+      : height + 20 + Math.random() * 50;
+
+    return {
+      x: Math.random() * width,
+      y: startY,
+      size,
+      speedY,
+      speedX: (Math.random() - 0.5) * 0.15,
+      amplitude: 15 + Math.random() * 20,
+      frequency: 0.01 + Math.random() * 0.02,
+      swayOffset: Math.random() * Math.PI * 2,
+      opacity,
+      layer,
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.03 + Math.random() * 0.04,
+      wobbleFactor: 0.5 + Math.random() * 0.5
+    };
+  }
+
+  private checkBubbleMerging(): void {
+    const activeBubbles = this.bubbles.filter(b => b.layer > 1);
+    
+    for (let i = 0; i < activeBubbles.length; i++) {
+      const b1 = activeBubbles[i];
+      for (let j = i + 1; j < activeBubbles.length; j++) {
+        const b2 = activeBubbles[j];
+        
+        const dx = b1.x - b2.x;
+        const dy = b1.y - b2.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        const mergeThreshold = (b1.size + b2.size) * 0.52;
+        if (dist < mergeThreshold) {
+          const larger = b1.size >= b2.size ? b1 : b2;
+          const smaller = b1.size < b2.size ? b1 : b2;
+          
+          const newArea = (larger.size * larger.size) + (smaller.size * smaller.size * 0.5);
+          larger.size = Math.min(22, Math.sqrt(newArea));
+          
+          larger.wobbleFactor = 2.5;
+          
+          setTimeout(() => {
+            larger.wobbleFactor = 1.0;
+          }, 800);
+
+          const canvas = this.bubbleCanvasRef?.nativeElement;
+          if (canvas) {
+            Object.assign(smaller, this.createBubble(canvas.width, canvas.height, false));
+          }
+        }
+      }
+    }
+  }
+
+  private spawnBubbleBurst(clickX: number, clickY: number): void {
+    const canvas = this.bubbleCanvasRef?.nativeElement;
+    if (!canvas) return;
+    
+    const burstCount = 6 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < burstCount; i++) {
+      const size = 3 + Math.random() * 6;
+      const opacity = 0.15 + Math.random() * 0.1;
+      const angle = (Math.PI * 2 / burstCount) * i + (Math.random() - 0.5) * 0.4;
+      const speed = 1.5 + Math.random() * 2;
+      
+      const burstBubble = {
+        x: clickX,
+        y: clickY,
+        size,
+        speedY: 0.8 + Math.random() * 0.6,
+        speedX: Math.cos(angle) * speed,
+        amplitude: 5 + Math.random() * 10,
+        frequency: 0.02 + Math.random() * 0.03,
+        swayOffset: Math.random() * Math.PI * 2,
+        opacity,
+        layer: 3,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.08 + Math.random() * 0.08,
+        wobbleFactor: 1.5
+      };
+
+      this.bubbles.push(burstBubble);
+      
+      if (this.bubbles.length > 250) {
+        this.bubbles.shift();
+      }
+    }
+  }
+
+  private stopBubbleEngine(): void {
+    if (this.canvasAnimationId) {
+      cancelAnimationFrame(this.canvasAnimationId);
+    }
+    
+    const canvas = this.bubbleCanvasRef?.nativeElement;
+    if (canvas) {
+      const container = (canvas as any)._container;
+      const onMouseMove = (canvas as any)._onMouseMove;
+      const onMouseLeave = (canvas as any)._onMouseLeave;
+      const onClick = (canvas as any)._onClick;
+      
+      if (container && onMouseMove) {
+        container.removeEventListener('mousemove', onMouseMove);
+        container.removeEventListener('mouseleave', onMouseLeave);
+        container.removeEventListener('click', onClick);
+      }
+    }
+
+    if (this.canvasResizeListener) {
+      window.removeEventListener('resize', this.canvasResizeListener);
+    }
   }
 
   private startWelcomeClock(): void {

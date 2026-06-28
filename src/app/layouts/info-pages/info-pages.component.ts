@@ -169,6 +169,36 @@ export class InfoPagesComponent implements OnInit {
     }
 
     loadMarkdown(page: string): void {
+      if (page === 'department' || page === 'objectives') {
+        this.infoPagesService.getAboutUs().subscribe({
+          next: (records) => {
+            const titleToFind = page === 'department' ? 'Department' : 'Objectives';
+            let record = records.find(r => r.title?.toLowerCase() === titleToFind.toLowerCase() || r.title?.toLowerCase() === page.toLowerCase());
+            
+            if (!record && records && records.length > 0) {
+              if (page === 'department') {
+                record = records[0];
+              } else if (page === 'objectives' && records.length > 1) {
+                record = records[1];
+              }
+            }
+
+            if (record && record.content) {
+              this.markdownContent = record.content;
+            } else {
+              this.markdownContent = '*Content not available.*';
+            }
+          },
+          error: () => {
+            this.markdownContent = '*Content not available.*';
+          }
+        });
+      } else {
+        this.loadFallbackMarkdown(page);
+      }
+    }
+
+    loadFallbackMarkdown(page: string): void {
       this.http.get(`assets/content/${page}.md`, { responseType: 'text' })
         .subscribe({
           next: data => this.markdownContent = data,

@@ -4,6 +4,9 @@ import { MaterialModule } from '../../../shared/material.module';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { WhatsCurrentService } from '../../../core/services/whats-current.service';
+import { InfoPagesService } from '../../../core/services/info-pages.service';
+import { PreventiveRaidsService } from '../../../core/services/preventive-raids.service';
+import { PreventiveRaid } from '../../../core/models/preventive-raids.model';
 import { environment } from '../../../../environments/environment';
 
 interface Particle3D {
@@ -41,6 +44,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedHomeCategory: string = 'all';
   allNotifications: any[] = [];
   bulletNotifications: any[] = []; // marquee ticker items
+  preventiveRaids: PreventiveRaid[] = [];
+  selectedRaidIndex = 0;
+  currentImageIndex = 0;
+  slideshowInterval: any;
 
   truncateWords(text: string, limit: number): string {
     if (!text) return '';
@@ -67,6 +74,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     private router: Router, 
     private http: HttpClient,
     private whatsCurrentService: WhatsCurrentService,
+    private infoPagesService: InfoPagesService,
+    private raidsService: PreventiveRaidsService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -75,6 +84,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.loadMarkdown();
     this.loadNotifications();
+    this.loadRaids();
   }
 
   get displayedNotifications(): any[] {
@@ -136,6 +146,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.slideshowInterval) {
+      clearInterval(this.slideshowInterval);
+    }
     if (!this.isBrowser) return;
 
     if (this.animationFrameId) {
@@ -150,11 +163,21 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadMarkdown(): void {
-    this.http.get(`assets/content/department.md`, { responseType: 'text' })
-      .subscribe({
-        next: data => this.markdownContent = data,
-        error: () => this.markdownContent = '*Content not available.*'
-      });
+    this.infoPagesService.getAboutUs().subscribe({
+      next: (records) => {
+        const deptRecord = records.find(r => r.title === 'Department' || r.title?.toLowerCase() === 'about us' || r.title?.toLowerCase() === 'about-us');
+        if (deptRecord && deptRecord.content) {
+          this.markdownContent = deptRecord.content;
+        } else if (records && records.length > 0 && records[0].content) {
+          this.markdownContent = records[0].content;
+        } else {
+          this.markdownContent = '*Content not available.*';
+        }
+      },
+      error: () => {
+        this.markdownContent = '*Content not available.*';
+      }
+    });
   }
 
   navigateToExternal(url: string) {
@@ -324,6 +347,55 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     };
 
     this.animationFrameId = requestAnimationFrame(animate);
+  }
+
+  loadRaids(): void {
+    this.raidsService.getPreventiveRaids().subscribe({
+      next: (data) => {
+        this.preventiveRaids = data;
+        this.startSlideshow();
+      },
+      error: (err) => {
+        console.error('Failed to load preventive raids:', err);
+      }
+    });
+  }
+
+  startSlideshow(): void {
+    if (this.slideshowInterval) {
+      clearInterval(this.slideshowInterval);
+    }
+    this.slideshowInterval = setInterval(() => {
+      this.nextSlide();
+    }, 6000);
+  }
+
+  nextSlide(): void {
+    const activeRaid = this.preventiveRaids[this.selectedRaidIndex];
+    if (activeRaid && activeRaid.images && activeRaid.images.length > 0) {
+      this.currentImageIndex = (this.currentImageIndex + 1) % activeRaid.images.length;
+    }
+  }
+
+  prevSlide(): void {
+    const activeRaid = this.preventiveRaids[this.selectedRaidIndex];
+    if (activeRaid && activeRaid.images && activeRaid.images.length > 0) {
+      this.currentImageIndex = (this.currentImageIndex - 1 + activeRaid.images.length) % activeRaid.images.length;
+    }
+  }
+
+  selectRaid(index: number): void {
+    this.selectedRaidIndex = index;
+    this.currentImageIndex = 0;
+    this.startSlideshow();
+  }
+
+  getRaidImageUrl(imagePath: string): string {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http') || imagePath.startsWith('assets/')) {
+      return imagePath;
+    }
+    return `${environment.apiBaseUrl}${imagePath}`;
   }
 }
 

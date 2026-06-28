@@ -305,10 +305,6 @@
                 <mat-icon class="nav-icon">route</mat-icon>
                 <span class="nav-text">Road</span>
               </a>
-              <a routerLink="/dashboard/admin/whats-current" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">notifications_active</mat-icon>
-                <span class="nav-text">What's Current</span>
-              </a>
               <a routerLink="/dashboard/admin/hologram-suppliers" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
                 <mat-icon class="nav-icon">qr_code</mat-icon>
                 <span class="nav-text">Hologram Suppliers</span>
@@ -371,10 +367,10 @@
               </ng-container>
 
               <button class="nav-item bulk-spirit-nav-item" (click)="adminAboutUsExpanded = !adminAboutUsExpanded"
-                [class.active]="adminAboutUsExpanded || isAdminRouteActive('/dashboard/admin/about-us')"
+                [class.active]="adminAboutUsExpanded || isAdminRouteActive('/dashboard/admin/about-us') || isAdminRouteActive('/dashboard/admin/preventive-raids') || isAdminRouteActive('/dashboard/admin/whats-current')"
                 [class.group-expanded]="adminAboutUsExpanded">
-                <mat-icon class="nav-icon">info</mat-icon>
-                <span class="nav-text">About Us</span>
+                <mat-icon class="nav-icon">home</mat-icon>
+                <span class="nav-text">Home Page</span>
                 <mat-icon class="nav-chevron">{{ adminAboutUsExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="adminAboutUsExpanded">
@@ -385,6 +381,18 @@
                 <a routerLink="/dashboard/admin/about-us/excise-secretaries" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">supervisor_account</mat-icon>
                   <span class="nav-text">Excise Secretaries</span>
+                </a>
+                <a routerLink="/dashboard/admin/about-us/department-content" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">description</mat-icon>
+                  <span class="nav-text">About Us</span>
+                </a>
+                <a routerLink="/dashboard/admin/preventive-raids" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">security</mat-icon>
+                  <span class="nav-text">Preventive Raids</span>
+                </a>
+                <a routerLink="/dashboard/admin/whats-current" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">notifications_active</mat-icon>
+                  <span class="nav-text">Notifications</span>
                 </a>
               </ng-container>
 

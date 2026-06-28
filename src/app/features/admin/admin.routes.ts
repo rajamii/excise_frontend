@@ -309,6 +309,29 @@ const routes: Routes = [
             },
           },
           {
+            path: 'about-us/department-content',
+            loadComponent: () =>
+              import('./master/about-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              aboutUsCategory: 'aboutUsText',
+            },
+          },
+          {
+            path: 'preventive-raids',
+            loadComponent: () =>
+              import('./master/preventive-raids/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+            },
+          },
+          {
             path: 'contact-us',
             redirectTo: 'contact-us/nodal-officer',
             pathMatch: 'full'

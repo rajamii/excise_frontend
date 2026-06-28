@@ -11,3 +11,12 @@ export class ExciseSecretary {
   designation!: string;
   email!: string;
 }
+
+export class AboutUs {
+  id?: number;
+  title!: string;
+  content!: string;
+  is_active?: boolean;
+  isActive?: boolean;
+}
+

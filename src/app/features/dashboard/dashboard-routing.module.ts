@@ -269,6 +269,20 @@ const routes: Routes = [
         data: { authorities: ['site_admin'], aboutUsCategory: 'exciseSecretaries' }
       },
       {
+        path: 'admin/about-us/department-content',
+        loadComponent: () =>
+          import('../admin/master/about-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], aboutUsCategory: 'aboutUsText' }
+      },
+      {
+        path: 'admin/preventive-raids',
+        loadComponent: () =>
+          import('../admin/master/preventive-raids/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/contact-us',
         redirectTo: 'admin/contact-us/nodal-officer',
         pathMatch: 'full'

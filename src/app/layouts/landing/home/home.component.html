@@ -100,19 +100,61 @@
 
   <mat-card class = "preventive-raids grid-card">
     <mat-card-header>Preventive Raids</mat-card-header>
-    <img src="assets/images/main/preventive-raids/preventive-raids.jpg" alt="Preventive raids conducted by Sikkim State Excise">
-    <mat-card-content class = "card-container">
-      <h6 cCardTitle>Total Raids From 1st January, 2020</h6>
-      <div class="description">
-        <p>
-          Raid conducted by Sikkim State Excise
-        </p>
-        <p>
-          Excise Raids on illicit dens in Remote Villages.
-        </p>
+    
+    @if (preventiveRaids && preventiveRaids.length > 0) {
+      @let activeRaid = preventiveRaids[selectedRaidIndex];
+      
+      <!-- Multi-title selector -->
+      @if (preventiveRaids.length > 1) {
+        <div class="raid-selector-wrapper">
+          <button class="scroll-arrow left" [disabled]="selectedRaidIndex === 0" (click)="selectRaid(selectedRaidIndex - 1)">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="selected-raid-title" [title]="activeRaid.title">{{ activeRaid.title }}</span>
+          <button class="scroll-arrow right" [disabled]="selectedRaidIndex === preventiveRaids.length - 1" (click)="selectRaid(selectedRaidIndex + 1)">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      }
+      
+      <div class="slideshow-container">
+        @if (activeRaid.images && activeRaid.images.length > 0) {
+          @let activeImage = activeRaid.images[currentImageIndex];
+          <img [src]="getRaidImageUrl(activeImage.image)" [alt]="activeRaid.title" class="slideshow-image">
+          
+          <!-- Next/Prev arrows for manual image navigation if more than 1 image -->
+          @if (activeRaid.images.length > 1) {
+            <button class="slide-nav prev" (click)="prevSlide()">
+              <mat-icon>keyboard_arrow_left</mat-icon>
+            </button>
+            <button class="slide-nav next" (click)="nextSlide()">
+              <mat-icon>keyboard_arrow_right</mat-icon>
+            </button>
+            
+            <div class="slide-dots">
+              @for (img of activeRaid.images; track img; let i = $index) {
+                <span class="dot" [class.active]="i === currentImageIndex" (click)="currentImageIndex = i"></span>
+              }
+            </div>
+          }
+        } @else {
+          <div class="no-images">No images uploaded.</div>
+        }
       </div>
-      <button matButton="filled" (click)="navigateTo('preventive-raids')">Read More</button>
-    </mat-card-content>
+
+      <mat-card-content class = "card-container">
+        <h6 cCardTitle>{{ activeRaid.title }}</h6>
+        <div class="description">
+          <p>{{ activeRaid.subject }}</p>
+        </div>
+        <button matButton="filled" (click)="navigateTo('preventive-raids')">Read More</button>
+      </mat-card-content>
+    } @else {
+      <div style="padding: 30px; text-align: center; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+        <mat-icon style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; color: #1C2B78;">security</mat-icon>
+        <p style="margin: 0; font-weight: 600;">No preventive raids records found.</p>
+      </div>
+    }
   </mat-card>
 
   <mat-card class = "revenue-receipts grid-card">
