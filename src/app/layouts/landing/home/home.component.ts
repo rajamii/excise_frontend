@@ -172,6 +172,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       next: (records) => {
         this.aboutUsRecords = (records || [])
           .filter(r => r.content)
+          .sort((a, b) => {
+            // Sort by ID (ascending) to show first entered record first
+            // If no ID, sort by title
+            if (a.id && b.id) return a.id - b.id;
+            return (a.title || '').localeCompare(b.title || '');
+          })
           .map(r => ({ title: r.title || 'About Us', content: r.content }));
 
         if (this.aboutUsRecords.length > 0) {

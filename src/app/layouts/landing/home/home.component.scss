@@ -1485,3 +1485,16 @@ button {
 .rev-chart-bars {
     overflow: visible !important;
 }
+
+
+// ========================================
+// REVENUE CHART NAVIGATION ARROWS
+// ========================================
+.rev-nav-arrow {
+    &:hover:not([style*="opacity: 0.3"]) {
+        background: rgba(28, 43, 120, 0.15) !important;
+        border-color: #1C2B78 !important;
+        box-shadow: 0 4px 12px rgba(28, 43, 120, 0.25) !important;
+        transform: scale(1.08);
+    }
+}

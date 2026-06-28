@@ -260,16 +260,18 @@
               <div (click)="hasPrevChartPage() ? prevChartPage() : null" 
                    [style.opacity]="hasPrevChartPage() ? 1 : 0.3"
                    [style.cursor]="hasPrevChartPage() ? 'pointer' : 'not-allowed'"
-                   style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; background-color: #1C2B78; color: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: all 0.3s;">
-                <mat-icon style="font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold;">chevron_left</mat-icon>
+                   class="rev-nav-arrow"
+                   style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.9); border: 1.5px solid rgba(28, 43, 120, 0.2); box-shadow: 0 2px 8px rgba(28, 43, 120, 0.15); transition: all 0.3s;">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #1C2B78; font-weight: bold;">chevron_left</mat-icon>
               </div>
               
               <!-- Right Arrow -->
               <div (click)="hasNextChartPage() ? nextChartPage() : null" 
                    [style.opacity]="hasNextChartPage() ? 1 : 0.3"
                    [style.cursor]="hasNextChartPage() ? 'pointer' : 'not-allowed'"
-                   style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; background-color: #1C2B78; color: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: all 0.3s;">
-                <mat-icon style="font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold;">chevron_right</mat-icon>
+                   class="rev-nav-arrow"
+                   style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.9); border: 1.5px solid rgba(28, 43, 120, 0.2); box-shadow: 0 2px 8px rgba(28, 43, 120, 0.15); transition: all 0.3s;">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #1C2B78; font-weight: bold;">chevron_right</mat-icon>
               </div>
             </div>
           }
