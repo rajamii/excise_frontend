@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
@@ -19,6 +19,8 @@ interface PreventiveRaidDialogData {
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
+  @ViewChild('subjectArea') subjectArea!: ElementRef<HTMLTextAreaElement>;
+
   record: Partial<PreventiveRaid> = {
     title: '',
     subject: '',
@@ -108,6 +110,21 @@ export class ManageComponent implements OnInit {
         },
         error: () => Swal.fire('Error', 'Failed to save Preventive Raid record.', 'error')
       });
+    });
+  }
+
+  wrapBold(): void {
+    const el = this.subjectArea?.nativeElement;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end   = el.selectionEnd   ?? 0;
+    const text  = this.record.subject || '';
+    const selected = text.substring(start, end);
+    const wrapped = `**${selected}**`;
+    this.record.subject = text.substring(0, start) + wrapped + text.substring(end);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + 2, end + 2);
     });
   }
 

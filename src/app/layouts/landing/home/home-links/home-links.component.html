@@ -33,7 +33,7 @@
               <!-- Left: description -->
               <div class="raid-entry__content">
                 @if (element.subject) {
-                  <p class="raid-entry__subject">{{ element.subject }}</p>
+                  <p class="raid-entry__subject" [innerHTML]="renderBold(element.subject)"></p>
                 } @else {
                   <p class="raid-entry__no-subject">No description provided.</p>
                 }

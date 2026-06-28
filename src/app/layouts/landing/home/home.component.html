@@ -239,7 +239,7 @@
       <mat-card-content class = "card-container">
         <h6 cCardTitle>{{ activeRaid.title }}</h6>
         <div class="description">
-          <p>{{ activeRaid.subject }}</p>
+          <p [innerHTML]="renderBold(activeRaid.subject)"></p>
         </div>
         <button matButton="filled" (click)="navigateTo('preventive-raids')">Read More</button>
       </mat-card-content>

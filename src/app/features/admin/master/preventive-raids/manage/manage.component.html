@@ -16,17 +16,25 @@
         />
       </mat-form-field>
 
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Subject</mat-label>
-        <textarea
-          matInput
-          rows="5"
-          [(ngModel)]="record.subject"
-          name="subject"
-          required
-          placeholder="Enter subject/description"
-        ></textarea>
-      </mat-form-field>
+      <div class="subject-field-group">
+        <div class="message-toolbar">
+          <button type="button" class="toolbar-btn" (click)="wrapBold()" title="Bold — select text then click">
+            <strong>B</strong>
+          </button>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Subject</mat-label>
+          <textarea
+            #subjectArea
+            matInput
+            rows="5"
+            [(ngModel)]="record.subject"
+            name="subject"
+            required
+            placeholder="Enter subject/description"
+          ></textarea>
+        </mat-form-field>
+      </div>
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Date</mat-label>
