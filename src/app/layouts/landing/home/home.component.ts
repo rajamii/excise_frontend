@@ -111,7 +111,18 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadNotifications(): void {
     this.whatsCurrentService.getWhatsCurrent().subscribe({
       next: (data) => {
-        const mapped = data.map(item => ({
+        // Sort by ID or date to show first entered items first
+        const sortedData = (data || []).sort((a, b) => {
+          // Primary: sort by ID (ascending)
+          if (a.id && b.id) return a.id - b.id;
+          // Secondary: sort by date (ascending - oldest first)
+          if (a.date && b.date) {
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          }
+          return 0;
+        });
+        
+        const mapped = sortedData.map(item => ({
           title: item.title,
           date: item.date,
           category: item.category,
@@ -130,7 +141,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           return item;
         });
 
-        // Store other notifications
+        // Store other notifications (already sorted)
         this.allNotifications = mapped.filter(i => i.category !== 'bullet');
       },
       error: (err) => {
