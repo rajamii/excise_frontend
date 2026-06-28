@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
@@ -18,6 +18,8 @@ interface ManageDialogData {
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
+  @ViewChild('messageArea') messageArea!: ElementRef<HTMLTextAreaElement>;
+
   record: Partial<WhatsCurrent> = {
     category: 'circular',
     date: new Date().toISOString().substring(0, 10),
@@ -114,6 +116,22 @@ export class ManageComponent implements OnInit {
           Swal.fire('Error', typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg), 'error');
         }
       });
+    });
+  }
+
+  wrapBold(): void {
+    const el = this.messageArea?.nativeElement;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end   = el.selectionEnd   ?? 0;
+    const text  = this.record.message || '';
+    const selected = text.substring(start, end);
+    const wrapped = `**${selected}**`;
+    this.record.message = text.substring(0, start) + wrapped + text.substring(end);
+    // Restore cursor inside the bold markers
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + 2, end + 2);
     });
   }
 

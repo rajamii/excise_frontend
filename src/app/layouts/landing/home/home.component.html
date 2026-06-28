@@ -48,8 +48,7 @@
 
       <!-- Message Body text -->
       @if (latestLicenseInfo.message) {
-        <div class="lic-message">
-          {{ latestLicenseInfo.message }}
+        <div class="lic-message" [innerHTML]="renderBold(latestLicenseInfo.message)">
         </div>
       }
 

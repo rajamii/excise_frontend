@@ -214,3 +214,40 @@
         }
     }
 }
+
+// Message toolbar
+.message-toolbar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: -8px;
+    padding: 4px 6px;
+    background: #f8faff;
+    border: 1px solid rgba(28, 43, 120, 0.15);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+
+    .toolbar-btn {
+        all: unset;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 26px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #1C2B78;
+        background: transparent;
+        border: 1px solid transparent;
+        transition: all 0.18s;
+
+        &:hover {
+            background: rgba(28, 43, 120, 0.10);
+            border-color: rgba(28, 43, 120, 0.25);
+        }
+
+        &:active {
+            background: rgba(28, 43, 120, 0.18);
+        }
+    }
+}

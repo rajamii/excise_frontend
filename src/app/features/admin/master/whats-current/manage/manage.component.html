@@ -39,9 +39,14 @@
 
     <!-- Optional Message/Ticker Content -->
     <div class="field-group">
+      <div class="message-toolbar">
+        <button type="button" class="toolbar-btn" (click)="wrapBold()" title="Bold">
+          <strong>B</strong>
+        </button>
+      </div>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Message / Details (Optional)</mat-label>
-        <textarea matInput [(ngModel)]="record.message" name="message" rows="3" placeholder="Enter additional details or ticker text (useful for bullet notifications)"></textarea>
+        <textarea #messageArea matInput [(ngModel)]="record.message" name="message" rows="3" placeholder="Enter additional details or ticker text (useful for bullet notifications)"></textarea>
       </mat-form-field>
     </div>
 

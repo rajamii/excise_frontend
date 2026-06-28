@@ -68,6 +68,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return text.substring(0, maxLength).trim() + '...';
   }
 
+  renderBold(text: string): string {
+    if (!text) return '';
+    // Escape HTML first to prevent XSS, then convert **...** to <b>...</b>
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    return escaped.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  }
+
   // 3D/Parallax Canvas engine properties
   private animationFrameId?: number;
   private resizeListener?: () => void;
