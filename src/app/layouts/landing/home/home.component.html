@@ -168,7 +168,7 @@
                 <div class="title-text">
                   <div class="title" [title]="note.title">{{ note.title }}</div>
                   @if (note.message) {
-                    <div class="message">{{ truncateText(note.message, 100) }}</div>
+                    <div class="message" [innerHTML]="renderBoldTruncated(note.message, 100)"></div>
                   }
                 </div>
               </div>

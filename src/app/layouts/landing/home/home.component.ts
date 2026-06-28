@@ -4,6 +4,7 @@ import { MaterialModule } from '../../../shared/material.module';
 import { MarkdownModule } from 'ngx-markdown';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { WhatsCurrentService } from '../../../core/services/whats-current.service';
 import { InfoPagesService } from '../../../core/services/info-pages.service';
 import { PreventiveRaidsService } from '../../../core/services/preventive-raids.service';
@@ -68,14 +69,52 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return text.substring(0, maxLength).trim() + '...';
   }
 
-  renderBold(text: string): string {
+  renderBold(text: string): SafeHtml {
     if (!text) return '';
     // Escape HTML first to prevent XSS, then convert **...** to <b>...</b>
     const escaped = text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    return escaped.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    // Replace complete **...** pairs, then strip any leftover lone ** markers
+    const html = escaped
+      .replace(/\*\*(.+?)\*\*/gs, '<b>$1</b>')
+      .replace(/\*\*/g, '');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  // Truncate by plain-text length then render bold — avoids cutting inside ** markers
+  renderBoldTruncated(text: string, maxLength: number): SafeHtml {
+    if (!text) return '';
+    // Step 1: escape HTML
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    // Step 2: convert ALL complete **...** pairs first (before truncating)
+    const withBold = escaped.replace(/\*\*(.+?)\*\*/gs, '<b>$1</b>').replace(/\*\*/g, '');
+    // Step 3: strip HTML tags to measure plain-text length, then truncate the HTML
+    const plainText = withBold.replace(/<[^>]*>/g, '');
+    if (plainText.length <= maxLength) {
+      return this.sanitizer.bypassSecurityTrustHtml(withBold);
+    }
+    // Truncate by walking the HTML and counting only visible characters
+    let count = 0;
+    let result = '';
+    let inTag = false;
+    for (let i = 0; i < withBold.length; i++) {
+      const ch = withBold[i];
+      if (ch === '<') { inTag = true; }
+      if (!inTag) { count++; }
+      result += ch;
+      if (ch === '>') { inTag = false; }
+      if (count >= maxLength) { result += '...'; break; }
+    }
+    // Close any unclosed <b> tags
+    const openBolds = (result.match(/<b>/g) || []).length;
+    const closeBolds = (result.match(/<\/b>/g) || []).length;
+    if (openBolds > closeBolds) { result += '</b>'; }
+    return this.sanitizer.bypassSecurityTrustHtml(result);
   }
 
   // 3D/Parallax Canvas engine properties
@@ -89,6 +128,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private router: Router, 
     private http: HttpClient,
+    private sanitizer: DomSanitizer,
     private whatsCurrentService: WhatsCurrentService,
     private infoPagesService: InfoPagesService,
     private raidsService: PreventiveRaidsService,

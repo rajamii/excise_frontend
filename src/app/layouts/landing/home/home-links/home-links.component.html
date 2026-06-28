@@ -85,7 +85,7 @@
               <div class="subject-cell">
                 <div class="subject-title">{{ notification.subject }}</div>
                 @if (notification.message) {
-                  <div class="subject-message">{{ notification.message }}</div>
+                  <div class="subject-message" [innerHTML]="renderBold(notification.message)"></div>
                 }
               </div>
             </td>

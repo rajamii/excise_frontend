@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { ActivatedRoute } from '@angular/router';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { WhatsCurrentService } from '../../../../core/services/whats-current.service';
 import { PreventiveRaidsService } from '../../../../core/services/preventive-raids.service';
 import { PreventiveRaid } from '../../../../core/models/preventive-raids.model';
@@ -39,6 +40,7 @@ export class HomeLinksComponent implements OnInit{
 
   constructor(
     private route: ActivatedRoute,
+    private sanitizer: DomSanitizer,
     private whatsCurrentService: WhatsCurrentService,
     private raidsService: PreventiveRaidsService
   ) {}
@@ -84,6 +86,16 @@ export class HomeLinksComponent implements OnInit{
     if (!text) return '';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength).trim() + '...';
+  }
+
+  renderBold(text: string): SafeHtml {
+    if (!text) return '';
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const html = escaped.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
   
   raidsColumns: string[] = ['photo', 'caption'];
