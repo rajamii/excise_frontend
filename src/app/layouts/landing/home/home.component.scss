@@ -1402,6 +1402,7 @@ button {
         border-radius: 12px;
         overflow: hidden;
         width: 100%;
+        margin-top: 8px;
         box-shadow:
             0 4px 16px rgba(28, 43, 120, 0.18),
             0 0 0 3px rgba(28, 43, 120, 0.08);
@@ -1419,6 +1420,7 @@ button {
         gap: 10px;
         width: 100%;
         justify-content: center;
+        margin-top: 8px;
 
         .video-btn {
             display: inline-flex;
