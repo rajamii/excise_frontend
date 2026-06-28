@@ -1343,8 +1343,8 @@ button {
             }
         }
 
-        // Share button — indigo pill
-        .share-btn {
+        // More Videos button — indigo pill
+        .more-btn {
             background: rgba(79, 70, 229, 0.14);
             color: #4338ca;
             border: 1.5px solid rgba(79, 70, 229, 0.35);
@@ -1365,6 +1365,8 @@ button {
             color: #dc2626;
             border: 1.5px solid rgba(239, 68, 68, 0.35);
             box-shadow: 0 1px 4px rgba(220, 38, 38, 0.1);
+            justify-content: center;
+            min-width: 180px;
 
             &:hover {
                 background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
