@@ -1,4 +1,78 @@
 <canvas #bgCanvas class="bg-3d-canvas"></canvas>
+
+<!-- License Info Welcome Popup Banner -->
+@if (showLicenseBanner && latestLicenseInfo) {
+  <div class="lic-overlay" (click)="closeLicenseBanner()">
+    <div class="lic-card" (click)="$event.stopPropagation()">
+      
+      <!-- Floating Background Decorative Icons -->
+      <div class="lic-decor lic-decor-1"><mat-icon>verified_user</mat-icon></div>
+      <div class="lic-decor lic-decor-2"><mat-icon>star</mat-icon></div>
+      <div class="lic-decor lic-decor-3"><mat-icon>article</mat-icon></div>
+      <div class="lic-decor lic-decor-4"><mat-icon>gavel</mat-icon></div>
+      <div class="lic-decor lic-decor-5"><mat-icon>notifications</mat-icon></div>
+      <div class="lic-decor lic-decor-6"><mat-icon>workspace_premium</mat-icon></div>
+      <div class="lic-decor lic-decor-7"><mat-icon>mail_outline</mat-icon></div>
+      <div class="lic-decor lic-decor-8"><mat-icon>description</mat-icon></div>
+
+      <!-- Close button -->
+      <div (click)="closeLicenseBanner()" class="lic-close-btn" aria-label="Close">
+        <mat-icon>close</mat-icon>
+      </div>
+
+      <!-- Floating Header Icon -->
+      <div class="lic-floating-icon">
+        <div class="lic-pulse-ring">
+          <mat-icon>notifications_active</mat-icon>
+        </div>
+      </div>
+
+      <!-- Sikkim Gov branding -->
+      <div class="lic-branding">
+        <h4 class="lic-dept-title">Sikkim Excise Department</h4>
+        <span class="lic-dept-sub">Government of Sikkim</span>
+      </div>
+
+      <!-- Main Title -->
+      <h2 class="lic-title">
+        {{ latestLicenseInfo.title }}
+      </h2>
+
+      <!-- Date Badge -->
+      <div class="lic-date-row">
+        <div class="lic-date-badge">
+          <mat-icon>calendar_today</mat-icon>
+          Dated: {{ latestLicenseInfo.date | date:'dd MMMM yyyy' }}
+        </div>
+      </div>
+
+      <!-- Message Body text -->
+      @if (latestLicenseInfo.message) {
+        <div class="lic-message">
+          {{ latestLicenseInfo.message }}
+        </div>
+      }
+
+      <!-- Action Buttons -->
+      <div class="lic-actions">
+        <div (click)="closeLicenseBanner()" class="lic-btn lic-btn-dismiss">
+          Dismiss
+        </div>
+        
+        @if (latestLicenseInfo.link) {
+          <a [href]="latestLicenseInfo.link" target="_blank" style="text-decoration: none;">
+            <div class="lic-btn lic-btn-action">
+              <mat-icon>picture_as_pdf</mat-icon>
+              View Document
+            </div>
+          </a>
+        }
+      </div>
+
+    </div>
+  </div>
+}
+
 <section class="home-grid" aria-label="Excise department highlights">
 
   @if (bulletNotifications && bulletNotifications.length > 0) {
@@ -379,3 +453,5 @@
     </mat-card-content>
   </mat-card>
 </section>
+
+

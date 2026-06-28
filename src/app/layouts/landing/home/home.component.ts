@@ -52,6 +52,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   currentImageIndex = 0;
   slideshowInterval: any;
   revenueData: any[] = [];
+  showLicenseBanner = false;
+  latestLicenseInfo: any = null;
 
   truncateWords(text: string, limit: number): string {
     if (!text) return '';
@@ -143,6 +145,27 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // Store other notifications (already sorted)
         this.allNotifications = mapped.filter(i => i.category !== 'bullet');
+
+        // Extract the latest active License Info update for the landing banner
+        const licenseRecords = (data || []).filter(item => item.category === 'license' && item.isActive !== false);
+        if (licenseRecords && licenseRecords.length > 0) {
+          const sortedLicense = [...licenseRecords].sort((a, b) => {
+            if (b.id && a.id) return b.id - a.id;
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+          });
+          const latest = sortedLicense[0];
+          this.latestLicenseInfo = {
+            title: latest.title,
+            date: latest.date,
+            message: latest.message,
+            link: latest.file ? (String(latest.file).startsWith('http') ? latest.file : `${environment.apiBaseUrl}${latest.file}`) : ''
+          };
+
+          const dismissed = sessionStorage.getItem('dismissedLicenseBanner');
+          if (!dismissed) {
+            this.showLicenseBanner = true;
+          }
+        }
       },
       error: (err) => {
         console.error('Failed to load notifications dynamically:', err);
@@ -154,6 +177,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.pillsScroll) {
       this.pillsScroll.nativeElement.scrollBy({ left: amount, behavior: 'smooth' });
     }
+  }
+
+  closeLicenseBanner(): void {
+    this.showLicenseBanner = false;
+    sessionStorage.setItem('dismissedLicenseBanner', '1');
   }
 
   ngAfterViewInit(): void {
