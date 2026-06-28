@@ -305,25 +305,50 @@
   <mat-card class = "connect-with-us grid-card">
     <mat-card-header>Connect With Us</mat-card-header>
     <mat-card-content class = "card-container">
-      <div class="contact">
-        <div class="dept">
-          <p>EXCISE DEPARTMENT<br>GOVERNMENT OF SIKKIM</p>
-        </div>
-        <div class="address">
-          <p>MG Marg,<br> 
-            Gangtok, Sikkim - 737101<br> 
-            Phone No: 03592-203963<br> 
-            Email: excise.dept&#64;sikkim.gov.in</p>
+
+      <!-- Department name -->
+      <div class="cwu-dept">
+        <mat-icon class="cwu-dept-icon">account_balance</mat-icon>
+        <div>
+          <p class="cwu-dept-name">Excise Department</p>
+          <p class="cwu-dept-sub">Government of Sikkim</p>
         </div>
       </div>
+
+      <!-- Contact details -->
+      <div class="cwu-details">
+        <div class="cwu-row">
+          <mat-icon>location_on</mat-icon>
+          <span>MG Marg, Gangtok, Sikkim – 737101</span>
+        </div>
+        <div class="cwu-row">
+          <mat-icon>call</mat-icon>
+          <span>03592-203963</span>
+        </div>
+        <div class="cwu-row">
+          <mat-icon>mail</mat-icon>
+          <span>excise.dept&#64;sikkim.gov.in</span>
+        </div>
+      </div>
+
+      <!-- Map -->
       <div class="map-container">
-        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3544.5308785306825!2d88.61010607523964!3d27.327866776402193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39e6a514e4a99e41%3A0x8800d2a3beee4886!2sSikkim%20Excise%20Department!5e0!3m2!1sen!2sin!4v1739085170837!5m2!1sen!2sin" 
-          style="border:0;" 
-          allowfullscreen="" 
-          loading="lazy" 
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3544.5308785306825!2d88.61010607523964!3d27.327866776402193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39e6a514e4a99e41%3A0x8800d2a3beee4886!2sSikkim%20Excise%20Department!5e0!3m2!1sen!2sin!4v1739085170837!5m2!1sen!2sin"
+          style="border:0;"
+          allowfullscreen=""
+          loading="lazy"
           referrerpolicy="no-referrer-when-downgrade">
         </iframe>
       </div>
+
+      <!-- Action button -->
+      <a class="cwu-directions-btn"
+         href="https://maps.google.com/?q=Sikkim+Excise+Department+Gangtok"
+         target="_blank" rel="noopener">
+        <mat-icon>directions</mat-icon>
+        <span>Get Directions</span>
+      </a>
+
     </mat-card-content>
   </mat-card>
 
