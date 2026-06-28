@@ -379,7 +379,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadRaids(): void {
     this.raidsService.getPreventiveRaids().subscribe({
       next: (data) => {
-        this.preventiveRaids = data;
+        // Sort by ID (ascending) to show first entered raid first
+        this.preventiveRaids = (data || []).sort((a, b) => {
+          if (a.id && b.id) return a.id - b.id;
+          // If no ID, sort by date
+          if (a.created_at && b.created_at) {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
+          return (a.title || '').localeCompare(b.title || '');
+        });
+        this.selectedRaidIndex = 0;
         this.startSlideshow();
       },
       error: (err) => {
