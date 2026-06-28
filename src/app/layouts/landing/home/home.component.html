@@ -330,9 +330,33 @@
   <mat-card class = "videos grid-card">
     <mat-card-header>Videos</mat-card-header>
     <mat-card-content class = "card-container">
-      <iframe
-        src="https://www.youtube.com/embed/yQF2wpLHcjg?si=ZOliGnG5WNkRamQ7" do-not-allow="autoplay">
-      </iframe>
+      <div class="video-wrapper">
+        <div class="video-info">
+          <p class="video-title">Procedure for Settlement of Licence</p>
+          <p class="video-subtitle">Sikkim Excise Department</p>
+        </div>
+        <div class="video-frame-container">
+          <iframe
+            src="https://www.youtube.com/embed/yQF2wpLHcjg?rel=0&modestbranding=1&fs=1"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+          </iframe>
+        </div>
+        <div class="video-actions">
+          <a class="video-btn share-btn"
+             href="https://www.youtube.com/watch?v=yQF2wpLHcjg"
+             target="_blank" rel="noopener" aria-label="Share video">
+            <mat-icon>share</mat-icon>
+            <span>Share</span>
+          </a>
+          <a class="video-btn watch-btn"
+             href="https://www.youtube.com/watch?v=yQF2wpLHcjg"
+             target="_blank" rel="noopener" aria-label="Watch on YouTube">
+            <mat-icon>smart_display</mat-icon>
+            <span>Watch on YouTube</span>
+          </a>
+        </div>
+      </div>
     </mat-card-content>
   </mat-card>
 </section>
