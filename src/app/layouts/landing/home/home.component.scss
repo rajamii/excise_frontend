@@ -466,7 +466,7 @@ button {
                 0 4px 12px rgba(28, 43, 120, 0.25),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
             position: relative;
-            overflow: hidden;
+            overflow: visible;
 
             &::before {
                 content: '';
@@ -478,6 +478,22 @@ button {
                 background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
                 transition: left 0.5s;
             }
+            
+            // Small downward arrow indicator at bottom center using Unicode
+            &::after {
+                content: '▼';
+                position: absolute;
+                bottom: 3px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 8px;
+                color: rgba(255, 255, 255, 0.6);
+                opacity: 0.8;
+                transition: all 0.3s ease;
+                z-index: 15;
+                pointer-events: none;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            }
 
             &:hover {
                 background: linear-gradient(180deg, #7986cb 0%, #5c6bc0 50%, #3f51b5 100%);
@@ -488,6 +504,13 @@ button {
 
                 &::before {
                     left: 100%;
+                }
+                
+                &::after {
+                    opacity: 1;
+                    bottom: 2px;
+                    color: rgba(255, 255, 255, 0.9);
+                    font-size: 9px;
                 }
             }
         }
@@ -1403,3 +1426,44 @@ button {
     75%       { transform: rotate(4deg); }
 }
 
+
+
+// ========================================
+// REVENUE CHART BAR ARROWS (for .rev-bar inline class)
+// ========================================
+.rev-bar {
+    position: relative !important;
+    overflow: visible !important;
+    
+    // Small downward arrow at bottom center using text
+    &::after {
+        content: '▼' !important;
+        position: absolute !important;
+        bottom: 3px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        font-size: 8px !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        opacity: 0.8 !important;
+        transition: all 0.3s ease !important;
+        z-index: 15 !important;
+        pointer-events: none !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    &:hover::after {
+        opacity: 1 !important;
+        bottom: 2px !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 9px !important;
+    }
+}
+
+// Make sure parent container allows overflow
+.rev-bar-container {
+    overflow: visible !important;
+}
+
+.rev-chart-bars {
+    overflow: visible !important;
+}

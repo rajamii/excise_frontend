@@ -433,68 +433,80 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedUnit: 'crores' | 'lakhs' = 'crores';
   currentChartPageIndex = 0;
 
-  getVisibleRevenueData(): any[] {
+  public getVisibleRevenueData(): any[] {
     const pageSize = 4;
     const start = this.currentChartPageIndex * pageSize;
     return this.revenueData ? this.revenueData.slice(start, start + pageSize) : [];
   }
 
-  hasPrevChartPage(): boolean {
+  public hasPrevChartPage(): boolean {
     return this.currentChartPageIndex > 0;
   }
 
-  hasNextChartPage(): boolean {
+  public hasNextChartPage(): boolean {
     const pageSize = 4;
     return this.revenueData ? (this.currentChartPageIndex + 1) * pageSize < this.revenueData.length : false;
   }
 
-  prevChartPage(): void {
+  public prevChartPage(): void {
     if (this.hasPrevChartPage()) {
       this.currentChartPageIndex--;
     }
   }
 
-  nextChartPage(): void {
+  public nextChartPage(): void {
     if (this.hasNextChartPage()) {
       this.currentChartPageIndex++;
     }
   }
 
-  getDisplayValue(val: number): number {
-    if (this.selectedUnit === 'lakhs') {
-      return Math.round(val * 100 * 100) / 100;
-    }
-    return val;
+  public getDisplayValue(val: number): number {
+    const divisor = this.selectedUnit === 'lakhs' ? 100000.0 : 10000000.0;
+    return Math.round((val / divisor) * 100) / 100;
   }
 
-  getChartMaxLimit(): number {
+  public getChartMaxLimit(): number {
     if (!this.revenueData || this.revenueData.length === 0) {
       return 300;
     }
-    const maxVal = Math.max(...this.revenueData.map(d => d.revenue));
-    const limit = Math.ceil((maxVal + 10) / 50) * 50;
-    return Math.max(100, limit);
+    const maxAmount = Math.max(...this.revenueData.map(d => d.amount || 0));
+    const divisor = this.selectedUnit === 'lakhs' ? 100000.0 : 10000000.0;
+    const maxVal = maxAmount / divisor;
+    
+    // Round up to next multiple of 50 or 2 depending on unit
+    if (this.selectedUnit === 'lakhs') {
+      const limit = Math.ceil((maxVal + 50) / 50) * 50;
+      return Math.max(1000, limit); // Minimum 1000 Lakhs (10 Crores)
+    } else {
+      const limit = Math.ceil((maxVal + 2) / 2) * 2;
+      return Math.max(10, limit); // Minimum 10 Crores
+    }
   }
 
-  getYAxisLabels(): string[] {
+  public getYAxisLabels(): string[] {
     const limit = this.getChartMaxLimit();
     const labels: string[] = [];
     for (let i = 6; i >= 0; i--) {
       let val = limit * (i / 6);
-      if (this.selectedUnit === 'lakhs') {
-        val = val * 100;
-      }
       labels.push(Math.round(val).toLocaleString('en-IN'));
     }
     return labels;
   }
 
-  getBarHeightPercentage(val: number): number {
+  public getBarHeightPercentage(amount: number): number {
     const limit = this.getChartMaxLimit();
+    const divisor = this.selectedUnit === 'lakhs' ? 100000.0 : 10000000.0;
+    const val = amount / divisor;
     return (val / limit) * 100;
   }
 
-  getMathCeil(val: number): number {
+  public getPaginationPages(): number[] {
+    if (!this.revenueData) return [];
+    const totalPages = Math.ceil(this.revenueData.length / 4);
+    return Array.from({ length: totalPages }, (_, i) => i);
+  }
+
+  public getMathCeil(val: number): number {
     return Math.ceil(val);
   }
 }

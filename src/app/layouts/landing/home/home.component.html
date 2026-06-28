@@ -37,7 +37,7 @@
           <button class="about-us-nav__arrow" [disabled]="aboutUsIndex === 0" (click)="prevAboutUs()" aria-label="Previous">
             <mat-icon>chevron_left</mat-icon>
           </button>
-          <span class="about-us-nav__title">{{ aboutUsRecords[aboutUsIndex]?.title }}</span>
+          <span class="about-us-nav__title">{{ aboutUsRecords[aboutUsIndex].title }}</span>
           <button class="about-us-nav__arrow" [disabled]="aboutUsIndex === aboutUsRecords.length - 1" (click)="nextAboutUs()" aria-label="Next">
             <mat-icon>chevron_right</mat-icon>
           </button>
@@ -207,11 +207,16 @@
             </div>
 
             <!-- Left Arrow for page sliding -->
-            <div style="display: flex; align-items: center; height: 180px; margin-top: 15px;">
-              <button type="button" [disabled]="!hasPrevChartPage()" (click)="prevChartPage()" style="background: none; border: none; cursor: pointer; color: #1C2B78; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;" [style.opacity]="hasPrevChartPage() ? 1 : 0.2">
-                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chevron_left</mat-icon>
-              </button>
-            </div>
+            @if (revenueData.length > 4) {
+              <div style="display: flex; align-items: center; height: 180px; margin-top: 15px; margin-right: 4px; z-index: 10;">
+                <div (click)="hasPrevChartPage() ? prevChartPage() : null" 
+                     [style.opacity]="hasPrevChartPage() ? 1 : 0.2"
+                     [style.cursor]="hasPrevChartPage() ? 'pointer' : 'default'"
+                     style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background-color: #1C2B78; color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: all 0.2s;">
+                  <mat-icon style="font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold;">chevron_left</mat-icon>
+                </div>
+              </div>
+            }
 
             <!-- Chart Area with Bars and Labels -->
             <div style="display: flex; flex-direction: column; flex-grow: 1; margin: 0 4px;">
@@ -232,8 +237,8 @@
                 <!-- Bars (flexbox centered) -->
                 <div class="rev-chart-bars" style="position: absolute; top: 0; left: 0; width: 100%; height: 195px; display: flex; justify-content: center; gap: 24px; align-items: flex-end; z-index: 2; padding: 0 10px;">
                   @for (item of getVisibleRevenueData(); track item) {
-                    @let displayVal = getDisplayValue(item.revenue);
-                    @let pct = getBarHeightPercentage(item.revenue);
+                    @let displayVal = getDisplayValue(item.amount);
+                    @let pct = getBarHeightPercentage(item.amount);
                     <!-- Adjust height based on 180px chart height (180px is 92.3% of 195px) -->
                     @let adjustedPct = pct * 0.923;
                     <div class="rev-bar-container" [style.height.%]="adjustedPct" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 45px; position: relative;">
@@ -260,11 +265,16 @@
             </div>
 
             <!-- Right Arrow for page sliding -->
-            <div style="display: flex; align-items: center; height: 180px; margin-top: 15px;">
-              <button type="button" [disabled]="!hasNextChartPage()" (click)="nextChartPage()" style="background: none; border: none; cursor: pointer; color: #1C2B78; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;" [style.opacity]="hasNextChartPage() ? 1 : 0.2">
-                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chevron_right</mat-icon>
-              </button>
-            </div>
+            @if (revenueData.length > 4) {
+              <div style="display: flex; align-items: center; height: 180px; margin-top: 15px; margin-left: 4px; z-index: 10;">
+                <div (click)="hasNextChartPage() ? nextChartPage() : null" 
+                     [style.opacity]="hasNextChartPage() ? 1 : 0.2"
+                     [style.cursor]="hasNextChartPage() ? 'pointer' : 'default'"
+                     style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background-color: #1C2B78; color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: all 0.2s;">
+                  <mat-icon style="font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold;">chevron_right</mat-icon>
+                </div>
+              </div>
+            }
           </div>
 
           <!-- Bottom Legend and pagination indicators -->
@@ -274,12 +284,13 @@
               <span class="rev-legend-text" style="font-size: 9px; font-weight: 700; color: #333;">Revenue (Rs. In {{ selectedUnit === 'lakhs' ? 'Lakhs' : 'Crores' }})</span>
             </div>
             
-            <div class="chart-pagination-dots" style="display: flex; gap: 4px;">
-              @let totalPages = getMathCeil(revenueData.length / 4);
-              @for (dummy of [].constructor(totalPages); track $index; let idx = $index) {
-                <span style="width: 6px; height: 6px; border-radius: 50%; display: inline-block; cursor: pointer; transition: all 0.3s;" [style.background-color]="idx === currentChartPageIndex ? '#1C2B78' : '#ccc'" (click)="currentChartPageIndex = idx"></span>
-              }
-            </div>
+            @if (revenueData.length > 4) {
+              <div class="chart-pagination-dots" style="display: flex; gap: 4px;">
+                @for (idx of getPaginationPages(); track idx) {
+                  <span style="width: 6px; height: 6px; border-radius: 50%; display: inline-block; cursor: pointer; transition: all 0.3s;" [style.background-color]="idx === currentChartPageIndex ? '#1C2B78' : '#ccc'" (click)="currentChartPageIndex = idx"></span>
+                }
+              </div>
+            }
           </div>
 
         </div>
