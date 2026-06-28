@@ -178,10 +178,117 @@
     }
   </mat-card>
 
-  <mat-card class = "revenue-receipts grid-card">
-    <mat-card-header>Revenue Receipts</mat-card-header>
-    <mat-card-content class = "card-container">
-      <img src = "assets/images/main/revenue-receipts/revenue_receipts.png" alt="Revenue receipts chart">
+  <mat-card class="revenue-receipts grid-card">
+    <mat-card-header style="display: flex; justify-content: center; align-items: center;">
+      <span>REVENUE RECEIPTS</span>
+    </mat-card-header>
+    <mat-card-content class="card-container">
+      @if (revenueData && revenueData.length > 0) {
+        <!-- Center-aligned unit toggle buttons inside the box -->
+        <div class="unit-toggle-wrapper">
+          <div class="unit-toggle">
+            <button type="button" [class.active]="selectedUnit === 'crores'" (click)="selectedUnit = 'crores'">
+              Crores
+            </button>
+            <button type="button" [class.active]="selectedUnit === 'lakhs'" (click)="selectedUnit = 'lakhs'">
+              Lakhs
+            </button>
+          </div>
+        </div>
+
+        <div class="rev-chart-wrapper" style="display: flex; flex-direction: column; width: 100%;">
+          
+          <div style="display: flex; align-items: flex-start; width: 100%;">
+            <!-- Y-Axis labels on the left -->
+            <div class="rev-chart-y-axis" style="display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; width: 55px; height: 180px; padding-right: 8px; border-right: 2px solid #333; font-size: 10px; font-weight: 700; color: #333; margin-top: 15px;">
+              @for (label of getYAxisLabels(); track label) {
+                <span class="rev-y-label" style="height: 0; display: flex; align-items: center;">{{ label }}</span>
+              }
+            </div>
+
+            <!-- Left Arrow for page sliding -->
+            <div style="display: flex; align-items: center; height: 180px; margin-top: 15px;">
+              <button type="button" [disabled]="!hasPrevChartPage()" (click)="prevChartPage()" style="background: none; border: none; cursor: pointer; color: #1C2B78; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;" [style.opacity]="hasPrevChartPage() ? 1 : 0.2">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chevron_left</mat-icon>
+              </button>
+            </div>
+
+            <!-- Chart Area with Bars and Labels -->
+            <div style="display: flex; flex-direction: column; flex-grow: 1; margin: 0 4px;">
+              <!-- Grid & Bars (height: 180px plus some space above for value labels) -->
+              <div class="rev-chart-area" style="position: relative; height: 195px; width: 100%;">
+                
+                <!-- Grid Lines (aligned to start 15px from top to match height) -->
+                <div class="rev-chart-grid-lines" style="position: absolute; top: 15px; left: 0; width: 100%; height: 180px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; z-index: 1;">
+                  <div class="rev-grid-line" style="border-bottom: 1px dashed #e0e0e0; width: 100%; height: 0;"></div>
+                  <div class="rev-grid-line" style="border-bottom: 1px dashed #e0e0e0; width: 100%; height: 0;"></div>
+                  <div class="rev-grid-line" style="border-bottom: 1px dashed #e0e0e0; width: 100%; height: 0;"></div>
+                  <div class="rev-grid-line" style="border-bottom: 1px dashed #e0e0e0; width: 100%; height: 0;"></div>
+                  <div class="rev-grid-line" style="border-bottom: 1px dashed #e0e0e0; width: 100%; height: 0;"></div>
+                  <div class="rev-grid-line" style="border-bottom: 1px dashed #e0e0e0; width: 100%; height: 0;"></div>
+                  <div class="rev-grid-line last" style="border-bottom: 2px solid #333; width: 100%; height: 0;"></div> <!-- Solid X-axis line -->
+                </div>
+
+                <!-- Bars (flexbox centered) -->
+                <div class="rev-chart-bars" style="position: absolute; top: 0; left: 0; width: 100%; height: 195px; display: flex; justify-content: center; gap: 24px; align-items: flex-end; z-index: 2; padding: 0 10px;">
+                  @for (item of getVisibleRevenueData(); track item) {
+                    @let displayVal = getDisplayValue(item.revenue);
+                    @let pct = getBarHeightPercentage(item.revenue);
+                    <!-- Adjust height based on 180px chart height (180px is 92.3% of 195px) -->
+                    @let adjustedPct = pct * 0.923;
+                    <div class="rev-bar-container" [style.height.%]="adjustedPct" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 45px; position: relative;">
+                      <div class="rev-bar-value" style="font-size: 9px; font-weight: 700; color: #333; margin-bottom: 2px; white-space: nowrap; background: #fff; border: 1px solid #1C2B78; border-radius: 4px; padding: 1px 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transform: translateY(-4px); z-index: 3;">{{ displayVal }}</div>
+                      <div class="rev-bar" [title]="item.financialYear + ': ' + displayVal + ' ' + (selectedUnit === 'lakhs' ? 'Lakhs' : 'Crores')" style="width: 100%; height: 100%; background: linear-gradient(180deg, #9fa8da 0%, #1C2B78 100%); border-radius: 4px 4px 0 0; transition: all 0.3s; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- X-Axis Labels (Years) perfectly aligned below the bars as high-contrast dark blue badges -->
+              <div style="display: flex; justify-content: center; gap: 14px; width: 100%; padding: 10px 10px 0 10px; z-index: 3;">
+                @for (item of getVisibleRevenueData(); track item) {
+                  <div style="width: 55px; text-align: center; white-space: nowrap; color: #ffffff !important; background-color: #1C2B78 !important; border-radius: 4px; padding: 2px 0; font-size: 9px !important; font-weight: 800 !important; box-shadow: 0 1px 3px rgba(0,0,0,0.15); display: inline-block; z-index: 4;">
+                    {{ item.financialYear }}
+                  </div>
+                }
+              </div>
+
+              <!-- Horizontal Axis description -->
+              <div style="text-align: center; font-size: 10px; font-weight: 800; color: #1C2B78 !important; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; z-index: 3;">
+                Financial Year
+              </div>
+            </div>
+
+            <!-- Right Arrow for page sliding -->
+            <div style="display: flex; align-items: center; height: 180px; margin-top: 15px;">
+              <button type="button" [disabled]="!hasNextChartPage()" (click)="nextChartPage()" style="background: none; border: none; cursor: pointer; color: #1C2B78; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;" [style.opacity]="hasNextChartPage() ? 1 : 0.2">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chevron_right</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Legend and pagination indicators -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding: 0 10px;">
+            <div class="rev-chart-legend" style="display: flex; align-items: center; gap: 6px;">
+              <span class="rev-legend-color" style="width: 16px; height: 10px; background: #1C2B78; border-radius: 2px; display: inline-block;"></span>
+              <span class="rev-legend-text" style="font-size: 9px; font-weight: 700; color: #333;">Revenue (Rs. In {{ selectedUnit === 'lakhs' ? 'Lakhs' : 'Crores' }})</span>
+            </div>
+            
+            <div class="chart-pagination-dots" style="display: flex; gap: 4px;">
+              @let totalPages = getMathCeil(revenueData.length / 4);
+              @for (dummy of [].constructor(totalPages); track $index; let idx = $index) {
+                <span style="width: 6px; height: 6px; border-radius: 50%; display: inline-block; cursor: pointer; transition: all 0.3s;" [style.background-color]="idx === currentChartPageIndex ? '#1C2B78' : '#ccc'" (click)="currentChartPageIndex = idx"></span>
+              }
+            </div>
+          </div>
+
+        </div>
+      } @else {
+        <div style="padding: 30px; text-align: center; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+          <mat-icon style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 12px; color: #1C2B78;">bar_chart</mat-icon>
+          <p style="margin: 0; font-weight: 600;">No revenue receipts details available.</p>
+        </div>
+      }
     </mat-card-content>
   </mat-card>
   

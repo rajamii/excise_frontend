@@ -51,6 +51,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedRaidIndex = 0;
   currentImageIndex = 0;
   slideshowInterval: any;
+  revenueData: any[] = [];
 
   truncateWords(text: string, limit: number): string {
     if (!text) return '';
@@ -88,6 +89,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadMarkdown();
     this.loadNotifications();
     this.loadRaids();
+    this.loadRevenueData();
   }
 
   get displayedNotifications(): any[] {
@@ -415,6 +417,85 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       return imagePath;
     }
     return `${environment.apiBaseUrl}${imagePath}`;
+  }
+
+  loadRevenueData(): void {
+    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/payment-gateway/revenue-receipts/`).subscribe({
+      next: (data) => {
+        this.revenueData = data;
+      },
+      error: (err) => {
+        console.error('Failed to load revenue data:', err);
+      }
+    });
+  }
+
+  selectedUnit: 'crores' | 'lakhs' = 'crores';
+  currentChartPageIndex = 0;
+
+  getVisibleRevenueData(): any[] {
+    const pageSize = 4;
+    const start = this.currentChartPageIndex * pageSize;
+    return this.revenueData ? this.revenueData.slice(start, start + pageSize) : [];
+  }
+
+  hasPrevChartPage(): boolean {
+    return this.currentChartPageIndex > 0;
+  }
+
+  hasNextChartPage(): boolean {
+    const pageSize = 4;
+    return this.revenueData ? (this.currentChartPageIndex + 1) * pageSize < this.revenueData.length : false;
+  }
+
+  prevChartPage(): void {
+    if (this.hasPrevChartPage()) {
+      this.currentChartPageIndex--;
+    }
+  }
+
+  nextChartPage(): void {
+    if (this.hasNextChartPage()) {
+      this.currentChartPageIndex++;
+    }
+  }
+
+  getDisplayValue(val: number): number {
+    if (this.selectedUnit === 'lakhs') {
+      return Math.round(val * 100 * 100) / 100;
+    }
+    return val;
+  }
+
+  getChartMaxLimit(): number {
+    if (!this.revenueData || this.revenueData.length === 0) {
+      return 300;
+    }
+    const maxVal = Math.max(...this.revenueData.map(d => d.revenue));
+    const limit = Math.ceil((maxVal + 10) / 50) * 50;
+    return Math.max(100, limit);
+  }
+
+  getYAxisLabels(): string[] {
+    const limit = this.getChartMaxLimit();
+    const labels: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      let val = limit * (i / 6);
+      if (this.selectedUnit === 'lakhs') {
+        val = val * 100;
+      }
+      labels.push(Math.round(val).toLocaleString('en-IN'));
+    }
+    return labels;
+  }
+
+  getBarHeightPercentage(val: number): number {
+    const limit = this.getChartMaxLimit();
+    return (val / limit) * 100;
+  }
+
+  getMathCeil(val: number): number {
+    return Math.ceil(val);
   }
 }
 

@@ -1762,6 +1762,72 @@ mat-card-content {
 }
 
 // ========================================
+// CHART BAR ARROW DESIGN
+// ========================================
+// Add small arrow indicators to chart bars
+::ng-deep {
+    // Target SVG bars or rectangular chart elements
+    .chart-bar,
+    [class*="bar"],
+    rect[fill*="#"],
+    .highcharts-point,
+    .apexcharts-bar-area {
+        position: relative;
+        
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid rgba(28, 43, 120, 0.4);
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+        
+        &:hover::after {
+            opacity: 1;
+            bottom: 6px;
+            border-top-color: rgba(28, 43, 120, 0.8);
+        }
+    }
+    
+    // Alternative approach for canvas-based charts
+    .chart-container,
+    [class*="revenue"],
+    [class*="chart"] {
+        canvas + div,
+        .bar-wrapper {
+            position: relative;
+            
+            &::before {
+                content: '';
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%) rotate(180deg);
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-bottom: 7px solid rgba(28, 43, 120, 0.35);
+                opacity: 0.6;
+                transition: opacity 0.3s ease;
+                pointer-events: none;
+            }
+            
+            &:hover::before {
+                opacity: 0.9;
+            }
+        }
+    }
+}
+
+// ========================================
 // SUPPLY CHAIN SECTION STYLES
 // ========================================
 .supply-chain-content {
@@ -2984,5 +3050,64 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
                 border-radius: 10px;
             }
         }
+    }
+}
+
+// ========================================
+// SPECIFIC BAR CHART ARROW INDICATORS
+// ========================================
+// For light blue colored bars in charts
+.revenue-bar,
+.chart-column,
+[class*="column-bar"] {
+    position: relative !important;
+    
+    // Small downward arrow at bottom center
+    &::after {
+        content: '▼' !important;
+        position: absolute !important;
+        bottom: 4px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        font-size: 10px !important;
+        color: rgba(28, 43, 120, 0.5) !important;
+        opacity: 0.7 !important;
+        transition: all 0.3s ease !important;
+        pointer-events: none !important;
+        z-index: 10 !important;
+    }
+    
+    &:hover::after {
+        opacity: 1 !important;
+        color: rgba(28, 43, 120, 0.8) !important;
+        bottom: 2px !important;
+    }
+}
+
+// CSS Triangle arrow for bars
+.bar-element,
+.chart-bar-item {
+    position: relative !important;
+    
+    &::before {
+        content: '' !important;
+        position: absolute !important;
+        bottom: 6px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 0 !important;
+        height: 0 !important;
+        border-left: 5px solid transparent !important;
+        border-right: 5px solid transparent !important;
+        border-top: 7px solid rgba(28, 43, 120, 0.4) !important;
+        opacity: 0.65 !important;
+        transition: all 0.3s ease !important;
+        z-index: 10 !important;
+    }
+    
+    &:hover::before {
+        opacity: 1 !important;
+        bottom: 4px !important;
+        border-top-color: rgba(28, 43, 120, 0.75) !important;
     }
 }
