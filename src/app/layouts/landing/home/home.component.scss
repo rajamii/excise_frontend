@@ -205,13 +205,15 @@
         }
 
         .lic-btn-dismiss {
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            color: #555555;
+            background: rgba(239, 68, 68, 0.10);
+            border: 1.5px solid rgba(239, 68, 68, 0.35);
+            color: #dc2626;
 
             &:hover {
-                background: rgba(0, 0, 0, 0.08) !important;
-                color: #222222;
+                background: linear-gradient(135deg, #dc2626 0%, #f87171 100%) !important;
+                color: #ffffff;
+                border-color: #dc2626;
+                box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
                 transform: translateY(-2px);
             }
             &:active {
@@ -220,7 +222,7 @@
         }
 
         .lic-btn-action {
-            background: linear-gradient(135deg, #1C2B78 0%, #3f51b5 100%);
+            background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
             border: none;
             color: #ffffff;
             font-weight: 700;
@@ -228,7 +230,7 @@
             align-items: center;
             gap: 8px;
             padding: 11px 26px;
-            box-shadow: 0 4px 15px rgba(28, 43, 120, 0.25);
+            box-shadow: 0 4px 15px rgba(3, 105, 161, 0.40);
 
             mat-icon {
                 font-size: 16px;
@@ -240,7 +242,8 @@
             }
 
             &:hover {
-                box-shadow: 0 6px 20px rgba(28, 43, 120, 0.35) !important;
+                background: linear-gradient(135deg, #075985 0%, #0369a1 100%);
+                box-shadow: 0 6px 20px rgba(3, 105, 161, 0.55) !important;
                 transform: translateY(-2px);
             }
             &:active {
