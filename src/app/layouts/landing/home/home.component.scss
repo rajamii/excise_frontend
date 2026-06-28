@@ -187,6 +187,14 @@ button {
         opacity: 0.88;
         box-shadow: 0 4px 14px rgba(59, 91, 219, 0.40) !important;
     }
+    
+    // Exception for unit toggle buttons
+    .unit-toggle & {
+        all: unset;
+        display: inline-block;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
 }
 
 .about-us {
@@ -337,17 +345,27 @@ button {
             background: transparent;
             color: #666;
             letter-spacing: 0.5px;
+            min-width: 80px;
 
             &.active {
-                background: linear-gradient(135deg, #1C2B78 0%, #2d4aa7 100%) !important;
+                background: linear-gradient(135deg, #1C2B78 0%, #3b5bdb 100%) !important;
                 color: #fff !important;
-                box-shadow: 0 4px 12px rgba(28, 43, 120, 0.3);
+                box-shadow: 0 4px 12px rgba(28, 43, 120, 0.35);
                 transform: translateY(-1px);
+                
+                &:hover {
+                    background: linear-gradient(135deg, #1C2B78 0%, #3b5bdb 100%) !important;
+                    color: #fff !important;
+                    opacity: 1;
+                }
             }
 
-            &:hover:not(.active) {
-                background: rgba(28, 43, 120, 0.08) !important;
-                color: #1C2B78;
+            &:not(.active) {
+                &:hover {
+                    background: rgba(28, 43, 120, 0.12) !important;
+                    color: #1C2B78 !important;
+                    opacity: 1;
+                }
             }
         }
     }
