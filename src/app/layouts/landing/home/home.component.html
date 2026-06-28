@@ -27,11 +27,32 @@
     </div>
   }
 
-  <mat-card class = "about-us grid-card" id = "about-us">
+  <mat-card class="about-us grid-card" id="about-us">
     <mat-card-header>About Us</mat-card-header>
-      <mat-card-content class = "card-container">
-        <markdown [data]="markdownContent"></markdown>
-      </mat-card-content>
+    <mat-card-content class="card-container">
+
+      <!-- Navigator — only shown when more than 1 record -->
+      @if (aboutUsRecords.length > 1) {
+        <div class="about-us-nav">
+          <button class="about-us-nav__arrow" [disabled]="aboutUsIndex === 0" (click)="prevAboutUs()" aria-label="Previous">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="about-us-nav__title">{{ aboutUsRecords[aboutUsIndex]?.title }}</span>
+          <button class="about-us-nav__arrow" [disabled]="aboutUsIndex === aboutUsRecords.length - 1" (click)="nextAboutUs()" aria-label="Next">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+
+        <!-- Dot indicators -->
+        <div class="about-us-dots">
+          @for (r of aboutUsRecords; track r; let i = $index) {
+            <span class="about-us-dots__dot" [class.active]="i === aboutUsIndex" (click)="aboutUsIndex = i; markdownContent = aboutUsRecords[i].content"></span>
+          }
+        </div>
+      }
+
+      <markdown [data]="markdownContent"></markdown>
+    </mat-card-content>
   </mat-card>
 
   <mat-card class = "whats-current grid-card">

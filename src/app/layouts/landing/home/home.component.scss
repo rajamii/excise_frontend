@@ -196,6 +196,99 @@ button {
         scrollbar-color: rgba(28, 43, 120, 0.45) rgba(28, 43, 120, 0.08);
         scrollbar-width: thin;
     }
+
+    // Nav bar shown when multiple records exist
+    .about-us-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(28, 43, 120, 0.07);
+        border-radius: 8px;
+        padding: 4px 6px;
+        margin-bottom: 10px;
+        flex-shrink: 0;
+
+        &__arrow {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 30px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border-radius: 50% !important;
+            background: rgba(255, 255, 255, 0.7) !important;
+            border: 1.5px solid rgba(28, 43, 120, 0.2) !important;
+            color: #1C2B78 !important;
+            cursor: pointer;
+            flex-shrink: 0;
+            box-shadow: 0 1px 4px rgba(28, 43, 120, 0.12) !important;
+            transition: all 0.2s ease !important;
+
+            mat-icon {
+                font-size: 18px !important;
+                width: 18px !important;
+                height: 18px !important;
+                line-height: 18px !important;
+                color: #1C2B78 !important;
+            }
+
+            &:hover:not([disabled]) {
+                background: rgba(28, 43, 120, 0.15) !important;
+                border-color: #1C2B78 !important;
+                box-shadow: 0 2px 8px rgba(28, 43, 120, 0.22) !important;
+            }
+
+            &[disabled] {
+                background: rgba(200, 200, 200, 0.3) !important;
+                border-color: rgba(200, 200, 200, 0.4) !important;
+                cursor: not-allowed;
+                box-shadow: none !important;
+
+                mat-icon { color: #bbb !important; }
+            }
+        }
+
+        &__title {
+            flex: 1;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1C2B78;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    // Dot indicators
+    .about-us-dots {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 12px;
+        flex-shrink: 0;
+
+        &__dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(28, 43, 120, 0.2);
+            cursor: pointer;
+            transition: all 0.25s ease;
+
+            &.active {
+                background: #1C2B78;
+                width: 22px;
+                border-radius: 4px;
+            }
+
+            &:hover:not(.active) {
+                background: rgba(28, 43, 120, 0.45);
+            }
+        }
+    }
 }
 
 .revenue-receipts {

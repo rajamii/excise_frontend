@@ -1,6 +1,7 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MaterialModule } from '../../../shared/material.module';
+import { MarkdownModule } from 'ngx-markdown';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { WhatsCurrentService } from '../../../core/services/whats-current.service';
@@ -30,7 +31,7 @@ interface Particle3D {
 
 @Component({
   selector: 'app-home',
-  imports: [MaterialModule],
+  imports: [MaterialModule, MarkdownModule],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
@@ -40,6 +41,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   selectedLink: string = '';
   markdownContent: string = '';
+  aboutUsRecords: { title: string; content: string }[] = [];
+  aboutUsIndex: number = 0;
   isBrowser: boolean;
   selectedHomeCategory: string = 'all';
   allNotifications: any[] = [];
@@ -165,11 +168,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadMarkdown(): void {
     this.infoPagesService.getAboutUs().subscribe({
       next: (records) => {
-        const deptRecord = records.find(r => r.title === 'Department' || r.title?.toLowerCase() === 'about us' || r.title?.toLowerCase() === 'about-us');
-        if (deptRecord && deptRecord.content) {
-          this.markdownContent = deptRecord.content;
-        } else if (records && records.length > 0 && records[0].content) {
-          this.markdownContent = records[0].content;
+        this.aboutUsRecords = (records || [])
+          .filter(r => r.content)
+          .map(r => ({ title: r.title || 'About Us', content: r.content }));
+
+        if (this.aboutUsRecords.length > 0) {
+          this.aboutUsIndex = 0;
+          this.markdownContent = this.aboutUsRecords[0].content;
         } else {
           this.markdownContent = '*Content not available.*';
         }
@@ -178,6 +183,20 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         this.markdownContent = '*Content not available.*';
       }
     });
+  }
+
+  prevAboutUs(): void {
+    if (this.aboutUsIndex > 0) {
+      this.aboutUsIndex--;
+      this.markdownContent = this.aboutUsRecords[this.aboutUsIndex].content;
+    }
+  }
+
+  nextAboutUs(): void {
+    if (this.aboutUsIndex < this.aboutUsRecords.length - 1) {
+      this.aboutUsIndex++;
+      this.markdownContent = this.aboutUsRecords[this.aboutUsIndex].content;
+    }
   }
 
   navigateToExternal(url: string) {
