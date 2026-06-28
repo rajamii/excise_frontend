@@ -486,7 +486,7 @@ button {
                 bottom: 3px;
                 left: 50%;
                 transform: translateX(-50%);
-                font-size: 8px;
+                font-size: 6px;
                 color: rgba(255, 255, 255, 0.6);
                 opacity: 0.8;
                 transition: all 0.3s ease;
@@ -510,7 +510,7 @@ button {
                     opacity: 1;
                     bottom: 2px;
                     color: rgba(255, 255, 255, 0.9);
-                    font-size: 9px;
+                    font-size: 7px;
                 }
             }
         }
@@ -1442,7 +1442,7 @@ button {
         bottom: 3px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
-        font-size: 8px !important;
+        font-size: 6px !important;
         color: rgba(255, 255, 255, 0.6) !important;
         opacity: 0.8 !important;
         transition: all 0.3s ease !important;
@@ -1455,7 +1455,7 @@ button {
         opacity: 1 !important;
         bottom: 2px !important;
         color: rgba(255, 255, 255, 0.9) !important;
-        font-size: 9px !important;
+        font-size: 7px !important;
     }
 }
 
