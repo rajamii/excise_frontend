@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 interface StatisticsData {
   applied: number;
   pending: number;
+  objection?: number;
   approved: number;
   rejected: number;
   dailyEntry?: number;
@@ -55,6 +56,23 @@ interface FilterOption {
           <div class="card-content">
             <div class="value">{{ statistics.pending }}</div>
             <div class="label">Pending</div>
+          </div>
+        </div>
+
+        <!-- Objection (optional) -->
+        <div class="stat-card objection" *ngIf="statistics.objection !== undefined">
+          <div class="card-header">
+            <div class="circle-icon orange-bg">
+              <mat-icon>error_outline</mat-icon>
+            </div>
+            <div class="card-trend" [class.negative]="(statistics.objection || 0) > 0">
+              <mat-icon>{{ (statistics.objection || 0) > 0 ? 'trending_up' : 'trending_flat' }}</mat-icon>
+              <span>{{ (statistics.objection || 0) > 0 ? 'Needs review' : 'None' }}</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ statistics.objection || 0 }}</div>
+            <div class="label">Objection</div>
           </div>
         </div>
 
@@ -212,6 +230,7 @@ interface FilterOption {
     .red-bg    { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); }
     .green-bg  { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
     .yellow-bg { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+    .orange-bg { background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); }
     .purple-bg { background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%); }
 
     /* ---- card-trend badge ---- */
@@ -294,6 +313,13 @@ interface FilterOption {
     .stat-card.pending::before { background: rgba(251, 191, 36, 0.3); }
     .stat-card.pending .value  { color: #ca8a04; }
     .stat-card.pending .label  { color: #eab308; }
+
+    .stat-card.objection {
+      background: linear-gradient(135deg, rgba(255,247,237,0.6) 0%, rgba(254,215,170,0.6) 100%);
+    }
+    .stat-card.objection::before { background: rgba(251, 146, 60, 0.3); }
+    .stat-card.objection .value  { color: #ea580c; }
+    .stat-card.objection .label  { color: #f97316; }
 
     .stat-card.approved {
       background: linear-gradient(135deg, rgba(240,253,244,0.6) 0%, rgba(220,252,231,0.6) 100%);

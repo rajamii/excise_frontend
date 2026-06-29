@@ -884,7 +884,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Data properties
   allApplications: CommissionerData[] = [];
   filteredApplications: CommissionerData[] = [];
-  unifiedCounts = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  unifiedCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
   selectedApplicationType: string = 'all';
   selectedCompany: string = '';
   companyOptions: string[] = [];
@@ -965,6 +965,7 @@ export class CommissionerDashboardComponent implements OnInit {
         this.unifiedCounts = {
           applied: counts?.applied || 0,
           pending: counts?.pending || 0,
+          objection: counts?.objection || 0,
           approved: counts?.approved || 0,
           rejected: counts?.rejected || 0
         };
@@ -1213,6 +1214,7 @@ export class CommissionerDashboardComponent implements OnInit {
     return {
       applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED') + (this.unifiedCounts?.applied || 0),
       pending: (actionablePending || legacyPending) + (this.unifiedCounts?.pending || 0),
+      objection: this.getStatusCount('OBJECTION') + (this.unifiedCounts?.objection || 0),
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER') + (this.unifiedCounts?.approved || 0),
       rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER') + (this.unifiedCounts?.rejected || 0)
     };
