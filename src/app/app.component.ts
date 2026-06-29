@@ -58,6 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly loading = inject(UiLoadingService);
   private wasAuthenticated = false;
   private doc = inject(DOCUMENT);
+  private preloaderRemoved = false;
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
@@ -80,7 +81,10 @@ export class AppComponent implements OnInit, OnDestroy {
         if (event instanceof NavigationStart) {
           if (this.shouldShowRouteLoader(event.url)) this.loading.setRouteLoading(true);
         }
-        if (event instanceof NavigationEnd) this.loading.setRouteLoading(false);
+        if (event instanceof NavigationEnd) {
+          this.loading.setRouteLoading(false);
+          this.removePreloader();
+        }
         if (event instanceof NavigationCancel) this.loading.setRouteLoading(false);
         if (event instanceof NavigationError) this.loading.setRouteLoading(false);
       });
@@ -146,5 +150,20 @@ export class AppComponent implements OnInit, OnDestroy {
     const withoutHash = (url ?? '').split('#')[0] ?? '';
     const withoutQuery = withoutHash.split('?')[0] ?? '';
     return withoutQuery.trim();
+  }
+
+  private removePreloader(): void {
+    if (this.preloaderRemoved) return;
+    this.preloaderRemoved = true;
+
+    const preloader = this.doc.getElementById('app-preloader');
+    if (!preloader) return;
+
+    const runAfterPaint = globalThis.requestAnimationFrame ?? ((callback: () => void) => globalThis.setTimeout(callback, 16));
+
+    runAfterPaint(() => {
+      preloader.classList.add('is-leaving');
+      globalThis.setTimeout(() => preloader.remove(), 320);
+    });
   }
 }
