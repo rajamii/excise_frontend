@@ -1521,13 +1521,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private canAccessCompanyRegistrationWorkflow(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    if ([3, 5, 10].includes(roleId)) {
+    if ([5, 10].includes(roleId)) {
       return true;
     }
 
     const normalizedRole = this.getNormalizedRoleName();
     return [
-      'singlewindow',
       'permitsection',
       'commissioner',
     ].some((token) => normalizedRole.includes(token));
@@ -1549,8 +1548,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return roleId === 3;
     }
 
-    if (section === 'company-registration' && this.canAccessCompanyRegistrationWorkflow()) {
-      return true;
+    if (section === 'company-registration') {
+      return this.canAccessCompanyRegistrationWorkflow();
     }
 
     if (section === 'company-collaboration' && this.canAccessCompanyCollaborationWorkflow()) {
