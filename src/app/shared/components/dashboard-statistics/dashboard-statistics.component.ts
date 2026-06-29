@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 
 interface StatisticsData {
   applied: number;
@@ -18,170 +19,315 @@ interface FilterOption {
 @Component({
   selector: 'app-dashboard-statistics',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   template: `
     <div class="dashboard-statistics">
-      <!-- Statistics Cards -->
-      <div class="statistics-cards">
+      <div class="stats-grid">
+
+        <!-- Applied -->
         <div class="stat-card applied">
-          <div class="stat-icon">
-            <i class="bi bi-arrow-right-circle"></i>
+          <div class="card-header">
+            <div class="circle-icon blue-bg">
+              <mat-icon>send</mat-icon>
+            </div>
+            <div class="card-trend positive">
+              <mat-icon>trending_up</mat-icon>
+              <span>All</span>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ statistics.applied }}</div>
-            <div class="stat-label">APPLIED</div>
+          <div class="card-content">
+            <div class="value">{{ statistics.applied }}</div>
+            <div class="label">Applied</div>
           </div>
         </div>
 
+        <!-- Pending -->
         <div class="stat-card pending">
-          <div class="stat-icon">
-            <i class="bi bi-clock"></i>
+          <div class="card-header">
+            <div class="circle-icon yellow-bg">
+              <mat-icon>schedule</mat-icon>
+            </div>
+            <div class="card-trend" [class.negative]="statistics.pending > 0">
+              <mat-icon>{{ statistics.pending > 0 ? 'trending_up' : 'trending_flat' }}</mat-icon>
+              <span>{{ statistics.pending > 0 ? 'Action needed' : 'Clear' }}</span>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ statistics.pending }}</div>
-            <div class="stat-label">PENDING</div>
+          <div class="card-content">
+            <div class="value">{{ statistics.pending }}</div>
+            <div class="label">Pending</div>
           </div>
         </div>
 
+        <!-- Approved -->
         <div class="stat-card approved">
-          <div class="stat-icon">
-            <i class="bi bi-check-circle"></i>
+          <div class="card-header">
+            <div class="circle-icon green-bg">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="card-trend positive">
+              <mat-icon>trending_up</mat-icon>
+              <span>Good</span>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ statistics.approved }}</div>
-            <div class="stat-label">APPROVED</div>
+          <div class="card-content">
+            <div class="value">{{ statistics.approved }}</div>
+            <div class="label">Approved</div>
           </div>
         </div>
 
+        <!-- Rejected -->
         <div class="stat-card rejected">
-          <div class="stat-icon">
-            <i class="bi bi-x-circle"></i>
+          <div class="card-header">
+            <div class="circle-icon red-bg">
+              <mat-icon>cancel</mat-icon>
+            </div>
+            <div class="card-trend" [class.negative]="statistics.rejected > 0">
+              <mat-icon>{{ statistics.rejected > 0 ? 'trending_down' : 'trending_flat' }}</mat-icon>
+              <span>{{ statistics.rejected > 0 ? 'Review' : 'None' }}</span>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ statistics.rejected }}</div>
-            <div class="stat-label">REJECTED</div>
+          <div class="card-content">
+            <div class="value">{{ statistics.rejected }}</div>
+            <div class="label">Rejected</div>
           </div>
         </div>
 
+        <!-- Daily Entry (optional) -->
         <div class="stat-card daily-entry" *ngIf="statistics.dailyEntry !== undefined">
-          <div class="stat-icon">
-            <i class="bi bi-calendar-check"></i>
+          <div class="card-header">
+            <div class="circle-icon purple-bg">
+              <mat-icon>calendar_today</mat-icon>
+            </div>
+            <div class="card-trend positive">
+              <mat-icon>trending_flat</mat-icon>
+              <span>Today</span>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ statistics.dailyEntry }}</div>
-            <div class="stat-label">DAILY ENTRY</div>
+          <div class="card-content">
+            <div class="value">{{ statistics.dailyEntry }}</div>
+            <div class="label">Daily Entry</div>
           </div>
         </div>
+
       </div>
     </div>
   `,
   styles: [`
     .dashboard-statistics {
       margin-bottom: 2rem;
+      background: transparent;
     }
 
-    .statistics-cards {
+    .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1.5rem;
-      margin-bottom: 2rem;
     }
 
     .stat-card {
-      background: white;
-      border-radius: 0.75rem;
-      padding: 1.5rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-radius: 1.25rem;
+      padding: 0;
+      box-shadow: none;
       display: flex;
-      align-items: center;
-      gap: 1rem;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transform: translateY(0);
+      min-height: 160px;
+    }
+
+    /* decorative bubble top-right */
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+      transition: all 0.4s ease;
     }
 
     .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-6px);
+      box-shadow:
+        0 12px 36px rgba(28, 43, 120, 0.15),
+        0 4px 12px rgba(28, 43, 120, 0.1);
+      border-color: rgba(255, 255, 255, 0.5);
     }
 
-    .stat-icon {
-      width: 60px;
-      height: 60px;
+    .stat-card:hover::before {
+      transform: scale(1.1);
+      opacity: 0.8;
+    }
+
+    .stat-card:hover .circle-icon {
+      transform: scale(1.08);
+    }
+
+
+
+    /* ---- card-header ---- */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 1.5rem 1.5rem 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ---- circle icon ---- */
+    .circle-icon {
+      width: 3.5rem;
+      height: 3.5rem;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
-      color: white;
+      position: relative;
+      box-shadow:
+        0 6px 20px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+      z-index: 1;
     }
 
-    .stat-card.applied .stat-icon {
-      background: #3b82f6; /* Blue */
+    .circle-icon mat-icon {
+      font-size: 1.75rem;
+      width: 1.75rem;
+      height: 1.75rem;
+      color: #fff;
+      z-index: 1;
+      position: relative;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
     }
 
-    .stat-card.pending .stat-icon {
-      background: #f59e0b; /* Orange */
+    .blue-bg   { background: linear-gradient(135deg, #1C2B78 0%, #2563eb 100%); }
+    .red-bg    { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); }
+    .green-bg  { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+    .yellow-bg { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+    .purple-bg { background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%); }
+
+    /* ---- card-trend badge ---- */
+    .card-trend {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      padding: 0.4rem 0.75rem;
+      border-radius: 1.5rem;
+      background: rgba(0, 0, 0, 0.04);
+      transition: all 0.3s ease;
     }
 
-    .stat-card.approved .stat-icon {
-      background: #10b981; /* Green */
+    .card-trend.positive {
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.15);
     }
 
-    .stat-card.rejected .stat-icon {
-      background: #ef4444; /* Red */
+    .card-trend.negative {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.15);
     }
 
-    .stat-card.daily-entry .stat-icon {
-      background: #8b5cf6; /* Purple */
+    .card-trend mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
     }
 
-    .stat-content {
+    /* ---- card-content ---- */
+    .card-content {
+      padding: 1rem 1.5rem 1rem;
       flex: 1;
+      position: relative;
+      z-index: 1;
     }
 
-    .stat-number {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #1f2937;
-      line-height: 1;
+    .value {
+      font-size: 2.25rem;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 0.4rem;
+      letter-spacing: -0.02em;
     }
 
-    .stat-label {
+    .label {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+
+    .sub-info {
       font-size: 0.875rem;
+      color: rgba(0, 0, 0, 0.6);
       font-weight: 600;
-      color: #6b7280;
-      margin-top: 0.25rem;
-      letter-spacing: 0.05em;
+      line-height: 1.6;
     }
 
+
+
+    /* ---- per-card colour themes ---- */
+    .stat-card { background: transparent; }
+
+    .stat-card.applied {
+      background: linear-gradient(135deg, rgba(239,246,255,0.6) 0%, rgba(219,234,254,0.6) 100%);
+    }
+    .stat-card.applied::before { background: rgba(96, 165, 250, 0.3); }
+    .stat-card.applied .value  { color: #2563eb; }
+    .stat-card.applied .label  { color: #3b82f6; }
+
+    .stat-card.pending {
+      background: linear-gradient(135deg, rgba(254,252,232,0.6) 0%, rgba(254,249,195,0.6) 100%);
+    }
+    .stat-card.pending::before { background: rgba(251, 191, 36, 0.3); }
+    .stat-card.pending .value  { color: #ca8a04; }
+    .stat-card.pending .label  { color: #eab308; }
+
+    .stat-card.approved {
+      background: linear-gradient(135deg, rgba(240,253,244,0.6) 0%, rgba(220,252,231,0.6) 100%);
+    }
+    .stat-card.approved::before { background: rgba(52, 211, 153, 0.3); }
+    .stat-card.approved .value  { color: #16a34a; }
+    .stat-card.approved .label  { color: #22c55e; }
+
+    .stat-card.rejected {
+      background: linear-gradient(135deg, rgba(255,241,242,0.6) 0%, rgba(255,228,230,0.6) 100%);
+    }
+    .stat-card.rejected::before { background: rgba(251, 113, 133, 0.3); }
+    .stat-card.rejected .value  { color: #dc2626; }
+    .stat-card.rejected .label  { color: #f43f5e; }
+
+    .stat-card.daily-entry {
+      background: linear-gradient(135deg, rgba(245,243,255,0.6) 0%, rgba(237,233,254,0.6) 100%);
+    }
+    .stat-card.daily-entry::before { background: rgba(167, 139, 250, 0.3); }
+    .stat-card.daily-entry .value  { color: #7c3aed; }
+    .stat-card.daily-entry .label  { color: #8b5cf6; }
+
+    /* ---- responsive ---- */
     @media (max-width: 768px) {
-      .statistics-cards {
+      .stats-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
       }
-
-      .stat-card {
-        padding: 1rem;
-      }
-
-      .stat-icon {
-        width: 50px;
-        height: 50px;
-        font-size: 1.25rem;
-      }
-
-      .stat-number {
-        font-size: 1.5rem;
-      }
-
-      .filter-section {
-        justify-content: center;
-      }
+      .stat-card { min-height: 160px; }
+      .value { font-size: 1.75rem; }
     }
 
     @media (max-width: 480px) {
-      .statistics-cards {
-        grid-template-columns: 1fr;
-      }
+      .stats-grid { grid-template-columns: 1fr; }
     }
   `]
 })
