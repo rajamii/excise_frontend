@@ -94,7 +94,9 @@ export class HomeLinksComponent implements OnInit{
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    const html = escaped.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    const html = escaped
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\n/g, '<br>');
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }
   

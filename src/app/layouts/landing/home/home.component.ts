@@ -76,10 +76,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    // Replace complete **...** pairs, then strip any leftover lone ** markers
+    // Replace complete **...** pairs, strip leftover lone ** markers, then newlines → <br>
     const html = escaped
       .replace(/\*\*(.+?)\*\*/gs, '<b>$1</b>')
-      .replace(/\*\*/g, '');
+      .replace(/\*\*/g, '')
+      .replace(/\n/g, '<br>');
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
@@ -91,8 +92,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    // Step 2: convert ALL complete **...** pairs first (before truncating)
-    const withBold = escaped.replace(/\*\*(.+?)\*\*/gs, '<b>$1</b>').replace(/\*\*/g, '');
+    // Step 2: convert ALL complete **...** pairs first (before truncating), then newlines → <br>
+    const withBold = escaped.replace(/\*\*(.+?)\*\*/gs, '<b>$1</b>').replace(/\*\*/g, '').replace(/\n/g, '<br>');
     // Step 3: strip HTML tags to measure plain-text length, then truncate the HTML
     const plainText = withBold.replace(/<[^>]*>/g, '');
     if (plainText.length <= maxLength) {
