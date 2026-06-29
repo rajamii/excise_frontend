@@ -51,7 +51,7 @@ export class HomeLinksComponent implements OnInit{
 
   viewFile(notification: Notification) {
     if (!notification.notificationFileUrl) return;
-    window.open(notification.notificationFileUrl, '_blank', 'noopener,noreferrer');
+    window.open(notification.notificationFileUrl, '_blank', 'noopener,noreferrer');``
   }
 
   loadNotifications(): void {

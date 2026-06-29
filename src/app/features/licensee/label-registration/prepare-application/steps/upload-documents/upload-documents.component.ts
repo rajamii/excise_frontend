@@ -6,6 +6,7 @@ import { MaterialModule } from '../../../../../../shared/material.module';
 type UploadDocumentRow = {
   key: string;
   name: string;
+  description: string;
   accept: string;
   format: string;
   required: boolean;
@@ -32,10 +33,63 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
 
   documents: UploadDocumentRow[] = [
     {
-      key: 'label_specimen',
-      name: 'Label artwork or specimen proposed for registration',
-      accept: '.pdf,.png,.jpg,.jpeg',
-      format: 'PDF, PNG, JPG',
+      key: 'renewed_licence_copy',
+      name: 'Renewed Licence Copy',
+      description: 'Attested copy of renewed license of the unit of respective state.',
+      accept: '.pdf',
+      format: 'PDF',
+      required: false,
+      file: null,
+      fileUrl: '',
+      fileName: '',
+      mimeType: '',
+      uploadedAt: ''
+    },
+    {
+      key: 'registered_partnership_deed',
+      name: 'Registered Partnership Deed',
+      description: 'Attested copy of license registered partnership deed.',
+      accept: '.pdf',
+      format: 'PDF',
+      required: false,
+      file: null,
+      fileUrl: '',
+      fileName: '',
+      mimeType: '',
+      uploadedAt: ''
+    },
+    {
+      key: 'article_of_association',
+      name: 'Article of Association',
+      description: 'Attested copy of article of association.',
+      accept: '.pdf',
+      format: 'PDF',
+      required: false,
+      file: null,
+      fileUrl: '',
+      fileName: '',
+      mimeType: '',
+      uploadedAt: ''
+    },
+    {
+      key: 'memorandum_of_association',
+      name: 'Memorandum of Association',
+      description: 'Attested copy of memorandum of association.',
+      accept: '.pdf',
+      format: 'PDF',
+      required: false,
+      file: null,
+      fileUrl: '',
+      fileName: '',
+      mimeType: '',
+      uploadedAt: ''
+    },
+    {
+      key: 'trade_mark_registration',
+      name: 'Trade Mark Registration',
+      description: 'Name of the brand, stating whether such brand is a registered trade mark and the number and date of trade mark registration.',
+      accept: '.pdf',
+      format: 'PDF',
       required: true,
       file: null,
       fileUrl: '',
@@ -44,10 +98,37 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
       uploadedAt: ''
     },
     {
-      key: 'brand_authorization',
-      name: 'Brand owner authorization / NOC, if applicable',
-      accept: '.pdf,.png,.jpg,.jpeg',
-      format: 'PDF, PNG, JPG',
+      key: 'certificate_of_registration',
+      name: 'Certificate of Registration',
+      description: 'Copy of certificate of registration.',
+      accept: '.pdf',
+      format: 'PDF',
+      required: true,
+      file: null,
+      fileUrl: '',
+      fileName: '',
+      mimeType: '',
+      uploadedAt: ''
+    },
+    {
+      key: 'cost_chart',
+      name: 'Cost Chart',
+      description: 'Copy of the cost chart of the product.',
+      accept: '.pdf',
+      format: 'PDF',
+      required: true,
+      file: null,
+      fileUrl: '',
+      fileName: '',
+      mimeType: '',
+      uploadedAt: ''
+    },
+    {
+      key: 'undertaking',
+      name: 'Undertaking',
+      description: 'Undertaking to abide by the excise laws, rules, regulations, and orders of Sikkim Excise Act, 1992.',
+      accept: '.pdf',
+      format: 'PDF',
       required: false,
       file: null,
       fileUrl: '',
@@ -56,11 +137,12 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
       uploadedAt: ''
     },
     {
-      key: 'analysis_certificate',
-      name: 'Strength or analysis certificate, if available',
-      accept: '.pdf,.png,.jpg,.jpeg',
-      format: 'PDF, PNG, JPG',
-      required: false,
+      key: 'product_photo',
+      name: 'Product Photo',
+      description: 'Photo of the product with label.',
+      accept: '.pdf',
+      format: 'PDF',
+      required: true,
       file: null,
       fileUrl: '',
       fileName: '',

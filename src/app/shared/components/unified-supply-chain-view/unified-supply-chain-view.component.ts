@@ -15,6 +15,7 @@ import { SupplyChainService } from '../../../features/licensee/supplyChain/servi
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
 import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
 import { CompanyCollaborationService } from '../../../core/services/company-collaboration.service';
+import { LabelRegistrationService } from '../../../core/services/label-registration.service';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { MasterService } from '../../../core/services/master.service';
@@ -424,6 +425,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private hologramDataService: HologramDataService,
         private companyRegistrationService: CompanyRegistrationService,
         private companyCollaborationService: CompanyCollaborationService,
+        private labelRegistrationService: LabelRegistrationService,
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private licenseApplicationService: LicenseApplicationService,
         private masterService: MasterService,
@@ -663,6 +665,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     brAmount: ['total_amount']
                 }
             },
+            'label-registration': {
+                service: this.labelRegistrationService,
+                listMethod: 'listLabelRegistrations',
+                detailMethod: 'getLabelRegistrationDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.LABEL_REGISTRATION],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no', 'id'],
+                    submissionDate: ['created_at', 'createdAt', 'application_date', 'applicationDate'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage', 'currentStage', 'current_stage_id', 'currentStageId'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['product_details.brandName', 'productDetails.brandName', 'product_details.bottlerName', 'productDetails.bottlerName'],
+                    brAmount: ['total_amount']
+                }
+            },
             'salesman-barman-registration': {
                 service: this.salesmanBarmanRegistrationService,
                 listMethod: 'getSalesmanBarmanList',
@@ -807,7 +826,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (
             this.applicationType === 'salesman-barman-registration' ||
             this.applicationType === 'company-registration' ||
-            this.applicationType === 'company-collaboration'
+            this.applicationType === 'company-collaboration' ||
+            this.applicationType === 'label-registration'
         ) {
             // Stage ID → human-readable status name mapping
             const stageIdToStatusName: { [key: number]: string } = {
@@ -1125,6 +1145,24 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.parseNumericValue(feeStructure?.collaboration_fees) +
                     this.parseNumericValue(feeStructure?.securityDeposit) +
                     this.parseNumericValue(feeStructure?.security_deposit)
+                );
+                break;
+            case 'label-registration':
+                const labelProductDetails = apiData?.product_details ?? apiData?.productDetails ?? {};
+                const labelPackagingDetails = apiData?.packaging_details ?? apiData?.packagingDetails ?? {};
+                const labelRows = Array.isArray(labelPackagingDetails?.packagingRows)
+                    ? labelPackagingDetails.packagingRows
+                    : [];
+                mappedData['distilleryName'] =
+                    labelProductDetails?.brandName ||
+                    labelProductDetails?.brand_name ||
+                    labelProductDetails?.bottlerName ||
+                    labelProductDetails?.bottler_name ||
+                    'Not specified';
+                mappedData['quantity'] = labelRows.length;
+                mappedData['brAmount'] = labelRows.reduce(
+                    (sum: number, row: any) => sum + this.parseNumericValue(row?.mrpPerBottle ?? row?.mrp),
+                    0
                 );
                 break;
             case 'salesman-barman-registration':
@@ -2709,6 +2747,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
+    isLabelRegistration(): boolean { return this.applicationType === 'label-registration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
 
     getApplicationTitle(): string {
@@ -2743,6 +2782,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'new-license',
             'company-registration',
             'company-collaboration',
+            'label-registration',
             'salesman-barman-registration'
         ];
 

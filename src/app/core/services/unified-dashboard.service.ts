@@ -25,7 +25,8 @@ export class UnifiedDashboardService {
     renewal: `${this.baseUrl}/license_application`,
     new: `${this.baseUrl}/new_license_application`,
     salesman: `${this.baseUrl}/salesman_barman`,
-    company: `${this.baseUrl}/company-registration`
+    company: `${this.baseUrl}/company-registration`,
+    label: `${this.baseUrl}/label-registration`
   };
 
   private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
@@ -79,15 +80,21 @@ export class UnifiedDashboardService {
           console.error(' Company registration counts error:', err);
           return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
         })
+      ),
+      this.http.get<DashboardCount>(`${this.endpoints.label}/dashboard-counts/`).pipe(
+        catchError(err => {
+          console.error(' Label registration counts error:', err);
+          return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+        })
       )
     ];
 
     return forkJoin(requests).pipe(
-      map(([renewal, newLic, salesman, company]) => ({
-        applied: (renewal.applied || 0) + (newLic.applied || 0) + (salesman.applied || 0) + (company.applied || 0),
-        pending: (renewal.pending || 0) + (newLic.pending || 0) + (salesman.pending || 0) + (company.pending || 0),
-        approved: (renewal.approved || 0) + (newLic.approved || 0) + (salesman.approved || 0) + (company.approved || 0),
-        rejected: (renewal.rejected || 0) + (newLic.rejected || 0) + (salesman.rejected || 0) + (company.rejected || 0),
+      map(([renewal, newLic, salesman, company, label]) => ({
+        applied: (renewal.applied || 0) + (newLic.applied || 0) + (salesman.applied || 0) + (company.applied || 0) + (label.applied || 0),
+        pending: (renewal.pending || 0) + (newLic.pending || 0) + (salesman.pending || 0) + (company.pending || 0) + (label.pending || 0),
+        approved: (renewal.approved || 0) + (newLic.approved || 0) + (salesman.approved || 0) + (company.approved || 0) + (label.approved || 0),
+        rejected: (renewal.rejected || 0) + (newLic.rejected || 0) + (salesman.rejected || 0) + (company.rejected || 0) + (label.rejected || 0),
       }))
     );
   }
@@ -139,11 +146,17 @@ export class UnifiedDashboardService {
           console.error('Company registration error:', err);
           return of({ applied: [], pending: [], approved: [], rejected: [] });
         })
+      ),
+      this.http.get<any>(`${this.endpoints.label}/list-by-status/`).pipe(
+        catchError(err => {
+          console.error('Label registration error:', err);
+          return of({ applied: [], pending: [], approved: [], rejected: [] });
+        })
       )
     ];
 
     this.unifiedAppsCache$ = forkJoin(requests).pipe(
-      map(([renewal, newLic, salesman, company]) => {
+      map(([renewal, newLic, salesman, company, label]) => {
         const normalize = (data: any, type: UnifiedApplication['type']) => {
           if (!data) {
             return { applied: [], pending: [], approved: [], rejected: [], awaitingPayment: [] };
@@ -220,13 +233,14 @@ export class UnifiedDashboardService {
         const normalizedRenewal = normalize(renewal, 'license-renewal');
         const normalizedNewLic = normalize(newLic, 'new-license');
         const normalizedSalesman = normalize(salesman, 'salesman-barman');
+        const normalizedLabel = normalize(label, 'label-registration');
         const normalizedCompany = normalize(company, 'company-registration'); // ✅ ADDED
 
         // FIXED: Include company applications in aggregation
-        let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied];
-        let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending];
-        let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved, ...normalizedCompany.approved];
-        const allRejected = [...normalizedRenewal.rejected, ...normalizedNewLic.rejected, ...normalizedSalesman.rejected, ...normalizedCompany.rejected];
+        let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied, ...normalizedLabel.applied];
+        let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending, ...normalizedLabel.pending];
+        let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved, ...normalizedCompany.approved, ...normalizedLabel.approved];
+        const allRejected = [...normalizedRenewal.rejected, ...normalizedNewLic.rejected, ...normalizedSalesman.rejected, ...normalizedCompany.rejected, ...normalizedLabel.rejected];
 
         const awaitingPaymentApps: UnifiedApplication[] = [];
         
@@ -286,6 +300,12 @@ export class UnifiedDashboardService {
     if (type === 'company-registration') {
       return app.company_name || app.companyName || 'N/A';
     }
+
+    if (type === 'label-registration') {
+      const licensee = app.licensee_details || app.licenseeDetails || {};
+      const product = app.product_details || app.productDetails || {};
+      return product.brandName || product.brand_name || licensee.applicantType || licensee.applicant_type || 'N/A';
+    }
     
     if (type === 'salesman-barman') {
       const firstName = app.first_name || app.firstName || '';
@@ -325,6 +345,7 @@ export class UnifiedDashboardService {
       'license-renewal': this.endpoints.renewal,
       'new-license': this.endpoints.new,
       'salesman-barman': this.endpoints.salesman,
+      'label-registration': this.endpoints.label,
       'company-registration': this.endpoints.company // ✅ ADDED
     };
 

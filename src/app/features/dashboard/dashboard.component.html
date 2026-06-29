@@ -111,7 +111,7 @@
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
         <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'"></app-payment-confirmation>
         <app-registration-management
-          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-collaboration' || selectedSupplyChainSection === 'salesman-barman-registration'">
+          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-collaboration' || selectedSupplyChainSection === 'salesman-barman-registration' || selectedSupplyChainSection === 'label-registration'">
         </app-registration-management>
         <app-prepare-application
           *ngIf="selectedSupplyChainSection === 'company-registration-apply'"></app-prepare-application>
@@ -121,7 +121,7 @@
         <app-salesman-registration
           *ngIf="selectedSupplyChainSection === 'salesman-barman-registration-apply'"></app-salesman-registration>
         <app-label-registration-prepare-application
-          *ngIf="selectedSupplyChainSection === 'label-registration'">
+          *ngIf="selectedSupplyChainSection === 'label-registration-apply'">
         </app-label-registration-prepare-application>
         <app-new-license-dashboard *ngIf="selectedSupplyChainSection === 'new-license'"></app-new-license-dashboard>
         <app-apply-new-license *ngIf="selectedSupplyChainSection === 'new-license-apply'"></app-apply-new-license>

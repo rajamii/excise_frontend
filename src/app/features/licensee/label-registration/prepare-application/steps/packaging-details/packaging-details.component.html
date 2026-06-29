@@ -146,6 +146,49 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="labelHeightMm">
+              <th mat-header-cell *matHeaderCellDef>Label Height (MM)</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="1" formControlName="labelHeightMm" placeholder="e.g. 90" title="Label physical height in millimetres" />
+                  @if (group.get('labelHeightMm')?.invalid && group.get('labelHeightMm')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="labelWidthMm">
+              <th mat-header-cell *matHeaderCellDef>Label Width (MM)</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" min="1" formControlName="labelWidthMm" placeholder="e.g. 120" title="Label physical width in millimetres" />
+                  @if (group.get('labelWidthMm')?.invalid && group.get('labelWidthMm')?.touched) {
+                    <mat-error>Required</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="isMonoCarton">
+              <th mat-header-cell *matHeaderCellDef>Mono Carton</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-checkbox formControlName="isMonoCarton" title="Is liquor packaged in a mono carton?"></mat-checkbox>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="gtin">
+              <th mat-header-cell *matHeaderCellDef>GTIN</th>
+              <td mat-cell *matCellDef="let group" [formGroup]="group">
+                <mat-form-field appearance="outline">
+                  <input matInput formControlName="gtin" maxlength="14" placeholder="8 to 14 digits" title="GTIN" />
+                  @if (group.get('gtin')?.invalid && group.get('gtin')?.touched) {
+                    <mat-error>8-14 digits</mat-error>
+                  }
+                </mat-form-field>
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="action">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let group; let i = index">

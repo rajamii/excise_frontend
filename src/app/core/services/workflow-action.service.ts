@@ -33,6 +33,7 @@ export interface ApplicationWorkflowData {
     | 'new-license'
     | 'company-registration'
     | 'company-collaboration'
+    | 'label-registration'
     | 'salesman-barman-registration'; // Changed to type to match component
   status: string;
   referenceNo?: string;
@@ -129,6 +130,7 @@ export class WorkflowActionService {
       case 'new-license':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
         if (!workflowApplicationId) {
           return of([]);
@@ -331,6 +333,7 @@ export class WorkflowActionService {
       case 'new-license':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
         const workflowApplicationId = this.getWorkflowApplicationId(data);
         const targetStage = typeof actionConfig === 'string' ? undefined : actionConfig.targetStage;
