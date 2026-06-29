@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { WhatsCurrentService } from '../../../../core/services/whats-current.service';
 import { PreventiveRaidsService } from '../../../../core/services/preventive-raids.service';
@@ -42,8 +43,18 @@ export class HomeLinksComponent implements OnInit{
     private route: ActivatedRoute,
     private sanitizer: DomSanitizer,
     private whatsCurrentService: WhatsCurrentService,
-    private raidsService: PreventiveRaidsService
+    private raidsService: PreventiveRaidsService,
+    private location: Location,
+    private router: Router
   ) {}
+
+  goBack(): void {
+    if (window.history.length > 1) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/']);
+    }
+  }
 
   loadNotifications() {
     this.whatsCurrentService.getWhatsCurrent().subscribe({

@@ -1,6 +1,7 @@
 import { Component, OnInit, OnChanges } from '@angular/core';
 import { MaterialModule } from '../../shared/material.module';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { MatTableDataSource } from '@angular/material/table';
 import { InfoPagesService } from '../../core/services/info-pages.service';
 import {
@@ -98,8 +99,18 @@ export class InfoPagesComponent implements OnInit {
     constructor(
       private route: ActivatedRoute, 
       private infoPagesService: InfoPagesService,
-      private http: HttpClient
+      private http: HttpClient,
+      private location: Location,
+      private router: Router
     ) {}
+
+    goBack(): void {
+      if (window.history.length > 1) {
+        this.location.back();
+      } else {
+        this.router.navigate(['/']);
+      }
+    }
 
     ngOnInit(): void {
       this.route.paramMap.subscribe(params => {

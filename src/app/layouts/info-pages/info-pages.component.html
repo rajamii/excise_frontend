@@ -1,4 +1,10 @@
 <div class="page-container">
+  <div class="back-button-container">
+    <button mat-button class="back-btn" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Back</span>
+    </button>
+  </div>
   <!--ABOUT US: Department-->
   @if (page === 'department') {
     <mat-card class = "department grid-card">
