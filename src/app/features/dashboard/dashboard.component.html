@@ -536,6 +536,69 @@
           </div>
         </mat-card>
       </div>
+
+      <!-- Single Window & Site Admin Bar Chart Section -->
+      <div class="single-window-chart-wrapper" *ngIf="currentUser?.roleId === 3 || currentUser?.roleId === 1">
+        <mat-card class="chart-card">
+          <div class="chart-header-container">
+            <div class="chart-title-area">
+              <div class="chart-badge">
+                <mat-icon>monitoring</mat-icon>
+                <span>Live System Analytics</span>
+              </div>
+              <h2 class="chart-main-title">System Applications Distribution</h2>
+              <p class="chart-sub-title">Overall status-wise breakdown of applications processed across all excise departments</p>
+            </div>
+            
+            <div class="chart-filter-area">
+              <mat-form-field appearance="outline" class="premium-select">
+                <mat-label>Module</mat-label>
+                <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)">
+                  <mat-option value="all">All Modules</mat-option>
+                  <mat-option value="newLicense">New Licenses</mat-option>
+                  <mat-option value="renewal">Renewals</mat-option>
+                  <mat-option value="salesman">Salesman / Barman</mat-option>
+                  <mat-option value="company">Company Reg.</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="premium-select">
+                <mat-label>Month</mat-label>
+                <mat-select [(value)]="selectedChartMonth" (selectionChange)="onChartDateFilterChange()">
+                  <mat-option value="">All Months</mat-option>
+                  <mat-option *ngFor="let m of chartMonthOptions" [value]="m.value">{{ m.label }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="premium-select">
+                <mat-label>Year</mat-label>
+                <mat-select [(value)]="selectedChartYear" (selectionChange)="onChartDateFilterChange()">
+                  <mat-option value="">All Years</mat-option>
+                  <mat-option *ngFor="let y of chartYearOptions" [value]="y">{{ y }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <button mat-stroked-button class="chart-reset-btn"
+                      title="Reset filters"
+                      (click)="selectedChartMonth = ''; selectedChartYear = ''; selectedChartModule = 'all'; onChartDateFilterChange()">
+                <mat-icon>restart_alt</mat-icon>
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <mat-card-content class="chart-content-layout">
+            <div class="canvas-holder">
+              <canvas baseChart
+                [data]="singleWindowChartData"
+                [options]="singleWindowChartOptions"
+                [plugins]="singleWindowChartPlugins"
+                [type]="'bar'">
+              </canvas>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
     </div>
 
     <!-- Renewal Warnings Section (Licensee Only) - shown after stats boxes -->

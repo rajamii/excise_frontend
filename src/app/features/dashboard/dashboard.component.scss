@@ -3111,3 +3111,160 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
         border-top-color: rgba(28, 43, 120, 0.75) !important;
     }
 }
+
+.single-window-chart-wrapper {
+    margin-top: 2rem;
+    width: 100%;
+
+    .chart-card {
+        background: #ffffff;
+        border-radius: 1.5rem;
+        border: 1px solid rgba(28, 43, 120, 0.06);
+        box-shadow: 0 10px 30px rgba(28, 43, 120, 0.04), 0 1px 3px rgba(28, 43, 120, 0.02);
+        overflow: hidden;
+        padding: 2rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+        &:hover {
+            box-shadow: 0 15px 35px rgba(28, 43, 120, 0.06);
+        }
+
+        .chart-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(28, 43, 120, 0.05);
+            padding-bottom: 1.5rem;
+        }
+
+        .chart-title-area {
+            flex: 1;
+            min-width: 280px;
+
+            .chart-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(124, 58, 237, 0.08) 100%);
+                color: #4F46E5;
+                padding: 0.35rem 0.85rem;
+                border-radius: 50px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 0.75rem;
+
+                mat-icon {
+                    font-size: 14px;
+                    width: 14px;
+                    height: 14px;
+                }
+            }
+
+            .chart-main-title {
+                font-size: 1.35rem;
+                font-weight: 800;
+                color: #0f172a;
+                margin: 0 0 0.4rem;
+                letter-spacing: -0.5px;
+            }
+
+            .chart-sub-title {
+                font-size: 0.875rem;
+                color: #64748b;
+                margin: 0;
+                line-height: 1.4;
+            }
+        }
+
+        .chart-filter-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+
+            .premium-select {
+                width: 155px;
+                margin-bottom: -1.25rem;
+
+                ::ng-deep {
+                    .mat-mdc-text-field-wrapper {
+                        background-color: #f8fafc !important;
+                        border-radius: 0.75rem !important;
+                        transition: all 0.2s ease;
+                        border: 1px solid #e2e8f0;
+                    }
+
+                    .mat-mdc-form-field-focus-indicator {
+                        display: none;
+                    }
+
+                    .mat-mdc-form-field-flex {
+                        padding-top: 4px !important;
+                        padding-bottom: 4px !important;
+                    }
+
+                    .mdc-notched-outline {
+                        display: none;
+                    }
+
+                    .mat-mdc-select-value {
+                        font-weight: 600;
+                        color: #334155;
+                        font-size: 0.875rem;
+                    }
+
+                    .mat-mdc-form-field-label {
+                        font-weight: 500;
+                        color: #64748b;
+                        font-size: 0.875rem;
+                    }
+                }
+            }
+
+            .chart-reset-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                color: #64748b;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 0.75rem !important;
+                height: 40px;
+                padding: 0 0.85rem !important;
+                font-size: 0.8rem;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+                background-color: #f8fafc !important;
+                transition: all 0.2s ease;
+                margin-top: 5px; /* Offset to align with form field baseline */
+
+                &:hover {
+                    background: rgba(79, 70, 229, 0.06) !important;
+                    color: #4F46E5;
+                    border-color: #4F46E5 !important;
+                }
+
+                mat-icon {
+                    font-size: 18px;
+                    width: 18px;
+                    height: 18px;
+                    margin: 0;
+                }
+            }
+        }
+
+        .chart-content-layout {
+            padding: 0;
+            
+            .canvas-holder {
+                position: relative;
+                height: 420px;
+                width: 100%;
+            }
+        }
+    }
+}

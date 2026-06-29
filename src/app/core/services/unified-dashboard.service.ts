@@ -202,6 +202,62 @@ export class UnifiedDashboardService {
     return this.unifiedCountsCache$;
   }
 
+  getDetailedUnifiedDashboardCounts(config?: DashboardConfig, forceRefresh = false, month?: number, year?: number): Observable<{
+    total: DashboardCount;
+    newLicense: DashboardCount;
+    renewal: DashboardCount;
+    salesman: DashboardCount;
+    company: DashboardCount;
+  }> {
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'salesman-barman', 'new-license']));
+    const empty: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 } as DashboardCount;
+
+    const buildUrl = (base: string): string => {
+      const params = new URLSearchParams();
+      if (forceRefresh) params.set('cb', Date.now().toString());
+      if (month != null) params.set('month', String(month));
+      if (year != null) params.set('year', String(year));
+      const qs = params.toString();
+      return qs ? `${base}?${qs}` : base;
+    };
+
+    return forkJoin({
+      newLicense: enabledTypes.includes('new-license')
+        ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.new}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
+        : of(empty),
+      renewal: enabledTypes.includes('license-renewal')
+        ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.renewal}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
+        : of(empty),
+      salesman: enabledTypes.includes('salesman-barman')
+        ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.salesman}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
+        : of(empty),
+      company: enabledTypes.includes('company-registration')
+        ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.company}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
+        : of(empty)
+    }).pipe(
+      map((res) => {
+        const total = {
+          applied: (res.newLicense.applied || 0) + (res.renewal.applied || 0) + (res.salesman.applied || 0) + (res.company.applied || 0),
+          pending: (res.newLicense.pending || 0) + (res.renewal.pending || 0) + (res.salesman.pending || 0) + (res.company.pending || 0),
+          objection: (res.newLicense.objection || 0) + (res.renewal.objection || 0) + (res.salesman.objection || 0) + (res.company.objection || 0),
+          approved: (res.newLicense.approved || 0) + (res.renewal.approved || 0) + (res.salesman.approved || 0) + (res.company.approved || 0),
+          rejected: (res.newLicense.rejected || 0) + (res.renewal.rejected || 0) + (res.salesman.rejected || 0) + (res.company.rejected || 0),
+          awaitingPayment: (res.newLicense.awaitingPayment || (res.newLicense as any).awaiting_payment || 0) +
+                           (res.renewal.awaitingPayment || (res.renewal as any).awaiting_payment || 0) +
+                           (res.salesman.awaitingPayment || (res.salesman as any).awaiting_payment || 0) +
+                           (res.company.awaitingPayment || (res.company as any).awaiting_payment || 0)
+        } as DashboardCount;
+        return {
+          total,
+          newLicense: res.newLicense,
+          renewal: res.renewal,
+          salesman: res.salesman,
+          company: res.company
+        };
+      })
+    );
+  }
+
   // Get applications from all 4 types (added company)
   getUnifiedApplicationsByStatus(forceRefresh = false, config?: DashboardConfig): Observable<{
     applied: UnifiedApplication[];

@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef,
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration } from 'chart.js';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
@@ -77,6 +79,32 @@ import { SingleWindowComponent } from '../single-window/single-window.component'
 import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
 import { PaymentTransactionsComponent } from '../admin/payment-transactions/payment-transactions.component';
 
+/** Module-level constant — created once, never reassigned, so ng2-charts never triggers re-render loops */
+const CHART_BAR_LABELS_PLUGIN = [{
+  id: 'barValueLabels',
+  afterDatasetsDraw(chart: any) {
+    const ctx = chart.ctx;
+    const barColors = ['#4F46E5', '#F59E0B', '#10B981', '#F97316', '#EF4444'];
+    chart.data.datasets.forEach((dataset: any, datasetIndex: number) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if (!meta.hidden) {
+        meta.data.forEach((bar: any, index: number) => {
+          const value = dataset.data[index];
+          if (value != null && value > 0) {
+            ctx.save();
+            ctx.fillStyle = barColors[index] || '#374151';
+            ctx.font = 'bold 14px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(value, bar.x, bar.y - 4);
+            ctx.restore();
+          }
+        });
+      }
+    });
+  }
+}];
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -88,6 +116,7 @@ import { PaymentTransactionsComponent } from '../admin/payment-transactions/paym
     NgClass,
     DatePipe,
     MatIconModule,
+    BaseChartDirective,
     MatButtonModule,
     MatCardModule,
     MatSelectModule,
@@ -169,6 +198,203 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     rejected: 0,
     awaitingPayment: 0
   };
+
+  public singleWindowChartData: ChartConfiguration<'bar'>['data'] = {
+    labels: ['Applied', 'Pending', 'Approved', 'Objection', 'Rejected'],
+    datasets: [
+      {
+        data: [0, 0, 0, 0, 0],
+        label: 'System Applications',
+        backgroundColor: [
+          'rgba(79, 70, 229, 0.18)',   // Applied (vibrant indigo)
+          'rgba(245, 158, 11, 0.18)',  // Pending (warm amber)
+          'rgba(16, 185, 129, 0.18)',  // Approved (emerald green)
+          'rgba(249, 115, 22, 0.18)',  // Objection (orange)
+          'rgba(239, 68, 68, 0.18)'    // Rejected (rose red)
+        ],
+        borderColor: [
+          '#4F46E5',  // Applied
+          '#F59E0B',  // Pending
+          '#10B981',  // Approved
+          '#F97316',  // Objection
+          '#EF4444'   // Rejected
+        ],
+        borderWidth: 2,
+        borderRadius: 8,
+        barThickness: 45,
+        hoverBackgroundColor: [
+          'rgba(79, 70, 229, 0.35)',
+          'rgba(245, 158, 11, 0.35)',
+          'rgba(16, 185, 129, 0.35)',
+          'rgba(249, 115, 22, 0.35)',
+          'rgba(239, 68, 68, 0.35)'
+        ],
+        hoverBorderColor: [
+          '#4F46E5',
+          '#F59E0B',
+          '#10B981',
+          '#F97316',
+          '#EF4444'
+        ],
+        hoverBorderWidth: 3
+      }
+    ]
+  };
+
+  public singleWindowChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+      padding: { top: 30 }
+    },
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: 'rgba(28, 43, 120, 0.9)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        padding: 12,
+        displayColors: false,
+        callbacks: {
+          label: (context) => {
+            return `Count: ${context.raw}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          font: {
+            size: 13,
+            weight: 'bold'
+          },
+          color: '#4b5563'
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        },
+        ticks: {
+          stepSize: 1,
+          font: {
+            size: 12
+          },
+          color: '#6b7280'
+        }
+      }
+    }
+  };
+
+  // Reference to the module-level constant to avoid change-detection loops
+  public readonly singleWindowChartPlugins = CHART_BAR_LABELS_PLUGIN;
+
+  selectedChartModule = 'all';
+  selectedChartMonth: number | string = '';
+  selectedChartYear: number | string = '';
+
+  public readonly chartMonthOptions: { label: string; value: number }[] = [
+    { label: 'January', value: 1 }, { label: 'February', value: 2 },
+    { label: 'March', value: 3 }, { label: 'April', value: 4 },
+    { label: 'May', value: 5 }, { label: 'June', value: 6 },
+    { label: 'July', value: 7 }, { label: 'August', value: 8 },
+    { label: 'September', value: 9 }, { label: 'October', value: 10 },
+    { label: 'November', value: 11 }, { label: 'December', value: 12 }
+  ];
+
+  public readonly chartYearOptions: number[] = (() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, i) => currentYear - i);
+  })();
+  detailedCounts: {
+    total: DashboardCount & { awaitingPayment?: number };
+    newLicense: DashboardCount & { awaitingPayment?: number };
+    renewal: DashboardCount & { awaitingPayment?: number };
+    salesman: DashboardCount & { awaitingPayment?: number };
+    company: DashboardCount & { awaitingPayment?: number };
+  } = {
+    total: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
+    newLicense: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
+    renewal: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
+    salesman: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
+    company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
+  };
+
+  updateSingleWindowChart(): void {
+    if (this.currentUser?.roleId === 3 || this.currentUser?.roleId === 1) {
+      let sourceCounts = this.dashboardCounts;
+      if (this.selectedChartModule === 'newLicense') {
+        sourceCounts = this.detailedCounts.newLicense;
+      } else if (this.selectedChartModule === 'renewal') {
+        sourceCounts = this.detailedCounts.renewal;
+      } else if (this.selectedChartModule === 'salesman') {
+        sourceCounts = this.detailedCounts.salesman;
+      } else if (this.selectedChartModule === 'company') {
+        sourceCounts = this.detailedCounts.company;
+      }
+
+      this.singleWindowChartData = {
+        ...this.singleWindowChartData,
+        datasets: [
+          {
+            ...this.singleWindowChartData.datasets[0],
+            data: [
+              sourceCounts.applied || 0,
+              sourceCounts.pending || 0,
+              sourceCounts.approved || 0,
+              sourceCounts.objection || 0,
+              sourceCounts.rejected || 0
+            ]
+          }
+        ]
+      };
+    }
+  }
+
+  onChartModuleChange(moduleName: string): void {
+    this.selectedChartModule = moduleName;
+    this.updateSingleWindowChart();
+  }
+
+  onChartDateFilterChange(): void {
+    const month = this.selectedChartMonth !== '' ? Number(this.selectedChartMonth) : undefined;
+    const year = this.selectedChartYear !== '' ? Number(this.selectedChartYear) : undefined;
+    this.unifiedDashboardService
+      .getDetailedUnifiedDashboardCounts(
+        this.dashboardConfig,
+        true,
+        month,
+        year
+      )
+      .subscribe({
+        next: (res) => {
+          this.detailedCounts = {
+            total: res.total,
+            newLicense: res.newLicense,
+            renewal: res.renewal,
+            salesman: res.salesman,
+            company: res.company
+          };
+          this.dashboardCounts = {
+            applied: res.total.applied || 0,
+            pending: res.total.pending || 0,
+            objection: res.total.objection || 0,
+            approved: res.total.approved || 0,
+            rejected: res.total.rejected || 0,
+            awaitingPayment: res.total.awaitingPayment || 0
+          };
+          this.updateSingleWindowChart();
+        },
+        error: () => { this.updateSingleWindowChart(); }
+      });
+  }
 
   awaitingPaymentBreakdown = {
     newLicense: 0,
@@ -1471,25 +1697,34 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.clearDataSources();
 
     this.unifiedDashboardService
-      .getUnifiedDashboardCounts(this.dashboardConfig)
+      .getDetailedUnifiedDashboardCounts(this.dashboardConfig)
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
-        next: (counts) => {
+        next: (res) => {
+          this.detailedCounts = {
+            total: res.total,
+            newLicense: res.newLicense,
+            renewal: res.renewal,
+            salesman: res.salesman,
+            company: res.company
+          };
           this.dashboardCounts = {
-            applied: counts?.applied || 0,
-            pending: counts?.pending || 0,
-            objection: counts?.objection || 0,
-            approved: counts?.approved || 0,
-            rejected: counts?.rejected || 0,
-            awaitingPayment: 0
+            applied: res.total.applied || 0,
+            pending: res.total.pending || 0,
+            objection: res.total.objection || 0,
+            approved: res.total.approved || 0,
+            rejected: res.total.rejected || 0,
+            awaitingPayment: res.total.awaitingPayment || 0
           };
           this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          this.updateSingleWindowChart();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard counts:', error);
           this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.supplyChainPendingCounts = {};
+          this.updateSingleWindowChart();
         }
       });
   }

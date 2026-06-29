@@ -24,7 +24,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })),
     provideHttpClient(withFetch(), withInterceptors([uiLoadingInterceptorFn]), withInterceptorsFromDi()),
     provideAnimationsAsync(),
-    provideAnimations(),
     provideToastr(),
 
     // ✅ No need for deprecated HttpClientModule
@@ -35,7 +34,7 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: JwtRefreshInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: CsrfInterceptor, multi: true },
     
-    // ✅ Chart.js configuration
-    provideCharts(withDefaultRegisterables()), provideCharts(withDefaultRegisterables()),
+    // ✅ Chart.js configuration (registered once)
+    provideCharts(withDefaultRegisterables()),
   ]
 };
