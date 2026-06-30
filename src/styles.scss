@@ -9,6 +9,24 @@ body{ background-color: #EDF7FE; }
 /* Login route gets the deep amber-charcoal factory atmosphere */
 body.login-page { background-color: #f8fafc; }
 
+/* Remove any dropdown arrows or indicators that may appear */
+button::after,
+button::before,
+mat-icon-button::after,
+mat-icon-button::before,
+.mat-mdc-button::after,
+.mat-mdc-button::before {
+  content: none !important;
+}
+
+/* Specifically target any arrow indicators */
+button[class*="arrow"]::after,
+button[class*="indicator"]::after,
+button[class*="expand"]::after,
+button[class*="dropdown"]::after {
+  display: none !important;
+}
+
 @media print {
   @page {
     size: A4;
