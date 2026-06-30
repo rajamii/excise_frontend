@@ -1,8 +1,9 @@
+/// <reference types="jasmine" />
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { of, throwError } from 'rxjs';
+import { delay, of, throwError } from 'rxjs';
 
 import { DashboardComponent } from './dashboard.component';
 import { DashboardContainerModule } from '../../shared/components/dashboard/dashboard-container/dashboard-container.module';
@@ -175,10 +176,7 @@ describe('DashboardComponent Integration', () => {
     it('should show loading state initially', () => {
       roleService.getCurrentUser.and.returnValue(mockUser);
       dashboardConfigService.getCurrentUserDashboardConfig.and.returnValue(
-        of(mockDashboardConfig).pipe(
-          // Simulate delay
-          delay => new Promise(resolve => setTimeout(() => resolve(delay), 100))
-        )
+        of(mockDashboardConfig).pipe(delay(100))
       );
       
       expect(component.isLoading).toBeTrue();

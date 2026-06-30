@@ -2319,6 +2319,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'new-license-apply': 'new-license',
       'company-registration-apply': 'company-registration',
       'company-collaboration-apply': 'company-collaboration',
+      'label-registration-apply': 'label-registration',
       'salesman-barman-registration-apply': 'salesman-barman-registration'
     };
 
@@ -2554,6 +2555,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'salesman-barman-registration': 'Salesman/Barman Registration',
       'salesman-barman-registration-apply': 'Salesman/Barman Registration',
       'label-registration': 'Label Registration',
+      'label-registration-apply': 'Label Registration',
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
       'license-renewal': 'License Renewal Management',
@@ -2612,6 +2614,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'new-license',
       'company-registration',
       'company-collaboration',
+      'label-registration',
       'salesman-barman-registration'
     ];
 
@@ -2630,6 +2633,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'new-license': return 'Apply New License';
       case 'company-registration': return 'Apply Company';
       case 'company-collaboration': return 'Apply Collaboration';
+      case 'label-registration': return 'Apply Label';
       case 'salesman-barman-registration': return 'Apply Salesman/Barman';
       default: return 'Create New';
     }
@@ -2647,6 +2651,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'new-license': return 'add_circle';
       case 'company-registration': return 'add_circle';
       case 'company-collaboration': return 'add_circle';
+      case 'label-registration': return 'add_circle';
       case 'salesman-barman-registration': return 'add_circle';
       default: return 'add';
     }
@@ -2675,6 +2680,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'company-registration-apply' } });
     } else if (section === 'company-collaboration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'company-collaboration-apply' } });
+    } else if (section === 'label-registration') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'label-registration-apply' } });
     } else if (section === 'salesman-barman-registration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'salesman-barman-registration-apply' } });
     }

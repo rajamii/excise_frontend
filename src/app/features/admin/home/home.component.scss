@@ -21,6 +21,15 @@ mat-sidenav{
     }
 }
 
+mat-sidenav-container {
+    padding: 0;
+    min-height: 800px;
+}
+
+.nav-toggle-icon {
+    font-size: 27px;
+}
+
 mat-nav-list{
     padding: 0;
     mat-expansion-panel{

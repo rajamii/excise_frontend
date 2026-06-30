@@ -25,6 +25,14 @@ export class LabelRegistrationService {
     return this.http.get(`${this.baseUrl}/detail/${encodedId}/`);
   }
 
+  getDashboardCounts(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/dashboard-counts/`);
+  }
+
+  getApplicationsByStatus(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/list-by-status/`);
+  }
+
   setDraftDocument(key: string, file: File | null): void {
     if (!key) {
       return;

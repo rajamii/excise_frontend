@@ -25,6 +25,7 @@ import Swal from 'sweetalert2';
 export class RegistrationManagementComponent implements OnInit {
   private readonly companyApiBase = `${environment.apiBaseUrl}/transactional/company-registration`;
   private readonly collaborationApiBase = `${environment.apiBaseUrl}/transactional/company-collaboration`;
+  private readonly labelApiBase = `${environment.apiBaseUrl}/transactional/label-registration`;
   private readonly salesmanApiBase = `${environment.apiBaseUrl}/transactional/salesman_barman`;
 
   currentSection = '';
@@ -273,6 +274,18 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
+    if (this.currentSection === 'label-registration') {
+      this.router.navigate(['/supply-chain-view'], {
+        queryParams: {
+          type: 'label-registration',
+          id: row.id || row.applicationId,
+          ref: row.applicationId,
+          source: 'licensee'
+        }
+      });
+      return;
+    }
+
     this.router.navigate(['/supply-chain-view'], {
       queryParams: {
         type: 'company-registration',
@@ -406,6 +419,9 @@ export class RegistrationManagementComponent implements OnInit {
     if (this.currentSection === 'company-collaboration') {
       return 'Company Collaboration Entries';
     }
+    if (this.currentSection === 'label-registration') {
+      return 'Label Registration Entries';
+    }
     return 'Company Registration Entries';
   }
 
@@ -431,7 +447,67 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
+    if (this.currentSection === 'label-registration') {
+      this.loadLabelRegistrationData();
+      return;
+    }
+
     this.loadCompanyData();
+  }
+
+  private loadLabelRegistrationData(): void {
+    forkJoin({
+      countsResult: this.http
+        .get<any>(`${this.labelApiBase}/dashboard-counts/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        ),
+      groupedResult: this.http
+        .get<any>(`${this.labelApiBase}/list-by-status/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        ),
+      listResult: this.http
+        .get<any>(`${this.labelApiBase}/list/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        )
+    }).subscribe({
+      next: ({ countsResult, groupedResult, listResult }) => {
+        const groupedRows = groupedResult.data
+          ? this.flattenLabelRegistrationGroupedData(groupedResult.data)
+          : [];
+        const fallbackRows = groupedRows.length === 0 && listResult.data
+          ? this.flattenLabelRegistrationListData(listResult.data)
+          : [];
+
+        this.allRows = groupedRows.length > 0 ? groupedRows : fallbackRows;
+
+        if (this.allRows.length === 0 && (groupedResult.error || listResult.error)) {
+          this.error = this.extractHttpErrorMessage(
+            groupedResult.error || listResult.error || countsResult.error,
+            'Failed to load label registration entries.'
+          );
+          this.filteredRows = [];
+          this.stageFilterOptions = [];
+          this.counts = this.resolveCounts([], countsResult.data || {});
+          this.isLoading = false;
+          return;
+        }
+
+        this.counts = this.resolveCounts(this.allRows, countsResult.data || {});
+        this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: () => {
+        this.error = 'Failed to load label registration entries.';
+        this.isLoading = false;
+      }
+    });
   }
 
   private loadCompanyData(): void {
@@ -696,6 +772,82 @@ export class RegistrationManagementComponent implements OnInit {
         statusGroup: this.classifyStatus(rawStage)
       };
     });
+  }
+
+  private flattenLabelRegistrationGroupedData(grouped: any): Array<{
+    id: string;
+    applicationId: string;
+    submittedOn: string;
+    applicantName: string;
+    establishmentName: string;
+    currentStage: string;
+    currentStageRaw: string;
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+  }> {
+    const mapGroup = (
+      items: any[] | undefined,
+      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'
+    ) => {
+      if (!Array.isArray(items)) return [];
+      return items.map((item: any) => this.mapLabelRegistrationRow(item, statusGroup));
+    };
+
+    const merged = [
+      ...mapGroup(grouped?.pending, 'pending'),
+      ...mapGroup(grouped?.approved, 'approved'),
+      ...mapGroup(grouped?.rejected, 'rejected'),
+      ...mapGroup(grouped?.objection, 'objection'),
+      ...mapGroup(grouped?.applied, 'pending'),
+      ...mapGroup(grouped?.in_review, 'pending')
+    ];
+
+    const seen = new Set<string>();
+    return merged.filter((row) => {
+      const key = String(row.applicationId || row.id || '').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  private flattenLabelRegistrationListData(items: any): Array<{
+    id: string;
+    applicationId: string;
+    submittedOn: string;
+    applicantName: string;
+    establishmentName: string;
+    currentStage: string;
+    currentStageRaw: string;
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+  }> {
+    return this.unwrapArrayResponse(items).map((item: any) => this.mapLabelRegistrationRow(item));
+  }
+
+  private mapLabelRegistrationRow(
+    item: any,
+    fallback: 'approved' | 'pending' | 'objection' | 'rejected' = 'pending'
+  ) {
+    const rawStage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      item?.status ??
+      'submitted'
+    );
+    const licensee = item?.licensee_details ?? item?.licenseeDetails ?? {};
+    const product = item?.product_details ?? item?.productDetails ?? {};
+
+    return {
+      id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+      applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+      submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.application_date ?? item?.applicationDate),
+      applicantName: String(licensee?.applicantType ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
+      establishmentName: String(product?.brandName ?? product?.brand_name ?? product?.bottlerName ?? product?.bottler_name ?? 'N/A'),
+      currentStage: this.formatStageName(rawStage),
+      currentStageRaw: rawStage,
+      statusGroup: this.resolveStatusGroup(rawStage, fallback)
+    };
   }
 
   private loadSalesmanBarmanData(): void {

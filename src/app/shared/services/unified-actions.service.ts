@@ -290,6 +290,7 @@ export class UnifiedActionsService {
       case 'new-license':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
         return this.executeWorkflowAdvance(item, 'approve', 'Approved', options?.workflowContextData);
 
@@ -370,6 +371,7 @@ export class UnifiedActionsService {
       case 'new-license':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
         return this.executeWorkflowReject(item, reason);
 
@@ -447,7 +449,7 @@ export class UnifiedActionsService {
     if (itemType === 'hologram') {
       return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
-    if (['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
+    if (['new-license', 'company-registration', 'company-collaboration', 'label-registration', 'salesman-barman-registration'].includes(itemType)) {
       return this.executeWorkflowAdvance(item, 'forward', 'Forwarded', options?.workflowContextData);
     }
 
@@ -1068,7 +1070,7 @@ export class UnifiedActionsService {
   }
 
   private handleRaiseObjectionAction(item: any, itemType: string): Observable<ActionResult> {
-    if (!['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
+    if (!['new-license', 'company-registration', 'company-collaboration', 'label-registration', 'salesman-barman-registration'].includes(itemType)) {
       return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
     }
 

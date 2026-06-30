@@ -1,0 +1,92 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Notification</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Subject</mat-label>
+        <input
+          matInput
+          name="subject"
+          aria-label="Subject"
+          title="Subject"
+          placeholder="Subject"
+          required
+          [(ngModel)]="notification.subject"
+          #subjectModel="ngModel"
+        />
+        <mat-error *ngIf="subjectModel.errors?.['required']">
+          Subject is required
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Category</mat-label>
+        <mat-select [(ngModel)]="notification.category" name="category" required #categoryModel="ngModel">
+          <mat-option *ngFor="let category of notificationCategories" [value]="category.value">
+            {{ category.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="categoryModel.errors?.['required']">
+          Category is required
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Date</mat-label>
+        <input
+          matInput
+          readonly
+          name="notificationDate"
+          aria-label="Date"
+          title="Date"
+          placeholder="Select date"
+          required
+          [matDatepicker]="notificationDatePicker"
+          [(ngModel)]="selectedDate"
+          (ngModelChange)="onDateSelected($event)"
+          #dateModel="ngModel"
+        />
+        <mat-datepicker-toggle matIconSuffix [for]="notificationDatePicker"></mat-datepicker-toggle>
+        <mat-datepicker #notificationDatePicker></mat-datepicker>
+        <mat-error *ngIf="dateModel.errors?.['required']">
+          Date is required
+        </mat-error>
+      </mat-form-field>
+
+      <div class="file-field">
+        <label for="notificationFile">File</label>
+        <input
+          id="notificationFile"
+          type="file"
+          accept=".jpeg,.jpg,.pdf,image/jpeg,application/pdf"
+          aria-describedby="notificationFileHelp"
+          (change)="onFileSelected($event)"
+        />
+        <div id="notificationFileHelp" class="file-help">
+          Upload JPEG, JPG, or PDF file below 2 MB.
+        </div>
+        <div *ngIf="fileError" class="file-error">{{ fileError }}</div>
+        <a
+          *ngIf="notification.notificationFileUrl && !selectedFile"
+          [href]="notification.notificationFileUrl"
+          target="_blank"
+          rel="noopener"
+        >
+          Current file
+        </a>
+      </div>
+
+      <mat-checkbox name="isActive" [(ngModel)]="notification.isActive">
+        Active
+      </mat-checkbox>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button type="button" matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid || !!fileError">Save</button>
+      <button type="button" matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

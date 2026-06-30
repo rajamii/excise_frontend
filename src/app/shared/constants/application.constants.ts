@@ -12,6 +12,7 @@ export const APPLICATION_TYPES = {
     LICENSE_RENEWAL: 'license-renewal',
     COMPANY_REGISTRATION: 'company-registration',
     COMPANY_COLLABORATION: 'company-collaboration',
+    LABEL_REGISTRATION: 'label-registration',
     SALESMAN_BARMAN_REGISTRATION: 'salesman-barman-registration'
 } as const;
 
@@ -46,6 +47,7 @@ export const WORKFLOW_IDS = {
     [APPLICATION_TYPES.LICENSE_RENEWAL]: 0, // Renewal workflow id not required for view-only flow
     [APPLICATION_TYPES.COMPANY_REGISTRATION]: 0, // View-only detail flow
     [APPLICATION_TYPES.COMPANY_COLLABORATION]: 0, // View-only detail flow
+    [APPLICATION_TYPES.LABEL_REGISTRATION]: 0, // View-only detail flow
     [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 0 // View-only detail flow
 } as const;
 
@@ -63,6 +65,7 @@ export const APPLICATION_TITLES = {
     [APPLICATION_TYPES.LICENSE_RENEWAL]: 'LICENSE RENEWAL APPLICATION',
     [APPLICATION_TYPES.COMPANY_REGISTRATION]: 'COMPANY REGISTRATION',
     [APPLICATION_TYPES.COMPANY_COLLABORATION]: 'COMPANY COLLABORATION',
+    [APPLICATION_TYPES.LABEL_REGISTRATION]: 'LABEL REGISTRATION',
     [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 'SALESMAN/BARMAN REGISTRATION'
 } as const;
 
@@ -80,6 +83,7 @@ export const PAGE_TITLES = {
     [APPLICATION_TYPES.LICENSE_RENEWAL]: 'License Renewal Application Details',
     [APPLICATION_TYPES.COMPANY_REGISTRATION]: 'Company Registration Details',
     [APPLICATION_TYPES.COMPANY_COLLABORATION]: 'Company Collaboration Details',
+    [APPLICATION_TYPES.LABEL_REGISTRATION]: 'Label Registration Details',
     [APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION]: 'Salesman/Barman Registration Details'
 } as const;
 

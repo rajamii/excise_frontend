@@ -29,7 +29,9 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
         '/get_captcha/',
         '/captcha/',
         '/token/refresh/',
-        '/masters/core/timer-config/'
+        '/masters/core/timer-config/',
+        '/masters/notification/public/',
+        '/masters/notification/download/'
       ];
 
       // If the request is public, skip attaching token
