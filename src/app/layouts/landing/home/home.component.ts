@@ -206,14 +206,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           });
           const latest = sortedLicense[0];
           this.latestLicenseInfo = {
+            id: latest.id,
             title: latest.title,
             date: latest.date,
             message: latest.message,
             link: latest.file ? (String(latest.file).startsWith('http') ? latest.file : `${environment.apiBaseUrl}${latest.file}`) : ''
           };
 
-          const dismissed = sessionStorage.getItem('dismissedLicenseBanner');
-          if (!dismissed) {
+          // Check if this specific notification was already dismissed using sessionStorage
+          const dismissedId = sessionStorage.getItem('dismissedLicenseBanner');
+          // Show banner only if it hasn't been dismissed in this browser session
+          if (!dismissedId || dismissedId !== String(latest.id)) {
             this.showLicenseBanner = true;
           }
         }
@@ -232,7 +235,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   closeLicenseBanner(): void {
     this.showLicenseBanner = false;
-    sessionStorage.setItem('dismissedLicenseBanner', '1');
+    // Store the dismissed notification ID in sessionStorage (persists during browser session only)
+    if (this.latestLicenseInfo && this.latestLicenseInfo.id) {
+      sessionStorage.setItem('dismissedLicenseBanner', String(this.latestLicenseInfo.id));
+    } else {
+      // Fallback: use a generic flag if ID is not available
+      sessionStorage.setItem('dismissedLicenseBanner', 'dismissed');
+    }
   }
 
   ngAfterViewInit(): void {
