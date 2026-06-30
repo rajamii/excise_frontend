@@ -1765,7 +1765,7 @@ mat-card-content {
 // CHART BAR ARROW DESIGN
 // ========================================
 // Add small arrow indicators to chart bars
-::ng-deep {
+.dashboard-container ::ng-deep {
     // Target SVG bars or rectangular chart elements
     .chart-bar,
     [class*="bar"],
