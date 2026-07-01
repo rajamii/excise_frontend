@@ -70,18 +70,15 @@
                 <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Requisition</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('requisition') as cnt">{{ cnt }}</span>
                   <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('requisition:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 </button>
                 <button class="nav-item nav-item--sub bulk-spirit-sub-item" *ngIf="!isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
                   <mat-icon class="nav-icon">refresh</mat-icon>
                   <span class="nav-text">Revalidation</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('revalidation') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
                   <mat-icon class="nav-icon">cancel</mat-icon>
                   <span class="nav-text">Cancellation</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('cancellation') as cnt">{{ cnt }}</span>
                 </button>
               </ng-container>
             </ng-container>
@@ -106,13 +103,11 @@
                 <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
                   <mat-icon class="nav-icon">qr_code</mat-icon>
                   <span class="nav-text">New Procurement</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('hologram') as cnt">{{ cnt }}</span>
                   <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('hologram:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 </button>
                 <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
                   <mat-icon class="nav-icon">add_box</mat-icon>
                   <span class="nav-text">Request</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('hologram-request') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">today</mat-icon>

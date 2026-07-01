@@ -390,8 +390,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Bulk Spirit' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, only requisition has an actionable badge (payment at Approved Commissioner stage)
-    const keys = sections.length > 0 ? sections : (this.isLicenseeUser() ? ['requisition'] : ['requisition', 'revalidation', 'cancellation']);
+    if (this.isLicenseeUser()) {
+      return this.getPendingCount('requisition:payment');
+    }
+    const keys = sections.length > 0 ? sections : ['requisition', 'revalidation', 'cancellation'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
 
@@ -400,9 +402,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Hologram' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, only hologram procurement has an actionable badge (payment at stage 78)
     if (this.isLicenseeUser()) {
-      return this.getPendingCount('hologram');
+      return this.getPendingCount('hologram:payment');
     }
     const keys = sections.length > 0 ? sections : ['hologram', 'hologram-request'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
