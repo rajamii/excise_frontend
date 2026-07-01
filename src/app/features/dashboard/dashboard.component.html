@@ -554,7 +554,7 @@
           <div class="chart-filter-area">
             <mat-form-field appearance="outline" class="premium-select">
               <mat-label>Module</mat-label>
-              <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)">
+              <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)" panelClass="module-dropdown-panel">
                 <mat-option *ngFor="let m of availableChartModules" [value]="m.value">
                   {{ m.label }}
                 </mat-option>
@@ -579,9 +579,9 @@
 
             <button mat-stroked-button class="chart-reset-btn"
                     title="Reset filters"
+                    matTooltip="Reset filters"
                     (click)="selectedChartMonth = ''; selectedChartYear = ''; selectedChartModule = 'all'; onChartDateFilterChange()">
               <mat-icon>restart_alt</mat-icon>
-              Reset
             </button>
           </div>
         </div>

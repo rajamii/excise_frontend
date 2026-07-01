@@ -3191,12 +3191,23 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
                 width: 155px;
                 margin-bottom: -1.25rem;
 
+                // Make the Module dropdown wider
+                &:first-child {
+                    width: 210px;
+                }
+
                 ::ng-deep {
                     .mat-mdc-text-field-wrapper {
                         background-color: #f8fafc !important;
                         border-radius: 0.75rem !important;
                         transition: all 0.2s ease;
                         border: 1px solid #e2e8f0;
+
+                        &:hover {
+                            border-color: #a5b4fc;
+                            background-color: #fff !important;
+                            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+                        }
                     }
 
                     .mat-mdc-form-field-focus-indicator {
@@ -3229,30 +3240,39 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
             .chart-reset-btn {
                 display: inline-flex;
                 align-items: center;
-                gap: 0.35rem;
-                color: #64748b;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 0.75rem !important;
+                justify-content: center;
+                gap: 0;
+                width: 40px;
                 height: 40px;
-                padding: 0 0.85rem !important;
-                font-size: 0.8rem;
-                font-weight: 600;
-                letter-spacing: 0.3px;
-                background-color: #f8fafc !important;
-                transition: all 0.2s ease;
-                margin-top: 5px; /* Offset to align with form field baseline */
+                min-width: 40px;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                border: 1.5px solid #e2e8f0 !important;
+                background: #f8fafc !important;
+                color: #64748b;
+                transition: all 0.22s ease;
+                margin-top: 5px;
+                box-shadow: 0 1px 4px rgba(100, 116, 139, 0.1);
 
                 &:hover {
-                    background: rgba(79, 70, 229, 0.06) !important;
-                    color: #4F46E5;
-                    border-color: #4F46E5 !important;
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+                    color: #fff !important;
+                    border-color: transparent !important;
+                    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+                    transform: rotate(45deg) scale(1.08);
                 }
 
                 mat-icon {
-                    font-size: 18px;
-                    width: 18px;
-                    height: 18px;
+                    font-size: 19px;
+                    width: 19px;
+                    height: 19px;
                     margin: 0;
+                    transition: inherit;
+                }
+
+                // Hide any text inside
+                span:not(mat-icon) {
+                    display: none !important;
                 }
             }
         }

@@ -27,6 +27,29 @@ button[class*="dropdown"]::after {
   display: none !important;
 }
 
+/* Module dropdown panel — wider panel so long labels like "Hologram Procurement" fit on one line */
+.module-dropdown-panel {
+  min-width: 240px !important;
+
+  .mat-mdc-option {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0 16px;
+    min-height: 42px;
+    white-space: nowrap;
+
+    &.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+      background: rgba(99, 102, 241, 0.08);
+      color: #4f46e5;
+      font-weight: 700;
+    }
+
+    &:hover:not(.mdc-list-item--disabled) {
+      background: rgba(99, 102, 241, 0.05);
+    }
+  }
+}
+
 @media print {
   @page {
     size: A4;
