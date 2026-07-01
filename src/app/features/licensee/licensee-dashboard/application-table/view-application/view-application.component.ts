@@ -522,6 +522,17 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (file) {
+      const allowedExtensions = new Set(['.png', '.jpg', '.jpeg']);
+      const extension = `.${file.name.split('.').pop()?.toLowerCase() || ''}`;
+      const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/jpg']);
+      const fileType = (file.type || '').toLowerCase();
+
+      if (file.size > 5 * 1024 * 1024 || !allowedExtensions.has(extension) || (fileType && !allowedMimeTypes.has(fileType))) {
+        Swal.fire('Error', 'Please upload a JPG or PNG image smaller than 5 MB.', 'error');
+        input.value = '';
+        return;
+      }
+
       this.resolveObjectionForm.get('photo')?.setValue(file);
     }
   }

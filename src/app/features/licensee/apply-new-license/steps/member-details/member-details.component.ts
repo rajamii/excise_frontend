@@ -303,7 +303,15 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
     const allowedExtensions = document.accept.split(',').map((value) => value.trim());
     const extension = `.${file.name.split('.').pop()?.toLowerCase()}`;
+    const allowedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']);
+    const fileType = (file.type || '').toLowerCase();
     if (!allowedExtensions.includes(extension)) {
+      alert(`Allowed formats: ${document.format}`);
+      input.value = '';
+      return;
+    }
+
+    if (fileType && !allowedMimeTypes.has(fileType)) {
       alert(`Allowed formats: ${document.format}`);
       input.value = '';
       return;

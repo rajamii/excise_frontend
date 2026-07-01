@@ -109,6 +109,17 @@ export class ManageComponent implements OnInit {
       return;
     }
 
+    const allowedExtensions = new Set(['.jpg', '.jpeg', '.png']);
+    const extension = `.${file.name.split('.').pop()?.toLowerCase() || ''}`;
+    const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/jpg']);
+    const fileType = (file.type || '').toLowerCase();
+
+    if (file.size > 5 * 1024 * 1024 || !allowedExtensions.has(extension) || (fileType && !allowedMimeTypes.has(fileType))) {
+      Swal.fire('Error', 'Please upload a JPG or PNG image smaller than 5 MB.', 'error');
+      input.value = '';
+      return;
+    }
+
     (this.record as any)[field.key] = file;
     this.selectedFileNames[field.key] = file.name;
   }

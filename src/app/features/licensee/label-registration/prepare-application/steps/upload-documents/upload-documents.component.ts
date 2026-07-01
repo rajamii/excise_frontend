@@ -87,6 +87,13 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
       return;
     }
 
+    if (!this.isAllowedDocument(file, document.accept, 5)) {
+      if (input) {
+        input.value = '';
+      }
+      return;
+    }
+
     this.revokeObjectUrl(document);
     document.file = file;
     document.fileUrl = URL.createObjectURL(file);
@@ -96,6 +103,30 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
 
     this.labelRegistrationService.setDraftDocument(document.key, file);
     this.saveToSessionStorage();
+  }
+
+  private isAllowedDocument(file: File, accept: string, maxSizeMb: number): boolean {
+    const allowedExtensions = accept.split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+    const fileExtension = `.${file.name.split('.').pop()?.toLowerCase() || ''}`;
+    const fileType = (file.type || '').toLowerCase();
+    const allowedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']);
+
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      alert(`File size must be less than ${maxSizeMb} MB.`);
+      return false;
+    }
+
+    if (!allowedExtensions.includes(fileExtension)) {
+      alert('Allowed formats: PDF, PNG, JPG.');
+      return false;
+    }
+
+    if (fileType && !allowedMimeTypes.has(fileType)) {
+      alert('Allowed formats: PDF, PNG, JPG.');
+      return false;
+    }
+
+    return true;
   }
 
   viewFile(document: UploadDocumentRow): void {

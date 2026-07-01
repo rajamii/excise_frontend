@@ -118,6 +118,17 @@ export class UploadDocumentsComponent implements OnDestroy {
   onFileSelect(event: any, document: any) {
     const file = event.target.files[0];
     if (file) {
+      const allowedExtensions = new Set((document.accept || '').split(',').map((value: string) => value.trim().toLowerCase()).filter(Boolean));
+      const extension = `.${file.name.split('.').pop()?.toLowerCase() || ''}`;
+      const allowedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']);
+      const fileType = (file.type || '').toLowerCase();
+
+      if (file.size > 10 * 1024 * 1024 || !allowedExtensions.has(extension) || (fileType && !allowedMimeTypes.has(fileType))) {
+        alert(`Allowed formats: ${document.format}`);
+        event.target.value = '';
+        return;
+      }
+
       document.file = file;
       document.fileUrl = URL.createObjectURL(file);
 

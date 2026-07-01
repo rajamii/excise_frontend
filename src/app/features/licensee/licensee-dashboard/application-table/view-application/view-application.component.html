@@ -84,7 +84,7 @@
           <!-- File Upload -->
           @if (fieldMetaMap[obj.fieldName]?.type === 'file') {
           <div class="photo-upload-container" (click)="fileInput.click()">
-            <input type="file" hidden #fileInput accept="image/*" (change)="onPhotoSelected($event)" />
+            <input type="file" hidden #fileInput accept=".png,.jpg,.jpeg" (change)="onPhotoSelected($event)" />
             <div class="upload-box">
               <mat-icon>cloud_upload</mat-icon>
               <div class="upload-text">

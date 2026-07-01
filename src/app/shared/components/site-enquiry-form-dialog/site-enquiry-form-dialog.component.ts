@@ -213,8 +213,26 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
-    this.selectedFileName = file?.name || '';
+    if (!file) {
+      return;
+    }
+
+    const allowedExtensions = new Set(['.pdf', '.png', '.jpg', '.jpeg']);
+    const fileExtension = `.${file.name.split('.').pop()?.toLowerCase() || ''}`;
+    const allowedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']);
+    const fileType = (file.type || '').toLowerCase();
+
+    if (file.size > 5 * 1024 * 1024 || !allowedExtensions.has(fileExtension) || (fileType && !allowedMimeTypes.has(fileType))) {
+      this.selectedFileName = '';
+      this.form.patchValue({ shop_image_document: null });
+      this.form.get('shop_image_document')?.setErrors({ invalidFileType: true });
+      input.value = '';
+      return;
+    }
+
+    this.selectedFileName = file.name;
     this.form.patchValue({ shop_image_document: file });
+    this.form.get('shop_image_document')?.setErrors(null);
     this.form.get('shop_image_document')?.updateValueAndValidity();
   }
 
