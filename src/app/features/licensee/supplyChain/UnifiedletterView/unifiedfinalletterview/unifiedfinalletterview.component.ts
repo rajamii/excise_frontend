@@ -610,7 +610,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     const year = currentDate.getFullYear();
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
     const day = String(currentDate.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const random = this.generateSecureNumericString(3);
     
     return `${random}/Excise`;
   }
@@ -618,9 +618,17 @@ export class UnifiedfinalletterviewComponent implements OnInit {
   private generateFileNumber(): string {
     const currentDate = new Date();
     const year = currentDate.getFullYear();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const random = this.generateSecureNumericString(3);
     
     return `GOS/${random}/Ex/HQ ${year}-25`;
+  }
+
+  private generateSecureNumericString(length: number): string {
+    const digits = '0123456789';
+    const randomValues = new Uint32Array(length);
+    crypto.getRandomValues(randomValues);
+
+    return Array.from(randomValues, (value) => digits[value % digits.length]).join('');
   }
 
   goBack(): void {

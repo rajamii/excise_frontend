@@ -2084,8 +2084,16 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
       excise: 'EX', brewery: 'BR', distillery: 'DI', education: 'EC', hologram: 'HG', security_deposit: 'SD', license_fee: 'LF'
     };
     const timestamp = Date.now().toString();
-    const randomBlock = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const randomBlock = this.generateSecureNumericString(6);
     return `SBIEPAY${prefixByWallet[walletType]}${timestamp}${randomBlock}`;
+  }
+
+  private generateSecureNumericString(length: number): string {
+    const digits = '0123456789';
+    const randomValues = new Uint32Array(length);
+    crypto.getRandomValues(randomValues);
+
+    return Array.from(randomValues, (value) => digits[value % digits.length]).join('');
   }
 
   closeUnifiedAddMoneyView(): void {

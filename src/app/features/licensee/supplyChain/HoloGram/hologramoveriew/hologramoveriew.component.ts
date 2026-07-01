@@ -1832,10 +1832,10 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // 4. Fill any remaining gaps with mixed available/used based on realistic patterns
     while (currentSerial <= endNum) {
       const remaining = endNum - currentSerial + 1;
-      const chunkSize = Math.min(remaining, Math.floor(Math.random() * 50) + 10);
+      const chunkSize = Math.min(remaining, this.getSecureRandomNumber(50) + 10);
 
       // 70% chance of being used, 20% available, 10% damaged
-      const rand = Math.random();
+      const rand = this.getSecureRandomFraction();
       let status: 'AVAILABLE' | 'USED' | 'DAMAGED';
       let description: string;
 
@@ -1882,13 +1882,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
     while (remaining > 0) {
       const batchSize = Math.min(remaining, this.getRealisticBatchSize());
-      const productName = productNames[Math.floor(Math.random() * productNames.length)];
+      const productName = productNames[this.getSecureRandomIndex(productNames.length)];
 
       batches.push({
         size: batchSize,
         productName: productName,
         referenceNo: `REF-${String(batchCounter).padStart(3, '0')}`, // Changed from batchNumber to referenceNo
-        productionLine: `LINE-${Math.floor(Math.random() * 5) + 1}`
+        productionLine: `LINE-${this.getSecureRandomNumber(5) + 1}`
       });
 
       remaining -= batchSize;
@@ -1918,12 +1918,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     let remaining = totalDamaged;
 
     while (remaining > 0) {
-      const incidentSize = Math.min(remaining, Math.floor(Math.random() * 25) + 5); // 5-30 damaged per incident
+      const incidentSize = Math.min(remaining, this.getSecureRandomNumber(25) + 5); // 5-30 damaged per incident
 
       incidents.push({
         count: incidentSize,
-        reason: damageReasons[Math.floor(Math.random() * damageReasons.length)],
-        reportedBy: inspectors[Math.floor(Math.random() * inspectors.length)]
+        reason: damageReasons[this.getSecureRandomIndex(damageReasons.length)],
+        reportedBy: inspectors[this.getSecureRandomIndex(inspectors.length)]
       });
 
       remaining -= incidentSize;
@@ -1932,19 +1932,47 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     return incidents;
   }
 
+  private getSecureRandomIndex(length: number): number {
+    return this.getSecureRandomNumber(length);
+  }
+
+  private getSecureRandomNumber(maxExclusive: number): number {
+    if (maxExclusive <= 0) {
+      return 0;
+    }
+
+    const randomValues = new Uint32Array(1);
+    const maxUint32 = 0x100000000;
+    const limit = maxUint32 - (maxUint32 % maxExclusive);
+
+    let randomNumber: number;
+    do {
+      crypto.getRandomValues(randomValues);
+      randomNumber = randomValues[0];
+    } while (randomNumber >= limit);
+
+    return randomNumber % maxExclusive;
+  }
+
+  private getSecureRandomFraction(): number {
+    const randomValues = new Uint32Array(1);
+    crypto.getRandomValues(randomValues);
+    return randomValues[0] / 0x100000000;
+  }
+
   getRealisticBatchSize(): number {
     // Realistic production batch sizes based on product type
     const batchSizes = [50, 75, 100, 150, 200, 250, 300, 500];
-    return batchSizes[Math.floor(Math.random() * batchSizes.length)];
+    return batchSizes[this.getSecureRandomNumber(batchSizes.length)];
   }
 
   splitIntoChunks(total: number, minChunks: number, maxChunks: number): number[] {
-    const numChunks = Math.min(maxChunks, Math.max(minChunks, Math.floor(Math.random() * maxChunks) + 1));
+    const numChunks = Math.min(maxChunks, Math.max(minChunks, this.getSecureRandomNumber(maxChunks) + 1));
     const chunks: number[] = [];
     let remaining = total;
 
     for (let i = 0; i < numChunks - 1; i++) {
-      const chunkSize = Math.floor(remaining / (numChunks - i)) + Math.floor(Math.random() * 20) - 10;
+      const chunkSize = Math.floor(remaining / (numChunks - i)) + this.getSecureRandomNumber(20) - 10;
       const actualChunkSize = Math.max(1, Math.min(remaining - (numChunks - i - 1), chunkSize));
       chunks.push(actualChunkSize);
       remaining -= actualChunkSize;
@@ -1963,7 +1991,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
     for (let i = 0; i < eventCount; i++) {
       // Generate dates over the last 90 days with more recent activity
-      const daysAgo = Math.floor(Math.pow(Math.random(), 2) * 90); // Weighted towards recent dates
+      const daysAgo = Math.floor(Math.pow(this.getSecureRandomFraction(), 2) * 90); // Weighted towards recent dates
       const date = new Date(today);
       date.setDate(date.getDate() - daysAgo);
       dates.push(date.toISOString().split('T')[0]);
@@ -3211,3 +3239,4 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     return Object.values(grouped);
   }
 }
+

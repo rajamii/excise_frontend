@@ -912,7 +912,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           // Basic validation
           if (!roll.carton_number && !roll.cartonNumber) continue;
 
-          const uniqueId = roll.id || Math.random();
+          const uniqueId = roll.id || crypto.randomUUID();
           const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
           
           // Use the available_range field from backend (already calculated)
@@ -1035,7 +1035,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           for (const roll of scopedRolls) {
             if (!roll.carton_number && !roll.cartonNumber) continue;
             
-            const uniqueId = roll.id || Math.random();
+            const uniqueId = roll.id || crypto.randomUUID();
             const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
             
             // Use the available_range field from backend (already calculated)

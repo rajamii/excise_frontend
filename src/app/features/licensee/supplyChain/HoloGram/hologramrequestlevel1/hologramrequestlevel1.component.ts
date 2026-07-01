@@ -129,8 +129,16 @@ export class Hologramrequestlevel1Component implements OnInit {
 
   private generateReferenceNumber(): string {
     const financialYear = this.getFinancialYear();
-    const random = Math.floor(Math.random() * 9999) + 1;
-    return `HQR/1101/${financialYear}/${String(random).padStart(4, '0')}`;
+    const random = this.generateSecureNumericString(4);
+    return `HQR/1101/${financialYear}/${random}`;
+  }
+
+  private generateSecureNumericString(length: number): string {
+    const digits = '0123456789';
+    const randomValues = new Uint32Array(length);
+    crypto.getRandomValues(randomValues);
+
+    return Array.from(randomValues, (value) => digits[value % digits.length]).join('');
   }
 
   private loadEstablishmentName(): void {

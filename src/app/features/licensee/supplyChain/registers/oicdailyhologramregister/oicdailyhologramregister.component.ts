@@ -2824,7 +2824,7 @@ After editing, click "Lock" to save your changes.`);
 
   // Generate unique ID for brand
   private generateBrandId(): string {
-    return `brand_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `brand_${crypto.randomUUID()}`;
   }
 
   // Check if roll is using multi-brand mode
@@ -4316,3 +4316,4 @@ After editing, click "Lock" to save your changes.`);
     }));
   }
 }
+

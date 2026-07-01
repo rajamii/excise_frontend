@@ -459,9 +459,17 @@ export class LicenseComponent implements OnInit, OnDestroy {
     const dist = this.districts.find((d) => d.id?.toString() === this.applicationForm.value.district);
     const districtCode = dist?.districtCode ?? 'XX';
     const year = new Date().getFullYear();
-    const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const rand = this.generateSecureNumericString(4);
     const mode = this.modesOfOperation.find((m) => m.value === this.applicationForm.value.modeOfOperation)?.code ?? 'XX';
     return `${districtCode}/${mode}/${year}/${rand}`;
+  }
+
+  private generateSecureNumericString(length: number): string {
+    const digits = '0123456789';
+    const randomValues = new Uint32Array(length);
+    crypto.getRandomValues(randomValues);
+
+    return Array.from(randomValues, (value) => digits[value % digits.length]).join('');
   }
 
   calculateApplicationFee(mode: string): number {

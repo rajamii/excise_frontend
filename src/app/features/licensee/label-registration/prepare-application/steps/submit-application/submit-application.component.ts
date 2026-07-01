@@ -343,8 +343,16 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const random = this.generateSecureNumericString(4);
     return `LBL/${year}${month}${day}/${random}`;
+  }
+
+  private generateSecureNumericString(length: number): string {
+    const digits = '0123456789';
+    const randomValues = new Uint32Array(length);
+    crypto.getRandomValues(randomValues);
+
+    return Array.from(randomValues, (value) => digits[value % digits.length]).join('');
   }
 
   goBack(): void {
@@ -373,3 +381,4 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     this.labelRegistrationService.clearDraftDocuments();
   }
 }
+
