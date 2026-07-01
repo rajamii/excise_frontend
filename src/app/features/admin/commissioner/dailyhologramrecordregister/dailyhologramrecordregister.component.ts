@@ -85,6 +85,7 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   approvalDeadlineLabel = '';
   showApprovalDeadlineBreachAlert = true;
   private approvalDeadlineBreachSignature = '';
+  private dismissedOverdueHologramRefs = new Set<string>();
 
   constructor(
     private hologramService: HologramService,
@@ -148,23 +149,8 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   }
 
   private updateApprovalDeadlineBreaches(now: Date = new Date()): void {
-    let dismissed: string[] = [];
-    try {
-      let stored = localStorage.getItem('dismissedOverdueHolograms');
-      if (!stored) {
-        const match = document.cookie.match(new RegExp('(^| )dismissedOverdueHolograms=([^;]+)'));
-        if (match) stored = decodeURIComponent(match[2]);
-      }
-      if (stored) {
-        dismissed = JSON.parse(stored);
-        if (!localStorage.getItem('dismissedOverdueHolograms')) {
-          localStorage.setItem('dismissedOverdueHolograms', stored);
-        }
-      }
-    } catch (e) {}
-
     const breaches = (this.dailyRegisterEntries || []).filter((entry) => {
-      return this.isApprovalUpdateOverdue(entry, now) && !dismissed.includes(entry.referenceNo);
+      return this.isApprovalUpdateOverdue(entry, now) && !this.dismissedOverdueHologramRefs.has(entry.referenceNo);
     });
 
     this.approvalDeadlineBreaches = breaches;
@@ -626,26 +612,9 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
 
   dismissApprovalDeadlineBreachAlert(): void {
     this.showApprovalDeadlineBreachAlert = false;
-
-    try {
-      let stored = localStorage.getItem('dismissedOverdueHolograms');
-      if (!stored) {
-        const match = document.cookie.match(new RegExp('(^| )dismissedOverdueHolograms=([^;]+)'));
-        if (match) stored = decodeURIComponent(match[2]);
-      }
-      const dismissed: string[] = stored ? JSON.parse(stored) : [];
-      this.approvalDeadlineBreaches.forEach(b => {
-        if (!dismissed.includes(b.referenceNo)) dismissed.push(b.referenceNo);
-      });
-      const newVal = JSON.stringify(dismissed);
-      localStorage.setItem('dismissedOverdueHolograms', newVal);
-      
-      const d = new Date();
-      d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
-      document.cookie = "dismissedOverdueHolograms=" + encodeURIComponent(newVal) + ";expires=" + d.toUTCString() + ";path=/";
-    } catch (e) {
-      console.error('Failed to save dismissed holograms', e);
-    }
+    this.approvalDeadlineBreaches.forEach((breach) => {
+      this.dismissedOverdueHologramRefs.add(breach.referenceNo);
+    });
   }
 
   isSlaBreached(entry: DailyRegisterEntry): boolean {
