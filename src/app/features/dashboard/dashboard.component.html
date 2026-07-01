@@ -383,7 +383,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.applied }}</div>
+            <div class="value">{{ getFilteredCount('applied') }}</div>
             <div class="label">Applied</div>
             <div class="sub-info">{{ getStatSubInfo('applied') }}</div>
           </div>
@@ -406,11 +406,11 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.pending + getSupplyChainPendingTotal() }}</div>
+            <div class="value">{{ getFilteredCount('pending') }}</div>
             <div class="label">Pending</div>
             <div
               class="sub-info"
-              *ngIf="(dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) || getSupplyChainPendingTotal() > 0 || (isOicUser() && (getOicPendingCount('transit-applications') > 0 || getOicPendingCount('hologram-daily-entry') > 0))"
+              *ngIf="selectedChartModule === 'all' && ((dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) || getSupplyChainPendingTotal() > 0 || (isOicUser() && (getOicPendingCount('transit-applications') > 0 || getOicPendingCount('hologram-daily-entry') > 0)))"
             >
               <span class="payment-count" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
               <span class="payment-count" *ngIf="getSupplyChainPendingCount('requisition') > 0">{{ getSupplyChainPendingCount('requisition') }} requisition payment pending</span>
@@ -418,7 +418,7 @@
               <span class="payment-count" *ngIf="isOicUser() && getOicPendingCount('transit-applications') > 0">{{ getOicPendingCount('transit-applications') }} transit applications pending</span>
               <span class="payment-count" *ngIf="isOicUser() && getOicPendingCount('hologram-daily-entry') > 0">{{ getOicPendingCount('hologram-daily-entry') }} daily entry pending</span>
             </div>
-            <div class="sub-info" *ngIf="(!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0) && getSupplyChainPendingTotal() === 0 && (!isOicUser() || (getOicPendingCount('transit-applications') === 0 && getOicPendingCount('hologram-daily-entry') === 0))">
+            <div class="sub-info" *ngIf="selectedChartModule !== 'all' || ((!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0) && getSupplyChainPendingTotal() === 0 && (!isOicUser() || (getOicPendingCount('transit-applications') === 0 && getOicPendingCount('hologram-daily-entry') === 0)))">
               {{ getStatSubInfo('pending') }}
             </div>
           </div>
@@ -428,7 +428,7 @@
         </mat-card>
 
         <!-- Awaiting Payment Stat Card -->
-        <mat-card class="stat-card awaiting-payment" *ngIf="shouldShowStatCard('awaitingPayment') && dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
+        <mat-card class="stat-card awaiting-payment" *ngIf="shouldShowStatCard('awaitingPayment') && getFilteredCount('awaitingPayment') > 0">
           <div class="card-header">
             <div class="circle-icon orange-bg">
               <mat-icon>payment</mat-icon>
@@ -441,7 +441,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
+            <div class="value">{{ getFilteredCount('awaitingPayment') }}</div>
             <div class="label">Awaiting Payment</div>
              <div class="sub-info">{{ getAwaitingPaymentBreakdownText() }}</div>
           </div>
@@ -459,7 +459,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.approved }}</div>
+            <div class="value">{{ getFilteredCount('approved') }}</div>
             <div class="label">Approved</div>
             <div class="sub-info">{{ getStatSubInfo('approved') }}</div>
           </div>
@@ -482,7 +482,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.objection || 0 }}</div>
+            <div class="value">{{ getFilteredCount('objection') }}</div>
             <div class="label">Objection</div>
             <div class="sub-info">{{ getStatSubInfo('objection') }}</div>
           </div>
@@ -505,7 +505,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.rejected }}</div>
+            <div class="value">{{ getFilteredCount('rejected') }}</div>
             <div class="label">Rejected</div>
             <div class="sub-info">{{ getStatSubInfo('rejected') }}</div>
           </div>
@@ -555,11 +555,9 @@
             <mat-form-field appearance="outline" class="premium-select">
               <mat-label>Module</mat-label>
               <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)">
-                <mat-option value="all">All Modules</mat-option>
-                <mat-option value="newLicense">New Licenses</mat-option>
-                <mat-option value="renewal">Renewals</mat-option>
-                <mat-option value="salesman">Salesman / Barman</mat-option>
-                <mat-option value="company">Company Reg.</mat-option>
+                <mat-option *ngFor="let m of availableChartModules" [value]="m.value">
+                  {{ m.label }}
+                </mat-option>
               </mat-select>
             </mat-form-field>
 

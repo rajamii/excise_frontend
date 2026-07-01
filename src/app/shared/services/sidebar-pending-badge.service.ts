@@ -463,7 +463,7 @@ export class SidebarPendingBadgeService {
 
   /** Count items that are in a non-final, non-draft state for a licensee's own view.
    *  Shows items that are submitted/pending/under-process (i.e. awaiting officer action). */
-  private countLicenseePendingItems(items: any[]): number {
+  public countLicenseePendingItems(items: any[]): number {
     return (items || []).filter((item) => {
       const raw = String(
         item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
@@ -480,7 +480,7 @@ export class SidebarPendingBadgeService {
     }).length;
   }
 
-  private countRequisitionPendingReview(items: any[]): number {
+  public countRequisitionPendingReview(items: any[]): number {
     return (items || []).filter((item) => {
       const raw = String(
         item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
@@ -503,7 +503,7 @@ export class SidebarPendingBadgeService {
     }).length;
   }
 
-  private countHologramPendingReview(items: any[]): number {
+  public countHologramPendingReview(items: any[]): number {
     return (items || []).filter((item) => {
       const raw = String(
         item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
@@ -532,7 +532,7 @@ export class SidebarPendingBadgeService {
    * Once payment is made the item moves to a post-payment stage (forwarded payslip,
    * approved payslip, etc.) and the badge must be cleared.
    */
-  private countRequisitionAwaitingPayment(items: any[]): number {
+  public countRequisitionAwaitingPayment(items: any[]): number {
     return (items || []).filter((item) => {
       const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
       const stageName = String(
@@ -566,7 +566,7 @@ export class SidebarPendingBadgeService {
    * Only stage 78 "Approved by Commissioner" triggers the badge.
    * Clears once payment is made (Payment Completed / Cartoon Assigned).
    */
-  private countHologramAwaitingPayment(items: any[]): number {
+  public countHologramAwaitingPayment(items: any[]): number {
     return (items || []).filter((item) => {
       const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
       const stageName = String(

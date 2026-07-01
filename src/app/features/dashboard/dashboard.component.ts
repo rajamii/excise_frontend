@@ -1,5 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
+import { SupplyChainService } from '../licensee/supplyChain/services/supplychain.service';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { BaseChartDirective } from 'ng2-charts';
@@ -337,6 +339,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.salesman;
     } else if (this.selectedChartModule === 'company') {
       sourceCounts = this.detailedCounts.company;
+    } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
+      sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
     }
 
     this.singleWindowChartData = {
@@ -345,11 +349,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         {
           ...this.singleWindowChartData.datasets[0],
           data: [
-            sourceCounts.applied || 0,
-            (sourceCounts.pending || 0) + this.getSupplyChainPendingTotal(),
-            sourceCounts.approved || 0,
-            sourceCounts.objection || 0,
-            sourceCounts.rejected || 0
+            this.selectedChartModule === 'all'
+              ? (sourceCounts.applied || 0) + this.getSupplyChainAppliedTotal()
+              : (sourceCounts.applied || 0),
+            this.selectedChartModule === 'all'
+              ? (sourceCounts.pending || 0) + this.getSupplyChainPendingTotal()
+              : (sourceCounts.pending || 0),
+            this.selectedChartModule === 'all'
+              ? (sourceCounts.approved || 0) + this.getSupplyChainApprovedTotal()
+              : (sourceCounts.approved || 0),
+            this.selectedChartModule === 'all'
+              ? (sourceCounts.objection || 0) + this.getSupplyChainObjectionTotal()
+              : (sourceCounts.objection || 0),
+            this.selectedChartModule === 'all'
+              ? (sourceCounts.rejected || 0) + this.getSupplyChainRejectedTotal()
+              : (sourceCounts.rejected || 0)
           ]
         }
       ]
@@ -359,6 +373,182 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   onChartModuleChange(moduleName: string): void {
     this.selectedChartModule = moduleName;
     this.updateSingleWindowChart();
+  }
+
+  public updateAvailableChartModules(): void {
+    const modules = [
+      { value: 'all', label: 'All Modules' },
+      { value: 'newLicense', label: 'New Licenses' },
+      { value: 'renewal', label: 'Renewals' },
+      { value: 'salesman', label: 'Salesman / Barman' },
+      { value: 'company', label: 'Company Reg.' }
+    ];
+
+    const isAdmin = this.currentUser?.roleId === 1 || this.currentUser?.roleId === 3;
+    
+    // Distillery-only supply chain items: Requisition, Revalidation, Cancellation
+    if (isAdmin || this.showDistilleryMenus) {
+      modules.push(
+        { value: 'requisition', label: 'Requisitions' },
+        { value: 'revalidation', label: 'Revalidations' },
+        { value: 'cancellation', label: 'Cancellations' }
+      );
+    }
+    
+    // Brewery/Distillery supply chain items: Transit, Hologram
+    if (isAdmin || this.showBreweryOrDistilleryMenus) {
+      modules.push(
+        { value: 'transit', label: 'Transit Permits' },
+        { value: 'hologram', label: 'Hologram Procurement' }
+      );
+    }
+    this.availableChartModules = modules;
+  }
+
+  public getFilteredCount(status: string): number {
+    let sourceCounts = this.dashboardCounts;
+    if (this.selectedChartModule === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (this.selectedChartModule === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (this.selectedChartModule === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (this.selectedChartModule === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
+      sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
+    }
+
+    if (status === 'applied') {
+      if (this.selectedChartModule === 'all') {
+        return (sourceCounts.applied || 0) + this.getSupplyChainAppliedTotal();
+      }
+      return sourceCounts.applied || 0;
+    }
+    if (status === 'pending') {
+      if (this.selectedChartModule === 'all') {
+        return (sourceCounts.pending || 0) + this.getSupplyChainPendingTotal();
+      }
+      return sourceCounts.pending || 0;
+    }
+    if (status === 'awaitingPayment') {
+      return sourceCounts.awaitingPayment || 0;
+    }
+    if (status === 'approved') {
+      if (this.selectedChartModule === 'all') {
+        return (sourceCounts.approved || 0) + this.getSupplyChainApprovedTotal();
+      }
+      return sourceCounts.approved || 0;
+    }
+    if (status === 'objection') {
+      if (this.selectedChartModule === 'all') {
+        return (sourceCounts.objection || 0) + this.getSupplyChainObjectionTotal();
+      }
+      return sourceCounts.objection || 0;
+    }
+    if (status === 'rejected') {
+      if (this.selectedChartModule === 'all') {
+        return (sourceCounts.rejected || 0) + this.getSupplyChainRejectedTotal();
+      }
+      return sourceCounts.rejected || 0;
+    }
+    return 0;
+  }
+
+  public loadSupplyChainModuleStats(): void {
+    if (!this.isLicenseeUser()) return;
+
+    // Requisitions
+    this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countRequisitionPendingReview(items);
+      const awaitingPayment = this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['requisition'] = {
+        applied: items.length,
+        pending: pending + awaitingPayment,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Revalidations
+    this.supplyChainService.getRevalidationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['revalidation'] = {
+        applied: items.length,
+        pending: pending,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Cancellations
+    this.supplyChainService.getCancellationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['cancellation'] = {
+        applied: items.length,
+        pending: pending,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Transit Permits
+    this.supplyChainService.getTransitPermits().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const billNos = new Set<string>();
+      const uniqueItems: any[] = [];
+      items.forEach(item => {
+        const billNo = item.billNo || item.bill_no;
+        if (billNo && !billNos.has(billNo)) {
+          billNos.add(billNo);
+          uniqueItems.push(item);
+        }
+      });
+
+      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(uniqueItems);
+      const approved = uniqueItems.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+      const rejected = uniqueItems.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['transit'] = {
+        applied: uniqueItems.length,
+        pending: pending,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Holograms
+    this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
+      const awaitingPayment = this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['hologram'] = {
+        applied: items.length,
+        pending: pending + awaitingPayment,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
   }
 
   onChartDateFilterChange(): void {
@@ -421,8 +611,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedSupplyChainSection: string | null = null;
   walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
-  private showDistilleryMenus = false;
-  private showBreweryOrDistilleryMenus = false;
+  public showDistilleryMenus = false;
+  public showBreweryOrDistilleryMenus = false;
+  public supplyChainService = inject(SupplyChainService);
+  public enaRequisitionService = inject(EnaRequisitionService);
+  public availableChartModules: { value: string; label: string }[] = [];
+
+  public supplyChainModuleCounts: Record<string, DashboardCount> = {
+    requisition: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    revalidation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    cancellation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    transit: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    hologram: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
+  };
   private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
   private walletEligibilityResolved = false;
@@ -1549,6 +1750,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Get current user from role service
     this.currentUser = this.roleService.getCurrentUser();
     this.refreshWelcomeText();
+    this.updateAvailableChartModules();
 
     // If no current user in role service, try to get from account service
     if (!this.currentUser) {
@@ -1559,6 +1761,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.roleService.setCurrentUser(mappedUser);
           this.currentUser = mappedUser;
           this.refreshWelcomeText();
+          this.updateAvailableChartModules();
           this.proceedWithDashboardLoad();
         } else {
           this.error = 'No user found. Please log in again.';
@@ -1595,7 +1798,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (config) => {
           this.dashboardConfig = config;
           this.loadLicenseeMenuAccess();
-          this.loadDashboardData();
         },
         error: (error) => {
           console.error('Error loading dashboard configuration:', error);
@@ -1641,6 +1843,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
            this.getSupplyChainPendingCount('cancellation') +
            this.getSupplyChainPendingCount('hologram') +
            this.getSupplyChainPendingCount('transit');
+  }
+
+  getSupplyChainAppliedTotal(): number {
+    if (!this.isLicenseeUser()) return 0;
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.applied || 0), 0);
+  }
+
+  getSupplyChainApprovedTotal(): number {
+    if (!this.isLicenseeUser()) return 0;
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.approved || 0), 0);
+  }
+
+  getSupplyChainRejectedTotal(): number {
+    if (!this.isLicenseeUser()) return 0;
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.rejected || 0), 0);
+  }
+
+  getSupplyChainObjectionTotal(): number {
+    if (!this.isLicenseeUser()) return 0;
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.objection || 0), 0);
   }
 
   isOicUser(): boolean {
@@ -1721,6 +1943,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           };
           this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          this.loadSupplyChainModuleStats();
           this.updateSingleWindowChart();
         },
         error: (error) => {
@@ -1818,6 +2041,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
           this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          this.loadSupplyChainModuleStats();
           this.updateSingleWindowChart();
         },
         error: (error) => {
@@ -1911,6 +2135,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           });
 
           this.refreshSupplyChainPendingCounts();
+          this.loadSupplyChainModuleStats();
           this.updateSingleWindowChart();
         },
         error: (error) => {
@@ -2114,6 +2339,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showBreweryOrDistilleryMenus = false;
       this.showBreweryOrDistilleryWalletViews = false;
       this.showManufacturingWalletNav = false;
+      this.loadDashboardData();
       return;
     }
 
@@ -2143,6 +2369,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
+          this.updateAvailableChartModules();
+          this.loadDashboardData();
         },
         error: () => {
           this.showDistilleryMenus = false;
@@ -2151,6 +2379,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.showManufacturingWalletNav = false;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
+          this.updateAvailableChartModules();
+          this.loadDashboardData();
         }
       });
   }
