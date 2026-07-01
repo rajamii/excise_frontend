@@ -486,7 +486,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public loadSupplyChainModuleStats(): void {
-    if (!this.isLicenseeUser()) return;
+    const isAdminOrOfficer = [1, 3, 5, 6, 7, 10].includes(Number(this.currentUser?.roleId || 0));
+    if (!this.isLicenseeUser() && !isAdminOrOfficer) return;
 
     // Requisitions
     this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
