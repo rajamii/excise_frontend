@@ -328,34 +328,32 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   updateSingleWindowChart(): void {
-    if (this.currentUser?.roleId === 3 || this.currentUser?.roleId === 1) {
-      let sourceCounts = this.dashboardCounts;
-      if (this.selectedChartModule === 'newLicense') {
-        sourceCounts = this.detailedCounts.newLicense;
-      } else if (this.selectedChartModule === 'renewal') {
-        sourceCounts = this.detailedCounts.renewal;
-      } else if (this.selectedChartModule === 'salesman') {
-        sourceCounts = this.detailedCounts.salesman;
-      } else if (this.selectedChartModule === 'company') {
-        sourceCounts = this.detailedCounts.company;
-      }
-
-      this.singleWindowChartData = {
-        ...this.singleWindowChartData,
-        datasets: [
-          {
-            ...this.singleWindowChartData.datasets[0],
-            data: [
-              sourceCounts.applied || 0,
-              sourceCounts.pending || 0,
-              sourceCounts.approved || 0,
-              sourceCounts.objection || 0,
-              sourceCounts.rejected || 0
-            ]
-          }
-        ]
-      };
+    let sourceCounts = this.dashboardCounts;
+    if (this.selectedChartModule === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (this.selectedChartModule === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (this.selectedChartModule === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (this.selectedChartModule === 'company') {
+      sourceCounts = this.detailedCounts.company;
     }
+
+    this.singleWindowChartData = {
+      ...this.singleWindowChartData,
+      datasets: [
+        {
+          ...this.singleWindowChartData.datasets[0],
+          data: [
+            sourceCounts.applied || 0,
+            (sourceCounts.pending || 0) + this.getSupplyChainPendingTotal(),
+            sourceCounts.approved || 0,
+            sourceCounts.objection || 0,
+            sourceCounts.rejected || 0
+          ]
+        }
+      ]
+    };
   }
 
   onChartModuleChange(moduleName: string): void {
@@ -1638,7 +1636,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainPendingTotal(): number {
-    return this.getSupplyChainPendingCount('requisition') + this.getSupplyChainPendingCount('hologram');
+    return this.getSupplyChainPendingCount('requisition') +
+           this.getSupplyChainPendingCount('revalidation') +
+           this.getSupplyChainPendingCount('cancellation') +
+           this.getSupplyChainPendingCount('hologram') +
+           this.getSupplyChainPendingCount('transit');
   }
 
   isOicUser(): boolean {
@@ -1657,13 +1659,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.sidebarPendingBadgeService
-      .refresh(['requisition', 'hologram'], force, { audience: 'licensee', mode: 'full' })
+      .refresh(['requisition', 'revalidation', 'cancellation', 'hologram', 'transit'], force, { audience: 'licensee', mode: 'full' })
       .pipe(
         takeUntil(this.destroy$),
         catchError(() => of({} as Record<string, number>))
       )
       .subscribe((counts) => {
         this.supplyChainPendingCounts = counts || {};
+        this.updateSingleWindowChart();
       });
   }
 
@@ -1754,7 +1757,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           // Product requirement: newly submitted applications should appear under Pending.
           const pendingBucket = [
             ...filteredApplications.pending,
-            ...filteredApplications.awaitingPayment,
             ...filteredApplications.applied
           ];
 
@@ -1816,6 +1818,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
           this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          this.updateSingleWindowChart();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
@@ -1854,7 +1857,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
           const pendingBucket = [
             ...filteredApplications.pending,
-            ...filteredApplications.awaitingPayment,
             ...filteredApplications.applied
           ];
 
@@ -1909,6 +1911,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           });
 
           this.refreshSupplyChainPendingCounts();
+          this.updateSingleWindowChart();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard applications:', error);
