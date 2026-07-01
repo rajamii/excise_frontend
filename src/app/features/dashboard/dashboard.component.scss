@@ -595,6 +595,7 @@
 .stats-container {
     margin: 2rem;
     margin-top: 1rem;
+    margin-bottom: 0.75rem;
 
     .stats-grid {
         display: grid;
@@ -3113,7 +3114,7 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
 }
 
 .single-window-chart-wrapper {
-    margin-top: 2rem;
+    margin-top: 0.5rem;
     width: 100%;
 
     .chart-card {

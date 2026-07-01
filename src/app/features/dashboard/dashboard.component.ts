@@ -69,7 +69,7 @@ import { DailyhologramrecordregisterComponent } from '../admin/commissioner/dail
 
 // Role-specific Dashboard Components
 import { PermitSectionDashboardComponent } from './role-components/permit-section-dashboard.component';
-import { CommissionerDashboardComponent as CommissionerDashboard } from './role-components/commissioner-dashboard.component';
+import { CommissionerDashboardComponent as CommissionerDashboard } from '../admin/commissioner/commissioner-dashboard/commissioner-dashboard.component';
 import { ITCellDashboardComponent } from './role-components/itcell-dashboard.component';
 import { OfficerInChargeDashboardComponent } from './role-components/officer-in-charge-dashboard.component';
 import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
@@ -418,9 +418,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     ];
 
     const isAdmin = this.currentUser?.roleId === 1 || this.currentUser?.roleId === 3;
+    const isCommissioner = this.isCommissionerUser();
     
     // Distillery-only supply chain items: Requisition, Revalidation, Cancellation
-    if (isAdmin || this.showDistilleryMenus) {
+    if (isAdmin || isCommissioner || this.showDistilleryMenus) {
       modules.push(
         { value: 'requisition', label: 'Requisitions' },
         { value: 'revalidation', label: 'Revalidations' },
@@ -429,7 +430,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     // Brewery/Distillery supply chain items: Transit, Hologram
-    if (isAdmin || this.showBreweryOrDistilleryMenus) {
+    if (isAdmin || isCommissioner || this.showBreweryOrDistilleryMenus) {
       modules.push(
         { value: 'transit', label: 'Transit Permits' },
         { value: 'hologram', label: 'Hologram Procurement' }
@@ -1877,22 +1878,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainAppliedTotal(): number {
-    if (!this.isLicenseeUser()) return 0;
     return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.applied || 0), 0);
   }
 
   getSupplyChainApprovedTotal(): number {
-    if (!this.isLicenseeUser()) return 0;
     return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.approved || 0), 0);
   }
 
   getSupplyChainRejectedTotal(): number {
-    if (!this.isLicenseeUser()) return 0;
     return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.rejected || 0), 0);
   }
 
   getSupplyChainObjectionTotal(): number {
-    if (!this.isLicenseeUser()) return 0;
     return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.objection || 0), 0);
   }
 
@@ -2250,7 +2247,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Roles that have their own full dashboard component (SPA-like)
-    return roleId ? [5, 6, 7, 10].includes(roleId) : false;
+    return roleId ? [5, 6, 7].includes(roleId) : false;
   }
 
   isLicenseeUser(): boolean {
