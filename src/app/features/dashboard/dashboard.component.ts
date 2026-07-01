@@ -329,6 +329,41 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
   };
 
+  public getModuleTotal(moduleName: string): number {
+    if (moduleName === 'all') {
+      const baseTotal = (this.dashboardCounts.pending || 0) +
+                        (this.dashboardCounts.approved || 0) +
+                        (this.dashboardCounts.objection || 0) +
+                        (this.dashboardCounts.rejected || 0) +
+                        (this.dashboardCounts.awaitingPayment || 0);
+      const supplyChainTotal = Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => 
+        sum + (v.applied || 0), 0);
+      return baseTotal + supplyChainTotal;
+    }
+
+    if (this.supplyChainModuleCounts[moduleName]) {
+      return this.supplyChainModuleCounts[moduleName].applied || 0;
+    }
+
+    let sourceCounts = this.dashboardCounts;
+    if (moduleName === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (moduleName === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (moduleName === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (moduleName === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    }
+
+    // For base modules, pending already includes applied (newly submitted)
+    return (sourceCounts.pending || 0) +
+           (sourceCounts.approved || 0) +
+           (sourceCounts.objection || 0) +
+           (sourceCounts.rejected || 0) +
+           (sourceCounts.awaitingPayment || 0);
+  }
+
   updateSingleWindowChart(): void {
     let sourceCounts = this.dashboardCounts;
     if (this.selectedChartModule === 'newLicense') {
@@ -349,20 +384,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         {
           ...this.singleWindowChartData.datasets[0],
           data: [
+            this.getModuleTotal(this.selectedChartModule),
             this.selectedChartModule === 'all'
-              ? (sourceCounts.applied || 0) + this.getSupplyChainAppliedTotal()
-              : (sourceCounts.applied || 0),
-            this.selectedChartModule === 'all'
-              ? (sourceCounts.pending || 0) + this.getSupplyChainPendingTotal()
+              ? (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()
               : (sourceCounts.pending || 0),
             this.selectedChartModule === 'all'
-              ? (sourceCounts.approved || 0) + this.getSupplyChainApprovedTotal()
+              ? (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal()
               : (sourceCounts.approved || 0),
             this.selectedChartModule === 'all'
-              ? (sourceCounts.objection || 0) + this.getSupplyChainObjectionTotal()
+              ? (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal()
               : (sourceCounts.objection || 0),
             this.selectedChartModule === 'all'
-              ? (sourceCounts.rejected || 0) + this.getSupplyChainRejectedTotal()
+              ? (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal()
               : (sourceCounts.rejected || 0)
           ]
         }
@@ -420,14 +453,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     if (status === 'applied') {
-      if (this.selectedChartModule === 'all') {
-        return (sourceCounts.applied || 0) + this.getSupplyChainAppliedTotal();
-      }
-      return sourceCounts.applied || 0;
+      return this.getModuleTotal(this.selectedChartModule);
     }
     if (status === 'pending') {
       if (this.selectedChartModule === 'all') {
-        return (sourceCounts.pending || 0) + this.getSupplyChainPendingTotal();
+        return (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal();
       }
       return sourceCounts.pending || 0;
     }
@@ -436,19 +466,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (status === 'approved') {
       if (this.selectedChartModule === 'all') {
-        return (sourceCounts.approved || 0) + this.getSupplyChainApprovedTotal();
+        return (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal();
       }
       return sourceCounts.approved || 0;
     }
     if (status === 'objection') {
       if (this.selectedChartModule === 'all') {
-        return (sourceCounts.objection || 0) + this.getSupplyChainObjectionTotal();
+        return (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal();
       }
       return sourceCounts.objection || 0;
     }
     if (status === 'rejected') {
       if (this.selectedChartModule === 'all') {
-        return (sourceCounts.rejected || 0) + this.getSupplyChainRejectedTotal();
+        return (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal();
       }
       return sourceCounts.rejected || 0;
     }
@@ -2001,7 +2031,33 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           });
 
-          // Store counts separately but combine pending display
+           // Store counts separately but combine pending display
+          const getCountsForType = (typeVal: string) => {
+            return {
+              applied: filteredApplications.applied.filter((app: any) => app.type === typeVal).length,
+              pending: pendingBucket.filter((app: any) => app.type === typeVal).length,
+              awaitingPayment: filteredApplications.awaitingPayment.filter((app: any) => app.type === typeVal).length,
+              approved: approvedWithoutRenewal.filter((app: any) => app.type === typeVal).length,
+              objection: filteredApplications.objection.filter((app: any) => app.type === typeVal).length,
+              rejected: filteredApplications.rejected.filter((app: any) => app.type === typeVal).length
+            };
+          };
+
+          this.detailedCounts = {
+            total: {
+              applied: filteredApplications.applied.length,
+              pending: pendingBucket.length,
+              awaitingPayment: filteredApplications.awaitingPayment.length,
+              approved: approvedWithoutRenewal.length,
+              objection: filteredApplications.objection.length,
+              rejected: filteredApplications.rejected.length
+            },
+            newLicense: getCountsForType('new-license'),
+            renewal: getCountsForType('license-renewal'),
+            salesman: getCountsForType('salesman-barman'),
+            company: getCountsForType('company-registration')
+          };
+
           this.dashboardCounts = {
             applied: 0,
             pending: pendingBucket.length,
