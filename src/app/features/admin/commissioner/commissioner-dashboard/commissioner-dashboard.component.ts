@@ -80,7 +80,7 @@ export interface CommissionerTableData {
 }
 
 @Component({
-  selector: "app-commissioner-dashboard-tabs",
+  selector: "app-commissioner-dashboard",
   standalone: true,
   imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, TransitComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
   templateUrl: "./commissioner-dashboard.component.html",

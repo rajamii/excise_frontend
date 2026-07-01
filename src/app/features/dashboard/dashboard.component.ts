@@ -1,5 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
+import { SupplyChainService } from '../licensee/supplyChain/services/supplychain.service';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { BaseChartDirective } from 'ng2-charts';
@@ -67,7 +69,7 @@ import { DailyhologramrecordregisterComponent } from '../admin/commissioner/dail
 
 // Role-specific Dashboard Components
 import { PermitSectionDashboardComponent } from './role-components/permit-section-dashboard.component';
-import { CommissionerDashboardComponent as CommissionerDashboard } from './role-components/commissioner-dashboard.component';
+import { CommissionerDashboardComponent as CommissionerDashboard } from '../admin/commissioner/commissioner-dashboard/commissioner-dashboard.component';
 import { ITCellDashboardComponent } from './role-components/itcell-dashboard.component';
 import { OfficerInChargeDashboardComponent } from './role-components/officer-in-charge-dashboard.component';
 import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
@@ -327,40 +329,258 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
   };
 
-  updateSingleWindowChart(): void {
-    if (this.currentUser?.roleId === 3 || this.currentUser?.roleId === 1) {
-      let sourceCounts = this.dashboardCounts;
-      if (this.selectedChartModule === 'newLicense') {
-        sourceCounts = this.detailedCounts.newLicense;
-      } else if (this.selectedChartModule === 'renewal') {
-        sourceCounts = this.detailedCounts.renewal;
-      } else if (this.selectedChartModule === 'salesman') {
-        sourceCounts = this.detailedCounts.salesman;
-      } else if (this.selectedChartModule === 'company') {
-        sourceCounts = this.detailedCounts.company;
-      }
-
-      this.singleWindowChartData = {
-        ...this.singleWindowChartData,
-        datasets: [
-          {
-            ...this.singleWindowChartData.datasets[0],
-            data: [
-              sourceCounts.applied || 0,
-              sourceCounts.pending || 0,
-              sourceCounts.approved || 0,
-              sourceCounts.objection || 0,
-              sourceCounts.rejected || 0
-            ]
-          }
-        ]
-      };
+  public getModuleTotal(moduleName: string): number {
+    if (moduleName === 'all') {
+      const baseTotal = (this.dashboardCounts.pending || 0) +
+                        (this.dashboardCounts.approved || 0) +
+                        (this.dashboardCounts.objection || 0) +
+                        (this.dashboardCounts.rejected || 0) +
+                        (this.dashboardCounts.awaitingPayment || 0);
+      const supplyChainTotal = Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => 
+        sum + (v.applied || 0), 0);
+      return baseTotal + supplyChainTotal;
     }
+
+    if (this.supplyChainModuleCounts[moduleName]) {
+      return this.supplyChainModuleCounts[moduleName].applied || 0;
+    }
+
+    let sourceCounts = this.dashboardCounts;
+    if (moduleName === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (moduleName === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (moduleName === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (moduleName === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    }
+
+    // For base modules, pending already includes applied (newly submitted)
+    return (sourceCounts.pending || 0) +
+           (sourceCounts.approved || 0) +
+           (sourceCounts.objection || 0) +
+           (sourceCounts.rejected || 0) +
+           (sourceCounts.awaitingPayment || 0);
+  }
+
+  updateSingleWindowChart(): void {
+    let sourceCounts = this.dashboardCounts;
+    if (this.selectedChartModule === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (this.selectedChartModule === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (this.selectedChartModule === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (this.selectedChartModule === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
+      sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
+    }
+
+    this.singleWindowChartData = {
+      ...this.singleWindowChartData,
+      datasets: [
+        {
+          ...this.singleWindowChartData.datasets[0],
+          data: [
+            this.getModuleTotal(this.selectedChartModule),
+            this.selectedChartModule === 'all'
+              ? (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()
+              : (sourceCounts.pending || 0),
+            this.selectedChartModule === 'all'
+              ? (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal()
+              : (sourceCounts.approved || 0),
+            this.selectedChartModule === 'all'
+              ? (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal()
+              : (sourceCounts.objection || 0),
+            this.selectedChartModule === 'all'
+              ? (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal()
+              : (sourceCounts.rejected || 0)
+          ]
+        }
+      ]
+    };
   }
 
   onChartModuleChange(moduleName: string): void {
     this.selectedChartModule = moduleName;
     this.updateSingleWindowChart();
+  }
+
+  public updateAvailableChartModules(): void {
+    const modules = [
+      { value: 'all', label: 'All Modules' },
+      { value: 'newLicense', label: 'New Licenses' },
+      { value: 'renewal', label: 'Renewals' },
+      { value: 'salesman', label: 'Salesman / Barman' },
+      { value: 'company', label: 'Company Reg.' }
+    ];
+
+    const isAdmin = this.currentUser?.roleId === 1 || this.currentUser?.roleId === 3;
+    const isCommissioner = this.isCommissionerUser();
+    
+    // Distillery-only supply chain items: Requisition, Revalidation, Cancellation
+    if (isAdmin || isCommissioner || this.showDistilleryMenus) {
+      modules.push(
+        { value: 'requisition', label: 'Requisitions' },
+        { value: 'revalidation', label: 'Revalidations' },
+        { value: 'cancellation', label: 'Cancellations' }
+      );
+    }
+    
+    // Brewery/Distillery supply chain items: Transit, Hologram
+    if (isAdmin || isCommissioner || this.showBreweryOrDistilleryMenus) {
+      modules.push(
+        { value: 'transit', label: 'Transit Permits' },
+        { value: 'hologram', label: 'Hologram Procurement' }
+      );
+    }
+    this.availableChartModules = modules;
+  }
+
+  public getFilteredCount(status: string): number {
+    let sourceCounts = this.dashboardCounts;
+    if (this.selectedChartModule === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (this.selectedChartModule === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (this.selectedChartModule === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (this.selectedChartModule === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
+      sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
+    }
+
+    if (status === 'applied') {
+      return this.getModuleTotal(this.selectedChartModule);
+    }
+    if (status === 'pending') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal();
+      }
+      return sourceCounts.pending || 0;
+    }
+    if (status === 'awaitingPayment') {
+      return sourceCounts.awaitingPayment || 0;
+    }
+    if (status === 'approved') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal();
+      }
+      return sourceCounts.approved || 0;
+    }
+    if (status === 'objection') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal();
+      }
+      return sourceCounts.objection || 0;
+    }
+    if (status === 'rejected') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal();
+      }
+      return sourceCounts.rejected || 0;
+    }
+    return 0;
+  }
+
+  public loadSupplyChainModuleStats(): void {
+    const isAdminOrOfficer = [1, 3, 5, 6, 7, 10].includes(Number(this.currentUser?.roleId || 0));
+    if (!this.isLicenseeUser() && !isAdminOrOfficer) return;
+
+    // Requisitions
+    this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countRequisitionPendingReview(items);
+      const awaitingPayment = this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['requisition'] = {
+        applied: items.length,
+        pending: pending + awaitingPayment,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Revalidations
+    this.supplyChainService.getRevalidationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['revalidation'] = {
+        applied: items.length,
+        pending: pending,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Cancellations
+    this.supplyChainService.getCancellationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['cancellation'] = {
+        applied: items.length,
+        pending: pending,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Transit Permits
+    this.supplyChainService.getTransitPermits().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const billNos = new Set<string>();
+      const uniqueItems: any[] = [];
+      items.forEach(item => {
+        const billNo = item.billNo || item.bill_no;
+        if (billNo && !billNos.has(billNo)) {
+          billNos.add(billNo);
+          uniqueItems.push(item);
+        }
+      });
+
+      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(uniqueItems);
+      const approved = uniqueItems.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+      const rejected = uniqueItems.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['transit'] = {
+        applied: uniqueItems.length,
+        pending: pending,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
+
+    // Holograms
+    this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      const items = Array.isArray(res) ? res : [];
+      const pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
+      const awaitingPayment = this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
+      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
+      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      this.supplyChainModuleCounts['hologram'] = {
+        applied: items.length,
+        pending: pending + awaitingPayment,
+        approved: approved,
+        objection: 0,
+        rejected: rejected
+      };
+      this.updateSingleWindowChart();
+    });
   }
 
   onChartDateFilterChange(): void {
@@ -423,8 +643,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedSupplyChainSection: string | null = null;
   walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
-  private showDistilleryMenus = false;
-  private showBreweryOrDistilleryMenus = false;
+  public showDistilleryMenus = false;
+  public showBreweryOrDistilleryMenus = false;
+  public supplyChainService = inject(SupplyChainService);
+  public enaRequisitionService = inject(EnaRequisitionService);
+  public availableChartModules: { value: string; label: string }[] = [];
+
+  public supplyChainModuleCounts: Record<string, DashboardCount> = {
+    requisition: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    revalidation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    cancellation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    transit: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    hologram: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
+  };
   private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
   private walletEligibilityResolved = false;
@@ -1551,6 +1782,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Get current user from role service
     this.currentUser = this.roleService.getCurrentUser();
     this.refreshWelcomeText();
+    this.updateAvailableChartModules();
 
     // If no current user in role service, try to get from account service
     if (!this.currentUser) {
@@ -1561,6 +1793,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.roleService.setCurrentUser(mappedUser);
           this.currentUser = mappedUser;
           this.refreshWelcomeText();
+          this.updateAvailableChartModules();
           this.proceedWithDashboardLoad();
         } else {
           this.error = 'No user found. Please log in again.';
@@ -1597,7 +1830,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (config) => {
           this.dashboardConfig = config;
           this.loadLicenseeMenuAccess();
-          this.loadDashboardData();
         },
         error: (error) => {
           console.error('Error loading dashboard configuration:', error);
@@ -1638,7 +1870,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainPendingTotal(): number {
-    return this.getSupplyChainPendingCount('requisition') + this.getSupplyChainPendingCount('hologram');
+    return this.getSupplyChainPendingCount('requisition') +
+           this.getSupplyChainPendingCount('revalidation') +
+           this.getSupplyChainPendingCount('cancellation') +
+           this.getSupplyChainPendingCount('hologram') +
+           this.getSupplyChainPendingCount('transit');
+  }
+
+  getSupplyChainAppliedTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.applied || 0), 0);
+  }
+
+  getSupplyChainApprovedTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.approved || 0), 0);
+  }
+
+  getSupplyChainRejectedTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.rejected || 0), 0);
+  }
+
+  getSupplyChainObjectionTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.objection || 0), 0);
   }
 
   isOicUser(): boolean {
@@ -1657,13 +1909,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.sidebarPendingBadgeService
-      .refresh(['requisition', 'hologram'], force, { audience: 'licensee', mode: 'full' })
+      .refresh(['requisition', 'revalidation', 'cancellation', 'hologram', 'transit'], force, { audience: 'licensee', mode: 'full' })
       .pipe(
         takeUntil(this.destroy$),
         catchError(() => of({} as Record<string, number>))
       )
       .subscribe((counts) => {
         this.supplyChainPendingCounts = counts || {};
+        this.updateSingleWindowChart();
       });
   }
 
@@ -1718,6 +1971,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           };
           this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          this.loadSupplyChainModuleStats();
           this.updateSingleWindowChart();
         },
         error: (error) => {
@@ -1754,7 +2008,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           // Product requirement: newly submitted applications should appear under Pending.
           const pendingBucket = [
             ...filteredApplications.pending,
-            ...filteredApplications.awaitingPayment,
             ...filteredApplications.applied
           ];
 
@@ -1776,7 +2029,33 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           });
 
-          // Store counts separately but combine pending display
+           // Store counts separately but combine pending display
+          const getCountsForType = (typeVal: string) => {
+            return {
+              applied: filteredApplications.applied.filter((app: any) => app.type === typeVal).length,
+              pending: pendingBucket.filter((app: any) => app.type === typeVal).length,
+              awaitingPayment: filteredApplications.awaitingPayment.filter((app: any) => app.type === typeVal).length,
+              approved: approvedWithoutRenewal.filter((app: any) => app.type === typeVal).length,
+              objection: filteredApplications.objection.filter((app: any) => app.type === typeVal).length,
+              rejected: filteredApplications.rejected.filter((app: any) => app.type === typeVal).length
+            };
+          };
+
+          this.detailedCounts = {
+            total: {
+              applied: filteredApplications.applied.length,
+              pending: pendingBucket.length,
+              awaitingPayment: filteredApplications.awaitingPayment.length,
+              approved: approvedWithoutRenewal.length,
+              objection: filteredApplications.objection.length,
+              rejected: filteredApplications.rejected.length
+            },
+            newLicense: getCountsForType('new-license'),
+            renewal: getCountsForType('license-renewal'),
+            salesman: getCountsForType('salesman-barman'),
+            company: getCountsForType('company-registration')
+          };
+
           this.dashboardCounts = {
             applied: 0,
             pending: pendingBucket.length,
@@ -1816,6 +2095,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
           this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          this.loadSupplyChainModuleStats();
+          this.updateSingleWindowChart();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
@@ -1854,7 +2135,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
           const pendingBucket = [
             ...filteredApplications.pending,
-            ...filteredApplications.awaitingPayment,
             ...filteredApplications.applied
           ];
 
@@ -1909,6 +2189,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           });
 
           this.refreshSupplyChainPendingCounts();
+          this.loadSupplyChainModuleStats();
+          this.updateSingleWindowChart();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard applications:', error);
@@ -1965,7 +2247,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Roles that have their own full dashboard component (SPA-like)
-    return roleId ? [5, 6, 7, 10].includes(roleId) : false;
+    return roleId ? [5, 6, 7].includes(roleId) : false;
   }
 
   isLicenseeUser(): boolean {
@@ -2111,6 +2393,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showBreweryOrDistilleryMenus = false;
       this.showBreweryOrDistilleryWalletViews = false;
       this.showManufacturingWalletNav = false;
+      this.loadDashboardData();
       return;
     }
 
@@ -2140,6 +2423,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
+          this.updateAvailableChartModules();
+          this.loadDashboardData();
         },
         error: () => {
           this.showDistilleryMenus = false;
@@ -2148,6 +2433,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.showManufacturingWalletNav = false;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
+          this.updateAvailableChartModules();
+          this.loadDashboardData();
         }
       });
   }
