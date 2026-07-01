@@ -30,22 +30,34 @@ button[class*="dropdown"]::after {
 /* Module dropdown panel — wider panel so long labels like "Hologram Procurement" fit on one line */
 .module-dropdown-panel {
   min-width: 240px !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 10px 40px rgba(15, 23, 42, 0.14),
+    0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  border: 1px solid rgba(99, 102, 241, 0.12) !important;
+  overflow: hidden;
 
   .mat-mdc-option {
     font-size: 0.875rem;
     font-weight: 500;
-    padding: 0 16px;
-    min-height: 42px;
+    padding: 0 18px;
+    min-height: 44px;
     white-space: nowrap;
+    border-radius: 0;
+    transition: background 0.15s ease;
 
     &.mdc-list-item--selected:not(.mdc-list-item--disabled) {
-      background: rgba(99, 102, 241, 0.08);
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.06) 100%);
       color: #4f46e5;
       font-weight: 700;
+
+      .mdc-list-item__primary-text {
+        color: #4f46e5 !important;
+      }
     }
 
     &:hover:not(.mdc-list-item--disabled) {
-      background: rgba(99, 102, 241, 0.05);
+      background: rgba(99, 102, 241, 0.06);
     }
   }
 }
