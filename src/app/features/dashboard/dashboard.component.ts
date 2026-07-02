@@ -619,7 +619,50 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onChartDateFilterChange(): void {
     const month = this.selectedChartMonth !== '' ? Number(this.selectedChartMonth) : undefined;
-    const year = this.selectedChartYear !== '' ? Number(this.selectedChartYear) : undefined;
+    const year  = this.selectedChartYear  !== '' ? Number(this.selectedChartYear)  : undefined;
+    const isITCell = this.currentUser?.roleId === 6;
+
+    if (isITCell) {
+      // IT Cell: filter hologram items client-side by month/year then recount
+      this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+        let items = Array.isArray(res) ? res : [];
+
+        // Apply month/year filter on the date field
+        if (month !== undefined || year !== undefined) {
+          items = items.filter(item => {
+            const d = new Date(item.date || item.created_at || item.submissionDate || '');
+            if (isNaN(d.getTime())) return false;
+            if (month !== undefined && (d.getMonth() + 1) !== month) return false;
+            if (year  !== undefined && d.getFullYear() !== year)         return false;
+            return true;
+          });
+        }
+
+        const pending = items.filter(item => {
+          const s = String(item?.status ?? '').toLowerCase();
+          return s.includes('submitted') || s.includes('under_it_cell_review') || s.includes('pending_verification');
+        }).length;
+        const approved = items.filter(x => {
+          const s = String(x.status || '').toLowerCase();
+          return s.includes('approved') || s.includes('issued') || s.includes('verified') || s.includes('forwarded');
+        }).length;
+        const rejected = items.filter(x => {
+          const s = String(x.status || '').toLowerCase();
+          return s.includes('rejected') || s.includes('cancelled');
+        }).length;
+
+        this.supplyChainModuleCounts['hologram'] = {
+          applied: items.length,
+          pending,
+          approved,
+          objection: 0,
+          rejected
+        };
+        this.updateSingleWindowChart();
+      });
+      return;
+    }
+
     this.unifiedDashboardService
       .getDetailedUnifiedDashboardCounts(
         this.dashboardConfig,
