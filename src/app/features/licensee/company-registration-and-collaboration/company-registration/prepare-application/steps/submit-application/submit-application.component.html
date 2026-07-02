@@ -19,7 +19,7 @@
       </div>
       <div class="application-summary">
         <div class="summary-row" *ngFor="let item of getSummaryData()">
-          <span class="label">{{ item.key }}:</span>
+          <span class="label">{{ item.label }}:</span>
           <span class="value">{{ item.value }}</span>
         </div>
       </div>
@@ -32,8 +32,8 @@
         <h3>License Details</h3>
       </div>
       <div class="details-grid">
-        <div class="detail-item" *ngFor="let item of companyDetails" [class.full-width]="item.key === 'Office Address' || item.key === 'Factory Address'">
-          <span class="label">{{ item.key }}:</span>
+        <div class="detail-item" *ngFor="let item of companyDetails" [class.full-width]="item.label === 'Office Address' || item.label === 'Factory Address'">
+          <span class="label">{{ item.label }}:</span>
           <span class="value">{{ item.value }}</span>
         </div>
       </div>
@@ -46,8 +46,8 @@
         <h3>Member Details</h3>
       </div>
       <div class="details-grid">
-        <div class="detail-item" *ngFor="let item of memberDetails" [class.full-width]="item.key === 'Member Address'">
-          <span class="label">{{ item.key }}:</span>
+        <div class="detail-item" *ngFor="let item of memberDetails" [class.full-width]="item.label === 'Member Address'">
+          <span class="label">{{ item.label }}:</span>
           <span class="value">{{ item.value }}</span>
         </div>
       </div>
@@ -60,8 +60,8 @@
         <h3>Payment Details</h3>
       </div>
       <div class="details-grid">
-        <div class="detail-item" *ngFor="let item of paymentDetails" [class.full-width]="item.key === 'Payment Remarks'">
-          <span class="label">{{ item.key }}:</span>
+        <div class="detail-item" *ngFor="let item of paymentDetails" [class.full-width]="item.label === 'Payment Remarks'">
+          <span class="label">{{ item.label }}:</span>
           <span class="value">{{ item.value }}</span>
         </div>
       </div>

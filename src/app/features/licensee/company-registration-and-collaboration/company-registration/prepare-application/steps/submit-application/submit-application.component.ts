@@ -102,35 +102,35 @@ export class SubmitApplicationComponent implements OnDestroy {
   }
 
   // Get summary data for the application summary section
-  getSummaryData(): { key: string; value: any }[] {
-    const summary: { key: string; value: any }[] = [];
+  getSummaryData(): { label: string; value: any }[] {
+    const summary: { label: string; value: any }[] = [];
     
-    // Add key company details
-    const appYearData = this.companyDetails.find(item => item.key === 'Application Year');
-    if (appYearData) summary.push({ key: 'Application Year', value: appYearData.value });
+    // Add selected company details
+    const appYearData = this.companyDetails.find(item => item.label === 'Application Year');
+    if (appYearData) summary.push({ label: 'Application Year', value: appYearData.value });
     
-    const brandTypeData = this.companyDetails.find(item => item.key === 'Brand Type');
-    if (brandTypeData) summary.push({ key: 'Brand Type', value: brandTypeData.value });
+    const brandTypeData = this.companyDetails.find(item => item.label === 'Brand Type');
+    if (brandTypeData) summary.push({ label: 'Brand Type', value: brandTypeData.value });
     
-    const companyNameData = this.companyDetails.find(item => item.key === 'Company Name');
-    if (companyNameData) summary.push({ key: 'Company Name', value: companyNameData.value });
+    const companyNameData = this.companyDetails.find(item => item.label === 'Company Name');
+    if (companyNameData) summary.push({ label: 'Company Name', value: companyNameData.value });
     
-    const panData = this.companyDetails.find(item => item.key === 'PAN');
-    if (panData) summary.push({ key: 'PAN', value: panData.value });
+    const panData = this.companyDetails.find(item => item.label === 'PAN');
+    if (panData) summary.push({ label: 'PAN', value: panData.value });
     
-    // Add key member details
-    const memberNameData = this.memberDetails.find(item => item.key === 'Member Name');
-    if (memberNameData) summary.push({ key: 'Member Name', value: memberNameData.value });
+    // Add selected member details
+    const memberNameData = this.memberDetails.find(item => item.label === 'Member Name');
+    if (memberNameData) summary.push({ label: 'Member Name', value: memberNameData.value });
     
-    const memberMobileData = this.memberDetails.find(item => item.key === 'Member Mobile Number');
-    if (memberMobileData) summary.push({ key: 'Contact Number', value: memberMobileData.value });
+    const memberMobileData = this.memberDetails.find(item => item.label === 'Member Mobile Number');
+    if (memberMobileData) summary.push({ label: 'Contact Number', value: memberMobileData.value });
     
     // Add payment amount
-    const paymentAmountData = this.paymentDetails.find(item => item.key === 'Payment Amount');
-    if (paymentAmountData) summary.push({ key: 'Payment Amount', value: `₹${paymentAmountData.value}` });
+    const paymentAmountData = this.paymentDetails.find(item => item.label === 'Payment Amount');
+    if (paymentAmountData) summary.push({ label: 'Payment Amount', value: `₹${paymentAmountData.value}` });
     
     // Add application date
-    summary.push({ key: 'Application Date', value: new Date().toLocaleDateString('en-GB') });
+    summary.push({ label: 'Application Date', value: new Date().toLocaleDateString('en-GB') });
     
     return summary;
   }
@@ -139,15 +139,15 @@ export class SubmitApplicationComponent implements OnDestroy {
   private getGroupedEntries<T extends Record<string, any>>(
     groupKey: string,
     labels: Record<string, string>
-  ): { key: string; value: any }[] {
+  ): { label: string; value: any }[] {
     const storedData = sessionStorage.getItem(groupKey);
     if (!storedData) return [];
 
     try {
       const parsedData: T = JSON.parse(storedData);
-      return Object.keys(parsedData).map(key => ({
-        key: labels[key] || key,
-        value: parsedData[key]
+      return Object.keys(parsedData).map(fieldName => ({
+        label: labels[fieldName] || fieldName,
+        value: parsedData[fieldName]
       }));
     } catch (error) {
       console.error(`Error parsing sessionStorage key "${groupKey}":`, error);
