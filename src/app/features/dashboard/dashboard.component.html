@@ -35,7 +35,10 @@
     <!-- Role-Specific Full Dashboards (when no specific section is selected) -->
     <div *ngIf="shouldShowRoleSpecificDashboard()" class="role-specific-dashboard">
       <!-- Permit Section Dashboard -->
-      <app-permit-section-dashboard *ngIf="currentUser?.roleId === 5"></app-permit-section-dashboard>
+      <app-permit-section-dashboard *ngIf="currentUser?.roleId === 5"
+        [selectedModule]="selectedChartModule"
+        [moduleCounts]="supplyChainModuleCounts">
+      </app-permit-section-dashboard>
 
       <!-- Commissioner Dashboard -->
       <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"

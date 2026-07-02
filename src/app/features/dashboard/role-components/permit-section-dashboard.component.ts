@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -180,6 +180,11 @@ export class PermitSectionDashboardComponent implements OnInit {
   allPermits: PermitData[] = [];
   filteredPermits: PermitData[] = [];
   selectedApplicationType: string = 'all';
+
+  /** Selected module from the parent chart dropdown — drives stat box filtering */
+  @Input() selectedModule: string = 'all';
+  /** supplyChainModuleCounts passed from parent — used for per-module stat boxes */
+  @Input() moduleCounts: Record<string, any> = {};
 
   // Pagination
   currentPage: number = 1;
@@ -427,25 +432,36 @@ export class PermitSectionDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
+    // When a specific module is selected, use its counts from moduleCounts
+    if (this.selectedModule && this.selectedModule !== 'all') {
+      const mc = this.moduleCounts[this.selectedModule];
+      if (mc) {
+        const total = (mc.applied || 0) || (mc.pending || 0) + (mc.approved || 0) +
+                      (mc.objection || 0) + (mc.rejected || 0);
+        return {
+          applied: total,
+          pending: mc.pending || 0,
+          approved: mc.approved || 0,
+          rejected: mc.rejected || 0
+        };
+      }
+    }
+
+    // All Modules: use allPermits totals
     const actionablePending = this.getActionablePendingCount();
 
-    // Applied = requisitions + company registrations (matches the bar chart modules)
-    const applied = this.allPermits.length;
-
-    // Approved = items with an approved/issued/complete status but not rejected
     const approved = this.allPermits.filter(p => {
       const s = String(p.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       return (s.includes('approv') || s.includes('issued') || s.includes('complete')) &&
              !s.includes('reject');
     }).length;
 
-    // Rejected = items with a rejected/cancelled status
     const rejected = this.allPermits.filter(p => {
       const s = String(p.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       return s.includes('reject') || s.includes('cancel');
     }).length;
 
-    return { applied, pending: actionablePending, approved, rejected };
+    return { applied: this.allPermits.length, pending: actionablePending, approved, rejected };
   }
 
   getFilterOptions() {
