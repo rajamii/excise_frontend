@@ -2029,8 +2029,7 @@ mat-card-content {
     background: transparent;
     border-radius: 12px;
     box-shadow: none;
-    overflow: hidden;
-    height: calc(100vh - 160px);
+    overflow: visible;
 
     // Ensure role-specific components fill the container
     app-permit-section-dashboard,
@@ -2038,8 +2037,8 @@ mat-card-content {
     app-itcell-dashboard,
     app-officer-in-charge-dashboard {
         display: block;
-        height: 100%;
-        overflow: auto;
+        height: auto;
+        overflow: visible;
     }
 }
 
@@ -2048,14 +2047,14 @@ mat-card-content {
 // ========================================
 @media (max-width: 768px) {
     .role-specific-dashboard {
-        height: calc(100vh - 120px);
+        height: auto;
         border-radius: 8px;
     }
 }
 
 @media (max-width: 480px) {
     .role-specific-dashboard {
-        height: calc(100vh - 100px);
+        height: auto;
         border-radius: 6px;
     }
 }

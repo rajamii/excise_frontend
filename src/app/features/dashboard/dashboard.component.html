@@ -539,8 +539,7 @@
     </div>
 
     <!-- System Applications Distribution Bar Chart Section (Shown for all users) -->
-    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser">
-      <mat-card class="chart-card">
+    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser && (!shouldShowRoleSpecificDashboard() || currentUser?.roleId === 6)">      <mat-card class="chart-card">
         <div class="chart-header-container">
           <div class="chart-title-area">
             <div class="chart-badge">

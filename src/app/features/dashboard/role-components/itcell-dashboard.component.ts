@@ -108,6 +108,7 @@ interface ITCellData {
   styles: [`
     .itcell-dashboard {
       padding: 1rem;
+      padding-bottom: 0;
     }
 
     .data-table-section {
