@@ -515,9 +515,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Requisitions
     this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const items = Array.isArray(res) ? res : [];
+      const allItems = Array.isArray(res) ? res : [];
+      // For commissioner, only count items that have reached or passed the commissioner's stage
+      const isCommissioner = this.isCommissionerUser();
+      const items = isCommissioner
+        ? allItems.filter(x => {
+            const s = String(x.status || '').toLowerCase();
+            return s.includes('forwarded') || s.includes('commissioner') ||
+                   s.includes('pending_commissioner') || s.includes('under_commissioner_review') ||
+                   s.includes('approved_by');
+          })
+        : allItems;
       const pending = this.sidebarPendingBadgeService.countRequisitionPendingReview(items);
-      const awaitingPayment = this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
+      const awaitingPayment = isCommissioner ? 0 : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
       const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
       const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
       this.supplyChainModuleCounts['requisition'] = {
@@ -532,7 +542,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Revalidations
     this.supplyChainService.getRevalidationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const items = Array.isArray(res) ? res : [];
+      const allItems = Array.isArray(res) ? res : [];
+      // For commissioner, only count items that have reached or passed the commissioner's stage
+      const isCommissioner = this.isCommissionerUser();
+      const items = isCommissioner
+        ? allItems.filter(x => {
+            const s = String(x.status || '').toLowerCase();
+            return s.includes('forwarded') || s.includes('commissioner') ||
+                   s.includes('pending_commissioner') || s.includes('under_commissioner_review') ||
+                   s.includes('approved_by');
+          })
+        : allItems;
       const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
       const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
       const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
@@ -548,7 +568,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Cancellations
     this.supplyChainService.getCancellationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const items = Array.isArray(res) ? res : [];
+      const allItems = Array.isArray(res) ? res : [];
+      // For commissioner, only count items that have reached or passed the commissioner's stage
+      const isCommissioner = this.isCommissionerUser();
+      const items = isCommissioner
+        ? allItems.filter(x => {
+            const s = String(x.status || '').toLowerCase();
+            return s.includes('forwarded') || s.includes('commissioner') ||
+                   s.includes('pending_commissioner') || s.includes('under_commissioner_review') ||
+                   s.includes('approved_by');
+          })
+        : allItems;
       const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
       const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
       const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
