@@ -246,21 +246,44 @@ export class ITCellDashboardComponent implements OnInit {
   }
 
   // Dashboard statistics methods — use ALL hologram items for correct totals
+  // Uses same logic as itcell.component.ts isApprovedLikeStatus/isPendingLikeStatus
+  private normalizeToken(value: any): string {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private isApproved(status: string): boolean {
+    const t = this.normalizeToken(status);
+    // Rejected/cancelled is never approved
+    if (t.includes('rejected') || t.includes('cancelled')) return false;
+    // Pending = still in IT Cell queue
+    const isPending = t.includes('submittedhp') || t.includes('submitted') ||
+                      t.includes('underitcellreview') || t.includes('itcellreview');
+    // Approved = everything that passed IT Cell (not pending, not rejected)
+    return !isPending;
+  }
+
+  private isForwarded(status: string): boolean {
+    const t = this.normalizeToken(status);
+    return (t.includes('forwarded') && t.includes('commissioner')) || t.includes('forwardedtocommissioner');
+  }
+
+  private isPending(status: string): boolean {
+    const t = this.normalizeToken(status);
+    if (t.includes('rejected') || t.includes('cancelled')) return false;
+    return t.includes('submittedhp') || t.includes('submitted') ||
+           t.includes('underitcellreview') || t.includes('itcellreview');
+  }
+
   getDashboardStatistics() {
     return {
       applied:  this.allHologramItems.length,
-      pending:  this.allHologramItems.filter(app => {
-                  const s = app.status.toLowerCase();
-                  return s.includes('submitted') || s.includes('pending') ||
-                         s.includes('under_it_cell_review') || s.includes('pending_verification');
-                }).length,
-      approved: this.allHologramItems.filter(app => {
-                  const s = app.status.toLowerCase();
-                  return s.includes('verified') || s.includes('forwarded') || s.includes('approved') || s.includes('issued');
-                }).length,
-      rejected: this.allHologramItems.filter(app =>
-                  app.status.toLowerCase().includes('rejected') || app.status.toLowerCase().includes('cancelled')
-                ).length
+      pending:  this.allHologramItems.filter(app => this.isPending(app.status)).length,
+      // Approved = everything IT Cell has processed (not pending, not rejected)
+      approved: this.allHologramItems.filter(app => this.isApproved(app.status)).length,
+      rejected: this.allHologramItems.filter(app => {
+                  const t = this.normalizeToken(app.status);
+                  return t.includes('rejected') || t.includes('cancelled');
+                }).length
     };
   }
 

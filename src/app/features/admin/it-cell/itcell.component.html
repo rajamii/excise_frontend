@@ -30,16 +30,6 @@
             <p class="card-label">Pending</p>
           </div>
         </div>
-        <div class="summary-card forwarded-requests summary-card-clickable" role="button" tabindex="0"
-          (click)="onSummaryCardClick('Forwarded to Commissioner')" [class.active]="activeSummaryFilter === 'Forwarded to Commissioner'">
-          <div class="card-icon">
-            <i class="bi bi-arrow-right-circle"></i>
-          </div>
-          <div class="card-content">
-            <h3 class="card-value">{{ getStatusCount('Forwarded to Commissioner') }}</h3>
-            <p class="card-label">Forwarded</p>
-          </div>
-        </div>
         <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
           (click)="onSummaryCardClick('Approved')" [class.active]="activeSummaryFilter === 'Approved'">
           <div class="card-icon">

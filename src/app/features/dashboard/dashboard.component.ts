@@ -594,17 +594,28 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       let pending: number;
       if (isITCell) {
-        // For IT Cell: only items that specifically need IT Cell review are pending
+        // Same logic as itcell.component.ts isPendingLikeStatus
         pending = items.filter(item => {
-          const s = String(item?.status ?? '').toLowerCase();
-          return s.includes('submitted') || s.includes('under_it_cell_review') || s.includes('pending_verification');
+          const t = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (t.includes('rejected') || t.includes('cancelled')) return false;
+          return t.includes('submittedhp') || t.includes('submitted') ||
+                 t.includes('underitcellreview') || t.includes('itcellreview');
         }).length;
       } else {
         pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
       }
 
       const awaitingPayment = isITCell ? 0 : this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
-      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
+      // For IT Cell: approved = everything NOT pending and NOT rejected (all downstream stages)
+      const approved = isITCell
+        ? items.filter(x => {
+            const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (t.includes('rejected') || t.includes('cancelled')) return false;
+            const isPending = t.includes('submittedhp') || t.includes('submitted') ||
+                              t.includes('underitcellreview') || t.includes('itcellreview');
+            return !isPending;
+          }).length
+        : items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
       const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
       this.supplyChainModuleCounts['hologram'] = {
         applied: items.length,
@@ -639,12 +650,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         const pending = items.filter(item => {
-          const s = String(item?.status ?? '').toLowerCase();
-          return s.includes('submitted') || s.includes('under_it_cell_review') || s.includes('pending_verification');
+          const t = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const isApproved = t.includes('approved') || t.includes('cartoonassigned') || t.includes('cartonassigned');
+          if (isApproved) return false;
+          return t.includes('submit') || t.includes('underitcellreview') ||
+                 t.includes('itcellreview') || t.includes('pending') || t.includes('review');
         }).length;
+        // approved = everything NOT pending and NOT rejected (all downstream stages count as IT Cell approved)
         const approved = items.filter(x => {
-          const s = String(x.status || '').toLowerCase();
-          return s.includes('approved') || s.includes('issued') || s.includes('verified') || s.includes('forwarded');
+          const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (t.includes('rejected') || t.includes('cancelled')) return false;
+          const isPending = t.includes('submittedhp') || t.includes('submitted') ||
+                            t.includes('underitcellreview') || t.includes('itcellreview');
+          return !isPending;
         }).length;
         const rejected = items.filter(x => {
           const s = String(x.status || '').toLowerCase();
