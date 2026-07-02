@@ -38,7 +38,9 @@
       <app-permit-section-dashboard *ngIf="currentUser?.roleId === 5"></app-permit-section-dashboard>
 
       <!-- Commissioner Dashboard -->
-      <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"></app-commissioner-dashboard>
+      <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"
+        [supplyChainHologramPending]="supplyChainModuleCounts['hologram'].pending || 0">
+      </app-commissioner-dashboard>
 
       <!-- IT Cell Dashboard -->
       <app-itcell-dashboard *ngIf="currentUser?.roleId === 6"></app-itcell-dashboard>

@@ -400,11 +400,60 @@
 
             <!-- Hologram Register Table -->
             <div class="hologram-register-table" *ngIf="activeTab === 'hologram'">
+              <div class="hologram-register-header mb-3">
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <div class="summary-card total-requests">
+                      <div class="card-icon">
+                        <i class="bi bi-list-ul"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getHologramSummaryCount('all') }}</h3>
+                        <p class="card-label">All Applications</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-card pending-requests">
+                      <div class="card-icon">
+                        <i class="bi bi-clock"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getHologramSummaryCount('pending') }}</h3>
+                        <p class="card-label">Pending</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-card approved-requests">
+                      <div class="card-icon">
+                        <i class="bi bi-check-circle"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getHologramSummaryCount('approved') }}</h3>
+                        <p class="card-label">Approved</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-card rejected-requests">
+                      <div class="card-icon">
+                        <i class="bi bi-x-circle"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getHologramSummaryCount('rejected') }}</h3>
+                        <p class="card-label">Rejected</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="register-container">
                 <div class="register-header-bar">
                   <h5 class="register-table-title">
                     <i class="bi bi-table me-2"></i>
-                    Hologram Procuremenet Applications
+                    Hologram Procurement Applications
                   </h5>
                   <div class="register-info">
                     <span class="entries-count">{{ filteredHologramData.length }} Applications</span>
@@ -458,7 +507,18 @@
                         </td>
                         <td class="actions">
                           <div class="action-buttons">
-                            <span class="text-muted small">Use Details</span>
+                            <button class="btn btn-outline-primary btn-sm" (click)="viewHologramDetails(item)"
+                              title="View Details">
+                              <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" (click)="approveHologram(item)"
+                              title="Approve" *ngIf="canApproveHologram(item)">
+                              <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" (click)="rejectHologram(item)"
+                              title="Reject" *ngIf="hasHologramAction(item, 'REJECT')">
+                              <i class="bi bi-x"></i>
+                            </button>
                           </div>
                         </td>
                       </tr>

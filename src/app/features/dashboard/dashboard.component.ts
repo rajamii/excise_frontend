@@ -591,6 +591,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const items = Array.isArray(res) ? res : [];
       const isITCell = this.currentUser?.roleId === 6;
+      const isCommissioner = this.isCommissionerUser();
 
       let pending: number;
       if (isITCell) {
@@ -605,7 +606,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
       }
 
-      const awaitingPayment = isITCell ? 0 : this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
+      const awaitingPayment = (isITCell || isCommissioner) ? 0 : this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
       // For IT Cell: approved = everything NOT pending and NOT rejected (all downstream stages)
       const approved = isITCell
         ? items.filter(x => {
@@ -1939,8 +1940,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // without waiting for unified stats/table data.
     if (this.shouldShowRoleSpecificDashboard()) {
       this.isLoading = false;
-      // IT Cell (roleId 6) still needs supply chain stats for the bar chart
-      if (this.currentUser?.roleId === 6) {
+      // IT Cell (roleId 6) and Commissioner (roleId 10) need supply chain stats
+      // so the stat boxes and bar chart show correct hologram pending counts
+      if (this.currentUser?.roleId === 6 || this.currentUser?.roleId === 10) {
         this.loadSupplyChainModuleStats();
       }
       return;
@@ -1960,7 +1962,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getSupplyChainPendingCount(section: string): number {
     const key = String(section || '').trim().toLowerCase();
-    return Number(this.supplyChainPendingCounts?.[key] || 0);
+    const sidebarPending = Number(this.supplyChainPendingCounts?.[key] || 0);
+    if (sidebarPending > 0) {
+      return sidebarPending;
+    }
+
+    return Number(this.supplyChainModuleCounts?.[key]?.pending || 0);
   }
 
   getOicPendingCount(section: string): number {
