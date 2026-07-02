@@ -76,11 +76,6 @@
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
-                <i class="bi bi-truck me-2"></i> TRANSIT
-              </button>
-            </li>
-            <li class="nav-item">
               <button class="nav-link" [class.active]="activeTab === 'hologram'" (click)="setActiveTab('hologram')">
                 <i class="bi bi-qr-code me-2"></i> HOLOGRAM PROCUREMENT
               </button>
@@ -391,11 +386,6 @@
             <!-- Cancellation Tab Content -->
             @if (activeTab === "cancellation") {
             <app-cancellation></app-cancellation>
-            }
-
-            <!-- Transit Tab Content -->
-            @if (activeTab === "transit") {
-            <app-transit [userRole]="'commissioner'"></app-transit>
             }
 
             <!-- Hologram Register Table -->

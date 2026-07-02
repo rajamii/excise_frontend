@@ -452,11 +452,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     // Brewery/Distillery supply chain items: Transit, Hologram
+    // Commissioner does not handle transit permits — exclude from their module list
+    if (isAdmin || this.showBreweryOrDistilleryMenus) {
+      modules.push({ value: 'transit', label: 'Transit Permits' });
+    }
     if (isAdmin || isCommissioner || this.showBreweryOrDistilleryMenus) {
-      modules.push(
-        { value: 'transit', label: 'Transit Permits' },
-        { value: 'hologram', label: 'Hologram Procurement' }
-      );
+      modules.push({ value: 'hologram', label: 'Hologram Procurement' });
     }
     this.availableChartModules = modules;
   }
@@ -561,7 +562,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.updateSingleWindowChart();
     });
 
-    // Transit Permits
+    // Transit Permits — Commissioner does not handle transit permits, skip loading
+    if (!this.isCommissionerUser()) {
     this.supplyChainService.getTransitPermits().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const items = Array.isArray(res) ? res : [];
       const billNos = new Set<string>();
@@ -586,6 +588,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       };
       this.updateSingleWindowChart();
     });
+    }
 
     // Holograms
     this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
@@ -616,7 +619,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                               t.includes('underitcellreview') || t.includes('itcellreview');
             return !isPending;
           }).length
-        : items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
+        : items.filter(x => {
+            const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            return t.includes('approved') || t.includes('issued') ||
+                   t.includes('paymentcompleted') || t.includes('cartoonassigned') ||
+                   t.includes('cartonassigned');
+          }).length;
       const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
       this.supplyChainModuleCounts['hologram'] = {
         applied: items.length,
@@ -1976,11 +1984,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainPendingTotal(): number {
+    const isCommissioner = this.isCommissionerUser();
     return this.getSupplyChainPendingCount('requisition') +
            this.getSupplyChainPendingCount('revalidation') +
            this.getSupplyChainPendingCount('cancellation') +
            this.getSupplyChainPendingCount('hologram') +
-           this.getSupplyChainPendingCount('transit');
+           (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
   }
 
   getSupplyChainAppliedTotal(): number {
