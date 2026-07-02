@@ -28,11 +28,10 @@ export interface HologramProcurement {
   localQty: number;
   exportQty: number;
   defenceQty: number;
-  // FIXED: Original requested quantities that never change after submission
   requested_local_qty?: number;
   requested_export_qty?: number;
   requested_defence_qty?: number;
-  total_requested_quantity?: number;  // Sum of all requested quantities (from backend)
+  total_requested_quantity?: number;
   paymentStatus?: string;
   paymentDetails?: any;
   remarks?: string;
@@ -106,7 +105,7 @@ export interface HologramRequest {
   submissionDate?: string;
   usageDate: string;
   quantity: number;
-  hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE'; // Added to support type
+  hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE';
   remarks?: string;
   status?: string;
   stageId?: number;
@@ -121,7 +120,6 @@ export interface HologramRequest {
   issued_assets?: any[];
 }
 
-// Keep legacy interfaces for compatibility if needed, but we are moving to API
 export interface HologramDailyEntry {
   id: string;
   date: string;
@@ -131,8 +129,6 @@ export interface HologramDailyEntry {
   utilizedQuantity: number;
   leftOverQuantity: number;
   isFixed: boolean;
-
-  // Legacy fields for backward compatibility
   issuedFromSerial?: string;
   issuedToSerial?: string;
   issuedQuantity?: number;
@@ -140,7 +136,6 @@ export interface HologramDailyEntry {
   wastageToSerial?: string;
   wastageQuantity?: number;
   damageReason?: string;
-  // ... other legacy fields
 }
 
 export interface MonthlyTotals {
@@ -177,7 +172,7 @@ export interface HologramArrivalRecord {
   toSerial?: string;
 }
 
-// Liquor Data Interfaces for brand and size dropdowns
+
 export interface LiquorBrandSize {
   brandName: string;
   sizes: number[];
@@ -271,7 +266,6 @@ export class HologramDataService {
     const params = activeOnly ? new HttpParams().set('active_only', '1') : undefined;
     return this.http.get<HologramSupplierListResponse>(this.supplierMasterUrl, { params }).pipe(
       map((resp: any) => {
-        // Backward/variant safety: allow `{data: [...]}` or raw array responses
         if (Array.isArray(resp)) {
           return { success: true, data: resp } as HologramSupplierListResponse;
         }
@@ -337,27 +331,19 @@ export class HologramDataService {
   // Components can call this after successfully updating arrival details
   notifyArrivalUpdate(): void {
     this.arrivalUpdateSubject.next(undefined);
-    console.log('📢 Arrival update notification sent');
   }
 
   // Components can call this after successfully updating request details (allocation, approval, etc.)
   notifyRequestUpdate(): void {
     this.requestUpdateSubject.next(undefined);
-    console.log('📢 Request update notification sent');
   }
 
   // Components can call this after successfully updating daily register entries (save, approve, etc.)
   notifyDailyRegisterUpdate(): void {
     this.dailyRegisterUpdateSubject.next(undefined);
-    console.log('📢 Daily register update notification sent');
   }
 
   // --- Liquor Data API for Brand and Size Dropdowns ---
-
-  /**
-   * Fetches liquor brands and their available sizes from liquor_data_details table
-   * Filtered for Sikkim Distilleries Ltd brands only
-   */
   getLiquorBrandsAndSizes(): Observable<LiquorBrandSize[]> {
     // Add distillery filter to only get Sikkim Distilleries Ltd brands
     const params = new HttpParams().set('distillery', 'Sikkim Distilleries Ltd');
@@ -513,9 +499,6 @@ export class HologramDataService {
     return this.monthCodeMap[normalized] || 'jan';
   }
 
-  /**
-   * Migrates legacy single entry data to new multiple entries structure
-   */
   migrateLegacyEntry(entry: HologramDailyEntry): HologramDailyEntry {
     const migratedEntry = { ...entry };
 
@@ -532,7 +515,6 @@ export class HologramDataService {
       }
     }
 
-    // Migrate wastage entries
     if (!migratedEntry.wastageEntries || migratedEntry.wastageEntries.length === 0) {
       migratedEntry.wastageEntries = [];
       if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity) {
@@ -549,9 +531,7 @@ export class HologramDataService {
     return migratedEntry;
   }
 
-  /**
-   * Calculates total issued quantity from multiple entries
-   */
+ 
   getTotalIssuedQuantity(entry: HologramDailyEntry): number {
     if (entry.issuedEntries && entry.issuedEntries.length > 0) {
       return entry.issuedEntries.reduce((sum, issuedEntry) => sum + issuedEntry.quantity, 0);
@@ -559,9 +539,6 @@ export class HologramDataService {
     return entry.issuedQuantity || 0;
   }
 
-  /**
-   * Calculates total wastage quantity from multiple entries
-   */
   getTotalWastageQuantity(entry: HologramDailyEntry): number {
     if (entry.wastageEntries && entry.wastageEntries.length > 0) {
       return entry.wastageEntries.reduce((sum, wastageEntry) => sum + wastageEntry.quantity, 0);
@@ -569,17 +546,10 @@ export class HologramDataService {
     return entry.wastageQuantity || 0;
   }
 
-  /**
-   * Generates a unique ID for new entries
-   */
   generateId(): string {
     return crypto.randomUUID();
   }
 
-  /**
-   * Validates serial range and calculates quantity
-   * Inclusive calculation: from 1 to 1 = 1 hologram, from 1 to 10 = 10 holograms
-   */
   calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
     if (!fromSerial || !toSerial) return 0;
 
@@ -592,7 +562,6 @@ export class HologramDataService {
       const toNum = parseInt(toMatch[1], 10);
 
       if (toNum >= fromNum) {
-        // Inclusive range calculation: from 1 to 1 = 1, from 1 to 10 = 10
         return toNum - fromNum + 1;
       }
     }
@@ -600,9 +569,6 @@ export class HologramDataService {
     return 0;
   }
 
-  /**
-   * Validates that serial ranges don't overlap
-   */
   validateSerialRanges(entries: (HologramIssuedEntry | HologramWastageEntry)[]): boolean {
     const ranges: Array<{ from: number, to: number }> = [];
 
@@ -674,10 +640,8 @@ export class HologramDataService {
           return;
         }
 
-        // CRITICAL FIX: Skip entries that are pending usage (not yet filled by user)
-        // These are entries created by officer approval but not yet used
         if ((entry as any).isPendingUsage === true) {
-          console.log('⏭️ Data Service: Skipping pending usage entry:', entry.id);
+          // console.log('Data Service: Skipping pending usage entry:', entry.id);
           return;
         }
 
@@ -966,18 +930,13 @@ export class HologramDataService {
       initialOpening
     };
   }
+  
   // --- Daily Register Integration ---
 
-  /**
-   * Save Daily Register Entry to Backend
-   */
   saveDailyRegisterEntry(entryData: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/daily-register/`, entryData);
   }
 
-  /**
-   * Fetch Daily Register Entries from Backend
-   */
   getDailyRegisterEntries(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/daily-register/`);
   }
@@ -990,10 +949,6 @@ export class HologramDataService {
     return this.http.get<any>(`${this.apiUrl}/rolls-details/${rollId}/serial_ranges/`);
   }
 
-  /**
-   * Get requests with allocated rolls (Currently Issued Holograms)
-   * These are requests that have rolls_assigned populated (In Use status)
-   */
   getRequestsWithAllocatedRolls(): Observable<any[]> {
     const t = new Date().getTime();
     console.log('🔍 Fetching requests from API...');
@@ -1001,9 +956,6 @@ export class HologramDataService {
 
     return this.http.get<any[]>(`${this.apiUrl}/request/?_t=${t}`).pipe(
       map((requests: any[]) => {
-        console.log('📦 Received requests from API:', requests.length);
-        console.log('📦 Full API Response:', JSON.stringify(requests, null, 2));
-
         // Log all requests for debugging
         requests.forEach((req: any, index: number) => {
           console.log(`API Request ${index + 1}:`, {
@@ -1028,7 +980,6 @@ export class HologramDataService {
           });
         });
 
-        // Try filtering by BOTH snake_case AND camelCase (API might return either format)
         const filteredByRollsAssigned = requests.filter(req =>
           (req.rolls_assigned && Array.isArray(req.rolls_assigned) && req.rolls_assigned.length > 0) ||
           (req.rollsAssigned && Array.isArray(req.rollsAssigned) && req.rollsAssigned.length > 0)
@@ -1039,23 +990,13 @@ export class HologramDataService {
           (req.issuedAssets && Array.isArray(req.issuedAssets) && req.issuedAssets.length > 0)
         );
 
-        console.log('✅ Filtered by rolls_assigned/rollsAssigned:', filteredByRollsAssigned.length);
-        console.log('✅ Filtered by issued_assets/issuedAssets:', filteredByIssuedAssets.length);
-
-        // Use rolls_assigned if available, otherwise fall back to issued_assets
         const filtered = filteredByRollsAssigned.length > 0 ? filteredByRollsAssigned : filteredByIssuedAssets;
-
-        console.log('✅ Final filtered requests:', filtered.length);
 
         return filtered;
       })
     );
   }
 
-  /**
-   * Fetch Monthly Statement from Backend daily register entries AND rolls details
-   * This method fetches completed daily register entries and arrivals from backend
-   */
   getMonthlyStatementFromBackend(
     month: string,
     year: string,
@@ -1072,27 +1013,6 @@ export class HologramDataService {
       map(({ dailyEntries, rollsDetails }) => {
         // Handle pagination/response structure for rollsDetails - cast to any to avoid type issues
         const rollsArray: any[] = Array.isArray(rollsDetails) ? rollsDetails : ((rollsDetails as any)?.results || []);
-
-        console.log(`📦 Backend Daily Register: ${dailyEntries.length} total entries`);
-        console.log(`📦 Backend Rolls Details: ${rollsArray.length} total rolls`);
-
-        // Log first roll structure for debugging
-        if (rollsArray.length > 0) {
-          console.log('📋 Sample roll structure:', {
-            id: rollsArray[0].id,
-            carton_number: rollsArray[0].carton_number,
-            cartonNumber: rollsArray[0].cartonNumber,
-            received_date: rollsArray[0].received_date,
-            receivedDate: rollsArray[0].receivedDate,
-            type: rollsArray[0].type,
-            keys: Object.keys(rollsArray[0])
-          });
-        }
-
-        console.log(`📦 Total daily entries from backend: ${dailyEntries.length}`);
-
-        // Filter daily entries by month, year, hologram type
-        // Handle both camelCase (from DRF serializer) and snake_case field names
         const filteredEntries = dailyEntries.filter((entry: any) => {
           const entryDate = entry.usageDate || entry.usage_date || entry.submissionDate || entry.submission_date || '';
           const entryMonthKey = entryDate ? entryDate.substring(0, 7) : '';
@@ -1105,28 +1025,6 @@ export class HologramDataService {
           return true;
         });
 
-        console.log(`📊 Filtered daily entries for ${monthKey}: ${filteredEntries.length}`);
-
-        // Debug: Log sample entry structure
-        if (filteredEntries.length > 0) {
-          console.log('📋 Sample daily register entry:', {
-            id: filteredEntries[0].id,
-            reference_no: filteredEntries[0].reference_no,
-            issued_qty: filteredEntries[0].issued_qty,
-            wastage_qty: filteredEntries[0].wastage_qty,
-            issued_from: filteredEntries[0].issued_from,
-            issued_to: filteredEntries[0].issued_to,
-            wastage_from: filteredEntries[0].wastage_from,
-            wastage_to: filteredEntries[0].wastage_to,
-            issued_ranges: filteredEntries[0].issued_ranges,
-            wastage_ranges: filteredEntries[0].wastage_ranges,
-            brand_details: filteredEntries[0].brand_details,
-            bottle_size: filteredEntries[0].bottle_size
-          });
-        }
-
-        // Convert backend entries to HologramDailyEntry format
-        // Handle both camelCase (from DRF serializer) and snake_case field names
         const convertedEntries: HologramDailyEntry[] = filteredEntries.map((entry: any) => ({
           id: String(entry.id),
           date: entry.usageDate || entry.usage_date || entry.submissionDate || entry.submission_date || '',
@@ -1148,7 +1046,6 @@ export class HologramDataService {
           bottleSize: entry.bottleSize || entry.bottle_size || '',
           cartoonNumber: entry.rollRange || entry.roll_range || '',
           lockedRolls: [],
-          // Preserve original backend fields for fallback processing (both camelCase and snake_case)
           issued_ranges: entry.issuedRanges || entry.issued_ranges,
           wastage_ranges: entry.wastageRanges || entry.wastage_ranges,
           issued_qty: entry.issuedQty || entry.issued_qty,
@@ -1159,22 +1056,15 @@ export class HologramDataService {
 
         // Calculate totals from daily entries
         const totals = this.aggregateMonthlyTotals(convertedEntries);
-
-        // *** CRITICAL: Get arrivals from backend rolls details ***
-        // Filter rolls by type and received_date month
         const arrivals: HologramArrivalRecord[] = rollsArray
           .filter((roll: any) => {
             // Handle both camelCase and snake_case field names
             const cartonNumber = roll.carton_number || roll.cartonNumber || '';
             const rollType = (roll.type || 'LOCAL').toString().toUpperCase().trim();
             const typeMatch = rollType === hologramType;
-
-            // Check received_date matches the month
-            // Handle both date formats: "YYYY-MM-DD" and ISO "YYYY-MM-DDTHH:MM:SS"
-            // Also handle camelCase: receivedDate
             const receivedDate = roll.received_date || roll.receivedDate || '';
             if (!receivedDate) {
-              console.log(`⚠️ Roll ${cartonNumber || roll.id || 'unknown'}: No received_date`);
+              // console.log(` Roll ${cartonNumber || roll.id || 'unknown'}: No received_date`);
               return false;
             }
 
@@ -1182,7 +1072,7 @@ export class HologramDataService {
             const rollMonthKey = receivedDate.substring(0, 7);
             const dateMatch = rollMonthKey === monthKey;
 
-            console.log(`🔍 Roll ${cartonNumber}: type=${rollType}(match=${typeMatch}), date=${receivedDate}, monthKey=${rollMonthKey}(match=${dateMatch})`);
+            // console.log(` Roll ${cartonNumber}: type=${rollType}(match=${typeMatch}), date=${receivedDate}, monthKey=${rollMonthKey}(match=${dateMatch})`);
 
             return typeMatch && dateMatch;
           })
@@ -1197,7 +1087,7 @@ export class HologramDataService {
           }));
 
         const freshArrival = arrivals.reduce((sum, a) => sum + a.totalCount, 0);
-        console.log(`📊 Fresh Arrivals for ${monthKey} (${hologramType}): ${freshArrival} from ${arrivals.length} rolls`);
+        // console.log(` Fresh Arrivals for ${monthKey} (${hologramType}): ${freshArrival} from ${arrivals.length} rolls`);
 
         // Get opening stock from previous month
         const initialOpening = this.getInitialOpeningStock(hologramType);
@@ -1205,7 +1095,7 @@ export class HologramDataService {
         // Calculate closing balance: Opening + Fresh Arrival - Utilized - Wastage
         const closingBalance = initialOpening + freshArrival - totals.totalIssued - totals.totalWastage;
 
-        console.log(`✅ Monthly Statement: Opening=${initialOpening}, Fresh=${freshArrival}, Issued=${totals.totalIssued}, Wastage=${totals.totalWastage}, Closing=${closingBalance}`);
+        // console.log(` Monthly Statement: Opening=${initialOpening}, Fresh=${freshArrival}, Issued=${totals.totalIssued}, Wastage=${totals.totalWastage}, Closing=${closingBalance}`);
 
         return {
           monthKey,
@@ -1223,10 +1113,6 @@ export class HologramDataService {
     );
   }
 
-  /**
-   * Get Monthly Report from Backend API
-   * This uses the new monthly report endpoint that aggregates data automatically
-   */
   getMonthlyReport(
     month: string,
     year: string,

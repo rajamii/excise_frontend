@@ -19,8 +19,6 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
   passPhotoUrl: string | null = null;
   private photoSub?: Subscription;
-
-  // Properties for success page and form control
   acceptTerms: boolean = false;
   isSubmitting: boolean = false;
   applicationId: string | null = null;
@@ -128,7 +126,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
       const data = sessionStorage.getItem(key);
       return data ? JSON.parse(data) as T : null;
     } catch (e) {
-      console.error(`❌ Failed to parse session key ${key}:`, e);
+      console.error(`Failed to parse session key ${key}:`, e);
       return null;
     }
   }
@@ -210,9 +208,6 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     this.router.navigate(['/licensee/dashboard']);
   }
 
-  /**
-   * 🔍 DEBUG: Check sessionStorage before submission
-   */
   private debugSessionStorage(): void {
     console.group('🔍 DEBUG: SessionStorage Contents Before Submission');
 
@@ -234,43 +229,41 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
           console.table(parsed);
           console.groupEnd();
         } catch (e) {
-          console.error(`❌ Failed to parse ${key}:`, e);
+          console.error(`Failed to parse ${key}:`, e);
         }
       } else {
-        console.warn(`⚠️ ${key} is EMPTY`);
+        console.warn(`${key} is EMPTY`);
       }
     });
 
     // Check master data
-    console.group('📊 Master Data in Session');
-    ['districts', 'subdivisions', 'policeStations', 'licenseCategories', 'licenseTypes'].forEach(key => {
-      const data = sessionStorage.getItem(key);
-      if (data) {
-        try {
-          const parsed = JSON.parse(data);
-          console.log(`${key}: ${parsed.length} items`);
-        } catch (e) {
-          console.error(`❌ Failed to parse ${key}`);
-        }
-      } else {
-        console.warn(`⚠️ ${key} is MISSING`);
-      }
-    });
-    console.groupEnd();
+    // console.group('📊 Master Data in Session');
+    // ['districts', 'subdivisions', 'policeStations', 'licenseCategories', 'licenseTypes'].forEach(key => {
+    //   const data = sessionStorage.getItem(key);
+    //   if (data) {
+    //     try {
+    //       const parsed = JSON.parse(data);
+    //       console.log(`${key}: ${parsed.length} items`);
+    //     } catch (e) {
+    //       console.error(`❌ Failed to parse ${key}`);
+    //     }
+    //   } else {
+    //     console.warn(`⚠️ ${key} is MISSING`);
+    //   }
+    // });
+    // console.groupEnd();
 
-    const photoFile = this.licenseAppService.getPassPhoto();
-    console.log('📷 Photo file:', photoFile ? `${photoFile.name} (${photoFile.size} bytes)` : '❌ MISSING');
+    // const photoFile = this.licenseAppService.getPassPhoto();
+    // console.log('📷 Photo file:', photoFile ? `${photoFile.name} (${photoFile.size} bytes)` : '❌ MISSING');
 
-    console.groupEnd();
+    // console.groupEnd();
   }
 
-  /**
-   * ✅ FINAL SUBMIT
-   */
+  
   submit(): void {
-    console.log('🔵 Submit button clicked!');
-    console.log('isSubmitting:', this.isSubmitting);
-    console.log('acceptTerms:', this.acceptTerms);
+    // console.log('Submit button clicked!');
+    // console.log('isSubmitting:', this.isSubmitting);
+    // console.log('acceptTerms:', this.acceptTerms);
     
     if (!this.acceptTerms) {
       Swal.fire('Warning', 'Please accept the terms and conditions to proceed.', 'warning');
@@ -291,15 +284,14 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
       cancelButtonText: 'Cancel',
     }).then((confirm) => {
       if (!confirm.isConfirmed) {
-        console.log('❌ User cancelled submission');
+        console.log('User cancelled submission');
         return;
       }
 
-      console.log('✅ User confirmed, proceeding with submission');
+      // console.log('User confirmed, proceeding with submission');
       this.isSubmitting = true;
 
       try {
-        // 🔍 DEBUG: Show what we have
         this.debugSessionStorage();
 
         // Check photo
@@ -310,25 +302,24 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
           return;
         }
 
-        // ✅ Prepare FormData
+        // Prepare FormData
         const formData = this.licenseAppService.prepareOldLicenseFormData();
 
-        // 📋 Log what's being sent
-        console.group('📦 FINAL FORMDATA BEING SENT');
-        const formDataArray: any[] = [];
-        formData.forEach((value: FormDataEntryValue, key: string) => {
-          formDataArray.push([
-            key, 
-            value instanceof File ? `[File: ${value.name}, ${value.size} bytes]` : value
-          ]);
-        });
-        console.table(formDataArray);
-        console.groupEnd();
+        // console.group('📦 FINAL FORMDATA BEING SENT');
+        // const formDataArray: any[] = [];
+        // formData.forEach((value: FormDataEntryValue, key: string) => {
+        //   formDataArray.push([
+        //     key, 
+        //     value instanceof File ? `[File: ${value.name}, ${value.size} bytes]` : value
+        //   ]);
+        // });
+        // console.table(formDataArray);
+        // console.groupEnd();
 
-        // ✅ Submit
+
         this.licenseAppService.submitOldLicenseApplication(formData).subscribe({
           next: (response: any) => {
-            console.log('✅ Application submitted successfully:', response);
+            // console.log('Application submitted successfully:', response);
             
             // Set the application ID from response
             this.applicationId = response.applicationId || response.application_id || 'LA/XXX/XXXX-XX/XXXX';
@@ -345,8 +336,8 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
           },
 
           error: (err: any) => {
-            console.error('❌ Submission error:', err);
-            console.log('Full error object:', err);
+            console.error('Submission error:', err);
+            // console.log('Full error object:', err);
 
             let errorMessage = 'Failed to submit application.';
 
@@ -383,7 +374,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
         });
 
       } catch (error) {
-        console.error('❌ Unexpected error:', error);
+        console.error('Unexpected error:', error);
         Swal.fire('Error', 'An unexpected error occurred.', 'error');
         this.isSubmitting = false;
       }

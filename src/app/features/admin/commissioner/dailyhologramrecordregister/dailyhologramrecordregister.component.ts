@@ -27,7 +27,7 @@ interface FilterOptions {
 })
 export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   Math = Math;
-  private readonly IST_DEADLINE_UTC_HOUR = 11; // 5:00 PM IST == 11:30 UTC
+  private readonly IST_DEADLINE_UTC_HOUR = 11;
   private readonly IST_DEADLINE_UTC_MINUTE = 30;
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
@@ -643,7 +643,6 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
 
   clearAllData() {
     if (confirm('Are you sure you want to clear all register data? This will remove all entries.')) {
-      // This would need a backend endpoint to clear data
       alert('Clear functionality requires backend implementation');
     }
   }
@@ -712,10 +711,6 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     return 'text-success';
   }
 
-  /**
-   * SLA rule: deadline is always 5:00 PM local time on the "approval day".
-   * Why: backend often sends `deadline` as UTC (`...Z`), which becomes 10:30 PM in IST and shows wrong remaining time.
-   */
   private getEntryDeadlineAt5Pm(entry: DailyRegisterEntry): Date | null {
     const dateParts =
       this.extractYmdFromAny((entry as any)?.deadline) ||
