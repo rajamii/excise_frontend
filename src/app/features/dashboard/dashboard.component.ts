@@ -554,12 +554,39 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const awaitingPayment = isCommissioner ? 0 : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
 
       const approved = items.filter(x => {
-        const s = String(x.status || '').toLowerCase();
-        return s.includes('approved') || s.includes('issued');
+        const status = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const stage  = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const combined = `${status} ${stage}`;
+        const stageId = Number(x.current_stage ?? x.currentStage ?? -1);
+
+        if (isCommissioner) {
+          // For commissioner: only count truly final approvals (after payslip stage 33)
+          // "approved_commissioner" (stage 29) is NOT final — still needs payment
+          const isAwaitingPayment = combined.includes('approvedcommissioner') &&
+            !['forwardedpayslip','approvedpayslip','rejectedpayslip','paymentcompleted','paymentdone','permitsection']
+              .some(m => combined.includes(m));
+          if (isAwaitingPayment) return false;
+          if (combined.includes('forwardedpayslip') && combined.includes('permitsection')) return false;
+          if (combined.includes('rejectedpayslip')) return false;
+          if (combined.includes('approvedpayslip')) return true;
+          if (combined.includes('issued') || combined.includes('complete') || combined.includes('paymentcompleted')) return true;
+          if (x.currentStageIsFinal === true && combined.includes('approv') && !combined.includes('reject')) return true;
+          if (stageId > 33) return true;
+          return false;
+        }
+        return (combined.includes('approved') || combined.includes('issued')) && !combined.includes('reject');
       }).length;
       const rejected = items.filter(x => {
-        const s = String(x.status || '').toLowerCase();
-        return s.includes('rejected') || s.includes('cancelled');
+        const status = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const stage  = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const combined = `${status} ${stage}`;
+        if (isCommissioner) {
+          // For commissioner: only count final rejections (after payslip stage 33)
+          if (combined.includes('rejectedpayslip')) return true;
+          if (x.currentStageIsFinal === true && combined.includes('reject')) return true;
+          return false;
+        }
+        return combined.includes('rejected') || combined.includes('cancelled');
       }).length;
 
       // For commissioner: items still in transit to the commissioner stage are

@@ -33,6 +33,18 @@
       </div>
     </div>
 
+    <!-- Under Process card: visible to commissioner only — items in workflow but no action needed yet -->
+    <div class="summary-card underprocess-requests summary-card-clickable" role="button" tabindex="0" *ngIf="isCommissioner()"
+      (click)="onSummaryCardClick('UNDERPROCESS')" [class.active]="activeSummaryFilter === 'UNDERPROCESS'">
+      <div class="card-icon">
+        <i class="bi bi-arrow-repeat"></i>
+      </div>
+      <div class="card-content">
+        <h3 class="card-value">{{ getRequisitionStatusCount('UNDERPROCESS') }}</h3>
+        <p class="card-label">Under Process</p>
+      </div>
+    </div>
+
     <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
       (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
       <div class="card-icon">

@@ -2487,7 +2487,57 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return combined.includes('approvedcommissioner');
   }
 
+  /**
+   * Commissioner-specific: is this the FINAL approved state?
+   * Only items that have completed the full payslip cycle (stage 33 actioned)
+   * or have been issued/completed are truly approved for the commissioner's count.
+   * "APPROVED COMMISSIONER" (stage 29) is NOT final — still needs payment.
+   */
+  private isCommissionerFinalApproved(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+    const stageId = Number(item?.currentStage ?? -1);
+
+    // Explicitly NOT final: approved_commissioner awaiting payment
+    if (this.isApprovedCommissionerAwaitingPayment(item)) return false;
+    // Explicitly NOT final: forwarded payslip still at permit section
+    if (combined.includes('forwardedpayslip') && combined.includes('permitsection')) return false;
+    // Rejected payslip = rejected final
+    if (combined.includes('rejectedpayslip')) return false;
+
+    // Final approved: payslip was approved, or permit issued, or complete
+    if (combined.includes('approvedpayslip')) return true;
+    if (combined.includes('issued') || combined.includes('complete') || combined.includes('paymentcompleted')) return true;
+    // Backend marks it as final stage and it's approved
+    if (item?.currentStageIsFinal === true &&
+        (combined.includes('approv') || combined.includes('issued') || combined.includes('complete'))) return true;
+    // Stage 33 has been actioned (stageId > 33 means past it)
+    if (stageId > 33) return true;
+
+    return false;
+  }
+
+  /**
+   * Commissioner-specific: is this the FINAL rejected state?
+   */
+  private isCommissionerFinalRejected(item: TableData): boolean {
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+
+    // Rejected payslip = final rejection
+    if (combined.includes('rejectedpayslip')) return true;
+    // Backend marks it as final stage and it's rejected
+    if (item?.currentStageIsFinal === true && combined.includes('reject')) return true;
+    return false;
+  }
+
   private isApprovedLikeStatus(item: TableData): boolean {
+    // For commissioner: use strict final-approval check
+    if (this.isCommissioner()) {
+      return this.isCommissionerFinalApproved(item);
+    }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {
       return false;
     }
@@ -2504,12 +2554,21 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isRejectedLikeStatus(item: TableData): boolean {
+    // For commissioner: use strict final-rejection check
+    if (this.isCommissioner()) {
+      return this.isCommissionerFinalRejected(item);
+    }
     const status = this.normalizeStageToken(item?.status);
     const stage = this.normalizeStageToken(item?.currentStageName);
     return status.includes('reject') || stage.includes('reject');
   }
 
   private isPendingLikeStatus(item: TableData): boolean {
+    // For commissioner: pending = action required RIGHT NOW (allowedActions has APPROVE)
+    if (this.isCommissioner()) {
+      const actions: string[] = item?.allowedActions ?? [];
+      return Array.isArray(actions) && actions.includes('APPROVE');
+    }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {
       return true;
     }
@@ -2535,6 +2594,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isUnderProcessLikeStatus(item: TableData): boolean {
+    // For commissioner: under process = visible but no action needed right now,
+    // not final approved, not final rejected, not cancelled.
+    if (this.isCommissioner()) {
+      if (this.isApprovedLikeStatus(item)) return false;
+      if (this.isRejectedLikeStatus(item)) return false;
+      if (this.isCancellationLikeStatus(item)) return false;
+      if (this.isPendingLikeStatus(item)) return false;
+      // Everything else the commissioner can see is "under process"
+      return true;
+    }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {
       return false;
     }
@@ -2657,6 +2726,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return {
       applied: this.getRequisitionStatusCount('APPLIED') + this.getRequisitionStatusCount('SUBMITTED'),
       pending: this.getRequisitionStatusCount('PENDING'),
+      underProcess: this.getRequisitionStatusCount('UNDERPROCESS'),
       approved: this.getRequisitionStatusCount('APPROVED'),
       rejected: this.getRequisitionStatusCount('REJECTED')
     };
