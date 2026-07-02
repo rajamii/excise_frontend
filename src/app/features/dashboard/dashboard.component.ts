@@ -429,13 +429,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public updateAvailableChartModules(): void {
-    const isITCell = this.currentUser?.roleId === 6;
+    const roleId = Number(this.currentUser?.roleId || 0);
+    const isITCell = roleId === 6;
+    const isJointCommissioner = roleId === 9;
 
     // IT Cell only deals with Hologram Procurement
     if (isITCell) {
       this.availableChartModules = [
         { value: 'all', label: 'All Modules' },
         { value: 'hologram', label: 'Hologram Procurement' }
+      ];
+      return;
+    }
+
+    // Joint Commissioner only handles license-related modules (no supply chain)
+    if (isJointCommissioner) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'newLicense', label: 'New Licenses' },
+        { value: 'renewal', label: 'Renewals' },
+        { value: 'salesman', label: 'Salesman / Barman' },
+        { value: 'company', label: 'Company Reg.' }
       ];
       return;
     }
@@ -448,9 +462,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       { value: 'company', label: 'Company Reg.' }
     ];
 
-    const isAdmin = this.currentUser?.roleId === 1 || this.currentUser?.roleId === 3;
-    const isCommissioner = this.isCommissionerUser();
-    
+    const isAdmin = roleId === 1 || roleId === 3;
+    // isCommissioner here means the full Commissioner (roleId 10), not Joint Commissioner
+    const isCommissioner = roleId === 10;
+
     // Distillery-only supply chain items: Requisition, Revalidation, Cancellation
     if (isAdmin || isCommissioner || this.showDistilleryMenus) {
       modules.push(
@@ -459,7 +474,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         { value: 'cancellation', label: 'Cancellations' }
       );
     }
-    
+
     // Brewery/Distillery supply chain items: Transit, Hologram
     // Commissioner does not handle transit permits — exclude from their module list
     if (isAdmin || this.showBreweryOrDistilleryMenus) {
@@ -519,7 +534,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public loadSupplyChainModuleStats(): void {
-    const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10].includes(Number(this.currentUser?.roleId || 0));
+    const isAdminOrOfficer = [1, 3, 5, 6, 7, 10].includes(Number(this.currentUser?.roleId || 0));
     if (!this.isLicenseeUser() && !isAdminOrOfficer) return;
 
     // Requisitions
@@ -1987,9 +2002,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // without waiting for unified stats/table data.
     if (this.shouldShowRoleSpecificDashboard()) {
       this.isLoading = false;
-      // IT Cell (roleId 6), Commissioner (roleId 10) and Joint Commissioner (roleId 9)
-      // need supply chain stats so the stat boxes and bar chart show correct hologram pending counts
-      if (this.currentUser?.roleId === 6 || this.currentUser?.roleId === 9 || this.currentUser?.roleId === 10) {
+      // IT Cell (roleId 6) and Commissioner (roleId 10) need supply chain stats
+      // so the stat boxes and bar chart show correct hologram pending counts
+      if (this.currentUser?.roleId === 6 || this.currentUser?.roleId === 10) {
         this.loadSupplyChainModuleStats();
       }
       return;
