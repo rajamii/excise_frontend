@@ -365,18 +365,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   updateSingleWindowChart(): void {
+    const isITCell = this.currentUser?.roleId === 6;
+
+    // For IT Cell, "All Modules" means hologram only — redirect to hologram counts
+    const effectiveModule = (isITCell && this.selectedChartModule === 'all')
+      ? 'hologram'
+      : this.selectedChartModule;
+
     let sourceCounts = this.dashboardCounts;
-    if (this.selectedChartModule === 'newLicense') {
+    if (effectiveModule === 'newLicense') {
       sourceCounts = this.detailedCounts.newLicense;
-    } else if (this.selectedChartModule === 'renewal') {
+    } else if (effectiveModule === 'renewal') {
       sourceCounts = this.detailedCounts.renewal;
-    } else if (this.selectedChartModule === 'salesman') {
+    } else if (effectiveModule === 'salesman') {
       sourceCounts = this.detailedCounts.salesman;
-    } else if (this.selectedChartModule === 'company') {
+    } else if (effectiveModule === 'company') {
       sourceCounts = this.detailedCounts.company;
-    } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
-      sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
+    } else if (this.supplyChainModuleCounts[effectiveModule]) {
+      sourceCounts = this.supplyChainModuleCounts[effectiveModule];
     }
+
+    const isAllModules = this.selectedChartModule === 'all' && !isITCell;
 
     this.singleWindowChartData = {
       ...this.singleWindowChartData,
@@ -384,17 +393,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         {
           ...this.singleWindowChartData.datasets[0],
           data: [
-            this.getModuleTotal(this.selectedChartModule),
-            this.selectedChartModule === 'all'
+            isAllModules
+              ? (this.dashboardCounts.applied || 0) + this.getSupplyChainAppliedTotal()
+              : (sourceCounts.applied || 0),
+            isAllModules
               ? (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()
               : (sourceCounts.pending || 0),
-            this.selectedChartModule === 'all'
+            isAllModules
               ? (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal()
               : (sourceCounts.approved || 0),
-            this.selectedChartModule === 'all'
+            isAllModules
               ? (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal()
               : (sourceCounts.objection || 0),
-            this.selectedChartModule === 'all'
+            isAllModules
               ? (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal()
               : (sourceCounts.rejected || 0)
           ]
@@ -409,6 +420,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public updateAvailableChartModules(): void {
+    const isITCell = this.currentUser?.roleId === 6;
+
+    // IT Cell only deals with Hologram Procurement
+    if (isITCell) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'hologram', label: 'Hologram Procurement' }
+      ];
+      return;
+    }
+
     const modules = [
       { value: 'all', label: 'All Modules' },
       { value: 'newLicense', label: 'New Licenses' },
@@ -568,8 +590,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Holograms
     this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const items = Array.isArray(res) ? res : [];
-      const pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
-      const awaitingPayment = this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
+      const isITCell = this.currentUser?.roleId === 6;
+
+      let pending: number;
+      if (isITCell) {
+        // For IT Cell: only items that specifically need IT Cell review are pending
+        pending = items.filter(item => {
+          const s = String(item?.status ?? '').toLowerCase();
+          return s.includes('submitted') || s.includes('under_it_cell_review') || s.includes('pending_verification');
+        }).length;
+      } else {
+        pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
+      }
+
+      const awaitingPayment = isITCell ? 0 : this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
       const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
       const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
       this.supplyChainModuleCounts['hologram'] = {
@@ -1844,6 +1878,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // without waiting for unified stats/table data.
     if (this.shouldShowRoleSpecificDashboard()) {
       this.isLoading = false;
+      // IT Cell (roleId 6) still needs supply chain stats for the bar chart
+      if (this.currentUser?.roleId === 6) {
+        this.loadSupplyChainModuleStats();
+      }
       return;
     }
 

@@ -176,7 +176,8 @@ export class ITCellDashboardComponent implements OnInit {
   private unifiedActionsService = inject(UnifiedActionsService);
 
   // Data properties
-  allApplications: ITCellData[] = [];
+  allApplications: ITCellData[] = [];       // Only items requiring IT Cell review (for action table)
+  allHologramItems: ITCellData[] = [];      // ALL hologram items (for stat boxes)
   filteredApplications: ITCellData[] = [];
   selectedApplicationType: string = 'all';
 
@@ -193,26 +194,31 @@ export class ITCellDashboardComponent implements OnInit {
   loadHologramApplications(): void {
     this.hologramService.getProcurements().subscribe({
       next: (data: any[]) => {
-        const holograms: ITCellData[] = data
+        const mapItem = (item: any): ITCellData => ({
+          id: item.id,
+          referenceNo: item.refNo || `HOL-${item.id}`,
+          submissionDate: this.formatDate(item.date),
+          companyName: item.licenseeName || item.manufacturingUnit || 'N/A',
+          status: item.status || 'SUBMITTED',
+          amount: '0.00',
+          type: 'hologram',
+          allowedActions: item.allowedActions || item.allowed_actions || [],
+          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+          workflowId: item.workflow || item.workflow_id || item.workflowId,
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+          localQtyLakh: Number(item.localQty || 0),
+          exportQtyLakh: Number(item.exportQty || 0),
+          defenceQtyLakh: Number(item.defenceQty || 0)
+        });
+
+        // All items for stat counts
+        this.allHologramItems = data.map(mapItem);
+
+        // Only actionable items for the review table
+        this.allApplications = data
           .filter((item: any) => this.requiresITCellReview(item.status))
-          .map((item: any) => ({
-            id: item.id,
-            referenceNo: item.refNo || `HOL-${item.id}`,
-            submissionDate: this.formatDate(item.date),
-            companyName: item.licenseeName || item.manufacturingUnit || 'N/A',
-            status: item.status || 'SUBMITTED',
-            amount: '0.00', // Holograms might not have amount
-            type: 'hologram',
-            allowedActions: item.allowedActions || item.allowed_actions || [],
-            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
-            workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-            localQtyLakh: Number(item.localQty || 0),
-            exportQtyLakh: Number(item.exportQty || 0),
-            defenceQtyLakh: Number(item.defenceQty || 0)
-          }));
-        
-        this.allApplications = holograms;
+          .map(mapItem);
+
         this.applyFilters();
       },
       error: (error) => console.error('Error loading hologram applications:', error)
@@ -239,17 +245,22 @@ export class ITCellDashboardComponent implements OnInit {
     }
   }
 
-  // Dashboard statistics methods
+  // Dashboard statistics methods — use ALL hologram items for correct totals
   getDashboardStatistics() {
-    const actionablePending = this.getActionablePendingCount();
-    const legacyPending =
-      this.getStatusCount('UNDER_IT_CELL_REVIEW') + this.getStatusCount('PENDING_VERIFICATION');
-
     return {
-      applied: this.getStatusCount('SUBMITTED'),
-      pending: actionablePending || legacyPending,
-      approved: this.getStatusCount('VERIFIED') + this.getStatusCount('FORWARDED_TO_COMMISSIONER'),
-      rejected: this.getStatusCount('REJECTED')
+      applied:  this.allHologramItems.length,
+      pending:  this.allHologramItems.filter(app => {
+                  const s = app.status.toLowerCase();
+                  return s.includes('submitted') || s.includes('pending') ||
+                         s.includes('under_it_cell_review') || s.includes('pending_verification');
+                }).length,
+      approved: this.allHologramItems.filter(app => {
+                  const s = app.status.toLowerCase();
+                  return s.includes('verified') || s.includes('forwarded') || s.includes('approved') || s.includes('issued');
+                }).length,
+      rejected: this.allHologramItems.filter(app =>
+                  app.status.toLowerCase().includes('rejected') || app.status.toLowerCase().includes('cancelled')
+                ).length
     };
   }
 
@@ -275,7 +286,7 @@ export class ITCellDashboardComponent implements OnInit {
   }
 
   private getStatusCount(status: string): number {
-    return this.allApplications.filter(app => 
+    return this.allHologramItems.filter(app =>
       app.status.toLowerCase().includes(status.toLowerCase())
     ).length;
   }
