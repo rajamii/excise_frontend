@@ -550,7 +550,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
       const filter = this.normalizeStageToken(this.requisitionStatusFilter);
       if (filter === 'pending' || filter === 'review') {
-        return this.isCommissioner() ? this.isPendingLikeStatus(item) : this.isPendingSummaryStatus(item);
+        return (this.isCommissioner() || this.isPermitSection())
+          ? this.isPendingLikeStatus(item)
+          : this.isPendingSummaryStatus(item);
       }
       if (filter === 'approved') {
         return this.isApprovedLikeStatus(item);
@@ -2183,7 +2185,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   getRequisitionStatusCount(status: string): number {
     const filter = this.normalizeStageToken(status);
     if (filter === 'pending' || filter === 'review') {
-      const predicate = this.isCommissioner()
+      // Commissioner and Permit Section: pending = action required RIGHT NOW
+      const predicate = (this.isCommissioner() || this.isPermitSection())
         ? (item: TableData) => this.isPendingLikeStatus(item)
         : (item: TableData) => this.isPendingSummaryStatus(item);
       return this.summaryRequisitionData.filter(predicate).length;
@@ -2569,6 +2572,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       const actions: string[] = item?.allowedActions ?? [];
       return Array.isArray(actions) && actions.includes('APPROVE');
     }
+    // For permit section: same — only pending when action is needed right now
+    if (this.isPermitSection()) {
+      const actions: string[] = item?.allowedActions ?? [];
+      return Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
+             actions.includes('FORWARD') || actions.includes('VERIFY'));
+    }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {
       return true;
     }
@@ -2602,6 +2611,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       if (this.isCancellationLikeStatus(item)) return false;
       if (this.isPendingLikeStatus(item)) return false;
       // Everything else the commissioner can see is "under process"
+      return true;
+    }
+    // For permit section: same logic — under process = visible, no action needed right now
+    if (this.isPermitSection()) {
+      if (this.isApprovedLikeStatus(item)) return false;
+      if (this.isRejectedLikeStatus(item)) return false;
+      if (this.isCancellationLikeStatus(item)) return false;
+      if (this.isPendingLikeStatus(item)) return false;
       return true;
     }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {

@@ -241,13 +241,13 @@
           </div>
 
           <!-- Empty -->
-          <div class="act-empty" *ngIf="!userActivityLoading && !userActivityError && !userActivities?.length">
+          <div class="act-empty" *ngIf="!userActivityLoading && !userActivityError && !userActivities.length">
             <mat-icon>inbox</mat-icon>
             <span>No activity records found.</span>
           </div>
 
           <!-- Table -->
-          <div class="act-table-wrap" *ngIf="!userActivityLoading && !userActivityError && userActivities?.length">
+          <div class="act-table-wrap" *ngIf="!userActivityLoading && !userActivityError && userActivities.length">
             <table class="act-table">
               <thead>
                 <tr>
@@ -541,7 +541,7 @@
     </div>
 
     <!-- System Applications Distribution Bar Chart Section (Shown for all users) -->
-    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser && (!shouldShowRoleSpecificDashboard() || currentUser?.roleId === 6)">      <mat-card class="chart-card">
+    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser && (!shouldShowRoleSpecificDashboard() || currentUser.roleId === 6 || currentUser.roleId === 5)">      <mat-card class="chart-card">
         <div class="chart-header-container">
           <div class="chart-title-area">
             <div class="chart-badge">

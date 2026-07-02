@@ -32,6 +32,7 @@ import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-
 import { AccountService } from '../../core/services/account.service';
 import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
 import { SidebarPendingBadgeService } from '../../shared/services/sidebar-pending-badge.service';
+import { CompanyRegistrationService } from '../../core/services/company-registration.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
 import {
@@ -336,12 +337,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                         (this.dashboardCounts.objection || 0) +
                         (this.dashboardCounts.rejected || 0) +
                         (this.dashboardCounts.awaitingPayment || 0);
-      const supplyChainTotal = Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => 
+      const supplyChainTotal = Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) =>
         sum + (v.applied || 0), 0);
       return baseTotal + supplyChainTotal;
     }
 
-    if (this.supplyChainModuleCounts[moduleName]) {
+    // Supply chain modules (including company for permit section)
+    if (this.supplyChainModuleCounts[moduleName] &&
+        (this.supplyChainModuleCounts[moduleName].applied || 0) > 0) {
       return this.supplyChainModuleCounts[moduleName].applied || 0;
     }
 
@@ -356,7 +359,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.company;
     }
 
-    // For base modules, pending already includes applied (newly submitted)
     return (sourceCounts.pending || 0) +
            (sourceCounts.approved || 0) +
            (sourceCounts.objection || 0) +
@@ -379,6 +381,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.renewal;
     } else if (effectiveModule === 'salesman') {
       sourceCounts = this.detailedCounts.salesman;
+    } else if (effectiveModule === 'company' && (this.supplyChainModuleCounts['company']?.applied ?? 0) > 0) {
+      // For permit section: company counts come from supplyChainModuleCounts (loaded from list API)
+      sourceCounts = this.supplyChainModuleCounts['company'];
     } else if (effectiveModule === 'company') {
       sourceCounts = this.detailedCounts.company;
     } else if (this.supplyChainModuleCounts[effectiveModule]) {
@@ -454,6 +459,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    // Permit Section only handles Requisitions and Company Registration
+    const isPermitSection = roleId === 5;
+    if (isPermitSection) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'requisition', label: 'Requisitions' },
+        { value: 'company', label: 'Company Reg.' }
+      ];
+      return;
+    }
+
     const modules = [
       { value: 'all', label: 'All Modules' },
       { value: 'newLicense', label: 'New Licenses' },
@@ -494,6 +510,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.renewal;
     } else if (this.selectedChartModule === 'salesman') {
       sourceCounts = this.detailedCounts.salesman;
+    } else if (this.selectedChartModule === 'company' && (this.supplyChainModuleCounts['company']?.applied ?? 0) > 0) {
+      // Permit section: company counts live in supplyChainModuleCounts
+      sourceCounts = this.supplyChainModuleCounts['company'];
     } else if (this.selectedChartModule === 'company') {
       sourceCounts = this.detailedCounts.company;
     } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
@@ -537,21 +556,22 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isAdminOrOfficer = [1, 3, 5, 6, 7, 10].includes(Number(this.currentUser?.roleId || 0));
     if (!this.isLicenseeUser() && !isAdminOrOfficer) return;
 
+    const isPermitSection = Number(this.currentUser?.roleId || 0) === 5;
+
     // Requisitions
     this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const allItems = Array.isArray(res) ? res : [];
       const isCommissioner = this.isCommissionerUser();
-
-      // For commissioner: use ALL items returned by the API — the backend already scopes
-      // the response to records that have reached or passed the commissioner's stage.
-      // Filtering by status string here caused approved items (e.g. "approved_issued") to
-      // be dropped because they no longer contain the word "commissioner".
       const items = allItems;
 
-      // Pending = only items where the commissioner must take an action right now.
+      // For commissioner and permit section: pending = action required now (allowedActions).
       // For all other roles, use the broad in-flight count.
-      const pending = this.sidebarPendingBadgeService.countRequisitionPendingReview(items, isCommissioner);
-      const awaitingPayment = isCommissioner ? 0 : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
+      const pending = (isCommissioner || isPermitSection)
+        ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
+        : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
+      const awaitingPayment = (isCommissioner || isPermitSection)
+        ? 0
+        : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
 
       const approved = items.filter(x => {
         const status = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -602,7 +622,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.updateSingleWindowChart();
     });
 
-    // Revalidations
+    // Revalidations — not shown in permit section chart, skip and zero out
+    if (isPermitSection) {
+      this.supplyChainModuleCounts['revalidation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+    } else {
     this.supplyChainService.getRevalidationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const allItems = Array.isArray(res) ? res : [];
       const isCommissioner = this.isCommissionerUser();
@@ -626,8 +649,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       };
       this.updateSingleWindowChart();
     });
+    }
 
-    // Cancellations
+    // Cancellations — not shown in permit section chart, skip and zero out
+    if (isPermitSection) {
+      this.supplyChainModuleCounts['cancellation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+    } else {
     this.supplyChainService.getCancellationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const allItems = Array.isArray(res) ? res : [];
       const isCommissioner = this.isCommissionerUser();
@@ -651,9 +678,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       };
       this.updateSingleWindowChart();
     });
+    }
 
-    // Transit Permits — Commissioner does not handle transit permits, skip loading
-    if (!this.isCommissionerUser()) {
+    // Transit Permits — Commissioner and Permit Section do not handle transit permits, skip loading
+    if (!this.isCommissionerUser() && !isPermitSection) {
     this.supplyChainService.getTransitPermits().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const items = Array.isArray(res) ? res : [];
       const billNos = new Set<string>();
@@ -680,7 +708,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     });
     }
 
-    // Holograms
+    // Holograms — not shown in permit section chart, skip and zero out
+    if (isPermitSection) {
+      this.supplyChainModuleCounts['hologram'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+      this.supplyChainModuleCounts['transit'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+    } else {
     this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const items = Array.isArray(res) ? res : [];
       const isITCell = this.currentUser?.roleId === 6;
@@ -725,6 +757,56 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       };
       this.updateSingleWindowChart();
     });
+    } // end else (not permit section)
+
+    // Company Registration — only needed for Permit Section dashboard bar chart
+    if (isPermitSection) {
+      this.companyRegistrationService.getApplicationsByStatus().pipe(catchError(() => of({}))).subscribe((res: any) => {
+        const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
+        const allItems = [
+          ...flatten(res?.applied), ...flatten(res?.pending),
+          ...flatten(res?.approved), ...flatten(res?.rejected),
+          ...flatten(res?.objection), ...flatten(res?.awaiting_payment)
+        ];
+        // Deduplicate by id
+        const seen = new Set<any>();
+        const items = allItems.filter(item => {
+          const key = item?.id ?? item?.application_id ?? item?.applicationId;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        const pending = this.sidebarPendingBadgeService.countActionable(
+          items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']
+        );
+        const approved = items.filter((x: any) => {
+          const s = String(x.current_stage_name || x.currentStageName || x.status || '')
+            .toLowerCase().replace(/[^a-z0-9]/g, '');
+          return (s.includes('approv') || s.includes('issued') || s.includes('complete')) &&
+                 !s.includes('reject');
+        }).length;
+        const rejected = items.filter((x: any) => {
+          const s = String(x.current_stage_name || x.currentStageName || x.status || '')
+            .toLowerCase().replace(/[^a-z0-9]/g, '');
+          return s.includes('reject') || s.includes('cancel');
+        }).length;
+        const objection = items.filter((x: any) => {
+          const s = String(x.current_stage_name || x.currentStageName || x.status || '')
+            .toLowerCase().replace(/[^a-z0-9]/g, '');
+          return s.includes('objection');
+        }).length;
+
+        this.supplyChainModuleCounts['company'] = {
+          applied: items.length,
+          pending,
+          approved,
+          objection,
+          rejected
+        };
+        this.updateSingleWindowChart();
+      });
+    }
   }
 
   onChartDateFilterChange(): void {
@@ -841,6 +923,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   public showBreweryOrDistilleryMenus = false;
   public supplyChainService = inject(SupplyChainService);
   public enaRequisitionService = inject(EnaRequisitionService);
+  private companyRegistrationService = inject(CompanyRegistrationService);
   public availableChartModules: { value: string; label: string }[] = [];
 
   public supplyChainModuleCounts: Record<string, DashboardCount> = {
@@ -848,7 +931,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     revalidation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
     cancellation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
     transit: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
-    hologram: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
+    hologram: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    company: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
   };
   private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
@@ -2039,8 +2123,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.shouldShowRoleSpecificDashboard()) {
       this.isLoading = false;
       // IT Cell (roleId 6) and Commissioner (roleId 10) need supply chain stats
-      // so the stat boxes and bar chart show correct hologram pending counts
-      if (this.currentUser?.roleId === 6 || this.currentUser?.roleId === 10) {
+      // so the stat boxes and bar chart show correct hologram pending counts.
+      // Permit Section (roleId 5) also needs supply chain + company registration counts for its bar chart.
+      if (this.currentUser?.roleId === 5 || this.currentUser?.roleId === 6 || this.currentUser?.roleId === 10) {
         this.loadSupplyChainModuleStats();
       }
       return;
