@@ -387,15 +387,24 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const isAllModules = this.selectedChartModule === 'all' && !isITCell;
 
+    // For the Applied bar, use getModuleTotal() which accounts for roles where
+    // the API returns applied=0 (admin/officer roles) by summing all statuses.
+    // For individual modules use sourceCounts.applied if available, else sum statuses.
+    const appliedValue = isAllModules
+      ? this.getModuleTotal('all')
+      : (sourceCounts.applied != null && sourceCounts.applied > 0
+          ? sourceCounts.applied
+          : (sourceCounts.pending || 0) + (sourceCounts.approved || 0) +
+            (sourceCounts.objection || 0) + (sourceCounts.rejected || 0) +
+            (sourceCounts.awaitingPayment || 0));
+
     this.singleWindowChartData = {
       ...this.singleWindowChartData,
       datasets: [
         {
           ...this.singleWindowChartData.datasets[0],
           data: [
-            isAllModules
-              ? (this.dashboardCounts.applied || 0) + this.getSupplyChainAppliedTotal()
-              : (sourceCounts.applied || 0),
+            appliedValue,
             isAllModules
               ? (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()
               : (sourceCounts.pending || 0),
@@ -510,7 +519,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public loadSupplyChainModuleStats(): void {
-    const isAdminOrOfficer = [1, 3, 5, 6, 7, 10].includes(Number(this.currentUser?.roleId || 0));
+    const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10].includes(Number(this.currentUser?.roleId || 0));
     if (!this.isLicenseeUser() && !isAdminOrOfficer) return;
 
     // Requisitions
@@ -1978,9 +1987,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // without waiting for unified stats/table data.
     if (this.shouldShowRoleSpecificDashboard()) {
       this.isLoading = false;
-      // IT Cell (roleId 6) and Commissioner (roleId 10) need supply chain stats
-      // so the stat boxes and bar chart show correct hologram pending counts
-      if (this.currentUser?.roleId === 6 || this.currentUser?.roleId === 10) {
+      // IT Cell (roleId 6), Commissioner (roleId 10) and Joint Commissioner (roleId 9)
+      // need supply chain stats so the stat boxes and bar chart show correct hologram pending counts
+      if (this.currentUser?.roleId === 6 || this.currentUser?.roleId === 9 || this.currentUser?.roleId === 10) {
         this.loadSupplyChainModuleStats();
       }
       return;

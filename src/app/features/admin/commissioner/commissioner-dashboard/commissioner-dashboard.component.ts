@@ -11,7 +11,6 @@ import { HologramService, DailyRegisterEntry } from '../../../../core/services/h
 import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
 import { RequisitionComponent } from "../../../licensee/supplyChain/supplychaincomponents/requisition/requisition.component";
 import { CancellationComponent } from "../../../licensee/supplyChain/supplychaincomponents/cancellation/cancellation.component";
-import { TransitComponent } from "../../../licensee/supplyChain/supplychaincomponents/transit/transit.component";
 import { PaymentSlipsViewComponent } from "../payment-slips-view/payment-slips-view.component";
 import { HologramDetailsViewComponent } from "../hologram-details-view/hologram-details-view.component";
 import { HologramDataService } from "../../../licensee/supplyChain/services/hologram-data.service";
@@ -82,7 +81,7 @@ export interface CommissionerTableData {
 @Component({
   selector: "app-commissioner-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, TransitComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
+  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
