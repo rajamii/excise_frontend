@@ -390,7 +390,7 @@ export class SidebarPendingBadgeService {
     return this.toUpperActions(allowed);
   }
 
-  private countActionable(items: any[], actionableActions: string[]): number {
+  public countActionable(items: any[], actionableActions: string[]): number {
     const actionable = new Set(this.toUpperActions(actionableActions));
     const isFinalish = (item: any): boolean => {
       // Prefer explicit final-stage markers when available.
@@ -480,7 +480,17 @@ export class SidebarPendingBadgeService {
     }).length;
   }
 
-  public countRequisitionPendingReview(items: any[]): number {
+  public countRequisitionPendingReview(items: any[], forCommissioner = false): number {
+    // For commissioner: only count items where the backend has explicitly granted
+    // an action (APPROVE/REJECT). This fires only when the application has reached
+    // the commissioner's stage — not for every in-flight requisition.
+    if (forCommissioner) {
+      return (items || []).filter((item) => {
+        const actions: string[] = item?.allowedActions ?? item?.allowed_actions ?? [];
+        return Array.isArray(actions) && actions.includes('APPROVE');
+      }).length;
+    }
+
     return (items || []).filter((item) => {
       const raw = String(
         item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''

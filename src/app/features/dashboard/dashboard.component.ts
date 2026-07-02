@@ -540,20 +540,31 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Requisitions
     this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const allItems = Array.isArray(res) ? res : [];
-      // For commissioner, only count items that have reached or passed the commissioner's stage
       const isCommissioner = this.isCommissionerUser();
-      const items = isCommissioner
-        ? allItems.filter(x => {
-            const s = String(x.status || '').toLowerCase();
-            return s.includes('forwarded') || s.includes('commissioner') ||
-                   s.includes('pending_commissioner') || s.includes('under_commissioner_review') ||
-                   s.includes('approved_by');
-          })
-        : allItems;
-      const pending = this.sidebarPendingBadgeService.countRequisitionPendingReview(items);
+
+      // For commissioner: use ALL items returned by the API — the backend already scopes
+      // the response to records that have reached or passed the commissioner's stage.
+      // Filtering by status string here caused approved items (e.g. "approved_issued") to
+      // be dropped because they no longer contain the word "commissioner".
+      const items = allItems;
+
+      // Pending = only items where the commissioner must take an action right now.
+      // For all other roles, use the broad in-flight count.
+      const pending = this.sidebarPendingBadgeService.countRequisitionPendingReview(items, isCommissioner);
       const awaitingPayment = isCommissioner ? 0 : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
-      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved') || String(x.status || '').toLowerCase().includes('issued')).length;
-      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+
+      const approved = items.filter(x => {
+        const s = String(x.status || '').toLowerCase();
+        return s.includes('approved') || s.includes('issued');
+      }).length;
+      const rejected = items.filter(x => {
+        const s = String(x.status || '').toLowerCase();
+        return s.includes('rejected') || s.includes('cancelled');
+      }).length;
+
+      // For commissioner: items still in transit to the commissioner stage are
+      // not yet "pending" for them — exclude from pending count but keep in applied.
+      // Pending count is already correct via countRequisitionPendingReview(forCommissioner=true).
       this.supplyChainModuleCounts['requisition'] = {
         applied: items.length,
         pending: pending + awaitingPayment,
@@ -567,19 +578,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Revalidations
     this.supplyChainService.getRevalidationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const allItems = Array.isArray(res) ? res : [];
-      // For commissioner, only count items that have reached or passed the commissioner's stage
       const isCommissioner = this.isCommissionerUser();
-      const items = isCommissioner
-        ? allItems.filter(x => {
-            const s = String(x.status || '').toLowerCase();
-            return s.includes('forwarded') || s.includes('commissioner') ||
-                   s.includes('pending_commissioner') || s.includes('under_commissioner_review') ||
-                   s.includes('approved_by');
-          })
-        : allItems;
-      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+      // Use all items — backend scopes the response to what this role should see
+      const items = allItems;
+      // For commissioner: pending only when action is required; for others: broad in-flight count
+      const pending = isCommissioner
+        ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+        : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
       const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      const rejected = items.filter(x => {
+        const s = String(x.status || '').toLowerCase();
+        return s.includes('rejected') || s.includes('cancelled');
+      }).length;
       this.supplyChainModuleCounts['revalidation'] = {
         applied: items.length,
         pending: pending,
@@ -593,19 +603,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Cancellations
     this.supplyChainService.getCancellationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
       const allItems = Array.isArray(res) ? res : [];
-      // For commissioner, only count items that have reached or passed the commissioner's stage
       const isCommissioner = this.isCommissionerUser();
-      const items = isCommissioner
-        ? allItems.filter(x => {
-            const s = String(x.status || '').toLowerCase();
-            return s.includes('forwarded') || s.includes('commissioner') ||
-                   s.includes('pending_commissioner') || s.includes('under_commissioner_review') ||
-                   s.includes('approved_by');
-          })
-        : allItems;
-      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+      // Use all items — backend scopes the response to what this role should see
+      const items = allItems;
+      // For commissioner: pending only when action is required; for others: broad in-flight count
+      const pending = isCommissioner
+        ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+        : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
       const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
+      const rejected = items.filter(x => {
+        const s = String(x.status || '').toLowerCase();
+        return s.includes('rejected') || s.includes('cancelled');
+      }).length;
       this.supplyChainModuleCounts['cancellation'] = {
         applied: items.length,
         pending: pending,
