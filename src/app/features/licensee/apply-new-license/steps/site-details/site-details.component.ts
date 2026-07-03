@@ -683,7 +683,8 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           categoryName: item.categoryName || item.category_name,
           description: item.description,
           isActive: item.isActive ?? item.is_active ?? true,
-          status: item.status
+          status: item.status,
+          subDivision: item.subDivision || item.sub_division
         }));
         sessionStorage.setItem('locationSubcategories', JSON.stringify(this.allLocationSubcategories));
         console.log('✅ Location Subcategories loaded:', this.allLocationSubcategories.length);
