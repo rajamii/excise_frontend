@@ -151,14 +151,17 @@ export class InfoPagesService {
     const formData = new FormData();
 
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (value instanceof File) {
-          formData.append(key, value, value.name);
-          return;
-        }
-
-        formData.append(key, String(value));
+      if (value instanceof File) {
+        formData.append(key, value, value.name);
+        return;
       }
+
+      // Always append non-file fields, including null/empty (send '' for null so backend can clear the field)
+      if (value === undefined) {
+        return;
+      }
+
+      formData.append(key, value === null ? '' : String(value));
     });
 
     return formData;
