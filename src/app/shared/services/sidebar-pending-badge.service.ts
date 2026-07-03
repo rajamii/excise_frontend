@@ -68,20 +68,39 @@ export class SidebarPendingBadgeService {
         tasks[section] = detail$.pipe(map(d => d.total));
         tasks[`${section}:payment`] = detail$.pipe(map(d => d.payment));
       } else {
-        tasks[section] = this.fetchPendingCount(section, audience, mode).pipe(catchError(() => of(0)));
+        // For requisition and hologram we need both a pending count and a payment count.
+        // Share a single HTTP fetch via shareReplay(1) so the two derived tasks don't
+        // each fire their own request.
         if (audience === 'licensee' && section === 'requisition') {
-          tasks[`${section}:payment`] = this.enaRequisitionService.getRequisitions().pipe(
+          const reqs$ = this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
+            shareReplay(1),
+            catchError(() => of([] as any[]))
+          );
+          tasks[section] = reqs$.pipe(
+            map((items) => this.countRequisitionPendingReview(items)),
+            catchError(() => of(0))
+          );
+          tasks[`${section}:payment`] = reqs$.pipe(
             map((items) => this.countRequisitionAwaitingPayment(items)),
             catchError(() => of(0))
           );
-        }
-        if (audience === 'licensee' && section === 'hologram') {
-          tasks[`${section}:payment`] = this.hologramService.getProcurements().pipe(
+        } else if (audience === 'licensee' && section === 'hologram') {
+          const holos$ = this.hologramService.getProcurements().pipe(
             map((items) => this.toArray(items)),
+            shareReplay(1),
+            catchError(() => of([] as any[]))
+          );
+          tasks[section] = holos$.pipe(
+            map((items) => this.countHologramPendingReview(items)),
+            catchError(() => of(0))
+          );
+          tasks[`${section}:payment`] = holos$.pipe(
             map((items) => this.countHologramAwaitingPayment(items)),
             catchError(() => of(0))
           );
+        } else {
+          tasks[section] = this.fetchPendingCount(section, audience, mode).pipe(catchError(() => of(0)));
         }
       }
     }

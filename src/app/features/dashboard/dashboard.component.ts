@@ -16,7 +16,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take, map } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
@@ -552,261 +552,207 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return 0;
   }
 
-  public loadSupplyChainModuleStats(): void {
-    const isAdminOrOfficer = [1, 3, 5, 6, 7, 10].includes(Number(this.currentUser?.roleId || 0));
+  public loadSupplyChainModuleStats(prefetched?: { hologram?: any[]; requisition?: any[]; revalidation?: any[]; cancellation?: any[]; transit?: any[] }): void {
+    const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10].includes(Number(this.currentUser?.roleId || 0));
     if (!this.isLicenseeUser() && !isAdminOrOfficer) return;
 
     const isPermitSection = Number(this.currentUser?.roleId || 0) === 5;
+    const isCommissioner  = this.isCommissionerUser();
+    const isJointComm     = Number(this.currentUser?.roleId || 0) === 9;
+    const isITCell        = this.currentUser?.roleId === 6;
+    const skipTransit     = isCommissioner || isJointComm || isPermitSection;
 
-    // Requisitions
-    this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const allItems = Array.isArray(res) ? res : [];
-      const isCommissioner = this.isCommissionerUser();
-      const items = allItems;
-
-      // For commissioner and permit section: pending = action required now (allowedActions).
-      // For all other roles, use the broad in-flight count.
-      const pending = (isCommissioner || isPermitSection)
-        ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
-        : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
-      const awaitingPayment = (isCommissioner || isPermitSection)
-        ? 0
-        : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
-
-      const approved = items.filter(x => {
-        const status = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const stage  = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const combined = `${status} ${stage}`;
-        const stageId = Number(x.current_stage ?? x.currentStage ?? -1);
-
-        if (isCommissioner) {
-          // For commissioner: only count truly final approvals (after payslip stage 33)
-          // "approved_commissioner" (stage 29) is NOT final — still needs payment
-          const isAwaitingPayment = combined.includes('approvedcommissioner') &&
-            !['forwardedpayslip','approvedpayslip','rejectedpayslip','paymentcompleted','paymentdone','permitsection']
-              .some(m => combined.includes(m));
-          if (isAwaitingPayment) return false;
-          if (combined.includes('forwardedpayslip') && combined.includes('permitsection')) return false;
-          if (combined.includes('rejectedpayslip')) return false;
-          if (combined.includes('approvedpayslip')) return true;
-          if (combined.includes('issued') || combined.includes('complete') || combined.includes('paymentcompleted')) return true;
-          if (x.currentStageIsFinal === true && combined.includes('approv') && !combined.includes('reject')) return true;
-          if (stageId > 33) return true;
-          return false;
-        }
-        return (combined.includes('approved') || combined.includes('issued')) && !combined.includes('reject');
-      }).length;
-      const rejected = items.filter(x => {
-        const status = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const stage  = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const combined = `${status} ${stage}`;
-        if (isCommissioner) {
-          // For commissioner: only count final rejections (after payslip stage 33)
-          if (combined.includes('rejectedpayslip')) return true;
-          if (x.currentStageIsFinal === true && combined.includes('reject')) return true;
-          return false;
-        }
-        return combined.includes('rejected') || combined.includes('cancelled');
-      }).length;
-
-      // For commissioner: items still in transit to the commissioner stage are
-      // not yet "pending" for them — exclude from pending count but keep in applied.
-      // Pending count is already correct via countRequisitionPendingReview(forCommissioner=true).
-      this.supplyChainModuleCounts['requisition'] = {
-        applied: items.length,
-        pending: pending + awaitingPayment,
-        approved: approved,
-        objection: 0,
-        rejected: rejected
-      };
-      this.updateSingleWindowChart();
-    });
-
-    // Revalidations — not shown in permit section chart, skip and zero out
-    if (isPermitSection) {
-      this.supplyChainModuleCounts['revalidation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-    } else {
-    this.supplyChainService.getRevalidationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const allItems = Array.isArray(res) ? res : [];
-      const isCommissioner = this.isCommissionerUser();
-      // Use all items — backend scopes the response to what this role should see
-      const items = allItems;
-      // For commissioner: pending only when action is required; for others: broad in-flight count
-      const pending = isCommissioner
-        ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
-        : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
-      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-      const rejected = items.filter(x => {
-        const s = String(x.status || '').toLowerCase();
-        return s.includes('rejected') || s.includes('cancelled');
-      }).length;
-      this.supplyChainModuleCounts['revalidation'] = {
-        applied: items.length,
-        pending: pending,
-        approved: approved,
-        objection: 0,
-        rejected: rejected
-      };
-      this.updateSingleWindowChart();
-    });
-    }
-
-    // Cancellations — not shown in permit section chart, skip and zero out
-    if (isPermitSection) {
-      this.supplyChainModuleCounts['cancellation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-    } else {
-    this.supplyChainService.getCancellationData().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const allItems = Array.isArray(res) ? res : [];
-      const isCommissioner = this.isCommissionerUser();
-      // Use all items — backend scopes the response to what this role should see
-      const items = allItems;
-      // For commissioner: pending only when action is required; for others: broad in-flight count
-      const pending = isCommissioner
-        ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
-        : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
-      const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-      const rejected = items.filter(x => {
-        const s = String(x.status || '').toLowerCase();
-        return s.includes('rejected') || s.includes('cancelled');
-      }).length;
-      this.supplyChainModuleCounts['cancellation'] = {
-        applied: items.length,
-        pending: pending,
-        approved: approved,
-        objection: 0,
-        rejected: rejected
-      };
-      this.updateSingleWindowChart();
-    });
-    }
-
-    // Transit Permits — Commissioner and Permit Section do not handle transit permits, skip loading
-    if (!this.isCommissionerUser() && !isPermitSection) {
-    this.supplyChainService.getTransitPermits().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const items = Array.isArray(res) ? res : [];
-      const billNos = new Set<string>();
-      const uniqueItems: any[] = [];
-      items.forEach(item => {
-        const billNo = item.billNo || item.bill_no;
-        if (billNo && !billNos.has(billNo)) {
-          billNos.add(billNo);
-          uniqueItems.push(item);
-        }
-      });
-
-      const pending = this.sidebarPendingBadgeService.countLicenseePendingItems(uniqueItems);
-      const approved = uniqueItems.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-      const rejected = uniqueItems.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
-      this.supplyChainModuleCounts['transit'] = {
-        applied: uniqueItems.length,
-        pending: pending,
-        approved: approved,
-        objection: 0,
-        rejected: rejected
-      };
-      this.updateSingleWindowChart();
-    });
-    }
-
-    // Holograms — not shown in permit section chart, skip and zero out
-    if (isPermitSection) {
-      this.supplyChainModuleCounts['hologram'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-      this.supplyChainModuleCounts['transit'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-    } else {
-    this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
-      const items = Array.isArray(res) ? res : [];
-      const isITCell = this.currentUser?.roleId === 6;
-      const isCommissioner = this.isCommissionerUser();
-
-      let pending: number;
-      if (isITCell) {
-        // Same logic as itcell.component.ts isPendingLikeStatus
-        pending = items.filter(item => {
-          const t = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (t.includes('rejected') || t.includes('cancelled')) return false;
-          return t.includes('submittedhp') || t.includes('submitted') ||
-                 t.includes('underitcellreview') || t.includes('itcellreview');
-        }).length;
-      } else {
-        pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
-      }
-
-      const awaitingPayment = (isITCell || isCommissioner) ? 0 : this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
-      // For IT Cell: approved = everything NOT pending and NOT rejected (all downstream stages)
-      const approved = isITCell
-        ? items.filter(x => {
-            const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (t.includes('rejected') || t.includes('cancelled')) return false;
-            const isPending = t.includes('submittedhp') || t.includes('submitted') ||
-                              t.includes('underitcellreview') || t.includes('itcellreview');
-            return !isPending;
-          }).length
-        : items.filter(x => {
-            const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            return t.includes('approved') || t.includes('issued') ||
-                   t.includes('paymentcompleted') || t.includes('cartoonassigned') ||
-                   t.includes('cartonassigned');
-          }).length;
-      const rejected = items.filter(x => String(x.status || '').toLowerCase().includes('rejected') || String(x.status || '').toLowerCase().includes('cancelled')).length;
-      this.supplyChainModuleCounts['hologram'] = {
-        applied: items.length,
-        pending: pending + awaitingPayment,
-        approved: approved,
-        objection: 0,
-        rejected: rejected
-      };
-      this.updateSingleWindowChart();
-    });
-    } // end else (not permit section)
-
-    // Company Registration — only needed for Permit Section dashboard bar chart
-    if (isPermitSection) {
-      this.companyRegistrationService.getApplicationsByStatus().pipe(catchError(() => of({}))).subscribe((res: any) => {
-        const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
-        const allItems = [
-          ...flatten(res?.applied), ...flatten(res?.pending),
-          ...flatten(res?.approved), ...flatten(res?.rejected),
-          ...flatten(res?.objection), ...flatten(res?.awaiting_payment)
-        ];
-        // Deduplicate by id
-        const seen = new Set<any>();
-        const items = allItems.filter(item => {
-          const key = item?.id ?? item?.application_id ?? item?.applicationId;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-
-        const pending = this.sidebarPendingBadgeService.countActionable(
-          items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']
+    // Build observables — reuse prefetched data where available to avoid duplicate HTTP calls.
+    const req$ = prefetched?.requisition
+      ? of(prefetched.requisition)
+      : this.enaRequisitionService.getRequisitions().pipe(
+          map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
+          catchError(() => of([]))
         );
-        const approved = items.filter((x: any) => {
-          const s = String(x.current_stage_name || x.currentStageName || x.status || '')
-            .toLowerCase().replace(/[^a-z0-9]/g, '');
-          return (s.includes('approv') || s.includes('issued') || s.includes('complete')) &&
-                 !s.includes('reject');
-        }).length;
-        const rejected = items.filter((x: any) => {
-          const s = String(x.current_stage_name || x.currentStageName || x.status || '')
-            .toLowerCase().replace(/[^a-z0-9]/g, '');
-          return s.includes('reject') || s.includes('cancel');
-        }).length;
-        const objection = items.filter((x: any) => {
-          const s = String(x.current_stage_name || x.currentStageName || x.status || '')
-            .toLowerCase().replace(/[^a-z0-9]/g, '');
-          return s.includes('objection');
-        }).length;
 
-        this.supplyChainModuleCounts['company'] = {
-          applied: items.length,
-          pending,
-          approved,
-          objection,
-          rejected
-        };
+    const rev$ = (isPermitSection)
+      ? of([] as any[])
+      : prefetched?.revalidation
+        ? of(prefetched.revalidation)
+        : this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
+
+    const can$ = (isPermitSection)
+      ? of([] as any[])
+      : prefetched?.cancellation
+        ? of(prefetched.cancellation)
+        : this.supplyChainService.getCancellationData().pipe(catchError(() => of([])));
+
+    const tra$ = skipTransit
+      ? of([] as any[])
+      : prefetched?.transit
+        ? of(prefetched.transit)
+        : this.supplyChainService.getTransitPermits().pipe(catchError(() => of([])));
+
+    const hol$ = isPermitSection
+      ? of([] as any[])
+      : prefetched?.hologram
+        ? of(prefetched.hologram)
+        : this.hologramService.getProcurements().pipe(catchError(() => of([])));
+
+    // Company registration — only for Permit Section
+    const comp$ = isPermitSection
+      ? this.companyRegistrationService.getApplicationsByStatus().pipe(catchError(() => of({})))
+      : of(null as any);
+
+    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$ })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(({ req, rev, can, tra, hol, comp }) => {
+
+        // ── REQUISITIONS ──────────────────────────────────────────────────────
+        {
+          const items: any[] = Array.isArray(req) ? req : [];
+          const pending = (isCommissioner || isPermitSection)
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
+            : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
+          const awaitingPayment = (isCommissioner || isPermitSection)
+            ? 0
+            : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
+          const approved = items.filter(x => {
+            const status   = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const stage    = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const combined = `${status} ${stage}`;
+            const stageId  = Number(x.current_stage ?? x.currentStage ?? -1);
+            if (isCommissioner) {
+              const isAwaitingPayment = combined.includes('approvedcommissioner') &&
+                !['forwardedpayslip','approvedpayslip','rejectedpayslip','paymentcompleted','paymentdone','permitsection']
+                  .some(m => combined.includes(m));
+              if (isAwaitingPayment) return false;
+              if (combined.includes('forwardedpayslip') && combined.includes('permitsection')) return false;
+              if (combined.includes('rejectedpayslip')) return false;
+              if (combined.includes('approvedpayslip')) return true;
+              if (combined.includes('issued') || combined.includes('complete') || combined.includes('paymentcompleted')) return true;
+              if (x.currentStageIsFinal === true && combined.includes('approv') && !combined.includes('reject')) return true;
+              if (stageId > 33) return true;
+              return false;
+            }
+            return (combined.includes('approved') || combined.includes('issued')) && !combined.includes('reject');
+          }).length;
+          const rejected = items.filter(x => {
+            const combined = `${String(x.status||'').toLowerCase().replace(/[^a-z0-9]/g,'')} ${String(x.current_stage_name||x.currentStageName||'').toLowerCase().replace(/[^a-z0-9]/g,'')}`;
+            if (isCommissioner) {
+              if (combined.includes('rejectedpayslip')) return true;
+              if (x.currentStageIsFinal === true && combined.includes('reject')) return true;
+              return false;
+            }
+            return combined.includes('rejected') || combined.includes('cancelled');
+          }).length;
+          this.supplyChainModuleCounts['requisition'] = { applied: items.length, pending: pending + awaitingPayment, approved, objection: 0, rejected };
+          // feed badge counts too
+          if (this.isLicenseeUser()) {
+            this.supplyChainPendingCounts['requisition'] = pending;
+            this.supplyChainPendingCounts['requisition:payment'] = awaitingPayment;
+          }
+        }
+
+        // ── REVALIDATIONS ─────────────────────────────────────────────────────
+        if (isPermitSection) {
+          this.supplyChainModuleCounts['revalidation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const items: any[] = Array.isArray(rev) ? rev : [];
+          const pending = isCommissioner
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['revalidation'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) this.supplyChainPendingCounts['revalidation'] = pending;
+        }
+
+        // ── CANCELLATIONS ─────────────────────────────────────────────────────
+        if (isPermitSection) {
+          this.supplyChainModuleCounts['cancellation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const items: any[] = Array.isArray(can) ? can : [];
+          const pending = isCommissioner
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['cancellation'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) this.supplyChainPendingCounts['cancellation'] = pending;
+        }
+
+        // ── TRANSIT PERMITS ───────────────────────────────────────────────────
+        if (skipTransit) {
+          this.supplyChainModuleCounts['transit'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const raw: any[] = Array.isArray(tra) ? tra : [];
+          const billNos = new Set<string>();
+          const items: any[] = [];
+          raw.forEach(item => {
+            const billNo = item.billNo || item.bill_no;
+            if (billNo && !billNos.has(billNo)) { billNos.add(billNo); items.push(item); }
+          });
+          const pending  = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['transit'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) this.supplyChainPendingCounts['transit'] = pending;
+        }
+
+        // ── HOLOGRAMS ─────────────────────────────────────────────────────────
+        if (isPermitSection) {
+          this.supplyChainModuleCounts['hologram'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const items: any[] = Array.isArray(hol) ? hol : [];
+          let pending: number;
+          if (isITCell) {
+            pending = items.filter(item => {
+              const t = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (t.includes('rejected') || t.includes('cancelled')) return false;
+              return t.includes('submittedhp') || t.includes('submitted') ||
+                     t.includes('underitcellreview') || t.includes('itcellreview');
+            }).length;
+          } else {
+            pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
+          }
+          const awaitingPayment = (isITCell || isCommissioner) ? 0 : this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
+          const approved = isITCell
+            ? items.filter(x => {
+                const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (t.includes('rejected') || t.includes('cancelled')) return false;
+                return !(t.includes('submittedhp') || t.includes('submitted') || t.includes('underitcellreview') || t.includes('itcellreview'));
+              }).length
+            : items.filter(x => {
+                const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                return t.includes('approved') || t.includes('issued') ||
+                       t.includes('paymentcompleted') || t.includes('cartoonassigned') || t.includes('cartonassigned');
+              }).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['hologram'] = { applied: items.length, pending: pending + awaitingPayment, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) {
+            this.supplyChainPendingCounts['hologram'] = pending;
+            this.supplyChainPendingCounts['hologram:payment'] = awaitingPayment;
+          }
+        }
+
+        // ── COMPANY REGISTRATION (Permit Section only) ────────────────────────
+        if (isPermitSection && comp) {
+          const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
+          const allItems = [
+            ...flatten(comp?.applied), ...flatten(comp?.pending),
+            ...flatten(comp?.approved), ...flatten(comp?.rejected),
+            ...flatten(comp?.objection), ...flatten(comp?.awaiting_payment)
+          ];
+          const seen = new Set<any>();
+          const items = allItems.filter(item => {
+            const key = item?.id ?? item?.application_id ?? item?.applicationId;
+            if (seen.has(key)) return false; seen.add(key); return true;
+          });
+          const pending  = this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']);
+          const approved = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return (s.includes('approv') || s.includes('issued') || s.includes('complete')) && !s.includes('reject'); }).length;
+          const rejected = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return s.includes('reject') || s.includes('cancel'); }).length;
+          const objection = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return s.includes('objection'); }).length;
+          this.supplyChainModuleCounts['company'] = { applied: items.length, pending, approved, objection, rejected };
+        }
+
         this.updateSingleWindowChart();
       });
-    }
   }
 
   onChartDateFilterChange(): void {
@@ -2125,7 +2071,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       // IT Cell (roleId 6) and Commissioner (roleId 10) need supply chain stats
       // so the stat boxes and bar chart show correct hologram pending counts.
       // Permit Section (roleId 5) also needs supply chain + company registration counts for its bar chart.
-      if (this.currentUser?.roleId === 5 || this.currentUser?.roleId === 6 || this.currentUser?.roleId === 10) {
+      if (this.currentUser?.roleId === 5 || this.currentUser?.roleId === 6 ||
+          this.currentUser?.roleId === 9 || this.currentUser?.roleId === 10) {
         this.loadSupplyChainModuleStats();
       }
       return;
@@ -2259,7 +2206,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: res.total.rejected || 0,
             awaitingPayment: res.total.awaitingPayment || 0
           };
-          this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
           this.loadSupplyChainModuleStats();
           this.updateSingleWindowChart();
@@ -2383,9 +2329,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: filteredApplications.rejected
           });
 
-          this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
-          this.loadSupplyChainModuleStats();
+          // Pass the already-fetched hologram data so loadSupplyChainModuleStats
+          // does not re-fetch it, eliminating a duplicate /hologram/procurement/ call.
+          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] });
           this.updateSingleWindowChart();
         },
         error: (error) => {
@@ -2478,8 +2425,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: filteredApplications.rejected
           });
 
-          this.refreshSupplyChainPendingCounts();
-          this.loadSupplyChainModuleStats();
+          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] });
           this.updateSingleWindowChart();
         },
         error: (error) => {
