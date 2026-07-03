@@ -122,6 +122,27 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_categories.view' }
       },
       {
+        path: 'admin/blocks',
+        loadComponent: () =>
+          import('../admin/master/block/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.subdivisions.view' }
+      },
+      {
+        path: 'admin/urban-wards',
+        loadComponent: () =>
+          import('../admin/master/urban-ward/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.subdivisions.view' }
+      },
+      {
+        path: 'admin/rural-wards',
+        loadComponent: () =>
+          import('../admin/master/rural-ward/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.subdivisions.view' }
+      },
+      {
         path: 'admin/fixed-fees',
         loadComponent: () =>
           import('../admin/master/fixed-fee/list/list.component').then((m) => m.ListComponent),

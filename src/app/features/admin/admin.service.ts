@@ -20,6 +20,7 @@ import { ActiveLicense } from '../../core/models/active-license.model';
 import { TransitPermitDistributorData } from '../../core/models/transit-permit-distributor-data.model';
 import { BrandMlInCases } from '../../core/models/brand-ml-in-cases.model';
 import { MasterBottleType } from '../../core/models/master-bottle-type.model';
+import { LocationSubcategory } from '../../core/models/location-subcategory.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -318,6 +319,52 @@ export class AdminService {
   // Deletes a license title by ID
   deleteLicenseTitle(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/license-titles/${id}/delete/`);
+  }
+
+  // ========================== LOCATION ==========================
+
+  // --- LOCATION SUBCATEGORIES ---
+  addLocationSubcategory(data: Partial<LocationSubcategory>): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/location-subcategories/create/`, data);
+  }
+  updateLocationSubcategory(id: number, data: Partial<LocationSubcategory>): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/location-subcategories/${id}/update/`, data);
+  }
+  deleteLocationSubcategory(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/location-subcategories/${id}/delete/`);
+  }
+
+  // --- BLOCKS ---
+  addBlock(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/blocks/create/`, data);
+  }
+  updateBlock(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/blocks/${id}/update/`, data);
+  }
+  deleteBlock(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/blocks/${id}/delete/`);
+  }
+
+  // --- RURAL WARDS ---
+  addRuralWard(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/rural-wards/create/`, data);
+  }
+  updateRuralWard(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/rural-wards/${id}/update/`, data);
+  }
+  deleteRuralWard(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/rural-wards/${id}/delete/`);
+  }
+
+  // --- URBAN WARDS ---
+  addWard(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/wards/create/`, data);
+  }
+  updateWard(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/wards/${id}/update/`, data);
+  }
+  deleteWard(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/wards/${id}/delete/`);
   }
 
   // ========================== ROAD MANAGEMENT ==========================

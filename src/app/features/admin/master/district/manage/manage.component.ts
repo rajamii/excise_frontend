@@ -2,6 +2,7 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
+import { MasterService } from '../../../../../core/services/master.service';
 import { District } from '../../../../../core/models/district.model';
 import { AdminService } from '../../../admin.service';
 
@@ -18,24 +19,42 @@ export class ManageComponent implements OnInit {
     district: '',
     districtCode: 0,
     stateCode: 11,
-    state: 'Sikkim',
+    state: '',
     isActive: true
   };
 
   isEditMode = false;
+  states: any[] = [];
 
   constructor(
     private adminService: AdminService,
+    private masterService: MasterService,
     public dialogRef: MatDialogRef<ManageComponent>,
     @Inject(MAT_DIALOG_DATA) public data: District | null // Inject dialog data for edit mode
   ) {}
 
   ngOnInit(): void {
+    this.loadStates();
+
     // If data is passed, switch to edit mode and populate district
     if (this.data) {
       this.district = { ...this.data };
       this.isEditMode = true;
     }
+  }
+
+  loadStates(): void {
+    this.masterService.getStates().subscribe({
+      next: (data: any) => {
+        this.states = data.map((item: any) => ({
+          id: item.id,
+          state: item.state,
+          stateCode: item.stateCode || item.state_code,
+          isActive: item.isActive !== undefined ? item.isActive : item.is_active
+        })).filter((s: any) => s.isActive || (this.isEditMode && s.stateCode === this.district.stateCode));
+      },
+      error: () => Swal.fire('Error', 'Failed to load states.', 'error')
+    });
   }
 
   onSave(): void {

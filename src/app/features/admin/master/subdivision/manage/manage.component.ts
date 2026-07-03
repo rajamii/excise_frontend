@@ -20,7 +20,8 @@ export class ManageComponent implements OnInit {
     subdivisionCode: 0,
     district: '',
     districtCode: 0,
-    isActive: true
+    isActive: true,
+    isRural: false
   };
   isEditMode = false;
   districts: District[] = [];

@@ -899,7 +899,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         normalized.includes('/admin/subdivisions') ||
         normalized.includes('/admin/roads') ||
         normalized.includes('/admin/police-stations') ||
-        normalized.includes('/admin/locations')) {
+        normalized.includes('/admin/locations') ||
+        normalized.includes('/admin/blocks') ||
+        normalized.includes('/admin/urban-wards') ||
+        normalized.includes('/admin/rural-wards')) {
       this.adminMasterDataExpanded = true;
     }
     
