@@ -178,6 +178,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private dailyHologramWorkingRecords?: DailyhologramrecordregisterComponent;
 
   @ViewChild('bubbleCanvas') bubbleCanvasRef?: ElementRef<HTMLCanvasElement>;
+  public readonly enableDashboardBubbles = false;
   private canvasAnimationId?: number;
   private canvasResizeListener?: () => void;
   private bubbles: any[] = [];
@@ -249,6 +250,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   public singleWindowChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
+    transitions: {
+      active: {
+        animation: {
+          duration: 0
+        }
+      }
+    },
     layout: {
       padding: { top: 30 }
     },
@@ -1219,6 +1228,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit() {
+    if (!this.enableDashboardBubbles) return;
     this.initBubbleEngine();
   }
 

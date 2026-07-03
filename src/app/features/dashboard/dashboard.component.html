@@ -1,8 +1,8 @@
 <!-- Professional Unified Dashboard Template -->
 <div class="dashboard-container">
 
-  <!-- High Performance Canvas Bubble Physics Engine -->
-  <canvas #bubbleCanvas class="db-bubble-canvas" [class.hidden]="selectedSupplyChainSection" aria-hidden="true"></canvas>
+  <!-- Decorative bubble canvas is disabled for smoother dashboard tab switching. -->
+  <canvas *ngIf="enableDashboardBubbles" #bubbleCanvas class="db-bubble-canvas" [class.hidden]="selectedSupplyChainSection" aria-hidden="true"></canvas>
 
   <!-- Dashboard Content Wrapper -->
   <div class="dashboard-content">
