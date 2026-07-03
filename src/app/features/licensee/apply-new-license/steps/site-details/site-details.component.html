@@ -67,31 +67,36 @@
           }
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Location Category</mat-label>
-          <mat-select formControlName="locationCategory" required>
-            @if (locationCategories.length === 0) {
-              <mat-option disabled>Loading categories...</mat-option>
+        @if (!isRuralSubdivision) {
+          <mat-form-field appearance="outline">
+            <mat-label>Location Category</mat-label>
+            <mat-select formControlName="locationCategory" required>
+              @if (locationCategories.length === 0) {
+                <mat-option disabled>Loading categories...</mat-option>
+              }
+              @for (category of locationCategories; track category.id) {
+                <mat-option [value]="category.id">
+                  {{ category.categoryName }}
+                </mat-option>
+              }
+            </mat-select>
+            @if (siteDetailsForm.controls['locationCategory'].invalid && siteDetailsForm.controls['locationCategory'].touched) {
+              <mat-error>{{ getErrorMessage('locationCategory') }}</mat-error>
             }
-            @for (category of locationCategories; track category.id) {
-              <mat-option [value]="category.id">
-                {{ category.categoryName }}
-              </mat-option>
-            }
-          </mat-select>
-          @if (siteDetailsForm.controls['locationCategory'].invalid && siteDetailsForm.controls['locationCategory'].touched) {
-            <mat-error>{{ getErrorMessage('locationCategory') }}</mat-error>
-          }
-        </mat-form-field>
+          </mat-form-field>
+        }
 
         <mat-form-field appearance="outline">
           <mat-label>Location Subcategory</mat-label>
           <mat-select formControlName="locationSubcategory" required>
-            @if (locationSubcategories.length === 0 && siteDetailsForm.get('locationCategory')?.value) {
-              <mat-option disabled>No subcategories available</mat-option>
-            }
-            @if (locationSubcategories.length === 0 && !siteDetailsForm.get('locationCategory')?.value) {
+            @if (locationSubcategories.length === 0 && !isRuralSubdivision && !siteDetailsForm.get('locationCategory')?.value) {
               <mat-option disabled>Please select category first</mat-option>
+            }
+            @if (locationSubcategories.length === 0 && isRuralSubdivision && !siteDetailsForm.get('siteSubdivision')?.value) {
+              <mat-option disabled>Please select subdivision first</mat-option>
+            }
+            @if (locationSubcategories.length === 0 && (siteDetailsForm.get('locationCategory')?.value || (isRuralSubdivision && siteDetailsForm.get('siteSubdivision')?.value))) {
+              <mat-option disabled>No subcategories available</mat-option>
             }
             @for (subcategory of locationSubcategories; track subcategory.id) {
               <mat-option [value]="subcategory.id">
@@ -104,34 +109,67 @@
           }
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Location Name</mat-label>
-          <mat-select formControlName="location" required>
-            @if (locations.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
-              <mat-option disabled>No locations available</mat-option>
+        @if (!isRuralSubdivision) {
+          <mat-form-field appearance="outline">
+            <mat-label>Location Name</mat-label>
+            <mat-select formControlName="location" required>
+              @if (locations.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
+                <mat-option disabled>No locations available</mat-option>
+              }
+              @if (locations.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
+                <mat-option disabled>Please select district first</mat-option>
+              }
+              @for (location of locations; track location.id) {
+                <mat-option [value]="location.id">
+                  {{ location.locationDescription }}
+                </mat-option>
+              }
+            </mat-select>
+            @if (siteDetailsForm.controls['location'].invalid && siteDetailsForm.controls['location'].touched) {
+              <mat-error>{{ getErrorMessage('location') }}</mat-error>
             }
-            @if (locations.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
-              <mat-option disabled>Please select district first</mat-option>
+          </mat-form-field>
+        }
+
+        @if (isRuralSubdivision) {
+          <mat-form-field appearance="outline">
+            <mat-label>Block</mat-label>
+            <mat-select formControlName="block" required>
+              @if (blocks.length === 0 && siteDetailsForm.get('locationSubcategory')?.value) {
+                <mat-option disabled>No blocks available</mat-option>
+              }
+              @if (blocks.length === 0 && !siteDetailsForm.get('locationSubcategory')?.value) {
+                <mat-option disabled>Please select location subcategory first</mat-option>
+              }
+              @for (block of blocks; track block.id) {
+                <mat-option [value]="block.id">
+                  {{ block.blockName }}
+                </mat-option>
+              }
+            </mat-select>
+            @if (siteDetailsForm.controls['block'].invalid && siteDetailsForm.controls['block'].touched) {
+              <mat-error>{{ getErrorMessage('block') }}</mat-error>
             }
-            @for (location of locations; track location.id) {
-              <mat-option [value]="location.id">
-                {{ location.locationDescription }}
-              </mat-option>
-            }
-          </mat-select>
-          @if (siteDetailsForm.controls['location'].invalid && siteDetailsForm.controls['location'].touched) {
-            <mat-error>{{ getErrorMessage('location') }}</mat-error>
-          }
-        </mat-form-field>
+          </mat-form-field>
+        }
 
         <mat-form-field appearance="outline">
           <mat-label>Ward Name</mat-label>
           <mat-select formControlName="ward" required>
-            @if (wards.length === 0 && siteDetailsForm.get('location')?.value) {
-              <mat-option disabled>No wards available</mat-option>
-            }
-            @if (wards.length === 0 && !siteDetailsForm.get('location')?.value) {
-              <mat-option disabled>Please select location first</mat-option>
+            @if (isRuralSubdivision) {
+              @if (wards.length === 0 && siteDetailsForm.get('block')?.value) {
+                <mat-option disabled>No wards available</mat-option>
+              }
+              @if (wards.length === 0 && !siteDetailsForm.get('block')?.value) {
+                <mat-option disabled>Please select block first</mat-option>
+              }
+            } @else {
+              @if (wards.length === 0 && siteDetailsForm.get('location')?.value) {
+                <mat-option disabled>No wards available</mat-option>
+              }
+              @if (wards.length === 0 && !siteDetailsForm.get('location')?.value) {
+                <mat-option disabled>Please select location first</mat-option>
+              }
             }
             @for (ward of wards; track ward.id) {
               <mat-option [value]="ward.id">
