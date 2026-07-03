@@ -39,9 +39,7 @@ export class ManageLocationSubcategoryComponent implements OnInit {
 
     if (this.data) {
       this.subcategoryRecord = { ...this.data };
-      if (this.data as any && (this.data as any).sub_division) {
-         this.subcategoryRecord.subDivision = (this.data as any).sub_division;
-      }
+      this.subcategoryRecord.subDivision = this.data.subDivision || (this.data as any).sub_division;
       this.isEditMode = true;
     }
   }
