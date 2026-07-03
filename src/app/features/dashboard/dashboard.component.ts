@@ -343,9 +343,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Supply chain modules (including company for permit section)
-    if (this.supplyChainModuleCounts[moduleName] &&
-        (this.supplyChainModuleCounts[moduleName].applied || 0) > 0) {
-      return this.supplyChainModuleCounts[moduleName].applied || 0;
+    if (['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company'].includes(moduleName)) {
+      return this.supplyChainModuleCounts[moduleName]?.applied || 0;
     }
 
     let sourceCounts = this.dashboardCounts;
@@ -394,14 +393,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // For the Applied bar, use getModuleTotal() which accounts for roles where
     // the API returns applied=0 (admin/officer roles) by summing all statuses.
-    // For individual modules use sourceCounts.applied if available, else sum statuses.
+    // For supply chain modules, always use the stored count (0 if not yet loaded).
+    const supplyChainModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company'];
     const appliedValue = isAllModules
       ? this.getModuleTotal('all')
-      : (sourceCounts.applied != null && sourceCounts.applied > 0
-          ? sourceCounts.applied
-          : (sourceCounts.pending || 0) + (sourceCounts.approved || 0) +
-            (sourceCounts.objection || 0) + (sourceCounts.rejected || 0) +
-            (sourceCounts.awaitingPayment || 0));
+      : supplyChainModules.includes(effectiveModule)
+        ? (this.supplyChainModuleCounts[effectiveModule]?.applied || 0)
+        : (sourceCounts.applied != null && sourceCounts.applied > 0
+            ? sourceCounts.applied
+            : (sourceCounts.pending || 0) + (sourceCounts.approved || 0) +
+              (sourceCounts.objection || 0) + (sourceCounts.rejected || 0) +
+              (sourceCounts.awaitingPayment || 0));
 
     this.singleWindowChartData = {
       ...this.singleWindowChartData,
@@ -562,39 +564,35 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isITCell        = this.currentUser?.roleId === 6;
     const skipTransit     = isCommissioner || isJointComm || isPermitSection;
 
-    // For a plain licensee user, only the hologram data is needed for the chart
-    // (hologram is already prefetched from loadDashboardStats).
-    // Requisition / revalidation / cancellation / transit full-list calls are only
-    // made if the licensee has distillery or brewery menus — and only hologram is
-    // relevant to the main stat cards for non-supply-chain licensees.
-    // This avoids fetching full item lists just to compute counts on login.
+    // For a licensee user, skip all full-list supply chain fetches on login.
+    // Data is only fetched lazily when the user selects a specific chart module.
+    // If prefetched data is provided (from lazy load), use it directly.
     const isLicensee = this.isLicenseeUser();
-    const hasSupplyChainMenus = this.showDistilleryMenus || this.showBreweryOrDistilleryMenus;
 
     // Build observables — reuse prefetched data where available to avoid duplicate HTTP calls.
     const req$ = prefetched?.requisition
       ? of(prefetched.requisition)
-      : (isLicensee && !hasSupplyChainMenus)
+      : (isLicensee)
         ? of([] as any[])
         : this.enaRequisitionService.getRequisitions().pipe(
             map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
             catchError(() => of([]))
           );
 
-    const rev$ = (isPermitSection || (isLicensee && !hasSupplyChainMenus))
-      ? of([] as any[])
+    const rev$ = (isPermitSection || isLicensee)
+      ? (prefetched?.revalidation ? of(prefetched.revalidation) : of([] as any[]))
       : prefetched?.revalidation
         ? of(prefetched.revalidation)
         : this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
 
-    const can$ = (isPermitSection || (isLicensee && !hasSupplyChainMenus))
-      ? of([] as any[])
+    const can$ = (isPermitSection || isLicensee)
+      ? (prefetched?.cancellation ? of(prefetched.cancellation) : of([] as any[]))
       : prefetched?.cancellation
         ? of(prefetched.cancellation)
         : this.supplyChainService.getCancellationData().pipe(catchError(() => of([])));
 
-    const tra$ = (skipTransit || (isLicensee && !hasSupplyChainMenus))
-      ? of([] as any[])
+    const tra$ = (skipTransit || isLicensee)
+      ? (prefetched?.transit ? of(prefetched.transit) : of([] as any[]))
       : prefetched?.transit
         ? of(prefetched.transit)
         : this.supplyChainService.getTransitPermits().pipe(catchError(() => of([])));
