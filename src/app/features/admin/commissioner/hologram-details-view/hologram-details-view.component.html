@@ -167,7 +167,7 @@
             Edit Quantities
           </button>
           <button type="button" class="btn btn-success" (click)="onApprove()" 
-                  *ngIf="application && application.allowedActions?.includes('approve')">
+                  *ngIf="canApproveApplication()">
             <i class="bi bi-check-circle me-1"></i>
             Approve
           </button>

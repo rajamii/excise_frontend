@@ -1,0 +1,36 @@
+<div class="container-fluid p-0">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} Block
+  </h2>
+
+  <mat-dialog-content class="manage-form">
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Block Name</mat-label>
+      <input
+        matInput
+        [(ngModel)]="block.blockName"
+        required
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Location Subcategory</mat-label>
+      <mat-select [(ngModel)]="block.subcategory" required>
+        <mat-option *ngFor="let subcat of locationSubcategories" [value]="subcat.id">
+          {{ subcat.subcategoryName }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="mt-2 mb-2">
+      <mat-checkbox [(ngModel)]="block.isActive">
+        Active
+      </mat-checkbox>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>

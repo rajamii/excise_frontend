@@ -558,6 +558,9 @@ export class LicenseApplicationService {
       if (siteDetailsData.ward_name) {
         formData.append('ward_name', String(siteDetailsData.ward_name));
       }
+      if (siteDetailsData.block_name) {
+        formData.append('block_name', String(siteDetailsData.block_name));
+      }
       if (siteDetailsData.address) {
         formData.append('business_address', String(siteDetailsData.address));
       }

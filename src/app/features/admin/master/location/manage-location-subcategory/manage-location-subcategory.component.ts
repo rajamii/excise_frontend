@@ -25,6 +25,7 @@ export class ManageLocationSubcategoryComponent implements OnInit {
 
   isEditMode = false;
   categories: LocationCategory[] = [];
+  subdivisions: any[] = []; // Using any to avoid importing Subdivision if not strictly needed, or we can use the proper type. Wait, let's just use any.
 
   constructor(
     private masterService: MasterService,
@@ -34,9 +35,11 @@ export class ManageLocationSubcategoryComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCategories();
+    this.loadSubdivisions();
 
     if (this.data) {
       this.subcategoryRecord = { ...this.data };
+      this.subcategoryRecord.subDivision = this.data.subDivision || (this.data as any).sub_division;
       this.isEditMode = true;
     }
   }
@@ -54,6 +57,19 @@ export class ManageLocationSubcategoryComponent implements OnInit {
     });
   }
 
+  loadSubdivisions(): void {
+    this.masterService.getSubdivisions().subscribe({
+      next: (data: any) => {
+        this.subdivisions = data.map((item: any) => ({
+          id: item.id,
+          subdivision: item.subdivision || item.sub_division,
+          isActive: item.isActive !== undefined ? item.isActive : item.is_active
+        })).filter((s: any) => s.isActive || (this.isEditMode && s.id === this.subcategoryRecord.subDivision));
+      },
+      error: () => Swal.fire('Error', 'Failed to load subdivisions.', 'error')
+    });
+  }
+
   onSave(): void {
     if (!this.subcategoryRecord.subcategoryName || !this.subcategoryRecord.subcategoryName.trim()) {
       Swal.fire('Warning', 'Subcategory Name is required.', 'warning');
@@ -62,6 +78,11 @@ export class ManageLocationSubcategoryComponent implements OnInit {
 
     if (!this.subcategoryRecord.categoryId) {
       Swal.fire('Warning', 'Location Category is required.', 'warning');
+      return;
+    }
+    
+    if (!this.subcategoryRecord.subDivision) {
+      Swal.fire('Warning', 'Subdivision is required.', 'warning');
       return;
     }
 
@@ -78,6 +99,7 @@ export class ManageLocationSubcategoryComponent implements OnInit {
       const payload = {
         subcategory_name: this.subcategoryRecord.subcategoryName.trim(),
         category: this.subcategoryRecord.categoryId,
+        sub_division: this.subcategoryRecord.subDivision,
         description: this.subcategoryRecord.description || '',
         is_active: this.subcategoryRecord.isActive
       };

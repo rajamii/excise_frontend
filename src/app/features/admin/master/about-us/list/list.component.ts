@@ -28,7 +28,7 @@ interface AboutUsFieldConfig {
   apiKey?: string;
   label: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'file' | 'textarea';
+  type?: 'text' | 'email' | 'file' | 'textarea' | 'date';
 }
 
 interface AboutUsCategoryConfig {
@@ -123,6 +123,8 @@ export class ListComponent implements OnInit {
       name: 'Name',
       designation: 'Designation',
       email: 'Email',
+      fromDate: 'From Date',
+      toDate: 'To Date',
       title: 'Title',
       image: 'Image',
       content: 'Content',
@@ -181,11 +183,13 @@ export class ListComponent implements OnInit {
         key: 'exciseSecretaries',
         label: 'Excise Secretaries / Principal Secretaries',
         singularLabel: 'Excise Secretary / Principal Secretary',
-        displayedColumns: ['name', 'designation', 'email', 'actions'],
+        displayedColumns: ['name', 'designation', 'email', 'fromDate', 'toDate', 'actions'],
         fields: [
           { key: 'name', label: 'Name', required: true },
           { key: 'designation', label: 'Designation', required: true },
-          { key: 'email', label: 'Email', required: true, type: 'email' as const }
+          { key: 'email', label: 'Email', required: true, type: 'email' as const },
+          { key: 'fromDate', apiKey: 'from_date', label: 'From Date', type: 'date' as const },
+          { key: 'toDate', apiKey: 'to_date', label: 'To Date', type: 'date' as const }
         ],
         load: () => this.infoPagesService.getExciseSecretaries(),
         create: (data) => this.infoPagesService.createExciseSecretary(data),

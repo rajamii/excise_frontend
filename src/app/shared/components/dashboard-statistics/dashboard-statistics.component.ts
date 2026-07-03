@@ -132,7 +132,7 @@ interface FilterOption {
   `,
   styles: [`
     .dashboard-statistics {
-      margin-bottom: 2rem;
+      margin-bottom: 0;
       background: transparent;
     }
 

@@ -19,7 +19,7 @@ interface AboutUsFieldConfig {
   apiKey?: string;
   label: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'file' | 'textarea';
+  type?: 'text' | 'email' | 'file' | 'textarea' | 'date';
 }
 
 interface AboutUsCategoryConfig {
@@ -224,7 +224,14 @@ export class ManageComponent implements OnInit {
       return value;
     }
 
-    return value.trim();
+    const trimmed = value.trim();
+
+    // Return null for empty date fields so backend accepts blank nullable dates
+    if (trimmed === '') {
+      return null;
+    }
+
+    return trimmed;
   }
 
   private readValue(record: any, key: string, apiKey?: string): any {

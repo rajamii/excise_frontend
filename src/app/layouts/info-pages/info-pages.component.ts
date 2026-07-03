@@ -48,8 +48,8 @@ export class InfoPagesComponent implements OnInit {
   
   markdownContent: string = '';
 
-  commissionerColumns: string[] = ['name', 'designation', 'email'];
-  commissionerData = COMMISSIONER_DATA;
+  commissionerColumns: string[] = ['name', 'designation', 'email', 'fromDate', 'toDate'];
+  commissionerData: any[] = COMMISSIONER_DATA;
 
   nodalOfficer: NodalOfficer[] = [];
 

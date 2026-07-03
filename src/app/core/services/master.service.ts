@@ -43,10 +43,11 @@ export class MasterService {
   private readonly LICENSE_FEE_URL = `${this.BASE_URL}/license-fees`;
   private readonly FIXED_FEE_URL = `${this.BASE_URL}/fixed-fees`;
 
-  // ✅ NEW: Endpoints for the 3 new tables
   private readonly LOCATION_CATEGORY_URL = `${this.BASE_URL}/location-categories`;
   private readonly LOCATION_SUBCATEGORY_URL = `${this.BASE_URL}/location-subcategories`;
   private readonly WARD_URL = `${this.BASE_URL}/wards`;
+  private readonly BLOCK_URL = `${this.BASE_URL}/blocks`;
+  private readonly RURAL_WARD_URL = `${this.BASE_URL}/rural-wards`;
   private readonly HOLOGRAM_SUPPLIER_URL = `${environment.apiBaseUrl}/masters/supply_chain/hologram-suppliers`;
   private readonly BULK_SPIRIT_URL = `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit`;
   private readonly ENA_DISTILLERY_URL = `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types`;
@@ -646,5 +647,25 @@ export class MasterService {
 
   updateFixedFee(code: string, data: any): Observable<any> {
     return this.http.put(`${this.FIXED_FEE_URL}/${code}/update/`, data);
+  }
+
+  getBlocks(): Observable<any> {
+    return this.http.get(`${this.BLOCK_URL}/`);
+  }
+
+  getBlocksBySubcategory(subcategoryId: number | string): Observable<any> {
+    return this.http.get(`${this.BLOCK_URL}/?subcategory_id=${subcategoryId}`);
+  }
+
+  getRuralWards(): Observable<any> {
+    return this.http.get(`${this.RURAL_WARD_URL}/`);
+  }
+
+  getRuralWardsByBlock(blockId: number | string): Observable<any> {
+    return this.http.get(`${this.RURAL_WARD_URL}/?block_id=${blockId}`);
+  }
+
+  getLocationSubcategoriesBySubdivision(subdivisionId: number | string): Observable<any> {
+    return this.http.get(`${this.LOCATION_SUBCATEGORY_URL}/?sub_division_id=${subdivisionId}`);
   }
 }

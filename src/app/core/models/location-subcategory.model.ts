@@ -8,4 +8,5 @@ export interface LocationSubcategory {
   operationDate?: string;
   createdBy?: number;
   status?: string;
+  subDivision?: number;
 }
