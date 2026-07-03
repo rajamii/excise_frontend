@@ -562,27 +562,38 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isITCell        = this.currentUser?.roleId === 6;
     const skipTransit     = isCommissioner || isJointComm || isPermitSection;
 
+    // For a plain licensee user, only the hologram data is needed for the chart
+    // (hologram is already prefetched from loadDashboardStats).
+    // Requisition / revalidation / cancellation / transit full-list calls are only
+    // made if the licensee has distillery or brewery menus — and only hologram is
+    // relevant to the main stat cards for non-supply-chain licensees.
+    // This avoids fetching full item lists just to compute counts on login.
+    const isLicensee = this.isLicenseeUser();
+    const hasSupplyChainMenus = this.showDistilleryMenus || this.showBreweryOrDistilleryMenus;
+
     // Build observables — reuse prefetched data where available to avoid duplicate HTTP calls.
     const req$ = prefetched?.requisition
       ? of(prefetched.requisition)
-      : this.enaRequisitionService.getRequisitions().pipe(
-          map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
-          catchError(() => of([]))
-        );
+      : (isLicensee && !hasSupplyChainMenus)
+        ? of([] as any[])
+        : this.enaRequisitionService.getRequisitions().pipe(
+            map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
+            catchError(() => of([]))
+          );
 
-    const rev$ = (isPermitSection)
+    const rev$ = (isPermitSection || (isLicensee && !hasSupplyChainMenus))
       ? of([] as any[])
       : prefetched?.revalidation
         ? of(prefetched.revalidation)
         : this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
 
-    const can$ = (isPermitSection)
+    const can$ = (isPermitSection || (isLicensee && !hasSupplyChainMenus))
       ? of([] as any[])
       : prefetched?.cancellation
         ? of(prefetched.cancellation)
         : this.supplyChainService.getCancellationData().pipe(catchError(() => of([])));
 
-    const tra$ = skipTransit
+    const tra$ = (skipTransit || (isLicensee && !hasSupplyChainMenus))
       ? of([] as any[])
       : prefetched?.transit
         ? of(prefetched.transit)
