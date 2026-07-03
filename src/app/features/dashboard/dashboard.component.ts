@@ -16,11 +16,12 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take, map } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take, map, tap } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
 import { TimerConfigService } from '../../core/services/timer-config.service';
+import { RenewalConfigService } from '../../core/services/renewal-config.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { UnifiedDashboardService } from '../../core/services/unified-dashboard.service';
 import { LicenseMeService } from '../../core/services/license-me.service';
@@ -189,6 +190,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   currentUser: User | null = null;
   dashboardData: any = {};
   isLoading = false;
+  isChartLoading = true;
   error: string | null = null;
 
   // Professional dashboard properties (from licensee dashboard)
@@ -554,9 +556,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return 0;
   }
 
-  public loadSupplyChainModuleStats(prefetched?: { hologram?: any[]; requisition?: any[]; revalidation?: any[]; cancellation?: any[]; transit?: any[] }): void {
+  public loadSupplyChainModuleStats(
+    prefetched?: { hologram?: any[]; requisition?: any[]; revalidation?: any[]; cancellation?: any[]; transit?: any[] },
+    onComplete?: () => void
+  ): void {
     const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10].includes(Number(this.currentUser?.roleId || 0));
-    if (!this.isLicenseeUser() && !isAdminOrOfficer) return;
+    if (!this.isLicenseeUser() && !isAdminOrOfficer) {
+      onComplete?.();
+      return;
+    }
+    if (!prefetched && this.supplyChainModuleStatsLoaded) {
+      this.updateSingleWindowChart();
+      onComplete?.();
+      return;
+    }
 
     const isPermitSection = Number(this.currentUser?.roleId || 0) === 5;
     const isCommissioner  = this.isCommissionerUser();
@@ -609,7 +622,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       : of(null as any);
 
     forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$ })
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => onComplete?.())
+      )
       .subscribe(({ req, rev, can, tra, hol, comp }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
@@ -760,6 +776,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.supplyChainModuleCounts['company'] = { applied: items.length, pending, approved, objection, rejected };
         }
 
+        this.supplyChainModuleStatsLoaded = true;
         this.updateSingleWindowChart();
       });
   }
@@ -768,10 +785,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const month = this.selectedChartMonth !== '' ? Number(this.selectedChartMonth) : undefined;
     const year  = this.selectedChartYear  !== '' ? Number(this.selectedChartYear)  : undefined;
     const isITCell = this.currentUser?.roleId === 6;
+    this.isChartLoading = true;
 
     if (isITCell) {
       // IT Cell: filter hologram items client-side by month/year then recount
-      this.hologramService.getProcurements().pipe(catchError(() => of([]))).subscribe((res: any[]) => {
+      this.hologramService.getProcurements().pipe(
+        catchError(() => of([])),
+        finalize(() => { this.isChartLoading = false; })
+      ).subscribe((res: any[]) => {
         let items = Array.isArray(res) ? res : [];
 
         // Apply month/year filter on the date field
@@ -824,6 +845,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         month,
         year
       )
+      .pipe(finalize(() => { this.isChartLoading = false; }))
       .subscribe({
         next: (res) => {
           this.detailedCounts = {
@@ -868,6 +890,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
   activeTable: 'default' | 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' = 'approved';
   private applicationsLoaded = false;
+  private supplyChainModuleStatsLoaded = false;
+  private licenseeHologramProcurementsCache: any[] | null = null;
   private applicationsLoading = false;
 
   // Supply Chain Section Management
@@ -962,7 +986,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private timerConfigService: TimerConfigService
+    private timerConfigService: TimerConfigService,
+    private renewalConfigService: RenewalConfigService
   ) { }
 
   ngOnInit() {
@@ -1113,7 +1138,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     
     forkJoin({
       timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
-      renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
+      renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
     }).subscribe(({ timer, renewalConfig }) => {
       let newWarnings: any[] = [];
       const windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
@@ -1641,7 +1666,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadUserActivities();
         }
 
-        // Navigating back to /dashboard (clearing section) should always reload stats.
+        // Returning to /dashboard should reuse cached dashboard data unless the user
+        // explicitly refreshes or performs an action that changes counts.
         if (!this.selectedSupplyChainSection) {
           this.activeTable = 'approved';
           this.loadDashboardData();
@@ -2072,27 +2098,28 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  private loadDashboardData() {
+  private loadDashboardData(forceRefresh = false) {
+    if (forceRefresh) {
+      this.supplyChainModuleStatsLoaded = false;
+      this.licenseeHologramProcurementsCache = null;
+    }
+
     // Officer dashboards are full-page components and should render directly
     // without waiting for unified stats/table data.
     if (this.shouldShowRoleSpecificDashboard()) {
       this.isLoading = false;
-      // IT Cell (roleId 6) and Commissioner (roleId 10) need supply chain stats
-      // so the stat boxes and bar chart show correct hologram pending counts.
-      // Permit Section (roleId 5) also needs supply chain + company registration counts for its bar chart.
-      if (this.currentUser?.roleId === 5 || this.currentUser?.roleId === 6 ||
-          this.currentUser?.roleId === 9 || this.currentUser?.roleId === 10) {
-        this.loadSupplyChainModuleStats();
-      }
+      this.isChartLoading = true;
+      // Paint the dashboard and chart loader before role APIs begin.
+      setTimeout(() => this.loadDashboardStatsLight(forceRefresh), 0);
       return;
     }
 
     // If no specific section is selected, load dashboard stats
     if (!this.selectedSupplyChainSection) {
       if (this.isLicenseeUser()) {
-        this.loadDashboardStats();
+        this.loadDashboardStats(forceRefresh);
       } else {
-        this.loadDashboardStatsLight();
+        this.loadDashboardStatsLight(forceRefresh);
       }
     } else {
       this.isLoading = false; // Directly show the section
@@ -2189,14 +2216,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  private loadDashboardStatsLight() {
+  private loadDashboardStatsLight(forceRefresh = false) {
     // Keep login fast: fetch only counts. Lists are fetched on-demand when user opens a table.
     this.applicationsLoaded = false;
     this.applicationsLoading = false;
     this.clearDataSources();
+    this.isChartLoading = true;
 
     this.unifiedDashboardService
-      .getDetailedUnifiedDashboardCounts(this.dashboardConfig)
+      .getDetailedUnifiedDashboardCounts(this.dashboardConfig, forceRefresh)
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (res) => {
@@ -2216,7 +2244,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             awaitingPayment: res.total.awaitingPayment || 0
           };
           this.refreshOicActionPendingCount();
-          this.loadSupplyChainModuleStats();
+          this.loadSupplyChainModuleStats(undefined, () => {
+            this.isChartLoading = false;
+          });
           this.updateSingleWindowChart();
         },
         error: (error) => {
@@ -2224,21 +2254,36 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.supplyChainPendingCounts = {};
           this.updateSingleWindowChart();
+          this.isChartLoading = false;
         }
       });
   }
 
-  private loadDashboardStats() {
-    this.unifiedDashboardService.clearUnifiedAppsCache();
+  private loadDashboardStats(forceRefresh = false) {
+    if (forceRefresh) {
+      this.unifiedDashboardService.clearUnifiedAppsCache();
+    }
+    this.isChartLoading = true;
     // Use the unified dashboard service for all roles
     forkJoin({
-      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(this.dashboardConfig, true),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, this.dashboardConfig),
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
       hologramProcurements: this.isLicenseeUser()
-        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        ? (
+            !forceRefresh && this.licenseeHologramProcurementsCache
+              ? of(this.licenseeHologramProcurementsCache)
+              : this.hologramService.getProcurements().pipe(
+                  tap((rows) => {
+                    this.licenseeHologramProcurementsCache = Array.isArray(rows) ? rows : [];
+                  }),
+                  catchError(() => of([]))
+                )
+          )
         : of([])
     })
-      .pipe(finalize(() => { this.isLoading = false; }))
+      .pipe(finalize(() => {
+        this.isLoading = false;
+        this.isChartLoading = false;
+      }))
       .subscribe({
         next: (result) => {
           let filteredApplications = {
@@ -2362,7 +2407,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     forkJoin({
       applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
       hologramProcurements: this.isLicenseeUser()
-        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        ? (
+            !forceRefresh && this.licenseeHologramProcurementsCache
+              ? of(this.licenseeHologramProcurementsCache)
+              : this.hologramService.getProcurements().pipe(
+                  tap((rows) => {
+                    this.licenseeHologramProcurementsCache = Array.isArray(rows) ? rows : [];
+                  }),
+                  catchError(() => of([]))
+                )
+          )
         : of([])
     })
       .pipe(finalize(() => { this.applicationsLoading = false; }))
@@ -2998,7 +3052,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               text: 'Payment confirmed and application approved.',
               icon: 'success'
             }).then(() => {
-              this.loadDashboardData();
+              this.unifiedDashboardService.clearUnifiedAppsCache();
+              this.loadDashboardData(true);
             });
           },
           error: (err) => {
@@ -3022,7 +3077,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   // Method to handle dashboard refresh
   onDashboardRefresh() {
     this.error = null;
-    this.initializeDashboard();
+    this.unifiedDashboardService.clearUnifiedAppsCache();
+    this.isLoading = true;
+    this.loadDashboardData(true);
   }
 
   // Get role-specific title

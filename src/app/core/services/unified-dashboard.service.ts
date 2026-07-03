@@ -15,6 +15,14 @@ export class UnifiedDashboardService {
   private workflowUrl = `${environment.apiBaseUrl}/auth/`;
   private unifiedCountsCache$?: Observable<DashboardCount>;
   private unifiedCountsCacheKey: string | null = null;
+  private detailedCountsCache$?: Observable<{
+    total: DashboardCount;
+    newLicense: DashboardCount;
+    renewal: DashboardCount;
+    salesman: DashboardCount;
+    company: DashboardCount;
+  }>;
+  private detailedCountsCacheKey: string | null = null;
   private unifiedAppsCache$?: Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
@@ -89,6 +97,8 @@ export class UnifiedDashboardService {
     this.unifiedAppsCacheKey = null;
     this.unifiedCountsCache$ = undefined;
     this.unifiedCountsCacheKey = null;
+    this.detailedCountsCache$ = undefined;
+    this.detailedCountsCacheKey = null;
   }
 
 
@@ -210,6 +220,16 @@ export class UnifiedDashboardService {
     company: DashboardCount;
   }> {
     const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'salesman-barman', 'new-license']));
+    const cacheKey = [
+      enabledTypes.slice().sort().join('|'),
+      `month:${month ?? 'all'}`,
+      `year:${year ?? 'all'}`
+    ].join('::');
+
+    if (!forceRefresh && this.detailedCountsCache$ && this.detailedCountsCacheKey === cacheKey) {
+      return this.detailedCountsCache$;
+    }
+
     const empty: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 } as DashboardCount;
 
     const buildUrl = (base: string): string => {
@@ -221,7 +241,8 @@ export class UnifiedDashboardService {
       return qs ? `${base}?${qs}` : base;
     };
 
-    return forkJoin({
+    this.detailedCountsCacheKey = cacheKey;
+    this.detailedCountsCache$ = forkJoin({
       newLicense: enabledTypes.includes('new-license')
         ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.new}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
         : of(empty),
@@ -255,7 +276,9 @@ export class UnifiedDashboardService {
           company: res.company
         };
       })
-    );
+    ).pipe(shareReplay({ bufferSize: 1, refCount: false }));
+
+    return this.detailedCountsCache$;
   }
 
   // Get applications from all 4 types (added company)
@@ -492,7 +515,7 @@ export class UnifiedDashboardService {
           awaitingPayment: uniqueByKey(awaitingPaymentApps),
         };
       }),
-      shareReplay({ bufferSize: 1, refCount: true })
+      shareReplay({ bufferSize: 1, refCount: false })
     );
 
     return this.unifiedAppsCache$;

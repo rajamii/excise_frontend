@@ -249,11 +249,13 @@ export class OfficerInChargeDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
-    this.loadTransitApplications();
-    this.loadHologramRequestsCounts();
-    this.loadHologramProcurementPendingCount();
-    this.loadBlDetailsPendingCount();
-    this.loadDailyEntryPendingCount();
+    setTimeout(() => {
+      this.loadTransitApplications();
+      this.loadHologramRequestsCounts();
+      this.loadHologramProcurementPendingCount();
+      this.loadBlDetailsPendingCount();
+      this.loadDailyEntryPendingCount();
+    }, 0);
   }
 
   private loadDailyEntryPendingCount(): void {

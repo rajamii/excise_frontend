@@ -13,8 +13,7 @@ import { SalesmanBarmanRegistrationService } from '../../../core/services/salesm
 import { DashboardConfigService } from '../../../core/services/dashboard-config.service';
 import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
 import { TimerConfigService } from '../../../core/services/timer-config.service';
-import { environment } from '../../../../environments/environment';
-import { HttpClient } from '@angular/common/http';
+import { RenewalConfigService } from '../../../core/services/renewal-config.service';
 import { ChangeDetectorRef } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MyLicensesComponent } from '../my-licenses/my-licenses.component';
@@ -75,8 +74,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private dashboardConfigService: DashboardConfigService,
     private sidebarPendingBadgeService: SidebarPendingBadgeService,
     private router: Router,
-    private http: HttpClient,
     private timerConfigService: TimerConfigService,
+    private renewalConfigService: RenewalConfigService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog
   ) { }
@@ -181,7 +180,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
       forkJoin({
         timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
-        renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
+        renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
       }).subscribe(({ timer, renewalConfig }) => {
         let newWarnings: any[] = [];
         const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);

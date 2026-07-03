@@ -916,11 +916,13 @@ export class CommissionerDashboardComponent implements OnInit {
     this.resolveCurrentUserRole();
     if (this.embeddedHologramOnly) {
       this.selectedApplicationType = 'hologram';
-      this.loadHolograms();
+      setTimeout(() => this.loadHolograms(), 0);
     } else {
       console.log('📊 Loading all applications for Commissioner review...');
-      this.loadAllApplications();
-      this.loadUnifiedDashboardCounts();
+      setTimeout(() => {
+        this.loadAllApplications();
+        this.loadUnifiedDashboardCounts();
+      }, 0);
     }
   }
 

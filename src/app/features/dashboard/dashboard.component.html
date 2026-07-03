@@ -544,7 +544,7 @@
     </div>
 
     <!-- System Applications Distribution Bar Chart Section (Shown for all users) -->
-    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser && (!shouldShowRoleSpecificDashboard() || currentUser.roleId === 6 || currentUser.roleId === 5)">      <mat-card class="chart-card">
+    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser">      <mat-card class="chart-card">
         <div class="chart-header-container">
           <div class="chart-title-area">
             <div class="chart-badge">
@@ -591,7 +591,11 @@
         </div>
 
         <mat-card-content class="chart-content-layout">
-          <div class="canvas-holder">
+          <div class="canvas-holder" [class.chart-loading]="isChartLoading">
+            <div class="chart-loader-overlay" *ngIf="isChartLoading" aria-live="polite">
+              <mat-progress-spinner mode="indeterminate" diameter="34"></mat-progress-spinner>
+              <span>Loading chart...</span>
+            </div>
             <canvas baseChart
               [data]="singleWindowChartData"
               [options]="singleWindowChartOptions"

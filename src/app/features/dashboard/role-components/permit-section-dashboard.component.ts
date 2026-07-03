@@ -193,7 +193,7 @@ export class PermitSectionDashboardComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
-    this.loadAllApplications();
+    setTimeout(() => this.loadAllApplications(), 0);
   }
 
   private isPermitSectionUser(): boolean {

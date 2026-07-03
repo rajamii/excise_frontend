@@ -15,8 +15,7 @@ import { of, Subscription } from 'rxjs';
 import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { TimerConfig, TimerConfigService } from '../../../core/services/timer-config.service';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { RenewalConfigService } from '../../../core/services/renewal-config.service';
 import { forkJoin } from 'rxjs';
 import { MasterService } from '../../../core/services/master.service';
 
@@ -43,9 +42,9 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private timerConfigService: TimerConfigService,
     private masterService: MasterService,
+    private renewalConfigService: RenewalConfigService,
     private dialog: MatDialog,
-    private router: Router,
-    private http: HttpClient
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -80,7 +79,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           forkJoin({
             app: of(app),
             timer: this.timerConfigService.getTimerConfig(this.renewalReminderTimerCode, fallbackSeconds).pipe(take(1)),
-            renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)), take(1))
+            renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
           })
         )
       )

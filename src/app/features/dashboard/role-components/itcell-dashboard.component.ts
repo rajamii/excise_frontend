@@ -188,7 +188,7 @@ export class ITCellDashboardComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
-    this.loadHologramApplications();
+    setTimeout(() => this.loadHologramApplications(), 0);
   }
 
   loadHologramApplications(): void {
