@@ -8,6 +8,7 @@ import { AdminService } from '../../admin.service';
 import { Block } from '../../../../core/models/block.model';
 import { Ward } from '../../../../core/models/ward.model';
 import { RuralWard } from '../../../../core/models/rural-ward.model';
+import { MasterLocation } from '../../../../core/models/master-location.model';
 
 import { BlockManageDialogComponent } from './dialogs/block-manage-dialog.component';
 import { UrbanWardManageDialogComponent } from './dialogs/urban-ward-manage-dialog.component';
@@ -30,6 +31,9 @@ export class BlocksWardsComponent implements OnInit {
   urbanColumns: string[] = ['sno', 'wardName', 'wardNumber', 'locationCode', 'actions'];
   urbanWards: Ward[] = [];
 
+  // Location lookup map: locationCode → locationDescription
+  locationMap = new Map<number, string>();
+
   // ── Rural Wards ──────────────────────────────────────────────────────────
   ruralColumns: string[] = ['sno', 'wardName', 'wardNumber', 'block', 'actions'];
   ruralWards: RuralWard[] = [];
@@ -41,9 +45,28 @@ export class BlocksWardsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadLocations();
     this.loadBlocks();
     this.loadUrbanWards();
     this.loadRuralWards();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // LOCATIONS (lookup map)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  loadLocations(): void {
+    this.masterService.getLocations().subscribe({
+      next: (data: any) => {
+        const list: MasterLocation[] = Array.isArray(data) ? data : [];
+        this.locationMap = new Map(list.map(l => [l.locationCode, l.locationDescription]));
+      },
+      error: () => {} // non-critical — table falls back to code
+    });
+  }
+
+  getLocationName(code: number): string {
+    return this.locationMap.get(code) ?? String(code);
   }
 
   // ══════════════════════════════════════════════════════════════════════════

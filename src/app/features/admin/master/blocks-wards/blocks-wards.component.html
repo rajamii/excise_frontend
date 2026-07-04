@@ -117,7 +117,7 @@
 
                   <ng-container matColumnDef="locationCode">
                     <mat-header-cell *matHeaderCellDef>Location</mat-header-cell>
-                    <mat-cell *matCellDef="let row">{{ row.locationName || row.locationCode }}</mat-cell>
+                    <mat-cell *matCellDef="let row">{{ getLocationName(row.locationCode) }}</mat-cell>
                   </ng-container>
 
                   <ng-container matColumnDef="actions">
