@@ -380,6 +380,24 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Subcategory IDs exempt from Trade License requirement:
+   * Foreign Liquor Retail Shop (10), Retail Sale of Denatured Spirit (11),
+   * Brewing/Sale of Pachwai by Retail (23), Brewing of Pachwai (24),
+   * Departmental Store (30)
+   */
+  private readonly TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS = new Set([10, 11, 23, 24, 30]);
+
+  private isTradeLicenseExempt(): boolean {
+    try {
+      const keyInfo = this.getParsedSession<any>('keyInfoData');
+      const subCatId = Number(keyInfo?.licenseSubCategory ?? keyInfo?.license_sub_category ?? 0);
+      return subCatId > 0 && this.TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS.has(subCatId);
+    } catch {
+      return false;
+    }
+  }
+
   private ensureReviewMasterData(): void {
     this.cacheMasterDataIfMissing('licenseCategories', () => this.masterService.getLicenseCategories());
     this.cacheMasterDataIfMissing('licenseSubcategories', () => this.masterService.getLicenseSubcategories());
@@ -883,14 +901,18 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('Site Ownership OK');
     }
 
-    if (!siteData?.trade_license_covered) {
-      console.error('Missing: Trade License Covered');
-      missingFields.push('Trade License Covered');
+    if (!this.isTradeLicenseExempt()) {
+      if (!siteData?.trade_license_covered) {
+        console.error('Missing: Trade License Covered');
+        missingFields.push('Trade License Covered');
+      } else {
+        console.log('Trade License Covered OK');
+      }
+      if (siteData?.trade_license_covered === 'No') {
+        missingFields.push('Trade License Covered');
+      }
     } else {
-      console.log('Trade License Covered OK');
-    }
-    if (siteData?.trade_license_covered === 'No') {
-      missingFields.push('Trade License Covered');
+      console.log('Trade License Covered — skipped (exempt category)');
     }
 
     const docs = this.licenseAppService.getAllSiteDocuments();
@@ -948,7 +970,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (siteData?.trade_license_covered === 'Yes' && !docs.get('trade_license')) {
+    if (!this.isTradeLicenseExempt() && siteData?.trade_license_covered === 'Yes' && !docs.get('trade_license')) {
       missingFields.push('Trade License');
     }
 

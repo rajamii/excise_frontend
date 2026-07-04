@@ -85,6 +85,54 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     return subdivision ? !!subdivision.isRural : false;
   }
 
+  /**
+   * Subcategory IDs for which Trade License is NOT applicable:
+   * Foreign Liquor Retail Shop (10), Retail Sale of Denatured Spirit (11),
+   * Brewing/Sale of Pachwai by Retail (23), Brewing of Pachwai (24),
+   * Departmental Store (30)
+   */
+  private readonly TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS = new Set([10, 11, 23, 24, 30]);
+
+  /** Set once in ngOnInit — true when the selected subcategory is trade-licence-exempt */
+  hideTradeLicense = false;
+
+  private computeHideTradeLicense(): void {
+    try {
+      const keyInfo = JSON.parse(sessionStorage.getItem('keyInfoData') || '{}');
+      const subCatId = Number(
+        keyInfo.licenseSubCategory ?? keyInfo.license_sub_category ?? 0
+      );
+      console.log('[TradeLicense] subCatId from keyInfoData:', subCatId);
+      const exempt = subCatId > 0 && this.TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS.has(subCatId);
+      this.hideTradeLicense = exempt;
+      console.log('[TradeLicense] hideTradeLicense =', exempt);
+
+      if (exempt) {
+        const ctrl = this.siteDetailsForm?.get('tradeLicenseCovered');
+        if (ctrl) {
+          ctrl.clearValidators();
+          ctrl.setValue(null, { emitEvent: false });
+          ctrl.updateValueAndValidity({ emitEvent: false });
+        }
+        const doc = this.documents?.find(d => d.name === 'trade_license');
+        if (doc) { doc.required = false; }
+        this.clearDocumentSelection('trade_license');
+      } else {
+        // Restore required validator when not exempt
+        const ctrl = this.siteDetailsForm?.get('tradeLicenseCovered');
+        if (ctrl && !ctrl.validator) {
+          ctrl.setValidators([Validators.required, Validators.pattern(/^Yes$/)]);
+          ctrl.updateValueAndValidity({ emitEvent: false });
+        }
+      }
+
+      this.cdr.detectChanges();
+    } catch (e) {
+      console.error('[TradeLicense] error reading keyInfoData', e);
+      this.hideTradeLicense = false;
+    }
+  }
+
   constructionTypes: string[] = ['RCC', 'Wooden Structure'];
 
   documents: DocumentUpload[] = [
@@ -193,6 +241,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
   ngOnInit() {
     console.log('🚀 SiteDetailsComponent initialized');
+    this.computeHideTradeLicense();
     this.loadMasterData();
     this.restoreDocuments();
 
@@ -1264,7 +1313,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       length: formData.length || null,
       breadth: formData.breadth || null,
       site_owned: formData.siteOwned || null,
-      trade_license_covered: formData.tradeLicenseCovered || null,
+      trade_license_covered: this.hideTradeLicense ? null : (formData.tradeLicenseCovered || null),
       noc_obtained: formData.siteOwned === 'No' ? formData.nocObtained || null : null,
       parcha: this.getDocumentReference('parcha'),
       noc: this.getDocumentReference('noc'),
