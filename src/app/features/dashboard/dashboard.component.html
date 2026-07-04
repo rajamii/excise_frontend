@@ -1,8 +1,8 @@
 <!-- Professional Unified Dashboard Template -->
 <div class="dashboard-container">
 
-  <!-- High Performance Canvas Bubble Physics Engine -->
-  <canvas #bubbleCanvas class="db-bubble-canvas" [class.hidden]="selectedSupplyChainSection" aria-hidden="true"></canvas>
+  <!-- Decorative bubble canvas is disabled for smoother dashboard tab switching. -->
+  <canvas *ngIf="enableDashboardBubbles" #bubbleCanvas class="db-bubble-canvas" [class.hidden]="selectedSupplyChainSection" aria-hidden="true"></canvas>
 
   <!-- Dashboard Content Wrapper -->
   <div class="dashboard-content">
@@ -35,10 +35,15 @@
     <!-- Role-Specific Full Dashboards (when no specific section is selected) -->
     <div *ngIf="shouldShowRoleSpecificDashboard()" class="role-specific-dashboard">
       <!-- Permit Section Dashboard -->
-      <app-permit-section-dashboard *ngIf="currentUser?.roleId === 5"></app-permit-section-dashboard>
+      <app-permit-section-dashboard *ngIf="currentUser?.roleId === 5"
+        [selectedModule]="selectedChartModule"
+        [moduleCounts]="supplyChainModuleCounts">
+      </app-permit-section-dashboard>
 
       <!-- Commissioner Dashboard -->
-      <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"></app-commissioner-dashboard>
+      <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"
+        [supplyChainHologramPending]="supplyChainModuleCounts['hologram'].pending || 0">
+      </app-commissioner-dashboard>
 
       <!-- IT Cell Dashboard -->
       <app-itcell-dashboard *ngIf="currentUser?.roleId === 6"></app-itcell-dashboard>
@@ -239,13 +244,13 @@
           </div>
 
           <!-- Empty -->
-          <div class="act-empty" *ngIf="!userActivityLoading && !userActivityError && !userActivities?.length">
+          <div class="act-empty" *ngIf="!userActivityLoading && !userActivityError && !userActivities.length">
             <mat-icon>inbox</mat-icon>
             <span>No activity records found.</span>
           </div>
 
           <!-- Table -->
-          <div class="act-table-wrap" *ngIf="!userActivityLoading && !userActivityError && userActivities?.length">
+          <div class="act-table-wrap" *ngIf="!userActivityLoading && !userActivityError && userActivities.length">
             <table class="act-table">
               <thead>
                 <tr>
@@ -383,7 +388,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.applied }}</div>
+            <div class="value">{{ getFilteredCount('applied') }}</div>
             <div class="label">Applied</div>
             <div class="sub-info">{{ getStatSubInfo('applied') }}</div>
           </div>
@@ -406,11 +411,11 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) + getSupplyChainPendingTotal() }}</div>
+            <div class="value">{{ getFilteredCount('pending') }}</div>
             <div class="label">Pending</div>
             <div
               class="sub-info"
-              *ngIf="(dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) || getSupplyChainPendingTotal() > 0 || (isOicUser() && (getOicPendingCount('transit-applications') > 0 || getOicPendingCount('hologram-daily-entry') > 0))"
+              *ngIf="selectedChartModule === 'all' && ((dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) || getSupplyChainPendingTotal() > 0 || (isOicUser() && (getOicPendingCount('transit-applications') > 0 || getOicPendingCount('hologram-daily-entry') > 0)))"
             >
               <span class="payment-count" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
               <span class="payment-count" *ngIf="getSupplyChainPendingCount('requisition') > 0">{{ getSupplyChainPendingCount('requisition') }} requisition payment pending</span>
@@ -418,7 +423,7 @@
               <span class="payment-count" *ngIf="isOicUser() && getOicPendingCount('transit-applications') > 0">{{ getOicPendingCount('transit-applications') }} transit applications pending</span>
               <span class="payment-count" *ngIf="isOicUser() && getOicPendingCount('hologram-daily-entry') > 0">{{ getOicPendingCount('hologram-daily-entry') }} daily entry pending</span>
             </div>
-            <div class="sub-info" *ngIf="(!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0) && getSupplyChainPendingTotal() === 0 && (!isOicUser() || (getOicPendingCount('transit-applications') === 0 && getOicPendingCount('hologram-daily-entry') === 0))">
+            <div class="sub-info" *ngIf="selectedChartModule !== 'all' || ((!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0) && getSupplyChainPendingTotal() === 0 && (!isOicUser() || (getOicPendingCount('transit-applications') === 0 && getOicPendingCount('hologram-daily-entry') === 0)))">
               {{ getStatSubInfo('pending') }}
             </div>
           </div>
@@ -428,7 +433,7 @@
         </mat-card>
 
         <!-- Awaiting Payment Stat Card -->
-        <mat-card class="stat-card awaiting-payment" *ngIf="shouldShowStatCard('awaitingPayment') && dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
+        <mat-card class="stat-card awaiting-payment" *ngIf="shouldShowStatCard('awaitingPayment') && getFilteredCount('awaitingPayment') > 0">
           <div class="card-header">
             <div class="circle-icon orange-bg">
               <mat-icon>payment</mat-icon>
@@ -441,7 +446,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
+            <div class="value">{{ getFilteredCount('awaitingPayment') }}</div>
             <div class="label">Awaiting Payment</div>
              <div class="sub-info">{{ getAwaitingPaymentBreakdownText() }}</div>
           </div>
@@ -459,7 +464,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.approved }}</div>
+            <div class="value">{{ getFilteredCount('approved') }}</div>
             <div class="label">Approved</div>
             <div class="sub-info">{{ getStatSubInfo('approved') }}</div>
           </div>
@@ -482,7 +487,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.objection || 0 }}</div>
+            <div class="value">{{ getFilteredCount('objection') }}</div>
             <div class="label">Objection</div>
             <div class="sub-info">{{ getStatSubInfo('objection') }}</div>
           </div>
@@ -505,7 +510,7 @@
             </div>
           </div>
           <div class="card-content">
-            <div class="value">{{ dashboardCounts.rejected }}</div>
+            <div class="value">{{ getFilteredCount('rejected') }}</div>
             <div class="label">Rejected</div>
             <div class="sub-info">{{ getStatSubInfo('rejected') }}</div>
           </div>
@@ -536,69 +541,70 @@
           </div>
         </mat-card>
       </div>
+    </div>
 
-      <!-- Single Window & Site Admin Bar Chart Section -->
-      <div class="single-window-chart-wrapper" *ngIf="currentUser?.roleId === 3 || currentUser?.roleId === 1">
-        <mat-card class="chart-card">
-          <div class="chart-header-container">
-            <div class="chart-title-area">
-              <div class="chart-badge">
-                <mat-icon>monitoring</mat-icon>
-                <span>Live System Analytics</span>
-              </div>
-              <h2 class="chart-main-title">System Applications Distribution</h2>
-              <p class="chart-sub-title">Overall status-wise breakdown of applications processed across all excise departments</p>
+    <!-- System Applications Distribution Bar Chart Section (Shown for all users) -->
+    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser">      <mat-card class="chart-card">
+        <div class="chart-header-container">
+          <div class="chart-title-area">
+            <div class="chart-badge">
+              <mat-icon>monitoring</mat-icon>
+              <span>Live System Analytics</span>
             </div>
-            
-            <div class="chart-filter-area">
-              <mat-form-field appearance="outline" class="premium-select">
-                <mat-label>Module</mat-label>
-                <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)">
-                  <mat-option value="all">All Modules</mat-option>
-                  <mat-option value="newLicense">New Licenses</mat-option>
-                  <mat-option value="renewal">Renewals</mat-option>
-                  <mat-option value="salesman">Salesman / Barman</mat-option>
-                  <mat-option value="company">Company Reg.</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="premium-select">
-                <mat-label>Month</mat-label>
-                <mat-select [(value)]="selectedChartMonth" (selectionChange)="onChartDateFilterChange()">
-                  <mat-option value="">All Months</mat-option>
-                  <mat-option *ngFor="let m of chartMonthOptions" [value]="m.value">{{ m.label }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="premium-select">
-                <mat-label>Year</mat-label>
-                <mat-select [(value)]="selectedChartYear" (selectionChange)="onChartDateFilterChange()">
-                  <mat-option value="">All Years</mat-option>
-                  <mat-option *ngFor="let y of chartYearOptions" [value]="y">{{ y }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <button mat-stroked-button class="chart-reset-btn"
-                      title="Reset filters"
-                      (click)="selectedChartMonth = ''; selectedChartYear = ''; selectedChartModule = 'all'; onChartDateFilterChange()">
-                <mat-icon>restart_alt</mat-icon>
-                Reset
-              </button>
-            </div>
+            <h2 class="chart-main-title">System Applications Distribution</h2>
+            <p class="chart-sub-title">Overall status-wise breakdown of applications processed across all excise departments</p>
           </div>
+          
+          <div class="chart-filter-area">
+            <mat-form-field appearance="outline" class="premium-select">
+              <mat-label>Module</mat-label>
+              <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)" panelClass="module-dropdown-panel">
+                <mat-option *ngFor="let m of availableChartModules" [value]="m.value">
+                  {{ m.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
 
-          <mat-card-content class="chart-content-layout">
-            <div class="canvas-holder">
-              <canvas baseChart
-                [data]="singleWindowChartData"
-                [options]="singleWindowChartOptions"
-                [plugins]="singleWindowChartPlugins"
-                [type]="'bar'">
-              </canvas>
+            <mat-form-field appearance="outline" class="premium-select">
+              <mat-label>Month</mat-label>
+              <mat-select [(value)]="selectedChartMonth" (selectionChange)="onChartDateFilterChange()">
+                <mat-option value="">All Months</mat-option>
+                <mat-option *ngFor="let m of chartMonthOptions" [value]="m.value">{{ m.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="premium-select">
+              <mat-label>Year</mat-label>
+              <mat-select [(value)]="selectedChartYear" (selectionChange)="onChartDateFilterChange()">
+                <mat-option value="">All Years</mat-option>
+                <mat-option *ngFor="let y of chartYearOptions" [value]="y">{{ y }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <button mat-stroked-button class="chart-reset-btn"
+                    title="Reset filters"
+                    matTooltip="Reset filters"
+                    (click)="selectedChartMonth = ''; selectedChartYear = ''; selectedChartModule = 'all'; onChartDateFilterChange()">
+              <mat-icon>restart_alt</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <mat-card-content class="chart-content-layout">
+          <div class="canvas-holder" [class.chart-loading]="isChartLoading">
+            <div class="chart-loader-overlay" *ngIf="isChartLoading" aria-live="polite">
+              <mat-progress-spinner mode="indeterminate" diameter="34"></mat-progress-spinner>
+              <span>Loading chart...</span>
             </div>
-          </mat-card-content>
-        </mat-card>
-      </div>
+            <canvas baseChart
+              [data]="singleWindowChartData"
+              [options]="singleWindowChartOptions"
+              [plugins]="singleWindowChartPlugins"
+              [type]="'bar'">
+            </canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
     </div>
 
     <!-- Renewal Warnings Section (Licensee Only) - shown after stats boxes -->

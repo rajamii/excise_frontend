@@ -1,5 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { CommonModule, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
+import { SupplyChainService } from '../licensee/supplyChain/services/supplychain.service';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { BaseChartDirective } from 'ng2-charts';
@@ -14,11 +16,12 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take, map, tap } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
 import { TimerConfigService } from '../../core/services/timer-config.service';
+import { RenewalConfigService } from '../../core/services/renewal-config.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { UnifiedDashboardService } from '../../core/services/unified-dashboard.service';
 import { LicenseMeService } from '../../core/services/license-me.service';
@@ -30,6 +33,7 @@ import { SalesmanBarmanRegistrationService } from '../../core/services/salesman-
 import { AccountService } from '../../core/services/account.service';
 import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
 import { SidebarPendingBadgeService } from '../../shared/services/sidebar-pending-badge.service';
+import { CompanyRegistrationService } from '../../core/services/company-registration.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
 import {
@@ -67,7 +71,7 @@ import { DailyhologramrecordregisterComponent } from '../admin/commissioner/dail
 
 // Role-specific Dashboard Components
 import { PermitSectionDashboardComponent } from './role-components/permit-section-dashboard.component';
-import { CommissionerDashboardComponent as CommissionerDashboard } from './role-components/commissioner-dashboard.component';
+import { CommissionerDashboardComponent as CommissionerDashboard } from '../admin/commissioner/commissioner-dashboard/commissioner-dashboard.component';
 import { ITCellDashboardComponent } from './role-components/itcell-dashboard.component';
 import { OfficerInChargeDashboardComponent } from './role-components/officer-in-charge-dashboard.component';
 import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
@@ -174,6 +178,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private dailyHologramWorkingRecords?: DailyhologramrecordregisterComponent;
 
   @ViewChild('bubbleCanvas') bubbleCanvasRef?: ElementRef<HTMLCanvasElement>;
+  public readonly enableDashboardBubbles = false;
   private canvasAnimationId?: number;
   private canvasResizeListener?: () => void;
   private bubbles: any[] = [];
@@ -186,6 +191,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   currentUser: User | null = null;
   dashboardData: any = {};
   isLoading = false;
+  isChartLoading = true;
   error: string | null = null;
 
   // Professional dashboard properties (from licensee dashboard)
@@ -244,6 +250,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   public singleWindowChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
+    transitions: {
+      active: {
+        animation: {
+          duration: 0
+        }
+      }
+    },
     layout: {
       padding: { top: 30 }
     },
@@ -327,35 +341,104 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
   };
 
-  updateSingleWindowChart(): void {
-    if (this.currentUser?.roleId === 3 || this.currentUser?.roleId === 1) {
-      let sourceCounts = this.dashboardCounts;
-      if (this.selectedChartModule === 'newLicense') {
-        sourceCounts = this.detailedCounts.newLicense;
-      } else if (this.selectedChartModule === 'renewal') {
-        sourceCounts = this.detailedCounts.renewal;
-      } else if (this.selectedChartModule === 'salesman') {
-        sourceCounts = this.detailedCounts.salesman;
-      } else if (this.selectedChartModule === 'company') {
-        sourceCounts = this.detailedCounts.company;
-      }
-
-      this.singleWindowChartData = {
-        ...this.singleWindowChartData,
-        datasets: [
-          {
-            ...this.singleWindowChartData.datasets[0],
-            data: [
-              sourceCounts.applied || 0,
-              sourceCounts.pending || 0,
-              sourceCounts.approved || 0,
-              sourceCounts.objection || 0,
-              sourceCounts.rejected || 0
-            ]
-          }
-        ]
-      };
+  public getModuleTotal(moduleName: string): number {
+    if (moduleName === 'all') {
+      const baseTotal = (this.dashboardCounts.pending || 0) +
+                        (this.dashboardCounts.approved || 0) +
+                        (this.dashboardCounts.objection || 0) +
+                        (this.dashboardCounts.rejected || 0) +
+                        (this.dashboardCounts.awaitingPayment || 0);
+      const supplyChainTotal = Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) =>
+        sum + (v.applied || 0), 0);
+      return baseTotal + supplyChainTotal;
     }
+
+    // Supply chain modules (including company for permit section)
+    if (['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company'].includes(moduleName)) {
+      return this.supplyChainModuleCounts[moduleName]?.applied || 0;
+    }
+
+    let sourceCounts = this.dashboardCounts;
+    if (moduleName === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (moduleName === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (moduleName === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (moduleName === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    }
+
+    return (sourceCounts.pending || 0) +
+           (sourceCounts.approved || 0) +
+           (sourceCounts.objection || 0) +
+           (sourceCounts.rejected || 0) +
+           (sourceCounts.awaitingPayment || 0);
+  }
+
+  updateSingleWindowChart(): void {
+    const isITCell = this.currentUser?.roleId === 6;
+
+    // For IT Cell, "All Modules" means hologram only — redirect to hologram counts
+    const effectiveModule = (isITCell && this.selectedChartModule === 'all')
+      ? 'hologram'
+      : this.selectedChartModule;
+
+    let sourceCounts = this.dashboardCounts;
+    if (effectiveModule === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (effectiveModule === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (effectiveModule === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (effectiveModule === 'company' && (this.supplyChainModuleCounts['company']?.applied ?? 0) > 0) {
+      // For permit section: company counts come from supplyChainModuleCounts (loaded from list API)
+      sourceCounts = this.supplyChainModuleCounts['company'];
+    } else if (effectiveModule === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    } else if (this.supplyChainModuleCounts[effectiveModule]) {
+      sourceCounts = this.supplyChainModuleCounts[effectiveModule];
+    }
+
+    const isAllModules = this.selectedChartModule === 'all' && !isITCell;
+
+    // For the Applied bar, use getModuleTotal() which accounts for roles where
+    // the API returns applied=0 (admin/officer roles) by summing all statuses.
+    // For supply chain modules, always use the stored count (0 if not yet loaded).
+    const supplyChainModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company'];
+    const appliedValue = isAllModules
+      ? this.getModuleTotal('all')
+      : supplyChainModules.includes(effectiveModule)
+        ? (this.supplyChainModuleCounts[effectiveModule]?.applied || 0)
+        : (sourceCounts.applied != null && sourceCounts.applied > 0
+            ? sourceCounts.applied
+            : (sourceCounts.pending || 0) + (sourceCounts.approved || 0) +
+              (sourceCounts.objection || 0) + (sourceCounts.rejected || 0) +
+              (sourceCounts.awaitingPayment || 0));
+
+    this.singleWindowChartData = {
+      ...this.singleWindowChartData,
+      datasets: [
+        {
+          ...this.singleWindowChartData.datasets[0],
+          data: [
+            appliedValue,
+            isAllModules
+              ? (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()
+              : (sourceCounts.pending || 0),
+            isAllModules
+              ? (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal()
+              : (sourceCounts.approved || 0),
+            isAllModules
+              ? (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal()
+              : (sourceCounts.objection || 0),
+            isAllModules
+              ? (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal()
+              : (sourceCounts.rejected || 0)
+          ]
+        }
+      ]
+    };
   }
 
   onChartModuleChange(moduleName: string): void {
@@ -363,9 +446,407 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.updateSingleWindowChart();
   }
 
+  public updateAvailableChartModules(): void {
+    const roleId = Number(this.currentUser?.roleId || 0);
+    const isITCell = roleId === 6;
+    const isJointCommissioner = roleId === 9;
+
+    // IT Cell only deals with Hologram Procurement
+    if (isITCell) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'hologram', label: 'Hologram Procurement' }
+      ];
+      return;
+    }
+
+    // Joint Commissioner only handles license-related modules (no supply chain)
+    if (isJointCommissioner) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'newLicense', label: 'New Licenses' },
+        { value: 'renewal', label: 'Renewals' },
+        { value: 'salesman', label: 'Salesman / Barman' },
+        { value: 'company', label: 'Company Reg.' }
+      ];
+      return;
+    }
+
+    // Permit Section only handles Requisitions and Company Registration
+    const isPermitSection = roleId === 5;
+    if (isPermitSection) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'requisition', label: 'Requisitions' },
+        { value: 'company', label: 'Company Reg.' }
+      ];
+      return;
+    }
+
+    const modules = [
+      { value: 'all', label: 'All Modules' },
+      { value: 'newLicense', label: 'New Licenses' },
+      { value: 'renewal', label: 'Renewals' },
+      { value: 'salesman', label: 'Salesman / Barman' },
+      { value: 'company', label: 'Company Reg.' }
+    ];
+
+    const isAdmin = roleId === 1 || roleId === 3;
+    // isCommissioner here means the full Commissioner (roleId 10), not Joint Commissioner
+    const isCommissioner = roleId === 10;
+
+    // Distillery-only supply chain items: Requisition, Revalidation, Cancellation
+    if (isAdmin || isCommissioner || this.showDistilleryMenus) {
+      modules.push(
+        { value: 'requisition', label: 'Requisitions' },
+        { value: 'revalidation', label: 'Revalidations' },
+        { value: 'cancellation', label: 'Cancellations' }
+      );
+    }
+
+    // Brewery/Distillery supply chain items: Transit, Hologram
+    // Commissioner does not handle transit permits — exclude from their module list
+    if (isAdmin || this.showBreweryOrDistilleryMenus) {
+      modules.push({ value: 'transit', label: 'Transit Permits' });
+    }
+    if (isAdmin || isCommissioner || this.showBreweryOrDistilleryMenus) {
+      modules.push({ value: 'hologram', label: 'Hologram Procurement' });
+    }
+    this.availableChartModules = modules;
+  }
+
+  public getFilteredCount(status: string): number {
+    let sourceCounts = this.dashboardCounts;
+    if (this.selectedChartModule === 'newLicense') {
+      sourceCounts = this.detailedCounts.newLicense;
+    } else if (this.selectedChartModule === 'renewal') {
+      sourceCounts = this.detailedCounts.renewal;
+    } else if (this.selectedChartModule === 'salesman') {
+      sourceCounts = this.detailedCounts.salesman;
+    } else if (this.selectedChartModule === 'company' && (this.supplyChainModuleCounts['company']?.applied ?? 0) > 0) {
+      // Permit section: company counts live in supplyChainModuleCounts
+      sourceCounts = this.supplyChainModuleCounts['company'];
+    } else if (this.selectedChartModule === 'company') {
+      sourceCounts = this.detailedCounts.company;
+    } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
+      sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
+    }
+
+    if (status === 'applied') {
+      return this.getModuleTotal(this.selectedChartModule);
+    }
+    if (status === 'pending') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal();
+      }
+      return sourceCounts.pending || 0;
+    }
+    if (status === 'awaitingPayment') {
+      return sourceCounts.awaitingPayment || 0;
+    }
+    if (status === 'approved') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal();
+      }
+      return sourceCounts.approved || 0;
+    }
+    if (status === 'objection') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal();
+      }
+      return sourceCounts.objection || 0;
+    }
+    if (status === 'rejected') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal();
+      }
+      return sourceCounts.rejected || 0;
+    }
+    return 0;
+  }
+
+  public loadSupplyChainModuleStats(
+    prefetched?: { hologram?: any[]; requisition?: any[]; revalidation?: any[]; cancellation?: any[]; transit?: any[] },
+    onComplete?: () => void
+  ): void {
+    const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10].includes(Number(this.currentUser?.roleId || 0));
+    if (!this.isLicenseeUser() && !isAdminOrOfficer) {
+      onComplete?.();
+      return;
+    }
+    if (!prefetched && this.supplyChainModuleStatsLoaded) {
+      this.updateSingleWindowChart();
+      onComplete?.();
+      return;
+    }
+
+    const isPermitSection = Number(this.currentUser?.roleId || 0) === 5;
+    const isCommissioner  = this.isCommissionerUser();
+    const isJointComm     = Number(this.currentUser?.roleId || 0) === 9;
+    const isITCell        = this.currentUser?.roleId === 6;
+    const skipTransit     = isCommissioner || isJointComm || isPermitSection;
+
+    // For a licensee user, skip all full-list supply chain fetches on login.
+    // Data is only fetched lazily when the user selects a specific chart module.
+    // If prefetched data is provided (from lazy load), use it directly.
+    const isLicensee = this.isLicenseeUser();
+
+    // Build observables — reuse prefetched data where available to avoid duplicate HTTP calls.
+    const req$ = prefetched?.requisition
+      ? of(prefetched.requisition)
+      : (isLicensee)
+        ? of([] as any[])
+        : this.enaRequisitionService.getRequisitions().pipe(
+            map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
+            catchError(() => of([]))
+          );
+
+    const rev$ = (isPermitSection || isLicensee)
+      ? (prefetched?.revalidation ? of(prefetched.revalidation) : of([] as any[]))
+      : prefetched?.revalidation
+        ? of(prefetched.revalidation)
+        : this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
+
+    const can$ = (isPermitSection || isLicensee)
+      ? (prefetched?.cancellation ? of(prefetched.cancellation) : of([] as any[]))
+      : prefetched?.cancellation
+        ? of(prefetched.cancellation)
+        : this.supplyChainService.getCancellationData().pipe(catchError(() => of([])));
+
+    const tra$ = (skipTransit || isLicensee)
+      ? (prefetched?.transit ? of(prefetched.transit) : of([] as any[]))
+      : prefetched?.transit
+        ? of(prefetched.transit)
+        : this.supplyChainService.getTransitPermits().pipe(catchError(() => of([])));
+
+    const hol$ = isPermitSection
+      ? of([] as any[])
+      : prefetched?.hologram
+        ? of(prefetched.hologram)
+        : this.hologramService.getProcurements().pipe(catchError(() => of([])));
+
+    // Company registration — only for Permit Section
+    const comp$ = isPermitSection
+      ? this.companyRegistrationService.getApplicationsByStatus().pipe(catchError(() => of({})))
+      : of(null as any);
+
+    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$ })
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => onComplete?.())
+      )
+      .subscribe(({ req, rev, can, tra, hol, comp }) => {
+
+        // ── REQUISITIONS ──────────────────────────────────────────────────────
+        {
+          const items: any[] = Array.isArray(req) ? req : [];
+          const pending = (isCommissioner || isPermitSection)
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
+            : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
+          const awaitingPayment = (isCommissioner || isPermitSection)
+            ? 0
+            : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
+          const approved = items.filter(x => {
+            const status   = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const stage    = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const combined = `${status} ${stage}`;
+            const stageId  = Number(x.current_stage ?? x.currentStage ?? -1);
+            if (isCommissioner) {
+              const isAwaitingPayment = combined.includes('approvedcommissioner') &&
+                !['forwardedpayslip','approvedpayslip','rejectedpayslip','paymentcompleted','paymentdone','permitsection']
+                  .some(m => combined.includes(m));
+              if (isAwaitingPayment) return false;
+              if (combined.includes('forwardedpayslip') && combined.includes('permitsection')) return false;
+              if (combined.includes('rejectedpayslip')) return false;
+              if (combined.includes('approvedpayslip')) return true;
+              if (combined.includes('issued') || combined.includes('complete') || combined.includes('paymentcompleted')) return true;
+              if (x.currentStageIsFinal === true && combined.includes('approv') && !combined.includes('reject')) return true;
+              if (stageId > 33) return true;
+              return false;
+            }
+            return (combined.includes('approved') || combined.includes('issued')) && !combined.includes('reject');
+          }).length;
+          const rejected = items.filter(x => {
+            const combined = `${String(x.status||'').toLowerCase().replace(/[^a-z0-9]/g,'')} ${String(x.current_stage_name||x.currentStageName||'').toLowerCase().replace(/[^a-z0-9]/g,'')}`;
+            if (isCommissioner) {
+              if (combined.includes('rejectedpayslip')) return true;
+              if (x.currentStageIsFinal === true && combined.includes('reject')) return true;
+              return false;
+            }
+            return combined.includes('rejected') || combined.includes('cancelled');
+          }).length;
+          this.supplyChainModuleCounts['requisition'] = { applied: items.length, pending: pending + awaitingPayment, approved, objection: 0, rejected };
+          // feed badge counts too
+          if (this.isLicenseeUser()) {
+            this.supplyChainPendingCounts['requisition'] = pending;
+            this.supplyChainPendingCounts['requisition:payment'] = awaitingPayment;
+          }
+        }
+
+        // ── REVALIDATIONS ─────────────────────────────────────────────────────
+        if (isPermitSection) {
+          this.supplyChainModuleCounts['revalidation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const items: any[] = Array.isArray(rev) ? rev : [];
+          const pending = isCommissioner
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['revalidation'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) this.supplyChainPendingCounts['revalidation'] = pending;
+        }
+
+        // ── CANCELLATIONS ─────────────────────────────────────────────────────
+        if (isPermitSection) {
+          this.supplyChainModuleCounts['cancellation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const items: any[] = Array.isArray(can) ? can : [];
+          const pending = isCommissioner
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['cancellation'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) this.supplyChainPendingCounts['cancellation'] = pending;
+        }
+
+        // ── TRANSIT PERMITS ───────────────────────────────────────────────────
+        if (skipTransit) {
+          this.supplyChainModuleCounts['transit'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const raw: any[] = Array.isArray(tra) ? tra : [];
+          const billNos = new Set<string>();
+          const items: any[] = [];
+          raw.forEach(item => {
+            const billNo = item.billNo || item.bill_no;
+            if (billNo && !billNos.has(billNo)) { billNos.add(billNo); items.push(item); }
+          });
+          const pending  = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['transit'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) this.supplyChainPendingCounts['transit'] = pending;
+        }
+
+        // ── HOLOGRAMS ─────────────────────────────────────────────────────────
+        if (isPermitSection) {
+          this.supplyChainModuleCounts['hologram'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else {
+          const items: any[] = Array.isArray(hol) ? hol : [];
+          let pending: number;
+          if (isITCell) {
+            pending = items.filter(item => {
+              const t = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (t.includes('rejected') || t.includes('cancelled')) return false;
+              return t.includes('submittedhp') || t.includes('submitted') ||
+                     t.includes('underitcellreview') || t.includes('itcellreview');
+            }).length;
+          } else {
+            pending = this.sidebarPendingBadgeService.countHologramPendingReview(items);
+          }
+          const awaitingPayment = (isITCell || isCommissioner) ? 0 : this.sidebarPendingBadgeService.countHologramAwaitingPayment(items);
+          const approved = isITCell
+            ? items.filter(x => {
+                const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (t.includes('rejected') || t.includes('cancelled')) return false;
+                return !(t.includes('submittedhp') || t.includes('submitted') || t.includes('underitcellreview') || t.includes('itcellreview'));
+              }).length
+            : items.filter(x => {
+                const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                return t.includes('approved') || t.includes('issued') ||
+                       t.includes('paymentcompleted') || t.includes('cartoonassigned') || t.includes('cartonassigned');
+              }).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          this.supplyChainModuleCounts['hologram'] = { applied: items.length, pending: pending + awaitingPayment, approved, objection: 0, rejected };
+          if (this.isLicenseeUser()) {
+            this.supplyChainPendingCounts['hologram'] = pending;
+            this.supplyChainPendingCounts['hologram:payment'] = awaitingPayment;
+          }
+        }
+
+        // ── COMPANY REGISTRATION (Permit Section only) ────────────────────────
+        if (isPermitSection && comp) {
+          const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
+          const allItems = [
+            ...flatten(comp?.applied), ...flatten(comp?.pending),
+            ...flatten(comp?.approved), ...flatten(comp?.rejected),
+            ...flatten(comp?.objection), ...flatten(comp?.awaiting_payment)
+          ];
+          const seen = new Set<any>();
+          const items = allItems.filter(item => {
+            const key = item?.id ?? item?.application_id ?? item?.applicationId;
+            if (seen.has(key)) return false; seen.add(key); return true;
+          });
+          const pending  = this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']);
+          const approved = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return (s.includes('approv') || s.includes('issued') || s.includes('complete')) && !s.includes('reject'); }).length;
+          const rejected = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return s.includes('reject') || s.includes('cancel'); }).length;
+          const objection = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return s.includes('objection'); }).length;
+          this.supplyChainModuleCounts['company'] = { applied: items.length, pending, approved, objection, rejected };
+        }
+
+        this.supplyChainModuleStatsLoaded = true;
+        this.updateSingleWindowChart();
+      });
+  }
+
   onChartDateFilterChange(): void {
     const month = this.selectedChartMonth !== '' ? Number(this.selectedChartMonth) : undefined;
-    const year = this.selectedChartYear !== '' ? Number(this.selectedChartYear) : undefined;
+    const year  = this.selectedChartYear  !== '' ? Number(this.selectedChartYear)  : undefined;
+    const isITCell = this.currentUser?.roleId === 6;
+    this.isChartLoading = true;
+
+    if (isITCell) {
+      // IT Cell: filter hologram items client-side by month/year then recount
+      this.hologramService.getProcurements().pipe(
+        catchError(() => of([])),
+        finalize(() => { this.isChartLoading = false; })
+      ).subscribe((res: any[]) => {
+        let items = Array.isArray(res) ? res : [];
+
+        // Apply month/year filter on the date field
+        if (month !== undefined || year !== undefined) {
+          items = items.filter(item => {
+            const d = new Date(item.date || item.created_at || item.submissionDate || '');
+            if (isNaN(d.getTime())) return false;
+            if (month !== undefined && (d.getMonth() + 1) !== month) return false;
+            if (year  !== undefined && d.getFullYear() !== year)         return false;
+            return true;
+          });
+        }
+
+        const pending = items.filter(item => {
+          const t = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const isApproved = t.includes('approved') || t.includes('cartoonassigned') || t.includes('cartonassigned');
+          if (isApproved) return false;
+          return t.includes('submit') || t.includes('underitcellreview') ||
+                 t.includes('itcellreview') || t.includes('pending') || t.includes('review');
+        }).length;
+        // approved = everything NOT pending and NOT rejected (all downstream stages count as IT Cell approved)
+        const approved = items.filter(x => {
+          const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (t.includes('rejected') || t.includes('cancelled')) return false;
+          const isPending = t.includes('submittedhp') || t.includes('submitted') ||
+                            t.includes('underitcellreview') || t.includes('itcellreview');
+          return !isPending;
+        }).length;
+        const rejected = items.filter(x => {
+          const s = String(x.status || '').toLowerCase();
+          return s.includes('rejected') || s.includes('cancelled');
+        }).length;
+
+        this.supplyChainModuleCounts['hologram'] = {
+          applied: items.length,
+          pending,
+          approved,
+          objection: 0,
+          rejected
+        };
+        this.updateSingleWindowChart();
+      });
+      return;
+    }
+
     this.unifiedDashboardService
       .getDetailedUnifiedDashboardCounts(
         this.dashboardConfig,
@@ -373,6 +854,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         month,
         year
       )
+      .pipe(finalize(() => { this.isChartLoading = false; }))
       .subscribe({
         next: (res) => {
           this.detailedCounts = {
@@ -417,14 +899,29 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
   activeTable: 'default' | 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' = 'approved';
   private applicationsLoaded = false;
+  private supplyChainModuleStatsLoaded = false;
+  private licenseeHologramProcurementsCache: any[] | null = null;
   private applicationsLoading = false;
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
   walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
-  private showDistilleryMenus = false;
-  private showBreweryOrDistilleryMenus = false;
+  public showDistilleryMenus = false;
+  public showBreweryOrDistilleryMenus = false;
+  public supplyChainService = inject(SupplyChainService);
+  public enaRequisitionService = inject(EnaRequisitionService);
+  private companyRegistrationService = inject(CompanyRegistrationService);
+  public availableChartModules: { value: string; label: string }[] = [];
+
+  public supplyChainModuleCounts: Record<string, DashboardCount> = {
+    requisition: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    revalidation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    cancellation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    transit: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    hologram: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    company: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
+  };
   private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
   private walletEligibilityResolved = false;
@@ -498,7 +995,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private timerConfigService: TimerConfigService
+    private timerConfigService: TimerConfigService,
+    private renewalConfigService: RenewalConfigService
   ) { }
 
   ngOnInit() {
@@ -649,7 +1147,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     
     forkJoin({
       timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
-      renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
+      renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
     }).subscribe(({ timer, renewalConfig }) => {
       let newWarnings: any[] = [];
       const windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
@@ -730,6 +1228,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit() {
+    if (!this.enableDashboardBubbles) return;
     this.initBubbleEngine();
   }
 
@@ -1177,7 +1676,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadUserActivities();
         }
 
-        // Navigating back to /dashboard (clearing section) should always reload stats.
+        // Returning to /dashboard should reuse cached dashboard data unless the user
+        // explicitly refreshes or performs an action that changes counts.
         if (!this.selectedSupplyChainSection) {
           this.activeTable = 'approved';
           this.loadDashboardData();
@@ -1551,6 +2051,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Get current user from role service
     this.currentUser = this.roleService.getCurrentUser();
     this.refreshWelcomeText();
+    this.updateAvailableChartModules();
 
     // If no current user in role service, try to get from account service
     if (!this.currentUser) {
@@ -1561,6 +2062,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.roleService.setCurrentUser(mappedUser);
           this.currentUser = mappedUser;
           this.refreshWelcomeText();
+          this.updateAvailableChartModules();
           this.proceedWithDashboardLoad();
         } else {
           this.error = 'No user found. Please log in again.';
@@ -1597,7 +2099,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (config) => {
           this.dashboardConfig = config;
           this.loadLicenseeMenuAccess();
-          this.loadDashboardData();
         },
         error: (error) => {
           console.error('Error loading dashboard configuration:', error);
@@ -1607,20 +2108,28 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  private loadDashboardData() {
+  private loadDashboardData(forceRefresh = false) {
+    if (forceRefresh) {
+      this.supplyChainModuleStatsLoaded = false;
+      this.licenseeHologramProcurementsCache = null;
+    }
+
     // Officer dashboards are full-page components and should render directly
     // without waiting for unified stats/table data.
     if (this.shouldShowRoleSpecificDashboard()) {
       this.isLoading = false;
+      this.isChartLoading = true;
+      // Paint the dashboard and chart loader before role APIs begin.
+      setTimeout(() => this.loadDashboardStatsLight(forceRefresh), 0);
       return;
     }
 
     // If no specific section is selected, load dashboard stats
     if (!this.selectedSupplyChainSection) {
       if (this.isLicenseeUser()) {
-        this.loadDashboardStats();
+        this.loadDashboardStats(forceRefresh);
       } else {
-        this.loadDashboardStatsLight();
+        this.loadDashboardStatsLight(forceRefresh);
       }
     } else {
       this.isLoading = false; // Directly show the section
@@ -1629,7 +2138,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getSupplyChainPendingCount(section: string): number {
     const key = String(section || '').trim().toLowerCase();
-    return Number(this.supplyChainPendingCounts?.[key] || 0);
+    const sidebarPending = Number(this.supplyChainPendingCounts?.[key] || 0);
+    if (sidebarPending > 0) {
+      return sidebarPending;
+    }
+
+    return Number(this.supplyChainModuleCounts?.[key]?.pending || 0);
   }
 
   getOicPendingCount(section: string): number {
@@ -1638,7 +2152,28 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainPendingTotal(): number {
-    return this.getSupplyChainPendingCount('requisition') + this.getSupplyChainPendingCount('hologram');
+    const isCommissioner = this.isCommissionerUser();
+    return this.getSupplyChainPendingCount('requisition') +
+           this.getSupplyChainPendingCount('revalidation') +
+           this.getSupplyChainPendingCount('cancellation') +
+           this.getSupplyChainPendingCount('hologram') +
+           (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
+  }
+
+  getSupplyChainAppliedTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.applied || 0), 0);
+  }
+
+  getSupplyChainApprovedTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.approved || 0), 0);
+  }
+
+  getSupplyChainRejectedTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.rejected || 0), 0);
+  }
+
+  getSupplyChainObjectionTotal(): number {
+    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.objection || 0), 0);
   }
 
   isOicUser(): boolean {
@@ -1657,13 +2192,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.sidebarPendingBadgeService
-      .refresh(['requisition', 'hologram'], force, { audience: 'licensee', mode: 'full' })
+      .refresh(['requisition', 'revalidation', 'cancellation', 'hologram', 'transit'], force, { audience: 'licensee', mode: 'full' })
       .pipe(
         takeUntil(this.destroy$),
         catchError(() => of({} as Record<string, number>))
       )
       .subscribe((counts) => {
         this.supplyChainPendingCounts = counts || {};
+        this.updateSingleWindowChart();
       });
   }
 
@@ -1690,14 +2226,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  private loadDashboardStatsLight() {
+  private loadDashboardStatsLight(forceRefresh = false) {
     // Keep login fast: fetch only counts. Lists are fetched on-demand when user opens a table.
     this.applicationsLoaded = false;
     this.applicationsLoading = false;
     this.clearDataSources();
+    this.isChartLoading = true;
 
     this.unifiedDashboardService
-      .getDetailedUnifiedDashboardCounts(this.dashboardConfig)
+      .getDetailedUnifiedDashboardCounts(this.dashboardConfig, forceRefresh)
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (res) => {
@@ -1716,8 +2253,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: res.total.rejected || 0,
             awaitingPayment: res.total.awaitingPayment || 0
           };
-          this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          this.loadSupplyChainModuleStats(undefined, () => {
+            this.isChartLoading = false;
+          });
           this.updateSingleWindowChart();
         },
         error: (error) => {
@@ -1725,21 +2264,36 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.supplyChainPendingCounts = {};
           this.updateSingleWindowChart();
+          this.isChartLoading = false;
         }
       });
   }
 
-  private loadDashboardStats() {
-    this.unifiedDashboardService.clearUnifiedAppsCache();
+  private loadDashboardStats(forceRefresh = false) {
+    if (forceRefresh) {
+      this.unifiedDashboardService.clearUnifiedAppsCache();
+    }
+    this.isChartLoading = true;
     // Use the unified dashboard service for all roles
     forkJoin({
-      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(this.dashboardConfig, true),
-      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, this.dashboardConfig),
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
       hologramProcurements: this.isLicenseeUser()
-        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        ? (
+            !forceRefresh && this.licenseeHologramProcurementsCache
+              ? of(this.licenseeHologramProcurementsCache)
+              : this.hologramService.getProcurements().pipe(
+                  tap((rows) => {
+                    this.licenseeHologramProcurementsCache = Array.isArray(rows) ? rows : [];
+                  }),
+                  catchError(() => of([]))
+                )
+          )
         : of([])
     })
-      .pipe(finalize(() => { this.isLoading = false; }))
+      .pipe(finalize(() => {
+        this.isLoading = false;
+        this.isChartLoading = false;
+      }))
       .subscribe({
         next: (result) => {
           let filteredApplications = {
@@ -1754,7 +2308,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           // Product requirement: newly submitted applications should appear under Pending.
           const pendingBucket = [
             ...filteredApplications.pending,
-            ...filteredApplications.awaitingPayment,
             ...filteredApplications.applied
           ];
 
@@ -1776,7 +2329,33 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           });
 
-          // Store counts separately but combine pending display
+           // Store counts separately but combine pending display
+          const getCountsForType = (typeVal: string) => {
+            return {
+              applied: filteredApplications.applied.filter((app: any) => app.type === typeVal).length,
+              pending: pendingBucket.filter((app: any) => app.type === typeVal).length,
+              awaitingPayment: filteredApplications.awaitingPayment.filter((app: any) => app.type === typeVal).length,
+              approved: approvedWithoutRenewal.filter((app: any) => app.type === typeVal).length,
+              objection: filteredApplications.objection.filter((app: any) => app.type === typeVal).length,
+              rejected: filteredApplications.rejected.filter((app: any) => app.type === typeVal).length
+            };
+          };
+
+          this.detailedCounts = {
+            total: {
+              applied: filteredApplications.applied.length,
+              pending: pendingBucket.length,
+              awaitingPayment: filteredApplications.awaitingPayment.length,
+              approved: approvedWithoutRenewal.length,
+              objection: filteredApplications.objection.length,
+              rejected: filteredApplications.rejected.length
+            },
+            newLicense: getCountsForType('new-license'),
+            renewal: getCountsForType('license-renewal'),
+            salesman: getCountsForType('salesman-barman'),
+            company: getCountsForType('company-registration')
+          };
+
           this.dashboardCounts = {
             applied: 0,
             pending: pendingBucket.length,
@@ -1814,8 +2393,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: filteredApplications.rejected
           });
 
-          this.refreshSupplyChainPendingCounts();
           this.refreshOicActionPendingCount();
+          // Pass the already-fetched hologram data so loadSupplyChainModuleStats
+          // does not re-fetch it, eliminating a duplicate /hologram/procurement/ call.
+          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] });
+          this.updateSingleWindowChart();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
@@ -1835,7 +2417,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     forkJoin({
       applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
       hologramProcurements: this.isLicenseeUser()
-        ? this.hologramService.getProcurements().pipe(catchError(() => of([])))
+        ? (
+            !forceRefresh && this.licenseeHologramProcurementsCache
+              ? of(this.licenseeHologramProcurementsCache)
+              : this.hologramService.getProcurements().pipe(
+                  tap((rows) => {
+                    this.licenseeHologramProcurementsCache = Array.isArray(rows) ? rows : [];
+                  }),
+                  catchError(() => of([]))
+                )
+          )
         : of([])
     })
       .pipe(finalize(() => { this.applicationsLoading = false; }))
@@ -1854,7 +2445,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
           const pendingBucket = [
             ...filteredApplications.pending,
-            ...filteredApplications.awaitingPayment,
             ...filteredApplications.applied
           ];
 
@@ -1908,7 +2498,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: filteredApplications.rejected
           });
 
-          this.refreshSupplyChainPendingCounts();
+          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] });
+          this.updateSingleWindowChart();
         },
         error: (error) => {
           console.error('❌ Error loading dashboard applications:', error);
@@ -1965,7 +2556,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Roles that have their own full dashboard component (SPA-like)
-    return roleId ? [5, 6, 7, 10].includes(roleId) : false;
+    return roleId ? [5, 6, 7].includes(roleId) : false;
   }
 
   isLicenseeUser(): boolean {
@@ -2111,6 +2702,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showBreweryOrDistilleryMenus = false;
       this.showBreweryOrDistilleryWalletViews = false;
       this.showManufacturingWalletNav = false;
+      this.loadDashboardData();
       return;
     }
 
@@ -2140,6 +2732,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
+          this.updateAvailableChartModules();
+          this.loadDashboardData();
         },
         error: () => {
           this.showDistilleryMenus = false;
@@ -2148,6 +2742,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.showManufacturingWalletNav = false;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
+          this.updateAvailableChartModules();
+          this.loadDashboardData();
         }
       });
   }
@@ -2467,7 +3063,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               text: 'Payment confirmed and application approved.',
               icon: 'success'
             }).then(() => {
-              this.loadDashboardData();
+              this.unifiedDashboardService.clearUnifiedAppsCache();
+              this.loadDashboardData(true);
             });
           },
           error: (err) => {
@@ -2491,7 +3088,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   // Method to handle dashboard refresh
   onDashboardRefresh() {
     this.error = null;
-    this.initializeDashboard();
+    this.unifiedDashboardService.clearUnifiedAppsCache();
+    this.isLoading = true;
+    this.loadDashboardData(true);
   }
 
   // Get role-specific title

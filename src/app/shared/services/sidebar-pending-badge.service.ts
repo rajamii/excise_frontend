@@ -68,9 +68,39 @@ export class SidebarPendingBadgeService {
         tasks[section] = detail$.pipe(map(d => d.total));
         tasks[`${section}:payment`] = detail$.pipe(map(d => d.payment));
       } else {
-        tasks[section] = this.fetchPendingCount(section, audience, mode).pipe(catchError(() => of(0)));
-        if (audience === 'licensee' && (section === 'requisition' || section === 'hologram')) {
-          tasks[`${section}:payment`] = tasks[section];
+        // For requisition and hologram we need both a pending count and a payment count.
+        // Share a single HTTP fetch via shareReplay(1) so the two derived tasks don't
+        // each fire their own request.
+        if (audience === 'licensee' && section === 'requisition') {
+          const reqs$ = this.enaRequisitionService.getRequisitions().pipe(
+            map((response) => this.toArray(response)),
+            shareReplay(1),
+            catchError(() => of([] as any[]))
+          );
+          tasks[section] = reqs$.pipe(
+            map((items) => this.countRequisitionPendingReview(items)),
+            catchError(() => of(0))
+          );
+          tasks[`${section}:payment`] = reqs$.pipe(
+            map((items) => this.countRequisitionAwaitingPayment(items)),
+            catchError(() => of(0))
+          );
+        } else if (audience === 'licensee' && section === 'hologram') {
+          const holos$ = this.hologramService.getProcurements().pipe(
+            map((items) => this.toArray(items)),
+            shareReplay(1),
+            catchError(() => of([] as any[]))
+          );
+          tasks[section] = holos$.pipe(
+            map((items) => this.countHologramPendingReview(items)),
+            catchError(() => of(0))
+          );
+          tasks[`${section}:payment`] = holos$.pipe(
+            map((items) => this.countHologramAwaitingPayment(items)),
+            catchError(() => of(0))
+          );
+        } else {
+          tasks[section] = this.fetchPendingCount(section, audience, mode).pipe(catchError(() => of(0)));
         }
       }
     }
@@ -141,7 +171,7 @@ export class SidebarPendingBadgeService {
         if (audience === 'licensee') {
           return this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
-            map((items) => this.countRequisitionAwaitingPayment(items))
+            map((items) => this.countRequisitionPendingReview(items))
           );
         }
         return this.enaRequisitionService.getRequisitions().pipe(
@@ -175,6 +205,21 @@ export class SidebarPendingBadgeService {
           map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP']))
         );
 
+      case 'transit':
+        if (mode === 'light') return of(0);
+        if (audience === 'licensee') {
+          return this.supplyChainService.getTransitPermits().pipe(
+            map((items) => this.toArray(items)),
+            map((items) => this.uniqueByBillNo(items)),
+            map((items) => this.countLicenseePendingItems(items))
+          );
+        }
+        return this.supplyChainService.getTransitPermits().pipe(
+          map((items) => this.toArray(items)),
+          map((items) => this.uniqueByBillNo(items)),
+          map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL']))
+        );
+
       case 'transit-applications':
         if (mode === 'light') return of(0);
         return this.supplyChainService.getTransitPermits().pipe(
@@ -189,7 +234,7 @@ export class SidebarPendingBadgeService {
         if (audience === 'licensee') {
           return this.hologramService.getProcurements().pipe(
             map((items) => this.toArray(items)),
-            map((items) => this.countHologramAwaitingPayment(items))
+            map((items) => this.countHologramPendingReview(items))
           );
         }
         return this.hologramService.getProcurements().pipe(
@@ -364,7 +409,7 @@ export class SidebarPendingBadgeService {
     return this.toUpperActions(allowed);
   }
 
-  private countActionable(items: any[], actionableActions: string[]): number {
+  public countActionable(items: any[], actionableActions: string[]): number {
     const actionable = new Set(this.toUpperActions(actionableActions));
     const isFinalish = (item: any): boolean => {
       // Prefer explicit final-stage markers when available.
@@ -437,7 +482,7 @@ export class SidebarPendingBadgeService {
 
   /** Count items that are in a non-final, non-draft state for a licensee's own view.
    *  Shows items that are submitted/pending/under-process (i.e. awaiting officer action). */
-  private countLicenseePendingItems(items: any[]): number {
+  public countLicenseePendingItems(items: any[]): number {
     return (items || []).filter((item) => {
       const raw = String(
         item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
@@ -454,6 +499,61 @@ export class SidebarPendingBadgeService {
     }).length;
   }
 
+  public countRequisitionPendingReview(items: any[], forCommissioner = false): number {
+    // For commissioner: only count items where the backend has explicitly granted
+    // an action (APPROVE/REJECT). This fires only when the application has reached
+    // the commissioner's stage — not for every in-flight requisition.
+    if (forCommissioner) {
+      return (items || []).filter((item) => {
+        const actions: string[] = item?.allowedActions ?? item?.allowed_actions ?? [];
+        return Array.isArray(actions) && actions.includes('APPROVE');
+      }).length;
+    }
+
+    return (items || []).filter((item) => {
+      const raw = String(
+        item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Exclude final states: approved, rejected, cancelled, draft
+      if (!raw) return false;
+      if (raw.includes('approved') || raw.includes('rejected') ||
+          raw.includes('cancelled') || raw.includes('draft')) return false;
+
+      // Exclude Awaiting Payment stage (stageId 29 or approved commissioner status)
+      const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
+      if (stageId === 29 || raw.includes('approvedcommissioner')) return false;
+
+      // Count if it's pending review or forwarded/submitted status (including payslip states)
+      return raw.includes('pending') || raw.includes('submit') ||
+             raw.includes('forward') || raw.includes('underprocess') ||
+             raw.includes('inreview') || raw.includes('review') ||
+             raw.includes('process') || raw.includes('verify') ||
+             raw.includes('payslip');
+    }).length;
+  }
+
+  public countHologramPendingReview(items: any[]): number {
+    return (items || []).filter((item) => {
+      const raw = String(
+        item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? ''
+      ).toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Exclude final states: approved, rejected, cancelled, draft
+      if (!raw) return false;
+      if (raw.includes('approved') || raw.includes('rejected') ||
+          raw.includes('cancelled') || raw.includes('draft')) return false;
+
+      // Exclude Awaiting Payment stage (stageId 78)
+      const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
+      if (stageId === 78) return false;
+
+      // Count if it's pending review or forwarded/submitted status
+      return raw.includes('pending') || raw.includes('submit') ||
+             raw.includes('forward') || raw.includes('underprocess') ||
+             raw.includes('inreview') || raw.includes('review') ||
+             raw.includes('process') || raw.includes('verify');
+    }).length;
+  }
+
   /**
    * Count requisition items that require payment from the licensee.
    * Only stage 29 "Approved Commissioner" triggers the badge — the licensee
@@ -461,7 +561,7 @@ export class SidebarPendingBadgeService {
    * Once payment is made the item moves to a post-payment stage (forwarded payslip,
    * approved payslip, etc.) and the badge must be cleared.
    */
-  private countRequisitionAwaitingPayment(items: any[]): number {
+  public countRequisitionAwaitingPayment(items: any[]): number {
     return (items || []).filter((item) => {
       const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
       const stageName = String(
@@ -495,7 +595,7 @@ export class SidebarPendingBadgeService {
    * Only stage 78 "Approved by Commissioner" triggers the badge.
    * Clears once payment is made (Payment Completed / Cartoon Assigned).
    */
-  private countHologramAwaitingPayment(items: any[]): number {
+  public countHologramAwaitingPayment(items: any[]): number {
     return (items || []).filter((item) => {
       const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
       const stageName = String(

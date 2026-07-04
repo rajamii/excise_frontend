@@ -64,10 +64,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   showBreweryOrDistilleryMenus = false;
   /** Whether the Bulk Spirit group is expanded in the sidebar (default: closed) */
   bulkSpiritExpanded = false;
-  adminHologramExpanded = false;
   adminBulkSpiritExpanded = false;
   adminAboutUsExpanded = false;
   adminContactUsExpanded = false;
+  adminMasterDataExpanded = false;
+  adminLicenseMasterDataExpanded = false;
+  adminBrandMasterDataExpanded = false;
+  adminUserManagementExpanded = false;
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
@@ -145,13 +148,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.initializeUserAndAuth();
 
     // Auto-expand admin groups based on current route
-    const currentPath = this.router.url.split('?')[0];
-    if (currentPath.startsWith('/dashboard/admin/hologram')) {
-      this.adminHologramExpanded = true;
-    }
-    if (currentPath.startsWith('/dashboard/admin/bulk-spirit')) {
-      this.adminBulkSpiritExpanded = true;
-    }
+    this.expandAdminGroupsForPath(this.router.url);
 
     // Auto-close the sidebar after navigation from menu selections.
     this.router.events
@@ -160,10 +157,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         takeUntil(this.destroy$)
       )
       .subscribe((event: any) => {
-        const path = (event.urlAfterRedirects || event.url || '').split('?')[0];
-        if (path.startsWith('/dashboard/admin/hologram')) {
-          this.adminHologramExpanded = true;
-        }
+        const url = event.urlAfterRedirects || event.url || '';
+        this.expandAdminGroupsForPath(url);
         if (this.isSidenavOpen) {
           this.closeSidenav();
         }
@@ -395,8 +390,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Bulk Spirit' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, only requisition has an actionable badge (payment at Approved Commissioner stage)
-    const keys = sections.length > 0 ? sections : (this.isLicenseeUser() ? ['requisition'] : ['requisition', 'revalidation', 'cancellation']);
+    if (this.isLicenseeUser()) {
+      return this.getPendingCount('requisition:payment');
+    }
+    const keys = sections.length > 0 ? sections : ['requisition', 'revalidation', 'cancellation'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
 
@@ -405,9 +402,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Hologram' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, only hologram procurement has an actionable badge (payment at stage 78)
     if (this.isLicenseeUser()) {
-      return this.getPendingCount('hologram');
+      return this.getPendingCount('hologram:payment');
     }
     const keys = sections.length > 0 ? sections : ['hologram', 'hologram-request'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
@@ -884,6 +880,64 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   isAdminRouteActive(routePrefix: string): boolean {
     const currentPath = this.router.url.split('?')[0].split('#')[0];
     return currentPath === routePrefix || currentPath.startsWith(`${routePrefix}/`);
+  }
+
+  expandAdminGroupsForPath(url: string): void {
+    if (!url) return;
+    const normalized = url.toLowerCase();
+    
+    // User Management
+    if (normalized.includes('/admin/users') ||
+        normalized.includes('/admin/oic') ||
+        normalized.includes('/admin/roles') ||
+        normalized.includes('section=single-window')) {
+      this.adminUserManagementExpanded = true;
+    }
+    
+    // Master Data
+    if (normalized.includes('/admin/districts') ||
+        normalized.includes('/admin/subdivisions') ||
+        normalized.includes('/admin/roads') ||
+        normalized.includes('/admin/police-stations') ||
+        normalized.includes('/admin/locations')) {
+      this.adminMasterDataExpanded = true;
+    }
+    
+    // License Master Data
+    if (normalized.includes('/admin/license-validity-period') ||
+        normalized.includes('/admin/license-types') ||
+        normalized.includes('/admin/license-categories') ||
+        normalized.includes('/admin/additional-charges') ||
+        normalized.includes('/admin/fixed-fees') ||
+        normalized.includes('/admin/license-terms') ||
+        normalized.includes('/admin/license-titles') ||
+        normalized.includes('/admin/license-subcategories')) {
+      this.adminLicenseMasterDataExpanded = true;
+    }
+    
+    // Brand Master Data (originally hologram)
+    if (normalized.includes('/admin/hologram') ||
+        normalized.includes('/admin/brand-ml-in-cases') ||
+        normalized.includes('/admin/hologram-suppliers')) {
+      this.adminBrandMasterDataExpanded = true;
+    }
+    
+    // Bulk Spirit
+    if (normalized.includes('/admin/bulk-spirit')) {
+      this.adminBulkSpiritExpanded = true;
+    }
+    
+    // Home Page / About Us
+    if (normalized.includes('/admin/about-us') ||
+        normalized.includes('/admin/preventive-raids') ||
+        normalized.includes('/admin/whats-current')) {
+      this.adminAboutUsExpanded = true;
+    }
+    
+    // Contact Us
+    if (normalized.includes('/admin/contact-us')) {
+      this.adminContactUsExpanded = true;
+    }
   }
 
   getSidebarLabel(section: string, fallbackLabel?: string): string {

@@ -70,18 +70,15 @@
                 <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('requisition')" [class.active]="isDashboardSectionActive('requisition')">
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">Requisition</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('requisition') as cnt">{{ cnt }}</span>
                   <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('requisition:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 </button>
                 <button class="nav-item nav-item--sub bulk-spirit-sub-item" *ngIf="!isPermitSectionUser()" (click)="navigateToSupplyChain('revalidation')" [class.active]="isDashboardSectionActive('revalidation')">
                   <mat-icon class="nav-icon">refresh</mat-icon>
                   <span class="nav-text">Revalidation</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('revalidation') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub bulk-spirit-sub-item" (click)="navigateToSupplyChain('cancellation')" [class.active]="isDashboardSectionActive('cancellation')">
                   <mat-icon class="nav-icon">cancel</mat-icon>
                   <span class="nav-text">Cancellation</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('cancellation') as cnt">{{ cnt }}</span>
                 </button>
               </ng-container>
             </ng-container>
@@ -106,13 +103,11 @@
                 <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram')" [class.active]="isDashboardSectionActive('hologram')">
                   <mat-icon class="nav-icon">qr_code</mat-icon>
                   <span class="nav-text">New Procurement</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('hologram') as cnt">{{ cnt }}</span>
                   <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('hologram:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 </button>
                 <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-request')" [class.active]="isDashboardSectionActive('hologram-request')">
                   <mat-icon class="nav-icon">add_box</mat-icon>
                   <span class="nav-text">Request</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('hologram-request') as cnt">{{ cnt }}</span>
                 </button>
                 <button class="nav-item nav-item--sub hologram-sub-item" (click)="navigateToSupplyChain('hologram-daily-entry')" [class.active]="isDashboardSectionActive('hologram-daily-entry')" *ngIf="!isLicenseeUser()">
                   <mat-icon class="nav-icon">today</mat-icon>
@@ -237,91 +232,117 @@
 
             <!-- Site Admin master navigation -->
             <div *ngIf="isSiteAdminUser()">
-              <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+              <!-- User Management group -->
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminUserManagementExpanded = !adminUserManagementExpanded"
+                [class.active]="adminUserManagementExpanded || isAdminRouteActive('/dashboard/admin/users') || isAdminRouteActive('/dashboard/admin/oic') || isAdminRouteActive('/dashboard/admin/roles') || isDashboardSectionActive('single-window')"
+                [class.group-expanded]="adminUserManagementExpanded">
                 <mat-icon class="nav-icon">people</mat-icon>
-                <span class="nav-text">User</span>
-              </a>
-              <a routerLink="/dashboard/admin/oic" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">badge</mat-icon>
-                <span class="nav-text">OIC</span>
-              </a>
-              <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
-                <span class="nav-text">Role</span>
-              </a>
-              <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">map</mat-icon>
-                <span class="nav-text">District</span>
-              </a>
-              <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">account_tree</mat-icon>
-                <span class="nav-text">Sub Division</span>
-              </a>
-              <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">local_police</mat-icon>
-                <span class="nav-text">Police Station</span>
-              </a>
-              <a routerLink="/dashboard/admin/license-validity-period" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">event_available</mat-icon>
-                <span class="nav-text">License Validity Period</span>
-              </a>
-              <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">category</mat-icon>
-                <span class="nav-text">License Type</span>
-              </a>
-              <a routerLink="/dashboard/admin/license-categories" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">view_list</mat-icon>
-                <span class="nav-text">License Category</span>
-              </a>
-              <a routerLink="/dashboard/admin/additional-charges" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">attach_money</mat-icon>
-                <span class="nav-text">Additional Charges</span>
-              </a>
-              <a routerLink="/dashboard/admin/locations" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">location_on</mat-icon>
-                <span class="nav-text">Location</span>
-              </a>
-              <a routerLink="/dashboard/admin/fixed-fees" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">payments</mat-icon>
-                <span class="nav-text">Service Fees</span>
-              </a>
-              <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">badge</mat-icon>
-                <span class="nav-text">License Title</span>
-              </a>
-              <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">layers</mat-icon>
-                <span class="nav-text">License Subcategory</span>
-              </a>
-              <a routerLink="/dashboard/admin/brand-ml-in-cases" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">science</mat-icon>
-                <span class="nav-text">ML</span>
-              </a>
-              <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">gavel</mat-icon>
-                <span class="nav-text">Terms &amp; Conditions</span>
-              </a>
-              <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">route</mat-icon>
-                <span class="nav-text">Road</span>
-              </a>
-              <a routerLink="/dashboard/admin/hologram-suppliers" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">qr_code</mat-icon>
-                <span class="nav-text">Hologram Suppliers</span>
-              </a>
-              <a routerLink="/dashboard/admin/sbi-e-pay" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">payment</mat-icon>
-                <span class="nav-text">SBI ePAY</span>
-              </a>
-
-              <button class="nav-item bulk-spirit-nav-item" (click)="adminHologramExpanded = !adminHologramExpanded"
-                [class.active]="adminHologramExpanded || isAdminRouteActive('/dashboard/admin/hologram')"
-                [class.group-expanded]="adminHologramExpanded">
-                <mat-icon class="nav-icon">qr_code</mat-icon>
-                <span class="nav-text">Hologram</span>
-                <mat-icon class="nav-chevron">{{ adminHologramExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+                <span class="nav-text">User Management</span>
+                <mat-icon class="nav-chevron">{{ adminUserManagementExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
-              <ng-container *ngIf="adminHologramExpanded">
+              <ng-container *ngIf="adminUserManagementExpanded">
+                <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">people</mat-icon>
+                  <span class="nav-text">User</span>
+                </a>
+                <a routerLink="/dashboard/admin/oic" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">badge</mat-icon>
+                  <span class="nav-text">OIC</span>
+                </a>
+                <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
+                  <span class="nav-text">Role</span>
+                </a>
+                <!-- Single Window Enquiry (User Details) -->
+                <button class="nav-item nav-item--sub" (click)="navigateToSection('single-window')" [class.active]="isDashboardSectionActive('single-window')">
+                  <mat-icon class="nav-icon">manage_search</mat-icon>
+                  <span class="nav-text">User Details</span>
+                </button>
+              </ng-container>
+
+              <!-- Master Data group -->
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminMasterDataExpanded = !adminMasterDataExpanded"
+                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations')"
+                [class.group-expanded]="adminMasterDataExpanded">
+                <mat-icon class="nav-icon">dns</mat-icon>
+                <span class="nav-text">Master Data</span>
+                <mat-icon class="nav-chevron">{{ adminMasterDataExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminMasterDataExpanded">
+                <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">map</mat-icon>
+                  <span class="nav-text">District</span>
+                </a>
+                <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">account_tree</mat-icon>
+                  <span class="nav-text">Sub Division</span>
+                </a>
+                <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">route</mat-icon>
+                  <span class="nav-text">Road</span>
+                </a>
+                <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">local_police</mat-icon>
+                  <span class="nav-text">Police Station</span>
+                </a>
+                <a routerLink="/dashboard/admin/locations" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">location_on</mat-icon>
+                  <span class="nav-text">Location</span>
+                </a>
+              </ng-container>
+
+              <!-- License Master Data group -->
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminLicenseMasterDataExpanded = !adminLicenseMasterDataExpanded"
+                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles') || isAdminRouteActive('/dashboard/admin/license-subcategories')"
+                [class.group-expanded]="adminLicenseMasterDataExpanded">
+                <mat-icon class="nav-icon">description</mat-icon>
+                <span class="nav-text">License Master Data</span>
+                <mat-icon class="nav-chevron">{{ adminLicenseMasterDataExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminLicenseMasterDataExpanded">
+                <a routerLink="/dashboard/admin/license-validity-period" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">event_available</mat-icon>
+                  <span class="nav-text">License Validity Period</span>
+                </a>
+                <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">category</mat-icon>
+                  <span class="nav-text">License Type</span>
+                </a>
+                <a routerLink="/dashboard/admin/additional-charges" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">attach_money</mat-icon>
+                  <span class="nav-text">Additional Charges</span>
+                </a>
+                <a routerLink="/dashboard/admin/fixed-fees" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">payments</mat-icon>
+                  <span class="nav-text">Service Fees</span>
+                </a>
+                <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">gavel</mat-icon>
+                  <span class="nav-text">Terms &amp; Conditions</span>
+                </a>
+                <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">badge</mat-icon>
+                  <span class="nav-text">License Title</span>
+                </a>
+                <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">layers</mat-icon>
+                  <span class="nav-text">License Subcategory</span>
+                </a>
+              </ng-container>
+
+              <!-- Brand Master Data group (renamed hologram group + supplier + ML) -->
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminBrandMasterDataExpanded = !adminBrandMasterDataExpanded"
+                [class.active]="adminBrandMasterDataExpanded || isAdminRouteActive('/dashboard/admin/hologram') || isAdminRouteActive('/dashboard/admin/brand-ml-in-cases') || isAdminRouteActive('/dashboard/admin/hologram-suppliers')"
+                [class.group-expanded]="adminBrandMasterDataExpanded">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Brand Master Data</span>
+                <mat-icon class="nav-chevron">{{ adminBrandMasterDataExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminBrandMasterDataExpanded">
+                <a routerLink="/dashboard/admin/hologram-suppliers" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">qr_code</mat-icon>
+                  <span class="nav-text">Hologram Suppliers</span>
+                </a>
                 <a routerLink="/dashboard/admin/hologram/transit-permit-distributor-data" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">local_shipping</mat-icon>
                   <span class="nav-text">Transit Permit Distributor Data</span>
@@ -338,7 +359,17 @@
                   <mat-icon class="nav-icon">inventory</mat-icon>
                   <span class="nav-text">Brands</span>
                 </a>
+                <a routerLink="/dashboard/admin/brand-ml-in-cases" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">science</mat-icon>
+                  <span class="nav-text">ML</span>
+                </a>
               </ng-container>
+
+              <!-- SBI ePAY -->
+              <a routerLink="/dashboard/admin/sbi-e-pay" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
+                <mat-icon class="nav-icon">payment</mat-icon>
+                <span class="nav-text">SBI ePAY</span>
+              </a>
 
               <button class="nav-item bulk-spirit-nav-item" (click)="adminBulkSpiritExpanded = !adminBulkSpiritExpanded"
                 [class.active]="adminBulkSpiritExpanded || isAdminRouteActive('/dashboard/admin/bulk-spirit')"
@@ -421,12 +452,6 @@
                   <span class="nav-text">Grievance Redressal Officer</span>
                 </a>
               </ng-container>
-
-              <!-- Single Window Enquiry (User Details) — site admin can also access -->
-              <button class="nav-item" (click)="navigateToSection('single-window')" [class.active]="isDashboardSectionActive('single-window')">
-                <mat-icon class="nav-icon">manage_search</mat-icon>
-                <span class="nav-text">User Details</span>
-              </button>
 
               <!-- Officer Activity — last item for site admin -->
               <button class="nav-item" (click)="navigateToSection('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">
