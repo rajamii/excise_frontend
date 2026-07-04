@@ -79,10 +79,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private allRuralWards: RuralWard[] = [];
 
   get isRuralSubdivision(): boolean {
-    const subdivisionId = this.siteDetailsForm.get('siteSubdivision')?.value;
-    if (!subdivisionId) return false;
-    const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
-    return subdivision ? !!subdivision.isRural : false;
+    const categoryId = this.siteDetailsForm.get('locationCategory')?.value;
+    if (!categoryId) return false;
+    const category = this.locationCategories.find(c => c.id === categoryId);
+    return category ? !!category.isRural : false;
   }
 
   /**
@@ -283,11 +283,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           roadNameCtrl?.enable();
           this.filterRoadsBySubdivision(subdivisionId);
 
-          const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
-          const isRural = subdivision ? !!subdivision.isRural : false;
-          
-          this.updateValidatorsBasedOnSubdivision(isRural);
-
           // Clear previous choices
           this.siteDetailsForm.patchValue({
             locationCategory: null,
@@ -297,26 +292,14 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
             ward: null
           }, { emitEvent: false });
 
-          // Enable Location Subcategory
-          locationSubcategoryCtrl?.enable();
-          
-          // Filter Location Subcategories by Subdivision!
-          this.filterLocationSubcategoriesBySubdivision(subdivisionId);
+          // Enable Location Category
+          this.siteDetailsForm.get('locationCategory')?.enable();
 
-          if (isRural) {
-            // Rural: Hide Location Name, show Block (disabled initially)
-            locationCtrl?.disable();
-            blockCtrl?.disable();
-            wardCtrl?.disable();
-          } else {
-            // Urban: Show Location Name (disabled initially), hide Block
-            locationCtrl?.disable();
-            blockCtrl?.disable();
-            wardCtrl?.disable();
-
-            // Enable and load Location Categories since it's urban
-            this.siteDetailsForm.get('locationCategory')?.enable();
-          }
+          // Disable dependent fields initially
+          locationSubcategoryCtrl?.disable();
+          locationCtrl?.disable();
+          blockCtrl?.disable();
+          wardCtrl?.disable();
 
         } else {
           policeStationCtrl?.disable();
@@ -351,14 +334,48 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .subscribe(categoryId => {
         console.log('📂 Location Category changed to:', categoryId);
         const locationSubcategoryCtrl = this.siteDetailsForm.get('locationSubcategory');
+        const locationCtrl = this.siteDetailsForm.get('location');
+        const blockCtrl = this.siteDetailsForm.get('block');
+        const wardCtrl = this.siteDetailsForm.get('ward');
         
-        if (categoryId && !this.isRuralSubdivision) {
+        if (categoryId) {
+          const category = this.locationCategories.find(c => c.id === categoryId);
+          const isRural = category ? !!category.isRural : false;
+          
+          this.updateValidatorsBasedOnSubdivision(isRural);
+
+          // Clear lower-level choices
+          this.siteDetailsForm.patchValue({
+            locationSubcategory: null,
+            location: null,
+            block: null,
+            ward: null
+          }, { emitEvent: false });
+
+          // Enable Location Subcategory
           locationSubcategoryCtrl?.enable();
           this.filterLocationSubcategories(categoryId);
-        } else if (!this.isRuralSubdivision) {
+
+          // Disable downstream controls initially until subcategory is selected
+          locationCtrl?.disable();
+          blockCtrl?.disable();
+          wardCtrl?.disable();
+        } else {
           locationSubcategoryCtrl?.disable();
           this.locationSubcategories = [];
           this.siteDetailsForm.patchValue({ locationSubcategory: null }, { emitEvent: false });
+
+          locationCtrl?.disable();
+          this.locations = [];
+          this.siteDetailsForm.patchValue({ location: null }, { emitEvent: false });
+
+          blockCtrl?.disable();
+          this.blocks = [];
+          this.siteDetailsForm.patchValue({ block: null }, { emitEvent: false });
+
+          wardCtrl?.disable();
+          this.wards = [];
+          this.siteDetailsForm.patchValue({ ward: null }, { emitEvent: false });
         }
       });
 
@@ -367,10 +384,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .pipe(takeUntil(this.destroy$))
       .subscribe(subcategoryId => {
         console.log('📂 Location Subcategory changed to:', subcategoryId);
+        const categoryId = this.siteDetailsForm.get('locationCategory')?.value;
+        const category = this.locationCategories.find(c => c.id === categoryId);
+        const isRural = category ? !!category.isRural : false;
+
         const subdivisionId = this.siteDetailsForm.get('siteSubdivision')?.value;
         const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
-        const isRural = subdivision ? !!subdivision.isRural : false;
-
         const locationCtrl = this.siteDetailsForm.get('location');
         const blockCtrl = this.siteDetailsForm.get('block');
 
@@ -711,6 +730,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           categoryName: item.categoryName || item.category_name,
           description: item.description,
           isActive: item.isActive ?? item.is_active ?? true,
+          isRural: item.isRural ?? item.is_rural ?? false,
           status: item.status,
           subcategoryCount: item.subcategoryCount || item.subcategory_count
         }));
@@ -832,31 +852,15 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       this.siteDetailsForm.get('siteSubdivision')?.enable();
     }
 
-    // Step 2: Subdivision → filter police stations, roads, and update validators
+    // Step 2: Subdivision → filter police stations, roads
     const subdivisionId = stored.subdivision;
-    let isRural = false;
     if (subdivisionId && this.siteSubdivisions.some(s => s.id === subdivisionId)) {
       this.siteDetailsForm.get('siteSubdivision')?.setValue(subdivisionId, { emitEvent: false });
       this.filterPoliceStations(subdivisionId);
       this.filterRoadsBySubdivision(subdivisionId);
       
-      const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
-      isRural = subdivision ? !!subdivision.isRural : false;
-      this.updateValidatorsBasedOnSubdivision(isRural);
-
       this.siteDetailsForm.get('policeStation')?.enable();
       this.siteDetailsForm.get('roadName')?.enable();
-      this.siteDetailsForm.get('locationSubcategory')?.enable();
-
-      if (isRural) {
-        this.filterLocationSubcategoriesBySubdivision(subdivisionId);
-        this.siteDetailsForm.get('locationCategory')?.disable();
-        this.siteDetailsForm.get('location')?.disable();
-      } else {
-        this.filterLocationSubcategoriesBySubdivision(subdivisionId);
-        this.siteDetailsForm.get('locationCategory')?.enable();
-        this.siteDetailsForm.get('location')?.enable();
-      }
     }
 
     // Step 3: Police Station
@@ -871,10 +875,18 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       this.siteDetailsForm.get('roadName')?.setValue(roadId, { emitEvent: false });
     }
 
-    // Step 5: Location Category (Urban only)
+    // Step 5: Location Category
     const locationCategoryId = stored.location_category;
-    if (!isRural && locationCategoryId && this.locationCategories.some(c => c.id === locationCategoryId)) {
+    let isRural = false;
+    if (locationCategoryId && this.locationCategories.some(c => c.id === locationCategoryId)) {
       this.siteDetailsForm.get('locationCategory')?.setValue(locationCategoryId, { emitEvent: false });
+      this.siteDetailsForm.get('locationCategory')?.enable();
+
+      const category = this.locationCategories.find(c => c.id === locationCategoryId);
+      isRural = category ? !!category.isRural : false;
+      this.updateValidatorsBasedOnSubdivision(isRural);
+
+      this.siteDetailsForm.get('locationSubcategory')?.enable();
       this.filterLocationSubcategories(locationCategoryId);
     }
 
@@ -884,7 +896,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       this.siteDetailsForm.get('locationSubcategory')?.setValue(locationSubcategoryId, { emitEvent: false });
       
       const subcat = this.allLocationSubcategories.find(s => s.id === locationSubcategoryId);
-      if (subcat) {
+      if (subcat && !locationCategoryId) {
         this.siteDetailsForm.patchValue({ locationCategory: subcat.categoryId }, { emitEvent: false });
       }
 
@@ -897,6 +909,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           const parentDistrict = this.districts.find(d => d.districtCode === subdivision.districtCode);
           if (parentDistrict?.id != null) {
             this.filterLocations(parentDistrict.id);
+            this.siteDetailsForm.get('location')?.enable();
           }
         }
       }
@@ -1131,12 +1144,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     const locationCtrl = this.siteDetailsForm.get('location');
     const blockCtrl = this.siteDetailsForm.get('block');
 
+    locationCategoryCtrl?.setValidators([Validators.required]);
+
     if (isRural) {
-      locationCategoryCtrl?.clearValidators();
       locationCtrl?.clearValidators();
       blockCtrl?.setValidators([Validators.required]);
     } else {
-      locationCategoryCtrl?.setValidators([Validators.required]);
       locationCtrl?.setValidators([Validators.required]);
       blockCtrl?.clearValidators();
     }

@@ -67,7 +67,6 @@
           }
         </mat-form-field>
 
-        @if (!isRuralSubdivision) {
           <mat-form-field appearance="outline">
             <mat-label>Location Category</mat-label>
             <mat-select formControlName="locationCategory" required>
@@ -84,18 +83,14 @@
               <mat-error>{{ getErrorMessage('locationCategory') }}</mat-error>
             }
           </mat-form-field>
-        }
 
         <mat-form-field appearance="outline">
           <mat-label>Location Subcategory</mat-label>
           <mat-select formControlName="locationSubcategory" required>
-            @if (locationSubcategories.length === 0 && !isRuralSubdivision && !siteDetailsForm.get('locationCategory')?.value) {
+            @if (locationSubcategories.length === 0 && !siteDetailsForm.get('locationCategory')?.value) {
               <mat-option disabled>Please select category first</mat-option>
             }
-            @if (locationSubcategories.length === 0 && isRuralSubdivision && !siteDetailsForm.get('siteSubdivision')?.value) {
-              <mat-option disabled>Please select subdivision first</mat-option>
-            }
-            @if (locationSubcategories.length === 0 && (siteDetailsForm.get('locationCategory')?.value || (isRuralSubdivision && siteDetailsForm.get('siteSubdivision')?.value))) {
+            @if (locationSubcategories.length === 0 && siteDetailsForm.get('locationCategory')?.value) {
               <mat-option disabled>No subcategories available</mat-option>
             }
             @for (subcategory of locationSubcategories; track subcategory.id) {

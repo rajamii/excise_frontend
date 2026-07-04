@@ -81,11 +81,6 @@ export class ManageLocationSubcategoryComponent implements OnInit {
       return;
     }
     
-    if (!this.subcategoryRecord.subDivision) {
-      Swal.fire('Warning', 'Subdivision is required.', 'warning');
-      return;
-    }
-
     Swal.fire({
       title: this.isEditMode ? 'Update Location Subcategory?' : 'Save Location Subcategory?',
       icon: 'question',
@@ -99,7 +94,7 @@ export class ManageLocationSubcategoryComponent implements OnInit {
       const payload = {
         subcategory_name: this.subcategoryRecord.subcategoryName.trim(),
         category: this.subcategoryRecord.categoryId,
-        sub_division: this.subcategoryRecord.subDivision,
+        sub_division: this.subcategoryRecord.subDivision || null,
         description: this.subcategoryRecord.description || '',
         is_active: this.subcategoryRecord.isActive
       };
