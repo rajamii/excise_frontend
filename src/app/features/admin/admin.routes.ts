@@ -102,38 +102,20 @@ const routes: Routes = [
             },
           },
           {
-            path: 'blocks',
+            path: 'blocks-wards',
             loadComponent: () =>
-              import('./master/block/list/list.component').then(
-                (m) => m.ListComponent
+              import('./master/blocks-wards/blocks-wards.component').then(
+                (m) => m.BlocksWardsComponent
               ),
             canActivate: [UserRouteAccessService],
             data: {
               requiredPermission: 'master.blocks.view',
             },
           },
-          {
-            path: 'urban-wards',
-            loadComponent: () =>
-              import('./master/urban-ward/list/list.component').then(
-                (m) => m.ListComponent
-              ),
-            canActivate: [UserRouteAccessService],
-            data: {
-              requiredPermission: 'master.wards.view',
-            },
-          },
-          {
-            path: 'rural-wards',
-            loadComponent: () =>
-              import('./master/rural-ward/list/list.component').then(
-                (m) => m.ListComponent
-              ),
-            canActivate: [UserRouteAccessService],
-            data: {
-              requiredPermission: 'master.rural_wards.view',
-            },
-          },
+          // Legacy redirects — keep old URLs working
+          { path: 'blocks',       redirectTo: 'blocks-wards', pathMatch: 'full' },
+          { path: 'urban-wards',  redirectTo: 'blocks-wards', pathMatch: 'full' },
+          { path: 'rural-wards',  redirectTo: 'blocks-wards', pathMatch: 'full' },
           {
             path: 'police-stations',
             loadComponent: () =>

@@ -1,0 +1,221 @@
+<div class="bw-page">
+
+  <mat-tab-group class="outer-tabs" animationDuration="200ms">
+
+    <!-- ══════════════════════════════════════════
+         TAB 1 — BLOCKS
+    ══════════════════════════════════════════ -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">location_city</mat-icon>
+        <span class="tab-label-text">Blocks</span>
+        <span class="count-badge">{{ blocks.length }}</span>
+      </ng-template>
+
+      <div class="tab-body">
+        <div class="tab-toolbar">
+          <span class="toolbar-title">Block Management</span>
+          <button mat-flat-button color="primary" (click)="onAddBlock()" class="add-btn">
+            <mat-icon>add</mat-icon> Add Block
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <mat-table [dataSource]="blocks" class="data-table">
+
+            <ng-container matColumnDef="sno">
+              <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
+              <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="blockName">
+              <mat-header-cell *matHeaderCellDef>Block Name</mat-header-cell>
+              <mat-cell *matCellDef="let row">{{ row.blockName }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="subcategory">
+              <mat-header-cell *matHeaderCellDef>Location Subcategory</mat-header-cell>
+              <mat-cell *matCellDef="let row">{{ row.subcategoryName || row.subcategory }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef class="actions-col">Actions</mat-header-cell>
+              <mat-cell *matCellDef="let row" class="actions-col">
+                <button mat-icon-button color="primary" matTooltip="Edit" (click)="onEditBlock(row)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" matTooltip="Delete" (click)="onDeleteBlock(row)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row *matHeaderRowDef="blockColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: blockColumns;"></mat-row>
+          </mat-table>
+
+          @if (blocks.length === 0) {
+            <div class="empty-state">
+              <mat-icon>inbox</mat-icon>
+              <p>No blocks found.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ══════════════════════════════════════════
+         TAB 2 — WARDS  (urban + rural inner tabs)
+    ══════════════════════════════════════════ -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">map</mat-icon>
+        <span class="tab-label-text">Wards</span>
+        <span class="count-badge">{{ urbanWards.length + ruralWards.length }}</span>
+      </ng-template>
+
+      <div class="tab-body ward-tab-body">
+
+        <!-- ── Inner tab group ── -->
+        <mat-tab-group class="inner-tabs" animationDuration="200ms">
+
+          <!-- Urban Wards -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="inner-tab-icon urban-icon">location_on</mat-icon>
+              <span class="tab-label-text">Urban Wards</span>
+              <span class="count-badge urban-badge">{{ urbanWards.length }}</span>
+            </ng-template>
+
+            <div class="inner-tab-body">
+              <div class="tab-toolbar">
+                <span class="toolbar-title">Urban Ward Management</span>
+                <button mat-flat-button color="primary" (click)="onAddUrbanWard()" class="add-btn">
+                  <mat-icon>add</mat-icon> Add Urban Ward
+                </button>
+              </div>
+
+              <div class="table-wrapper">
+                <mat-table [dataSource]="urbanWards" class="data-table">
+
+                  <ng-container matColumnDef="sno">
+                    <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
+                    <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="wardName">
+                    <mat-header-cell *matHeaderCellDef>Ward Name</mat-header-cell>
+                    <mat-cell *matCellDef="let row">{{ row.wardName }}</mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="wardNumber">
+                    <mat-header-cell *matHeaderCellDef>Ward No.</mat-header-cell>
+                    <mat-cell *matCellDef="let row">
+                      <span class="ward-chip urban-chip">{{ row.wardNumber }}</span>
+                    </mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="locationCode">
+                    <mat-header-cell *matHeaderCellDef>Location</mat-header-cell>
+                    <mat-cell *matCellDef="let row">{{ row.locationName || row.locationCode }}</mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="actions">
+                    <mat-header-cell *matHeaderCellDef class="actions-col">Actions</mat-header-cell>
+                    <mat-cell *matCellDef="let row" class="actions-col">
+                      <button mat-icon-button color="primary" matTooltip="Edit" (click)="onEditUrbanWard(row)">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" matTooltip="Delete" (click)="onDeleteUrbanWard(row)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </mat-cell>
+                  </ng-container>
+
+                  <mat-header-row *matHeaderRowDef="urbanColumns"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: urbanColumns;"></mat-row>
+                </mat-table>
+
+                @if (urbanWards.length === 0) {
+                  <div class="empty-state">
+                    <mat-icon>inbox</mat-icon>
+                    <p>No urban wards found.</p>
+                  </div>
+                }
+              </div>
+            </div>
+          </mat-tab>
+
+          <!-- Rural Wards -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="inner-tab-icon rural-icon">nature_people</mat-icon>
+              <span class="tab-label-text">Rural Wards</span>
+              <span class="count-badge rural-badge">{{ ruralWards.length }}</span>
+            </ng-template>
+
+            <div class="inner-tab-body">
+              <div class="tab-toolbar">
+                <span class="toolbar-title">Rural Ward Management</span>
+                <button mat-flat-button color="accent" (click)="onAddRuralWard()" class="add-btn">
+                  <mat-icon>add</mat-icon> Add Rural Ward
+                </button>
+              </div>
+
+              <div class="table-wrapper">
+                <mat-table [dataSource]="ruralWards" class="data-table">
+
+                  <ng-container matColumnDef="sno">
+                    <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
+                    <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="wardName">
+                    <mat-header-cell *matHeaderCellDef>Ward Name</mat-header-cell>
+                    <mat-cell *matCellDef="let row">{{ row.wardName }}</mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="wardNumber">
+                    <mat-header-cell *matHeaderCellDef>Ward No.</mat-header-cell>
+                    <mat-cell *matCellDef="let row">
+                      <span class="ward-chip rural-chip">{{ row.wardNumber }}</span>
+                    </mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="block">
+                    <mat-header-cell *matHeaderCellDef>Block</mat-header-cell>
+                    <mat-cell *matCellDef="let row">{{ row.blockName || row.block }}</mat-cell>
+                  </ng-container>
+
+                  <ng-container matColumnDef="actions">
+                    <mat-header-cell *matHeaderCellDef class="actions-col">Actions</mat-header-cell>
+                    <mat-cell *matCellDef="let row" class="actions-col">
+                      <button mat-icon-button color="primary" matTooltip="Edit" (click)="onEditRuralWard(row)">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" matTooltip="Delete" (click)="onDeleteRuralWard(row)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </mat-cell>
+                  </ng-container>
+
+                  <mat-header-row *matHeaderRowDef="ruralColumns"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: ruralColumns;"></mat-row>
+                </mat-table>
+
+                @if (ruralWards.length === 0) {
+                  <div class="empty-state">
+                    <mat-icon>inbox</mat-icon>
+                    <p>No rural wards found.</p>
+                  </div>
+                }
+              </div>
+            </div>
+          </mat-tab>
+
+        </mat-tab-group>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

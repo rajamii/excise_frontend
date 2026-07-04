@@ -1,0 +1,94 @@
+import { Component, Inject, OnInit } from '@angular/core';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { Block } from '../../../../../core/models/block.model';
+import { LocationSubcategory } from '../../../../../core/models/location-subcategory.model';
+import { MasterService } from '../../../../../core/services/master.service';
+import { AdminService } from '../../../admin.service';
+import Swal from 'sweetalert2';
+
+@Component({
+  selector: 'app-block-manage-dialog',
+  standalone: true,
+  imports: [MaterialModule],
+  template: `
+    <div class="dialog-container">
+      <h2 mat-dialog-title class="dialog-title">
+        <mat-icon>{{ isEditMode ? 'edit' : 'add_circle' }}</mat-icon>
+        {{ isEditMode ? 'Edit' : 'Add' }} Block
+      </h2>
+
+      <mat-dialog-content>
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Block Name</mat-label>
+          <input matInput [(ngModel)]="block.blockName" placeholder="Enter block name" required />
+          <mat-icon matPrefix>business</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Location Subcategory</mat-label>
+          <mat-select [(ngModel)]="block.subcategory" required>
+            <mat-option *ngFor="let s of subcategories" [value]="s.id">
+              {{ s.subcategoryName }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>category</mat-icon>
+        </mat-form-field>
+
+        <mat-checkbox [(ngModel)]="block.isActive" color="primary">Active</mat-checkbox>
+      </mat-dialog-content>
+
+      <mat-dialog-actions align="end">
+        <button mat-stroked-button (click)="onCancel()">Cancel</button>
+        <button mat-flat-button color="primary" (click)="onSave()">
+          {{ isEditMode ? 'Update' : 'Save' }}
+        </button>
+      </mat-dialog-actions>
+    </div>
+  `,
+  styles: [`
+    .dialog-container { padding: 8px; min-width: 400px; }
+    .dialog-title {
+      display: flex; align-items: center; gap: 8px;
+      color: #1C2B78; font-size: 1.1rem; margin-bottom: 12px;
+    }
+    .w-100 { width: 100%; margin-bottom: 12px; display: block; }
+    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+    mat-dialog-actions { padding: 16px 0 0; gap: 8px; }
+  `]
+})
+export class BlockManageDialogComponent implements OnInit {
+  block: Block = { blockName: '', subcategory: 0, isActive: true };
+  isEditMode = false;
+  subcategories: LocationSubcategory[] = [];
+
+  constructor(
+    private masterService: MasterService,
+    private adminService: AdminService,
+    public dialogRef: MatDialogRef<BlockManageDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Block | null
+  ) {}
+
+  ngOnInit(): void {
+    this.masterService.getLocationSubcategories().subscribe({
+      next: (d: any) => this.subcategories = d,
+      error: () => Swal.fire('Error', 'Failed to load subcategories.', 'error')
+    });
+    if (this.data) { this.block = { ...this.data }; this.isEditMode = true; }
+  }
+
+  onSave(): void {
+    if (!this.block.blockName || !this.block.subcategory) {
+      Swal.fire('Warning', 'All fields are required.', 'warning'); return;
+    }
+    const req = this.isEditMode
+      ? this.adminService.updateBlock(this.block.id!, this.block)
+      : this.adminService.addBlock(this.block);
+    req.subscribe({
+      next: () => { Swal.fire('Success', `Block ${this.isEditMode ? 'updated' : 'added'}!`, 'success'); this.dialogRef.close(true); },
+      error: () => Swal.fire('Error', 'Failed to save block.', 'error')
+    });
+  }
+
+  onCancel(): void { this.dialogRef.close(); }
+}

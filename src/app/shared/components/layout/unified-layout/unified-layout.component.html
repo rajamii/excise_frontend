@@ -262,7 +262,7 @@
 
               <!-- Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminMasterDataExpanded = !adminMasterDataExpanded"
-                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/blocks') || isAdminRouteActive('/dashboard/admin/urban-wards') || isAdminRouteActive('/dashboard/admin/rural-wards')"
+                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/blocks-wards')"
                 [class.group-expanded]="adminMasterDataExpanded">
                 <mat-icon class="nav-icon">dns</mat-icon>
                 <span class="nav-text">Master Data</span>
@@ -289,17 +289,9 @@
                   <mat-icon class="nav-icon">location_on</mat-icon>
                   <span class="nav-text">Location</span>
                 </a>
-                <a routerLink="/dashboard/admin/blocks" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                <a routerLink="/dashboard/admin/blocks-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">view_module</mat-icon>
-                  <span class="nav-text">Block</span>
-                </a>
-                <a routerLink="/dashboard/admin/urban-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
-                  <mat-icon class="nav-icon">location_city</mat-icon>
-                  <span class="nav-text">Urban Ward</span>
-                </a>
-                <a routerLink="/dashboard/admin/rural-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
-                  <mat-icon class="nav-icon">nature_people</mat-icon>
-                  <span class="nav-text">Rural Ward</span>
+                  <span class="nav-text">Block &amp; Wards</span>
                 </a>
               </ng-container>
 
