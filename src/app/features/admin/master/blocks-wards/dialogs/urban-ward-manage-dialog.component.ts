@@ -6,11 +6,12 @@ import { MasterLocation } from '../../../../../core/models/master-location.model
 import { MasterService } from '../../../../../core/services/master.service';
 import { AdminService } from '../../../admin.service';
 import Swal from 'sweetalert2';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-urban-ward-manage-dialog',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [MaterialModule, CommonModule],
   template: `
     <div class="dialog-container">
       <h2 mat-dialog-title class="dialog-title urban">
@@ -34,11 +35,19 @@ import Swal from 'sweetalert2';
         <mat-form-field appearance="outline" class="w-100">
           <mat-label>Location</mat-label>
           <mat-select [(ngModel)]="ward.locationCode" required>
+            <mat-option *ngIf="loadingLocations" disabled>
+              <mat-spinner diameter="20" style="display:inline-block;margin-right:8px;"></mat-spinner>
+              Loading locations...
+            </mat-option>
             <mat-option *ngFor="let loc of locations" [value]="loc.locationCode">
               {{ loc.locationDescription }}
             </mat-option>
+            <mat-option *ngIf="!loadingLocations && locations.length === 0" disabled>
+              No locations available
+            </mat-option>
           </mat-select>
           <mat-icon matPrefix>place</mat-icon>
+          <mat-hint *ngIf="locations.length > 0">{{ locations.length }} locations available</mat-hint>
         </mat-form-field>
 
         <mat-checkbox [(ngModel)]="ward.isActive" color="primary">Active</mat-checkbox>
@@ -46,21 +55,21 @@ import Swal from 'sweetalert2';
 
       <mat-dialog-actions align="end">
         <button mat-stroked-button (click)="onCancel()">Cancel</button>
-        <button mat-flat-button color="primary" (click)="onSave()">
+        <button mat-flat-button color="primary" (click)="onSave()" [disabled]="loadingLocations">
           {{ isEditMode ? 'Update' : 'Save' }}
         </button>
       </mat-dialog-actions>
     </div>
   `,
   styles: [`
-    .dialog-container { padding: 8px; min-width: 400px; }
+    .dialog-container { padding: 8px; min-width: 420px; }
     .dialog-title {
       display: flex; align-items: center; gap: 8px;
       font-size: 1.1rem; margin-bottom: 12px;
     }
     .dialog-title.urban { color: #1d4ed8; }
     .w-100 { width: 100%; margin-bottom: 12px; display: block; }
-    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; max-height: 70vh; }
     mat-dialog-actions { padding: 16px 0 0; gap: 8px; }
   `]
 })
@@ -68,6 +77,7 @@ export class UrbanWardManageDialogComponent implements OnInit {
   ward: Ward = { id: 0, wardName: '', wardNumber: 0, locationCode: 0, isActive: true };
   isEditMode = false;
   locations: MasterLocation[] = [];
+  loadingLocations = true;
 
   constructor(
     private masterService: MasterService,
@@ -77,22 +87,36 @@ export class UrbanWardManageDialogComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    if (this.data) {
+      this.ward = { ...this.data };
+      this.isEditMode = true;
+    }
+
     this.masterService.getLocations().subscribe({
-      next: (d: any) => this.locations = d,
-      error: () => Swal.fire('Error', 'Failed to load locations.', 'error')
+      next: (d: any) => {
+        this.locations = Array.isArray(d) ? d : [];
+        this.loadingLocations = false;
+      },
+      error: () => {
+        this.loadingLocations = false;
+        Swal.fire('Error', 'Failed to load locations.', 'error');
+      }
     });
-    if (this.data) { this.ward = { ...this.data }; this.isEditMode = true; }
   }
 
   onSave(): void {
     if (!this.ward.wardName || !this.ward.wardNumber || !this.ward.locationCode) {
-      Swal.fire('Warning', 'All fields are required.', 'warning'); return;
+      Swal.fire('Warning', 'All fields are required.', 'warning');
+      return;
     }
     const req = this.isEditMode
       ? this.adminService.updateWard(this.ward.id!, this.ward)
       : this.adminService.addWard(this.ward);
     req.subscribe({
-      next: () => { Swal.fire('Success', `Urban ward ${this.isEditMode ? 'updated' : 'added'}!`, 'success'); this.dialogRef.close(true); },
+      next: () => {
+        Swal.fire('Success', `Urban ward ${this.isEditMode ? 'updated' : 'added'}!`, 'success');
+        this.dialogRef.close(true);
+      },
       error: () => Swal.fire('Error', 'Failed to save urban ward.', 'error')
     });
   }

@@ -6,11 +6,12 @@ import { LocationSubcategory } from '../../../../../core/models/location-subcate
 import { MasterService } from '../../../../../core/services/master.service';
 import { AdminService } from '../../../admin.service';
 import Swal from 'sweetalert2';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-block-manage-dialog',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [MaterialModule, CommonModule],
   template: `
     <div class="dialog-container">
       <h2 mat-dialog-title class="dialog-title">
@@ -28,11 +29,19 @@ import Swal from 'sweetalert2';
         <mat-form-field appearance="outline" class="w-100">
           <mat-label>Location Subcategory</mat-label>
           <mat-select [(ngModel)]="block.subcategory" required>
+            <mat-option *ngIf="loadingSubcategories" disabled>
+              <mat-spinner diameter="20" style="display:inline-block;margin-right:8px;"></mat-spinner>
+              Loading...
+            </mat-option>
             <mat-option *ngFor="let s of subcategories" [value]="s.id">
               {{ s.subcategoryName }}
             </mat-option>
+            <mat-option *ngIf="!loadingSubcategories && subcategories.length === 0" disabled>
+              No subcategories available
+            </mat-option>
           </mat-select>
           <mat-icon matPrefix>category</mat-icon>
+          <mat-hint *ngIf="subcategories.length > 0">{{ subcategories.length }} subcategories available</mat-hint>
         </mat-form-field>
 
         <mat-checkbox [(ngModel)]="block.isActive" color="primary">Active</mat-checkbox>
@@ -40,20 +49,20 @@ import Swal from 'sweetalert2';
 
       <mat-dialog-actions align="end">
         <button mat-stroked-button (click)="onCancel()">Cancel</button>
-        <button mat-flat-button color="primary" (click)="onSave()">
+        <button mat-flat-button color="primary" (click)="onSave()" [disabled]="loadingSubcategories">
           {{ isEditMode ? 'Update' : 'Save' }}
         </button>
       </mat-dialog-actions>
     </div>
   `,
   styles: [`
-    .dialog-container { padding: 8px; min-width: 400px; }
+    .dialog-container { padding: 8px; min-width: 420px; }
     .dialog-title {
       display: flex; align-items: center; gap: 8px;
       color: #1C2B78; font-size: 1.1rem; margin-bottom: 12px;
     }
     .w-100 { width: 100%; margin-bottom: 12px; display: block; }
-    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; max-height: 70vh; }
     mat-dialog-actions { padding: 16px 0 0; gap: 8px; }
   `]
 })
@@ -61,6 +70,7 @@ export class BlockManageDialogComponent implements OnInit {
   block: Block = { blockName: '', subcategory: 0, isActive: true };
   isEditMode = false;
   subcategories: LocationSubcategory[] = [];
+  loadingSubcategories = true;
 
   constructor(
     private masterService: MasterService,
@@ -70,22 +80,36 @@ export class BlockManageDialogComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    if (this.data) {
+      this.block = { ...this.data };
+      this.isEditMode = true;
+    }
+
     this.masterService.getLocationSubcategories().subscribe({
-      next: (d: any) => this.subcategories = d,
-      error: () => Swal.fire('Error', 'Failed to load subcategories.', 'error')
+      next: (d: any) => {
+        this.subcategories = Array.isArray(d) ? d : [];
+        this.loadingSubcategories = false;
+      },
+      error: () => {
+        this.loadingSubcategories = false;
+        Swal.fire('Error', 'Failed to load subcategories.', 'error');
+      }
     });
-    if (this.data) { this.block = { ...this.data }; this.isEditMode = true; }
   }
 
   onSave(): void {
     if (!this.block.blockName || !this.block.subcategory) {
-      Swal.fire('Warning', 'All fields are required.', 'warning'); return;
+      Swal.fire('Warning', 'All fields are required.', 'warning');
+      return;
     }
     const req = this.isEditMode
       ? this.adminService.updateBlock(this.block.id!, this.block)
       : this.adminService.addBlock(this.block);
     req.subscribe({
-      next: () => { Swal.fire('Success', `Block ${this.isEditMode ? 'updated' : 'added'}!`, 'success'); this.dialogRef.close(true); },
+      next: () => {
+        Swal.fire('Success', `Block ${this.isEditMode ? 'updated' : 'added'}!`, 'success');
+        this.dialogRef.close(true);
+      },
       error: () => Swal.fire('Error', 'Failed to save block.', 'error')
     });
   }
