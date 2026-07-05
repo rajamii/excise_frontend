@@ -62,8 +62,11 @@ export interface UnifiedApplicationData {
     workflowId?: number;
     allowedActions?: string[];
     allowedActionConfigs?: ActionButtonConfig[];
+    
+    // Additional tracking
     isRevertedByCommissioner?: boolean;
     commissionerRevertRemarks?: string;
+    latestRevert?: any;
 
     // Common computed fields (properly typed)
     distilleryName?: string;
@@ -912,8 +915,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             workflowId: this.parseId(rawWorkflowId) || config.workflowId,
             allowedActions,
             allowedActionConfigs,
-            isRevertedByCommissioner: apiData.is_reverted_by_commissioner || false,
-            commissionerRevertRemarks: apiData.commissioner_revert_remarks || ''
+            isRevertedByCommissioner: apiData.isRevertedByCommissioner ?? apiData.is_reverted_by_commissioner ?? false,
+            commissionerRevertRemarks: apiData.commissionerRevertRemarks ?? apiData.commissioner_revert_remarks ?? '',
+            latestRevert: apiData.latestRevert ?? apiData.latest_revert ?? null
         };
 
         // For workflows where backend often sends generic "PENDING" or a raw stage ID,

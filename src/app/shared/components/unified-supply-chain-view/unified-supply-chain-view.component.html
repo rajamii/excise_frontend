@@ -1847,22 +1847,7 @@
     
         </div>
 
-        <!-- Bottom Revert Remarks Alert from Commissioner -->
-        <div class="alert alert-danger mb-4 shadow-sm border-start border-danger border-4 no-print mx-4" 
-             *ngIf="applicationData && (applicationData.isRevertedByCommissioner || applicationData['is_reverted_by_commissioner'])"
-             style="background-color: #fff5f5; border-radius: 8px; padding: 16px;">
-            <div class="d-flex gap-3 align-items-start">
-                <div style="background-color: #fee2e2; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i class="bi bi-arrow-counterclockwise text-danger" style="font-size: 20px;"></i>
-                </div>
-                <div style="flex-grow: 1;">
-                    <h5 class="alert-heading text-danger fw-bold mb-1" style="font-size: 16px; margin: 0 0 4px 0;">Application Reverted by Commissioner</h5>
-                    <p class="mb-0 text-dark fw-medium" style="font-size: 14px; line-height: 1.5; margin: 0;">
-                        <strong>Remarks:</strong> {{ applicationData.commissionerRevertRemarks || applicationData['commissioner_revert_remarks'] }}
-                    </p>
-                </div>
-            </div>
-        </div>
+
 
         <div class="no-print application-footer-actions" *ngIf="applicationData">
                     <div class="application-footer-actions__row">
@@ -1889,6 +1874,30 @@
             [displayMode]="'detailed'"
             (actionClicked)="onUnifiedAction($event)">
         </app-unified-action-buttons>
+
+
+
+        <!-- Bottom Revert Remarks Alert -->
+        <div class="alert alert-danger mt-4 mb-4 shadow-sm border-start border-danger border-4 no-print mx-4" 
+             *ngIf="applicationData && (applicationData.latestRevert || applicationData['latest_revert'] || applicationData.commissionerRevertRemarks || applicationData.isRevertedByCommissioner)"
+             style="background-color: #fff5f5; border-radius: 8px; padding: 16px;">
+            <div class="d-flex gap-3 align-items-start">
+                <div style="background-color: #fee2e2; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="bi bi-arrow-counterclockwise text-danger" style="font-size: 20px;"></i>
+                </div>
+                <div style="flex-grow: 1;">
+                    <h5 class="alert-heading text-danger fw-bold mb-1" style="font-size: 16px; margin: 0 0 4px 0;">
+                        Application Reverted {{ (applicationData.latestRevert || applicationData['latest_revert']) ? 'by ' + ((applicationData.latestRevert || applicationData['latest_revert'])?.revertedByRole || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_by_role) : '' }}
+                    </h5>
+                    <p class="mb-1 text-dark fw-medium" style="font-size: 14px; line-height: 1.5; margin: 0;">
+                        <strong>Remarks:</strong> {{ (applicationData.latestRevert || applicationData['latest_revert'])?.remarks || applicationData.commissionerRevertRemarks || applicationData['commissioner_revert_remarks'] }}
+                    </p>
+                    <small class="text-muted" style="font-size: 12px;" *ngIf="applicationData.latestRevert || applicationData['latest_revert']">
+                        Reverted on: {{ ((applicationData.latestRevert || applicationData['latest_revert'])?.revertedOn || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_on) | date:'medium' }} by {{ (applicationData.latestRevert || applicationData['latest_revert'])?.revertedBy || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_by }}
+                    </small>
+                </div>
+            </div>
+        </div>
         
         } @else {
         <div class="alert alert-warning text-center">
