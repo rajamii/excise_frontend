@@ -52,15 +52,15 @@ export class HeaderComponent implements OnInit {
         ">
           <!-- Animated icon -->
           <div style="
-            width: 80px;
-            height: 80px;
+            width: 82px;
+            height: 82px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #ef4444 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 28px rgba(220, 38, 38, 0.4);
+            margin-bottom: 22px;
+            box-shadow: 0 8px 28px rgba(185, 28, 28, 0.45);
             animation: pulse-red 1.8s ease-in-out infinite;
           ">
             <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -72,22 +72,32 @@ export class HeaderComponent implements OnInit {
 
           <!-- Title -->
           <div style="
-            font-size: 1.5rem;
+            font-size: 1.55rem;
             font-weight: 800;
-            color: #111827;
-            margin-bottom: 8px;
+            color: #7f1d1d;
+            margin-bottom: 10px;
             letter-spacing: -0.3px;
           ">Sign Out?</div>
 
+          <!-- Divider -->
+          <div style="
+            width: 48px;
+            height: 3px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #dc2626, #fca5a5);
+            margin-bottom: 14px;
+          "></div>
+
           <!-- Subtitle -->
           <div style="
-            font-size: 0.9rem;
-            color: #6b7280;
-            line-height: 1.6;
-            max-width: 270px;
+            font-size: 0.92rem;
+            color: #991b1b;
+            line-height: 1.65;
+            max-width: 280px;
             text-align: center;
+            opacity: 0.85;
           ">
-            You'll be securely signed out of your session. Any unsaved changes may be lost.
+            You'll be securely signed out of your session.<br>Any unsaved changes may be lost.
           </div>
         </div>
       `,
