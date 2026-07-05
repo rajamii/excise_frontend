@@ -2,7 +2,7 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { Ward } from '../../../../../core/models/ward.model';
-import { MasterLocation } from '../../../../../core/models/master-location.model';
+import { LocationSubcategory } from '../../../../../core/models/location-subcategory.model';
 import { MasterService } from '../../../../../core/services/master.service';
 import { AdminService } from '../../../admin.service';
 import Swal from 'sweetalert2';
@@ -33,21 +33,21 @@ import { CommonModule } from '@angular/common';
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="w-100">
-          <mat-label>Location</mat-label>
-          <mat-select [(ngModel)]="ward.locationCode" required>
-            <mat-option *ngIf="loadingLocations" disabled>
+          <mat-label>Location Subcategory</mat-label>
+          <mat-select [(ngModel)]="ward.subcategory" required>
+            <mat-option *ngIf="loadingSubcategories" disabled>
               <mat-spinner diameter="20" style="display:inline-block;margin-right:8px;"></mat-spinner>
-              Loading locations...
+              Loading subcategories...
             </mat-option>
-            <mat-option *ngFor="let loc of locations" [value]="loc.locationCode">
-              {{ loc.locationDescription }}
+            <mat-option *ngFor="let sub of subcategories" [value]="sub.id">
+              {{ sub.subcategoryName }}
             </mat-option>
-            <mat-option *ngIf="!loadingLocations && locations.length === 0" disabled>
-              No locations available
+            <mat-option *ngIf="!loadingSubcategories && subcategories.length === 0" disabled>
+              No subcategories available
             </mat-option>
           </mat-select>
           <mat-icon matPrefix>place</mat-icon>
-          <mat-hint *ngIf="locations.length > 0">{{ locations.length }} locations available</mat-hint>
+          <mat-hint *ngIf="subcategories.length > 0">{{ subcategories.length }} subcategories available</mat-hint>
         </mat-form-field>
 
         <mat-checkbox [(ngModel)]="ward.isActive" color="primary">Active</mat-checkbox>
@@ -55,7 +55,7 @@ import { CommonModule } from '@angular/common';
 
       <mat-dialog-actions align="end">
         <button mat-stroked-button (click)="onCancel()">Cancel</button>
-        <button mat-flat-button color="primary" (click)="onSave()" [disabled]="loadingLocations">
+        <button mat-flat-button color="primary" (click)="onSave()" [disabled]="loadingSubcategories">
           {{ isEditMode ? 'Update' : 'Save' }}
         </button>
       </mat-dialog-actions>
@@ -74,10 +74,10 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class UrbanWardManageDialogComponent implements OnInit {
-  ward: Ward = { id: 0, wardName: '', wardNumber: 0, locationCode: 0, isActive: true };
+  ward: Ward = { id: 0, wardName: '', wardNumber: 0, locationCode: 0, subcategory: undefined, isActive: true };
   isEditMode = false;
-  locations: MasterLocation[] = [];
-  loadingLocations = true;
+  subcategories: LocationSubcategory[] = [];
+  loadingSubcategories = true;
 
   constructor(
     private masterService: MasterService,
@@ -92,20 +92,20 @@ export class UrbanWardManageDialogComponent implements OnInit {
       this.isEditMode = true;
     }
 
-    this.masterService.getLocations().subscribe({
+    this.masterService.getLocationSubcategories().subscribe({
       next: (d: any) => {
-        this.locations = Array.isArray(d) ? d : [];
-        this.loadingLocations = false;
+        this.subcategories = Array.isArray(d) ? d : [];
+        this.loadingSubcategories = false;
       },
       error: () => {
-        this.loadingLocations = false;
-        Swal.fire('Error', 'Failed to load locations.', 'error');
+        this.loadingSubcategories = false;
+        Swal.fire('Error', 'Failed to load location subcategories.', 'error');
       }
     });
   }
 
   onSave(): void {
-    if (!this.ward.wardName || !this.ward.wardNumber || !this.ward.locationCode) {
+    if (!this.ward.wardName || !this.ward.wardNumber || !this.ward.subcategory) {
       Swal.fire('Warning', 'All fields are required.', 'warning');
       return;
     }

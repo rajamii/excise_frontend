@@ -3,6 +3,8 @@ export interface Ward {
   wardName: string;
   wardNumber: number;
   locationCode: number;
+  subcategory?: number;
+  subcategoryName?: string;
   locationName?: string;
   districtName?: string;
   population?: number;

@@ -116,8 +116,8 @@
                   </ng-container>
 
                   <ng-container matColumnDef="locationCode">
-                    <mat-header-cell *matHeaderCellDef>Location</mat-header-cell>
-                    <mat-cell *matCellDef="let row">{{ getLocationName(row.locationCode) }}</mat-cell>
+                    <mat-header-cell *matHeaderCellDef>Location Subcategory</mat-header-cell>
+                    <mat-cell *matCellDef="let row">{{ row.subcategoryName || getLocationName(row.locationCode) }}</mat-cell>
                   </ng-container>
 
                   <ng-container matColumnDef="actions">

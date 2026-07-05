@@ -1040,7 +1040,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .map(l => l.locationCode);
 
     this.wards = this.allWards.filter(
-      ward => locationCodesInDistrict.includes(ward.locationCode)
+      ward => locationCodesInDistrict.includes(ward.locationCode) || ward.subcategory != null
     );
     const current = this.siteDetailsForm.get('ward')?.value;
     if (current && !this.wards.some(w => w.id === current)) {
@@ -1090,6 +1090,8 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           wardName: item.wardName || item.ward_name,
           wardNumber: item.wardNumber || item.ward_number,
           locationCode: item.locationCode || item.location_code,
+          subcategory: item.subcategory,
+          subcategoryName: item.subcategoryName || item.subcategory_name,
           isActive: item.isActive || item.is_active
         }));
         sessionStorage.setItem('wards', JSON.stringify(this.allWards));
@@ -1195,7 +1197,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.cdr.detectChanges();
   }
 
-  // ✅ NEW: Filter wards by location
+  // ✅ UPDATED: Filter wards by location or subcategory
   private filterWards(locationId: number): void {
     console.log('🔍 Filtering wards for location:', locationId);
     const location = this.allLocations.find(l => l.id === locationId);
@@ -1203,12 +1205,23 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       this.wards = [];
       return;
     }
-    
-    this.wards = this.allWards.filter(
-      ward => ward.locationCode === location.locationCode
-    );
+
+    // Get the active subcategory selection from the form
+    const subcategoryId = this.siteDetailsForm.get('locationSubcategory')?.value;
+
+    if (subcategoryId) {
+      // Filter by subcategory first (new wards), fall back to locationCode for legacy wards
+      this.wards = this.allWards.filter(
+        ward => ward.subcategory === subcategoryId || ward.locationCode === location.locationCode
+      );
+    } else {
+      this.wards = this.allWards.filter(
+        ward => ward.locationCode === location.locationCode
+      );
+    }
+
     console.log('✅ Filtered wards:', this.wards.length);
-    
+
     const current = this.siteDetailsForm.get('ward')?.value;
     if (current && !this.wards.some(w => w.id === current)) {
       this.siteDetailsForm.patchValue({ ward: null }, { emitEvent: false });
