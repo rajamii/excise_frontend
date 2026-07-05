@@ -534,6 +534,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           const dialogRef = this.dialog.open(UserProfileComponent, {
             width: '600px',
             maxWidth: '90vw',
+            maxHeight: '90vh',
             panelClass: 'user-profile-dialog'
           });
         })
@@ -549,6 +550,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           const dialogRef = this.dialog.open(UserProfileComponent, {
             width: '600px',
             maxWidth: '90vw',
+            maxHeight: '90vh',
             panelClass: 'user-profile-dialog'
           });
         })

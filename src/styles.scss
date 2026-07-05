@@ -1963,14 +1963,20 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   50%       { box-shadow: 0 8px 40px rgba(220,38,38,0.65); transform: scale(1.05); }
 }
 
+@keyframes float-icon {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
 .logout-swal-popup.swal2-popup {
-  border-radius: 24px !important;
-  padding: 44px 40px 36px !important;
-  background: linear-gradient(160deg, #fff5f5 0%, #fee2e2 60%, #fecaca 100%) !important;
-  box-shadow: 0 20px 60px rgba(220,38,38,0.2), 0 4px 20px rgba(0,0,0,0.08) !important;
-  border: 1px solid rgba(220,38,38,0.12) !important;
+  border-radius: 20px !important;
+  padding: 0 !important;
+  background: #fff !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.18) !important;
+  border: none !important;
   width: 460px !important;
   max-width: 94vw !important;
+  overflow: hidden !important;
 
   .swal2-html-container {
     margin: 0 !important;
@@ -1980,51 +1986,50 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 }
 
 .logout-swal-actions.swal2-actions {
-  gap: 10px !important;
-  margin-top: 28px !important;
-  padding: 0 !important;
-  flex-direction: column !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 28px 28px !important;
+  flex-direction: row !important;
   align-items: stretch !important;
   width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .logout-swal-confirm.swal2-confirm {
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #ef4444 100%) !important;
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%) !important;
   color: #fff !important;
   border: none !important;
-  border-radius: 14px !important;
-  padding: 15px 28px !important;
-  font-size: 1rem !important;
+  border-radius: 12px !important;
+  padding: 13px 20px !important;
+  font-size: 0.92rem !important;
   font-weight: 700 !important;
-  letter-spacing: 0.4px !important;
-  box-shadow: 0 6px 20px rgba(185,28,28,0.45) !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: 0 4px 16px rgba(185,28,28,0.4) !important;
   transition: all 0.2s ease !important;
-  width: 100% !important;
+  flex: 1 !important;
   margin: 0 !important;
 
   &:hover {
     background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%) !important;
-    box-shadow: 0 8px 28px rgba(185,28,28,0.6) !important;
+    box-shadow: 0 6px 22px rgba(185,28,28,0.55) !important;
     transform: translateY(-1px) !important;
   }
 }
 
 .logout-swal-cancel.swal2-cancel {
-  background: rgba(255,255,255,0.7) !important;
-  color: #7f1d1d !important;
-  border: 1.5px solid rgba(220,38,38,0.25) !important;
-  border-radius: 14px !important;
-  padding: 14px 28px !important;
-  font-size: 1rem !important;
+  background: #f4f4f5 !important;
+  color: #52525b !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 13px 20px !important;
+  font-size: 0.92rem !important;
   font-weight: 600 !important;
   transition: all 0.2s ease !important;
-  width: 100% !important;
+  flex: 1 !important;
   margin: 0 !important;
-  backdrop-filter: blur(4px) !important;
 
   &:hover {
-    background: rgba(255,255,255,0.9) !important;
-    border-color: rgba(220,38,38,0.4) !important;
-    color: #991b1b !important;
+    background: #e4e4e7 !important;
+    color: #18181b !important;
   }
 }

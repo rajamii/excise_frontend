@@ -43,62 +43,72 @@ export class HeaderComponent implements OnInit {
   logout(): void {
     Swal.fire({
       html: `
-        <div style="
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 12px 0 8px;
-          font-family: 'Inter', 'Segoe UI', sans-serif;
-        ">
-          <!-- Animated icon -->
-          <div style="
-            width: 82px;
-            height: 82px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #ef4444 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 22px;
-            box-shadow: 0 8px 28px rgba(185, 28, 28, 0.45);
-            animation: pulse-red 1.8s ease-in-out infinite;
-          ">
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </div>
+        <div style="font-family:'Inter','Segoe UI',sans-serif;">
 
-          <!-- Title -->
+          <!-- Red banner top -->
           <div style="
-            font-size: 1.55rem;
-            font-weight: 800;
-            color: #7f1d1d;
-            margin-bottom: 10px;
-            letter-spacing: -0.3px;
-          ">Sign Out?</div>
-
-          <!-- Divider -->
-          <div style="
-            width: 48px;
-            height: 3px;
-            border-radius: 4px;
-            background: linear-gradient(90deg, #dc2626, #fca5a5);
-            margin-bottom: 14px;
-          "></div>
-
-          <!-- Subtitle -->
-          <div style="
-            font-size: 0.92rem;
-            color: #991b1b;
-            line-height: 1.65;
-            max-width: 280px;
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 60%, #f87171 100%);
+            padding: 36px 32px 48px;
+            position: relative;
+            overflow: hidden;
             text-align: center;
-            opacity: 0.85;
           ">
-            You'll be securely signed out of your session.<br>Any unsaved changes may be lost.
+            <!-- Decorative circles -->
+            <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
+            <div style="position:absolute;bottom:-40px;left:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>
+
+            <!-- Icon -->
+            <div style="
+              width: 72px;
+              height: 72px;
+              border-radius: 50%;
+              background: rgba(255,255,255,0.18);
+              border: 2px solid rgba(255,255,255,0.35);
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              margin-bottom: 16px;
+              animation: float-icon 2.4s ease-in-out infinite;
+              position: relative;
+              z-index: 1;
+            ">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </div>
+
+            <div style="
+              font-size: 1.5rem;
+              font-weight: 800;
+              color: #fff;
+              letter-spacing: -0.3px;
+              position: relative;
+              z-index: 1;
+            ">Sign Out?</div>
           </div>
+
+          <!-- White curved body -->
+          <div style="
+            background: #fff;
+            border-radius: 24px 24px 0 0;
+            margin-top: -22px;
+            padding: 28px 32px 8px;
+            position: relative;
+            text-align: center;
+          ">
+            <p style="
+              font-size: 0.92rem;
+              color: #71717a;
+              line-height: 1.65;
+              margin: 0;
+            ">
+              You're about to be signed out of your account.<br>
+              <span style="color:#dc2626;font-weight:600;">Any unsaved changes will be lost.</span>
+            </p>
+          </div>
+
         </div>
       `,
       showCancelButton: true,
@@ -118,9 +128,9 @@ export class HeaderComponent implements OnInit {
           const style = document.createElement('style');
           style.id = styleId;
           style.textContent = `
-            @keyframes pulse-red {
-              0%, 100% { box-shadow: 0 8px 28px rgba(220,38,38,0.4); transform: scale(1); }
-              50%       { box-shadow: 0 8px 40px rgba(220,38,38,0.65); transform: scale(1.05); }
+            @keyframes float-icon {
+              0%, 100% { transform: translateY(0px); }
+              50%       { transform: translateY(-6px); }
             }
           `;
           document.head.appendChild(style);
