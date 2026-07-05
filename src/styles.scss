@@ -1955,3 +1955,75 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 .stat-card.objection { border: 2px solid #fdba74 !important; background: linear-gradient(135deg, rgba(255,247,237,0.35) 0%, rgba(255,237,213,0.35) 100%) !important; }
 .stat-card.approved  { border: 2px solid #6ee7b7 !important; }
 .stat-card.rejected  { border: 2px solid #fca5a5 !important; }
+
+
+// ── Logout SweetAlert2 Popup ─────────────────────────────────────────────────
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 8px 28px rgba(220,38,38,0.4); transform: scale(1); }
+  50%       { box-shadow: 0 8px 40px rgba(220,38,38,0.65); transform: scale(1.05); }
+}
+
+.logout-swal-popup.swal2-popup {
+  border-radius: 20px !important;
+  padding: 40px 32px 32px !important;
+  background: #fff !important;
+  box-shadow: 0 20px 60px rgba(220,38,38,0.18), 0 4px 24px rgba(0,0,0,0.1) !important;
+  border: none !important;
+  width: 400px !important;
+  max-width: 92vw !important;
+
+  .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+}
+
+.logout-swal-actions.swal2-actions {
+  gap: 10px !important;
+  margin-top: 28px !important;
+  padding: 0 !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+.logout-swal-confirm.swal2-confirm {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 14px 28px !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: 0 6px 20px rgba(220,38,38,0.4) !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  margin: 0 !important;
+
+  &:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%) !important;
+    box-shadow: 0 8px 28px rgba(220,38,38,0.55) !important;
+    transform: translateY(-1px) !important;
+  }
+}
+
+.logout-swal-cancel.swal2-cancel {
+  background: #f9fafb !important;
+  color: #374151 !important;
+  border: 1.5px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  padding: 13px 28px !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  margin: 0 !important;
+
+  &:hover {
+    background: #f3f4f6 !important;
+    border-color: #d1d5db !important;
+    color: #111827 !important;
+  }
+}
