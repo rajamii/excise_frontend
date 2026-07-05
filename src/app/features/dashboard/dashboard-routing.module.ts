@@ -115,6 +115,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_categories.view' }
       },
       {
+        path: 'admin/pachwai-excess',
+        loadComponent: () =>
+          import('../admin/master/pachwai-excess/list/list.component').then((m) => m.PachwaiExcessListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
         path: 'admin/locations',
         loadComponent: () =>
           import('../admin/master/location/list/list.component').then((m) => m.ListComponent),

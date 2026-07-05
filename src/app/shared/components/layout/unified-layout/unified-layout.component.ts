@@ -911,6 +911,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         normalized.includes('/admin/license-types') ||
         normalized.includes('/admin/license-categories') ||
         normalized.includes('/admin/additional-charges') ||
+        normalized.includes('/admin/pachwai-excess') ||
         normalized.includes('/admin/fixed-fees') ||
         normalized.includes('/admin/license-terms') ||
         normalized.includes('/admin/license-titles') ||

@@ -161,6 +161,17 @@ const routes: Routes = [
             },
           },
           {
+            path: 'pachwai-excess',
+            loadComponent: () =>
+              import('./master/pachwai-excess/list/list.component').then(
+                (m) => m.PachwaiExcessListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.license_categories.view',
+            },
+          },
+          {
             path: 'locations',
             loadComponent: () =>
               import('./master/location/list/list.component').then(

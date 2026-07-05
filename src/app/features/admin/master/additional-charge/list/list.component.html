@@ -3,154 +3,92 @@
 
     <!-- Header: Title and Add button -->
     <mat-card-header>
-      <div class="page-title">Additional Charges</div>
-      @if (activeTab === 0) {
-        <button matButton="filled" (click)="onAdd()">
-          <mat-icon>add</mat-icon> Add Configuration
-        </button>
-      } @else {
-        <button matButton="filled" (click)="onAddLicenseFee()">
-          <mat-icon>add</mat-icon> Add License Fee
-        </button>
-      }
+      <div class="page-title">License Location Fee</div>
+      <button matButton="filled" (click)="onAddLicenseFee()">
+        <mat-icon>add</mat-icon> Add License Fee
+      </button>
     </mat-card-header>
 
     <!-- Content: Table -->
     <mat-card-content>
-      <!-- Tab strip -->
-      <mat-tab-group class="category-tabs" (selectedTabChange)="onTabChange($event)">
-        <mat-tab label="Additional Charges"></mat-tab>
-        <mat-tab label="License Fees"></mat-tab>
-      </mat-tab-group>
+      <!-- License Fees Table -->
+      <div class="table-container">
+        <mat-table [dataSource]="licenseFees">
 
-      <!-- Tab 0: Additional Charge Configurations -->
-      @if (activeTab === 0) {
-        <div class="table-container">
-          <mat-table [dataSource]="configs">
+          <ng-container matColumnDef="category">
+            <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
+            <mat-cell *matCellDef="let item">{{ item.licenseCategoryName || item.licenseCategory }}</mat-cell>
+          </ng-container>
 
-            <ng-container matColumnDef="categoryName">
-              <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
-              <mat-cell *matCellDef="let item">{{ item.categoryName }}</mat-cell>
-            </ng-container>
+          <ng-container matColumnDef="subcategory">
+            <mat-header-cell *matHeaderCellDef>License Subcategory</mat-header-cell>
+            <mat-cell *matCellDef="let item">{{ item.licenseSubcategoryName || item.licenseSubcategory }}</mat-cell>
+          </ng-container>
 
-            <ng-container matColumnDef="chargeType">
-              <mat-header-cell *matHeaderCellDef>Charge Type</mat-header-cell>
-              <mat-cell *matCellDef="let item">{{ getChargeTypeDisplay(item.chargeType) }}</mat-cell>
-            </ng-container>
+          <ng-container matColumnDef="location">
+            <mat-header-cell *matHeaderCellDef>Location</mat-header-cell>
+            <mat-cell *matCellDef="let item">{{ item.locationDescription || 'All Locations' }}</mat-cell>
+          </ng-container>
 
-            <ng-container matColumnDef="isActive">
-              <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                <span class="status-badge" [class.active]="item.isActive">
-                  {{ item.isActive ? 'Active' : 'Inactive' }}
-                </span>
-              </mat-cell>
-            </ng-container>
+          <ng-container matColumnDef="fee">
+            <mat-header-cell *matHeaderCellDef>License Fee</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              {{ item.licenseFee != null ? (item.licenseFee | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
+            </mat-cell>
+          </ng-container>
 
-            <ng-container matColumnDef="actions">
-              <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                <button matIconButton color="primary" (click)="onEdit(item)" title="Edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button matIconButton color="warn" (click)="onDelete(item)" title="Delete">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </mat-cell>
-            </ng-container>
+          <ng-container matColumnDef="security">
+            <mat-header-cell *matHeaderCellDef>Security Amount</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              {{ item.securityAmount != null ? (item.securityAmount | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
+            </mat-cell>
+          </ng-container>
 
-            <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-            <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-          </mat-table>
+          <ng-container matColumnDef="renewal">
+            <mat-header-cell *matHeaderCellDef>Renewal Amount</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              {{ item.renewalAmount != null ? (item.renewalAmount | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
+            </mat-cell>
+          </ng-container>
 
-          @if (configs.length === 0) {
-            <div class="empty-state">
-              No configurations found. Click "Add Configuration" to create one.
-            </div>
-          }
-        </div>
-      }
+          <ng-container matColumnDef="lateFee">
+            <mat-header-cell *matHeaderCellDef>Late Fee</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              {{ item.lateFee != null ? (item.lateFee | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
+            </mat-cell>
+          </ng-container>
 
-      <!-- Tab 1: License Fees -->
-      @if (activeTab === 1) {
-        <div class="table-container">
-          <mat-table [dataSource]="licenseFees">
+          <ng-container matColumnDef="status">
+            <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              <span class="status-badge" [class.active]="item.isActive">
+                {{ item.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </mat-cell>
+          </ng-container>
 
-            <ng-container matColumnDef="category">
-              <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
-              <mat-cell *matCellDef="let item">{{ item.licenseCategoryName || item.licenseCategory }}</mat-cell>
-            </ng-container>
+          <ng-container matColumnDef="actions">
+            <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              <button matIconButton color="primary" (click)="onEditLicenseFee(item)" title="Edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton color="warn" (click)="onDeleteLicenseFee(item)" title="Deactivate">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </mat-cell>
+          </ng-container>
 
-            <ng-container matColumnDef="subcategory">
-              <mat-header-cell *matHeaderCellDef>License Subcategory</mat-header-cell>
-              <mat-cell *matCellDef="let item">{{ item.licenseSubcategoryName || item.licenseSubcategory }}</mat-cell>
-            </ng-container>
+          <mat-header-row *matHeaderRowDef="licenseFeeColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: licenseFeeColumns;"></mat-row>
+        </mat-table>
 
-            <ng-container matColumnDef="location">
-              <mat-header-cell *matHeaderCellDef>Location</mat-header-cell>
-              <mat-cell *matCellDef="let item">{{ item.locationDescription || 'All Locations' }}</mat-cell>
-            </ng-container>
-
-            <ng-container matColumnDef="fee">
-              <mat-header-cell *matHeaderCellDef>License Fee</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                {{ item.licenseFee != null ? (item.licenseFee | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
-              </mat-cell>
-            </ng-container>
-
-            <ng-container matColumnDef="security">
-              <mat-header-cell *matHeaderCellDef>Security Amount</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                {{ item.securityAmount != null ? (item.securityAmount | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
-              </mat-cell>
-            </ng-container>
-
-            <ng-container matColumnDef="renewal">
-              <mat-header-cell *matHeaderCellDef>Renewal Amount</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                {{ item.renewalAmount != null ? (item.renewalAmount | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
-              </mat-cell>
-            </ng-container>
-
-            <ng-container matColumnDef="lateFee">
-              <mat-header-cell *matHeaderCellDef>Late Fee</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                {{ item.lateFee != null ? (item.lateFee | currency:'INR':'symbol':'1.2-2') : 'N/A' }}
-              </mat-cell>
-            </ng-container>
-
-            <ng-container matColumnDef="status">
-              <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                <span class="status-badge" [class.active]="item.isActive">
-                  {{ item.isActive ? 'Active' : 'Inactive' }}
-                </span>
-              </mat-cell>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-              <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
-              <mat-cell *matCellDef="let item">
-                <button matIconButton color="primary" (click)="onEditLicenseFee(item)" title="Edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button matIconButton color="warn" (click)="onDeleteLicenseFee(item)" title="Deactivate">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </mat-cell>
-            </ng-container>
-
-            <mat-header-row *matHeaderRowDef="licenseFeeColumns"></mat-header-row>
-            <mat-row *matRowDef="let row; columns: licenseFeeColumns;"></mat-row>
-          </mat-table>
-
-          @if (licenseFees.length === 0) {
-            <div class="empty-state">
-              No license fees found. Click "Add License Fee" to create one.
-            </div>
-          }
-        </div>
-      }
+        @if (licenseFees.length === 0) {
+          <div class="empty-state">
+            No license fees found. Click "Add License Fee" to create one.
+          </div>
+        }
+      </div>
     </mat-card-content>
   </mat-card>
 </div>
