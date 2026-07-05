@@ -48,7 +48,7 @@
 
         <!-- Revert Remarks Alert from Commissioner -->
         <div class="alert alert-danger mb-4 shadow-sm border-start border-danger border-4 no-print" 
-             *ngIf="applicationData.isRevertedByCommissioner || applicationData['is_reverted_by_commissioner']"
+             *ngIf="!isLicenseeContext() && (applicationData.isRevertedByCommissioner || applicationData['is_reverted_by_commissioner'])"
              style="background-color: #fff5f5; border-radius: 8px; padding: 16px;">
             <div class="d-flex gap-3 align-items-start">
                 <div style="background-color: #fee2e2; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -1879,7 +1879,7 @@
 
         <!-- Bottom Revert Remarks Alert -->
         <div class="alert alert-danger mt-4 mb-4 shadow-sm border-start border-danger border-4 no-print mx-4" 
-             *ngIf="applicationData && (applicationData.latestRevert || applicationData['latest_revert'] || applicationData.commissionerRevertRemarks || applicationData.isRevertedByCommissioner)"
+             *ngIf="applicationData && !isLicenseeContext() && (applicationData.latestRevert || applicationData['latest_revert'] || applicationData.commissionerRevertRemarks || applicationData.isRevertedByCommissioner)"
              style="background-color: #fff5f5; border-radius: 8px; padding: 16px;">
             <div class="d-flex gap-3 align-items-start">
                 <div style="background-color: #fee2e2; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
