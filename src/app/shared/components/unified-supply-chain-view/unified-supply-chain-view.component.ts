@@ -62,6 +62,8 @@ export interface UnifiedApplicationData {
     workflowId?: number;
     allowedActions?: string[];
     allowedActionConfigs?: ActionButtonConfig[];
+    isRevertedByCommissioner?: boolean;
+    commissionerRevertRemarks?: string;
 
     // Common computed fields (properly typed)
     distilleryName?: string;
@@ -898,6 +900,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const allowedActions = this.extractAllowedActions(apiData);
         const allowedActionConfigs = this.extractAllowedActionConfigs(apiData);
 
+        console.log('🔧 MAP APPLICATION DATA - apiData:', apiData);
+
         const mappedData: UnifiedApplicationData = {
             id: this.extractFieldValue(apiData, config.fieldMappings.id)?.toString() || '',
             referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo)?.toString() || '',
@@ -907,7 +911,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             currentStageName: this.extractFieldValue(apiData, config.fieldMappings.currentStageName || []),
             workflowId: this.parseId(rawWorkflowId) || config.workflowId,
             allowedActions,
-            allowedActionConfigs
+            allowedActionConfigs,
+            isRevertedByCommissioner: apiData.is_reverted_by_commissioner || false,
+            commissionerRevertRemarks: apiData.commissioner_revert_remarks || ''
         };
 
         // For workflows where backend often sends generic "PENDING" or a raw stage ID,
