@@ -859,11 +859,29 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('Location Category OK');
     }
 
-    if (!siteData?.location) {
-      console.error('Missing: Location Name');
-      missingFields.push('Location Name');
+    const categoryId = siteData?.location_category;
+    let isRural = false;
+    if (categoryId) {
+      const categoriesRaw = sessionStorage.getItem('locationCategories');
+      const categories = categoriesRaw ? JSON.parse(categoriesRaw) : [];
+      const category = categories.find((c: any) => c.id === Number(categoryId));
+      isRural = category ? (category.isRural ?? category.is_rural ?? false) : false;
+    }
+
+    if (isRural) {
+      if (!siteData?.block) {
+        console.error('Missing: Block');
+        missingFields.push('Block');
+      } else {
+        console.log('Block OK');
+      }
     } else {
-      console.log('Location Name OK');
+      if (!siteData?.location) {
+        console.error('Missing: Location Name');
+        missingFields.push('Location Name');
+      } else {
+        console.log('Location Name OK');
+      }
     }
 
     if (!siteData?.ward) {
