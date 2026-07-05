@@ -292,7 +292,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'REQUEST_REVALIDATION',
       'PAY',
       'MAKE_PAYMENT',
-      'SUBMIT'
+      'SUBMIT',
+      'REVERT'
     ];
     return this.getFilteredConfigs().filter(config =>
       primaryActions.includes(config.action)
@@ -310,7 +311,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
-      'SUBMIT'
+      'SUBMIT',
+      'REVERT'
     ];
     return this.getFilteredConfigs().filter(config =>
       !primaryActions.includes(config.action)
@@ -1934,7 +1936,7 @@ private getTransitRejectSummary(): {
     const action = this.normalizeActionName(rawAction);
     let label = config?.label ?? config?.Label ?? this.toTitleCase(action);
     let icon = config?.icon ?? config?.Icon ?? 'arrow_forward';
-    const color = config?.color ?? config?.Color ?? 'primary';
+    let color = config?.color ?? config?.Color ?? 'primary';
     let tooltip = config?.tooltip ?? config?.Tooltip ?? (label ? `${label} Application` : 'Perform Action');
     const requiresConfirmation = config?.requiresConfirmation ?? config?.requires_confirmation ?? false;
     const confirmationMessage = config?.confirmationMessage ?? config?.confirmation_message;
@@ -1951,6 +1953,12 @@ private getTransitRejectSummary(): {
       label = 'View Payment Slip';
       icon = 'receipt_long';
       tooltip = 'View Payment Slip';
+    }
+
+    if (action === 'REVERT') {
+      label = 'Revert';
+      icon = 'undo';
+      color = 'warn';
     }
 
     return {

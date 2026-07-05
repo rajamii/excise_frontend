@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { MatDialog } from '@angular/material/dialog';
 import { ObjectionDialogComponent, ObjectionDialogResult } from '../components/objection-dialog/objection-dialog.component';
 import { RejectionRemarksDialogComponent } from '../components/rejection-remarks-dialog';
+import Swal from 'sweetalert2';
 
 // Import existing services
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
@@ -120,6 +121,8 @@ export class UnifiedActionsService {
         return this.handleRaiseObjectionAction(item, itemType);
       case 'VIEW_REMARK':
         return this.handleViewRemarkAction(item, itemType);
+      case 'REVERT':
+        return this.handleRevertAction(item, itemType);
 
       default:
         return of({
@@ -1091,7 +1094,7 @@ export class UnifiedActionsService {
 
   private executeWorkflowAdvance(
     item: any,
-    mode: 'approve' | 'reject' | 'forward',
+    mode: 'approve' | 'reject' | 'forward' | 'revert',
     remarks: string,
     workflowContextData?: Record<string, any>
   ): Observable<ActionResult> {
@@ -1169,6 +1172,57 @@ export class UnifiedActionsService {
     );
   }
 
+  private handleRevertAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({
+        success: false,
+        message: 'Item ID is required for revert'
+      });
+    }
+
+    if (itemType === 'new-license' || itemType === 'company-registration' || itemType === 'company-collaboration' || itemType === 'salesman-barman-registration') {
+      return new Observable<ActionResult>((subscriber) => {
+        Swal.fire({
+          title: 'Revert Application',
+          input: 'textarea',
+          inputLabel: 'Remarks (required)',
+          inputPlaceholder: 'Enter remarks for reverting...',
+          showCancelButton: true,
+          confirmButtonText: 'Revert Back',
+          cancelButtonText: 'Cancel',
+          confirmButtonColor: '#dc3545',
+          reverseButtons: true,
+          inputValidator: (value: any) => {
+            if (!value || !value.trim()) {
+              return 'Remarks are required!';
+            }
+            return null;
+          }
+        }).then((result: any) => {
+          if (result.isConfirmed && result.value) {
+            this.executeWorkflowAdvance(item, 'revert', result.value, { is_reverted: true }).subscribe({
+              next: (res) => {
+                subscriber.next(res);
+                subscriber.complete();
+              },
+              error: (err) => {
+                subscriber.error(err);
+              }
+            });
+          } else {
+            subscriber.next({ success: false, message: 'Revert cancelled.' });
+            subscriber.complete();
+          }
+        });
+      });
+    }
+
+    return of({
+      success: false,
+      message: `Revert not implemented for ${itemType}`
+    });
+  }
+
   private executeWorkflowObjection(
     item: any,
     objections: { field: string; remarks: string }[],
@@ -1233,7 +1287,7 @@ export class UnifiedActionsService {
 
   private pickWorkflowStage(
     stages: any[],
-    mode: 'approve' | 'reject' | 'forward' | 'objection'
+    mode: 'approve' | 'reject' | 'forward' | 'objection' | 'revert'
   ): any | null {
     if (!Array.isArray(stages) || stages.length === 0) return null;
 
@@ -1304,6 +1358,15 @@ export class UnifiedActionsService {
         byAction('OBJECTION') ||
         byConditionFlag('has_objections') ||
         byName('objection')
+      );
+    }
+
+    if (mode === 'revert') {
+      return (
+        byAction('REVERT') ||
+        byConditionFlag('is_reverted') ||
+        byConditionFlag('isReverted') ||
+        byName('revert')
       );
     }
 

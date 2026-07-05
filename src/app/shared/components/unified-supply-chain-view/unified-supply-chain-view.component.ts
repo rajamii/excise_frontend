@@ -1677,7 +1677,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     if ([
                         'APPROVE', 'REJECT', 'FORWARD', 'RAISE_OBJECTION', 'VERIFY', 'ISSUE',
                         'COMPLETE', 'ASSIGN_CARTONS', 'PAY',
-                        'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'
+                        'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP', 'REVERT'
                     ].includes(action)) {
                         const currentId = this.applicationData?.id?.toString() || '';
                         const currentRef = this.applicationData?.referenceNo || '';

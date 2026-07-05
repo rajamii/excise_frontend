@@ -169,6 +169,7 @@ export class WorkflowActionService {
     const hasSpecialConditionalFlag = (stage: any): boolean => {
       const condition = stage?.condition;
       if (!condition || typeof condition !== 'object') return false;
+      if (String(stage?.action || '').toUpperCase().trim() === 'REVERT') return false;
       return condition['is_reverted'] === true
         || condition['isReverted'] === true
         || condition['objections_resolved'] === true
@@ -250,6 +251,13 @@ export class WorkflowActionService {
         icon = 'visibility';
         color = 'info';
         tooltip = 'View details';
+        requiresConfirmation = false;
+      } else if (explicitAction === 'REVERT') {
+        action = 'REVERT';
+        label = 'Revert';
+        icon = 'undo';
+        color = 'warning';
+        tooltip = 'Revert this application';
         requiresConfirmation = false;
       } else if (explicitAction) {
         // Hide unsupported or internal transition actions from UI buttons
