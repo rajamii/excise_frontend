@@ -153,13 +153,6 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_titles.view' }
       },
       {
-        path: 'admin/license-subcategories',
-        loadComponent: () =>
-          import('../admin/master/license-subcategory/list/list.component').then((m) => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: { requiredPermission: 'master.license_subcategories.view' }
-      },
-      {
         path: 'admin/license-terms',
         component: LicenseTermsListComponent,
         canActivate: [UserRouteAccessService],

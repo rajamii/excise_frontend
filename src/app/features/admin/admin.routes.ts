@@ -139,17 +139,6 @@ const routes: Routes = [
             },
           },
           {
-            path: 'license-categories',
-            loadComponent: () =>
-              import('./master/license-category/list/list.component').then(
-                (m) => m.ListComponent
-              ),
-            canActivate: [UserRouteAccessService],
-            data: {
-              requiredPermission: 'master.license_categories.view',
-            },
-          },
-          {
             path: 'additional-charges',
             loadComponent: () =>
               import('./master/additional-charge/list/list.component').then(
@@ -202,17 +191,6 @@ const routes: Routes = [
             canActivate: [UserRouteAccessService],
             data: {
               requiredPermission: 'master.license_titles.view',
-            },
-          },
-          {
-            path: 'license-subcategories',
-            loadComponent: () =>
-              import('./master/license-subcategory/list/list.component').then(
-                (m) => m.ListComponent
-              ),
-            canActivate: [UserRouteAccessService],
-            data: {
-              requiredPermission: 'master.license_subcategories.view',
             },
           },
           {
