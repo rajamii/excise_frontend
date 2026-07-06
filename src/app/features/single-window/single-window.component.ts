@@ -319,7 +319,26 @@ export class SingleWindowComponent implements OnInit {
         // Split search results into respective lists for the tabs
         this.latestUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status !== 'Deactivated');
         this.latestDeactivatedUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status === 'Deactivated');
-        this.latestRecords = this.searchResults.filter(r => ['license', 'new_license_app', 'renewal_app', 'salesman_barman_app'].includes(r.type));
+        this.latestRecords = this.searchResults
+          .filter(r => ['license', 'new_license_app', 'renewal_app', 'salesman_barman_app', 'payment'].includes(r.type))
+          .map(r => {
+            if (r.type === 'payment') {
+              return {
+                ...r,
+                application_id: r.meta?.application_id || r.id,
+                establishment_name: r.meta?.payment_type || 'Payment Gateway',
+                applicant_name: r.meta?.applicant_name || 'N/A',
+                applicant_username: r.meta?.username || 'N/A',
+                license_category: 'Payment Transaction',
+                issued_license_id: r.id,
+                license_is_active: r.status === 'Success',
+                current_stage: r.status || 'Pending',
+                pending_at: 'N/A',
+                created_at: r.meta?.created_at?.split(' ')[0] || 'N/A'
+              };
+            }
+            return r;
+          });
 
         // Reset pagination indexes on new search
         this.adminPageIndex = 0;

@@ -232,8 +232,33 @@
       </div>
     </div>
 
-    <!-- ONLY SHOW WHEN SEARCH IS APPLIED -->
-    <ng-container *ngIf="hasSearched">
+    <!-- WHEN SEARCHED BUT NO RESULTS FOUND AT ALL -->
+    <div class="tab-content-panel placeholder-panel" *ngIf="hasSearched && searchResults.length === 0" style="margin-top: 2rem;">
+      <div class="search-prompt-card not-found-card" style="max-width: 600px; margin: 0 auto; border-top: 4px solid #ef4444;">
+        <div class="glow-overlay red-glow"></div>
+        <div class="prompt-content">
+          <mat-icon class="prompt-icon red-icon" style="color: #ef4444; font-size: 56px; width: 56px; height: 56px; margin-bottom: 1.25rem;">search_off</mat-icon>
+          <h3 style="color: #0f172a; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.75rem;">No Matches Found</h3>
+          <p style="color: #475569; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.75rem; max-width: 480px; margin-left: auto; margin-right: auto;">
+            We couldn't find any licensee accounts, active licenses, or applications matching "<strong>{{ searchQuery }}</strong>".
+          </p>
+          <div class="prompt-tips" style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 12px; padding: 1.25rem; max-width: 450px; margin: 0 auto; gap: 0.5rem;">
+            <h4 style="color: #991b1b; font-weight: 700; font-size: 0.95rem; margin: 0; display: flex; align-items: center; gap: 0.25rem;">
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #ef4444;">info</mat-icon>
+              Suggestions:
+            </h4>
+            <ul style="color: #b91c1c; font-size: 0.88rem; margin: 0; padding-left: 1.2rem; line-height: 1.6;">
+              <li>Double-check the spelling of the name or username.</li>
+              <li>Verify the application prefix code (e.g. <code>NLI/1102/...</code>).</li>
+              <li>Ensure the search term is not too short or specific.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONLY SHOW WHEN SEARCH IS APPLIED AND RESULTS EXIST -->
+    <ng-container *ngIf="hasSearched && searchResults.length > 0">
       <!-- ── Separator ── -->
       <div class="section-divider">
         <div class="section-divider__line"></div>
