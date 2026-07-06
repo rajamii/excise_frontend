@@ -73,6 +73,14 @@
             <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
             <mat-cell *matCellDef="let com"> {{com.email}} </mat-cell>
           </ng-container>
+          <ng-container matColumnDef="fromDate">
+            <mat-header-cell *matHeaderCellDef> From Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{ com['fromDate'] ? com['fromDate'] : '-' }} </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="toDate">
+            <mat-header-cell *matHeaderCellDef> To Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{ com['toDate'] ? com['toDate'] : '-' }} </mat-cell>
+          </ng-container>
           <mat-header-row *matHeaderRowDef="commissionerColumns"></mat-header-row>
           <mat-row *matRowDef="let row; columns: commissionerColumns;"></mat-row>
         </mat-table>

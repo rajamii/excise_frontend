@@ -1,0 +1,46 @@
+<div class="card p-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Urban Wards</h3>
+    <button mat-raised-button color="primary" (click)="onAdd()">
+      <mat-icon>add</mat-icon> Add Ward
+    </button>
+  </div>
+
+  <div class="table-container mat-elevation-z2">
+    <mat-table [dataSource]="wardDataSource">
+      <ng-container matColumnDef="wardName">
+        <mat-header-cell *matHeaderCellDef> Ward Name </mat-header-cell>
+        <mat-cell *matCellDef="let element"> {{ element.wardName }} </mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="wardNumber">
+        <mat-header-cell *matHeaderCellDef> Ward Number </mat-header-cell>
+        <mat-cell *matCellDef="let element"> {{ element.wardNumber }} </mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="locationCode">
+        <mat-header-cell *matHeaderCellDef> Location </mat-header-cell>
+        <mat-cell *matCellDef="let element"> {{ element.locationName || element.locationCode }} </mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <mat-header-cell *matHeaderCellDef class="text-center"> Actions </mat-header-cell>
+        <mat-cell *matCellDef="let element" class="text-center">
+          <button mat-icon-button color="primary" (click)="onEdit(element)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="onDelete(element)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-cell>
+      </ng-container>
+
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+    </mat-table>
+
+    <div *ngIf="wardDataSource.length === 0" class="text-center p-3 text-muted">
+      No wards found.
+    </div>
+  </div>
+</div>

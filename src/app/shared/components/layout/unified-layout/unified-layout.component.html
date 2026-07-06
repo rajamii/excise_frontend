@@ -50,6 +50,13 @@
               <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('license-renewal:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>
 
+            <!-- Special Permit -->
+            <button class="nav-item special-permit-nav-item" (click)="navigateToSupplyChain('special-permit')" [class.active]="isDashboardSectionActive('special-permit')">
+              <mat-icon class="nav-icon">assignment_turned_in</mat-icon>
+              <span class="nav-text">Special Permit</span>
+              <span class="nav-badge" *ngIf="getPendingCount('special-permit') as pending">{{ pending }}</span>
+            </button>
+
             <!-- Wallet -->
             <button class="nav-item wallet-nav-item" *ngIf="showManufacturingWalletNav" (click)="navigateToWalletView('wallet')" [class.active]="isWalletActive()">
               <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
@@ -262,7 +269,7 @@
 
               <!-- Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminMasterDataExpanded = !adminMasterDataExpanded"
-                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations')"
+                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/blocks') || isAdminRouteActive('/dashboard/admin/urban-wards') || isAdminRouteActive('/dashboard/admin/rural-wards')"
                 [class.group-expanded]="adminMasterDataExpanded">
                 <mat-icon class="nav-icon">dns</mat-icon>
                 <span class="nav-text">Master Data</span>
@@ -288,6 +295,18 @@
                 <a routerLink="/dashboard/admin/locations" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">location_on</mat-icon>
                   <span class="nav-text">Location</span>
+                </a>
+                <a routerLink="/dashboard/admin/blocks" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">view_module</mat-icon>
+                  <span class="nav-text">Block</span>
+                </a>
+                <a routerLink="/dashboard/admin/urban-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">location_city</mat-icon>
+                  <span class="nav-text">Urban Ward</span>
+                </a>
+                <a routerLink="/dashboard/admin/rural-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">nature_people</mat-icon>
+                  <span class="nav-text">Rural Ward</span>
                 </a>
               </ng-container>
 

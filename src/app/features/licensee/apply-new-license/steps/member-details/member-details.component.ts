@@ -143,7 +143,6 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restoreDocuments();
-    this.autoFillFromProfiles();
   }
 
   ngOnDestroy(): void {
@@ -389,7 +388,6 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       this.licenseApplicationService.removeSiteDocument(document.key);
     });
     sessionStorage.removeItem('memberDetailsData');
-    this.autoFillFromProfiles();
   }
 
   goBack(): void {

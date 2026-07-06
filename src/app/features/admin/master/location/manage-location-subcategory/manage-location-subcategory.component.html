@@ -30,6 +30,21 @@
       </mat-select>
     </mat-form-field>
 
+    <!-- Subdivision Selection -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Subdivision</mat-label>
+      <mat-select [(ngModel)]="subcategoryRecord.subDivision" required>
+        @if (subdivisions.length === 0) {
+          <mat-option disabled>No subdivisions available</mat-option>
+        }
+        @for (subdivision of subdivisions; track subdivision.id) {
+          <mat-option [value]="subdivision.id">
+            {{ subdivision.subdivision }}
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
     <!-- Description -->
     <mat-form-field appearance="outline" class="w-100 mt-2">
       <mat-label>Description</mat-label>

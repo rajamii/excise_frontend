@@ -79,19 +79,17 @@ const routes: Routes = [
               requiredPermission: 'master.roles.view',
             },
           },
-          // ✅ COMMENTED OUT: District route causing compilation errors
-          // Uncomment this once the district list component export issue is fixed
-          // {
-          //   path: 'districts',
-          //   loadComponent: () =>
-          //     import('./master/district/list/list.component').then(
-          //       (m) => m.ListComponent
-          //     ),
-          //   canActivate: [UserRouteAccessService],
-          //   data: {
-          //     authorities: [Authority.SITE_ADMIN],
-          //   },
-          // },
+          {
+            path: 'districts',
+            loadComponent: () =>
+              import('./master/district/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.districts.view',
+            },
+          },
           {
             path: 'subdivisions',
             loadComponent: () =>
@@ -101,6 +99,39 @@ const routes: Routes = [
             canActivate: [UserRouteAccessService],
             data: {
               requiredPermission: 'master.subdivisions.view',
+            },
+          },
+          {
+            path: 'blocks',
+            loadComponent: () =>
+              import('./master/block/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.blocks.view',
+            },
+          },
+          {
+            path: 'urban-wards',
+            loadComponent: () =>
+              import('./master/urban-ward/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.wards.view',
+            },
+          },
+          {
+            path: 'rural-wards',
+            loadComponent: () =>
+              import('./master/rural-ward/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.rural_wards.view',
             },
           },
           {

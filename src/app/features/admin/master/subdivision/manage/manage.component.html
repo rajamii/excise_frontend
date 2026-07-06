@@ -19,7 +19,7 @@
         </mat-error>
       </mat-form-field>
 
-      <!-- Subdivision Code (1000–9999) -->
+      <!-- Subdivision Code -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Subdivision Code</mat-label>
         <input
@@ -27,16 +27,11 @@
           name="subdivisionCode"
           type="number"
           required
-          min="1000"
-          max="9999"
           [(ngModel)]="subdivision.subdivisionCode"
           #codeModel="ngModel"
         />
         <mat-error *ngIf="codeModel.errors?.['required']">
           Subdivision code is required
-        </mat-error>
-        <mat-error *ngIf="codeModel.errors?.['min'] || codeModel.errors?.['max']">
-          Subdivision code must be between 1000 and 9999
         </mat-error>
       </mat-form-field>
 
@@ -57,6 +52,13 @@
           District is required
         </mat-error>
       </mat-form-field>
+
+      <!-- Is Rural Checkbox -->
+      <div style="margin: 12px 0;">
+        <mat-checkbox [(ngModel)]="subdivision.isRural" name="isRural">
+          Is Rural Subdivision
+        </mat-checkbox>
+      </div>
 
     </mat-dialog-content>
 

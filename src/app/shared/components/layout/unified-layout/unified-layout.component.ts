@@ -851,6 +851,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'hologram-new': 'hologram',
       'hologram-request-form': 'hologram-request',
       'new-license-apply': 'new-license',
+      'special-permit-apply': 'special-permit',
       'company-registration-apply': 'company-registration',
       'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration',
@@ -899,7 +900,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         normalized.includes('/admin/subdivisions') ||
         normalized.includes('/admin/roads') ||
         normalized.includes('/admin/police-stations') ||
-        normalized.includes('/admin/locations')) {
+        normalized.includes('/admin/locations') ||
+        normalized.includes('/admin/blocks') ||
+        normalized.includes('/admin/urban-wards') ||
+        normalized.includes('/admin/rural-wards')) {
       this.adminMasterDataExpanded = true;
     }
     

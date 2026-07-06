@@ -5,5 +5,6 @@ export class Subdivision {
     districtCode!: number;
     district!: string;
     isActive!: boolean;
+    isRural?: boolean;
   }
   

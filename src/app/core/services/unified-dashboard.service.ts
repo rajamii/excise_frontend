@@ -38,14 +38,16 @@ export class UnifiedDashboardService {
     renewal: `${this.baseUrl}/license_renewal_application`,
     new: `${this.baseUrl}/new_license_application`,
     salesman: `${this.baseUrl}/salesman_barman`,
-    company: `${this.baseUrl}/company-registration`
+    company: `${this.baseUrl}/company-registration`,
+    label: `${this.baseUrl}/label-registration`
   };
 
   private readonly allTypes: UnifiedApplication['type'][] = [
     'license-renewal',
     'new-license',
     'salesman-barman',
-    'company-registration'
+    'company-registration',
+    'label-registration'
   ];
 
   private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
@@ -570,7 +572,8 @@ export class UnifiedDashboardService {
       'license-renewal': this.endpoints.renewal,
       'new-license': this.endpoints.new,
       'salesman-barman': this.endpoints.salesman,
-      'company-registration': this.endpoints.company // ✅ ADDED
+      'company-registration': this.endpoints.company,
+      'label-registration': this.endpoints.label
     };
 
     const inferred = this.inferAppTypeFromId(applicationId);

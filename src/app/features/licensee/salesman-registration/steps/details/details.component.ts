@@ -94,8 +94,6 @@ export class DetailsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     FormUtils.capitalize(this.detailsForm.get('pan')!, this.destroy$);
     this.loadSavedDocuments();
-
-    this.autoFillFromProfiles();
   }
 
   ngOnDestroy() {
@@ -329,6 +327,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
   resetForm() {
     this.detailsForm.reset();
+    this.detailsForm.patchValue({ nationality: 'Indian' });
     sessionStorage.removeItem('personalDetails');
     this.clearFileUrls();
 
@@ -340,8 +339,6 @@ export class DetailsComponent implements OnInit, OnDestroy {
       doc.file = null;
       doc.fileUrl = '';
     });
-
-    this.autoFillFromProfiles();
   }
 
   proceedToNext() {

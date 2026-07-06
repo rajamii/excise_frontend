@@ -163,7 +163,8 @@ export class ListComponent implements OnInit {
           isActive: item.isActive !== undefined ? item.isActive : item.is_active,
           operationDate: item.operationDate || item.operation_date,
           createdBy: item.createdBy || item.created_by,
-          status: item.status
+          status: item.status,
+          subDivision: item.sub_division || item.subDivision
         }));
       },
       error: () => Swal.fire('Error', 'Failed to load location subcategories.', 'error')

@@ -1,0 +1,108 @@
+<form [formGroup]="form" class="special-permit-form">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Special Permission for Dry Day</div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (isLoadingLicenses) {
+        <div class="state-panel">
+          <mat-spinner diameter="28"></mat-spinner>
+          <span>Loading license details...</span>
+        </div>
+      } @else if (loadError) {
+        <div class="state-panel state-panel--error">
+          <mat-icon>warning</mat-icon>
+          <span>{{ loadError }}</span>
+        </div>
+      } @else if (!licenses.length) {
+        <div class="state-panel state-panel--empty">
+          <mat-icon>info</mat-icon>
+          <span>No active license is available for Special Permission.</span>
+        </div>
+      } @else {
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Select District</mat-label>
+            <input matInput formControlName="district" required aria-label="Select District" title="Select District">
+            <mat-icon matPrefix>place</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Select License Category</mat-label>
+            <input matInput formControlName="licenseCategory" required aria-label="Select License Category" title="Select License Category">
+            <mat-icon matPrefix>place</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Select Sub Category</mat-label>
+            <input matInput formControlName="licenseSubCategory" required aria-label="Select Sub Category" title="Select Sub Category">
+            <mat-icon matPrefix>place</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field-wide">
+            <mat-label>Select Licensee</mat-label>
+            <mat-select formControlName="licensee" required (selectionChange)="onLicenseChange($event.value)">
+              @for (license of licenses; track getLicenseKey(license)) {
+                <mat-option [value]="getLicenseKey(license)">
+                  {{ getLicenseOptionLabel(license) }}
+                </mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix>place</mat-icon>
+            @if (form.controls.licensee.invalid && form.controls.licensee.touched) {
+              <mat-error>{{ getErrorMessage('licensee') }}</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Select Financial Year</mat-label>
+            <mat-select formControlName="financialYear" required>
+              @for (year of financialYears; track year) {
+                <mat-option [value]="year">{{ year }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix>place</mat-icon>
+            @if (form.controls.financialYear.invalid && form.controls.financialYear.touched) {
+              <mat-error>{{ getErrorMessage('financialYear') }}</mat-error>
+            }
+          </mat-form-field>
+
+          @if (isPerDayCategory) {
+            <mat-form-field appearance="outline">
+              <mat-label>Select Date</mat-label>
+              <input matInput type="date" formControlName="permissionDate" required aria-label="Select Date" title="Select Date">
+              <mat-icon matPrefix>place</mat-icon>
+              @if (form.controls.permissionDate.invalid && form.controls.permissionDate.touched) {
+                <mat-error>{{ getErrorMessage('permissionDate') }}</mat-error>
+              }
+            </mat-form-field>
+          }
+        </div>
+
+        <p class="form-note">** Data Once Submitted Can not be changed. Please verify all Details before submitting</p>
+
+        <div class="action-row">
+          <button mat-flat-button color="primary" type="button" (click)="saveAndProceedToPayment()" [disabled]="isSubmitting">
+            Save &amp; Proceed To Make Payment
+          </button>
+        </div>
+
+        @if (submitError) {
+          <div class="state-panel state-panel--error">
+            <mat-icon>warning</mat-icon>
+            <span>{{ submitError }}</span>
+          </div>
+        }
+
+        @if (isSavedForPayment) {
+          <div class="success-panel">
+            <mat-icon>check_circle</mat-icon>
+            <span>Application {{ applicationId }} saved. Payment integration can continue from here.</span>
+          </div>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</form>
