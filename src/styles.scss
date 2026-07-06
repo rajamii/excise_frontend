@@ -1996,7 +1996,7 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 }
 
 .logout-swal-confirm.swal2-confirm {
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%) !important;
+  background: linear-gradient(135deg, #c0273a 0%, #a01a2e 100%) !important;
   color: #fff !important;
   border: none !important;
   border-radius: 12px !important;
@@ -2004,14 +2004,14 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   font-size: 0.92rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.3px !important;
-  box-shadow: 0 4px 16px rgba(185,28,28,0.4) !important;
+  box-shadow: 0 4px 16px rgba(160,26,46,0.35) !important;
   transition: all 0.2s ease !important;
   flex: 1 !important;
   margin: 0 !important;
 
   &:hover {
-    background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%) !important;
-    box-shadow: 0 6px 22px rgba(185,28,28,0.55) !important;
+    background: linear-gradient(135deg, #e8304a 0%, #c0273a 100%) !important;
+    box-shadow: 0 6px 22px rgba(192,39,58,0.5) !important;
     transform: translateY(-1px) !important;
   }
 }

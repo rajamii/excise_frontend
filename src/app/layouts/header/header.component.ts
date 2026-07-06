@@ -47,7 +47,7 @@ export class HeaderComponent implements OnInit {
 
           <!-- Red banner top -->
           <div style="
-            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 60%, #f87171 100%);
+            background: linear-gradient(135deg, #a01a2e 0%, #c0273a 60%, #a01a2e 100%);
             padding: 36px 32px 48px;
             position: relative;
             overflow: hidden;
