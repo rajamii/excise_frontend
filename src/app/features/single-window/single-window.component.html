@@ -195,10 +195,13 @@
 
     <!-- WHEN NOT SEARCHED, SHOW A CLEAN SEARCH INITIALIZATION SCREEN -->
     <div class="tab-content-panel placeholder-panel" *ngIf="!hasSearched" style="margin-top: 2rem;">
-      <div class="search-prompt-card" style="max-width: 600px; margin: 0 auto;">
-        <div class="glow-overlay"></div>
+
+      <!-- Search Central Registry — centered top -->
+      <div class="search-prompt-card search-prompt-card--top">
         <div class="prompt-content">
-          <mat-icon class="prompt-icon">manage_search</mat-icon>
+          <div class="prompt-icon-wrap">
+            <mat-icon class="prompt-icon">manage_search</mat-icon>
+          </div>
           <h3>Search Central Registry</h3>
           <p>
             Please enter a licensee name, username, application number, or license ID in the search bar above to look up records.
@@ -206,24 +209,24 @@
         </div>
       </div>
 
-      <!-- Quick Info Cards Section -->
-      <div class="landing-card-grid" style="margin-top: 3rem;">
-        <div class="landing-card">
-          <div class="landing-icon-wrap">
+      <!-- Quick Info Cards — 3 columns below -->
+      <div class="landing-card-grid landing-card-grid--three" style="margin-top: 1.5rem;">
+        <div class="landing-card landing-card--indigo">
+          <div class="landing-icon-wrap landing-icon-wrap--indigo">
             <mat-icon>manage_search</mat-icon>
           </div>
           <h3>Unified Search</h3>
           <p>Look up licensees and applications globally. Instantly search records across users, licenses, renewals, and barman/salesman registries.</p>
         </div>
-        <div class="landing-card">
-          <div class="landing-icon-wrap">
+        <div class="landing-card landing-card--emerald">
+          <div class="landing-icon-wrap landing-icon-wrap--emerald">
             <mat-icon>timeline</mat-icon>
           </div>
           <h3>Workflow Stages</h3>
           <p>Trace the exact department workflow routing, actions taken by other officials, date timestamps, and check-post history details.</p>
         </div>
-        <div class="landing-card">
-          <div class="landing-icon-wrap">
+        <div class="landing-card landing-card--amber">
+          <div class="landing-icon-wrap landing-icon-wrap--amber">
             <mat-icon>feedback</mat-icon>
           </div>
           <h3>Objections & Observers</h3>
