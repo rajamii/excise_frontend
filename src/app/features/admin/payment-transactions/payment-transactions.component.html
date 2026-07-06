@@ -173,7 +173,7 @@
     </div>
 
     <!-- Results Panel -->
-    <div class="tab-content-panel" *ngIf="!isLoading && !error">
+    <div class="tab-content-panel" *ngIf="hasSearched && !isLoading && !error">
       <div class="table-responsive-wrapper">
         <table class="premium-table">
           <thead>
@@ -284,6 +284,21 @@
         (page)="onPageChange($event)"
         class="premium-paginator">
       </mat-paginator>
+    </div>
+
+    <!-- Default Landing Search Prompt Placeholder (when not searched yet) -->
+    <div class="tab-content-panel placeholder-panel" *ngIf="!hasSearched && !isLoading && !error">
+      <div class="search-prompt-card">
+        <div class="glow-overlay"></div>
+        <mat-icon class="prompt-icon">payments</mat-icon>
+        <h3>Search Gateway Transactions</h3>
+        <p>
+          To protect server performance and load speeds, the transaction history is hidden by default. Please enter a UTR, Order ID, Application ID, or select a status filter above to look up transaction details.
+        </p>
+        <div class="prompt-tips">
+          <span class="tip-tag"><mat-icon>info</mat-icon> Tip: You can filter by Success, Failed, or Pending status directly</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>

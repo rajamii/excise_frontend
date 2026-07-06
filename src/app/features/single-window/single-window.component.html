@@ -349,361 +349,58 @@
         <button [class.active]="activeLatestTab === 'admin'" (click)="setLatestTab('admin')" type="button">
           <mat-icon>supervisor_account</mat-icon>
           <span>Admin Users</span>
-          <span class="count-badge">{{ filteredLatestUsers.length }}</span>
+          <span class="count-badge">{{ latestUsersCount }}</span>
         </button>
         <button [class.active]="activeLatestTab === 'license'" (click)="setLatestTab('license')" type="button">
           <mat-icon>history_edu</mat-icon>
           <span>Licenses & Applications</span>
-          <span class="count-badge">{{ filteredLatestRecords.length }}</span>
+          <span class="count-badge">{{ latestRecordsCount }}</span>
         </button>
         <button [class.active]="activeLatestTab === 'deactivated'" (click)="setLatestTab('deactivated')" type="button" class="deactivated-tab-btn">
           <mat-icon class="deactivated-icon">no_accounts</mat-icon>
           <span>Deactivated Users</span>
-          <span class="count-badge deactivated-badge">{{ filteredLatestDeactivatedUsers.length }}</span>
+          <span class="count-badge deactivated-badge">{{ latestDeactivatedUsersCount }}</span>
         </button>
       </div>
 
-      <!-- Loading State for Latest -->
-      <div class="latest-loader" *ngIf="isLatestLoading">
-        <mat-spinner diameter="40"></mat-spinner>
-        <p>Loading latest records from central registry...</p>
-      </div>
+      <!-- Search Prompts instead of huge loaded tables -->
+      <div class="tab-content-panel placeholder-panel">
+        <div class="search-prompt-card">
+          <div class="glow-overlay"></div>
+          
+          <div *ngIf="activeLatestTab === 'admin'" class="prompt-content">
+            <mat-icon class="prompt-icon">supervisor_account</mat-icon>
+            <h3>Search Admin Users</h3>
+            <p>
+              To protect server performance and load speeds, the full directory of {{ latestUsersCount }} Admin Users is hidden by default. Please enter a name or username in the search bar above to view profile details.
+            </p>
+            <div class="prompt-tips">
+              <span class="tip-tag"><mat-icon>info</mat-icon> Tip: Search by name (e.g. "sasa") or role (e.g. "IT Cell")</span>
+            </div>
+          </div>
 
-      <!-- Admin/Users Tab Content -->
-      <div class="tab-content-panel" *ngIf="!isLatestLoading && activeLatestTab === 'admin'">
-        <div class="table-responsive-wrapper">
-          <table class="premium-table">
-            <thead>
-              <tr>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--blue"><mat-icon>account_circle</mat-icon></span>
-                    Name
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--indigo"><mat-icon>alternate_email</mat-icon></span>
-                    Username
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--teal"><mat-icon>contacts</mat-icon></span>
-                    Contact Info
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--violet"><mat-icon>badge</mat-icon></span>
-                    User Role
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--amber"><mat-icon>event</mat-icon></span>
-                    Registered On
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--green"><mat-icon>verified_user</mat-icon></span>
-                    Status
-                  </div>
-                </th>
-                <th class="text-right">
-                  <div class="th-inner th-inner--right">
-                    <span class="th-icon-wrap th-icon-wrap--slate"><mat-icon>open_in_new</mat-icon></span>
-                    Action
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let user of paginatedLatestUsers">
-                <td class="font-bold">
-                  <div class="user-meta-cell">
-                    <mat-icon class="cell-icon">account_circle</mat-icon>
-                    <div class="cell-text">
-                      <span class="primary-text">{{ user.first_name }} {{ user.last_name }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <code>&#64;{{ user.username }}</code>
-                </td>
-                <td>
-                  <div class="contact-cell">
-                    <span class="primary-text"><mat-icon>email</mat-icon> {{ user.email }}</span>
-                    <span class="secondary-text"><mat-icon>phone</mat-icon> {{ user.phone_number }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="role-badge">{{ user.role_name }}</span>
-                </td>
-                <td class="date-cell">{{ user.date_joined }}</td>
-                <td>
-                  <span class="status-pill" [ngClass]="user.is_active ? 'status-active' : 'status-inactive'">
-                    {{ user.is_active ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td class="text-right">
-                  <button mat-raised-button color="primary" class="track-btn-sm" (click)="viewDetails({type: 'licensee', id: user.id})">
-                    <span>View Profile</span>
-                    <mat-icon>chevron_right</mat-icon>
-                  </button>
-                </td>
-              </tr>
-              <tr *ngIf="filteredLatestUsers.length === 0">
-                <td colspan="6" class="text-center no-data-cell">No recent licensee accounts found.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <!-- Paginator -->
-        <mat-paginator
-          [length]="filteredLatestUsers.length"
-          [pageSize]="adminPageSize"
-          [pageSizeOptions]="adminPageSizes"
-          [pageIndex]="adminPageIndex"
-          (page)="onAdminPageChange($event)"
-          class="premium-paginator">
-        </mat-paginator>
-      </div>
+          <div *ngIf="activeLatestTab === 'license'" class="prompt-content">
+            <mat-icon class="prompt-icon">history_edu</mat-icon>
+            <h3>Search Licenses &amp; Applications</h3>
+            <p>
+              The full register of {{ latestRecordsCount }} Active Licenses and applications is hidden by default. To inspect workflow status or view details, enter an application ID, license number, or establishment name above.
+            </p>
+            <div class="prompt-tips">
+              <span class="tip-tag"><mat-icon>info</mat-icon> Tip: Search by prefix like "NLA/" or "LRA/" to filter specific types</span>
+            </div>
+          </div>
 
-      <!-- Deactivated Users Tab Content -->
-      <div class="tab-content-panel deactivated-panel" *ngIf="!isLatestLoading && activeLatestTab === 'deactivated'">
-        <div class="no-records-fallback red-fallback" *ngIf="filteredLatestDeactivatedUsers.length === 0">
-          <mat-icon class="red-icon">no_accounts</mat-icon>
-          <p>No deactivated or suspended accounts found.</p>
+          <div *ngIf="activeLatestTab === 'deactivated'" class="prompt-content">
+            <mat-icon class="prompt-icon">no_accounts</mat-icon>
+            <h3>Search Deactivated Users</h3>
+            <p>
+              To view any of the {{ latestDeactivatedUsersCount }} Deactivated or suspended accounts, type their details in the registry search above.
+            </p>
+            <div class="prompt-tips">
+              <span class="tip-tag"><mat-icon>info</mat-icon> Tip: Deactivated users will show a clear red "Deactivated" status pill in search results</span>
+            </div>
+          </div>
         </div>
-        
-        <div class="table-responsive-wrapper" *ngIf="filteredLatestDeactivatedUsers.length > 0">
-          <table class="premium-table deactivated-table">
-            <thead>
-              <tr>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>account_circle</mat-icon></span>
-                    Name
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>alternate_email</mat-icon></span>
-                    Username
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>contacts</mat-icon></span>
-                    Contact Info
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>badge</mat-icon></span>
-                    User Role
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>event</mat-icon></span>
-                    Registered On
-                  </div>
-                </th>
-                <th>
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>verified_user</mat-icon></span>
-                    Status
-                  </div>
-                </th>
-                <th class="text-right">
-                  <div class="th-inner th-inner--right">
-                    <span class="th-icon-wrap th-icon-wrap--red"><mat-icon>open_in_new</mat-icon></span>
-                    Action
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let user of paginatedLatestDeactivatedUsers" class="deactivated-tr">
-                <td class="font-bold">
-                  <div class="user-meta-cell">
-                    <mat-icon class="cell-icon red-cell-icon">account_circle</mat-icon>
-                    <div class="cell-text">
-                      <span class="primary-text red-text">{{ user.first_name }} {{ user.last_name }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <code class="red-code">&#64;{{ user.username }}</code>
-                </td>
-                <td>
-                  <div class="contact-cell">
-                    <span class="primary-text red-text"><mat-icon>email</mat-icon> {{ user.email }}</span>
-                    <span class="secondary-text"><mat-icon>phone</mat-icon> {{ user.phone_number }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="role-badge red-badge">{{ user.role_name }}</span>
-                </td>
-                <td class="date-cell">{{ user.date_joined }}</td>
-                <td>
-                  <span class="status-pill status-deactivated">
-                    Deactivated
-                  </span>
-                </td>
-                <td class="text-right">
-                  <button mat-raised-button color="warn" class="track-btn-sm red-btn" (click)="viewDetails({type: 'licensee', id: user.id})">
-                    <span>View Profile</span>
-                    <mat-icon>chevron_right</mat-icon>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <!-- Paginator -->
-        <mat-paginator *ngIf="filteredLatestDeactivatedUsers.length > 0"
-          [length]="filteredLatestDeactivatedUsers.length"
-          [pageSize]="deactivatedPageSize"
-          [pageSizeOptions]="deactivatedPageSizes"
-          [pageIndex]="deactivatedPageIndex"
-          (page)="onDeactivatedPageChange($event)"
-          class="premium-paginator">
-        </mat-paginator>
-      </div>
-
-      <!-- Licenses/Applications Tab Content — NLA only -->
-      <div class="tab-content-panel" *ngIf="!isLatestLoading && activeLatestTab === 'license'">
-        <div class="table-responsive-wrapper">
-          <table class="premium-table">
-            <thead>
-              <tr>
-                <th class="th-nla">
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--indigo"><mat-icon>description</mat-icon></span>
-                    NLA Application No.
-                  </div>
-                </th>
-                <th class="th-establishment">
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--blue"><mat-icon>store</mat-icon></span>
-                    Establishment / Applicant
-                  </div>
-                </th>
-                <th class="th-category">
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--violet"><mat-icon>category</mat-icon></span>
-                    License Category
-                  </div>
-                </th>
-                <th class="th-license">
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--green"><mat-icon>verified</mat-icon></span>
-                    Issued License
-                  </div>
-                </th>
-                <th class="th-status">
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--amber"><mat-icon>pending_actions</mat-icon></span>
-                    Application Status
-                  </div>
-                </th>
-                <th class="th-pending">
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--orange"><mat-icon>manage_accounts</mat-icon></span>
-                    Pending At
-                  </div>
-                </th>
-                <th class="th-date">
-                  <div class="th-inner">
-                    <span class="th-icon-wrap th-icon-wrap--teal"><mat-icon>event</mat-icon></span>
-                    Applied On
-                  </div>
-                </th>
-                <th class="th-action text-right">
-                  <div class="th-inner th-inner--right">
-                    <span class="th-icon-wrap th-icon-wrap--slate"><mat-icon>open_in_new</mat-icon></span>
-                    Action
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let record of paginatedLatestRecords">
-                <td>
-                  <div class="nla-id-cell">
-                    <mat-icon class="cell-icon nla-icon">description</mat-icon>
-                    <div class="cell-text">
-                      <code class="nla-code">{{ record.application_id }}</code>
-                      <span class="nla-sub" *ngIf="record.is_approved">
-                        <mat-icon style="font-size:12px;width:12px;height:12px;color:#10b981">verified</mat-icon>
-                        Approved
-                      </span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="cell-text">
-                    <span class="primary-text">{{ record.establishment_name }}</span>
-                    <span class="secondary-text">
-                      <mat-icon style="font-size:11px;width:11px;height:11px">person</mat-icon>
-                      {{ record.applicant_name }} &nbsp;·&nbsp; &#64;{{ record.applicant_username }}
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <span class="category-tag">{{ record.license_category }}</span>
-                </td>
-                <td>
-                  <div *ngIf="record.issued_license_id" class="license-issued-cell">
-                    <code class="license-code">{{ record.issued_license_id }}</code>
-                    <span class="status-pill" [ngClass]="record.license_is_active ? 'status-active' : 'status-inactive'">
-                      {{ record.license_is_active ? 'Active' : 'Expired' }}
-                    </span>
-                  </div>
-                  <span *ngIf="!record.issued_license_id" class="not-issued-tag">Not Issued</span>
-                </td>
-                <td>
-                  <span class="status-pill" [ngClass]="getStatusClass(record.current_stage)">
-                    {{ record.current_stage }}
-                  </span>
-                </td>
-                <td>
-                  <span *ngIf="!record.is_approved" class="pending-role-tag">
-                    <mat-icon style="font-size:13px;width:13px;height:13px">manage_accounts</mat-icon>
-                    {{ record.pending_at }}
-                  </span>
-                  <span *ngIf="record.is_approved" class="approved-badge">
-                    <mat-icon style="font-size:13px;width:13px;height:13px">check_circle</mat-icon>
-                    Completed
-                  </span>
-                </td>
-                <td class="date-cell">{{ record.created_at }}</td>
-                <td class="text-right">
-                  <button mat-raised-button color="primary" class="track-btn-sm" (click)="viewDetails(record)">
-                    <span>View Profile</span>
-                    <mat-icon>chevron_right</mat-icon>
-                  </button>
-                </td>
-              </tr>
-              <tr *ngIf="filteredLatestRecords.length === 0">
-                <td colspan="8" class="text-center no-data-cell">No new license applications found.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <!-- Paginator -->
-        <mat-paginator
-          [length]="filteredLatestRecords.length"
-          [pageSize]="licensePageSize"
-          [pageSizeOptions]="licensePageSizes"
-          [pageIndex]="licensePageIndex"
-          (page)="onLicensePageChange($event)"
-          class="premium-paginator">
-        </mat-paginator>
       </div>
     </div>
 

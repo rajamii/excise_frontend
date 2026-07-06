@@ -1126,3 +1126,107 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Premium Search Prompt Placeholder Card styling */
+.placeholder-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1.5rem !important;
+  background: radial-gradient(circle at 50% 50%, rgba(248, 250, 252, 0.5) 0%, rgba(241, 245, 249, 0.2) 100%) !important;
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
+  margin-top: 1rem;
+}
+
+.search-prompt-card {
+  position: relative;
+  max-width: 580px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  box-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.1), 0 8px 10px -6px rgba(148, 163, 184, 0.05);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(148, 163, 184, 0.15), 0 10px 10px -5px rgba(148, 163, 184, 0.08);
+    border-color: rgba(99, 102, 241, 0.4);
+
+    .prompt-icon {
+      transform: scale(1.1) rotate(5deg);
+      color: #4f46e5;
+    }
+  }
+
+  .glow-overlay {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .prompt-content {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .prompt-icon {
+    font-size: 56px;
+    width: 56px;
+    height: 56px;
+    color: #6366f1;
+    margin-bottom: 1.25rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  h3 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+    border: none;
+    padding: 0;
+  }
+
+  p {
+    font-size: 0.95rem;
+    color: #475569;
+    line-height: 1.6;
+    margin-bottom: 1.75rem;
+  }
+
+  .prompt-tips {
+    display: inline-flex;
+    align-items: center;
+    background: #eef2ff;
+    border: 1px solid #e0e7ff;
+    border-radius: 30px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #3730a3;
+    gap: 0.5rem;
+    margin: 0 auto;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #6366f1;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
