@@ -73,6 +73,7 @@ export class AdminService {
   private readonly licenseMastersUrl = `${this.baseUrl}/masters/license`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
   private readonly supplyChainUrl = `${this.baseUrl}/masters/supply_chain`;
+  private readonly notificationUrl = `${this.baseUrl}/masters/notification`;
 
   constructor(private http: HttpClient) { }
 
@@ -542,6 +543,20 @@ export class AdminService {
 
   toggleCheckPostActive(id: number): Observable<any> {
     return this.http.patch(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/toggle-active/`, {});
+  }
+
+  // ========================== NOTIFICATION MANAGEMENT ==========================
+
+  addNotification(payload: FormData): Observable<any> {
+    return this.http.post(`${this.notificationUrl}/create/`, payload);
+  }
+
+  updateNotification(id: number, payload: FormData): Observable<any> {
+    return this.http.put(`${this.notificationUrl}/update/${id}/`, payload);
+  }
+
+  deleteNotification(id: number): Observable<any> {
+    return this.http.delete(`${this.notificationUrl}/delete/${id}/`);
   }
 
   // Renewal Application Config

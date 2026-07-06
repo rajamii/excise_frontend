@@ -100,7 +100,7 @@ export class ManageComponent implements OnInit {
           Swal.fire('Success', this.isEditMode ? 'Notification updated!' : 'Notification added!', 'success');
           this.dialogRef.close(true);
         },
-        error: (error) => Swal.fire('Error', this.getErrorMessage(error), 'error')
+        error: (error: unknown) => Swal.fire('Error', this.getErrorMessage(error), 'error')
       });
     });
   }
@@ -158,11 +158,12 @@ export class ManageComponent implements OnInit {
     return `${year}-${month}-${day}`;
   }
 
-  private getErrorMessage(error: any): string {
-    const detail = error?.error;
+  private getErrorMessage(error: unknown): string {
+    const detail = (error as { error?: unknown })?.error;
     if (!detail) return 'Failed to save notification.';
     if (typeof detail === 'string') return detail;
-    if (detail.detail) return detail.detail;
+    const detailObject = detail as { detail?: string };
+    if (detailObject.detail) return detailObject.detail;
 
     const messages = Object.entries(detail)
       .map(([field, value]) => {

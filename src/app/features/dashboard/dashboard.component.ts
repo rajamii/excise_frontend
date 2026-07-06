@@ -55,6 +55,7 @@ import { Hologramrequestlevel1Component } from '../licensee/supplyChain/HoloGram
 import { HologramComponent } from '../licensee/supplyChain/HoloGram/hologram/hologram.component';
 import { NewLicenseDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/new-license/new-license-dashboard.component';
 import { LicenseRenewalDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/license-renewal/license-renewal-dashboard.component';
+import { SpecialPermitDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/special-permit/special-permit-dashboard.component';
 import { RegistrationManagementComponent } from '../licensee/supplyChain/supplychaincomponents/registration-management/registration-management.component';
 import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
 
@@ -79,6 +80,7 @@ import { PrepareApplicationComponent as CompanyCollaborationPrepareApplicationCo
 import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } from '../licensee/salesman-registration/prepare-application.component';
 import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-registration/prepare-application/prepare-application.component';
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
+import { ApplySpecialPermitComponent } from '../licensee/special-permit/apply-special-permit.component';
 import { SingleWindowComponent } from '../single-window/single-window.component';
 import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
 import { PaymentTransactionsComponent } from '../admin/payment-transactions/payment-transactions.component';
@@ -144,6 +146,7 @@ const CHART_BAR_LABELS_PLUGIN = [{
     HologramComponent,
     NewLicenseDashboardComponent,
     LicenseRenewalDashboardComponent,
+    SpecialPermitDashboardComponent,
     RegistrationManagementComponent,
     PaymentConfirmationComponent,
     // Officer-specific Components
@@ -166,6 +169,7 @@ const CHART_BAR_LABELS_PLUGIN = [{
     SalesmanPrepareApplicationComponent,
     LabelRegistrationPrepareApplicationComponent,
     ApplyNewLicenseComponent,
+    ApplySpecialPermitComponent,
     SingleWindowComponent,
     SingleWindowDetailComponent,
     PaymentTransactionsComponent
@@ -327,6 +331,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const currentYear = new Date().getFullYear();
     return Array.from({ length: 5 }, (_, i) => currentYear - i);
   })();
+  public readonly activityMonthOptions: { label: string; value: string }[] = this.buildActivityMonthOptions();
   detailedCounts: {
     total: DashboardCount & { awaitingPayment?: number };
     newLicense: DashboardCount & { awaitingPayment?: number };
@@ -884,6 +889,22 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     salesmanBarman: 0,
     companyRegistration: 0
   };
+
+  private buildActivityMonthOptions(): { label: string; value: string }[] {
+    const formatter = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' });
+    const cursor = new Date();
+    cursor.setDate(1);
+
+    return Array.from({ length: 24 }, (_, index) => {
+      const date = new Date(cursor.getFullYear(), cursor.getMonth() - index, 1);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return {
+        label: formatter.format(date),
+        value: `${year}-${month}`
+      };
+    });
+  }
 
   supplyChainPendingCounts: Record<string, number> = {};
   oicActionPendingCounts: Record<string, number> = {};
@@ -3158,6 +3179,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
       'license-renewal': 'License Renewal Management',
+      'special-permit': 'Special Permit',
+      'special-permit-apply': 'Prepare Special Permit Application',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',
@@ -3211,6 +3234,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'hologram',
       'hologram-request',
       'new-license',
+      'special-permit',
       'company-registration',
       'company-collaboration',
       'label-registration',
@@ -3230,6 +3254,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'hologram': return 'New Hologram';
       case 'hologram-request': return 'New Request';
       case 'new-license': return 'Apply New License';
+      case 'special-permit': return 'Apply Special Permit';
       case 'company-registration': return 'Apply Company';
       case 'company-collaboration': return 'Apply Collaboration';
       case 'label-registration': return 'Apply Label';
@@ -3248,6 +3273,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'hologram': return 'add_circle';
       case 'hologram-request': return 'add_circle';
       case 'new-license': return 'add_circle';
+      case 'special-permit': return 'add_circle';
       case 'company-registration': return 'add_circle';
       case 'company-collaboration': return 'add_circle';
       case 'label-registration': return 'add_circle';
@@ -3275,6 +3301,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-request-form' } });
     } else if (section === 'new-license') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'new-license-apply' } });
+    } else if (section === 'special-permit') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'special-permit-apply' } });
     } else if (section === 'company-registration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'company-registration-apply' } });
     } else if (section === 'company-collaboration') {

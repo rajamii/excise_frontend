@@ -129,9 +129,9 @@
           *ngIf="selectedSupplyChainSection === 'hologram' && !isCommissionerUser()"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
         <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'"></app-payment-confirmation>
-        <app-registration-management
-          *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-collaboration' || selectedSupplyChainSection === 'salesman-barman-registration' || selectedSupplyChainSection === 'label-registration'">
-        </app-registration-management>
+      <app-registration-management
+        *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-collaboration' || selectedSupplyChainSection === 'salesman-barman-registration' || selectedSupplyChainSection === 'label-registration'">
+      </app-registration-management>
         <app-prepare-application
           *ngIf="selectedSupplyChainSection === 'company-registration-apply'"></app-prepare-application>
         <app-company-collaboration-prepare-application
@@ -144,7 +144,9 @@
         </app-label-registration-prepare-application>
         <app-new-license-dashboard *ngIf="selectedSupplyChainSection === 'new-license'"></app-new-license-dashboard>
         <app-license-renewal-dashboard *ngIf="selectedSupplyChainSection === 'license-renewal'"></app-license-renewal-dashboard>
+        <app-special-permit-dashboard *ngIf="selectedSupplyChainSection === 'special-permit'"></app-special-permit-dashboard>
         <app-apply-new-license *ngIf="selectedSupplyChainSection === 'new-license-apply'"></app-apply-new-license>
+        <app-apply-special-permit *ngIf="selectedSupplyChainSection === 'special-permit-apply'"></app-apply-special-permit>
         <app-single-window *ngIf="selectedSupplyChainSection === 'single-window'"></app-single-window>
         <app-single-window-detail *ngIf="selectedSupplyChainSection === 'single-window-detail'"></app-single-window-detail>
         <app-payment-transactions *ngIf="selectedSupplyChainSection === 'payment-transactions'"></app-payment-transactions>
@@ -197,9 +199,16 @@
             <!-- Month filter -->
             <div class="act-filter-field">
               <label>Month</label>
-              <input type="month" [(ngModel)]="activityFilterMonth"
-                     (ngModelChange)="loadUserActivities()"
-                     class="act-filter-month" />
+              <select [(ngModel)]="activityFilterMonth"
+                      (ngModelChange)="loadUserActivities()"
+                      aria-label="Activity month"
+                      title="Activity month"
+                      class="act-filter-select">
+                <option value="">All Months</option>
+                <option *ngFor="let month of activityMonthOptions" [value]="month.value">
+                  {{ month.label }}
+                </option>
+              </select>
             </div>
 
             <!-- Specific date filter -->
@@ -207,6 +216,8 @@
               <label>Date</label>
               <input type="date" [(ngModel)]="activityFilterDate"
                      (ngModelChange)="loadUserActivities()"
+                     aria-label="Activity date"
+                     title="Activity date"
                      class="act-filter-month" />
             </div>
 
@@ -215,6 +226,8 @@
               <label>Action</label>
               <select [(ngModel)]="activityFilterAction"
                       (ngModelChange)="loadUserActivities()"
+                      aria-label="Activity action"
+                      title="Activity action"
                       class="act-filter-select">
                 <option value="">All Actions</option>
                 <option value="LOGIN">Login</option>
@@ -272,7 +285,7 @@
 
                   <td class="act-td-num">{{ (activityPage - 1) * activityPageSize + i + 1 }}</td>
 
-                  <td class="act-td-time" style="white-space:nowrap">
+                  <td class="act-td-time act-td-time--nowrap">
                     {{ row?.timestamp | date:'dd MMM yyyy' }}<br>
                     <span class="act-time-sub">{{ row?.timestamp | date:'h:mm a' }}</span>
                   </td>
@@ -338,7 +351,7 @@
 
                 <div class="act-page-size">
                   <label>Per page</label>
-                  <select [(ngModel)]="activityPageSize" (change)="activityGoToPage(1)">
+                  <select [(ngModel)]="activityPageSize" (change)="activityGoToPage(1)" aria-label="Activity records per page" title="Activity records per page">
                     <option [value]="5">5</option>
                     <option [value]="10">10</option>
                     <option [value]="25">25</option>

@@ -851,6 +851,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'hologram-new': 'hologram',
       'hologram-request-form': 'hologram-request',
       'new-license-apply': 'new-license',
+      'special-permit-apply': 'special-permit',
       'company-registration-apply': 'company-registration',
       'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration',
