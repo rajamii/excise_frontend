@@ -43,10 +43,15 @@ export class ManageComponent implements OnInit {
     this.adminService.getActiveLicenses().subscribe({
       next: (rows) => {
         const all: ActiveLicense[] = Array.isArray(rows) ? rows : [];
-        // Only show NA (New License Application) licenses — exclude CR and others
-        this.licenses = all.filter(l =>
-          String(l.id || '').toUpperCase().startsWith('NA')
-        );
+        // Only show NA licenses with category "Manufacturing" and subcategory "Distillery"
+        this.licenses = all.filter(l => {
+          const id = String(l.id || '').toUpperCase();
+          const category = String(l.license_category || '').toLowerCase();
+          const subcategory = String(l.license_subcategory || '').toLowerCase();
+          return id.startsWith('NA')
+            && category.includes('manufactur')
+            && subcategory.includes('distiller');
+        });
       },
       error: () => {
         this.licenses = [];
