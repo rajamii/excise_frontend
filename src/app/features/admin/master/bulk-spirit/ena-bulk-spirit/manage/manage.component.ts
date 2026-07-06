@@ -42,7 +42,11 @@ export class ManageComponent implements OnInit {
   private loadLicenses(): void {
     this.adminService.getActiveLicenses().subscribe({
       next: (rows) => {
-        this.licenses = Array.isArray(rows) ? rows : [];
+        const all: ActiveLicense[] = Array.isArray(rows) ? rows : [];
+        // Only show NA (New License Application) licenses — exclude CR and others
+        this.licenses = all.filter(l =>
+          String(l.id || '').toUpperCase().startsWith('NA')
+        );
       },
       error: () => {
         this.licenses = [];

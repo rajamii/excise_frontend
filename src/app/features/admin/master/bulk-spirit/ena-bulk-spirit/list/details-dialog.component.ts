@@ -38,10 +38,10 @@ import { ManageComponent } from '../manage/manage.component';
                 </td>
                 <td>
                   <div class="action-btn-group">
-                    <button mat-icon-button class="btn-action-edit" (click)="onEdit(row)">
+                    <button mat-icon-button class="btn-action-edit" (click)="onEdit(row)" matTooltip="Edit">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button class="btn-action-delete" (click)="onDelete(row)">
+                    <button mat-icon-button class="btn-action-delete" (click)="onDelete(row)" matTooltip="Delete">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
