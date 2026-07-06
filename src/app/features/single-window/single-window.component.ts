@@ -273,6 +273,9 @@ export class SingleWindowComponent implements OnInit {
     this.searchQuery = '';
     this.searchResults = [];
     this.filteredResults = [];
+    this.latestUsers = [];
+    this.latestRecords = [];
+    this.latestDeactivatedUsers = [];
     this.hasSearched = false;
   }
 
@@ -281,6 +284,9 @@ export class SingleWindowComponent implements OnInit {
     if (!trimmed) {
       this.searchResults = [];
       this.filteredResults = [];
+      this.latestUsers = [];
+      this.latestRecords = [];
+      this.latestDeactivatedUsers = [];
       this.hasSearched = false;
       return;
     }
@@ -309,6 +315,26 @@ export class SingleWindowComponent implements OnInit {
       next: (res) => {
         this.searchResults = res.results || [];
         this.filterResults();
+
+        // Split search results into respective lists for the tabs
+        this.latestUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status !== 'Deactivated');
+        this.latestDeactivatedUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status === 'Deactivated');
+        this.latestRecords = this.searchResults.filter(r => ['license', 'new_license_app', 'renewal_app', 'salesman_barman_app'].includes(r.type));
+
+        // Reset pagination indexes on new search
+        this.adminPageIndex = 0;
+        this.licensePageIndex = 0;
+        this.deactivatedPageIndex = 0;
+
+        // Automatically switch to the tab that has results
+        if (this.latestRecords.length > 0) {
+          this.activeLatestTab = 'license';
+        } else if (this.latestUsers.length > 0) {
+          this.activeLatestTab = 'admin';
+        } else if (this.latestDeactivatedUsers.length > 0) {
+          this.activeLatestTab = 'deactivated';
+        }
+
         this.isLoading = false;
       },
       error: (err) => {
