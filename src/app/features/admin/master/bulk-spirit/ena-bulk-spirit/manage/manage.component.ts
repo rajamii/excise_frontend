@@ -22,6 +22,7 @@ export class ManageComponent implements OnInit {
   };
 
   licenses: ActiveLicense[] = [];
+  selectedLicenseIds: string[] = [];
   isEditMode = false;
 
   constructor(
@@ -68,7 +69,8 @@ export class ManageComponent implements OnInit {
         bulkSpiritKindType: this.row.bulkSpiritKindType.trim(),
         strength: this.row.strength.trim(),
         priceBl: Number(this.row.priceBl ?? 0),
-        licenseId: this.row.licenseId ? String(this.row.licenseId).trim() : null,
+        licenseId: this.isEditMode && this.row.licenseId ? String(this.row.licenseId).trim() : null,
+        license_ids: !this.isEditMode && this.selectedLicenseIds.length > 0 ? this.selectedLicenseIds : null
       };
 
       const request = this.isEditMode

@@ -20,7 +20,18 @@
       <input matInput type="number" [(ngModel)]="row.priceBl" />
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
+    <!-- Multi-select for Add Mode -->
+    <mat-form-field appearance="outline" class="full-width" *ngIf="!isEditMode">
+      <mat-label>Assign Licenses (Select Multiple)</mat-label>
+      <mat-select [(ngModel)]="selectedLicenseIds" multiple>
+        <mat-option *ngFor="let lic of licenses" [value]="lic.licenseeId">
+          {{ lic.establishmentName }} ({{ lic.licenseeId }})
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Single select for Edit Mode -->
+    <mat-form-field appearance="outline" class="full-width" *ngIf="isEditMode">
       <mat-label>Assign License</mat-label>
       <mat-select [(ngModel)]="row.licenseId">
         <mat-option [value]="null">Unassigned</mat-option>
