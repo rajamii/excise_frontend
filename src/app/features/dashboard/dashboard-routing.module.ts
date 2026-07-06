@@ -101,16 +101,22 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_types.view' }
       },
       {
+        // license-categories is now merged into the license-subcategories page (2 tabs)
         path: 'admin/license-categories',
-        loadComponent: () =>
-          import('../admin/master/license-category/list/list.component').then((m) => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: { requiredPermission: 'master.license_categories.view' }
+        redirectTo: 'admin/license-subcategories',
+        pathMatch: 'full'
       },
       {
         path: 'admin/additional-charges',
         loadComponent: () =>
           import('../admin/master/additional-charge/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/pachwai-excess',
+        loadComponent: () =>
+          import('../admin/master/pachwai-excess/list/list.component').then((m) => m.PachwaiExcessListComponent),
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.license_categories.view' }
       },
@@ -122,26 +128,16 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_categories.view' }
       },
       {
-        path: 'admin/blocks',
+        path: 'admin/blocks-wards',
         loadComponent: () =>
-          import('../admin/master/block/list/list.component').then((m) => m.ListComponent),
+          import('../admin/master/blocks-wards/blocks-wards.component').then((m) => m.BlocksWardsComponent),
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.subdivisions.view' }
       },
-      {
-        path: 'admin/urban-wards',
-        loadComponent: () =>
-          import('../admin/master/urban-ward/list/list.component').then((m) => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: { requiredPermission: 'master.subdivisions.view' }
-      },
-      {
-        path: 'admin/rural-wards',
-        loadComponent: () =>
-          import('../admin/master/rural-ward/list/list.component').then((m) => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: { requiredPermission: 'master.subdivisions.view' }
-      },
+      // Legacy redirects
+      { path: 'admin/blocks',       redirectTo: 'admin/blocks-wards', pathMatch: 'full' },
+      { path: 'admin/urban-wards',  redirectTo: 'admin/blocks-wards', pathMatch: 'full' },
+      { path: 'admin/rural-wards',  redirectTo: 'admin/blocks-wards', pathMatch: 'full' },
       {
         path: 'admin/fixed-fees',
         loadComponent: () =>

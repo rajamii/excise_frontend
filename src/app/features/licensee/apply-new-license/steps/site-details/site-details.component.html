@@ -67,7 +67,6 @@
           }
         </mat-form-field>
 
-        @if (!isRuralSubdivision) {
           <mat-form-field appearance="outline">
             <mat-label>Location Category</mat-label>
             <mat-select formControlName="locationCategory" required>
@@ -84,18 +83,14 @@
               <mat-error>{{ getErrorMessage('locationCategory') }}</mat-error>
             }
           </mat-form-field>
-        }
 
         <mat-form-field appearance="outline">
           <mat-label>Location Subcategory</mat-label>
           <mat-select formControlName="locationSubcategory" required>
-            @if (locationSubcategories.length === 0 && !isRuralSubdivision && !siteDetailsForm.get('locationCategory')?.value) {
+            @if (locationSubcategories.length === 0 && !siteDetailsForm.get('locationCategory')?.value) {
               <mat-option disabled>Please select category first</mat-option>
             }
-            @if (locationSubcategories.length === 0 && isRuralSubdivision && !siteDetailsForm.get('siteSubdivision')?.value) {
-              <mat-option disabled>Please select subdivision first</mat-option>
-            }
-            @if (locationSubcategories.length === 0 && (siteDetailsForm.get('locationCategory')?.value || (isRuralSubdivision && siteDetailsForm.get('siteSubdivision')?.value))) {
+            @if (locationSubcategories.length === 0 && siteDetailsForm.get('locationCategory')?.value) {
               <mat-option disabled>No subcategories available</mat-option>
             }
             @for (subcategory of locationSubcategories; track subcategory.id) {
@@ -288,28 +283,30 @@
           </div>
         }
 
-        <div class="radio-question">
-          <label class="question-label">
-            Whether the proposed shop is covered by Trade License? <span class="required">*</span>
-          </label>
-          <mat-radio-group formControlName="tradeLicenseCovered" required>
-            <mat-radio-button value="Yes">Yes</mat-radio-button>
-            <mat-radio-button value="No">No</mat-radio-button>
-          </mat-radio-group>
-          @if (siteDetailsForm.controls['tradeLicenseCovered'].invalid && siteDetailsForm.controls['tradeLicenseCovered'].touched) {
-            <mat-error class="radio-error">{{ getErrorMessage('tradeLicenseCovered') }}</mat-error>
-          }
-        </div>
+        @if (!hideTradeLicense) {
+          <div class="radio-question">
+            <label class="question-label">
+              Whether the proposed shop is covered by Trade License? <span class="required">*</span>
+            </label>
+            <mat-radio-group formControlName="tradeLicenseCovered" required>
+              <mat-radio-button value="Yes">Yes</mat-radio-button>
+              <mat-radio-button value="No">No</mat-radio-button>
+            </mat-radio-group>
+            @if (siteDetailsForm.controls['tradeLicenseCovered'].invalid && siteDetailsForm.controls['tradeLicenseCovered'].touched) {
+              <mat-error class="radio-error">{{ getErrorMessage('tradeLicenseCovered') }}</mat-error>
+            }
+          </div>
+        }
       </div>
 
-      @if (siteDetailsForm.get('siteOwned')?.value === 'Yes' || siteDetailsForm.get('nocObtained')?.value === 'Yes' || siteDetailsForm.get('tradeLicenseCovered')?.value === 'Yes') {
+      @if (siteDetailsForm.get('siteOwned')?.value === 'Yes' || siteDetailsForm.get('nocObtained')?.value === 'Yes' || (!hideTradeLicense && siteDetailsForm.get('tradeLicenseCovered')?.value === 'Yes')) {
         <div>
           <h5 class="section-title">Upload Documents</h5>
           <div class="documents-upload-container">
             @for (doc of documents; track doc.name) {
               @if ((doc.name === 'parcha' && siteDetailsForm.get('siteOwned')?.value === 'Yes') ||
                    (doc.name === 'noc' && siteDetailsForm.get('nocObtained')?.value === 'Yes') ||
-                   (doc.name === 'trade_license' && siteDetailsForm.get('tradeLicenseCovered')?.value === 'Yes')) {
+                   (!hideTradeLicense && doc.name === 'trade_license' && siteDetailsForm.get('tradeLicenseCovered')?.value === 'Yes')) {
                 <div class="document-upload-row">
                   <div class="document-info">
                     <span class="document-label">

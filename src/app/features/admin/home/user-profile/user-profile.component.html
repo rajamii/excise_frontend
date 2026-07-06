@@ -1,60 +1,86 @@
-<!-- Display the card only when data is fully loaded -->
 @if (loaded) {
-  <mat-card>
-    <!-- Card header displaying the title -->
-    <mat-card-header>
-      User Profile
-      <button mat-icon-button (click)="closeDialog()">
-        <mat-icon class="close-icon">close</mat-icon>
+  <div class="profile-dialog">
+
+    <!-- ── Hero Header ──────────────────────────────────────────── -->
+    <div class="profile-hero">
+      <button class="close-btn" mat-icon-button (click)="closeDialog()">
+        <mat-icon>close</mat-icon>
       </button>
-    </mat-card-header>
-    <!-- Card content is shown only if the user object exists -->
+
+      <div class="avatar-ring">
+        <div class="avatar">
+          {{ (user?.firstName?.[0] || '') + (user?.lastName?.[0] || '') | uppercase }}
+        </div>
+      </div>
+
+      <div class="hero-name">
+        {{ user?.firstName }} {{ user?.middleName }} {{ user?.lastName }}
+      </div>
+      <div class="hero-meta">
+        <span class="role-chip">
+          <mat-icon>verified_user</mat-icon>
+          {{ resolvedRoleName }}
+        </span>
+        <span class="username-chip">
+          <mat-icon>alternate_email</mat-icon>
+          {{ user?.username }}
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Info Grid ─────────────────────────────────────────────── -->
     @if (user) {
-      <mat-card-content>
-        <table>
-          <!-- Each row displays a specific piece of user information -->
-          <tr>
-            <td><strong>First Name:</strong></td>
-            <td>{{ user.firstName }}</td>
-          </tr>
-          <tr>
-            <td><strong>Middle Name:</strong></td>
-            <td>{{ user.middleName }}</td>
-          </tr>
-          <tr>
-            <td><strong>Last Name:</strong></td>
-            <td>{{ user.lastName }}</td>
-          </tr>
-          <tr>
-            <td><strong>User Name:</strong></td>
-            <td>{{ user.username }}</td>
-          </tr>
-          <tr>
-            <td><strong>Email:</strong></td>
-            <td>{{ user.email }}</td>
-          </tr>
-          <tr>
-            <td><strong>Phone:</strong></td>
-            <td>{{ user.phoneNumber }}</td>
-          </tr>
-          <tr>
-            <td><strong>Role:</strong></td>
-            <td>{{ resolvedRoleName }}</td>
-          </tr>
-          <tr>
-            <td><strong>District:</strong></td>
-            <td>{{ user.district.name }}</td>
-          </tr>
-          <tr>
-            <td><strong>Subdivision:</strong></td>
-            <td>{{ user.subdivision.name }}</td>
-          </tr>
-          <tr>
-            <td><strong>Address:</strong></td>
-            <td>{{ user.address }}</td>
-          </tr>
-        </table>
-      </mat-card-content>
+      <div class="profile-body">
+
+        <div class="section-title">
+          <mat-icon>contact_page</mat-icon>
+          Account Information
+        </div>
+
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-icon contact"><mat-icon>email</mat-icon></div>
+            <div class="info-content">
+              <span class="info-label">Email</span>
+              <span class="info-value">{{ user.email || '—' }}</span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon phone"><mat-icon>phone</mat-icon></div>
+            <div class="info-content">
+              <span class="info-label">Phone</span>
+              <span class="info-value">{{ user.phoneNumber || '—' }}</span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon location"><mat-icon>location_city</mat-icon></div>
+            <div class="info-content">
+              <span class="info-label">District</span>
+              <span class="info-value">{{ user.district?.name || '—' }}</span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon location"><mat-icon>map</mat-icon></div>
+            <div class="info-content">
+              <span class="info-label">Subdivision</span>
+              <span class="info-value">{{ user.subdivision?.name || '—' }}</span>
+            </div>
+          </div>
+
+          <div class="info-card full-span">
+            <div class="info-icon address"><mat-icon>home</mat-icon></div>
+            <div class="info-content">
+              <span class="info-label">Address</span>
+              <span class="info-value">{{ user.address || '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
     }
-  </mat-card>
+
+  </div>
 }

@@ -657,6 +657,10 @@ export class MasterService {
     return this.http.get(`${this.BLOCK_URL}/?subcategory_id=${subcategoryId}`);
   }
 
+  getWardsBySubcategory(subcategoryId: number | string): Observable<any> {
+    return this.http.get(`${this.WARD_URL}/?subcategory_id=${subcategoryId}`);
+  }
+
   getRuralWards(): Observable<any> {
     return this.http.get(`${this.RURAL_WARD_URL}/`);
   }

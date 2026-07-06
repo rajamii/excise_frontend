@@ -63,6 +63,11 @@ export interface UnifiedApplicationData {
     workflowId?: number;
     allowedActions?: string[];
     allowedActionConfigs?: ActionButtonConfig[];
+    
+    // Additional tracking
+    isRevertedByCommissioner?: boolean;
+    commissionerRevertRemarks?: string;
+    latestRevert?: any;
 
     // Common computed fields (properly typed)
     distilleryName?: string;
@@ -917,6 +922,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const allowedActions = this.extractAllowedActions(apiData);
         const allowedActionConfigs = this.extractAllowedActionConfigs(apiData);
 
+        console.log('🔧 MAP APPLICATION DATA - apiData:', apiData);
+
         const mappedData: UnifiedApplicationData = {
             id: this.extractFieldValue(apiData, config.fieldMappings.id)?.toString() || '',
             referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo)?.toString() || '',
@@ -926,7 +933,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             currentStageName: this.extractFieldValue(apiData, config.fieldMappings.currentStageName || []),
             workflowId: this.parseId(rawWorkflowId) || config.workflowId,
             allowedActions,
-            allowedActionConfigs
+            allowedActionConfigs,
+            isRevertedByCommissioner: apiData.isRevertedByCommissioner ?? apiData.is_reverted_by_commissioner ?? false,
+            commissionerRevertRemarks: apiData.commissionerRevertRemarks ?? apiData.commissioner_revert_remarks ?? '',
+            latestRevert: apiData.latestRevert ?? apiData.latest_revert ?? null
         };
 
         // For workflows where backend often sends generic "PENDING" or a raw stage ID,
@@ -1715,7 +1725,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     if ([
                         'APPROVE', 'REJECT', 'FORWARD', 'RAISE_OBJECTION', 'VERIFY', 'ISSUE',
                         'COMPLETE', 'ASSIGN_CARTONS', 'PAY',
-                        'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'
+                        'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP', 'REVERT'
                     ].includes(action)) {
                         const currentId = this.applicationData?.id?.toString() || '';
                         const currentRef = this.applicationData?.referenceNo || '';

@@ -100,6 +100,7 @@ export class ListComponent implements OnInit {
           categoryName: item.categoryName || item.category_name,
           description: item.description,
           isActive: item.isActive !== undefined ? item.isActive : item.is_active,
+          isRural: item.isRural !== undefined ? item.isRural : item.is_rural,
           operationDate: item.operationDate || item.operation_date,
           createdBy: item.createdBy || item.created_by,
           status: item.status

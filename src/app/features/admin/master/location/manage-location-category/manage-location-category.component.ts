@@ -17,7 +17,8 @@ export class ManageLocationCategoryComponent implements OnInit {
     id: 0,
     categoryName: '',
     description: '',
-    isActive: true
+    isActive: true,
+    isRural: false
   };
 
   isEditMode = false;
@@ -54,7 +55,8 @@ export class ManageLocationCategoryComponent implements OnInit {
       const payload = {
         category_name: this.categoryRecord.categoryName.trim(),
         description: this.categoryRecord.description || '',
-        is_active: this.categoryRecord.isActive
+        is_active: this.categoryRecord.isActive,
+        is_rural: this.categoryRecord.isRural
       };
 
       const request = this.isEditMode

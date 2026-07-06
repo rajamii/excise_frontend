@@ -269,7 +269,7 @@
 
               <!-- Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminMasterDataExpanded = !adminMasterDataExpanded"
-                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/blocks') || isAdminRouteActive('/dashboard/admin/urban-wards') || isAdminRouteActive('/dashboard/admin/rural-wards')"
+                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/blocks-wards')"
                 [class.group-expanded]="adminMasterDataExpanded">
                 <mat-icon class="nav-icon">dns</mat-icon>
                 <span class="nav-text">Master Data</span>
@@ -296,23 +296,15 @@
                   <mat-icon class="nav-icon">location_on</mat-icon>
                   <span class="nav-text">Location</span>
                 </a>
-                <a routerLink="/dashboard/admin/blocks" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                <a routerLink="/dashboard/admin/blocks-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">view_module</mat-icon>
-                  <span class="nav-text">Block</span>
-                </a>
-                <a routerLink="/dashboard/admin/urban-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
-                  <mat-icon class="nav-icon">location_city</mat-icon>
-                  <span class="nav-text">Urban Ward</span>
-                </a>
-                <a routerLink="/dashboard/admin/rural-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
-                  <mat-icon class="nav-icon">nature_people</mat-icon>
-                  <span class="nav-text">Rural Ward</span>
+                  <span class="nav-text">Block &amp; Wards</span>
                 </a>
               </ng-container>
 
               <!-- License Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminLicenseMasterDataExpanded = !adminLicenseMasterDataExpanded"
-                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles') || isAdminRouteActive('/dashboard/admin/license-subcategories')"
+                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/pachwai-excess') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles') || isAdminRouteActive('/dashboard/admin/license-subcategories')"
                 [class.group-expanded]="adminLicenseMasterDataExpanded">
                 <mat-icon class="nav-icon">description</mat-icon>
                 <span class="nav-text">License Master Data</span>
@@ -329,7 +321,11 @@
                 </a>
                 <a routerLink="/dashboard/admin/additional-charges" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">attach_money</mat-icon>
-                  <span class="nav-text">Additional Charges</span>
+                  <span class="nav-text">License Location Fee</span>
+                </a>
+                <a routerLink="/dashboard/admin/pachwai-excess" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">local_bar</mat-icon>
+                  <span class="nav-text">Pachwai Excess</span>
                 </a>
                 <a routerLink="/dashboard/admin/fixed-fees" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">payments</mat-icon>
@@ -345,7 +341,7 @@
                 </a>
                 <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">layers</mat-icon>
-                  <span class="nav-text">License Subcategory</span>
+                  <span class="nav-text">License Categories &amp; Subcategory</span>
                 </a>
               </ng-container>
 

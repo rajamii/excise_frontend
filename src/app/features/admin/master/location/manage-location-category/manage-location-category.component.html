@@ -26,10 +26,13 @@
       ></textarea>
     </mat-form-field>
 
-    <!-- Active Status -->
-    <div class="mt-2 mb-2">
+    <!-- Active Status & Rural Type -->
+    <div class="mt-2 mb-2 d-flex gap-3">
       <mat-checkbox [(ngModel)]="categoryRecord.isActive">
         Active
+      </mat-checkbox>
+      <mat-checkbox [(ngModel)]="categoryRecord.isRural">
+        Is Rural Category
       </mat-checkbox>
     </div>
   </mat-dialog-content>

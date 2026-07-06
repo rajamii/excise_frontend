@@ -1,12 +1,16 @@
-.lf-page {
+// ═══════════════════════════════════════════════════════════
+// Blocks & Wards — Styles
+// ═══════════════════════════════════════════════════════════
+
+.bw-page {
   padding: 20px;
   background: #f0f4f8;
   min-height: 100%;
 }
 
-// ══════════════════════════════════════════════════════════════════
-// OUTER TAB GROUP  (Locations | License Location Fee)
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// OUTER TAB GROUP  (Blocks | Wards)
+// ══════════════════════════════════════════════════════════
 
 .outer-tabs {
   border-radius: 14px;
@@ -21,12 +25,14 @@
 
     .mat-mdc-tab {
       min-width: 180px;
-      opacity: 0.72;
+      opacity: 0.7;
       transition: opacity 0.2s;
       &.mdc-tab--active { opacity: 1; }
     }
 
-    .mdc-tab__text-label { color: #fff !important; }
+    .mdc-tab__text-label {
+      color: #fff !important;
+    }
 
     .mat-mdc-tab-body-wrapper {
       background: #fff;
@@ -40,8 +46,7 @@
   }
 }
 
-// ── Tab label pieces ─────────────────────────────────────────────
-
+// ── Tab label pieces ───────────────────────────────────────
 .tab-icon {
   margin-right: 7px;
   font-size: 19px;
@@ -69,17 +74,23 @@
   margin-left: 8px;
   background: rgba(255,255,255,0.25);
   color: #fff;
+
+  &.urban-badge { background: #dbeafe; color: #1d4ed8; }
+  &.rural-badge { background: #d1fae5; color: #065f46; }
 }
 
-// ── Outer tab body ───────────────────────────────────────────────
-
+// ── Outer tab body ─────────────────────────────────────────
 .tab-body {
+  padding: 20px;
+}
+
+// ══════════════════════════════════════════════════════════
+// INNER TAB GROUP  (Urban | Rural) — inside Wards tab
+// ══════════════════════════════════════════════════════════
+
+.ward-tab-body {
   padding: 16px 20px 20px;
 }
-
-// ══════════════════════════════════════════════════════════════════
-// INNER TAB GROUP  (Locations | Categories | Subcategories)
-// ══════════════════════════════════════════════════════════════════
 
 .inner-tabs {
   border-radius: 10px;
@@ -112,31 +123,30 @@
       border-width: 2px !important;
     }
 
-    .mat-mdc-tab-body-wrapper { background: #fff; }
+    .mat-mdc-tab-body-wrapper {
+      background: #fff;
+    }
   }
 }
 
-.inner-icon {
+.inner-tab-icon {
   margin-right: 6px;
-  font-size: 17px;
-  height: 17px;
-  width: 17px;
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
   vertical-align: middle;
-  color: #1C2B78;
+
+  &.urban-icon { color: #3b82f6; }
+  &.rural-icon { color: #10b981; }
 }
 
-.inner-badge {
-  background: #dbeafe !important;
-  color: #1d4ed8 !important;
-}
-
-.inner-body {
+.inner-tab-body {
   padding: 16px;
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // TOOLBAR
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 .tab-toolbar {
   display: flex;
@@ -148,6 +158,7 @@
     font-size: 0.92rem;
     font-weight: 700;
     color: #1e293b;
+    letter-spacing: 0.01em;
   }
 }
 
@@ -157,9 +168,9 @@
   mat-icon { margin-right: 4px; font-size: 18px; }
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // TABLE
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 .table-wrapper {
   border-radius: 10px;
@@ -215,41 +226,34 @@
   }
 }
 
+// ── Column helpers ──────────────────────────────────────────
+.sno-col {
+  max-width: 52px;
+  min-width: 52px;
+  justify-content: center;
+  text-align: center;
+}
+
 .actions-col {
   max-width: 100px;
   min-width: 100px;
   justify-content: center;
 }
 
-// ── Chips & badges ─────────────────────────────────────────────────
-
-.code-chip {
+// ── Ward number chips ───────────────────────────────────────
+.ward-chip {
   display: inline-flex;
+  align-items: center;
   padding: 2px 10px;
   border-radius: 12px;
   font-size: 0.78rem;
   font-weight: 700;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-family: monospace;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+.urban-chip { background: #dbeafe; color: #1d4ed8; }
+.rural-chip { background: #d1fae5; color: #065f46; }
 
-  &.active   { background: linear-gradient(135deg, #059669 0%, #34d399 100%); }
-  &.inactive { background: linear-gradient(135deg, #dc2626 0%, #f87171 100%); }
-}
-
-// ── Empty state ─────────────────────────────────────────────────────
-
+// ── Empty state ─────────────────────────────────────────────
 .empty-state {
   display: flex;
   flex-direction: column;
