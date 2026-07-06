@@ -369,12 +369,6 @@
                 </a>
               </ng-container>
 
-              <!-- SBI ePAY -->
-              <a routerLink="/dashboard/admin/sbi-e-pay" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">payment</mat-icon>
-                <span class="nav-text">SBI ePAY</span>
-              </a>
-
               <button class="nav-item bulk-spirit-nav-item" (click)="adminBulkSpiritExpanded = !adminBulkSpiritExpanded"
                 [class.active]="adminBulkSpiritExpanded || isAdminRouteActive('/dashboard/admin/bulk-spirit')"
                 [class.group-expanded]="adminBulkSpiritExpanded">
