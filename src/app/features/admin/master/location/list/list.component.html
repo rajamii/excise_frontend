@@ -26,6 +26,16 @@
                 <mat-cell *matCellDef="let item"> {{ item.description || 'N/A' }} </mat-cell>
               </ng-container>
 
+              <!-- Type (Rural/Urban) -->
+              <ng-container matColumnDef="type">
+                <mat-header-cell *matHeaderCellDef> Type </mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="type-badge" [class.rural]="item.isRural" [class.urban]="!item.isRural">
+                    {{ item.isRural ? 'Rural' : 'Urban' }}
+                  </span>
+                </mat-cell>
+              </ng-container>
+
               <!-- Status -->
               <ng-container matColumnDef="status">
                 <mat-header-cell *matHeaderCellDef> Status </mat-header-cell>
