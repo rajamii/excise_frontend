@@ -46,8 +46,8 @@ export class ManageComponent implements OnInit {
         // Only show NA licenses with category "Manufacturing" and subcategory "Distillery"
         this.licenses = all.filter(l => {
           const id = String(l.id || '').toUpperCase();
-          const category = String(l.license_category || '').toLowerCase();
-          const subcategory = String(l.license_subcategory || '').toLowerCase();
+          const category = String(l.license_category || l.licenseCategory || '').toLowerCase();
+          const subcategory = String(l.license_subcategory || l.licenseSubcategory || '').toLowerCase();
           return id.startsWith('NA')
             && category.includes('manufactur')
             && subcategory.includes('distiller');
