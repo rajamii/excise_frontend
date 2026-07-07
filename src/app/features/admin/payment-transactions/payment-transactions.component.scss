@@ -332,7 +332,18 @@
       font-size: 0.7rem;
       font-weight: 700;
       margin-left: 8px;
-      pointer-events: none;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease, opacity 0.1s ease;
+
+      &:hover {
+        opacity: 0.85;
+        transform: scale(1.05);
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
     }
   }
 

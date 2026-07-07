@@ -57,13 +57,6 @@ export class PaymentTransactionsComponent implements OnInit {
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
-    this.searchSubject.pipe(
-      debounceTime(400),
-      distinctUntilChanged()
-    ).subscribe(() => {
-      this.pageIndex = 0;
-      this.loadTransactions();
-    });
   }
 
   loadTransactions() {
@@ -126,8 +119,9 @@ export class PaymentTransactionsComponent implements OnInit {
       });
   }
 
-  onSearchChange() {
-    this.searchSubject.next(this.searchQuery);
+  triggerSearch() {
+    this.pageIndex = 0;
+    this.loadTransactions();
   }
 
   onStatusChange() {

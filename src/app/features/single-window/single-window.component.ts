@@ -100,13 +100,6 @@ export class SingleWindowComponent implements OnInit {
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
-    this.searchSubject.pipe(
-      debounceTime(400),
-      distinctUntilChanged()
-    ).subscribe(query => {
-      this.executeSearch(query);
-    });
-
     // Load latest created entries for landing view
     this.fetchLatestCreated();
   }

@@ -73,7 +73,7 @@
           <input
             type="text"
             [(ngModel)]="searchQuery"
-            (ngModelChange)="onSearchChange()"
+            (keydown.enter)="executeSearch(searchQuery)"
             [placeholder]="searchMode === 'registry' ? 'Search by Licensee Name, Username, License Number, Application ID...' : 'Search by Amount, Transaction ID / UTR, Date & Time (YYYY-MM-DD)...'"
             class="search-input"
             aria-label="Search Single Window Database"
@@ -88,7 +88,7 @@
           >
             <mat-icon>close</mat-icon>
           </button>
-          <div class="search-kbd-hint">
+          <div class="search-kbd-hint" (click)="executeSearch(searchQuery)" title="Click to search">
             <kbd>Enter</kbd>
           </div>
         </div>

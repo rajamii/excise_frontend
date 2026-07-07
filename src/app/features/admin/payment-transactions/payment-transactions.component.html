@@ -59,7 +59,7 @@
             <input
               type="text"
               [(ngModel)]="searchQuery"
-              (ngModelChange)="onSearchChange()"
+              (keydown.enter)="triggerSearch()"
               placeholder="Search by UTR, Application ID, Username, or Amount..."
               class="search-input"
               aria-label="Search payment transactions"
@@ -74,7 +74,7 @@
             >
               <mat-icon>close</mat-icon>
             </button>
-            <div class="search-kbd-hint">
+            <div class="search-kbd-hint" (click)="triggerSearch()" title="Click to search">
               <kbd>Enter</kbd>
             </div>
           </div>
