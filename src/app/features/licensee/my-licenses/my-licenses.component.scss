@@ -267,43 +267,54 @@ mat-card-content {
 
 // ── Action buttons ───────────────────────────────────────────────────
 .action-btn {
-  margin: 0 5px !important;
-  width: 38px !important;
-  min-width: 38px !important;
-  height: 38px !important;
-  line-height: 38px !important;
+  margin: 0 4px !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
   border-radius: 10px !important;
   transition: all 0.18s ease !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
- 
-  ::ng-deep .mat-mdc-button-touch-target {
-    display: none !important;
-  }
- 
-  mat-icon {
-    font-size: 22px !important;
-    width: 22px !important;
-    height: 22px !important;
-    line-height: 22px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 0 !important;
+  padding: 0 !important;
+
+  // Override Material's touch target that shifts icon positioning
+  ::ng-deep {
+    .mat-mdc-button-touch-target { display: none !important; }
+    .mat-mdc-button-persistent-ripple { border-radius: 10px !important; }
+    .mat-icon,
+    .material-icons {
+      font-size: 22px !important;
+      width: 22px !important;
+      height: 22px !important;
+      line-height: 22px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin: 0 !important;
+      position: static !important;
+    }
   }
 
   &.view-btn {
     color: #6d28d9 !important;
     background: #f3e8ff !important;
-    &:hover { background: #ddd6fe !important; transform: translateY(-1px); }
+    &:hover {
+      background: #ddd6fe !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(109,40,217,0.22) !important;
+    }
   }
 
   &.print-btn {
     color: #0369a1 !important;
     background: #e0f2fe !important;
-    &:hover { background: #bae6fd !important; transform: translateY(-1px); }
+    &:hover {
+      background: #bae6fd !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(3,105,161,0.22) !important;
+    }
   }
 
   &.renew-btn {
@@ -312,7 +323,8 @@ mat-card-content {
     &:hover {
       background: #fed7aa !important;
       transform: translateY(-1px);
-      mat-icon { animation: rotate-icon 0.6s ease-in-out infinite; }
+      box-shadow: 0 4px 12px rgba(194,65,12,0.22) !important;
+      ::ng-deep .mat-icon { animation: rotate-icon 0.6s ease-in-out infinite; }
     }
   }
 }

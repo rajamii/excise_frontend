@@ -4,6 +4,7 @@ export interface EnaBulkSpiritType {
   strength: string;
   priceBl: number;
   licenseId?: string | null;
+  license_ids?: string[] | null;
   createdAt?: string;
   updatedAt?: string;
 }

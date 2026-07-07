@@ -23,6 +23,7 @@ export class PaymentTransactionsComponent implements OnInit {
   selectedStatus = ''; // '', 'S', 'F', 'P'
   transactions: any[] = [];
   isLoading = false;
+  hasSearched = false;
   totalTransactions = 0;
   pageIndex = 0;
   pageSize = 10;
@@ -63,11 +64,21 @@ export class PaymentTransactionsComponent implements OnInit {
       this.pageIndex = 0;
       this.loadTransactions();
     });
-
-    this.loadTransactions();
   }
 
   loadTransactions() {
+    const queryTrimmed = this.searchQuery.trim();
+    const hasActiveFilters = this.selectedStatus || this.filterDay || this.filterMonth || this.filterYear || this.filterModule;
+
+    if (!queryTrimmed && !hasActiveFilters) {
+      this.transactions = [];
+      this.totalTransactions = 0;
+      this.hasSearched = false;
+      this.isLoading = false;
+      return;
+    }
+
+    this.hasSearched = true;
     this.isLoading = true;
     this.error = null;
 
@@ -127,7 +138,9 @@ export class PaymentTransactionsComponent implements OnInit {
   clearSearch() {
     this.searchQuery = '';
     this.pageIndex = 0;
-    this.loadTransactions();
+    this.hasSearched = false;
+    this.transactions = [];
+    this.totalTransactions = 0;
   }
 
   toggleAdvancedFilters() {

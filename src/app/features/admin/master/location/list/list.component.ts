@@ -24,7 +24,7 @@ export class ListComponent implements OnInit {
   locations: MasterLocation[] = [];
 
   // Tab 2: Categories
-  categoryColumns: string[] = ['categoryName', 'description', 'status', 'actions'];
+  categoryColumns: string[] = ['categoryName', 'description', 'type', 'status', 'actions'];
   locationCategories: LocationCategory[] = [];
 
   // Tab 3: Subcategories

@@ -78,6 +78,9 @@ export class SingleWindowComponent implements OnInit {
   latestUsers: any[] = [];
   latestRecords: any[] = [];
   latestDeactivatedUsers: any[] = [];
+  latestUsersCount = 0;
+  latestRecordsCount = 0;
+  latestDeactivatedUsersCount = 0;
   activeLatestTab = 'admin'; // 'admin', 'license', or 'deactivated'
   isLatestLoading = false;
 
@@ -112,9 +115,12 @@ export class SingleWindowComponent implements OnInit {
     this.isLatestLoading = true;
     this.http.get<any>(`${environment.apiBaseUrl}/transactional/single-window/latest/`).subscribe({
       next: (res) => {
-        this.latestUsers = res.users || [];
-        this.latestRecords = res.records || [];
-        this.latestDeactivatedUsers = res.deactivated_users || [];
+        this.latestUsersCount = res.users_count || 0;
+        this.latestRecordsCount = res.records_count || 0;
+        this.latestDeactivatedUsersCount = res.deactivated_users_count || 0;
+        this.latestUsers = [];
+        this.latestRecords = [];
+        this.latestDeactivatedUsers = [];
         this.isLatestLoading = false;
       },
       error: (err) => {
@@ -267,6 +273,9 @@ export class SingleWindowComponent implements OnInit {
     this.searchQuery = '';
     this.searchResults = [];
     this.filteredResults = [];
+    this.latestUsers = [];
+    this.latestRecords = [];
+    this.latestDeactivatedUsers = [];
     this.hasSearched = false;
   }
 
@@ -275,6 +284,9 @@ export class SingleWindowComponent implements OnInit {
     if (!trimmed) {
       this.searchResults = [];
       this.filteredResults = [];
+      this.latestUsers = [];
+      this.latestRecords = [];
+      this.latestDeactivatedUsers = [];
       this.hasSearched = false;
       return;
     }
@@ -303,6 +315,45 @@ export class SingleWindowComponent implements OnInit {
       next: (res) => {
         this.searchResults = res.results || [];
         this.filterResults();
+
+        // Split search results into respective lists for the tabs
+        this.latestUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status !== 'Deactivated');
+        this.latestDeactivatedUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status === 'Deactivated');
+        this.latestRecords = this.searchResults
+          .filter(r => ['license', 'new_license_app', 'renewal_app', 'salesman_barman_app', 'payment'].includes(r.type))
+          .map(r => {
+            if (r.type === 'payment') {
+              return {
+                ...r,
+                application_id: r.meta?.application_id || r.id,
+                establishment_name: r.meta?.payment_type || 'Payment Gateway',
+                applicant_name: r.meta?.applicant_name || 'N/A',
+                applicant_username: r.meta?.username || 'N/A',
+                license_category: 'Payment Transaction',
+                issued_license_id: r.id,
+                license_is_active: r.status === 'Success',
+                current_stage: r.status || 'Pending',
+                pending_at: 'N/A',
+                created_at: r.meta?.created_at?.split(' ')[0] || 'N/A'
+              };
+            }
+            return r;
+          });
+
+        // Reset pagination indexes on new search
+        this.adminPageIndex = 0;
+        this.licensePageIndex = 0;
+        this.deactivatedPageIndex = 0;
+
+        // Automatically switch to the tab that has results
+        if (this.latestRecords.length > 0) {
+          this.activeLatestTab = 'license';
+        } else if (this.latestUsers.length > 0) {
+          this.activeLatestTab = 'admin';
+        } else if (this.latestDeactivatedUsers.length > 0) {
+          this.activeLatestTab = 'deactivated';
+        }
+
         this.isLoading = false;
       },
       error: (err) => {
@@ -431,6 +482,9 @@ export class SingleWindowComponent implements OnInit {
   getStatusClass(status: string): string {
     if (!status) return 'status-draft';
     const s = status.toLowerCase();
+    if (s.includes('deactivate')) {
+      return 'status-deactivated';
+    }
     if (s.includes('active') || s.includes('approve') || s.includes('pass') || s.includes('resolve')) {
       return 'status-active';
     }

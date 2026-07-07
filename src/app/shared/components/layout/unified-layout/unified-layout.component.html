@@ -304,7 +304,7 @@
 
               <!-- License Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminLicenseMasterDataExpanded = !adminLicenseMasterDataExpanded"
-                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/pachwai-excess') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles') || isAdminRouteActive('/dashboard/admin/license-subcategories')"
+                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/pachwai-excess') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles')"
                 [class.group-expanded]="adminLicenseMasterDataExpanded">
                 <mat-icon class="nav-icon">description</mat-icon>
                 <span class="nav-text">License Master Data</span>
@@ -338,10 +338,6 @@
                 <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">badge</mat-icon>
                   <span class="nav-text">License Title</span>
-                </a>
-                <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
-                  <mat-icon class="nav-icon">layers</mat-icon>
-                  <span class="nav-text">License Categories &amp; Subcategory</span>
                 </a>
               </ng-container>
 
@@ -379,12 +375,6 @@
                   <span class="nav-text">ML</span>
                 </a>
               </ng-container>
-
-              <!-- SBI ePAY -->
-              <a routerLink="/dashboard/admin/sbi-e-pay" routerLinkActive="active" class="nav-item" (click)="closeSidenav()">
-                <mat-icon class="nav-icon">payment</mat-icon>
-                <span class="nav-text">SBI ePAY</span>
-              </a>
 
               <button class="nav-item bulk-spirit-nav-item" (click)="adminBulkSpiritExpanded = !adminBulkSpiritExpanded"
                 [class.active]="adminBulkSpiritExpanded || isAdminRouteActive('/dashboard/admin/bulk-spirit')"

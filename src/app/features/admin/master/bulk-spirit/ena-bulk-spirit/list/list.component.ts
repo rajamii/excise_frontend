@@ -7,6 +7,15 @@ import { AdminService } from '../../../../admin.service';
 import { EnaBulkSpiritType } from '../../../../../../core/models/ena-bulk-spirit.model';
 import { ManageComponent } from '../manage/manage.component';
 import { ActiveLicense } from '../../../../../../core/models/active-license.model';
+import { DetailsDialogComponent } from './details-dialog.component';
+
+export interface GroupedLicenseBulkSpirit {
+  licenseId: string | null;
+  licenseName: string;
+  spiritCount: number;
+  spiritsList: string;
+  spirits: EnaBulkSpiritType[];
+}
 
 @Component({
   selector: 'app-ena-bulk-spirit-list',
@@ -16,8 +25,9 @@ import { ActiveLicense } from '../../../../../../core/models/active-license.mode
   styleUrl: './list.component.scss',
 })
 export class ListComponent implements OnInit {
-  displayedColumns: string[] = ['bulkSpiritKindType', 'strength', 'priceBl', 'licenseId', 'actions'];
+  displayedColumns: string[] = ['licenseName', 'licenseId', 'spiritsList', 'actions'];
   rows: EnaBulkSpiritType[] = [];
+  groupedRows: GroupedLicenseBulkSpirit[] = [];
   licenseNameMap = new Map<string, string>();
 
   constructor(
@@ -41,13 +51,15 @@ export class ListComponent implements OnInit {
           const lid = String(l.licenseeId || '').trim();
           if (lid && lid !== id) this.licenseNameMap.set(lid, l.establishmentName || lid);
         });
+        // Reload rows to update mapped grouped license names
+        this.loadRows();
       },
       error: () => {},
     });
   }
 
   getLicenseName(licenseId?: string | null): string {
-    if (!licenseId) return '—';
+    if (!licenseId) return 'Unassigned';
     return this.licenseNameMap.get(licenseId.trim()) || licenseId;
   }
 
@@ -64,6 +76,31 @@ export class ListComponent implements OnInit {
           createdAt: item?.createdAt ?? item?.created_at,
           updatedAt: item?.updatedAt ?? item?.updated_at,
         }));
+
+        // Group by licenseId
+        const groups = new Map<string | null, EnaBulkSpiritType[]>();
+        this.rows.forEach(r => {
+          const lid = r.licenseId || null;
+          if (!groups.has(lid)) {
+            groups.set(lid, []);
+          }
+          groups.get(lid)!.push(r);
+        });
+
+        this.groupedRows = [];
+        groups.forEach((spirits, lid) => {
+          const licenseName = this.getLicenseName(lid);
+          const uniqueKinds = Array.from(new Set(spirits.map(s => s.bulkSpiritKindType)));
+          this.groupedRows.push({
+            licenseId: lid,
+            licenseName: licenseName,
+            spiritCount: spirits.length,
+            spiritsList: uniqueKinds.join(', '),
+            spirits: spirits
+          });
+        });
+
+        this.groupedRows.sort((a, b) => a.licenseName.localeCompare(b.licenseName));
       },
       error: () => Swal.fire('Error', 'Failed to load ENA bulk spirit types.', 'error'),
     });
@@ -76,37 +113,17 @@ export class ListComponent implements OnInit {
     });
   }
 
-  onEdit(row: EnaBulkSpiritType): void {
-    const dialogRef = this.dialog.open(ManageComponent, {
+  onViewDetails(group: GroupedLicenseBulkSpirit): void {
+    const dialogRef = this.dialog.open(DetailsDialogComponent, {
       width: '650px',
-      data: { ...row },
+      data: {
+        licenseName: group.licenseName,
+        licenseId: group.licenseId,
+        spirits: group.spirits
+      }
     });
     dialogRef.afterClosed().subscribe((result) => {
       if (result) this.loadRows();
-    });
-  }
-
-  onDelete(row: EnaBulkSpiritType): void {
-    if (!row?.spritId) {
-      Swal.fire('Error', 'Invalid bulk spirit record.', 'error');
-      return;
-    }
-
-    Swal.fire({
-      title: 'Are you sure?',
-      text: `Delete bulk spirit type "${row.bulkSpiritKindType}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete',
-    }).then((result) => {
-      if (!result.isConfirmed) return;
-      this.adminService.deleteEnaBulkSpiritType(row.spritId as number).subscribe({
-        next: () => {
-          Swal.fire('Deleted!', 'Bulk spirit type deleted successfully.', 'success');
-          this.loadRows();
-        },
-        error: () => Swal.fire('Error', 'Failed to delete bulk spirit type.', 'error'),
-      });
     });
   }
 }

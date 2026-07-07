@@ -3,6 +3,7 @@ export interface ActiveLicense {
   licenseeId: string;
   establishmentName: string;
   license_category?: string;
+  license_subcategory?: string;
   district?: string;
   district_code?: string;
   valid_up_to?: string;
