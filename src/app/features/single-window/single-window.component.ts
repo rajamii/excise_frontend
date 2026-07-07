@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { MaterialModule } from '../../shared/material.module';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import Swal from 'sweetalert2';
+import { SingleWindowSearchStateService } from '../../core/services/single-window-search-state.service';
 
 @Component({
   selector: 'app-single-window',
@@ -18,6 +19,7 @@ import Swal from 'sweetalert2';
 export class SingleWindowComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private searchStateService = inject(SingleWindowSearchStateService);
 
   searchQuery = '';
   searchResults: any[] = [];
@@ -100,6 +102,35 @@ export class SingleWindowComponent implements OnInit {
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
+    // Restore previous search state if returning from detail view
+    if (this.searchStateService.hasState()) {
+      const saved = this.searchStateService.restore()!;
+      this.searchQuery = saved.searchQuery;
+      this.searchMode = saved.searchMode;
+      this.hasSearched = saved.hasSearched;
+      this.searchResults = saved.searchResults;
+      this.latestUsers = saved.latestUsers;
+      this.latestRecords = saved.latestRecords;
+      this.latestDeactivatedUsers = saved.latestDeactivatedUsers;
+      this.latestUsersCount = saved.latestUsersCount;
+      this.latestRecordsCount = saved.latestRecordsCount;
+      this.latestDeactivatedUsersCount = saved.latestDeactivatedUsersCount;
+      this.activeLatestTab = saved.activeLatestTab;
+      this.selectedTab = saved.selectedTab;
+      this.adminPageIndex = saved.adminPageIndex;
+      this.licensePageIndex = saved.licensePageIndex;
+      this.deactivatedPageIndex = saved.deactivatedPageIndex;
+      this.showAdvancedFilters = saved.showAdvancedFilters;
+      this.filterDay = saved.filterDay;
+      this.filterMonth = saved.filterMonth;
+      this.filterYear = saved.filterYear;
+      this.filterCategory = saved.filterCategory;
+      this.filterRole = saved.filterRole;
+      this.filterModule = saved.filterModule;
+      // Clear saved state so it doesn't persist across unrelated navigations
+      this.searchStateService.clear();
+      return;
+    }
     // Load latest created entries for landing view
     this.fetchLatestCreated();
   }
@@ -270,6 +301,7 @@ export class SingleWindowComponent implements OnInit {
     this.latestRecords = [];
     this.latestDeactivatedUsers = [];
     this.hasSearched = false;
+    this.searchStateService.clear();
   }
 
   executeSearch(query: string) {
@@ -370,7 +402,35 @@ export class SingleWindowComponent implements OnInit {
     }
   }
 
+  private saveCurrentSearchState(): void {
+    this.searchStateService.save({
+      searchQuery: this.searchQuery,
+      searchMode: this.searchMode,
+      hasSearched: this.hasSearched,
+      searchResults: this.searchResults,
+      latestUsers: this.latestUsers,
+      latestRecords: this.latestRecords,
+      latestDeactivatedUsers: this.latestDeactivatedUsers,
+      latestUsersCount: this.latestUsersCount,
+      latestRecordsCount: this.latestRecordsCount,
+      latestDeactivatedUsersCount: this.latestDeactivatedUsersCount,
+      activeLatestTab: this.activeLatestTab,
+      selectedTab: this.selectedTab,
+      adminPageIndex: this.adminPageIndex,
+      licensePageIndex: this.licensePageIndex,
+      deactivatedPageIndex: this.deactivatedPageIndex,
+      showAdvancedFilters: this.showAdvancedFilters,
+      filterDay: this.filterDay,
+      filterMonth: this.filterMonth,
+      filterYear: this.filterYear,
+      filterCategory: this.filterCategory,
+      filterRole: this.filterRole,
+      filterModule: this.filterModule,
+    });
+  }
+
   viewDetails(result: any) {
+    this.saveCurrentSearchState();
     if (result.type === 'licensee') {
       this.router.navigate(['/dashboard'], {
         queryParams: {
