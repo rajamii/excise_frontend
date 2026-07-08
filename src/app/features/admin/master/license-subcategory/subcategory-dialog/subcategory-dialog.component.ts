@@ -28,9 +28,10 @@ export class SubcategoryDialogComponent implements OnInit {
   showAddForm = false;
   editingId: number | null = null;
   formDescription = '';
+  formDryDayFeeType: string | null = null;
   isSaving = false;
 
-  displayedColumns = ['sno', 'description', 'actions'];
+  displayedColumns = ['sno', 'description', 'dryDay', 'actions'];
 
   constructor(
     public dialogRef: MatDialogRef<SubcategoryDialogComponent>,
@@ -71,12 +72,14 @@ export class SubcategoryDialogComponent implements OnInit {
     this.showAddForm = true;
     this.editingId = null;
     this.formDescription = '';
+    this.formDryDayFeeType = null;
   }
 
   cancelForm(): void {
     this.showAddForm = false;
     this.editingId = null;
     this.formDescription = '';
+    this.formDryDayFeeType = null;
   }
 
   saveNew(): void {
@@ -84,7 +87,8 @@ export class SubcategoryDialogComponent implements OnInit {
     this.isSaving = true;
     const payload: LicenseSubcategory = {
       description: this.formDescription.trim(),
-      category: this.category.id as any
+      category: this.category.id as any,
+      dry_day_fee_type: this.formDryDayFeeType
     };
     this.adminService.addLicenseSubcategory(payload).subscribe({
       next: () => {
@@ -104,18 +108,24 @@ export class SubcategoryDialogComponent implements OnInit {
   startEdit(sub: LicenseSubcategory): void {
     this.editingId = sub.id!;
     this.formDescription = sub.description || '';
+    this.formDryDayFeeType = sub.dry_day_fee_type || null;
     this.showAddForm = false;
   }
 
   cancelEdit(): void {
     this.editingId = null;
     this.formDescription = '';
+    this.formDryDayFeeType = null;
   }
 
   saveEdit(sub: LicenseSubcategory): void {
     if (!this.formDescription.trim()) return;
     this.isSaving = true;
-    const payload = { description: this.formDescription.trim(), category: this.category.id };
+    const payload = {
+      description: this.formDescription.trim(),
+      category: this.category.id,
+      dry_day_fee_type: this.formDryDayFeeType
+    };
     this.adminService.updateLicenseSubcategory(sub.id!, payload).subscribe({
       next: () => {
         this.isSaving = false;

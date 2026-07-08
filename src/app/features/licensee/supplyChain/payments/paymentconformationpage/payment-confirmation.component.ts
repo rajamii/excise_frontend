@@ -13,6 +13,7 @@ import { LicenseApplicationService } from '../../../../../core/services/license-
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
 import { CompanyRegistrationService } from '../../../../../core/services/company-registration.service';
 import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
+import { SpecialPermitService } from '../../../../../core/services/special-permit.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import {
@@ -264,6 +265,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private resolvedLicenseModuleType: WalletModuleType = '';
   private walletHoaByType: Record<AddMoneyWalletType, string> = { ...DEFAULT_WALLET_HOA_BY_TYPE };
   private readonly http = inject(HttpClient);
+  private readonly specialPermitService = inject(SpecialPermitService);
   private readonly distilleryTabs = new Set([
     'requisition',
     'revalidation',
@@ -2550,6 +2552,9 @@ private initializeWalletContextAndLoadData(): void {
         }
         if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
           return this.licenseApplicationService.payLicenseRenewalFee(String(context.id), new FormData());
+        }
+        if (String(context.itemType || '').trim().toLowerCase() === 'special-permit') {
+          return this.specialPermitService.paySpecialPermitFee(String(context.id));
         }
         return this.licenseApplicationService.payNewLicenseFee(String(context.id), new FormData());
       case 'security_deposit':

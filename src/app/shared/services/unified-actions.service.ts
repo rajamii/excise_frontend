@@ -607,6 +607,28 @@ export class UnifiedActionsService {
         return of({ success: true, message: 'Redirected to wallet for payment' });
       }
 
+      case 'special-permit': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const licenseFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.amount ?? item?.payment_amount ?? item?.paymentAmount ?? 0);
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'special-permit',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+            action: 'pay',
+            source: 'special-permit'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
+      }
+
       case 'requisition':
       case 'revalidation':
       case 'cancellation':

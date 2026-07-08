@@ -81,11 +81,33 @@
           }
         </div>
 
+        <!-- Dry Day Fee Calculation Breakdown -->
+        <div class="calculation-breakdown mt-3 mb-3 p-3" *ngIf="selectedLicense" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; display: block; width: 100%; box-sizing: border-box;">
+          <div style="font-size: 0.9rem; font-weight: 600; color: #334155; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <mat-icon style="color: #64748b; font-size: 20px; width: 20px; height: 20px;">calculate</mat-icon>
+            Permit Fee Calculation Breakdown
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: #475569;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>License Subcategory Fee Type:</span>
+              <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.dry_day_fee_type === 'per_day' ? 'Per Day' : 'Per Annum' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;" *ngIf="selectedLicense.dry_day_fee_type === 'per_annum'">
+              <span>Location (from application):</span>
+              <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.is_rural ? 'Rural' : 'Urban' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 4px;">
+              <span>Calculated Fee to Pay on Approval:</span>
+              <strong style="color: #1e40af; font-size: 1.1rem;">₹{{ selectedLicense.dry_day_fee | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+        </div>
+
         <p class="form-note">** Data Once Submitted Can not be changed. Please verify all Details before submitting</p>
 
         <div class="action-row">
-          <button mat-flat-button color="primary" type="button" (click)="saveAndProceedToPayment()" [disabled]="isSubmitting">
-            Save &amp; Proceed To Make Payment
+          <button mat-flat-button color="primary" type="button" (click)="saveAndProceedToPayment()" [disabled]="isSubmitting || form.invalid">
+            <mat-icon>send</mat-icon> Save &amp; Submit for Approval
           </button>
         </div>
 
@@ -97,9 +119,22 @@
         }
 
         @if (isSavedForPayment) {
-          <div class="success-panel">
-            <mat-icon>check_circle</mat-icon>
-            <span>Application {{ applicationId }} saved. Payment integration can continue from here.</span>
+          <div class="success-panel mt-3 p-3" style="border: 1px solid #bbf7d0; background-color: #f0fdf4; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; width: 100%; box-sizing: border-box;">
+            <mat-icon style="color: #16a34a; font-size: 48px; width: 48px; height: 48px;">check_circle</mat-icon>
+            <div>
+              <h3 style="color: #14532d; margin: 0 0 4px 0; font-weight: 600;">Application Submitted Successfully!</h3>
+              <p style="color: #166534; font-size: 0.9rem; margin: 0;">
+                Application ID: <strong>{{ applicationId }}</strong> has been submitted.
+              </p>
+              <p style="color: #374151; font-size: 0.85rem; margin-top: 8px;">
+                Permit Fee of <strong>₹{{ selectedLicense.dry_day_fee | number:'1.2-2' }}</strong> will be payable once the application is approved.
+              </p>
+            </div>
+            <div style="margin-top: 8px;">
+              <button mat-flat-button color="primary" type="button" (click)="goBackToDashboard()">
+                <mat-icon>arrow_back</mat-icon> Back to Dashboard
+              </button>
+            </div>
           </div>
         }
       }

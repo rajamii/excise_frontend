@@ -34,4 +34,8 @@ export class SpecialPermitService {
   getSpecialPermitDetail(applicationId: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/detail/${encodeURIComponent(applicationId)}/`);
   }
+
+  paySpecialPermitFee(applicationId: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/pay/${encodeURIComponent(applicationId)}/`, {});
+  }
 }

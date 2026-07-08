@@ -32,14 +32,24 @@
   </div>
 
   <!-- ─── Inline Add Form ────────────────────────────────────────────── -->
-  <div class="scd-add-form" *ngIf="showAddForm">
-    <mat-form-field appearance="outline" class="scd-add-form__field">
-      <mat-label>New Sub Category Name</mat-label>
-      <mat-icon matPrefix style="color:#64748b;font-size:18px;height:18px;width:18px;margin-right:4px">subdirectory_arrow_right</mat-icon>
-      <input matInput [(ngModel)]="formDescription" placeholder="Enter subcategory name"
-             (keyup.enter)="saveNew()" autofocus />
-    </mat-form-field>
-    <div class="scd-add-form__actions">
+  <div class="scd-add-form" *ngIf="showAddForm" style="display: flex; flex-direction: column; gap: 8px; width: 100%">
+    <div style="display: flex; gap: 12px; width: 100%">
+      <mat-form-field appearance="outline" class="scd-add-form__field" style="flex: 2">
+        <mat-label>New Sub Category Name</mat-label>
+        <mat-icon matPrefix style="color:#64748b;font-size:18px;height:18px;width:18px;margin-right:4px">subdirectory_arrow_right</mat-icon>
+        <input matInput [(ngModel)]="formDescription" placeholder="Enter subcategory name"
+               (keyup.enter)="saveNew()" autofocus />
+      </mat-form-field>
+      <mat-form-field appearance="outline" style="flex: 1">
+        <mat-label>Dry Day Permit Type</mat-label>
+        <mat-select [(ngModel)]="formDryDayFeeType">
+          <mat-option [value]="null">None</mat-option>
+          <mat-option value="per_annum">Per Annum</mat-option>
+          <mat-option value="per_day">Per Day</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="scd-add-form__actions" style="margin-top: 0">
       <button mat-stroked-button (click)="cancelForm()" class="scd-btn-cancel">Cancel</button>
       <button mat-flat-button color="primary" (click)="saveNew()"
               [disabled]="!formDescription.trim() || isSaving" class="scd-btn-save">
@@ -73,15 +83,50 @@
 
           <!-- Inline edit input -->
           <ng-container *ngIf="editingId === row.id; else viewMode">
-            <mat-form-field appearance="outline" class="scd-inline-field">
-              <input matInput [(ngModel)]="formDescription"
-                     (keyup.enter)="saveEdit(row)"
-                     (keyup.escape)="cancelEdit()" autofocus />
-            </mat-form-field>
+            <div style="display: flex; gap: 8px; width: 100%">
+              <mat-form-field appearance="outline" class="scd-inline-field" style="flex: 1">
+                <input matInput [(ngModel)]="formDescription"
+                       (keyup.enter)="saveEdit(row)"
+                       (keyup.escape)="cancelEdit()" autofocus />
+              </mat-form-field>
+            </div>
           </ng-container>
 
           <ng-template #viewMode>
             <span class="scd-desc-text">{{ row.description }}</span>
+          </ng-template>
+
+        </mat-cell>
+      </ng-container>
+
+      <!-- Dry Day Fee Type Column -->
+      <ng-container matColumnDef="dryDay">
+        <mat-header-cell *matHeaderCellDef class="scd-dryday-col">Dry Day Permit</mat-header-cell>
+        <mat-cell *matCellDef="let row" class="scd-dryday-col">
+
+          <ng-container *ngIf="editingId === row.id; else dryDayView">
+            <mat-form-field appearance="outline" class="scd-inline-field" style="min-width: 130px">
+              <mat-select [(ngModel)]="formDryDayFeeType">
+                <mat-option [value]="null">None</mat-option>
+                <mat-option value="per_annum">Per Annum</mat-option>
+                <mat-option value="per_day">Per Day</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </ng-container>
+
+          <ng-template #dryDayView>
+            <span *ngIf="row.dry_day_fee_type === 'per_annum'" class="scd-dryday-badge scd-dryday-badge--annum">
+              <mat-icon class="scd-dryday-badge__icon">calendar_today</mat-icon>
+              Annual
+            </span>
+            <span *ngIf="row.dry_day_fee_type === 'per_day'" class="scd-dryday-badge scd-dryday-badge--day">
+              <mat-icon class="scd-dryday-badge__icon">today</mat-icon>
+              Per Day
+            </span>
+            <span *ngIf="!row.dry_day_fee_type" class="scd-dryday-badge scd-dryday-badge--none">
+              <mat-icon class="scd-dryday-badge__icon">remove</mat-icon>
+              None
+            </span>
           </ng-template>
 
         </mat-cell>

@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { SpecialPermitService } from '../../../core/services/special-permit.service';
 import { MaterialModule } from '../../../shared/material.module';
@@ -16,6 +17,7 @@ type PermissionDuration = 'per_annum' | 'per_day';
 export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly specialPermitService = inject(SpecialPermitService);
+  private readonly router = inject(Router);
   private readonly destroy$ = new Subject<void>();
 
   readonly form = this.fb.group({
@@ -92,6 +94,27 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
         }
       });
+  }
+
+  proceedToPayment(): void {
+    if (!this.applicationId || !this.selectedLicense) return;
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'wallet',
+        tab: 'license_fee',
+        id: this.applicationId,
+        type: 'special-permit',
+        ref: this.applicationId,
+        referenceNo: this.applicationId,
+        amount: this.selectedLicense?.dry_day_fee ? Number(this.selectedLicense.dry_day_fee) : undefined,
+        action: 'pay',
+        source: 'special-permit'
+      }
+    });
+  }
+
+  goBackToDashboard(): void {
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'special-permit' } });
   }
 
   getLicenseOptionLabel(license: any): string {
@@ -227,6 +250,12 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   }
 
   private resolvePermissionDuration(row: any): PermissionDuration {
+    if (row?.dry_day_fee_type) {
+      return row.dry_day_fee_type as PermissionDuration;
+    }
+    if (row?.dryDayFeeType) {
+      return row.dryDayFeeType as PermissionDuration;
+    }
     const raw = this.extractText(row, [
       'special_permission_type',
       'specialPermissionType',

@@ -231,6 +231,54 @@
   justify-content: center;
 }
 
+// ─── Dry Day column ───────────────────────────────────────────────────
+.scd-dryday-col {
+  min-width: 140px;
+  max-width: 160px;
+  justify-content: center;
+  text-align: center;
+}
+
+.scd-dryday-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px 4px 8px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+
+  &__icon {
+    font-size: 13px !important;
+    width: 13px !important;
+    height: 13px !important;
+    line-height: 13px !important;
+  }
+
+  &--annum {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    &__icon { color: #3b82f6; }
+  }
+
+  &--day {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+    &__icon { color: #f59e0b; }
+  }
+
+  &--none {
+    background: #f8fafc;
+    color: #94a3b8;
+    border: 1px solid #e2e8f0;
+    &__icon { color: #cbd5e1; }
+  }
+}
+
 .scd-desc-text {
   font-weight: 500;
   color: #1e293b;

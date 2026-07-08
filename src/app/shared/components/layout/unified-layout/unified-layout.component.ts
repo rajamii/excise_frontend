@@ -74,6 +74,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
+  showSpecialPermitMenu = false;
 
   myLicenses: any[] = [];
   selectedLicenseGroupKey = '';
@@ -1352,12 +1353,29 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // (Awaiting License Fee Payment) or final approval.
     this.showManufacturingWalletNav = this.computeWalletNavVisible(rows);
 
+    const allowedCategories = [
+      'Restaurant - cum - Bar Shop',
+      'Foreign Liquor Retail Shop',
+      'Special Category Hotel',
+      'Discotheque & Night Club',
+      'Casino with Bar'
+    ];
+    this.showSpecialPermitMenu = rows.some((row) => {
+      const cat = row?.license_category ?? row?.licenseCategory;
+      const categoryName = typeof cat === 'object'
+        ? (cat?.license_category ?? cat?.licenseCategory ?? cat?.name ?? cat?.description ?? '')
+        : (cat ?? '');
+      const category = String(categoryName).trim();
+      return allowedCategories.includes(category);
+    });
+
     console.log('Resolved menu flags:', {
       hasDistillery,
       hasBrewery,
       showDistilleryMenus: this.showDistilleryMenus,
       showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus,
-      showManufacturingWalletNav: this.showManufacturingWalletNav
+      showManufacturingWalletNav: this.showManufacturingWalletNav,
+      showSpecialPermitMenu: this.showSpecialPermitMenu
     });
 
     if (rows.length > 0) {
