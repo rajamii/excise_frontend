@@ -304,7 +304,7 @@
 
               <!-- License Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminLicenseMasterDataExpanded = !adminLicenseMasterDataExpanded"
-                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/pachwai-excess') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles')"
+                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/license-subcategories') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/pachwai-excess') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles')"
                 [class.group-expanded]="adminLicenseMasterDataExpanded">
                 <mat-icon class="nav-icon">description</mat-icon>
                 <span class="nav-text">License Master Data</span>
@@ -318,6 +318,10 @@
                 <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">category</mat-icon>
                   <span class="nav-text">License Type</span>
+                </a>
+                <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">list_alt</mat-icon>
+                  <span class="nav-text">License Category &amp; Sub Category</span>
                 </a>
                 <a routerLink="/dashboard/admin/additional-charges" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">attach_money</mat-icon>

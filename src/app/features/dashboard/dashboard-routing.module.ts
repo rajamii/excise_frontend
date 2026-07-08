@@ -101,10 +101,18 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_types.view' }
       },
       {
-        // license-categories is now merged into the license-subcategories page (2 tabs)
         path: 'admin/license-categories',
-        redirectTo: 'admin/license-subcategories',
-        pathMatch: 'full'
+        loadComponent: () =>
+          import('../admin/master/license-subcategory/license-subcategory.component').then((m) => m.LicenseSubcategoryComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/license-subcategories',
+        loadComponent: () =>
+          import('../admin/master/license-subcategory/license-subcategory.component').then((m) => m.LicenseSubcategoryComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
       },
       {
         path: 'admin/additional-charges',

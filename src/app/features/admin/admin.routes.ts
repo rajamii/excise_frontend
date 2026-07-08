@@ -397,6 +397,28 @@ const routes: Routes = [
               authorities: ['site_admin'],
             },
           },
+          {
+            path: 'license-categories',
+            loadComponent: () =>
+              import('./master/license-category/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+            },
+          },
+          {
+            path: 'license-subcategories',
+            loadComponent: () =>
+              import('./master/license-subcategory/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+            },
+          },
         ]
       },
     ],

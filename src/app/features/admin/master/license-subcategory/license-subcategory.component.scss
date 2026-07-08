@@ -1,0 +1,377 @@
+// ═══════════════════════════════════════════════════════════
+// License Category & Sub Category — Styles
+// ═══════════════════════════════════════════════════════════
+
+.lc-page {
+  padding: 20px;
+  background: #f0f4f8;
+  min-height: 100%;
+}
+
+// ══════════════════════════════════════════════════════════
+// OUTER TAB GROUP  (Category | SubCategory)
+// ══════════════════════════════════════════════════════════
+
+.outer-tabs {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(28, 43, 120, 0.12);
+
+  ::ng-deep {
+    .mat-mdc-tab-header {
+      background: linear-gradient(135deg, #1C2B78 0%, #2d3fa6 100%);
+      border-radius: 14px 14px 0 0;
+    }
+
+    .mat-mdc-tab {
+      min-width: 180px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      &.mdc-tab--active { opacity: 1; }
+    }
+
+    .mdc-tab__text-label {
+      color: #fff !important;
+    }
+
+    .mat-mdc-tab-body-wrapper {
+      background: #fff;
+      border-radius: 0 0 14px 14px;
+    }
+
+    .mdc-tab-indicator__content--underline {
+      border-color: #34d399 !important;
+      border-width: 3px !important;
+    }
+  }
+}
+
+// ── Tab label pieces ───────────────────────────────────────
+.tab-icon {
+  margin-right: 7px;
+  font-size: 19px;
+  height: 19px;
+  width: 19px;
+  vertical-align: middle;
+}
+
+.tab-label-text {
+  font-weight: 600;
+  font-size: 0.93rem;
+  letter-spacing: 0.02em;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 8px;
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+// ── Tab body ───────────────────────────────────────────────
+.tab-body {
+  padding: 20px;
+}
+
+// ══════════════════════════════════════════════════════════
+// TOOLBAR
+// ══════════════════════════════════════════════════════════
+
+.tab-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+
+  .toolbar-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 0.01em;
+  }
+
+  .toolbar-hint {
+    font-size: 0.8rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+
+    strong {
+      color: #1e293b;
+      font-weight: 600;
+    }
+  }
+}
+
+.add-btn {
+  font-weight: 600;
+  border-radius: 8px;
+  mat-icon { margin-right: 4px; font-size: 18px; }
+}
+
+// ══════════════════════════════════════════════════════════
+// TABLE
+// ══════════════════════════════════════════════════════════
+
+.table-wrapper {
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(28, 43, 120, 0.05);
+}
+
+.data-table {
+  width: 100%;
+
+  ::ng-deep {
+    mat-header-row {
+      background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+      min-height: 44px;
+    }
+
+    mat-header-cell {
+      font-size: 0.71rem !important;
+      font-weight: 800 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #e2e8f0 !important;
+      border-bottom: none !important;
+
+      &::before {
+        content: '';
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        margin-right: 6px;
+        background: #34d399;
+        flex-shrink: 0;
+        vertical-align: middle;
+      }
+    }
+
+    mat-row {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+      min-height: 52px;
+
+      &:nth-child(even) { background: #f8fafc; }
+      &:last-child      { border-bottom: none; }
+      &:hover           { background: #eff6ff !important; }
+    }
+
+    mat-cell {
+      color: #334155;
+      font-size: 0.875rem;
+    }
+
+    // ── Tab 2 specific column sizing ──────────────────────
+    // Force Sub Categories column to fixed width centered
+    .mat-column-subCount {
+      flex: 0 0 160px !important;
+      max-width: 160px !important;
+      min-width: 160px !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+
+    // Force Actions column to fixed width
+    .mat-column-subActions {
+      flex: 0 0 240px !important;
+      max-width: 240px !important;
+      min-width: 240px !important;
+      justify-content: flex-start !important;
+      padding: 0 12px !important;
+    }
+
+    // Force # column
+    .mat-column-sub_sno,
+    .mat-column-sno {
+      flex: 0 0 52px !important;
+      max-width: 52px !important;
+      min-width: 52px !important;
+      justify-content: center !important;
+    }
+
+    // Actions col for tab 1
+    .mat-column-actions {
+      flex: 0 0 100px !important;
+      max-width: 100px !important;
+      min-width: 100px !important;
+      justify-content: center !important;
+    }
+  }
+}
+
+// ── Column helpers (fallback) ───────────────────────────────
+.sno-col {
+  max-width: 52px;
+  min-width: 52px;
+  justify-content: center;
+  text-align: center;
+}
+
+// Tab 1 — small actions col (just edit + delete icons)
+.actions-col-sm {
+  max-width: 100px;
+  min-width: 100px;
+  justify-content: center;
+}
+
+// Tab 2 — wider actions col for the "View Sub Categories" button
+.actions-col {
+  max-width: 220px;
+  min-width: 220px;
+  justify-content: center;
+}
+
+.sub-actions-col {
+  max-width: 200px;
+  min-width: 200px;
+  justify-content: center;
+}
+
+// ── Category chip ───────────────────────────────────────────
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+// ── Cat name ────────────────────────────────────────────────
+.cat-name-text {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+// ── Sub count badge ─────────────────────────────────────────
+.sub-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 15px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #065f46;
+  border: 1.5px solid #6ee7b7;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.18);
+  letter-spacing: 0.02em;
+
+  &--zero {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    box-shadow: none;
+  }
+}
+
+// ── View Sub Categories button ──────────────────────────────
+.sub-actions-col {
+  flex: 0 0 240px !important;
+  max-width: 240px !important;
+  min-width: 240px !important;
+  justify-content: flex-start !important;
+  padding: 0 12px !important;
+}
+
+.view-sub-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 12px;
+  border-radius: 10px;
+  border: none;
+  background: #1C2B78;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(28, 43, 120, 0.25);
+  width: 100%;
+  max-width: 216px;
+
+  &__icon {
+    font-size: 17px;
+    height: 17px;
+    width: 17px;
+    flex-shrink: 0;
+    color: #fff;
+  }
+
+  &__label {
+    line-height: 1;
+    flex: 1;
+  }
+
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 11px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+  }
+
+  &:hover {
+    background: #2d3fa6;
+    box-shadow: 0 6px 18px rgba(28, 43, 120, 0.4);
+    transform: translateY(-1px);
+
+    .view-sub-btn__count {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: #162266;
+    box-shadow: 0 2px 6px rgba(28, 43, 120, 0.2);
+  }
+}
+
+// ── Empty state ─────────────────────────────────────────────
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+
+  mat-icon {
+    font-size: 48px;
+    height: 48px;
+    width: 48px;
+    margin-bottom: 8px;
+    opacity: 0.4;
+  }
+
+  p { font-size: 0.9rem; margin: 0; }
+}
