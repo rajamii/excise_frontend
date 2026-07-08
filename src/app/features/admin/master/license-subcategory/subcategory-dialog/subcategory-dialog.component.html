@@ -34,13 +34,13 @@
   <!-- ─── Inline Add Form ────────────────────────────────────────────── -->
   <div class="scd-add-form" *ngIf="showAddForm" style="display: flex; flex-direction: column; gap: 8px; width: 100%">
     <div style="display: flex; gap: 12px; width: 100%">
-      <mat-form-field appearance="outline" class="scd-add-form__field" style="flex: 2">
+      <mat-form-field appearance="outline" class="scd-add-form__field" [style.flex]="isDryDayPermittedCategory ? '2' : '1'">
         <mat-label>New Sub Category Name</mat-label>
         <mat-icon matPrefix style="color:#64748b;font-size:18px;height:18px;width:18px;margin-right:4px">subdirectory_arrow_right</mat-icon>
         <input matInput [(ngModel)]="formDescription" placeholder="Enter subcategory name"
                (keyup.enter)="saveNew()" autofocus />
       </mat-form-field>
-      <mat-form-field appearance="outline" style="flex: 1">
+      <mat-form-field appearance="outline" style="flex: 1" *ngIf="isDryDayPermittedCategory">
         <mat-label>Dry Day Permit Type</mat-label>
         <mat-select [(ngModel)]="formDryDayFeeType">
           <mat-option [value]="null">None</mat-option>

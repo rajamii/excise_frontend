@@ -33,6 +33,19 @@ export class SubcategoryDialogComponent implements OnInit {
 
   displayedColumns = ['sno', 'description', 'dryDay', 'actions'];
 
+  get isDryDayPermittedCategory(): boolean {
+    const name = this.category?.licenseCategory;
+    if (!name) return false;
+    const permitted = [
+      'Restaurant - cum - Bar Shop',
+      'Foreign Liquor Retail Shop',
+      'Special Category Hotel',
+      'Discotheque & Night Club',
+      'Casino with Bar'
+    ];
+    return permitted.includes(name);
+  }
+
   constructor(
     public dialogRef: MatDialogRef<SubcategoryDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: SubcategoryDialogData,
@@ -43,6 +56,11 @@ export class SubcategoryDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.isDryDayPermittedCategory) {
+      this.displayedColumns = ['sno', 'description', 'dryDay', 'actions'];
+    } else {
+      this.displayedColumns = ['sno', 'description', 'actions'];
+    }
     this.loadSubcategories();
   }
 
