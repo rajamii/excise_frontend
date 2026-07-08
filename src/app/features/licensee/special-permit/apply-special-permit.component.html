@@ -90,15 +90,15 @@
           <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: #475569;">
             <div style="display: flex; justify-content: space-between;">
               <span>License Subcategory Fee Type:</span>
-              <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.dry_day_fee_type === 'per_day' ? 'Per Day' : 'Per Annum' }}</strong>
+              <strong style="color: #0f172a; text-transform: uppercase;">{{ (selectedLicense.dryDayFeeType || selectedLicense.dry_day_fee_type) === 'per_day' ? 'Per Day' : 'Per Annum' }}</strong>
             </div>
-            <div style="display: flex; justify-content: space-between;" *ngIf="selectedLicense.dry_day_fee_type === 'per_annum'">
+            <div style="display: flex; justify-content: space-between;" *ngIf="(selectedLicense.dryDayFeeType || selectedLicense.dry_day_fee_type) === 'per_annum'">
               <span>Location (from application):</span>
-              <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.is_rural ? 'Rural' : 'Urban' }}</strong>
+              <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.isRural !== undefined ? (selectedLicense.isRural ? 'Rural' : 'Urban') : (selectedLicense.is_rural ? 'Rural' : 'Urban') }}</strong>
             </div>
             <div style="display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 4px;">
               <span>Calculated Fee to Pay on Approval:</span>
-              <strong style="color: #1e40af; font-size: 1.1rem;">₹{{ selectedLicense.dry_day_fee | number:'1.2-2' }}</strong>
+              <strong style="color: #1e40af; font-size: 1.1rem;">₹{{ (selectedLicense.dryDayFee || selectedLicense.dry_day_fee) | number:'1.2-2' }}</strong>
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@
                 Application ID: <strong>{{ applicationId }}</strong> has been submitted.
               </p>
               <p style="color: #374151; font-size: 0.85rem; margin-top: 8px;">
-                Permit Fee of <strong>₹{{ selectedLicense.dry_day_fee | number:'1.2-2' }}</strong> will be payable once the application is approved.
+                Permit Fee of <strong>₹{{ (selectedLicense.dryDayFee || selectedLicense.dry_day_fee) | number:'1.2-2' }}</strong> will be payable once the application is approved.
               </p>
             </div>
             <div style="margin-top: 8px;">

@@ -106,7 +106,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
         type: 'special-permit',
         ref: this.applicationId,
         referenceNo: this.applicationId,
-        amount: this.selectedLicense?.dry_day_fee ? Number(this.selectedLicense.dry_day_fee) : undefined,
+        amount: (this.selectedLicense?.dryDayFee || this.selectedLicense?.dry_day_fee) ? Number(this.selectedLicense.dryDayFee || this.selectedLicense.dry_day_fee) : undefined,
         action: 'pay',
         source: 'special-permit'
       }
