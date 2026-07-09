@@ -31,7 +31,7 @@ export class SubcategoryDialogComponent implements OnInit {
   formDryDayFeeType: string | null = null;
   isSaving = false;
 
-  displayedColumns = ['sno', 'description', 'dryDay', 'actions'];
+  displayedColumns = ['sno', 'description', 'dryDay', 'status', 'actions'];
 
   get isDryDayPermittedCategory(): boolean {
     const name = this.category?.licenseCategory;
@@ -57,9 +57,9 @@ export class SubcategoryDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.isDryDayPermittedCategory) {
-      this.displayedColumns = ['sno', 'description', 'dryDay', 'actions'];
+      this.displayedColumns = ['sno', 'description', 'dryDay', 'status', 'actions'];
     } else {
-      this.displayedColumns = ['sno', 'description', 'actions'];
+      this.displayedColumns = ['sno', 'description', 'status', 'actions'];
     }
     this.loadSubcategories();
   }
@@ -110,12 +110,12 @@ export class SubcategoryDialogComponent implements OnInit {
   saveNew(): void {
     if (!this.formDescription.trim()) return;
     this.isSaving = true;
-    const payload: LicenseSubcategory = {
+    const payload = {
       description: this.formDescription.trim(),
-      category: this.category.id as any,
-      dry_day_fee_type: this.formDryDayFeeType
+      category: this.category.id,
+      dryDayFeeType: this.formDryDayFeeType   // camelCase for DRF camel_case parser
     };
-    this.adminService.addLicenseSubcategory(payload).subscribe({
+    this.adminService.addLicenseSubcategory(payload as any).subscribe({
       next: () => {
         this.isSaving = false;
         this.cancelForm();
@@ -149,7 +149,7 @@ export class SubcategoryDialogComponent implements OnInit {
     const payload = {
       description: this.formDescription.trim(),
       category: this.category.id,
-      dry_day_fee_type: this.formDryDayFeeType
+      dryDayFeeType: this.formDryDayFeeType   // camelCase for DRF camel_case parser
     };
     this.adminService.updateLicenseSubcategory(sub.id!, payload).subscribe({
       next: () => {
@@ -160,6 +160,27 @@ export class SubcategoryDialogComponent implements OnInit {
       error: () => {
         this.isSaving = false;
         Swal.fire('Error', 'Failed to update subcategory.', 'error');
+      }
+    });
+  }
+
+  // ─── Toggle Active ────────────────────────────────────────────────────────
+
+  onToggleActive(sub: LicenseSubcategory): void {
+    const action = sub.isActive !== false ? 'Deactivate' : 'Activate';
+    Swal.fire({
+      title: `${action}?`,
+      text: `${action} "${sub.description}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: action,
+      confirmButtonColor: sub.isActive !== false ? '#f59e0b' : '#10b981'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.adminService.toggleLicenseSubcategoryActive(sub.id!).subscribe({
+          next: () => { this.loadSubcategories(); },
+          error: () => Swal.fire('Error', `Failed to ${action.toLowerCase()} subcategory.`, 'error')
+        });
       }
     });
   }

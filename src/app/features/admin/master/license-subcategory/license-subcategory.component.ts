@@ -20,7 +20,7 @@ import { SubcategoryDialogComponent } from './subcategory-dialog/subcategory-dia
 })
 export class LicenseSubcategoryComponent implements OnInit {
   // Tab 1 — License Category columns
-  categoryColumns: string[] = ['sno', 'licenseCategory', 'actions'];
+  categoryColumns: string[] = ['sno', 'licenseCategory', 'status', 'actions'];
 
   // Tab 2 — Sub Category overview columns
   subTabColumns: string[] = ['sub_sno', 'sub_categoryName', 'subActions'];
@@ -84,6 +84,28 @@ export class LicenseSubcategoryComponent implements OnInit {
             this.loadSubcategories();
           },
           error: () => Swal.fire('Error', 'Failed to delete license category.', 'error')
+        });
+      }
+    });
+  }
+
+  onToggleCategoryActive(category: LicenseCategory): void {
+    const action = category.isActive ? 'Deactivate' : 'Activate';
+    Swal.fire({
+      title: `${action} Category?`,
+      text: `${action} "${category.licenseCategory}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: action,
+      confirmButtonColor: category.isActive ? '#f59e0b' : '#10b981'
+    }).then(result => {
+      if (result.isConfirmed && category.id !== undefined) {
+        this.adminService.toggleLicenseCategoryActive(category.id).subscribe({
+          next: () => {
+            Swal.fire('Done!', `Category ${action.toLowerCase()}d.`, 'success');
+            this.loadCategories();
+          },
+          error: () => Swal.fire('Error', `Failed to ${action.toLowerCase()} category.`, 'error')
         });
       }
     });

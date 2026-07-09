@@ -31,7 +31,21 @@
             <ng-container matColumnDef="licenseCategory">
               <mat-header-cell *matHeaderCellDef>Category Name</mat-header-cell>
               <mat-cell *matCellDef="let item">
-                <span class="cat-name-text">{{ item.licenseCategory }}</span>
+                <span class="cat-name-text" [class.cat-name--inactive]="item.isActive === false">
+                  {{ item.licenseCategory }}
+                </span>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Status -->
+            <ng-container matColumnDef="status">
+              <mat-header-cell *matHeaderCellDef class="status-col">Status</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="status-col">
+                <span class="status-badge" [class.status-badge--active]="item.isActive !== false"
+                      [class.status-badge--inactive]="item.isActive === false">
+                  <span class="status-dot"></span>
+                  {{ item.isActive !== false ? 'Active' : 'Inactive' }}
+                </span>
               </mat-cell>
             </ng-container>
 
@@ -41,8 +55,11 @@
                 <button mat-icon-button color="primary" matTooltip="Edit" (click)="onEditCategory(item)">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" matTooltip="Delete" (click)="onDeleteCategory(item)">
-                  <mat-icon>delete</mat-icon>
+                <button mat-icon-button
+                        [color]="item.isActive !== false ? 'warn' : 'accent'"
+                        [matTooltip]="item.isActive !== false ? 'Deactivate' : 'Activate'"
+                        (click)="onToggleCategoryActive(item)">
+                  <mat-icon>{{ item.isActive !== false ? 'toggle_on' : 'toggle_off' }}</mat-icon>
                 </button>
               </mat-cell>
             </ng-container>

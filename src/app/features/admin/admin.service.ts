@@ -269,6 +269,11 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/license-categories/${id}/delete/`);
   }
 
+  // Toggles is_active for a license category
+  toggleLicenseCategoryActive(id: number): Observable<any> {
+    return this.http.patch(`${this.mastersUrl}/license-categories/${id}/toggle-active/`, {});
+  }
+
   // ========================== ADDITIONAL CHARGE CONFIG MANAGEMENT ==========================
 
   getAdditionalChargeConfigs(categoryId?: number): Observable<any[]> {
@@ -297,12 +302,17 @@ export class AdminService {
 
   // Updates an existing license subcategory by ID
   updateLicenseSubcategory(id: number, changes: Partial<LicenseSubcategory>): Observable<LicenseSubcategory> {
-    return this.http.put<LicenseSubcategory>(`${this.mastersUrl}/license-subcategories/${id}/update/`, changes);
+    return this.http.patch<LicenseSubcategory>(`${this.mastersUrl}/license-subcategories/${id}/update/`, changes);
   }
 
   // Deletes a license subcategory by ID
   deleteLicenseSubcategory(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/license-subcategories/${id}/delete/`);
+  }
+
+  // Toggles is_active for a license subcategory
+  toggleLicenseSubcategoryActive(id: number): Observable<any> {
+    return this.http.patch(`${this.mastersUrl}/license-subcategories/${id}/toggle-active/`, {});
   }
 
   // ========================== LICENSE TITLE MANAGEMENT ==========================
