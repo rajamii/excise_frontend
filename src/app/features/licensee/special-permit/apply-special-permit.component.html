@@ -88,24 +88,76 @@
                     <span>No Dry Day dates configured for financial year {{ form.controls.financialYear.value }}. Please contact Site Admin.</span>
                   </div>
                 } @else {
-                  <div class="dates-checklist-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 10px; margin-bottom: 8px; width: 100%;">
-                    @for (dateStr of allowedDryDayDates; track dateStr) {
-                      <button 
-                        type="button" 
-                        [class.active]="isFormDateSelected(dateStr)" 
-                        (click)="toggleFormDate(dateStr)"
-                        style="padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 0.85rem; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.2s ease; outline: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; width: 100%;"
-                        [style.border-color]="isFormDateSelected(dateStr) ? '#ffccd2' : '#cbd5e1'"
-                        [style.background-color]="isFormDateSelected(dateStr) ? '#ffebee' : '#fff'"
-                        [style.color]="isFormDateSelected(dateStr) ? '#c62828' : '#334155'"
-                      >
-                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">{{ isFormDateSelected(dateStr) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-                        {{ dateStr | date:'dd MMM yyyy' }}
-                      </button>
+                  <div class="selection-controls-row" style="display: flex; flex-direction: column; gap: 12px;">
+                    <mat-form-field appearance="outline" style="max-width: 250px;">
+                      <mat-label>Select Month</mat-label>
+                      <mat-select [(value)]="selectedMonthLabel" (selectionChange)="generateCurrentMonthCalendar()">
+                        @for (m of activeMonths; track m.label) {
+                          <mat-option [value]="m.label">{{ m.name }} {{ m.year }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    
+                    <div class="calendar-card-wrapper" *ngIf="selectedMonthLabel" style="max-width: 280px; margin: 0; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; background: #fff; box-sizing: border-box;">
+                      <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 8px;">
+                        @for (day of weekDays; track day) {
+                          <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">{{ day }}</div>
+                        }
+                      </div>
+                      
+                      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;">
+                        @for (day of currentMonthDays; track $index) {
+                          @if (!day.dayNumber) {
+                            <div style="aspect-ratio: 1;"></div>
+                          } @else {
+                            <button
+                              type="button"
+                              [disabled]="!day.isAllowed"
+                              (click)="toggleFormDate(day.dateStr)"
+                              style="aspect-ratio: 1; border-radius: 8px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;"
+                              [style.background]="!day.isAllowed ? '#f1f5f9' : (day.isSelected ? '#ffebee' : '#fff')"
+                              [style.color]="!day.isAllowed ? '#cbd5e1' : (day.isSelected ? '#c62828' : '#334155')"
+                              [style.border]="!day.isAllowed ? 'none' : (day.isSelected ? '1px solid #ffcdd2' : '1px solid #cbd5e1')"
+                              [style.cursor]="!day.isAllowed ? 'default' : 'pointer'"
+                              [style.font-weight]="day.isSelected ? '700' : '600'"
+                            >
+                              {{ day.dayNumber }}
+                            </button>
+                          }
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="selected-dates-panel" style="width: 100%; display: block; margin-top: 16px; box-sizing: border-box;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">
+                      Selected Dates ({{ form.controls.selectedDates.value?.length || 0 }})
+                    </div>
+                    
+                    @if (!form.controls.selectedDates.value?.length) {
+                      <div style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">No dates selected yet. Click the active dates in the calendar above.</div>
+                    } @else {
+                      <div style="display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%;">
+                        @for (dateStr of form.controls.selectedDates.value; track dateStr) {
+                          <div 
+                            style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #334155; box-sizing: border-box;"
+                          >
+                            {{ dateStr | date:'dd MMM yyyy' }}
+                            <button 
+                              type="button" 
+                              (click)="toggleFormDate(dateStr)" 
+                              style="background: none; border: none; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; outline: none;"
+                            >
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">cancel</mat-icon>
+                            </button>
+                          </div>
+                        }
+                      </div>
                     }
                   </div>
+                  
                   @if (form.controls.selectedDates.invalid && form.controls.selectedDates.touched) {
-                    <div style="color: #ef4444; font-size: 0.75rem; margin-top: 4px;">Please select at least one Dry Day date.</div>
+                    <div style="color: #ef4444; font-size: 0.75rem; margin-top: 8px;">Please select at least one Dry Day date.</div>
                   }
                 }
               </div>

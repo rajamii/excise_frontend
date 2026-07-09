@@ -8,6 +8,14 @@ import { MaterialModule } from '../../../shared/material.module';
 
 type PermissionDuration = 'per_annum' | 'per_day';
 
+interface LicenseeCalendarDay {
+  date: Date | null;
+  dateStr: string;
+  dayNumber: number | null;
+  isAllowed: boolean;
+  isSelected: boolean;
+}
+
 @Component({
   selector: 'app-apply-special-permit',
   standalone: true,
@@ -44,6 +52,11 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
 
   allowedDryDayDates: string[] = [];
   isLoadingAllowedDates = false;
+
+  weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  activeMonths: { name: string; index: number; year: number; label: string }[] = [];
+  selectedMonthLabel = '';
+  currentMonthDays: LicenseeCalendarDay[] = [];
 
   ngOnInit(): void {
     this.loadLicenses();
@@ -239,12 +252,102 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.allowedDryDayDates = res?.allowedDates || res?.allowed_dates || [];
         this.isLoadingAllowedDates = false;
+        this.buildActiveMonths();
       },
       error: () => {
         this.allowedDryDayDates = [];
         this.isLoadingAllowedDates = false;
+        this.buildActiveMonths();
       }
     });
+  }
+
+  buildActiveMonths(): void {
+    this.activeMonths = [];
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const sortedAllowed = [...this.allowedDryDayDates].sort();
+    const uniqueMonths = new Set<string>();
+
+    sortedAllowed.forEach((dateStr) => {
+      const dateObj = new Date(dateStr);
+      if (isNaN(dateObj.getTime())) return;
+
+      const y = dateObj.getFullYear();
+      const m = dateObj.getMonth();
+      const key = `${m}-${y}`;
+
+      if (!uniqueMonths.has(key)) {
+        uniqueMonths.add(key);
+        this.activeMonths.push({
+          name: monthNames[m],
+          index: m,
+          year: y,
+          label: key
+        });
+      }
+    });
+
+    if (this.activeMonths.length > 0) {
+      this.selectedMonthLabel = this.activeMonths[0].label;
+      this.generateCurrentMonthCalendar();
+    } else {
+      this.selectedMonthLabel = '';
+      this.currentMonthDays = [];
+    }
+  }
+
+  generateCurrentMonthCalendar(): void {
+    if (!this.selectedMonthLabel) {
+      this.currentMonthDays = [];
+      return;
+    }
+    const parts = this.selectedMonthLabel.split('-');
+    const month = parseInt(parts[0], 10);
+    const year = parseInt(parts[1], 10);
+
+    const startDate = new Date(year, month, 1);
+    const startDayOfWeek = startDate.getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const days: LicenseeCalendarDay[] = [];
+
+    for (let i = 0; i < startDayOfWeek; i++) {
+      days.push({
+        date: null,
+        dateStr: '',
+        dayNumber: null,
+        isAllowed: false,
+        isSelected: false
+      });
+    }
+
+    for (let i = 1; i <= totalDays; i++) {
+      const d = new Date(year, month, i);
+      const dateStr = this.formatLocalDate(d);
+      const isAllowed = this.allowedDryDayDates.includes(dateStr);
+      const isSelected = (this.form.controls.selectedDates.value || []).includes(dateStr);
+
+      days.push({
+        date: d,
+        dateStr,
+        dayNumber: i,
+        isAllowed,
+        isSelected
+      });
+    }
+
+    this.currentMonthDays = days;
+  }
+
+  formatLocalDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   toggleFormDate(dateStr: string): void {
@@ -257,6 +360,13 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     }
     this.form.controls.selectedDates.setValue(updated);
     this.form.controls.selectedDates.markAsTouched();
+
+    this.currentMonthDays = this.currentMonthDays.map((day) => {
+      if (day.dateStr === dateStr) {
+        return { ...day, isSelected: !day.isSelected };
+      }
+      return day;
+    });
   }
 
   isFormDateSelected(dateStr: string): boolean {
