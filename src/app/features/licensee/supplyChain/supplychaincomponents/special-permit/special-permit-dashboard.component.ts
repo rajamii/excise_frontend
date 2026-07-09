@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 import { SpecialPermitService } from '../../../../../core/services/special-permit.service';
+import { AccountService } from '../../../../../core/services/account.service';
 import { MaterialModule } from '../../../../../shared/material.module';
 
 interface SpecialPermitCounts {
@@ -54,8 +55,16 @@ export class SpecialPermitDashboardComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private specialPermitService: SpecialPermitService
+    private specialPermitService: SpecialPermitService,
+    private accountService: AccountService
   ) {}
+
+  /** Returns true only when the logged-in user is a licensee. */
+  private get isLicenseeUser(): boolean {
+    const user = this.accountService.getCurrentUser();
+    const roleName = String(user?.role?.name || '').toLowerCase();
+    return roleName.includes('licensee');
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -207,7 +216,7 @@ export class SpecialPermitDashboardComponent implements OnInit {
       applicantName: row?.applicant_name || row?.applicantName || '-',
       establishmentName: row?.establishment_name || row?.establishmentName || row?.license_id || '-',
       submittedOn: this.formatDate(row?.created_at || row?.createdAt),
-      currentStage: this.formatStage(row?.current_stage_name || row?.currentStageName || row?.current_stage || ''),
+      currentStage: this.mapStageForLicensee(row?.current_stage_name || row?.currentStageName || row?.current_stage || '', group),
       currentStageRaw: row?.current_stage_name || row?.currentStageName || row?.current_stage || '',
       statusGroup: group,
       canView: Boolean(applicationId),
@@ -215,6 +224,30 @@ export class SpecialPermitDashboardComponent implements OnInit {
       canPrint: group === 'approved',
       paymentAmount: Number(row?.payment_amount ?? row?.paymentAmount ?? 0)
     };
+  }
+
+  /**
+   * Maps the actual workflow stage name to what the licensee should see.
+   * Internal officer stages (pending review) are masked as "Pending".
+   * Admin / officer users always see the real stage name.
+   */
+  private mapStageForLicensee(stageName: string, group: SpecialPermitItem['statusGroup']): string {
+    // Admins / officers see the real stage name exactly as returned by the backend
+    if (!this.isLicenseeUser) {
+      return this.formatStage(stageName);
+    }
+
+    // Licensees only see user-friendly labels
+    switch (group) {
+      case 'approved':         return 'Approved';
+      case 'rejected':         return 'Rejected';
+      case 'awaiting-payment': return 'Awaiting Payment';
+      case 'objection':        return 'Objection Raised';
+      case 'applied':          return 'Submitted';
+      case 'pending':
+      default:
+        return 'Pending';
+    }
   }
 
   private formatStage(value: string): string {
