@@ -23,6 +23,26 @@
         </mat-error>
       </mat-form-field>
 
+      <!-- Special Permit Toggle Card -->
+      <div class="permit-toggle-card" [class.permit-active]="licenseCategory.isSpecialPermitAllowed">
+        <div class="permit-toggle-left">
+          <div class="permit-icon" [class.permit-icon-active]="licenseCategory.isSpecialPermitAllowed">
+            <mat-icon>assignment_turned_in</mat-icon>
+          </div>
+          <div class="permit-text">
+            <span class="permit-title">Allow Special Permit</span>
+            <span class="permit-subtitle">
+              Licensees of this category can view &amp; submit Special Permit applications
+            </span>
+          </div>
+        </div>
+        <mat-slide-toggle
+          name="isSpecialPermitAllowed"
+          [(ngModel)]="licenseCategory.isSpecialPermitAllowed"
+          color="primary">
+        </mat-slide-toggle>
+      </div>
+
     </mat-dialog-content>
 
     <mat-dialog-actions class="dialog-actions">

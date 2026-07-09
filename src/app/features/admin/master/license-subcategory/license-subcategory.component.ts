@@ -20,7 +20,7 @@ import { SubcategoryDialogComponent } from './subcategory-dialog/subcategory-dia
 })
 export class LicenseSubcategoryComponent implements OnInit {
   // Tab 1 — License Category columns
-  categoryColumns: string[] = ['sno', 'licenseCategory', 'status', 'actions'];
+  categoryColumns: string[] = ['sno', 'licenseCategory', 'specialPermit', 'status', 'actions'];
 
   // Tab 2 — Sub Category overview columns
   subTabColumns: string[] = ['sub_sno', 'sub_categoryName', 'subActions'];

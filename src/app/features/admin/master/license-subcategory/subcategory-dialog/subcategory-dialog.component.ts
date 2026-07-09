@@ -34,16 +34,9 @@ export class SubcategoryDialogComponent implements OnInit {
   displayedColumns = ['sno', 'description', 'dryDay', 'status', 'actions'];
 
   get isDryDayPermittedCategory(): boolean {
-    const name = this.category?.licenseCategory;
-    if (!name) return false;
-    const permitted = [
-      'Restaurant - cum - Bar Shop',
-      'Foreign Liquor Retail Shop',
-      'Special Category Hotel',
-      'Discotheque & Night Club',
-      'Casino with Bar'
-    ];
-    return permitted.includes(name);
+    // Dynamic: use the is_special_permit_allowed flag set by admin on the License Category.
+    // This replaces the old hardcoded list of category names.
+    return this.category?.isSpecialPermitAllowed === true;
   }
 
   constructor(

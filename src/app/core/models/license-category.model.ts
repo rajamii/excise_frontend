@@ -3,4 +3,5 @@ export class LicenseCategory {
     licenseCategory!: string;
     description?: any;
     isActive?: boolean;
+    isSpecialPermitAllowed?: boolean;
   }

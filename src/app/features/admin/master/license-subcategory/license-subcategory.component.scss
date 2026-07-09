@@ -208,8 +208,23 @@
       min-width: 100px !important;
       justify-content: center !important;
     }
+
+    // Special Permit column for tab 1
+    .mat-column-specialPermit {
+      flex: 0 0 160px !important;
+      max-width: 160px !important;
+      min-width: 160px !important;
+      justify-content: center !important;
+    }
   }
 }
+
+.permit-col {
+  max-width: 160px;
+  min-width: 160px;
+  justify-content: center;
+}
+
 
 // ── Column helpers (fallback) ───────────────────────────────
 .sno-col {

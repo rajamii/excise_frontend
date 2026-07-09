@@ -1353,21 +1353,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // (Awaiting License Fee Payment) or final approval.
     this.showManufacturingWalletNav = this.computeWalletNavVisible(rows);
 
-    const allowedCategories = [
-      'Restaurant - cum - Bar Shop',
-      'Foreign Liquor Retail Shop',
-      'Special Category Hotel',
-      'Discotheque & Night Club',
-      'Casino with Bar'
-    ];
-    this.showSpecialPermitMenu = rows.some((row) => {
-      const cat = row?.license_category ?? row?.licenseCategory;
-      const categoryName = typeof cat === 'object'
-        ? (cat?.license_category ?? cat?.licenseCategory ?? cat?.name ?? cat?.description ?? '')
-        : (cat ?? '');
-      const category = String(categoryName).trim();
-      return allowedCategories.includes(category);
-    });
+    // Dynamic: show Special Permit menu only if ANY active license has is_special_permit_allowed=true
+    // (set by admin in the License Category CRUD — no hardcoded category names needed)
+    this.showSpecialPermitMenu = rows.some((row) =>
+      row?.isSpecialPermitAllowed === true || row?.is_special_permit_allowed === true
+    );
 
     console.log('Resolved menu flags:', {
       hasDistillery,

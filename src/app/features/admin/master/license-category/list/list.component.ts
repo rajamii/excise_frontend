@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { CommonModule } from '@angular/common';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
@@ -10,12 +11,12 @@ import { ManageComponent } from '../manage/manage.component';
 @Component({
   selector: 'app-license-category-list',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [MaterialModule, CommonModule],
   templateUrl: './list.component.html',
   styleUrl: './list.component.scss'
 })
 export class ListComponent implements OnInit {
-  displayedColumns: string[] = ['licenseCategory', 'actions'];
+  displayedColumns: string[] = ['licenseCategory', 'specialPermit', 'actions'];
   licenseCategories: LicenseCategory[] = [];
 
   constructor(

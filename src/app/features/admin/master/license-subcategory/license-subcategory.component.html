@@ -37,6 +37,17 @@
               </mat-cell>
             </ng-container>
 
+            <ng-container matColumnDef="specialPermit">
+              <mat-header-cell *matHeaderCellDef class="permit-col">Special Permit</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="permit-col">
+                <span class="status-badge" [class.status-badge--active]="item.isSpecialPermitAllowed"
+                      [class.status-badge--inactive]="!item.isSpecialPermitAllowed">
+                  <span class="status-dot"></span>
+                  {{ item.isSpecialPermitAllowed ? 'Active' : 'Inactive' }}
+                </span>
+              </mat-cell>
+            </ng-container>
+
             <!-- Status -->
             <ng-container matColumnDef="status">
               <mat-header-cell *matHeaderCellDef class="status-col">Status</mat-header-cell>

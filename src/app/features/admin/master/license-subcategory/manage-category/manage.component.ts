@@ -13,7 +13,7 @@ import { AdminService } from '../../../admin.service';
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
-  licenseCategory: LicenseCategory = { licenseCategory: '' };
+  licenseCategory: LicenseCategory = { licenseCategory: '', isSpecialPermitAllowed: false };
   isEditMode = false;
 
   constructor(

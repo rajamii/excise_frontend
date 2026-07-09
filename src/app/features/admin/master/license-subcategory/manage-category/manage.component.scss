@@ -76,3 +76,72 @@
     }
   }
 }
+
+/* Special Permit Toggle Card */
+.permit-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-top: 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  transition: all 0.25s ease;
+
+  &.permit-active {
+    border-color: #2563eb;
+    background: #eff6ff;
+  }
+}
+
+.permit-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.permit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.permit-icon-active {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+}
+
+.permit-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.permit-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.permit-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
