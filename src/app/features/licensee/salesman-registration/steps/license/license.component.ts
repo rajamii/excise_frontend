@@ -186,8 +186,8 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
     this.masterService.getLicenseCategories().subscribe({
       next: (data) => {
-        this.licenseCategories = data;
-        console.log('📋 Loaded license categories:', data);
+        this.licenseCategories = data.filter((cat: any) => cat.isActive !== false);
+        console.log('📋 Loaded license categories:', this.licenseCategories);
       },
       error: (e) => console.error('Categories error', e)
     });

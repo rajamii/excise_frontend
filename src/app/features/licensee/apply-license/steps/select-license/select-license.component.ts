@@ -77,12 +77,12 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
       next: ({ districts, subdivisions, licenseCategories }) => {
         this.districts = districts;
         this.subdivisions = subdivisions;
-        this.licenseCategories = licenseCategories;
+        this.licenseCategories = licenseCategories.filter((cat: any) => cat.isActive !== false);
         this.dataLoaded = true;
         
         sessionStorage.setItem('districts', JSON.stringify(districts));
         sessionStorage.setItem('subdivisions', JSON.stringify(subdivisions));
-        sessionStorage.setItem('licenseCategories', JSON.stringify(licenseCategories));
+        sessionStorage.setItem('licenseCategories', JSON.stringify(this.licenseCategories));
         
         console.log('✅ Master data loaded and saved to sessionStorage');
         

@@ -123,11 +123,13 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   private loadDropdownData(): void {
     this.masterService.getLicenseCategories().subscribe({
       next: (data: LicenseCategory[]) => {
-        this.licenseCategories = data.map(item => ({
-          id: item.id ?? 0,
-          licenseCategory: item.licenseCategory,
-          description: item.description ?? ''
-        }));        
+        this.licenseCategories = data
+          .filter(item => item.isActive !== false)
+          .map(item => ({
+            id: item.id ?? 0,
+            licenseCategory: item.licenseCategory,
+            description: item.description ?? ''
+          }));        
         sessionStorage.setItem('licenseCategories', JSON.stringify(this.licenseCategories));
         this.restoreCategoryIfNeeded();
       },
