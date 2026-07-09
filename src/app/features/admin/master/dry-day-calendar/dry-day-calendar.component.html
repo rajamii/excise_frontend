@@ -1,0 +1,84 @@
+<div class="calendar-container">
+  <!-- Header Control Card -->
+  <mat-card class="header-card">
+    <div class="header-title-section">
+      <mat-icon class="header-icon">date_range</mat-icon>
+      <div>
+        <h1 class="header-title">Dry Day Calendar</h1>
+        <p class="header-subtitle">Configure allowed dry day dates for each financial year.</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Financial Year Select -->
+      <div class="select-wrapper">
+        <label class="select-label">Financial Year</label>
+        <div class="select-controls">
+          <mat-select [(value)]="financialYear" (selectionChange)="onYearChange()" class="year-select">
+            <mat-option *ngFor="let year of availableYears" [value]="year">
+              {{ year }}
+            </mat-option>
+          </mat-select>
+          <button mat-icon-button (click)="addNewFinancialYear()" matTooltip="Add Financial Year" class="add-year-btn">
+            <mat-icon>add_circle</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Summary -->
+      <div class="stats-card">
+        <span class="stats-label">Selected Dry Days</span>
+        <span class="stats-value">{{ allowedDates.size }}</span>
+      </div>
+
+      <!-- Save Action -->
+      <button mat-flat-button color="primary" class="save-btn" (click)="saveCalendar()" [disabled]="isLoading">
+        <mat-icon *ngIf="!isLoading">save</mat-icon>
+        <span *ngIf="!isLoading">Save Configuration</span>
+        <span *ngIf="isLoading">Saving...</span>
+      </button>
+    </div>
+  </mat-card>
+
+  <!-- 12-Month Calendar Grid -->
+  <div class="months-grid" *ngIf="!isLoading; else loadingState">
+    <mat-card class="month-card" *ngFor="let month of months">
+      <div class="month-header">
+        <span class="month-name">{{ month.name }}</span>
+        <span class="month-year">{{ month.year }}</span>
+      </div>
+
+      <!-- Week Days Header -->
+      <div class="weekdays-grid">
+        <div class="weekday" *ngFor="let day of weekDays">{{ day }}</div>
+      </div>
+
+      <!-- Days Grid -->
+      <div class="days-grid">
+        <ng-container *ngFor="let day of month.days">
+          <!-- Empty cell for padding -->
+          <div class="day-cell pad" *ngIf="!day.dayNumber"></div>
+          
+          <!-- Calendar Day Button -->
+          <button 
+            *ngIf="day.dayNumber" 
+            class="day-cell day-btn" 
+            [class.is-dry]="day.isDryDay" 
+            (click)="toggleDay(day)"
+            [matTooltip]="day.dateStr"
+          >
+            {{ day.dayNumber }}
+          </button>
+        </ng-container>
+      </div>
+    </mat-card>
+  </div>
+
+  <!-- Loading State Template -->
+  <ng-template #loadingState>
+    <div class="loading-wrapper">
+      <div class="loader"></div>
+      <p class="loading-text">Loading Calendar Data...</p>
+    </div>
+  </ng-template>
+</div>

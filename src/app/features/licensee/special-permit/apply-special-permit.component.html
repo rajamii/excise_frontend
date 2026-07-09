@@ -71,14 +71,44 @@
             </mat-form-field>
 
             @if (isPerDayCategory) {
-              <mat-form-field appearance="outline">
-                <mat-label>Select Date</mat-label>
-                <input matInput type="date" formControlName="permissionDate" required aria-label="Select Date" title="Select Date">
-                <mat-icon matPrefix>place</mat-icon>
-                @if (form.controls.permissionDate.invalid && form.controls.permissionDate.touched) {
-                  <mat-error>{{ getErrorMessage('permissionDate') }}</mat-error>
+              <div class="field-wide date-selection-panel" style="width: 100%; display: block; margin-top: 8px;">
+                <div style="font-size: 0.9rem; font-weight: 600; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <mat-icon style="color: #64748b;">event</mat-icon>
+                  Select Dry Day Dates *
+                </div>
+                
+                @if (isLoadingAllowedDates) {
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #64748b;">
+                    <mat-spinner diameter="18"></mat-spinner>
+                    <span>Loading allowed Dry Day dates...</span>
+                  </div>
+                } @else if (!allowedDryDayDates.length) {
+                  <div style="padding: 16px; border: 1px solid #fed7aa; background-color: #fff7ed; color: #c2410c; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;">
+                    <mat-icon>warning</mat-icon>
+                    <span>No Dry Day dates configured for financial year {{ form.controls.financialYear.value }}. Please contact Site Admin.</span>
+                  </div>
+                } @else {
+                  <div class="dates-checklist-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 10px; margin-bottom: 8px; width: 100%;">
+                    @for (dateStr of allowedDryDayDates; track dateStr) {
+                      <button 
+                        type="button" 
+                        [class.active]="isFormDateSelected(dateStr)" 
+                        (click)="toggleFormDate(dateStr)"
+                        style="padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 0.85rem; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.2s ease; outline: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; width: 100%;"
+                        [style.border-color]="isFormDateSelected(dateStr) ? '#ffccd2' : '#cbd5e1'"
+                        [style.background-color]="isFormDateSelected(dateStr) ? '#ffebee' : '#fff'"
+                        [style.color]="isFormDateSelected(dateStr) ? '#c62828' : '#334155'"
+                      >
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">{{ isFormDateSelected(dateStr) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                        {{ dateStr | date:'dd MMM yyyy' }}
+                      </button>
+                    }
+                  </div>
+                  @if (form.controls.selectedDates.invalid && form.controls.selectedDates.touched) {
+                    <div style="color: #ef4444; font-size: 0.75rem; margin-top: 4px;">Please select at least one Dry Day date.</div>
+                  }
                 }
-              </mat-form-field>
+              </div>
             }
           </div>
 
@@ -97,9 +127,17 @@
                 <span>Location (from application):</span>
                 <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.isRural !== undefined ? (selectedLicense.isRural ? 'Rural' : 'Urban') : (selectedLicense.is_rural ? 'Rural' : 'Urban') }}</strong>
               </div>
+              <div style="display: flex; justify-content: space-between;" *ngIf="isPerDayCategory">
+                <span>Selected Dates Count:</span>
+                <strong style="color: #0f172a;">{{ form.controls.selectedDates.value?.length || 0 }} day(s)</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;" *ngIf="isPerDayCategory && form.controls.selectedDates.value?.length">
+                <span>Calculation Formula:</span>
+                <strong style="color: #0f172a;">₹{{ (selectedLicense.dryDayFee || selectedLicense.dry_day_fee) | number:'1.2-2' }} × {{ form.controls.selectedDates.value?.length }} day(s)</strong>
+              </div>
               <div style="display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 4px;">
                 <span>Calculated Fee to Pay on Approval:</span>
-                <strong style="color: #1e40af; font-size: 1.1rem;">₹{{ (selectedLicense.dryDayFee || selectedLicense.dry_day_fee) | number:'1.2-2' }}</strong>
+                <strong style="color: #1e40af; font-size: 1.1rem;">₹{{ calculatedTotalFee | number:'1.2-2' }}</strong>
               </div>
             </div>
           </div>
@@ -129,7 +167,7 @@
                 Application ID: <strong>{{ applicationId }}</strong> has been submitted.
               </p>
               <p style="color: #374151; font-size: 0.95rem; margin-top: 12px; max-width: 500px; line-height: 1.5;">
-                Your request for a Special Permit has been successfully submitted for officer review. The permit fee of <strong>₹{{ (selectedLicense.dryDayFee || selectedLicense.dry_day_fee) | number:'1.2-2' }}</strong> will be payable once the application is approved.
+                Your request for a Special Permit has been successfully submitted for officer review. The permit fee of <strong>₹{{ calculatedTotalFee | number:'1.2-2' }}</strong> will be payable once the application is approved.
               </p>
             </div>
             <div style="margin-top: 12px;">

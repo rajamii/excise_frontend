@@ -154,6 +154,13 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_categories.view' }
       },
       {
+        path: 'admin/dry-day-calendar',
+        loadComponent: () =>
+          import('../admin/master/dry-day-calendar/dry-day-calendar.component').then((m) => m.DryDayCalendarComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
         path: 'admin/license-titles',
         loadComponent: () =>
           import('../admin/master/license-title/list/list.component').then((m) => m.ListComponent),

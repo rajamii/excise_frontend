@@ -27,7 +27,8 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     licenseSubCategory: [{ value: '', disabled: true }, Validators.required],
     licensee: ['', Validators.required],
     financialYear: ['', Validators.required],
-    permissionDate: ['']
+    permissionDate: [''],
+    selectedDates: [[] as string[]]
   });
 
   readonly financialYears = this.buildFinancialYears();
@@ -41,9 +42,19 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   isSavedForPayment = false;
   permissionDuration: PermissionDuration = 'per_annum';
 
+  allowedDryDayDates: string[] = [];
+  isLoadingAllowedDates = false;
+
   ngOnInit(): void {
     this.loadLicenses();
     this.form.patchValue({ financialYear: this.financialYears[0] });
+    this.loadAllowedDates();
+
+    this.form.controls.financialYear.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadAllowedDates();
+      });
   }
 
   ngOnDestroy(): void {
@@ -79,7 +90,8 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       license_id: this.getLicenseId(this.selectedLicense),
       financial_year: raw.financialYear,
       permission_duration: this.permissionDuration,
-      permission_date: this.isPerDayCategory ? raw.permissionDate : null
+      permission_date: this.isPerDayCategory && raw.selectedDates?.length ? raw.selectedDates[0] : null,
+      selected_dates: this.isPerDayCategory ? raw.selectedDates : null
     };
 
     this.specialPermitService
@@ -122,7 +134,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
         type: 'special-permit',
         ref: this.applicationId,
         referenceNo: this.applicationId,
-        amount: (this.selectedLicense?.dryDayFee || this.selectedLicense?.dry_day_fee) ? Number(this.selectedLicense.dryDayFee || this.selectedLicense.dry_day_fee) : undefined,
+        amount: this.calculatedTotalFee > 0 ? this.calculatedTotalFee : undefined,
         action: 'pay',
         source: 'special-permit'
       }
@@ -190,7 +202,8 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
         district: '',
         licenseCategory: '',
         licenseSubCategory: '',
-        permissionDate: ''
+        permissionDate: '',
+        selectedDates: []
       });
       this.permissionDuration = 'per_annum';
       this.syncDateValidator();
@@ -205,16 +218,65 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       permissionDate: this.permissionDuration === 'per_day' ? this.form.controls.permissionDate.value || '' : ''
     });
     this.syncDateValidator();
+    this.loadAllowedDates();
+  }
+
+  get calculatedTotalFee(): number {
+    const base = this.selectedLicense?.dryDayFee || this.selectedLicense?.dry_day_fee || 0;
+    if (this.isPerDayCategory) {
+      const count = this.form.controls.selectedDates.value?.length || 0;
+      return Number(base) * count;
+    }
+    return Number(base);
+  }
+
+  loadAllowedDates(): void {
+    const fy = this.form.controls.financialYear.value;
+    if (!fy) return;
+
+    this.isLoadingAllowedDates = true;
+    this.specialPermitService.getDryDayCalendar(fy).subscribe({
+      next: (res) => {
+        this.allowedDryDayDates = res?.allowedDates || res?.allowed_dates || [];
+        this.isLoadingAllowedDates = false;
+      },
+      error: () => {
+        this.allowedDryDayDates = [];
+        this.isLoadingAllowedDates = false;
+      }
+    });
+  }
+
+  toggleFormDate(dateStr: string): void {
+    const current = this.form.controls.selectedDates.value || [];
+    let updated: string[];
+    if (current.includes(dateStr)) {
+      updated = current.filter((d) => d !== dateStr);
+    } else {
+      updated = [...current, dateStr];
+    }
+    this.form.controls.selectedDates.setValue(updated);
+    this.form.controls.selectedDates.markAsTouched();
+  }
+
+  isFormDateSelected(dateStr: string): boolean {
+    return (this.form.controls.selectedDates.value || []).includes(dateStr);
   }
 
   private syncDateValidator(): void {
     const dateControl = this.form.controls.permissionDate;
+    const datesControl = this.form.controls.selectedDates;
+
     if (this.isPerDayCategory) {
-      dateControl.addValidators(Validators.required);
+      datesControl.addValidators(Validators.required);
+      dateControl.clearValidators();
     } else {
+      datesControl.clearValidators();
+      datesControl.setValue([], { emitEvent: false });
       dateControl.clearValidators();
       dateControl.setValue('', { emitEvent: false });
     }
+    datesControl.updateValueAndValidity({ emitEvent: false });
     dateControl.updateValueAndValidity({ emitEvent: false });
   }
 

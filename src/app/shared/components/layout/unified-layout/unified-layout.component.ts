@@ -920,6 +920,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         normalized.includes('/admin/fixed-fees') ||
         normalized.includes('/admin/license-terms') ||
         normalized.includes('/admin/license-titles') ||
+        normalized.includes('/admin/dry-day-calendar') ||
         normalized.includes('/admin/license-subcategories')) {
       this.adminLicenseMasterDataExpanded = true;
     }
@@ -1481,7 +1482,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       '/dashboard/admin/license-titles',
       '/dashboard/admin/license-subcategories',
       '/dashboard/admin/roads',
-      '/dashboard/admin/oic'
+      '/dashboard/admin/oic',
+      '/dashboard/admin/dry-day-calendar'
     ];
 
     const hasAdminNav = adminRoutes.some((route) =>

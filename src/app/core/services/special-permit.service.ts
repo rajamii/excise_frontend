@@ -38,4 +38,10 @@ export class SpecialPermitService {
   paySpecialPermitFee(applicationId: string): Observable<any> {
     return this.http.post(`${this.baseUrl}/pay/${encodeURIComponent(applicationId)}/`, {});
   }
+
+  getDryDayCalendar(financialYear: string): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/transactional/special-permit/master-dry-day/`, {
+      params: { financial_year: financialYear }
+    });
+  }
 }
