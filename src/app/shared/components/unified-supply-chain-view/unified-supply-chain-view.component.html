@@ -1839,7 +1839,73 @@
                 </div>
                 }
 
-               
+                @if (isSpecialPermit()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Special Permit Application Information</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Application ID</td>
+                                    <td>{{ applicationData['referenceNo'] || applicationData['applicationId'] || applicationData['id'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Applicant Name</td>
+                                    <td>{{ applicationData['applicantName'] || applicationData['applicant_name'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Establishment Name</td>
+                                    <td>{{ applicationData['establishmentName'] || applicationData['establishment_name'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License No</td>
+                                    <td>{{ applicationData['licenseId'] || applicationData['license_id'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">District</td>
+                                    <td>{{ applicationData['districtName'] || applicationData['district_name'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Financial Year</td>
+                                    <td>{{ applicationData['financialYear'] || applicationData['financial_year'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Permit Duration</td>
+                                    <td>{{ (applicationData['permissionDuration'] || applicationData['permission_duration']) === 'per_day' ? 'Per Day' : 'Per Annum' }}</td>
+                                </tr>
+                                <tr *ngIf="(applicationData['permissionDuration'] || applicationData['permission_duration']) === 'per_day'">
+                                    <td class="fw-semibold bg-light">Permit Date</td>
+                                    <td>{{ (applicationData['permissionDate'] || applicationData['permission_date'] | date: "dd-MM-yyyy") || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Sub Category</td>
+                                    <td>{{ applicationData['licenseSubCategoryName'] || applicationData['license_sub_category_name'] || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Calculated Fee</td>
+                                    <td class="fw-bold">₹{{ (applicationData['paymentAmount'] || applicationData['payment_amount'] || 0) | number: '1.2-2' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Fee Payment Status</td>
+                                    <td>
+                                        <span [class]="(applicationData['isFeePaid'] || applicationData['is_fee_paid']) ? 'badge bg-success' : 'badge bg-warning text-dark'">
+                                            {{ (applicationData['isFeePaid'] || applicationData['is_fee_paid']) ? 'Paid' : 'Pending' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Remarks</td>
+                                    <td>{{ applicationData['remarks'] || 'No remarks' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Submitted On</td>
+                                    <td>{{ (applicationData['submissionDate'] | date: "dd-MM-yyyy") || (applicationData['createdAt'] | date: "dd-MM-yyyy") || (applicationData['created_at'] | date: "dd-MM-yyyy") || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
             </div>
                 <div class="no-print d-flex justify-content-center mb-4" *ngIf="applicationData">
         

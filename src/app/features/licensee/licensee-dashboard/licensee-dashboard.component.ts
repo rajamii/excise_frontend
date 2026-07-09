@@ -42,7 +42,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     newLicense: 0,
     licenseRenewal: 0,
     salesmanBarman: 0,
-    companyRegistration: 0
+    companyRegistration: 0,
+    specialPermit: 0
   };
 
   isLoading = false;
@@ -358,7 +359,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
             licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
             salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
-            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length,
+            specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
           // console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
@@ -598,6 +600,9 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     }
     if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
       parts.push(`Company Registration (${this.awaitingPaymentBreakdown.companyRegistration})`);
+    }
+    if (this.awaitingPaymentBreakdown.specialPermit > 0) {
+      parts.push(`Special Permit (${this.awaitingPaymentBreakdown.specialPermit})`);
     }
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }

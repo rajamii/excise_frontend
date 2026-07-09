@@ -114,6 +114,12 @@
                 <button *ngIf="row.canView" class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
                   <i class="bi bi-eye-fill"></i>
                 </button>
+                <button *ngIf="row.canPay" class="btn btn-link p-0 action-pay ms-2 text-primary" title="Pay Fee" (click)="payApplication(row)">
+                  <i class="bi bi-credit-card-fill"></i>
+                </button>
+                <button *ngIf="row.canPrint" class="btn btn-link p-0 action-print ms-2 text-success" title="Print License" (click)="printPermit(row)">
+                  <i class="bi bi-printer-fill"></i>
+                </button>
               </td>
             </tr>
           </tbody>

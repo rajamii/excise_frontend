@@ -21,6 +21,7 @@ export class UnifiedDashboardService {
     renewal: DashboardCount;
     salesman: DashboardCount;
     company: DashboardCount;
+    specialPermit: DashboardCount;
   }>;
   private detailedCountsCacheKey: string | null = null;
   private unifiedAppsCache$?: Observable<{
@@ -39,7 +40,8 @@ export class UnifiedDashboardService {
     new: `${this.baseUrl}/new_license_application`,
     salesman: `${this.baseUrl}/salesman_barman`,
     company: `${this.baseUrl}/company-registration`,
-    label: `${this.baseUrl}/label-registration`
+    label: `${this.baseUrl}/label-registration`,
+    specialPermit: `${this.baseUrl}/special-permit`
   };
 
   private readonly allTypes: UnifiedApplication['type'][] = [
@@ -47,12 +49,14 @@ export class UnifiedDashboardService {
     'new-license',
     'salesman-barman',
     'company-registration',
-    'label-registration'
+    'label-registration',
+    'special-permit'
   ];
 
   private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
+    if (id.startsWith('SP/')) return 'special-permit';
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
     if (id.startsWith('LRA/')) return 'license-renewal';
@@ -128,12 +132,13 @@ export class UnifiedDashboardService {
     if (/(new[_ -]?license|new[_ -]?licen[cs]e|new_license_application)/.test(haystack)) enabled.add('new-license');
     if (/(salesman|barman|salesman_barman)/.test(haystack)) enabled.add('salesman-barman');
     if (/(company|company[_ -]?registration|company-registration)/.test(haystack)) enabled.add('company-registration');
+    if (/(special[_ -]?permit|special_permit|dry_day|dry-day)/.test(haystack)) enabled.add('special-permit');
 
     return enabled.size ? Array.from(enabled) : this.allTypes.slice();
   }
 
   getUnifiedDashboardCounts(config?: DashboardConfig, forceRefresh = false): Observable<DashboardCount> {
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal']));
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'salesman-barman', 'new-license', 'special-permit']));
     const cacheKey = enabledTypes.slice().sort().join('|');
     if (!forceRefresh && this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
       return this.unifiedCountsCache$;
@@ -188,6 +193,17 @@ export class UnifiedDashboardService {
       );
     }
 
+    if (enabledTypes.includes('special-permit')) {
+      tasks.push(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.specialPermit}/dashboard-counts/`)).pipe(
+          catchError((err) => {
+            console.error(' Special permit counts error:', err);
+            return of(empty);
+          })
+        )
+      );
+    }
+
     if (!tasks.length) {
       this.unifiedCountsCacheKey = cacheKey;
       this.unifiedCountsCache$ = of(empty).pipe(shareReplay({ bufferSize: 1, refCount: false }));
@@ -220,8 +236,9 @@ export class UnifiedDashboardService {
     renewal: DashboardCount;
     salesman: DashboardCount;
     company: DashboardCount;
+    specialPermit: DashboardCount;
   }> {
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'salesman-barman', 'new-license']));
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'salesman-barman', 'new-license', 'special-permit']));
     const cacheKey = [
       enabledTypes.slice().sort().join('|'),
       `month:${month ?? 'all'}`,
@@ -229,7 +246,7 @@ export class UnifiedDashboardService {
     ].join('::');
 
     if (!forceRefresh && this.detailedCountsCache$ && this.detailedCountsCacheKey === cacheKey) {
-      return this.detailedCountsCache$;
+      return this.detailedCountsCache$ as any;
     }
 
     const empty: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 } as DashboardCount;
@@ -256,31 +273,36 @@ export class UnifiedDashboardService {
         : of(empty),
       company: enabledTypes.includes('company-registration')
         ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.company}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
+        : of(empty),
+      specialPermit: enabledTypes.includes('special-permit')
+        ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.specialPermit}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
         : of(empty)
     }).pipe(
       map((res) => {
         const total = {
-          applied: (res.newLicense.applied || 0) + (res.renewal.applied || 0) + (res.salesman.applied || 0) + (res.company.applied || 0),
-          pending: (res.newLicense.pending || 0) + (res.renewal.pending || 0) + (res.salesman.pending || 0) + (res.company.pending || 0),
-          objection: (res.newLicense.objection || 0) + (res.renewal.objection || 0) + (res.salesman.objection || 0) + (res.company.objection || 0),
-          approved: (res.newLicense.approved || 0) + (res.renewal.approved || 0) + (res.salesman.approved || 0) + (res.company.approved || 0),
-          rejected: (res.newLicense.rejected || 0) + (res.renewal.rejected || 0) + (res.salesman.rejected || 0) + (res.company.rejected || 0),
+          applied: (res.newLicense.applied || 0) + (res.renewal.applied || 0) + (res.salesman.applied || 0) + (res.company.applied || 0) + (res.specialPermit.applied || 0),
+          pending: (res.newLicense.pending || 0) + (res.renewal.pending || 0) + (res.salesman.pending || 0) + (res.company.pending || 0) + (res.specialPermit.pending || 0),
+          objection: (res.newLicense.objection || 0) + (res.renewal.objection || 0) + (res.salesman.objection || 0) + (res.company.objection || 0) + (res.specialPermit.objection || 0),
+          approved: (res.newLicense.approved || 0) + (res.renewal.approved || 0) + (res.salesman.approved || 0) + (res.company.approved || 0) + (res.specialPermit.approved || 0),
+          rejected: (res.newLicense.rejected || 0) + (res.renewal.rejected || 0) + (res.salesman.rejected || 0) + (res.company.rejected || 0) + (res.specialPermit.rejected || 0),
           awaitingPayment: (res.newLicense.awaitingPayment || (res.newLicense as any).awaiting_payment || 0) +
                            (res.renewal.awaitingPayment || (res.renewal as any).awaiting_payment || 0) +
                            (res.salesman.awaitingPayment || (res.salesman as any).awaiting_payment || 0) +
-                           (res.company.awaitingPayment || (res.company as any).awaiting_payment || 0)
+                           (res.company.awaitingPayment || (res.company as any).awaiting_payment || 0) +
+                           (res.specialPermit.awaitingPayment || (res.specialPermit as any).awaiting_payment || 0)
         } as DashboardCount;
         return {
           total,
           newLicense: res.newLicense,
           renewal: res.renewal,
           salesman: res.salesman,
-          company: res.company
+          company: res.company,
+          specialPermit: res.specialPermit
         };
       })
-    ).pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    ).pipe(shareReplay({ bufferSize: 1, refCount: false })) as any;
 
-    return this.detailedCountsCache$;
+    return this.detailedCountsCache$ as any;
   }
 
   // Get applications from all 4 types (added company)
@@ -292,7 +314,7 @@ export class UnifiedDashboardService {
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration']));
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'special-permit']));
     const cacheKey = enabledTypes.slice().sort().join('|');
 
     if (!forceRefresh && this.unifiedAppsCache$ && this.unifiedAppsCacheKey === cacheKey) {
@@ -367,6 +389,18 @@ export class UnifiedDashboardService {
       );
     }
 
+    if (enabledTypes.includes('special-permit')) {
+      push(
+        'special-permit',
+        this.http.get<any>(getUrl(`${this.endpoints.specialPermit}/list-by-status/`)).pipe(
+          catchError((err) => {
+            console.error('Special Permit error:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        )
+      );
+    }
+
     this.unifiedAppsCacheKey = cacheKey;
 
     this.unifiedAppsCache$ = forkJoin(requests).pipe(
@@ -380,6 +414,7 @@ export class UnifiedDashboardService {
         const newLic = getResponse('new-license');
         const salesman = getResponse('salesman-barman');
         const company = getResponse('company-registration');
+        const specialPermit = getResponse('special-permit');
 
         const normalize = (data: any, type: UnifiedApplication['type']) => {
           if (!data) {
@@ -457,12 +492,13 @@ export class UnifiedDashboardService {
         const normalizedNewLic = normalize(newLic, 'new-license');
         const normalizedSalesman = normalize(salesman, 'salesman-barman');
         const normalizedCompany = normalize(company, 'company-registration');
+        const normalizedSpecialPermit = normalize(specialPermit, 'special-permit');
 
-        let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied];
-        let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending];
-        const allObjection = [...normalizedRenewal.objection, ...normalizedNewLic.objection, ...normalizedSalesman.objection, ...normalizedCompany.objection];
-        let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved, ...normalizedCompany.approved];
-        const allRejected = [...normalizedRenewal.rejected, ...normalizedNewLic.rejected, ...normalizedSalesman.rejected, ...normalizedCompany.rejected];
+        let allApplied = [...normalizedRenewal.applied, ...normalizedNewLic.applied, ...normalizedSalesman.applied, ...normalizedCompany.applied, ...normalizedSpecialPermit.applied];
+        let allPending = [...normalizedRenewal.pending, ...normalizedNewLic.pending, ...normalizedSalesman.pending, ...normalizedCompany.pending, ...normalizedSpecialPermit.pending];
+        const allObjection = [...normalizedRenewal.objection, ...normalizedNewLic.objection, ...normalizedSalesman.objection, ...normalizedCompany.objection, ...normalizedSpecialPermit.objection];
+        let allApproved = [...normalizedRenewal.approved, ...normalizedNewLic.approved, ...normalizedSalesman.approved, ...normalizedCompany.approved, ...normalizedSpecialPermit.approved];
+        const allRejected = [...normalizedRenewal.rejected, ...normalizedNewLic.rejected, ...normalizedSalesman.rejected, ...normalizedCompany.rejected, ...normalizedSpecialPermit.rejected];
 
         const awaitingPaymentApps: UnifiedApplication[] = [];
         
@@ -471,8 +507,8 @@ export class UnifiedDashboardService {
           const stageId = app.raw?.current_stage_id || app.raw?.currentStageId;
           const isAwaitingByName = stage === 'awaiting_payment' || stage.includes('awaiting') || stage === 'awaiting payment';
           const isAwaitingById = 
-            stageId === 23 || stageId === 31 || stageId === 109 || stageId === 119 || stageId === 122 || 
-            Number(stageId) === 23 || Number(stageId) === 31 || Number(stageId) === 109 || Number(stageId) === 119 || Number(stageId) === 122;
+            stageId === 23 || stageId === 31 || stageId === 109 || stageId === 119 || stageId === 122 || stageId === 12 ||
+            Number(stageId) === 23 || Number(stageId) === 31 || Number(stageId) === 109 || Number(stageId) === 119 || Number(stageId) === 122 || Number(stageId) === 12;
           return isAwaitingByName || isAwaitingById;
         };
 
@@ -573,7 +609,8 @@ export class UnifiedDashboardService {
       'new-license': this.endpoints.new,
       'salesman-barman': this.endpoints.salesman,
       'company-registration': this.endpoints.company,
-      'label-registration': this.endpoints.label
+      'label-registration': this.endpoints.label,
+      'special-permit': this.endpoints.specialPermit
     };
 
     const inferred = this.inferAppTypeFromId(applicationId);

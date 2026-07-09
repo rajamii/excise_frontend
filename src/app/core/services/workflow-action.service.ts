@@ -35,7 +35,8 @@ export interface ApplicationWorkflowData {
     | 'company-registration'
     | 'company-collaboration'
     | 'label-registration'
-    | 'salesman-barman-registration'; // Changed to type to match component
+    | 'salesman-barman-registration'
+    | 'special-permit';
   status: string;
   referenceNo?: string;
   allowedActionConfigs?: WorkflowActionConfig[];
@@ -142,6 +143,7 @@ export class WorkflowActionService {
       case 'company-collaboration':
       case 'label-registration':
       case 'salesman-barman-registration':
+      case 'special-permit':
         if (!workflowApplicationId) {
           return of([]);
         }

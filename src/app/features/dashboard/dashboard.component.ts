@@ -338,13 +338,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     renewal: DashboardCount & { awaitingPayment?: number };
     salesman: DashboardCount & { awaitingPayment?: number };
     company: DashboardCount & { awaitingPayment?: number };
+    specialPermit: DashboardCount & { awaitingPayment?: number };
   } = {
     total: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     newLicense: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     renewal: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     salesman: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
-    company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
+    company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
+    specialPermit: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
   };
+
+  public showSpecialPermitChartOption = false;
 
   public getModuleTotal(moduleName: string): number {
     if (moduleName === 'all') {
@@ -372,6 +376,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.salesman;
     } else if (moduleName === 'company') {
       sourceCounts = this.detailedCounts.company;
+    } else if (moduleName === 'specialPermit') {
+      sourceCounts = this.detailedCounts.specialPermit;
     }
 
     return (sourceCounts.pending || 0) +
@@ -401,6 +407,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.supplyChainModuleCounts['company'];
     } else if (effectiveModule === 'company') {
       sourceCounts = this.detailedCounts.company;
+    } else if (effectiveModule === 'specialPermit') {
+      sourceCounts = this.detailedCounts.specialPermit;
     } else if (this.supplyChainModuleCounts[effectiveModule]) {
       sourceCounts = this.supplyChainModuleCounts[effectiveModule];
     }
@@ -517,6 +525,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (isAdmin || isCommissioner || this.showBreweryOrDistilleryMenus) {
       modules.push({ value: 'hologram', label: 'Hologram Procurement' });
     }
+    if (this.showSpecialPermitChartOption) {
+      modules.push({ value: 'specialPermit', label: 'Special Permits' });
+    }
     this.availableChartModules = modules;
   }
 
@@ -533,6 +544,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.supplyChainModuleCounts['company'];
     } else if (this.selectedChartModule === 'company') {
       sourceCounts = this.detailedCounts.company;
+    } else if (this.selectedChartModule === 'specialPermit') {
+      sourceCounts = this.detailedCounts.specialPermit;
     } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
       sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
     }
@@ -867,7 +880,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             newLicense: res.newLicense,
             renewal: res.renewal,
             salesman: res.salesman,
-            company: res.company
+            company: res.company,
+            specialPermit: res.specialPermit
           };
           this.dashboardCounts = {
             applied: res.total.applied || 0,
@@ -887,7 +901,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     newLicense: 0,
     licenseRenewal: 0,
     salesmanBarman: 0,
-    companyRegistration: 0
+    companyRegistration: 0,
+    specialPermit: 0
   };
 
   private buildActivityMonthOptions(): { label: string; value: string }[] {
@@ -2068,11 +2083,39 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  private checkSpecialPermitEligibility(): void {
+    const roleId = Number(this.currentUser?.roleId || 0);
+    const isCommissioner = roleId === 10;
+    const isDistrictUser = roleId === 4;
+    const isAdmin = roleId === 1 || roleId === 3;
+
+    if (isCommissioner || isDistrictUser || isAdmin) {
+      this.showSpecialPermitChartOption = true;
+      this.updateAvailableChartModules();
+    } else {
+      this.licenseMeService.getMyLicenses().subscribe({
+        next: (res: any) => {
+          const rows = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+          this.showSpecialPermitChartOption = rows.some((row: any) =>
+            row?.isSpecialPermitAllowed === true || row?.is_special_permit_allowed === true
+          );
+          this.updateAvailableChartModules();
+        },
+        error: () => {
+          this.showSpecialPermitChartOption = false;
+          this.updateAvailableChartModules();
+        }
+      });
+    }
+  }
+
   private initializeDashboard() {
     // Get current user from role service
     this.currentUser = this.roleService.getCurrentUser();
     this.refreshWelcomeText();
-    this.updateAvailableChartModules();
+    if (this.currentUser) {
+      this.checkSpecialPermitEligibility();
+    }
 
     // If no current user in role service, try to get from account service
     if (!this.currentUser) {
@@ -2083,7 +2126,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.roleService.setCurrentUser(mappedUser);
           this.currentUser = mappedUser;
           this.refreshWelcomeText();
-          this.updateAvailableChartModules();
+          this.checkSpecialPermitEligibility();
           this.proceedWithDashboardLoad();
         } else {
           this.error = 'No user found. Please log in again.';
@@ -2264,7 +2307,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             newLicense: res.newLicense,
             renewal: res.renewal,
             salesman: res.salesman,
-            company: res.company
+            company: res.company,
+            specialPermit: res.specialPermit
           };
           this.dashboardCounts = {
             applied: res.total.applied || 0,
@@ -2374,7 +2418,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             newLicense: getCountsForType('new-license'),
             renewal: getCountsForType('license-renewal'),
             salesman: getCountsForType('salesman-barman'),
-            company: getCountsForType('company-registration')
+            company: getCountsForType('company-registration'),
+            specialPermit: getCountsForType('special-permit')
           };
 
           this.dashboardCounts = {
@@ -2390,7 +2435,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
             licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
             salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
-            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length,
+            specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
           // Licensee UX: include hologram procurement workflow (circulating for approvals) in Pending/Approved totals.
@@ -2497,7 +2543,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
             licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
             salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
-            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length,
+            specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
           if (this.isLicenseeUser()) {
@@ -3598,6 +3645,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
       parts.push('Company Reg');
+    }
+    if ((this.awaitingPaymentBreakdown as any).specialPermit > 0) {
+      parts.push('Special Permit');
     }
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }

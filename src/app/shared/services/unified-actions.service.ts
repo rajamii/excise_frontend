@@ -295,6 +295,7 @@ export class UnifiedActionsService {
       case 'company-collaboration':
       case 'label-registration':
       case 'salesman-barman-registration':
+      case 'special-permit':
         return this.executeWorkflowAdvance(item, 'approve', 'Approved', options?.workflowContextData);
 
       case 'license-renewal':
@@ -376,6 +377,7 @@ export class UnifiedActionsService {
       case 'company-collaboration':
       case 'label-registration':
       case 'salesman-barman-registration':
+      case 'special-permit':
         return this.executeWorkflowReject(item, reason);
 
       case 'license-renewal':
@@ -452,7 +454,7 @@ export class UnifiedActionsService {
     if (itemType === 'hologram') {
       return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
-    if (['new-license', 'company-registration', 'company-collaboration', 'label-registration', 'salesman-barman-registration'].includes(itemType)) {
+    if (['new-license', 'company-registration', 'company-collaboration', 'label-registration', 'salesman-barman-registration', 'special-permit'].includes(itemType)) {
       return this.executeWorkflowAdvance(item, 'forward', 'Forwarded', options?.workflowContextData);
     }
 
@@ -1204,7 +1206,7 @@ export class UnifiedActionsService {
       });
     }
 
-    if (itemType === 'new-license' || itemType === 'company-registration' || itemType === 'company-collaboration' || itemType === 'salesman-barman-registration') {
+    if (itemType === 'new-license' || itemType === 'company-registration' || itemType === 'company-collaboration' || itemType === 'salesman-barman-registration' || itemType === 'special-permit') {
       return new Observable<ActionResult>((subscriber) => {
         Swal.fire({
           title: 'Revert Application',

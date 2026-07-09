@@ -19,6 +19,7 @@ import { LabelRegistrationService } from '../../../core/services/label-registrat
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { MasterService } from '../../../core/services/master.service';
+import { SpecialPermitService } from '../../../core/services/special-permit.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { LicenseCategory } from '../../../core/models/license-category.model';
 import { LicenseFee } from '../../../core/models/license-fee.model';
@@ -460,6 +461,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private licenseApplicationService: LicenseApplicationService,
         private masterService: MasterService,
+        private specialPermitService: SpecialPermitService,
         private roleService: RoleService,
         private unifiedActionsService: UnifiedActionsService,
         private unifiedDashboardService: UnifiedDashboardService,
@@ -743,6 +745,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     status: ['current_stage_name', 'current_stage', 'status'],
                     currentStageName: ['current_stage_name', 'currentStageName'],
                     distilleryName: ['license_category_name', 'licenseCategoryName', 'license_category']
+                }
+            },
+            'special-permit': {
+                service: this.specialPermitService,
+                listMethod: 'listSpecialPermits',
+                detailMethod: 'getSpecialPermitDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.SPECIAL_PERMIT],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no', 'id'],
+                    submissionDate: ['created_at', 'createdAt', 'submitted_at', 'submittedAt'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['license_category_name', 'licenseCategoryName', 'establishment_name', 'establishmentName'],
+                    brAmount: ['payment_amount', 'paymentAmount']
                 }
             }
         };
@@ -3362,6 +3381,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
     isRenewal(): boolean { return this.applicationType === 'license-renewal'; }
+    isSpecialPermit(): boolean { return this.applicationType === 'special-permit'; }
     isSalesmanRenewal(): boolean {
         if (!this.applicationData) return false;
         const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();

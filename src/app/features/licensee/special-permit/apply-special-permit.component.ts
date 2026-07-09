@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import Swal from 'sweetalert2';
 import { SpecialPermitService } from '../../../core/services/special-permit.service';
 import { MaterialModule } from '../../../shared/material.module';
 
@@ -42,6 +43,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadLicenses();
+    this.form.patchValue({ financialYear: this.financialYears[0] });
   }
 
   ngOnDestroy(): void {
@@ -88,6 +90,20 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
           this.applicationId = response?.application_id || '';
           this.isSavedForPayment = true;
           this.isSubmitting = false;
+
+          Swal.fire({
+            title: 'Application Submitted!',
+            html: `Your Special Permit application (ID: <b>${this.applicationId}</b>) has been submitted successfully.<br>Permit fee will be payable once the application is approved.`,
+            icon: 'success',
+            showCancelButton: false,
+            confirmButtonText: 'Go to Dashboard',
+            confirmButtonColor: '#3085d6',
+            allowOutsideClick: false
+          }).then((result) => {
+            if (result.isConfirmed) {
+              this.goBackToDashboard();
+            }
+          });
         },
         error: (error) => {
           this.submitError = error?.error?.detail || 'Unable to submit Special Permit application. Please try again.';

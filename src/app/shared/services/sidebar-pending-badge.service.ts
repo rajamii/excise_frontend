@@ -50,7 +50,8 @@ export class SidebarPendingBadgeService {
          section === 'salesman-barman-registration' ||
          section === 'salesman-barman' ||
          section === 'company-registration' ||
-         section === 'company-collaboration');
+         section === 'company-collaboration' ||
+         section === 'special-permit');
 
       if (isDashboardSection) {
         const urlMap: Record<string, string> = {
@@ -60,7 +61,8 @@ export class SidebarPendingBadgeService {
           'salesman-barman-registration': `${this.apiBase}/salesman_barman/dashboard-counts/`,
           'salesman-barman': `${this.apiBase}/salesman_barman/dashboard-counts/`,
           'company-registration': `${this.apiBase}/company-registration/dashboard-counts/`,
-          'company-collaboration': `${this.apiBase}/company-collaboration/dashboard-counts/`
+          'company-collaboration': `${this.apiBase}/company-collaboration/dashboard-counts/`,
+          'special-permit': `${this.apiBase}/special-permit/dashboard-counts/`
         };
         const url = urlMap[section];
         const detail$ = this.fetchDashboardCountsDetail(url, audience).pipe(shareReplay(1));
@@ -165,6 +167,9 @@ export class SidebarPendingBadgeService {
       case 'license-renewal':
       case 'license-renewal-application':
         return this.fetchDashboardCount(`${this.apiBase}/license_renewal_application/dashboard-counts/`, audience);
+
+      case 'special-permit':
+        return this.fetchDashboardCount(`${this.apiBase}/special-permit/dashboard-counts/`, audience);
 
       case 'requisition':
         if (mode === 'light') return of(0);

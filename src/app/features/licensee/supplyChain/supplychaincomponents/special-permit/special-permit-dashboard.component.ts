@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import Swal from 'sweetalert2';
 import { SpecialPermitService } from '../../../../../core/services/special-permit.service';
 import { MaterialModule } from '../../../../../shared/material.module';
 
@@ -25,6 +26,9 @@ interface SpecialPermitItem {
   currentStageRaw: string;
   statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected' | 'awaiting-payment';
   canView: boolean;
+  canPay: boolean;
+  canPrint: boolean;
+  paymentAmount: number;
 }
 
 @Component({
@@ -106,6 +110,31 @@ export class SpecialPermitDashboardComponent implements OnInit {
     });
   }
 
+  payApplication(row: SpecialPermitItem): void {
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'wallet',
+        tab: 'license_fee',
+        id: row.applicationId,
+        type: 'special-permit',
+        ref: row.applicationId,
+        referenceNo: row.applicationId,
+        amount: row.paymentAmount > 0 ? row.paymentAmount : undefined,
+        action: 'pay',
+        source: 'special-permit'
+      }
+    });
+  }
+
+  printPermit(row: SpecialPermitItem): void {
+    Swal.fire({
+      title: 'Special Permit License',
+      text: 'Successful',
+      icon: 'success',
+      confirmButtonText: 'OK'
+    });
+  }
+
   applyFilters(): void {
     const q = this.searchFilter.trim().toLowerCase();
     const rows = this.allRows.filter((row) => {
@@ -156,8 +185,13 @@ export class SpecialPermitDashboardComponent implements OnInit {
     ];
 
     return groups.flatMap((group) => {
-      const key = group === 'awaiting-payment' ? 'awaiting_payment' : group;
-      const rows = Array.isArray(grouped?.[key]) ? grouped[key] : [];
+      let rows: any[] = [];
+      if (group === 'awaiting-payment') {
+        rows = Array.isArray(grouped?.awaitingPayment) ? grouped.awaitingPayment :
+               (Array.isArray(grouped?.awaiting_payment) ? grouped.awaiting_payment : []);
+      } else {
+        rows = Array.isArray(grouped?.[group]) ? grouped[group] : [];
+      }
       return rows.map((row: any) => this.mapApplicationRow(row, group));
     });
   }
@@ -173,7 +207,10 @@ export class SpecialPermitDashboardComponent implements OnInit {
       currentStage: this.formatStage(row?.current_stage_name || row?.currentStageName || row?.current_stage || ''),
       currentStageRaw: row?.current_stage_name || row?.currentStageName || row?.current_stage || '',
       statusGroup: group,
-      canView: Boolean(applicationId)
+      canView: Boolean(applicationId),
+      canPay: group === 'awaiting-payment',
+      canPrint: group === 'approved',
+      paymentAmount: Number(row?.payment_amount ?? row?.paymentAmount ?? 0)
     };
   }
 

@@ -105,6 +105,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
+    { section: 'special-permit', label: 'Special Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit', hideForPermitSection: true },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit', hideForPermitSection: true },
@@ -1354,8 +1355,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.showManufacturingWalletNav = this.computeWalletNavVisible(rows);
 
     // Dynamic: show Special Permit menu only if ANY active license has is_special_permit_allowed=true
-    // (set by admin in the License Category CRUD — no hardcoded category names needed)
-    this.showSpecialPermitMenu = rows.some((row) =>
+    // or if the user is District User (roleId 4) or Commissioner (roleId 10)
+    const userRoleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    this.showSpecialPermitMenu = [4, 10].includes(userRoleId) || rows.some((row) =>
       row?.isSpecialPermitAllowed === true || row?.is_special_permit_allowed === true
     );
 
@@ -1602,6 +1604,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   canAccessSection(section: string): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+
+    if (section === 'special-permit') {
+      return roleId === 4 || roleId === 10;
+    }
 
     // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).
     if (section === 'officer-activity') {

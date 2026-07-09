@@ -60,6 +60,9 @@
           <span class="payment-count" *ngIf="awaitingPaymentBreakdown.companyRegistration > 0">
             Company Registration ({{ awaitingPaymentBreakdown.companyRegistration }})
           </span>
+          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.specialPermit > 0">
+            Special Permit ({{ awaitingPaymentBreakdown.specialPermit }})
+          </span>
         </div>
       </mat-card>
     }
