@@ -50,7 +50,7 @@ export class SpecialPermitDashboardComponent implements OnInit {
   pageSize = 5;
   pageIndex = 0;
   searchFilter = '';
-  activeSummaryFilter: SpecialPermitItem['statusGroup'] | '' = '';
+  activeSummaryFilter: SpecialPermitItem['statusGroup'] | '' = 'awaiting-payment';
 
   constructor(
     private router: Router,
@@ -78,6 +78,9 @@ export class SpecialPermitDashboardComponent implements OnInit {
           rejected: counts?.rejected || 0,
           awaitingPayment: counts?.awaiting_payment || counts?.awaitingPayment || 0
         };
+        if (this.activeSummaryFilter === 'awaiting-payment' && this.counts.awaitingPayment === 0) {
+          this.activeSummaryFilter = '';
+        }
         this.allRows = this.flattenGroupedData(grouped || {});
         this.pageIndex = 0;
         this.applyFilters();
