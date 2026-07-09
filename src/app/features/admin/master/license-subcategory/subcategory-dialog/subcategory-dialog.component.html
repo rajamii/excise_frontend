@@ -11,6 +11,7 @@
         <p class="scd-header__subtitle">
           <mat-icon class="scd-header__cat-icon">list_alt</mat-icon>
           {{ category.licenseCategory }}
+          <span *ngIf="category.isActive === false" class="scd-inactive-badge">Inactive</span>
         </p>
       </div>
     </div>

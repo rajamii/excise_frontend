@@ -143,7 +143,9 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       next: (data: any[]) => {
         console.log('📦 Raw subcategories from API:', data);
         
-        this.allSubCategories = data.map(d => {
+        this.allSubCategories = data
+          .filter(d => d.isActive !== false && d.is_active !== false)
+          .map(d => {
           // Handle multiple possible field names for category foreign key
           let categoryId: number;
           
