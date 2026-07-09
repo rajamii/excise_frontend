@@ -115,15 +115,15 @@
           </ng-container>
 
           <ng-template #dryDayView>
-            <span *ngIf="row.dry_day_fee_type === 'per_annum'" class="scd-dryday-badge scd-dryday-badge--annum">
+            <span *ngIf="getDryDayFeeType(row) === 'per_annum'" class="scd-dryday-badge scd-dryday-badge--annum">
               <mat-icon class="scd-dryday-badge__icon">calendar_today</mat-icon>
               Annual
             </span>
-            <span *ngIf="row.dry_day_fee_type === 'per_day'" class="scd-dryday-badge scd-dryday-badge--day">
+            <span *ngIf="getDryDayFeeType(row) === 'per_day'" class="scd-dryday-badge scd-dryday-badge--day">
               <mat-icon class="scd-dryday-badge__icon">today</mat-icon>
               Per Day
             </span>
-            <span *ngIf="!row.dry_day_fee_type" class="scd-dryday-badge scd-dryday-badge--none">
+            <span *ngIf="!getDryDayFeeType(row)" class="scd-dryday-badge scd-dryday-badge--none">
               <mat-icon class="scd-dryday-badge__icon">remove</mat-icon>
               None
             </span>

@@ -84,6 +84,13 @@ export class SubcategoryDialogComponent implements OnInit {
     });
   }
 
+  // ─── Dry Day Fee Type helper — handles camelCase from API ────────────────
+
+  getDryDayFeeType(sub: LicenseSubcategory): string | null {
+    // djangorestframework_camel_case converts dry_day_fee_type → dryDayFeeType
+    return sub.dryDayFeeType ?? sub.dry_day_fee_type ?? null;
+  }
+
   // ─── Add ─────────────────────────────────────────────────────────────────
 
   openAddForm(): void {
@@ -126,7 +133,7 @@ export class SubcategoryDialogComponent implements OnInit {
   startEdit(sub: LicenseSubcategory): void {
     this.editingId = sub.id!;
     this.formDescription = sub.description || '';
-    this.formDryDayFeeType = sub.dry_day_fee_type || null;
+    this.formDryDayFeeType = this.getDryDayFeeType(sub);
     this.showAddForm = false;
   }
 
