@@ -540,7 +540,8 @@ export class UnifiedDashboardService {
           ...normalizedRenewal.awaitingPayment,
           ...normalizedNewLic.awaitingPayment,
           ...normalizedSalesman.awaitingPayment,
-          ...normalizedCompany.awaitingPayment
+          ...normalizedCompany.awaitingPayment,
+          ...normalizedSpecialPermit.awaitingPayment
         ];
         awaitingPaymentApps.push(...directAwaiting);
 
