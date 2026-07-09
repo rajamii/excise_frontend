@@ -1874,8 +1874,15 @@
                                     <td>{{ (applicationData['permissionDuration'] || applicationData['permission_duration']) === 'per_day' ? 'Per Day' : 'Per Annum' }}</td>
                                 </tr>
                                 <tr *ngIf="(applicationData['permissionDuration'] || applicationData['permission_duration']) === 'per_day'">
-                                    <td class="fw-semibold bg-light">Permit Date</td>
-                                    <td>{{ (applicationData['permissionDate'] || applicationData['permission_date'] | date: "dd-MM-yyyy") || 'Not available' }}</td>
+                                    <td class="fw-semibold bg-light">Permit Date(s)</td>
+                                    <td>
+                                         <div class="d-flex flex-wrap gap-1" *ngIf="applicationData['selected_dates']?.length || applicationData['selectedDates']?.length; else noDates">
+                                             <span class="badge bg-secondary" *ngFor="let dateVal of (applicationData['selected_dates'] || applicationData['selectedDates'])" style="margin-right: 4px;">
+                                                 {{ dateVal | date: "dd-MM-yyyy" }}
+                                             </span>
+                                         </div>
+                                         <ng-template #noDates>Not available</ng-template>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Sub Category</td>

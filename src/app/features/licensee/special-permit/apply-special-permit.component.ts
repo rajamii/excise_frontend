@@ -35,7 +35,6 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     licenseSubCategory: [{ value: '', disabled: true }, Validators.required],
     licensee: ['', Validators.required],
     financialYear: ['', Validators.required],
-    permissionDate: [''],
     selectedDates: [[] as string[]]
   });
 
@@ -103,7 +102,6 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       license_id: this.getLicenseId(this.selectedLicense),
       financial_year: raw.financialYear,
       permission_duration: this.permissionDuration,
-      permission_date: this.isPerDayCategory && raw.selectedDates?.length ? raw.selectedDates[0] : null,
       selected_dates: this.isPerDayCategory ? raw.selectedDates : null
     };
 
@@ -170,7 +168,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     return [id, name].filter(Boolean).join(' - ') || 'License';
   }
 
-  getErrorMessage(field: 'licensee' | 'financialYear' | 'permissionDate'): string {
+  getErrorMessage(field: 'licensee' | 'financialYear'): string {
     const control = this.form.get(field);
     if (control?.hasError('required')) {
       return 'This field is required';
@@ -215,7 +213,6 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
         district: '',
         licenseCategory: '',
         licenseSubCategory: '',
-        permissionDate: '',
         selectedDates: []
       });
       this.permissionDuration = 'per_annum';
@@ -227,8 +224,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     this.form.patchValue({
       district: this.getDistrictName(license),
       licenseCategory: this.getLicenseCategoryName(license),
-      licenseSubCategory: this.getLicenseSubCategoryName(license),
-      permissionDate: this.permissionDuration === 'per_day' ? this.form.controls.permissionDate.value || '' : ''
+      licenseSubCategory: this.getLicenseSubCategoryName(license)
     });
     this.syncDateValidator();
     this.loadAllowedDates();
@@ -374,20 +370,15 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   }
 
   private syncDateValidator(): void {
-    const dateControl = this.form.controls.permissionDate;
     const datesControl = this.form.controls.selectedDates;
 
     if (this.isPerDayCategory) {
       datesControl.addValidators(Validators.required);
-      dateControl.clearValidators();
     } else {
       datesControl.clearValidators();
       datesControl.setValue([], { emitEvent: false });
-      dateControl.clearValidators();
-      dateControl.setValue('', { emitEvent: false });
     }
     datesControl.updateValueAndValidity({ emitEvent: false });
-    dateControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private isUsableLicense(row: any): boolean {
