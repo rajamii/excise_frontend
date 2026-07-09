@@ -139,19 +139,29 @@ export class SubcategoryDialogComponent implements OnInit {
   saveEdit(sub: LicenseSubcategory): void {
     if (!this.formDescription.trim()) return;
     this.isSaving = true;
-    const payload = {
-      description: this.formDescription.trim(),
-      category: this.category.id,
-      dryDayFeeType: this.formDryDayFeeType   // camelCase for DRF camel_case parser
+
+    // Build minimal PATCH payload — only send what we need to update
+    // Using camelCase keys so djangorestframework_camel_case parser converts them correctly
+    const payload: any = {
+      dryDayFeeType: this.formDryDayFeeType ?? null
     };
+
+    // Only include description if it actually changed
+    const originalDesc = sub.description || '';
+    if (this.formDescription.trim() !== originalDesc.trim()) {
+      payload['description'] = this.formDescription.trim();
+    }
+
     this.adminService.updateLicenseSubcategory(sub.id!, payload).subscribe({
       next: () => {
         this.isSaving = false;
         this.cancelEdit();
         this.loadSubcategories();
       },
-      error: () => {
+      error: (err) => {
         this.isSaving = false;
+        const detail = err?.error ? JSON.stringify(err.error) : 'Unknown error';
+        console.error('Update subcategory error:', detail);
         Swal.fire('Error', 'Failed to update subcategory.', 'error');
       }
     });
