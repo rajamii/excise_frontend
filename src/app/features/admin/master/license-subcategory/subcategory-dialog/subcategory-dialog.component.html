@@ -81,15 +81,13 @@
         <mat-header-cell *matHeaderCellDef>Sub Category Name</mat-header-cell>
         <mat-cell *matCellDef="let row">
 
-          <!-- Inline edit input -->
           <ng-container *ngIf="editingId === row.id; else viewMode">
-            <div style="display: flex; gap: 8px; width: 100%">
-              <mat-form-field appearance="outline" class="scd-inline-field" style="flex: 1">
-                <input matInput [(ngModel)]="formDescription"
-                       (keyup.enter)="saveEdit(row)"
-                       (keyup.escape)="cancelEdit()" autofocus />
-              </mat-form-field>
-            </div>
+            <input class="scd-edit-input"
+                   [(ngModel)]="formDescription"
+                   (keyup.enter)="saveEdit(row)"
+                   (keyup.escape)="cancelEdit()"
+                   placeholder="Sub category name"
+                   autofocus />
           </ng-container>
 
           <ng-template #viewMode>
@@ -105,13 +103,11 @@
         <mat-cell *matCellDef="let row" class="scd-dryday-col">
 
           <ng-container *ngIf="editingId === row.id; else dryDayView">
-            <mat-form-field appearance="outline" class="scd-inline-field" style="min-width: 130px">
-              <mat-select [(ngModel)]="formDryDayFeeType">
-                <mat-option [value]="null">None</mat-option>
-                <mat-option value="per_annum">Per Annum</mat-option>
-                <mat-option value="per_day">Per Day</mat-option>
-              </mat-select>
-            </mat-form-field>
+            <select class="scd-edit-select" [(ngModel)]="formDryDayFeeType">
+              <option [ngValue]="null">None</option>
+              <option value="per_annum">Per Annum</option>
+              <option value="per_day">Per Day</option>
+            </select>
           </ng-container>
 
           <ng-template #dryDayView>

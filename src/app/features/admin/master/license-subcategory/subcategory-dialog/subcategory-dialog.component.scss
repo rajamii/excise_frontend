@@ -208,7 +208,10 @@
       &:nth-child(even) { background: #f8fafc; }
       &:last-child { border-bottom: none; }
       &:hover { background: #eff6ff !important; }
-      &.scd-row--editing { background: #fef3c7 !important; }
+      &.scd-row--editing {
+        background: #fef9e7 !important;
+        min-height: 62px;
+      }
     }
 
     mat-cell {
@@ -284,12 +287,43 @@
   color: #1e293b;
 }
 
-.scd-inline-field {
+// ─── Native inline edit controls ─────────────────────────────────────
+.scd-edit-input {
   width: 100%;
-  margin-bottom: -1.25em;
+  padding: 7px 12px;
+  border: 2px solid #1C2B78;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(28, 43, 120, 0.1);
+  transition: border-color 0.15s, box-shadow 0.15s;
 
-  ::ng-deep .mat-mdc-form-field-subscript-wrapper {
-    display: none;
+  &:focus {
+    border-color: #2d3fa6;
+    box-shadow: 0 0 0 3px rgba(28, 43, 120, 0.18);
+  }
+}
+
+.scd-edit-select {
+  padding: 7px 10px;
+  border: 2px solid #1C2B78;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  min-width: 120px;
+  box-shadow: 0 0 0 3px rgba(28, 43, 120, 0.1);
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    border-color: #2d3fa6;
+    box-shadow: 0 0 0 3px rgba(28, 43, 120, 0.18);
   }
 }
 
