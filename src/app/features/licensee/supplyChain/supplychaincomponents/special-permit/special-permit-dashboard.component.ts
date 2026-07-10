@@ -60,13 +60,16 @@ export class SpecialPermitDashboardComponent implements OnInit {
   ) {}
 
   /** Returns true only when the logged-in user is a licensee. */
-  private get isLicenseeUser(): boolean {
+  get isLicenseeUser(): boolean {
     const user = this.accountService.getCurrentUser();
     const roleName = String(user?.role?.name || '').toLowerCase();
     return roleName.includes('licensee');
   }
 
   ngOnInit(): void {
+    if (!this.isLicenseeUser) {
+      this.activeSummaryFilter = '';
+    }
     this.loadData();
   }
 
@@ -139,11 +142,14 @@ export class SpecialPermitDashboardComponent implements OnInit {
   }
 
   printPermit(row: SpecialPermitItem): void {
-    Swal.fire({
-      title: 'Special Permit License',
-      text: 'Successful',
-      icon: 'success',
-      confirmButtonText: 'OK'
+    const id = row.id || row.applicationId;
+    this.router.navigate(['/unified-letter-view/special-permit'], {
+      queryParams: {
+        id,
+        ref: row.applicationId,
+        type: 'special-permit',
+        source: 'licensee'
+      }
     });
   }
 

@@ -1,0 +1,162 @@
+<div class="final-special-permit-view">
+  <!-- Action Bar (Hidden during printing) -->
+  <div class="header-actions no-print">
+    <button class="btn btn-outline-secondary me-2" (click)="goBack()">
+      <i class="bi bi-arrow-left me-1"></i>{{ getBackButtonText() }}
+    </button>
+    <button class="btn btn-primary" (click)="printPermit()">
+      <i class="bi bi-printer me-1"></i>Print Final Permit
+    </button>
+  </div>
+
+  <div class="alert alert-info no-print" *ngIf="isLoading">Loading Special Permit data...</div>
+  <div class="alert alert-danger no-print" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</div>
+
+  <!-- Printable Area -->
+  <div *ngIf="!isLoading && permitData" class="print-card-wrapper">
+    <div id="specialPermitPrintSection" 
+         [class]="permitData.permissionDuration === 'per_day' ? 'final-letter-container' : 'final-certificate-container'">
+      
+      <!-- Watermark background -->
+      <div class="print-watermark" aria-hidden="true">
+        <span *ngFor="let row of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]">SIKKIM EXCISE</span>
+      </div>
+
+      <!-- Layout 1: PER DAY -->
+      <ng-container *ngIf="permitData.permissionDuration === 'per_day'">
+        <!-- Official Letter Header -->
+        <div class="letter-header">
+          <div class="logos-container">
+            <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
+            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+          </div>
+          <div class="dept-title">EXCISE DEPARTMENT</div>
+          <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
+          <div class="dept-address">EXCISE HEADQUARTERS, M. G. MARG, GANGTOK - 737 101</div>
+          <div class="divider-line"></div>
+        </div>
+
+        <!-- Reference and Date -->
+        <div class="letter-meta">
+          <div class="letter-number">
+            No: <strong>{{ permitData.applicationId }} / Excise</strong>
+          </div>
+          <div class="letter-date">
+            Dated: <strong>{{ permitData.approvedDate | date: 'dd/MM/yyyy' }}</strong>
+          </div>
+        </div>
+
+        <!-- Addressee -->
+        <div class="addressee-section">
+          <div class="to-line">To,</div>
+          <div class="addressee-details">
+            <div class="addressee-name">The General Manager,</div>
+            <div class="company-name"><strong>M/s {{ permitData.establishmentName }},</strong></div>
+            <div class="company-address">{{ permitData.establishmentAddress }}.</div>
+          </div>
+        </div>
+
+        <!-- Subject -->
+        <div class="subject-section">
+          <div class="subject-line">
+            Sub: <strong><u>Special Permission to Operate {{ permitData.licenseSubCategoryName }} on Dry Day i.e., on {{ getFormattedDates() }}.</u></strong>
+          </div>
+        </div>
+
+        <!-- Letter Body -->
+        <div class="letter-body">
+          Reference your application dated: <strong>{{ permitData.submittedOn | date: 'dd.MM.yyyy' }}</strong>, on the subject cited above, this is to inform you that your request has been considered on payment of Rs <strong>{{ getDryDayBaseFee() | number:'1.2-2' }}/-</strong> per Dry Day as special permission fee.
+        </div>
+
+        <!-- Bottom Signatures and Stamp -->
+        <div class="bottom-signatures">
+          <div class="seal-container">
+            <img src="assets/fav-icon-black.png" alt="Seal" class="stamp-image">
+            <div class="seal-label">Excise Department</div>
+            <div class="seal-label-sub">Govt. of Sikkim</div>
+          </div>
+          <div class="signature-container">
+            <img src="assets/comm_sign.jpg" alt="Signature" class="signature-image">
+            <div class="signatory-name"><strong>(B. Chhetri) SES</strong></div>
+            <div class="signatory-title">Commissioner of Excise</div>
+            <div class="signatory-dept">Excise Headquarters/Gangtok</div>
+            <div class="signatory-file">File no: GOS/271/Ex/HQ/{{ permitData.financialYear }}</div>
+          </div>
+        </div>
+
+        <!-- Contact/Footer Address Bar -->
+        <div class="footer-address-bar">
+          Excise Headquarters, M. G. Marg, Gangtok - 737 101 | Website: excise.sikkim.gov.in | E-mail: excise.dept&#64;sikkim.gov.in
+        </div>
+      </ng-container>
+
+      <!-- Layout 2: PER ANNUM -->
+      <ng-container *ngIf="permitData.permissionDuration === 'per_annum'">
+        <!-- Official Certificate Header -->
+        <div class="letter-header">
+          <div class="logos-container">
+            <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
+            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+          </div>
+          <div class="dept-title">EXCISE DEPARTMENT</div>
+          <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
+          <div class="dept-address">EXCISE HEADQUARTERS, M. G. MARG, GANGTOK - 737 101</div>
+          <div class="divider-line"></div>
+        </div>
+
+        <!-- Certificate Title -->
+        <div class="certificate-title">
+          SPECIAL PERMISSION TO OPERATE BAR ON DRY DAYS
+        </div>
+
+        <!-- Details Table -->
+        <table class="details-table">
+          <tr>
+            <td class="label-cell">License Number</td>
+            <td class="colon-cell">:</td>
+            <td class="value-cell">{{ permitData.licenseId }}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Name of the Licensee</td>
+            <td class="colon-cell">:</td>
+            <td class="value-cell">{{ permitData.establishmentName || permitData.applicantName }}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">License Category</td>
+            <td class="colon-cell">:</td>
+            <td class="value-cell">{{ permitData.licenseCategoryName }}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Address of the Business Premises</td>
+            <td class="colon-cell">:</td>
+            <td class="value-cell">{{ permitData.establishmentAddress }}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">District</td>
+            <td class="colon-cell">:</td>
+            <td class="value-cell">{{ permitData.districtName }}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Mode of Operation</td>
+            <td class="colon-cell">:</td>
+            <td class="value-cell">{{ permitData.modeOfOperation }}</td>
+          </tr>
+        </table>
+
+        <!-- Certificate Body Statement -->
+        <div class="certificate-body">
+          The Special Permission Fee of Rs <strong>{{ permitData.paymentAmount | number:'1.2-2' }}/-</strong> for the Financial Year <strong>{{ permitData.financialYear }}</strong> vide Transaction Reference Number <strong>{{ permitData.paymentTxnId }}</strong> dated <strong>{{ permitData.paymentTxnDate | date: 'dd.MM.yyyy' }}</strong> has been acknowledged by the Department.
+        </div>
+
+        <!-- Certificate Signature block -->
+        <div class="bottom-signatures" style="justify-content: flex-end;">
+          <div class="signature-container">
+            <img src="assets/comm_sign.jpg" alt="Signature" class="signature-image">
+            <div class="signatory-name"><strong>Commissioner</strong></div>
+            <div class="signatory-title">Excise Department</div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>

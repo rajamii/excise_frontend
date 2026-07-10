@@ -194,6 +194,14 @@ export const routes: Routes = [
       ).then((m) => m.FinalrequistionlettersComponent),
   },
   {
+    path: "unified-letter-view/special-permit",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finalspecialpermit/finalspecialpermit.component"
+      ).then((m) => m.FinalspecialpermitComponent),
+  },
+  {
     path: "unified-letter-view/transit",
     canActivate: [UserRouteAccessService],
     loadComponent: () =>
