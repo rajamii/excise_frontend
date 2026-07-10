@@ -58,16 +58,9 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Select Financial Year</mat-label>
-              <mat-select formControlName="financialYear" required>
-                @for (year of financialYears; track year) {
-                  <mat-option [value]="year">{{ year }}</mat-option>
-                }
-              </mat-select>
-              <mat-icon matPrefix>place</mat-icon>
-              @if (form.controls.financialYear.invalid && form.controls.financialYear.touched) {
-                <mat-error>{{ getErrorMessage('financialYear') }}</mat-error>
-              }
+              <mat-label>Financial Year</mat-label>
+              <input matInput [value]="form.controls.financialYear.value" readonly />
+              <mat-icon matPrefix>calendar_today</mat-icon>
             </mat-form-field>
 
             @if (isPerDayCategory) {
