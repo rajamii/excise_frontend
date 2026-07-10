@@ -16,9 +16,7 @@ mat-card {
     align-items: center;
     justify-content: space-between;
 
-    .heading {
-      flex: 1;
-    }
+    .heading { flex: 1; }
 
     .validation {
       font-size: 12px;
@@ -33,6 +31,7 @@ mat-card {
   }
 }
 
+// ── Form grid ──────────────────────────────────────────────
 .form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -40,20 +39,281 @@ mat-card {
   row-gap: 12px;
   align-items: start;
 
-  mat-form-field {
-    width: 100%;
-  }
-
-  .field-wide {
-    grid-column: 1 / -1;
-  }
+  mat-form-field { width: 100%; }
+  .field-wide { grid-column: 1 / -1; }
 
   mat-icon[matPrefix] {
     margin-right: 8px;
     color: #0f9bb8;
   }
+
+  // Licensee spans 2 cols, Financial Year spans 1 — same row
+  .field-licensee {
+    grid-column: span 2;
+  }
 }
 
+// ── Dry Day Section ────────────────────────────────────────
+.dry-day-section {
+  margin-top: 4px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #1C2B78 0%, #2d3fa6 100%);
+  }
+
+  &__icon {
+    color: #fff;
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+  }
+
+  &__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    flex: 1;
+  }
+
+  &__required {
+    color: #fca5a5;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  &__hint {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.65);
+    font-style: italic;
+  }
+}
+
+.dry-day-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 20px;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.dry-day-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  font-size: 0.85rem;
+  color: #c2410c;
+  background: #fff7ed;
+  border-radius: 0 0 13px 13px;
+
+  mat-icon { color: #f97316; flex-shrink: 0; }
+}
+
+// ── Dry Day Picker ─────────────────────────────────────────
+.dry-day-picker {
+  padding: 20px;
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+
+  &__month-select {
+    width: 220px;
+  }
+}
+
+// ── Calendar Card ──────────────────────────────────────────
+.dry-day-calendar-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(28, 43, 120, 0.1);
+  min-width: 264px;
+  max-width: 300px;
+
+  &__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 10px;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+}
+
+.weekday-label {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 0;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  cursor: default;
+  background: transparent;
+  color: #94a3b8;
+  outline: none;
+
+  &--empty {
+    border: none;
+    background: transparent;
+  }
+
+  &--disabled {
+    background: #f8fafc;
+    color: #e2e8f0;
+    border-color: transparent;
+    cursor: not-allowed;
+  }
+
+  &--allowed {
+    background: #eff6ff;
+    color: #1e293b;
+    border-color: #bfdbfe;
+    cursor: pointer;
+    font-weight: 700;
+
+    &:hover:not([disabled]) {
+      background: #dbeafe;
+      border-color: #1C2B78;
+      color: #1C2B78;
+      transform: scale(1.1);
+      box-shadow: 0 2px 6px rgba(28, 43, 120, 0.2);
+    }
+  }
+
+  &--selected {
+    background: #1C2B78 !important;
+    color: #fff !important;
+    border-color: #1C2B78 !important;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(28, 43, 120, 0.4);
+
+    &:hover:not([disabled]) {
+      background: #2d3fa6 !important;
+      transform: scale(1.1);
+    }
+  }
+}
+
+// ── Selected Dates Chips ───────────────────────────────────
+.dry-day-selected {
+  padding: 16px 20px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 12px;
+  }
+
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 11px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    background: #1C2B78;
+    color: #fff;
+  }
+
+  &__empty {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    font-style: italic;
+    margin: 0;
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__error {
+    color: #ef4444;
+    font-size: 0.75rem;
+    margin: 8px 0 0;
+  }
+}
+
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e40af;
+
+  &__icon {
+    font-size: 14px;
+    height: 14px;
+    width: 14px;
+    color: #3b82f6;
+    flex-shrink: 0;
+  }
+
+  &__remove {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: #93c5fd;
+    transition: color 0.15s;
+    outline: none;
+    line-height: 1;
+
+    mat-icon {
+      font-size: 16px;
+      height: 16px;
+      width: 16px;
+    }
+
+    &:hover { color: #1d4ed8; }
+  }
+}
+
+// ── Other ──────────────────────────────────────────────────
 .form-note {
   margin: 10px 0 8px;
   color: #f59e0b;
@@ -65,10 +325,7 @@ mat-card {
 .action-row {
   display: flex;
   justify-content: center;
-
-  button {
-    min-width: 230px;
-  }
+  button { min-width: 230px; }
 }
 
 .state-panel,
@@ -79,19 +336,11 @@ mat-card {
   gap: 12px;
   min-height: 130px;
   color: #334155;
-
-  mat-icon {
-    color: #1c2b78;
-  }
+  mat-icon { color: #1c2b78; }
 }
 
-.state-panel--error mat-icon {
-  color: #dc2626;
-}
-
-.state-panel--empty mat-icon {
-  color: #f59e0b;
-}
+.state-panel--error mat-icon { color: #dc2626; }
+.state-panel--empty mat-icon { color: #f59e0b; }
 
 .success-panel {
   min-height: 0;
@@ -101,24 +350,19 @@ mat-card {
   border-radius: 8px;
   background: #ecfdf5;
   border: 1px solid #bbf7d0;
-
-  mat-icon {
-    color: #16a34a;
-  }
+  mat-icon { color: #16a34a; }
 }
 
 @media (max-width: 900px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
+  .form-grid { grid-template-columns: 1fr; }
 
   mat-card mat-card-header {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
-
-    .validation {
-      white-space: normal;
-    }
+    .validation { white-space: normal; }
   }
+
+  .dry-day-picker { flex-direction: column; }
+  .dry-day-picker__month-select { width: 100%; }
 }

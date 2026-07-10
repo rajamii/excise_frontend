@@ -42,7 +42,7 @@
               <mat-icon matPrefix>place</mat-icon>
             </mat-form-field>
 
-            <mat-form-field appearance="outline" class="field-wide">
+            <mat-form-field appearance="outline" class="field-licensee">
               <mat-label>Select Licensee</mat-label>
               <mat-select formControlName="licensee" required (selectionChange)="onLicenseChange($event.value)">
                 @for (license of licenses; track getLicenseKey(license)) {
@@ -71,56 +71,64 @@
             </mat-form-field>
 
             @if (isPerDayCategory) {
-              <div class="field-wide date-selection-panel" style="width: 100%; display: block; margin-top: 8px;">
-                <div style="font-size: 0.9rem; font-weight: 600; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                  <mat-icon style="color: #64748b;">event</mat-icon>
-                  Select Dry Day Dates *
+              <div class="field-wide dry-day-section">
+                <div class="dry-day-section__header">
+                  <mat-icon class="dry-day-section__icon">event</mat-icon>
+                  <span class="dry-day-section__title">Select Dry Day Dates</span>
+                  <span class="dry-day-section__required">*</span>
+                  @if (!isLoadingAllowedDates && allowedDryDayDates.length) {
+                    <span class="dry-day-section__hint">Click on highlighted dates to select them</span>
+                  }
                 </div>
-                
+
                 @if (isLoadingAllowedDates) {
-                  <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #64748b;">
-                    <mat-spinner diameter="18"></mat-spinner>
-                    <span>Loading allowed Dry Day dates...</span>
+                  <div class="dry-day-loading">
+                    <mat-spinner diameter="20"></mat-spinner>
+                    <span>Loading allowed dates...</span>
                   </div>
                 } @else if (!allowedDryDayDates.length) {
-                  <div style="padding: 16px; border: 1px solid #fed7aa; background-color: #fff7ed; color: #c2410c; border-radius: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;">
-                    <mat-icon>warning</mat-icon>
-                    <span>No Dry Day dates configured for financial year {{ form.controls.financialYear.value }}. Please contact Site Admin.</span>
+                  <div class="dry-day-empty">
+                    <mat-icon>event_busy</mat-icon>
+                    <span>No Dry Day dates configured for <strong>{{ form.controls.financialYear.value }}</strong>. Please contact Site Admin.</span>
                   </div>
                 } @else {
-                  <div class="selection-controls-row" style="display: flex; flex-direction: column; gap: 12px;">
-                    <mat-form-field appearance="outline" style="max-width: 250px;">
-                      <mat-label>Select Month</mat-label>
-                      <mat-select [(value)]="selectedMonthLabel" (selectionChange)="generateCurrentMonthCalendar()">
-                        @for (m of activeMonths; track m.label) {
-                          <mat-option [value]="m.label">{{ m.name }} {{ m.year }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                    
-                    <div class="calendar-card-wrapper" *ngIf="selectedMonthLabel" style="max-width: 280px; margin: 0; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; background: #fff; box-sizing: border-box;">
-                      <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 8px;">
+                  <div class="dry-day-picker">
+                    <!-- Month selector -->
+                    <div class="dry-day-picker__month-row">
+                      <mat-form-field appearance="outline" class="dry-day-picker__month-select">
+                        <mat-label>Select Month</mat-label>
+                        <mat-icon matPrefix style="color:#1C2B78;font-size:18px;height:18px;width:18px;margin-right:4px">calendar_month</mat-icon>
+                        <mat-select [(value)]="selectedMonthLabel" (selectionChange)="generateCurrentMonthCalendar()">
+                          @for (m of activeMonths; track m.label) {
+                            <mat-option [value]="m.label">{{ m.name }} {{ m.year }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                    </div>
+
+                    <!-- Calendar card -->
+                    <div class="dry-day-calendar-card" *ngIf="selectedMonthLabel">
+                      <!-- Weekday headers -->
+                      <div class="dry-day-calendar-card__weekdays">
                         @for (day of weekDays; track day) {
-                          <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">{{ day }}</div>
+                          <div class="weekday-label">{{ day }}</div>
                         }
                       </div>
-                      
-                      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;">
+
+                      <!-- Day grid -->
+                      <div class="dry-day-calendar-card__grid">
                         @for (day of currentMonthDays; track $index) {
                           @if (!day.dayNumber) {
-                            <div style="aspect-ratio: 1;"></div>
+                            <div class="cal-day cal-day--empty"></div>
                           } @else {
                             <button
                               type="button"
+                              class="cal-day"
+                              [class.cal-day--allowed]="day.isAllowed"
+                              [class.cal-day--selected]="day.isSelected"
+                              [class.cal-day--disabled]="!day.isAllowed"
                               [disabled]="!day.isAllowed"
-                              (click)="toggleFormDate(day.dateStr)"
-                              style="aspect-ratio: 1; border-radius: 8px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;"
-                              [style.background]="!day.isAllowed ? '#f1f5f9' : (day.isSelected ? '#ffebee' : '#fff')"
-                              [style.color]="!day.isAllowed ? '#cbd5e1' : (day.isSelected ? '#c62828' : '#334155')"
-                              [style.border]="!day.isAllowed ? 'none' : (day.isSelected ? '1px solid #ffcdd2' : '1px solid #cbd5e1')"
-                              [style.cursor]="!day.isAllowed ? 'default' : 'pointer'"
-                              [style.font-weight]="day.isSelected ? '700' : '600'"
-                            >
+                              (click)="toggleFormDate(day.dateStr)">
                               {{ day.dayNumber }}
                             </button>
                           }
@@ -128,37 +136,34 @@
                       </div>
                     </div>
                   </div>
-                  
-                  <div class="selected-dates-panel" style="width: 100%; display: block; margin-top: 16px; box-sizing: border-box;">
-                    <div style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">
-                      Selected Dates ({{ form.controls.selectedDates.value?.length || 0 }})
+
+                  <!-- Selected dates chips -->
+                  <div class="dry-day-selected">
+                    <div class="dry-day-selected__label">
+                      Selected Dates
+                      <span class="dry-day-selected__count">{{ form.controls.selectedDates.value?.length || 0 }}</span>
                     </div>
-                    
+
                     @if (!form.controls.selectedDates.value?.length) {
-                      <div style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">No dates selected yet. Click the active dates in the calendar above.</div>
+                      <p class="dry-day-selected__empty">No dates selected yet.</p>
                     } @else {
-                      <div style="display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%;">
+                      <div class="dry-day-selected__chips">
                         @for (dateStr of form.controls.selectedDates.value; track dateStr) {
-                          <div 
-                            style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #334155; box-sizing: border-box;"
-                          >
-                            {{ dateStr | date:'dd MMM yyyy' }}
-                            <button 
-                              type="button" 
-                              (click)="toggleFormDate(dateStr)" 
-                              style="background: none; border: none; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; outline: none;"
-                            >
-                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">cancel</mat-icon>
+                          <div class="date-chip">
+                            <mat-icon class="date-chip__icon">today</mat-icon>
+                            <span>{{ dateStr | date:'dd MMM yyyy' }}</span>
+                            <button type="button" class="date-chip__remove" (click)="toggleFormDate(dateStr)">
+                              <mat-icon>close</mat-icon>
                             </button>
                           </div>
                         }
                       </div>
                     }
+
+                    @if (form.controls.selectedDates.invalid && form.controls.selectedDates.touched) {
+                      <p class="dry-day-selected__error">Please select at least one Dry Day date.</p>
+                    }
                   </div>
-                  
-                  @if (form.controls.selectedDates.invalid && form.controls.selectedDates.touched) {
-                    <div style="color: #ef4444; font-size: 0.75rem; margin-top: 8px;">Please select at least one Dry Day date.</div>
-                  }
                 }
               </div>
             }
