@@ -88,28 +88,29 @@ export class FinalspecialpermitComponent implements OnInit {
   }
 
   private mapApiDataToPermit(apiData: any): void {
-    const selectedDates = Array.isArray(apiData.selected_dates) ? apiData.selected_dates : [];
+    const selectedDates = Array.isArray(apiData.selectedDates) ? apiData.selectedDates :
+                          (Array.isArray(apiData.selected_dates) ? apiData.selected_dates : []);
     
     this.permitData = {
-      id: apiData.id || apiData.application_id || '',
-      applicationId: apiData.application_id || apiData.id || '',
-      applicantName: apiData.applicant_name || '',
-      establishmentName: apiData.establishment_name || '',
-      establishmentAddress: apiData.establishment_address || apiData.district_name || 'Sikkim',
-      licenseId: apiData.license_id || '',
-      licenseCategoryName: apiData.license_category_name || '',
-      licenseSubCategoryName: apiData.license_sub_category_name || '',
-      districtName: apiData.district_name || '',
-      modeOfOperation: apiData.mode_of_operation || 'Self',
-      paymentAmount: Number(apiData.payment_amount || 0),
-      dryDayFeeType: apiData.dry_day_fee_type || '',
-      permissionDuration: apiData.permission_duration === 'per_day' ? 'per_day' : 'per_annum',
+      id: apiData.id || apiData.applicationId || apiData.application_id || '',
+      applicationId: apiData.applicationId || apiData.application_id || apiData.id || '',
+      applicantName: apiData.applicantName || apiData.applicant_name || '',
+      establishmentName: apiData.establishmentName || apiData.establishment_name || '',
+      establishmentAddress: apiData.establishmentAddress || apiData.establishment_address || apiData.districtName || apiData.district_name || 'Sikkim',
+      licenseId: apiData.licenseId || apiData.license_id || '',
+      licenseCategoryName: apiData.licenseCategoryName || apiData.license_category_name || '',
+      licenseSubCategoryName: apiData.licenseSubCategoryName || apiData.license_sub_category_name || '',
+      districtName: apiData.districtName || apiData.district_name || '',
+      modeOfOperation: apiData.modeOfOperation || apiData.mode_of_operation || 'Self',
+      paymentAmount: Number(apiData.paymentAmount ?? apiData.payment_amount ?? 0),
+      dryDayFeeType: apiData.dryDayFeeType || apiData.dry_day_fee_type || '',
+      permissionDuration: (apiData.permissionDuration || apiData.permission_duration) === 'per_day' ? 'per_day' : 'per_annum',
       selectedDates: selectedDates,
-      financialYear: apiData.financial_year || '',
-      paymentTxnId: apiData.payment_txn_id || 'N/A',
-      paymentTxnDate: apiData.payment_txn_date ? new Date(apiData.payment_txn_date) : new Date(),
-      submittedOn: apiData.created_at ? new Date(apiData.created_at) : new Date(),
-      approvedDate: apiData.updated_at ? new Date(apiData.updated_at) : new Date()
+      financialYear: apiData.financialYear || apiData.financial_year || '',
+      paymentTxnId: apiData.paymentTxnId || apiData.payment_txn_id || 'N/A',
+      paymentTxnDate: (apiData.paymentTxnDate || apiData.payment_txn_date) ? new Date(apiData.paymentTxnDate || apiData.payment_txn_date) : new Date(),
+      submittedOn: (apiData.createdAt || apiData.created_at) ? new Date(apiData.createdAt || apiData.created_at) : new Date(),
+      approvedDate: (apiData.updatedAt || apiData.updated_at) ? new Date(apiData.updatedAt || apiData.updated_at) : new Date()
     };
   }
 
