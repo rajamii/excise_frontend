@@ -110,7 +110,11 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.applicationId = response?.application_id || '';
+          // DRF camelCase renderer converts application_id → applicationId
+          this.applicationId = response?.applicationId
+            || response?.application_id
+            || response?.id
+            || '';
           this.isSavedForPayment = true;
           this.isSubmitting = false;
 
