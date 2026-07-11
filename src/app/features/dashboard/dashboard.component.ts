@@ -1098,6 +1098,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const renewedIds = new Set<string>();
     
     [...applied, ...pending, ...awaitingPayment].forEach(app => {
+      if (app.type !== 'license-renewal') {
+        return;
+      }
       const raw = app.raw || {};
       
       const renewalOfValue = 
@@ -2386,7 +2389,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const approvedWithRenewal: UnifiedApplication[] = [];
           filteredApplications.approved.forEach((app: UnifiedApplication) => {
             const licenseId = this.extractLicenseId(app);
-            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            const isRenewed = app.type === 'new-license' && licenseId && renewedLicenseIds.has(licenseId);
             if (isRenewed) {
               approvedWithRenewal.push(app);
             } else {
@@ -2525,7 +2528,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const approvedWithRenewal: UnifiedApplication[] = [];
           filteredApplications.approved.forEach((app: UnifiedApplication) => {
             const licenseId = this.extractLicenseId(app);
-            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            const isRenewed = app.type === 'new-license' && licenseId && renewedLicenseIds.has(licenseId);
             if (isRenewed) {
               approvedWithRenewal.push(app);
             } else {

@@ -327,7 +327,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
           filteredApplications.approved.forEach((app: UnifiedApplication) => {
             const licenseId = this.extractLicenseId(app);
-            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            const isRenewed = app.type === 'new-license' && licenseId && renewedLicenseIds.has(licenseId);
             
             if (isRenewed) {
               // console.log(`Dashboard: Moving approved license ${licenseId} to Applied - has active renewal`);
@@ -456,6 +456,9 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     const renewedIds = new Set<string>();
     
     [...applied, ...pending, ...awaitingPayment].forEach(app => {
+      if (app.type !== 'license-renewal') {
+        return;
+      }
       const raw = app.raw || {};
       
       // PRIORITY 1: Check renewalOf or old license fields
