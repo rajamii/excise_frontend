@@ -56,7 +56,7 @@ export class UnifiedDashboardService {
   private inferAppTypeFromId(applicationId: string): UnifiedApplication['type'] | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
-    if (id.startsWith('SP/')) return 'special-permit';
+    if (id.startsWith('DP/') || id.startsWith('SP/')) return 'special-permit';
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
     if (id.startsWith('LRA/')) return 'license-renewal';

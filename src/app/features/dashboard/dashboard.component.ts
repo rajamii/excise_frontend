@@ -526,7 +526,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       modules.push({ value: 'hologram', label: 'Hologram Procurement' });
     }
     if (this.showSpecialPermitChartOption) {
-      modules.push({ value: 'specialPermit', label: 'Special Permits' });
+      modules.push({ value: 'specialPermit', label: 'Dry Day Permits' });
     }
     this.availableChartModules = modules;
   }
@@ -3226,8 +3226,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
       'license-renewal': 'License Renewal Management',
-      'special-permit': 'Special Permit',
-      'special-permit-apply': 'Prepare Special Permit Application',
+      'special-permit': 'Dry Day Permit',
+      'special-permit-apply': 'Prepare Dry Day Permit Application',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',
@@ -3301,7 +3301,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'hologram': return 'New Hologram';
       case 'hologram-request': return 'New Request';
       case 'new-license': return 'Apply New License';
-      case 'special-permit': return 'Apply Special Permit';
+      case 'special-permit': return 'Apply Dry Day Permit';
       case 'company-registration': return 'Apply Company';
       case 'company-collaboration': return 'Apply Collaboration';
       case 'label-registration': return 'Apply Label';
@@ -3647,7 +3647,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       parts.push('Company Reg');
     }
     if ((this.awaitingPaymentBreakdown as any).specialPermit > 0) {
-      parts.push('Special Permit');
+      parts.push('Dry Day Permit');
     }
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }

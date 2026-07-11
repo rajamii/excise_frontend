@@ -1042,6 +1042,10 @@ private initializeWalletContextAndLoadData(): void {
     const txnId = String(this.pickAny(row, ['transaction_id', 'transactionId'], '')).toUpperCase();
     const reference = String(this.pickAny(row, ['reference_no', 'referenceNo'], '')).toUpperCase();
 
+    if (reference.startsWith('DP/') || reference.startsWith('SP/')) {
+      return 'Dry Day Permit Fee Paid';
+    }
+
     // Prefer explicit wallet type when available (fixes license/security utilization rows
     // incorrectly showing "Wallet Recharge" in those tabs).
     if (walletType === 'license_fee') {

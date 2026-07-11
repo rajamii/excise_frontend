@@ -53,7 +53,7 @@
             <!-- Special Permit -->
             <button *ngIf="showSpecialPermitMenu" class="nav-item special-permit-nav-item" (click)="navigateToSupplyChain('special-permit')" [class.active]="isDashboardSectionActive('special-permit')">
               <mat-icon class="nav-icon">assignment_turned_in</mat-icon>
-              <span class="nav-text">Special Permit</span>
+              <span class="nav-text">Dry Day Permit</span>
               <span class="nav-badge" *ngIf="getPendingCount('special-permit') as pending">{{ pending }}</span>
               <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('special-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>

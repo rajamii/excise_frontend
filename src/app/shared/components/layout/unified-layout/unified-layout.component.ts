@@ -105,7 +105,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
-    { section: 'special-permit', label: 'Special Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
+    { section: 'special-permit', label: 'Dry Day Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit', hideForPermitSection: true },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit', hideForPermitSection: true },

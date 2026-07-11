@@ -120,7 +120,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
 
           Swal.fire({
             title: 'Application Submitted!',
-            html: `Your Special Permit application (ID: <b>${this.applicationId}</b>) has been submitted successfully.<br>Permit fee will be payable once the application is approved.`,
+            html: `Your Dry Day Permit application (ID: <b>${this.applicationId}</b>) has been submitted successfully.<br>Permit fee will be payable once the application is approved.`,
             icon: 'success',
             showCancelButton: false,
             confirmButtonText: 'Go to Dashboard',
@@ -133,7 +133,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
           });
         },
         error: (error) => {
-          this.submitError = error?.error?.detail || 'Unable to submit Special Permit application. Please try again.';
+          this.submitError = error?.error?.detail || 'Unable to submit Dry Day Permit application. Please try again.';
           this.isSubmitting = false;
         }
       });

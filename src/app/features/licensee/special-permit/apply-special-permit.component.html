@@ -1,7 +1,7 @@
 <form [formGroup]="form" class="special-permit-form">
   <mat-card>
     <mat-card-header>
-      <div class="heading">Special Permission for Dry Day</div>
+      <div class="heading">Dry Day Permit Application</div>
       <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
@@ -19,7 +19,7 @@
       } @else if (!licenses.length) {
         <div class="state-panel state-panel--empty">
           <mat-icon>info</mat-icon>
-          <span>No active license is available for Special Permission.</span>
+          <span>No active license is available for Dry Day Permit.</span>
         </div>
       } @else {
         @if (!isSavedForPayment) {
@@ -217,7 +217,7 @@
                 Application ID: <strong>{{ applicationId }}</strong> has been submitted.
               </p>
               <p style="color: #374151; font-size: 0.95rem; margin-top: 12px; max-width: 500px; line-height: 1.5;">
-                Your request for a Special Permit has been successfully submitted for officer review. The permit fee of <strong>₹{{ calculatedTotalFee | number:'1.2-2' }}</strong> will be payable once the application is approved.
+                Your request for a Dry Day Permit has been successfully submitted for officer review. The permit fee of <strong>₹{{ calculatedTotalFee | number:'1.2-2' }}</strong> will be payable once the application is approved.
               </p>
             </div>
             <div style="margin-top: 12px;">

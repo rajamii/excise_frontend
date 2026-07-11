@@ -66,8 +66,8 @@
           placeholder="Search by ID / Applicant / Establishment"
           [(ngModel)]="searchFilter"
           (ngModelChange)="applyFilters()"
-          aria-label="Search special permit applications"
-          title="Search special permit applications"
+          aria-label="Search dry day permit applications"
+          title="Search dry day permit applications"
         />
       </div>
     </div>
@@ -78,7 +78,7 @@
       <div class="register-header-bar">
         <h5 class="register-table-title">
           <i class="bi bi-table me-2"></i>
-          Special Permit Application Entries
+          Dry Day Permit Application Entries
         </h5>
         <div class="register-info">
           <span class="entries-count">{{ filteredRows.length }} Entries</span>
@@ -154,7 +154,7 @@
       <div class="empty-state" *ngIf="!isLoading && !error && filteredRows.length === 0">
         <div class="empty-icon"><i class="bi bi-inbox"></i></div>
         <h5>No Applications</h5>
-        <p class="text-muted">No special permit applications found.</p>
+        <p class="text-muted">No dry day permit applications found.</p>
       </div>
 
       <div class="loading-state" *ngIf="isLoading">

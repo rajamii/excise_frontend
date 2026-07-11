@@ -602,7 +602,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       parts.push(`Company Registration (${this.awaitingPaymentBreakdown.companyRegistration})`);
     }
     if (this.awaitingPaymentBreakdown.specialPermit > 0) {
-      parts.push(`Special Permit (${this.awaitingPaymentBreakdown.specialPermit})`);
+      parts.push(`Dry Day Permit (${this.awaitingPaymentBreakdown.specialPermit})`);
     }
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }
