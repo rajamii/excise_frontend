@@ -227,7 +227,7 @@ export class SpecialPermitDashboardComponent implements OnInit {
       statusGroup: group,
       canView: Boolean(applicationId),
       canPay: this.isLicenseeUser && group === 'awaiting-payment',
-      canPrint: group === 'approved',
+      canPrint: group === 'approved' && Boolean(row?.is_fee_paid ?? row?.isFeePaid ?? false),
       paymentAmount: Number(row?.payment_amount ?? row?.paymentAmount ?? 0)
     };
   }
