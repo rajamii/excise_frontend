@@ -29,7 +29,10 @@
         <div class="letter-header">
           <div class="logos-container">
             <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
-            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+            <div class="header-right-logos">
+              <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+              <img *ngIf="qrCodeUrl" [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
+            </div>
           </div>
           <div class="dept-title">EXCISE DEPARTMENT</div>
           <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
@@ -87,7 +90,10 @@
 
         <!-- Contact/Footer Address Bar -->
         <div class="footer-address-bar">
-          Excise Headquarters, M. G. Marg, Gangtok - 737 101 | Website: excise.sikkim.gov.in | E-mail: excise.dept&#64;sikkim.gov.in
+          <div>Excise Headquarters, M. G. Marg, Gangtok - 737 101 | Website: excise.sikkim.gov.in | E-mail: excise.dept&#64;sikkim.gov.in</div>
+          <div class="validation-url" *ngIf="permitData.validationCode" style="margin-top: 6px; font-weight: bold; font-family: Arial, sans-serif; font-size: 11px;">
+            Verification Link: {{ getValidationLink() }}
+          </div>
         </div>
       </ng-container>
 
@@ -97,7 +103,10 @@
         <div class="letter-header">
           <div class="logos-container">
             <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
-            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+            <div class="header-right-logos">
+              <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+              <img *ngIf="qrCodeUrl" [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
+            </div>
           </div>
           <div class="dept-title">EXCISE DEPARTMENT</div>
           <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
@@ -150,11 +159,19 @@
         </div>
 
         <!-- Certificate Signature block -->
-        <div class="bottom-signatures" style="justify-content: flex-end;">
+        <div class="bottom-signatures" style="justify-content: flex-end; margin-bottom: 20px;">
           <div class="signature-container">
             <img src="assets/comm_sign.jpg" alt="Signature" class="signature-image">
             <div class="signatory-name"><strong>Commissioner</strong></div>
             <div class="signatory-title">Excise Department</div>
+          </div>
+        </div>
+
+        <!-- Contact/Footer Address Bar -->
+        <div class="footer-address-bar">
+          <div>Excise Headquarters, M. G. Marg, Gangtok - 737 101 | Website: excise.sikkim.gov.in | E-mail: excise.dept&#64;sikkim.gov.in</div>
+          <div class="validation-url" *ngIf="permitData.validationCode" style="margin-top: 6px; font-weight: bold; font-family: Arial, sans-serif; font-size: 11px;">
+            Verification Link: {{ getValidationLink() }}
           </div>
         </div>
       </ng-container>

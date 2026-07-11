@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -25,6 +25,7 @@ interface SpecialPermitLetterData {
   paymentTxnDate: string | Date;
   submittedOn: string | Date;
   approvedDate: string | Date;
+  validationCode?: string;
 }
 
 @Component({
@@ -34,11 +35,13 @@ interface SpecialPermitLetterData {
   templateUrl: './finalspecialpermit.component.html',
   styleUrl: './finalspecialpermit.component.scss'
 })
-export class FinalspecialpermitComponent implements OnInit {
+export class FinalspecialpermitComponent implements OnInit, OnDestroy {
   permitData?: SpecialPermitLetterData;
   isBrowser = false;
   isLoading = false;
   errorMessage = '';
+  qrCodeUrl = '';
+  private qrObjectUrl: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -65,6 +68,26 @@ export class FinalspecialpermitComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    if (this.qrObjectUrl) {
+      URL.revokeObjectURL(this.qrObjectUrl);
+    }
+  }
+
+  getValidationLink(): string {
+    if (!this.permitData?.validationCode) return '';
+    let backendOrigin = 'https://excise.sikkim.gov.in';
+    try {
+      if (environment.apiBaseUrl) {
+        const url = new URL(environment.apiBaseUrl);
+        backendOrigin = url.origin;
+      }
+    } catch (e) {
+      console.error('Failed to parse apiBaseUrl:', e);
+    }
+    return `${backendOrigin}/v/${this.permitData.validationCode}/`;
+  }
+
   private loadSpecialPermitData(id: string): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -74,6 +97,7 @@ export class FinalspecialpermitComponent implements OnInit {
         console.log('Special Permit data received:', data);
         if (data) {
           this.mapApiDataToPermit(data);
+          this.loadQrCode(id);
         } else {
           this.errorMessage = 'Special permit application not found.';
         }
@@ -83,6 +107,22 @@ export class FinalspecialpermitComponent implements OnInit {
         console.error('Error loading special permit data:', error);
         this.errorMessage = 'Failed to load special permit details. Please try again.';
         this.isLoading = false;
+      }
+    });
+  }
+
+  private loadQrCode(id: string): void {
+    this.specialPermitService.getSpecialPermitQrCode(id).subscribe({
+      next: (blob: Blob) => {
+        if (this.qrObjectUrl) {
+          URL.revokeObjectURL(this.qrObjectUrl);
+        }
+        this.qrObjectUrl = URL.createObjectURL(blob);
+        this.qrCodeUrl = this.qrObjectUrl;
+      },
+      error: (err) => {
+        console.error('Failed to load QR code:', err);
+        this.qrCodeUrl = '';
       }
     });
   }
@@ -110,7 +150,8 @@ export class FinalspecialpermitComponent implements OnInit {
       paymentTxnId: apiData.paymentTxnId || apiData.payment_txn_id || 'N/A',
       paymentTxnDate: (apiData.paymentTxnDate || apiData.payment_txn_date) ? new Date(apiData.paymentTxnDate || apiData.payment_txn_date) : new Date(),
       submittedOn: (apiData.createdAt || apiData.created_at) ? new Date(apiData.createdAt || apiData.created_at) : new Date(),
-      approvedDate: (apiData.updatedAt || apiData.updated_at) ? new Date(apiData.updatedAt || apiData.updated_at) : new Date()
+      approvedDate: (apiData.updatedAt || apiData.updated_at) ? new Date(apiData.updatedAt || apiData.updated_at) : new Date(),
+      validationCode: apiData.validationCode || apiData.validation_code || ''
     };
   }
 
@@ -206,6 +247,7 @@ export class FinalspecialpermitComponent implements OnInit {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          isolation: isolate;
         }
         .final-certificate-container {
           position: relative;
@@ -218,19 +260,25 @@ export class FinalspecialpermitComponent implements OnInit {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          isolation: isolate;
+        }
+        .final-letter-container > *:not(.print-watermark),
+        .final-certificate-container > *:not(.print-watermark) {
+          position: relative;
+          z-index: 1;
         }
         
         // Watermark CSS
         .print-watermark {
           display: flex !important;
-          position: absolute;
+          position: absolute !important;
           inset: 10px;
           flex-direction: column;
           justify-content: space-around;
           align-items: center;
           pointer-events: none;
           user-select: none;
-          z-index: 0;
+          z-index: -1 !important;
           overflow: hidden;
           transform: rotate(-25deg) scale(1.25);
         }
@@ -262,12 +310,24 @@ export class FinalspecialpermitComponent implements OnInit {
         .logos-container {
           display: flex;
           justify-content: space-between;
+          align-items: flex-start;
           width: 100%;
           margin-bottom: 15px;
+        }
+        .header-right-logos {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
         }
         .govt-logo {
           height: 80px;
           width: auto;
+          object-fit: contain;
+        }
+        .qr-code-img {
+          height: 80px;
+          width: 80px;
           object-fit: contain;
         }
         .dept-title {

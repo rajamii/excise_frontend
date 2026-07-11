@@ -44,4 +44,8 @@ export class SpecialPermitService {
       params: { financial_year: financialYear }
     });
   }
+
+  getSpecialPermitQrCode(applicationId: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/qr-code/${encodeURIComponent(applicationId)}/`, { responseType: 'blob' });
+  }
 }
