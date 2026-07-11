@@ -169,59 +169,93 @@ export class FinalspecialpermitComponent implements OnInit {
 
     const clonedSection = printContent.cloneNode(true) as HTMLElement;
 
+    // Convert relative image sources to absolute URLs using current origin
+    let allContent = clonedSection.outerHTML;
+    const assetBaseUrl = `${window.location.origin}/`;
+    allContent = allContent.replace(
+      /src="assets\//g,
+      `src="${assetBaseUrl}assets/`
+    );
+
     // Inject styles specifically for print window
     const styles = `
       <style>
         body {
           font-family: 'Times New Roman', serif;
           margin: 0;
-          padding: 20px;
-          background: #white;
+          padding: 0;
+          background: #fff;
           color: #000;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
+        @page {
+          size: A4;
+          margin: 12mm 10mm;
+        }
+        * {
+          box-sizing: border-box;
+        }
         .final-letter-container {
           position: relative;
-          padding: 15px;
+          padding: 35px 30px;
           box-sizing: border-box;
           max-width: 198mm;
+          min-height: 260mm;
           margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
         }
         .final-certificate-container {
           position: relative;
-          padding: 30px;
+          padding: 50px 40px;
           box-sizing: border-box;
           max-width: 198mm;
+          min-height: 260mm;
           margin: 0 auto;
           border: 4px double #000;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
         }
+        
+        // Watermark CSS
         .print-watermark {
+          display: flex !important;
           position: absolute;
-          inset: 0;
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          grid-gap: 40px;
-          opacity: 0.04;
-          transform: rotate(-30deg);
+          inset: 10px;
+          flex-direction: column;
+          justify-content: space-around;
+          align-items: center;
           pointer-events: none;
+          user-select: none;
           z-index: 0;
-          font-size: 20px;
-          font-weight: bold;
-          text-align: center;
-          padding-top: 100px;
+          overflow: hidden;
+          transform: rotate(-25deg) scale(1.25);
         }
         .print-watermark span {
-          display: inline-block;
+          display: block !important;
+          font-family: Arial, sans-serif;
+          font-size: 24px;
+          font-weight: 700;
+          letter-spacing: 2.5px;
+          color: rgba(22, 88, 58, 0.055) !important;
           white-space: nowrap;
+          line-height: 1.6;
+          width: 100%;
+          text-align: center;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
+
         .letter-header {
           display: flex;
           flex-direction: column;
           align-items: center;
           text-align: center;
           font-weight: bold;
-          margin-bottom: 25px;
+          margin-bottom: 35px;
           position: relative;
           z-index: 1;
         }
@@ -229,23 +263,24 @@ export class FinalspecialpermitComponent implements OnInit {
           display: flex;
           justify-content: space-between;
           width: 100%;
-          margin-bottom: 10px;
+          margin-bottom: 15px;
         }
         .govt-logo {
-          height: 70px;
+          height: 80px;
           width: auto;
+          object-fit: contain;
         }
         .dept-title {
-          font-size: 20px;
+          font-size: 23px;
           letter-spacing: 1px;
-          margin: 2px 0;
+          margin: 3px 0;
         }
         .dept-subtitle {
-          font-size: 16px;
+          font-size: 18px;
           margin: 2px 0;
         }
         .dept-address {
-          font-size: 12px;
+          font-size: 13px;
           font-weight: normal;
           margin-top: 5px;
         }
@@ -254,21 +289,21 @@ export class FinalspecialpermitComponent implements OnInit {
           height: 1px;
           background-color: #000;
           margin-top: 5px;
-          margin-bottom: 15px;
+          margin-bottom: 20px;
         }
         .letter-meta {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 20px;
-          font-size: 14px;
+          margin-bottom: 30px;
+          font-size: 16px;
           font-weight: bold;
           position: relative;
           z-index: 1;
         }
         .addressee-section {
-          margin-bottom: 20px;
-          line-height: 1.5;
-          font-size: 14px;
+          margin-bottom: 30px;
+          line-height: 1.6;
+          font-size: 16px;
           position: relative;
           z-index: 1;
         }
@@ -276,21 +311,21 @@ export class FinalspecialpermitComponent implements OnInit {
           margin-left: 20px;
         }
         .subject-section {
-          margin-bottom: 25px;
+          margin-bottom: 30px;
           position: relative;
           z-index: 1;
         }
         .subject-line {
           font-weight: bold;
-          font-size: 14px;
-          line-height: 1.5;
+          font-size: 16px;
+          line-height: 1.6;
           text-align: justify;
         }
         .letter-body {
-          margin-bottom: 40px;
+          margin-bottom: 50px;
           text-align: justify;
-          line-height: 1.6;
-          font-size: 14px;
+          line-height: 1.75;
+          font-size: 16px;
           text-indent: 40px;
           position: relative;
           z-index: 1;
@@ -299,7 +334,8 @@ export class FinalspecialpermitComponent implements OnInit {
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
-          margin-top: 40px;
+          margin-top: auto;
+          padding-top: 30px;
           position: relative;
           z-index: 1;
         }
@@ -314,46 +350,56 @@ export class FinalspecialpermitComponent implements OnInit {
           width: auto;
           opacity: 0.85;
         }
+        .seal-label {
+          font-weight: bold;
+          text-transform: uppercase;
+          margin-top: 3px;
+        }
+        .seal-label-sub {
+          font-size: 10px;
+          color: #555;
+        }
         .signature-container {
           text-align: right;
-          font-size: 14px;
-          line-height: 1.4;
+          font-size: 15px;
+          line-height: 1.5;
         }
         .signature-image {
-          height: 45px;
+          height: 48px;
           width: auto;
           margin-bottom: 5px;
         }
         .footer-address-bar {
           text-align: center;
-          font-size: 11px;
+          font-size: 12px;
           border-top: 1px solid #ccc;
-          margin-top: 50px;
+          margin-top: 40px;
           padding-top: 10px;
           color: #555;
           position: relative;
           z-index: 1;
         }
         .certificate-title {
-          font-size: 18px;
+          font-size: 21px;
           font-weight: bold;
           text-align: center;
           text-decoration: underline;
-          margin-bottom: 30px;
+          margin-bottom: 40px;
           text-transform: uppercase;
           position: relative;
           z-index: 1;
+          letter-spacing: 0.5px;
         }
         .details-table {
           width: 90%;
-          margin: 0 auto 30px auto;
+          margin: 0 auto 35px auto;
           border-collapse: collapse;
-          font-size: 14px;
+          font-size: 16px;
           position: relative;
           z-index: 1;
         }
         .details-table td {
-          padding: 8px 10px;
+          padding: 10px 12px;
           vertical-align: top;
         }
         .details-table td.label-cell {
@@ -368,21 +414,11 @@ export class FinalspecialpermitComponent implements OnInit {
           width: 62%;
         }
         .certificate-body {
-          font-size: 14px;
-          line-height: 1.6;
+          font-size: 16px;
+          line-height: 1.75;
           text-align: justify;
           width: 90%;
-          margin: 0 auto 40px auto;
-          position: relative;
-          z-index: 1;
-        }
-        .certificate-signature {
-          text-align: right;
-          width: 90%;
-          margin: 0 auto;
-          font-size: 14px;
-          font-weight: bold;
-          line-height: 1.4;
+          margin: 0 auto 45px auto;
           position: relative;
           z-index: 1;
         }
@@ -398,7 +434,7 @@ export class FinalspecialpermitComponent implements OnInit {
           ${styles}
         </head>
         <body>
-          ${clonedSection.outerHTML}
+          ${allContent}
         </body>
       </html>
     `);
