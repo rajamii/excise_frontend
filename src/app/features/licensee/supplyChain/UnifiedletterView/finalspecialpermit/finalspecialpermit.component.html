@@ -29,12 +29,14 @@
       <ng-container *ngIf="permitData.permissionDuration === 'per_day'">
         <!-- Official Letter Header -->
         <div class="letter-header">
+          <!-- Row 1: Crest logo left, Sikkim logo right -->
           <div class="logos-container">
             <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
-            <div class="header-right-logos">
-              <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
-              <img *ngIf="qrCodeUrl" [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
-            </div>
+            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+          </div>
+          <!-- Row 2: QR code aligned to the right -->
+          <div class="qr-row" *ngIf="qrCodeUrl">
+            <img [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
           </div>
           <div class="dept-title">EXCISE DEPARTMENT</div>
           <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
@@ -82,7 +84,7 @@
             <div class="seal-label-sub">Govt. of Sikkim</div>
           </div>
           <div class="signature-container">
-            <img src="assets/comm_sign.jpg" alt="Signature" class="signature-image">
+            <img src="assets/EC_Sign_1.png" alt="Signature" class="signature-image">
             <div class="signatory-name"><strong>(B. Chhetri) SES</strong></div>
             <div class="signatory-title">Commissioner of Excise</div>
             <div class="signatory-dept">Excise Headquarters/Gangtok</div>
@@ -103,12 +105,14 @@
       <ng-container *ngIf="permitData.permissionDuration === 'per_annum'">
         <!-- Official Certificate Header -->
         <div class="letter-header">
+          <!-- Row 1: Crest logo left, Sikkim logo right -->
           <div class="logos-container">
             <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
-            <div class="header-right-logos">
-              <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
-              <img *ngIf="qrCodeUrl" [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
-            </div>
+            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+          </div>
+          <!-- Row 2: QR code aligned to the right -->
+          <div class="qr-row" *ngIf="qrCodeUrl">
+            <img [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
           </div>
           <div class="dept-title">EXCISE DEPARTMENT</div>
           <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
@@ -163,7 +167,7 @@
         <!-- Certificate Signature block -->
         <div class="bottom-signatures" style="justify-content: flex-end; margin-bottom: 20px;">
           <div class="signature-container">
-            <img src="assets/comm_sign.jpg" alt="Signature" class="signature-image">
+            <img src="assets/EC_Sign_1.png" alt="Signature" class="signature-image">
             <div class="signatory-name"><strong>Commissioner</strong></div>
             <div class="signatory-title">Excise Department</div>
           </div>

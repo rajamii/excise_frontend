@@ -310,24 +310,37 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
         .logos-container {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center;
           width: 100%;
-          margin-bottom: 15px;
+          padding: 0 10px;
+          margin-bottom: 0;
+        }
+        .qr-row {
+          display: flex;
+          justify-content: flex-end;
+          width: 100%;
+          padding: 0 10px;
+          margin-bottom: 8px;
         }
         .header-right-logos {
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           align-items: center;
-          gap: 6px;
+          gap: 10px;
         }
         .govt-logo {
-          height: 80px;
+          height: 75px;
           width: auto;
           object-fit: contain;
         }
         .qr-code-img {
-          height: 80px;
-          width: 80px;
+          height: 70px;
+          width: 70px;
+          object-fit: contain;
+        }
+        .qr-below-logo {
+          height: 75px;
+          width: 75px;
           object-fit: contain;
         }
         .dept-title {
