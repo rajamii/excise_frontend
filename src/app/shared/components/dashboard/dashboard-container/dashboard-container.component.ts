@@ -132,12 +132,12 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
     switch (widget.type) {
       case 'stats-overview':
         return {
-          applied: Math.floor(Math.random() * 100) + 50,
-          pending: Math.floor(Math.random() * 50) + 20,
-          approved: Math.floor(Math.random() * 80) + 30,
-          rejected: Math.floor(Math.random() * 20) + 5,
-          executed: Math.floor(Math.random() * 60) + 25,
-          total: Math.floor(Math.random() * 200) + 100
+          applied: this.getSecureRandomInt(100) + 50,
+          pending: this.getSecureRandomInt(50) + 20,
+          approved: this.getSecureRandomInt(80) + 30,
+          rejected: this.getSecureRandomInt(20) + 5,
+          executed: this.getSecureRandomInt(60) + 25,
+          total: this.getSecureRandomInt(200) + 100
         };
       
       case 'chart-widget':
@@ -162,6 +162,21 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
       default:
         return {};
     }
+  }
+
+  private getSecureRandomInt(maxExclusive: number): number {
+    if (maxExclusive <= 0) {
+      return 0;
+    }
+
+    const cryptoApi = globalThis.crypto;
+    if (!cryptoApi?.getRandomValues) {
+      return 0;
+    }
+
+    const randomValues = new Uint32Array(1);
+    cryptoApi.getRandomValues(randomValues);
+    return randomValues[0] % maxExclusive;
   }
 
   // Event handlers
