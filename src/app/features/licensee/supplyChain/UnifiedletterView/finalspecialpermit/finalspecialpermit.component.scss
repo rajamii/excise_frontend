@@ -266,9 +266,9 @@
   position: relative;
   z-index: 1;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-end;
-  margin-top: auto; // Push to bottom
+  margin-top: auto;
   padding-top: 30px;
 }
 

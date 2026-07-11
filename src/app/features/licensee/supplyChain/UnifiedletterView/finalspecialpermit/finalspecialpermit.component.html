@@ -75,20 +75,16 @@
         <div class="letter-body">
           Reference your application dated: <strong>{{ permitData.submittedOn | date: 'dd.MM.yyyy' }}</strong>, on the subject cited above, this is to inform you that your request has been considered on payment of Rs <strong>{{ getDryDayBaseFee() | number:'1.2-2' }}/-</strong> per Dry Day as special permission fee.
         </div>
-
+ <div class="signatory-file">financial Year: {{ permitData.financialYear }}</div>
         <!-- Bottom Signatures and Stamp -->
         <div class="bottom-signatures">
-          <div class="seal-container">
-            <img src="assets/fav-icon-black.png" alt="Seal" class="stamp-image">
-            <div class="seal-label">Excise Department</div>
-            <div class="seal-label-sub">Govt. of Sikkim</div>
-          </div>
+          <!-- Right: Signature block -->
           <div class="signature-container">
             <img src="assets/EC_Sign_1.png" alt="Signature" class="signature-image">
-            <div class="signatory-name"><strong>(B. Chhetri) SES</strong></div>
+         
             <div class="signatory-title">Commissioner of Excise</div>
             <div class="signatory-dept">Excise Headquarters/Gangtok</div>
-            <div class="signatory-file">File no: GOS/271/Ex/HQ/{{ permitData.financialYear }}</div>
+           
           </div>
         </div>
 

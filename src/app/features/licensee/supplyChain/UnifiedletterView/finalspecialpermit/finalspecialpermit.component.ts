@@ -405,7 +405,7 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
         }
         .bottom-signatures {
           display: flex;
-          justify-content: space-between;
+          justify-content: flex-end;
           align-items: flex-end;
           margin-top: auto;
           padding-top: 30px;
