@@ -325,10 +325,12 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       });
     }
 
+    const todayStr = this.formatLocalDate(new Date());
     for (let i = 1; i <= totalDays; i++) {
       const d = new Date(year, month, i);
       const dateStr = this.formatLocalDate(d);
-      const isAllowed = this.allowedDryDayDates.includes(dateStr);
+      const isPast = dateStr < todayStr;
+      const isAllowed = this.allowedDryDayDates.includes(dateStr) && !isPast;
       const isSelected = (this.form.controls.selectedDates.value || []).includes(dateStr);
 
       days.push({
