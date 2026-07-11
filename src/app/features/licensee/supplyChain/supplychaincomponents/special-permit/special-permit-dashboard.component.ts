@@ -226,7 +226,7 @@ export class SpecialPermitDashboardComponent implements OnInit {
       currentStageRaw: row?.current_stage_name || row?.currentStageName || row?.current_stage || '',
       statusGroup: group,
       canView: Boolean(applicationId),
-      canPay: group === 'awaiting-payment',
+      canPay: this.isLicenseeUser && group === 'awaiting-payment',
       canPrint: group === 'approved',
       paymentAmount: Number(row?.payment_amount ?? row?.paymentAmount ?? 0)
     };
