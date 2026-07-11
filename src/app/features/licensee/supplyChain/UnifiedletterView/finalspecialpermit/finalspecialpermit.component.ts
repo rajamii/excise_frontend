@@ -247,7 +247,7 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          isolation: isolate;
+          /* No isolation:isolate so watermark z-index:0 sits behind z-index:1 children */
         }
         .final-certificate-container {
           position: relative;
@@ -260,39 +260,39 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          isolation: isolate;
+          /* No isolation:isolate so watermark z-index:0 sits behind z-index:1 children */
         }
         .final-letter-container > *:not(.print-watermark),
         .final-certificate-container > *:not(.print-watermark) {
           position: relative;
           z-index: 1;
         }
-        
-        // Watermark CSS
         .print-watermark {
           display: flex !important;
           position: absolute !important;
-          inset: 10px;
+          inset: 0;
           flex-direction: column;
           justify-content: space-around;
-          align-items: center;
+          align-items: stretch;
           pointer-events: none;
           user-select: none;
-          z-index: -1 !important;
+          z-index: 0;
           overflow: hidden;
-          transform: rotate(-25deg) scale(1.25);
+          /* No rotation — straight horizontal rows */
         }
         .print-watermark span {
-          display: block !important;
+          display: flex !important;
+          justify-content: space-around;
+          align-items: center;
           font-family: Arial, sans-serif;
-          font-size: 24px;
+          font-size: 18px;
           font-weight: 700;
-          letter-spacing: 2.5px;
-          color: rgba(22, 88, 58, 0.055) !important;
+          letter-spacing: 4px;
+          color: rgba(22, 88, 58, 0.13) !important;
           white-space: nowrap;
-          line-height: 1.6;
+          line-height: 1;
           width: 100%;
-          text-align: center;
+          padding: 4px 0;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
