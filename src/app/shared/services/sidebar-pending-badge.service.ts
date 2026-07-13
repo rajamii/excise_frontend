@@ -14,7 +14,7 @@ type BadgeMode = 'light' | 'full';
 
 @Injectable({ providedIn: 'root' })
 export class SidebarPendingBadgeService {
-  private readonly cacheTtlMs = 15_000;
+  private readonly cacheTtlMs = 60_000;
   private countsCache = new Map<string, { counts: PendingCountsBySection; fetchedAt: number }>();
   private readonly apiBase = `${environment.apiBaseUrl}/transactional`;
 

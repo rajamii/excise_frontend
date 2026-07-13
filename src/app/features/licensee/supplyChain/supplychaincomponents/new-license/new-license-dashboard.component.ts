@@ -12,6 +12,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
 import { RoleService } from '../../../../../core/services/role.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { timeout } from 'rxjs';
 import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
 import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
@@ -66,6 +67,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   private dialog = inject(MatDialog);
   private roleService = inject(RoleService);
   private paymentIntegrationService = inject(PaymentIntegrationService);
+  private licenseApplicationService = inject(LicenseApplicationService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -149,10 +151,10 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.monthFilter = '';
 
     forkJoin({
-      counts: this.http.get<NewLicenseCounts>(`${this.apiBase}/dashboard-counts/`).pipe(
+      counts: this.licenseApplicationService.getNewLicenseDashboardCounts().pipe(
         catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
       ),
-      grouped: this.http.get<GroupedNewLicenseResponse>(`${this.apiBase}/list-by-status/`).pipe(
+      grouped: this.licenseApplicationService.getNewLicenseApplicationsByStatus().pipe(
         catchError(() => of({ applied: [], pending: [], objection: [], approved: [], rejected: [] }))
       )
     }).subscribe({

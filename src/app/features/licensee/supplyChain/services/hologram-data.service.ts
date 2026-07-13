@@ -195,7 +195,7 @@ export interface LiquorBrandsResponse {
 export class HologramDataService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/transactional/supply_chain/hologram`;
-  private readonly cacheTtlMs = 15_000;
+  private readonly cacheTtlMs = 60_000;
   private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
   private readonly inflightRequests = new Map<string, Observable<unknown>>();
 

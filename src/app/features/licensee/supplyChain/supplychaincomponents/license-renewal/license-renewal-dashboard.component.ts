@@ -1,13 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { environment } from '../../../../../../environments/environment';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { RoleService } from '../../../../../core/services/role.service';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 
 interface RenewalCounts {
   applied: number;
@@ -46,10 +45,9 @@ interface GroupedRenewalResponse {
   styleUrls: ['./license-renewal-dashboard.component.scss']
 })
 export class LicenseRenewalDashboardComponent implements OnInit {
-  private http = inject(HttpClient);
   private router = inject(Router);
   private roleService = inject(RoleService);
-  private readonly apiBase = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
+  private licenseApplicationService = inject(LicenseApplicationService);
 
   isLoading = false;
   error: string | null = null;
@@ -79,10 +77,10 @@ export class LicenseRenewalDashboardComponent implements OnInit {
     this.searchFilter = '';
 
     forkJoin({
-      counts: this.http.get<RenewalCounts>(`${this.apiBase}/dashboard-counts/`).pipe(
+      counts: this.licenseApplicationService.getLicenseRenewalDashboardCounts().pipe(
         catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
       ),
-      grouped: this.http.get<GroupedRenewalResponse>(`${this.apiBase}/list-by-status/`).pipe(
+      grouped: this.licenseApplicationService.getLicenseRenewalApplicationsByStatus().pipe(
         catchError(() => of({ applied: [], pending: [], objection: [], approved: [], rejected: [] }))
       )
     }).subscribe({

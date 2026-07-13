@@ -12,7 +12,7 @@ import { Role } from '../models/role.model';
 export class UserService {
   private readonly baseUrl = `${environment.apiBaseUrl}/auth/users`;
   private readonly rolesUrl = `${environment.apiBaseUrl}/auth/roles`;
-  private readonly cacheTtlMs = 15_000;
+  private readonly cacheTtlMs = 60_000;
   private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
   private readonly inflightRequests = new Map<string, Observable<unknown>>();
 

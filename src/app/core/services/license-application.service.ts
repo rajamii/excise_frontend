@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, map } from 'rxjs';
+import { Observable, BehaviorSubject, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -15,11 +15,55 @@ export class LicenseApplicationService {
   private readonly renewalLicenseUrl = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
   private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
   private readonly workflowUrl = `${environment.apiBaseUrl}/auth`;
+  private readonly cacheTtlMs = 60_000;
+  private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private readonly inflightRequests = new Map<string, Observable<unknown>>();
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocumentsSubject = new BehaviorSubject<Map<string, File>>(new Map());
 
   constructor(private http: HttpClient) { }
+
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return of(cachedEntry.value as T);
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) {
+      return inflightRequest as Observable<T>;
+    }
+
+    const request$ = requestFactory().pipe(
+      tap((value) => {
+        this.responseCache.set(key, { value, fetchedAt: Date.now() });
+      }),
+      finalize(() => {
+        this.inflightRequests.delete(key);
+      }),
+      shareReplay(1)
+    );
+
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  private invalidateCache(...keys: string[]): void {
+    for (const key of keys) {
+      this.responseCache.delete(key);
+      this.inflightRequests.delete(key);
+    }
+  }
+
+  private invalidateNewLicenseDashboardCache(): void {
+    this.invalidateCache('new-license:dashboard-counts', 'new-license:list-by-status');
+  }
+
+  private invalidateRenewalDashboardCache(): void {
+    this.invalidateCache('license-renewal:dashboard-counts', 'license-renewal:list-by-status');
+  }
 
   getPassPhoto(): File | null {
     return this.passPhotoSubject.value;
@@ -649,16 +693,22 @@ export class LicenseApplicationService {
   }
 
   submitNewLicenseApplication(formData: FormData): Observable<any> {
-    return this.http.post(`${this.newLicenseUrl}/apply/`, formData);
+    return this.http.post(`${this.newLicenseUrl}/apply/`, formData).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   createNewLicenseApplicationDraft(formData: FormData): Observable<any> {
-    return this.http.post(`${this.newLicenseUrl}/apply/draft/`, formData);
+    return this.http.post(`${this.newLicenseUrl}/apply/draft/`, formData).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   forceSubmitNewLicenseApplication(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(String(applicationId || '').trim());
-    return this.http.post(`${this.newLicenseUrl}/force-submit/${encodedId}/`, {});
+    return this.http.post(`${this.newLicenseUrl}/force-submit/${encodedId}/`, {}).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   private formatDate(value: any): string {
@@ -694,11 +744,15 @@ export class LicenseApplicationService {
   }
 
   getApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.oldLicenseUrl}/list-by-status/`);
+    return this.getCachedOrFetch('old-license:list-by-status', () =>
+      this.http.get(`${this.oldLicenseUrl}/list-by-status/`)
+    );
   }
 
   getDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.oldLicenseUrl}/dashboard-counts/`);
+    return this.getCachedOrFetch('old-license:dashboard-counts', () =>
+      this.http.get(`${this.oldLicenseUrl}/dashboard-counts/`)
+    );
   }
 
   getApplicationById(applicationId: string): Observable<any> {
@@ -819,14 +873,18 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseUrl}/${encodedId}/advance/${stageId}/`, {
       context_data: context || {},
       remarks: context?.remarks || ''
-    });
+    }).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   raiseNewLicenseObjection(applicationId: string, objections: { field: string; remarks: string }[], generalRemarks?: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     const body: any = { objections };
     if (generalRemarks) body.remarks = generalRemarks;
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/raise-objection/`, body);
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/raise-objection/`, body).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   getNewLicenseApplicationById(applicationId: string): Observable<any> {
@@ -905,12 +963,16 @@ export class LicenseApplicationService {
 
   deleteNewLicenseApplication(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.delete(`${this.newLicenseUrl}/${encodedId}/delete/`);
+    return this.http.delete(`${this.newLicenseUrl}/${encodedId}/delete/`).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   printNewLicense(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/print/`, {});
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/print/`, {}).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   resolveNewLicenseObjections(applicationId: string, formData: FormData): Observable<any> {
@@ -924,18 +986,23 @@ export class LicenseApplicationService {
         if (!raw) return {};
         if (raw.startsWith('<')) return { _raw: raw };
         try { return JSON.parse(raw); } catch { return { _raw: raw }; }
-      })
+      }),
+      tap(() => this.invalidateNewLicenseDashboardCache())
     );
   }
 
   payNewLicenseFee(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-license-fee/`, formData);
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-license-fee/`, formData).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   payNewLicenseSecurityFee(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-security-fee/`, {});
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-security-fee/`, {}).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
   }
 
   getLicenseRenewalApplicationById(applicationId: string): Observable<any> {
@@ -945,20 +1012,40 @@ export class LicenseApplicationService {
 
   payLicenseRenewalFee(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-license-fee/`, formData);
+    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-license-fee/`, formData).pipe(
+      tap(() => this.invalidateRenewalDashboardCache())
+    );
   }
 
   payLicenseRenewalSecurityFee(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-security-fee/`, {});
+    return this.http.post(`${this.renewalLicenseUrl}/${encodedId}/pay-security-fee/`, {}).pipe(
+      tap(() => this.invalidateRenewalDashboardCache())
+    );
   }
 
   getNewLicenseDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.newLicenseUrl}/dashboard-counts/`);
+    return this.getCachedOrFetch('new-license:dashboard-counts', () =>
+      this.http.get(`${this.newLicenseUrl}/dashboard-counts/`)
+    );
   }
 
   getNewLicenseApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.newLicenseUrl}/list-by-status/`);
+    return this.getCachedOrFetch('new-license:list-by-status', () =>
+      this.http.get(`${this.newLicenseUrl}/list-by-status/`)
+    );
+  }
+
+  getLicenseRenewalDashboardCounts(): Observable<any> {
+    return this.getCachedOrFetch('license-renewal:dashboard-counts', () =>
+      this.http.get(`${this.renewalLicenseUrl}/dashboard-counts/`)
+    );
+  }
+
+  getLicenseRenewalApplicationsByStatus(): Observable<any> {
+    return this.getCachedOrFetch('license-renewal:list-by-status', () =>
+      this.http.get(`${this.renewalLicenseUrl}/list-by-status/`)
+    );
   }
 
   getNewLicenseSiteDetails(applicationId: string): Observable<any> {
@@ -972,6 +1059,8 @@ export class LicenseApplicationService {
       `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
       formData,
       { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    ).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
     );
   }
 
@@ -981,6 +1070,8 @@ export class LicenseApplicationService {
       `${this.siteEnquiryUrl}/${encodedId}/site-enquiry/`,
       formData,
       { headers: new HttpHeaders({ Accept: 'application/json' }) }
+    ).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
     );
   }
 
@@ -1018,7 +1109,9 @@ export class LicenseApplicationService {
    */
   renewNewLicense(licenseId: string): Observable<any> {
     const encodedId = encodeURIComponent(licenseId);
-    return this.http.post(`${this.newLicenseUrl}/renew/${encodedId}/`, {});
+    return this.http.post(`${this.newLicenseUrl}/renew/${encodedId}/`, {}).pipe(
+      tap(() => this.invalidateRenewalDashboardCache())
+    );
   }
 
   /**
@@ -1030,6 +1123,8 @@ export class LicenseApplicationService {
     return this.http.post(
       `${environment.apiBaseUrl}/transactional/license_renewal_application/renew/${encodedId}/`,
       options || {}
+    ).pipe(
+      tap(() => this.invalidateRenewalDashboardCache())
     );
   }
 }

@@ -13,7 +13,7 @@ import { Observable, catchError, finalize, of, shareReplay, tap, throwError } fr
 })
 export class EnaRequisitionService {
   private apiUrl = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/`;
-  private readonly cacheTtlMs = 15_000;
+  private readonly cacheTtlMs = 60_000;
   private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
   private readonly inflightRequests = new Map<string, Observable<unknown>>();
   private httpOptions = {
