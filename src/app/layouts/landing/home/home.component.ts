@@ -55,6 +55,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   revenueData: any[] = [];
   showLicenseBanner = false;
   latestLicenseInfo: any = null;
+  activeLicenseInfos: any[] = [];
+  currentLicenseInfoIndex = 0;
 
   truncateWords(text: string, limit: number): string {
     if (!text) return '';
@@ -164,8 +166,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadNotifications(): void {
     this.whatsCurrentService.getWhatsCurrent().subscribe({
       next: (data) => {
+        const activeData = (data || []).filter(item => item.isActive !== false);
         // Sort by ID or date to show first entered items first
-        const sortedData = (data || []).sort((a, b) => {
+        const sortedData = activeData.sort((a, b) => {
           // Primary: sort by ID (ascending)
           if (a.id && b.id) return a.id - b.id;
           // Secondary: sort by date (ascending - oldest first)
@@ -197,21 +200,25 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         // Store other notifications (already sorted)
         this.allNotifications = mapped.filter(i => i.category !== 'bullet');
 
-        // Extract the latest active License Info update for the landing banner
+        // Extract the active License Info updates for the landing banner slider
         const licenseRecords = (data || []).filter(item => item.category === 'license' && item.isActive !== false);
         if (licenseRecords && licenseRecords.length > 0) {
           const sortedLicense = [...licenseRecords].sort((a, b) => {
             if (b.id && a.id) return b.id - a.id;
             return new Date(b.date).getTime() - new Date(a.date).getTime();
           });
-          const latest = sortedLicense[0];
-          this.latestLicenseInfo = {
-            id: latest.id,
-            title: latest.title,
-            date: latest.date,
-            message: latest.message,
-            link: latest.file ? (String(latest.file).startsWith('http') ? latest.file : `${environment.apiBaseUrl}${latest.file}`) : ''
-          };
+          
+          this.activeLicenseInfos = sortedLicense.map(item => ({
+            id: item.id,
+            title: item.title,
+            date: item.date,
+            message: item.message,
+            link: item.file ? (String(item.file).startsWith('http') ? item.file : `${environment.apiBaseUrl}${item.file}`) : ''
+          }));
+          
+          this.currentLicenseInfoIndex = 0;
+          const latest = this.activeLicenseInfos[0];
+          this.latestLicenseInfo = latest;
 
           // Check if this specific notification was already dismissed using sessionStorage
           const dismissedId = sessionStorage.getItem('dismissedLicenseBanner');
@@ -235,13 +242,27 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   closeLicenseBanner(): void {
     this.showLicenseBanner = false;
-    // Store the dismissed notification ID in sessionStorage (persists during browser session only)
-    if (this.latestLicenseInfo && this.latestLicenseInfo.id) {
-      sessionStorage.setItem('dismissedLicenseBanner', String(this.latestLicenseInfo.id));
+    // Store the dismissed notification ID of the most recent item in sessionStorage
+    const latestId = this.activeLicenseInfos?.[0]?.id || this.latestLicenseInfo?.id;
+    if (latestId) {
+      sessionStorage.setItem('dismissedLicenseBanner', String(latestId));
     } else {
-      // Fallback: use a generic flag if ID is not available
       sessionStorage.setItem('dismissedLicenseBanner', 'dismissed');
     }
+  }
+
+  prevLicenseInfo(event?: Event): void {
+    event?.stopPropagation();
+    if (this.activeLicenseInfos.length <= 1) return;
+    this.currentLicenseInfoIndex = (this.currentLicenseInfoIndex - 1 + this.activeLicenseInfos.length) % this.activeLicenseInfos.length;
+    this.latestLicenseInfo = this.activeLicenseInfos[this.currentLicenseInfoIndex];
+  }
+
+  nextLicenseInfo(event?: Event): void {
+    event?.stopPropagation();
+    if (this.activeLicenseInfos.length <= 1) return;
+    this.currentLicenseInfoIndex = (this.currentLicenseInfoIndex + 1) % this.activeLicenseInfos.length;
+    this.latestLicenseInfo = this.activeLicenseInfos[this.currentLicenseInfoIndex];
   }
 
   ngAfterViewInit(): void {

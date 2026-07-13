@@ -15,6 +15,16 @@
       <div class="lic-decor lic-decor-7"><mat-icon>mail_outline</mat-icon></div>
       <div class="lic-decor lic-decor-8"><mat-icon>description</mat-icon></div>
 
+      <!-- Navigation arrows if there is more than 1 notification -->
+      @if (activeLicenseInfos.length > 1) {
+        <button class="lic-nav-btn lic-nav-prev" (click)="prevLicenseInfo($event)" aria-label="Previous Flash Notification">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <button class="lic-nav-btn lic-nav-next" (click)="nextLicenseInfo($event)" aria-label="Next Flash Notification">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      }
+
       <!-- Close button -->
       <div (click)="closeLicenseBanner()" class="lic-close-btn" aria-label="Close">
         <mat-icon>close</mat-icon>
@@ -49,6 +59,15 @@
       <!-- Message Body text -->
       @if (latestLicenseInfo.message) {
         <div class="lic-message" [innerHTML]="renderBold(latestLicenseInfo.message)">
+        </div>
+      }
+
+      <!-- Pagination Dots -->
+      @if (activeLicenseInfos.length > 1) {
+        <div class="lic-dots">
+          @for (info of activeLicenseInfos; track info.id; let i = $index) {
+            <span class="lic-dot" [class.active]="i === currentLicenseInfoIndex" (click)="currentLicenseInfoIndex = i; latestLicenseInfo = activeLicenseInfos[i]; $event.stopPropagation()"></span>
+          }
         </div>
       }
 
@@ -144,7 +163,7 @@
             <button [class.active]="selectedHomeCategory === 'act'" (click)="filterHomeCategory('act')">Acts</button>
             <button [class.active]="selectedHomeCategory === 'rule'" (click)="filterHomeCategory('rule')">Rules</button>
             <button [class.active]="selectedHomeCategory === 'circular'" (click)="filterHomeCategory('circular')">Circulars</button>
-            <button [class.active]="selectedHomeCategory === 'license'" (click)="filterHomeCategory('license')">License Info</button>
+            <button [class.active]="selectedHomeCategory === 'license'" (click)="filterHomeCategory('license')">Flash Notification</button>
           </div>
         </div>
 

@@ -60,7 +60,7 @@ export class ListComponent implements OnInit {
       rule: 'Rules',
       circular: 'Circulars',
       bullet: 'Bullet Notif.',
-      license: 'License Info'
+      license: 'Flash Notification'
     };
     return labels[category] || category;
   }

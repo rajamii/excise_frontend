@@ -59,7 +59,8 @@ export class HomeLinksComponent implements OnInit{
   loadNotifications() {
     this.whatsCurrentService.getWhatsCurrent().subscribe({
       next: (data) => {
-        this.notifications = data.map(item => ({
+        const activeData = (data || []).filter(item => item.isActive !== false);
+        this.notifications = activeData.map(item => ({
           date: item.date,
           subject: item.title,
           message: item.message,
