@@ -190,6 +190,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private dashboardInitLoadHandled = false;
+  private dashboardLoadInFlight = false;
 
   dashboardConfig!: DashboardConfig;
   currentUser: User | null = null;
@@ -1719,7 +1721,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         // explicitly refreshes or performs an action that changes counts.
         if (!this.selectedSupplyChainSection) {
           this.activeTable = 'approved';
-          this.loadDashboardData();
+          if (this.dashboardInitLoadHandled) {
+            this.loadDashboardData();
+          }
         }
       });
   }
@@ -2176,6 +2180,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadDashboardData(forceRefresh = false) {
+    if (this.dashboardLoadInFlight && !forceRefresh) {
+      return;
+    }
+
+    this.dashboardLoadInFlight = true;
     if (forceRefresh) {
       this.supplyChainModuleStatsLoaded = false;
       this.licenseeHologramProcurementsCache = null;
@@ -2200,6 +2209,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     } else {
       this.isLoading = false; // Directly show the section
+      this.dashboardLoadInFlight = false;
     }
   }
 
@@ -2326,6 +2336,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             this.isChartLoading = false;
           });
           this.updateSingleWindowChart();
+          this.dashboardLoadInFlight = false;
         },
         error: (error) => {
           console.error('❌ Error loading dashboard counts:', error);
@@ -2333,6 +2344,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.supplyChainPendingCounts = {};
           this.updateSingleWindowChart();
           this.isChartLoading = false;
+          this.dashboardLoadInFlight = false;
         }
       });
   }
@@ -2468,12 +2480,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           // does not re-fetch it, eliminating a duplicate /hologram/procurement/ call.
           this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] });
           this.updateSingleWindowChart();
+          this.dashboardLoadInFlight = false;
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
           this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
           this.clearDataSources();
           this.supplyChainPendingCounts = {};
+          this.dashboardLoadInFlight = false;
         }
       });
   }
@@ -2773,6 +2787,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showBreweryOrDistilleryMenus = false;
       this.showBreweryOrDistilleryWalletViews = false;
       this.showManufacturingWalletNav = false;
+      this.dashboardInitLoadHandled = true;
       this.loadDashboardData();
       return;
     }
@@ -2804,6 +2819,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.enforceSectionAccess();
           this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
           this.updateAvailableChartModules();
+          this.dashboardInitLoadHandled = true;
           this.loadDashboardData();
         },
         error: () => {
@@ -2814,6 +2830,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.updateAvailableChartModules();
+          this.dashboardInitLoadHandled = true;
           this.loadDashboardData();
         }
       });

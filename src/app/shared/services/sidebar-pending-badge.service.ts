@@ -14,9 +14,8 @@ type BadgeMode = 'light' | 'full';
 
 @Injectable({ providedIn: 'root' })
 export class SidebarPendingBadgeService {
-  private lastKey = '';
-  private lastCounts: PendingCountsBySection = {};
-  private lastFetchMs = 0;
+  private readonly cacheTtlMs = 15_000;
+  private countsCache = new Map<string, { counts: PendingCountsBySection; fetchedAt: number }>();
   private readonly apiBase = `${environment.apiBaseUrl}/transactional`;
 
   constructor(
@@ -34,10 +33,13 @@ export class SidebarPendingBadgeService {
     const normalized = this.normalizeSections(sections);
     const audience: BadgeAudience = options?.audience ?? 'officer';
     const mode: BadgeMode = options?.mode ?? 'light';
-    const key = `${audience}:${normalized.join('|')}`;
+    const key = `${audience}:${mode}:${normalized.join('|')}`;
 
-    if (!force && key === this.lastKey && Date.now() - this.lastFetchMs < 15_000) {
-      return of(this.lastCounts);
+    if (!force) {
+      const cached = this.countsCache.get(key);
+      if (cached && Date.now() - cached.fetchedAt < this.cacheTtlMs) {
+        return of(cached.counts);
+      }
     }
 
     const tasks: Record<string, Observable<number>> = {};
@@ -109,9 +111,10 @@ export class SidebarPendingBadgeService {
 
     return forkJoin(tasks).pipe(
       tap((counts) => {
-        this.lastKey = key;
-        this.lastCounts = counts;
-        this.lastFetchMs = Date.now();
+        this.countsCache.set(key, {
+          counts,
+          fetchedAt: Date.now()
+        });
       })
     );
   }

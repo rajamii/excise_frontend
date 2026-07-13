@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, finalize, of, shareReplay, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Account } from '../models/account.model';
@@ -12,12 +12,48 @@ import { Role } from '../models/role.model';
 export class UserService {
   private readonly baseUrl = `${environment.apiBaseUrl}/auth/users`;
   private readonly rolesUrl = `${environment.apiBaseUrl}/auth/roles`;
+  private readonly cacheTtlMs = 15_000;
+  private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private readonly inflightRequests = new Map<string, Observable<unknown>>();
 
   constructor(private http: HttpClient) { }
 
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return of(cachedEntry.value as T);
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) {
+      return inflightRequest as Observable<T>;
+    }
+
+    const request$ = requestFactory().pipe(
+      tap((value) => {
+        this.responseCache.set(key, { value, fetchedAt: Date.now() });
+      }),
+      finalize(() => {
+        this.inflightRequests.delete(key);
+      }),
+      shareReplay(1)
+    );
+
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  private invalidateCache(...keys: string[]): void {
+    for (const key of keys) {
+      this.responseCache.delete(key);
+      this.inflightRequests.delete(key);
+    }
+  }
+
   // Get all users
   getUsers(): Observable<Account[]> {
-    return this.http.get<Account[]>(`${this.baseUrl}/`);
+    return this.getCachedOrFetch('users:list', () => this.http.get<Account[]>(`${this.baseUrl}/`));
   }
 
   // Get user by id
@@ -53,6 +89,8 @@ export class UserService {
     return this.http.patch<{ message: string; is_active: boolean }>(
       `${this.baseUrl}/${id}/toggle-active/`,
       {}
+    ).pipe(
+      tap(() => this.invalidateCache('users:list'))
     );
   }
 }

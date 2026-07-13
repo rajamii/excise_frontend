@@ -6,13 +6,16 @@ import {
   HttpHeaders,
 } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, finalize, of, shareReplay, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class EnaRequisitionService {
   private apiUrl = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/`;
+  private readonly cacheTtlMs = 15_000;
+  private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private readonly inflightRequests = new Map<string, Observable<unknown>>();
   private httpOptions = {
     headers: new HttpHeaders({
       'Content-Type': 'application/json',
@@ -20,6 +23,39 @@ export class EnaRequisitionService {
   };
 
   constructor(private http: HttpClient) {}
+
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return of(cachedEntry.value as T);
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) {
+      return inflightRequest as Observable<T>;
+    }
+
+    const request$ = requestFactory().pipe(
+      tap((value) => {
+        this.responseCache.set(key, { value, fetchedAt: Date.now() });
+      }),
+      finalize(() => {
+        this.inflightRequests.delete(key);
+      }),
+      shareReplay(1)
+    );
+
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  private invalidateCache(...keys: string[]): void {
+    for (const key of keys) {
+      this.responseCache.delete(key);
+      this.inflightRequests.delete(key);
+    }
+  }
 
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'An error occurred';
@@ -40,13 +76,16 @@ export class EnaRequisitionService {
   createRequisition(requisitionData: any): Observable<any> {
     return this.http
       .post(this.apiUrl, requisitionData, this.httpOptions)
+      .pipe(tap(() => this.invalidateCache('requisitions:list')))
       .pipe(catchError(this.handleError));
   }
 
   getRequisitions(): Observable<any> {
-    return this.http
-      .get(this.apiUrl, this.httpOptions)
-      .pipe(catchError(this.handleError));
+    return this.getCachedOrFetch('requisitions:list', () =>
+      this.http
+        .get(this.apiUrl, this.httpOptions)
+        .pipe(catchError(this.handleError))
+    );
   }
 
   getRequisitionById(id: string): Observable<any> {
@@ -58,12 +97,14 @@ export class EnaRequisitionService {
   updateRequisition(id: string, requisitionData: any): Observable<any> {
     return this.http
       .put(`${this.apiUrl}${id}/`, requisitionData, this.httpOptions)
+      .pipe(tap(() => this.invalidateCache('requisitions:list')))
       .pipe(catchError(this.handleError));
   }
 
   deleteRequisition(id: string): Observable<any> {
     return this.http
       .delete(`${this.apiUrl}${id}/`, this.httpOptions)
+      .pipe(tap(() => this.invalidateCache('requisitions:list')))
       .pipe(catchError(this.handleError));
   }
 
@@ -76,6 +117,7 @@ export class EnaRequisitionService {
   performAction(id: number, action: 'APPROVE' | 'REJECT'): Observable<any> {
     return this.http
       .post(`${this.apiUrl}${id}/perform-action/`, { action: action }, this.httpOptions)
+      .pipe(tap(() => this.invalidateCache('requisitions:list')))
       .pipe(catchError(this.handleError));
   }
 
@@ -108,6 +150,7 @@ export class EnaRequisitionService {
   ): Observable<any> {
     return this.http
       .post(`${this.apiUrl}${id}/arrival-bulk-liter-details/`, payload, this.httpOptions)
+      .pipe(tap(() => this.invalidateCache('requisitions:list')))
       .pipe(catchError(this.handleError));
   }
 
@@ -128,6 +171,7 @@ export class EnaRequisitionService {
         payload,
         this.httpOptions
       )
+      .pipe(tap(() => this.invalidateCache('requisitions:list')))
       .pipe(catchError(this.handleError));
   }
 }
