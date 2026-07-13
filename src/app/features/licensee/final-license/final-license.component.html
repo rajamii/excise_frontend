@@ -199,7 +199,7 @@
         </div>
       </header>
 
-      <div class="sub-title" *ngIf="!isSalesmanBarman">COUNTER FOIL</div>
+      <div class="sub-title" *ngIf="!isSalesmanBarman">{{ templateData().licenseSubTitle || 'COUNTER FOIL' }}</div>
 
       <div class="content">
         <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>

@@ -29,6 +29,7 @@ type FinalLicenseTemplateData = {
   generatedOn: string;
   applicationDateTime?: string;
   applicationYear?: string;
+  licenseSubTitle?: string;
 };
 
 type TermsPage = {
@@ -94,7 +95,8 @@ export class FinalLicenseComponent implements OnDestroy {
     validFrom: '',
     validTo: '',
     generatedOn: '',
-    applicationYear: ''
+    applicationYear: '',
+    licenseSubTitle: ''
   });
 
   constructor(
@@ -265,7 +267,8 @@ export class FinalLicenseComponent implements OnDestroy {
           validTo: String(data?.validTo || current.validTo || ''),
           generatedOn: String(data?.generatedOn || current.generatedOn || ''),
           applicationDateTime: String(data?.applicationDateTime || data?.application_date_time || current.applicationDateTime || ''),
-          applicationYear: String(data?.applicationYear || data?.application_year || current.applicationYear || '')
+          applicationYear: String(data?.applicationYear || data?.application_year || current.applicationYear || ''),
+          licenseSubTitle: String(data?.licenseSubTitle || data?.license_sub_title || '')
         }));
 
         this.printCount.set(this.extractPrintCount(data));

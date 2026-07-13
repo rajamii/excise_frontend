@@ -26,6 +26,7 @@ interface SpecialPermitLetterData {
   submittedOn: string | Date;
   approvedDate: string | Date;
   validationCode?: string;
+  licenseTitle?: string;
 }
 
 @Component({
@@ -151,7 +152,8 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
       paymentTxnDate: (apiData.paymentTxnDate || apiData.payment_txn_date) ? new Date(apiData.paymentTxnDate || apiData.payment_txn_date) : new Date(),
       submittedOn: (apiData.createdAt || apiData.created_at) ? new Date(apiData.createdAt || apiData.created_at) : new Date(),
       approvedDate: (apiData.updatedAt || apiData.updated_at) ? new Date(apiData.updatedAt || apiData.updated_at) : new Date(),
-      validationCode: apiData.validationCode || apiData.validation_code || ''
+      validationCode: apiData.validationCode || apiData.validation_code || '',
+      licenseTitle: apiData.licenseTitle || apiData.license_title || 'SPECIAL PERMISSION TO OPERATE BAR ON DRY DAYS'
     };
   }
 

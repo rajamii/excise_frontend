@@ -4,6 +4,21 @@
 
   <form #form="ngForm">
     <mat-dialog-content>
+      <!-- Input for license title name -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Name / Identifier</mat-label>
+        <input
+          matInput 
+          [(ngModel)]="licenseTitle.name" 
+          name="name" 
+          required
+          #nameModel="ngModel" 
+        />
+        <mat-error *ngIf="nameModel.errors?.['required']">
+          Name / Identifier is required
+        </mat-error>
+      </mat-form-field>
+
       <!-- Input for license title description -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Description</mat-label>
