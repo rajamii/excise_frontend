@@ -204,8 +204,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         const licenseRecords = (data || []).filter(item => item.category === 'license' && item.isActive !== false);
         if (licenseRecords && licenseRecords.length > 0) {
           const sortedLicense = [...licenseRecords].sort((a, b) => {
-            if (b.id && a.id) return b.id - a.id;
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
+            // ascending by ID → first entered record shows first
+            if (a.id && b.id) return a.id - b.id;
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
           });
           
           this.activeLicenseInfos = sortedLicense.map(item => ({
