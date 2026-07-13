@@ -1105,10 +1105,11 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         const approvedApps = result.approved || [];
         this.activeRenewalLicenseIds = this.collectActiveRenewalLicenseIds(result);
         
-        // Filter out LRA (License Renewal), RCR (Company Renewal) and RSBM (Renewed Salesman Barman) applications
+        // Filter out LRA (License Renewal), RCR (Company Renewal) and RSBM (Renewed Salesman Barman) applications,
+        // as well as DP (Dry Day Permit) and SP (Special Permit) applications.
         const filteredApps = approvedApps.filter((app: UnifiedApplication) => {
           const id = String(app.applicationId || '').trim().toUpperCase();
-          return !id.startsWith('LRA/') && !id.startsWith('RCR/') && !id.startsWith('RSBM/');
+          return !id.startsWith('LRA/') && !id.startsWith('RCR/') && !id.startsWith('RSBM/') && !id.startsWith('DP/') && !id.startsWith('SP/');
         });
         
         // 🔍 DEBUG: Log the first approved app to see structure
