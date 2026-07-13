@@ -520,6 +520,16 @@
                 <span class="chip-text">{{ selectedLicenseDisplay }}</span>
                 <mat-icon class="chip-caret">expand_more</mat-icon>
               </button>
+              <button
+                *ngIf="isLicenseeUser()"
+                type="button"
+                class="top-my-licenses-btn"
+                (click)="$event.stopPropagation(); openMyLicensesDialog()"
+                title="Go to My Licenses"
+              >
+                <mat-icon class="my-lic-icon">assignment</mat-icon>
+                <span class="my-lic-text">My Licenses</span>
+              </button>
                 <div class="top-user-avatar">
                   <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
                 </div>
