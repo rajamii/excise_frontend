@@ -242,17 +242,17 @@
             &:active { transform: translateY(0); }
         }
 
-        /* ── View Document — indigo-to-violet gradient with shimmer ── */
+        /* ── View Document — matches card bg (navy-indigo) with gold border ── */
         .lic-btn-action {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #6d28d9 100%);
-            border: none;
+            background: linear-gradient(135deg, #1C2B78 0%, #2d3ea0 60%, #1e1b5e 100%);
+            border: 1.5px solid rgba(255, 215, 0, 0.55);
             color: #ffffff;
             font-weight: 700;
             display: flex;
             align-items: center;
             gap: 8px;
             padding: 11px 28px;
-            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+            box-shadow: 0 4px 16px rgba(28, 43, 120, 0.55), inset 0 1px 0 rgba(255,255,255,0.12);
             position: relative;
             overflow: hidden;
 
@@ -260,7 +260,7 @@
                 content: '';
                 position: absolute;
                 inset: 0;
-                background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%);
+                background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.10) 50%, transparent 65%);
                 background-size: 200% 100%;
                 background-position: -200% center;
                 animation: btnShimmer 2.8s ease-in-out infinite;
@@ -277,14 +277,16 @@
                 justify-content: center;
                 position: relative;
                 z-index: 1;
-                filter: drop-shadow(0 0 4px rgba(196,181,253,0.7));
+                color: #FFD700;
+                filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.60));
             }
 
             span { position: relative; z-index: 1; }
 
             &:hover {
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 60%, #7c3aed 100%);
-                box-shadow: 0 7px 22px rgba(79, 70, 229, 0.58), inset 0 1px 0 rgba(255,255,255,0.22);
+                background: linear-gradient(135deg, #253494 0%, #3b5bdb 60%, #1C2B78 100%);
+                border-color: rgba(255, 215, 0, 0.85);
+                box-shadow: 0 7px 22px rgba(28, 43, 120, 0.70), inset 0 1px 0 rgba(255,255,255,0.18);
                 transform: translateY(-2px);
             }
             &:active { transform: translateY(0) scale(0.97); }
