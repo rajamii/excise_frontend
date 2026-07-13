@@ -306,7 +306,7 @@ export class UnifiedDashboardService {
   }
 
   // Get applications from all 4 types (added company)
-  getUnifiedApplicationsByStatus(forceRefresh = false, config?: DashboardConfig): Observable<{
+  getUnifiedApplicationsByStatus(forceRefresh = false, config?: DashboardConfig, excludeSpecialPermit = false): Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
     objection: UnifiedApplication[];
@@ -314,8 +314,15 @@ export class UnifiedDashboardService {
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'special-permit']));
-    const cacheKey = enabledTypes.slice().sort().join('|');
+    const baseTypes = ['license-renewal', 'company-registration'];
+    if (!excludeSpecialPermit) {
+      baseTypes.push('special-permit');
+    }
+    let enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), ...baseTypes]));
+    if (excludeSpecialPermit) {
+      enabledTypes = enabledTypes.filter(t => t !== 'special-permit');
+    }
+    const cacheKey = enabledTypes.slice().sort().join('|') + `|excludeSP:${excludeSpecialPermit}`;
 
     if (!forceRefresh && this.unifiedAppsCache$ && this.unifiedAppsCacheKey === cacheKey) {
       return this.unifiedAppsCache$;

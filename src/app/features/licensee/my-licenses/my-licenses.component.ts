@@ -1097,9 +1097,9 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     return '0 days';
   }
 
-  loadMyLicenses(): void {
+  loadMyLicenses(forceRefresh = false): void {
     this.isLoading = true;
-    this.unifiedDashboardService.getUnifiedApplicationsByStatus(true).subscribe({
+    this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, undefined, true).subscribe({
       next: (result: any) => {
         this.allAppsResult = result;
         const approvedApps = result.approved || [];
@@ -1166,7 +1166,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       data: { unifiedApp: application, tableType: 'approved' }
     });
     dialogRef.afterClosed().subscribe((result: boolean | undefined) => {
-      if (result === true) this.loadMyLicenses();
+      if (result === true) this.loadMyLicenses(true);
     });
   }
 
