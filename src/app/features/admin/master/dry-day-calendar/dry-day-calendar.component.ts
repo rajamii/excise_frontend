@@ -41,8 +41,8 @@ interface MonthInfo {
 })
 export class DryDayCalendarComponent implements OnInit {
   isLoading = false;
-  financialYear = '2026-27';
-  availableYears: string[] = ['2025-26', '2026-27', '2027-28', '2028-29'];
+  financialYear = '2026';
+  availableYears: string[] = ['2025', '2026', '2027', '2028', '2029'];
   
   allowedDates: Set<string> = new Set<string>(); // Set of YYYY-MM-DD strings
   months: MonthInfo[] = [];
@@ -75,27 +75,23 @@ export class DryDayCalendarComponent implements OnInit {
   }
 
   generateCalendarStructure(): void {
-    // A financial year e.g. "2026-27" starts April 1st 2026 and ends March 31st 2027
-    const parts = this.financialYear.split('-');
-    if (parts.length !== 2) return;
+    const year = parseInt(this.financialYear, 10);
+    if (isNaN(year)) return;
     
-    const startYear = parseInt(parts[0], 10);
-    const endYear = 2000 + parseInt(parts[1], 10); // handles "27" to 2027
-
-    // Month order: April (3) to Dec (11) of startYear, then Jan (0) to March (2) of endYear
+    // Month order: January (0) to December (11) of the selected year
     const monthConfigs = [
-      { month: 3, year: startYear, name: 'April' },
-      { month: 4, year: startYear, name: 'May' },
-      { month: 5, year: startYear, name: 'June' },
-      { month: 6, year: startYear, name: 'July' },
-      { month: 7, year: startYear, name: 'August' },
-      { month: 8, year: startYear, name: 'September' },
-      { month: 9, year: startYear, name: 'October' },
-      { month: 10, year: startYear, name: 'November' },
-      { month: 11, year: startYear, name: 'December' },
-      { month: 0, year: endYear, name: 'January' },
-      { month: 1, year: endYear, name: 'February' },
-      { month: 2, year: endYear, name: 'March' }
+      { month: 0, year: year, name: 'January' },
+      { month: 1, year: year, name: 'February' },
+      { month: 2, year: year, name: 'March' },
+      { month: 3, year: year, name: 'April' },
+      { month: 4, year: year, name: 'May' },
+      { month: 5, year: year, name: 'June' },
+      { month: 6, year: year, name: 'July' },
+      { month: 7, year: year, name: 'August' },
+      { month: 8, year: year, name: 'September' },
+      { month: 9, year: year, name: 'October' },
+      { month: 10, year: year, name: 'November' },
+      { month: 11, year: year, name: 'December' }
     ];
 
     this.months = monthConfigs.map((cfg) => {
@@ -164,20 +160,20 @@ export class DryDayCalendarComponent implements OnInit {
     this.loadCalendar();
   }
 
-  addNewFinancialYear(): void {
+  addNewYear(): void {
     Swal.fire({
-      title: 'Add Financial Year',
+      title: 'Add Year',
       input: 'text',
-      inputPlaceholder: 'YYYY-YY (e.g. 2029-30)',
+      inputPlaceholder: 'YYYY (e.g. 2029)',
       showCancelButton: true,
       confirmButtonText: 'Add',
       cancelButtonText: 'Cancel',
       inputValidator: (value) => {
         if (!value) {
-          return 'Financial Year code is required!';
+          return 'Year is required!';
         }
-        if (!/^\d{4}-\d{2}$/.test(value)) {
-          return 'Format must be YYYY-YY (e.g. 2029-30)';
+        if (!/^\d{4}$/.test(value)) {
+          return 'Format must be YYYY (e.g. 2029)';
         }
         return null;
       }

@@ -9,19 +9,19 @@
         </div>
         <div>
           <h1 class="header-title">Dry Day Calendar</h1>
-          <p class="header-subtitle">Configure allowed dry day dates for each financial year.</p>
+          <p class="header-subtitle">Configure allowed dry day dates for each calendar year.</p>
         </div>
       </div>
 
       <div class="header-actions">
-        <!-- Financial Year Select -->
+        <!-- Year Select -->
         <div class="select-wrapper">
-          <label class="select-label">Financial Year</label>
+          <label class="select-label">Year</label>
           <div class="select-controls">
             <select [(ngModel)]="financialYear" (ngModelChange)="onYearChange()" class="year-select">
               <option *ngFor="let year of availableYears" [value]="year">{{ year }}</option>
             </select>
-            <button mat-icon-button (click)="addNewFinancialYear()" class="add-year-btn" matTooltip="Add Financial Year">
+            <button mat-icon-button (click)="addNewYear()" class="add-year-btn" matTooltip="Add Year">
               <mat-icon>add_circle</mat-icon>
             </button>
           </div>
