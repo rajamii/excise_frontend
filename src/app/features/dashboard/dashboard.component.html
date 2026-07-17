@@ -183,6 +183,8 @@
         <!-- Import Permit (Requisition) Application Form -->
         <app-import-permit *ngIf="selectedSupplyChainSection === 'import-permit'"></app-import-permit>
 
+        <app-distributor-permit *ngIf="selectedSupplyChainSection === 'distributor-permit'"></app-distributor-permit>
+
         <!-- Hologram Request Application Form -->
         <app-hologramrequestlevel1
           *ngIf="selectedSupplyChainSection === 'hologram-request-form'"></app-hologramrequestlevel1>
