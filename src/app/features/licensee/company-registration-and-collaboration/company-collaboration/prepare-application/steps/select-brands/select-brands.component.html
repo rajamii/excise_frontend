@@ -14,9 +14,8 @@
       <div class="filter-section">
 
         <mat-form-field appearance="outline">
-          <mat-label>Liquor Category</mat-label>
+          <mat-label>Liquor Category *</mat-label>
           <mat-select [(ngModel)]="selectedCatCode" (selectionChange)="onCategoryChange()">
-            <mat-option [value]="null">-- All --</mat-option>
             @for (cat of categories; track cat.liquorCatCode) {
               <mat-option [value]="cat.liquorCatCode">{{ cat.liquorCatDesc }}</mat-option>
             }
@@ -25,9 +24,8 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Liquor Kind</mat-label>
+          <mat-label>Liquor Kind *</mat-label>
           <mat-select [(ngModel)]="selectedKindId" (selectionChange)="onKindChange()">
-            <mat-option [value]="null">-- All --</mat-option>
             @for (kind of kinds; track kind.id) {
               <mat-option [value]="kind.id">{{ kind.liquorKindDesc }}</mat-option>
             }
@@ -36,9 +34,8 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Liquor Type</mat-label>
+          <mat-label>Liquor Type *</mat-label>
           <mat-select [(ngModel)]="selectedTypeId" (selectionChange)="onTypeChange()">
-            <mat-option [value]="null">-- All --</mat-option>
             @for (type of types; track type.id) {
               <mat-option [value]="type.id">{{ type.liquorTypeDesc }}</mat-option>
             }
@@ -46,16 +43,25 @@
           <mat-icon matSuffix>category</mat-icon>
         </mat-form-field>
 
+        <div class="search-action-wrapper">
+          <button mat-raised-button color="primary" type="button"
+            [disabled]="!selectedCatCode || !selectedKindId || !selectedTypeId || isSearchingBrands"
+            (click)="searchFilteredBrands()">
+            <mat-icon>search</mat-icon> Search
+          </button>
+        </div>
+
         <mat-form-field appearance="outline" class="filter-search">
           <mat-label>Search Brands</mat-label>
-          <input matInput [(ngModel)]="searchTerm" (input)="filterBrands()" placeholder="Brand name or code">
+          <input matInput [(ngModel)]="searchTerm" (input)="filterBrands()" placeholder="Brand name or code"
+            [disabled]="filteredBrands.length === 0">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
 
       </div>
 
       <!-- ── Brands Table ────────────────────────────────────────────────── -->
-      @if (isLoadingBrands) {
+      @if (isLoadingBrands || isSearchingBrands) {
         <div class="no-brands">
           <mat-icon>hourglass_empty</mat-icon>
           <p>Loading brands...</p>

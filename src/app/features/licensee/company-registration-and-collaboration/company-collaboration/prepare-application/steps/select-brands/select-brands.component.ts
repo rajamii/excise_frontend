@@ -26,6 +26,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   allBrands: CompanyCollaborationBrand[] = [];
   filteredBrands: CompanyCollaborationBrand[] = [];
   isLoadingBrands = false;
+  isSearchingBrands = false;
   isLoadingFee = false;
   showOverview = false;
   feeStructure: CompanyCollaborationFeeStructure | null = null;
@@ -71,10 +72,9 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     forkJoin({
       categories: this.svc.getLiquorCategories(),
       kinds:      this.svc.getLiquorKinds(),
-      types:      this.svc.getLiquorTypes(),
-      brands:     this.svc.getBrands()
+      types:      this.svc.getLiquorTypes()
     }).subscribe({
-      next: ({ categories, kinds, types, brands }) => {
+      next: ({ categories, kinds, types }) => {
         this.allCategories = categories.map((c: any) => ({
           liquorCatCode: c.liquorCatCode ?? c.liquor_cat_code,
           liquorCatDesc: c.liquorCatDesc ?? c.liquor_cat_desc,
@@ -95,13 +95,9 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
           liquorTypeDesc: t.liquorTypeDesc  ?? t.liquor_type_desc
         }));
 
-        this.allBrands = brands;
         this.categories = [...this.allCategories];
         this.rebuildKinds();
         this.loadSavedSelection();
-        this.filterBrands();
-        this.updateSelectedBrands();
-        this.saveSelection();
         this.isLoadingBrands = false;
       },
       error: (err) => {
@@ -119,16 +115,21 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.selectedKindId = null;
     this.selectedTypeId = null;
     this.rebuildKinds();
-    this.filterBrands();
+    this.allBrands = [];
+    this.filteredBrands = [];
   }
 
   onKindChange(): void {
     this.selectedTypeId = null;
     this.rebuildTypes();
-    this.filterBrands();
+    this.allBrands = [];
+    this.filteredBrands = [];
   }
 
-  onTypeChange(): void { this.filterBrands(); }
+  onTypeChange(): void {
+    this.allBrands = [];
+    this.filteredBrands = [];
+  }
 
   private rebuildKinds(): void {
     this.kinds = this.selectedCatCode
@@ -150,16 +151,42 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     }
   }
 
+  searchFilteredBrands(): void {
+    if (!this.selectedCatCode || !this.selectedKindId || !this.selectedTypeId) {
+      return;
+    }
+    this.isSearchingBrands = true;
+    this.svc.getBrands(this.selectedCatCode, this.selectedKindId, this.selectedTypeId).subscribe({
+      next: (brands) => {
+        this.allBrands = brands;
+        
+        // Restore selection states for the newly loaded brands
+        if (this.selectedBrands.length > 0) {
+          this.selectedBrands.forEach((sb) => {
+            const match = this.allBrands.find((b) => String(b.id) === String(sb.id));
+            if (match) {
+              match.selected_sizes = sb.selected_sizes;
+            }
+          });
+        }
+        
+        this.filterBrands();
+        this.isSearchingBrands = false;
+      },
+      error: (err) => {
+        console.error('Failed to load brands:', err);
+        this.isSearchingBrands = false;
+      }
+    });
+  }
+
   filterBrands(): void {
     this.pageIndex = 0; // Reset page index on filter change
     this.filteredBrands = this.allBrands.filter((brand) => {
-      const catMatch  = !this.selectedCatCode || brand.liquorCatCode === this.selectedCatCode;
-      const kindMatch = !this.selectedKindId  || brand.liquorKindId  === this.selectedKindId;
-      const typeMatch = !this.selectedTypeId  || brand.liquorTypeId  === this.selectedTypeId;
-      const search    = !this.searchTerm      ||
+      const search = !this.searchTerm ||
         brand.brand_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         brand.brand_code.toLowerCase().includes(this.searchTerm.toLowerCase());
-      return catMatch && kindMatch && typeMatch && search;
+      return search;
     });
   }
 
@@ -224,17 +251,17 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.selectedTypeId  = null;
     this.searchTerm = '';
     this.selectedBrands = [];
+    this.filteredBrands = [];
+    this.allBrands = [];
     this.feeStructure = null;
     this.showOverview = false;
     this.pageIndex = 0;
-    this.allBrands.forEach(b => b.selected_sizes = []);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
     this.svc.clearSelectedBrands();
     this.rebuildKinds();
-    this.filterBrands();
   }
 
   // ---------------------------------------------------------------------------
@@ -256,7 +283,8 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
       try {
         const parsedBrands = JSON.parse(savedBrands) as CompanyCollaborationBrand[];
         if (Array.isArray(parsedBrands)) {
-          parsedBrands.forEach((sb) => {
+          this.selectedBrands = parsedBrands;
+          this.selectedBrands.forEach((sb) => {
             const match = this.allBrands.find((b) => String(b.id) === String(sb.id));
             if (match) {
               match.selected_sizes = sb.selected_sizes;
@@ -282,7 +310,22 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   }
 
   private updateSelectedBrands(): void {
-    this.selectedBrands = this.allBrands.filter((b) => this.selectedBrandIds.has(String(b.id)));
+    const newSelectedMap = new Map<string, CompanyCollaborationBrand>();
+    
+    // Keep previously selected brands
+    this.selectedBrands.forEach(b => newSelectedMap.set(String(b.id), b));
+    
+    // Update state of currently loaded brands
+    this.allBrands.forEach((b) => {
+      const key = String(b.id);
+      if (this.selectedBrandIds.has(key)) {
+        newSelectedMap.set(key, b);
+      } else {
+        newSelectedMap.delete(key);
+      }
+    });
+    
+    this.selectedBrands = Array.from(newSelectedMap.values()).filter(b => this.selectedBrandIds.has(String(b.id)));
   }
 
   // ---------------------------------------------------------------------------

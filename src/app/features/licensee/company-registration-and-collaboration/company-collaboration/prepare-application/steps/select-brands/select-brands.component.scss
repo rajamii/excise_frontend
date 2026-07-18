@@ -40,9 +40,29 @@ mat-card {
       background-color: #f8f9fa;
       border-radius: 8px;
       border-left: 4px solid #1C2B78;
+      align-items: center;
 
       mat-form-field {
         width: 100%;
+      }
+
+      .search-action-wrapper {
+        display: flex;
+        align-items: center;
+        padding-bottom: 4px;
+
+        button {
+          height: 48px;
+          width: 100%;
+          font-weight: 600;
+          background-color: #1C2B78;
+          color: white;
+
+          &[disabled] {
+            background-color: rgba(0, 0, 0, 0.12);
+            color: rgba(0, 0, 0, 0.26);
+          }
+        }
       }
 
       .filter-search {
