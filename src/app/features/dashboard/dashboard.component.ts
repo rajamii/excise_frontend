@@ -2274,24 +2274,43 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
            this.getSupplyChainPendingCount('revalidation') +
            this.getSupplyChainPendingCount('cancellation') +
            this.getSupplyChainPendingCount('hologram') +
-           this.getSupplyChainPendingCount('company-collaboration') +
            (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
   }
 
   getSupplyChainAppliedTotal(): number {
-    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.applied || 0), 0);
+    const isCommissioner = this.isCommissionerUser();
+    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    if (!isCommissioner) {
+      modules.push('transit');
+    }
+    return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.applied || 0), 0);
   }
 
   getSupplyChainApprovedTotal(): number {
-    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.approved || 0), 0);
+    const isCommissioner = this.isCommissionerUser();
+    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    if (!isCommissioner) {
+      modules.push('transit');
+    }
+    return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.approved || 0), 0);
   }
 
   getSupplyChainRejectedTotal(): number {
-    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.rejected || 0), 0);
+    const isCommissioner = this.isCommissionerUser();
+    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    if (!isCommissioner) {
+      modules.push('transit');
+    }
+    return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.rejected || 0), 0);
   }
 
   getSupplyChainObjectionTotal(): number {
-    return Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) => sum + (v.objection || 0), 0);
+    const isCommissioner = this.isCommissionerUser();
+    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    if (!isCommissioner) {
+      modules.push('transit');
+    }
+    return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
   }
 
   isOicUser(): boolean {
