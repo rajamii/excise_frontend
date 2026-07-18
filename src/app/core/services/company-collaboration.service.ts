@@ -68,7 +68,7 @@ function normalizeBrandOwner(raw: any): CompanyCollaborationBrandOwner {
  */
 function normalizeBrand(raw: any): CompanyCollaborationBrand {
   return {
-    id:               raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? raw.id ?? '',
+    id:               raw.id               ?? raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? '',
     brand_code:       raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? String(raw.id ?? ''),
     brand_name:       raw.liquorBrandDesc  ?? raw.liquor_brand_desc  ?? '',
     category:         raw.liquorCatDesc    ?? raw.liquor_cat_desc    ?? '',
