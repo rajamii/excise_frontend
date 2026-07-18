@@ -126,6 +126,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
       { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
       { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
+      { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups' },
       { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
       { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
       { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
@@ -430,7 +431,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         return false;
       };
 
-      const licenseeSections: string[] = ['new-license', 'license-renewal', 'salesman-barman-registration', 'company-registration', 'special-permit'];
+      const licenseeSections: string[] = ['new-license', 'license-renewal', 'salesman-barman-registration', 'company-registration', 'company-collaboration', 'special-permit'];
       // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
       // Ensure Requisition payment-pending badge still loads in that case.
       if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {

@@ -189,6 +189,8 @@
             <button class="nav-item company-collaboration-nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
               <mat-icon class="nav-icon">groups</mat-icon>
               <span class="nav-text">Company Collaboration</span>
+              <span class="nav-badge" *ngIf="getPendingCount('company-collaboration') as pending">{{ pending }}</span>
+              <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('company-collaboration:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>
             <button class="nav-item salesman-barman-registration-nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
               <mat-icon class="nav-icon">badge</mat-icon>

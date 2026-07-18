@@ -34,6 +34,7 @@ import { AccountService } from '../../core/services/account.service';
 import { HologramDataService } from '../licensee/supplyChain/services/hologram-data.service';
 import { SidebarPendingBadgeService } from '../../shared/services/sidebar-pending-badge.service';
 import { CompanyRegistrationService } from '../../core/services/company-registration.service';
+import { CompanyCollaborationService } from '../../core/services/company-collaboration.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
 import {
@@ -340,6 +341,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     renewal: DashboardCount & { awaitingPayment?: number };
     salesman: DashboardCount & { awaitingPayment?: number };
     company: DashboardCount & { awaitingPayment?: number };
+    companyCollaboration: DashboardCount & { awaitingPayment?: number };
     specialPermit: DashboardCount & { awaitingPayment?: number };
   } = {
     total: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
@@ -347,6 +349,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     renewal: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     salesman: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
+    companyCollaboration: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     specialPermit: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
   };
 
@@ -364,8 +367,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return baseTotal + supplyChainTotal;
     }
 
-    // Supply chain modules (including company for permit section)
-    if (['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company'].includes(moduleName)) {
+    // Supply chain modules (including company/company-collaboration for permit section)
+    if (['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company', 'company-collaboration'].includes(moduleName)) {
       return this.supplyChainModuleCounts[moduleName]?.applied || 0;
     }
 
@@ -378,6 +381,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.salesman;
     } else if (moduleName === 'company') {
       sourceCounts = this.detailedCounts.company;
+    } else if (moduleName === 'companyCollaboration' || moduleName === 'company-collaboration') {
+      sourceCounts = this.detailedCounts.companyCollaboration;
     } else if (moduleName === 'specialPermit') {
       sourceCounts = this.detailedCounts.specialPermit;
     }
@@ -409,6 +414,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.supplyChainModuleCounts['company'];
     } else if (effectiveModule === 'company') {
       sourceCounts = this.detailedCounts.company;
+    } else if (effectiveModule === 'company-collaboration' && (this.supplyChainModuleCounts['company-collaboration']?.applied ?? 0) > 0) {
+      sourceCounts = this.supplyChainModuleCounts['company-collaboration'];
+    } else if (effectiveModule === 'company-collaboration') {
+      sourceCounts = this.detailedCounts.companyCollaboration;
     } else if (effectiveModule === 'specialPermit') {
       sourceCounts = this.detailedCounts.specialPermit;
     } else if (this.supplyChainModuleCounts[effectiveModule]) {
@@ -420,7 +429,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // For the Applied bar, use getModuleTotal() which accounts for roles where
     // the API returns applied=0 (admin/officer roles) by summing all statuses.
     // For supply chain modules, always use the stored count (0 if not yet loaded).
-    const supplyChainModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company'];
+    const supplyChainModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company', 'company-collaboration'];
     const appliedValue = isAllModules
       ? this.getModuleTotal('all')
       : supplyChainModules.includes(effectiveModule)
@@ -482,18 +491,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         { value: 'newLicense', label: 'New Licenses' },
         { value: 'renewal', label: 'Renewals' },
         { value: 'salesman', label: 'Salesman / Barman' },
-        { value: 'company', label: 'Company Reg.' }
+        { value: 'company', label: 'Company Reg.' },
+        { value: 'company-collaboration', label: 'Company Collab.' }
       ];
       return;
     }
 
-    // Permit Section only handles Requisitions and Company Registration
+    // Permit Section handles Requisitions, Company Registration, and Company Collaboration
     const isPermitSection = roleId === 5;
     if (isPermitSection) {
       this.availableChartModules = [
         { value: 'all', label: 'All Modules' },
         { value: 'requisition', label: 'Requisitions' },
-        { value: 'company', label: 'Company Reg.' }
+        { value: 'company', label: 'Company Reg.' },
+        { value: 'company-collaboration', label: 'Company Collab.' }
       ];
       return;
     }
@@ -503,7 +514,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       { value: 'newLicense', label: 'New Licenses' },
       { value: 'renewal', label: 'Renewals' },
       { value: 'salesman', label: 'Salesman / Barman' },
-      { value: 'company', label: 'Company Reg.' }
+      { value: 'company', label: 'Company Reg.' },
+      { value: 'company-collaboration', label: 'Company Collab.' }
     ];
 
     const isAdmin = roleId === 1 || roleId === 3;
@@ -546,6 +558,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.supplyChainModuleCounts['company'];
     } else if (this.selectedChartModule === 'company') {
       sourceCounts = this.detailedCounts.company;
+    } else if (this.selectedChartModule === 'company-collaboration' && (this.supplyChainModuleCounts['company-collaboration']?.applied ?? 0) > 0) {
+      sourceCounts = this.supplyChainModuleCounts['company-collaboration'];
+    } else if (this.selectedChartModule === 'company-collaboration') {
+      sourceCounts = this.detailedCounts.companyCollaboration;
     } else if (this.selectedChartModule === 'specialPermit') {
       sourceCounts = this.detailedCounts.specialPermit;
     } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
@@ -650,12 +666,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.companyRegistrationService.getApplicationsByStatus().pipe(catchError(() => of({})))
       : of(null as any);
 
-    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$ })
+    // Company collaboration — for Permit Section and Commissioner
+    const collab$ = (isPermitSection || isCommissioner)
+      ? this.companyCollaborationService.getDashboardCounts().pipe(catchError(() => of(null)))
+      : of(null as any);
+
+    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$ })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => onComplete?.())
       )
-      .subscribe(({ req, rev, can, tra, hol, comp }) => {
+      .subscribe(({ req, rev, can, tra, hol, comp, collab }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
@@ -805,6 +826,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.supplyChainModuleCounts['company'] = { applied: items.length, pending, approved, objection, rejected };
         }
 
+        // ── COMPANY COLLABORATION (Permit Section + Commissioner) ─────────────
+        if ((isPermitSection || isCommissioner) && collab) {
+          this.supplyChainModuleCounts['company-collaboration'] = {
+            applied:  Number(collab?.applied  || collab?.total  || 0),
+            pending:  Number(collab?.pending  || 0),
+            approved: Number(collab?.approved || 0),
+            objection: Number(collab?.objection || 0),
+            rejected: Number(collab?.rejected || 0)
+          };
+          this.detailedCounts.companyCollaboration = {
+            ...this.supplyChainModuleCounts['company-collaboration'],
+            awaitingPayment: Number(collab?.awaiting_payment || collab?.awaitingPayment || 0)
+          };
+        }
+
         this.supplyChainModuleStatsLoaded = true;
         this.updateSingleWindowChart();
       });
@@ -883,6 +919,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             renewal: res.renewal,
             salesman: res.salesman,
             company: res.company,
+            companyCollaboration: (res as any).companyCollaboration || { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
             specialPermit: res.specialPermit
           };
           this.dashboardCounts = {
@@ -904,6 +941,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     licenseRenewal: 0,
     salesmanBarman: 0,
     companyRegistration: 0,
+    companyCollaboration: 0,
     specialPermit: 0
   };
 
@@ -950,6 +988,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   public supplyChainService = inject(SupplyChainService);
   public enaRequisitionService = inject(EnaRequisitionService);
   private companyRegistrationService = inject(CompanyRegistrationService);
+  private companyCollaborationService = inject(CompanyCollaborationService);
   public availableChartModules: { value: string; label: string }[] = [];
 
   public supplyChainModuleCounts: Record<string, DashboardCount> = {
@@ -958,7 +997,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     cancellation: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
     transit: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
     hologram: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
-    company: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
+    company: { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+    'company-collaboration': { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
   };
   private showBreweryOrDistilleryWalletViews = false;
   private showManufacturingWalletNav = false;
@@ -2234,6 +2274,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
            this.getSupplyChainPendingCount('revalidation') +
            this.getSupplyChainPendingCount('cancellation') +
            this.getSupplyChainPendingCount('hologram') +
+           this.getSupplyChainPendingCount('company-collaboration') +
            (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
   }
 
@@ -2321,6 +2362,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             renewal: res.renewal,
             salesman: res.salesman,
             company: res.company,
+            companyCollaboration: (res as any).companyCollaboration || { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
             specialPermit: res.specialPermit
           };
           this.dashboardCounts = {
@@ -2434,6 +2476,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             renewal: getCountsForType('license-renewal'),
             salesman: getCountsForType('salesman-barman'),
             company: getCountsForType('company-registration'),
+            companyCollaboration: getCountsForType('company-collaboration'),
             specialPermit: getCountsForType('special-permit')
           };
 
@@ -2451,6 +2494,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
             salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
             companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length,
+            companyCollaboration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-collaboration').length,
             specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
@@ -2561,6 +2605,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
             salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
             companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length,
+            companyCollaboration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-collaboration').length,
             specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
@@ -3665,6 +3710,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
       parts.push('Company Reg');
+    }
+    if (this.awaitingPaymentBreakdown.companyCollaboration > 0) {
+      parts.push('Company Collab');
     }
     if ((this.awaitingPaymentBreakdown as any).specialPermit > 0) {
       parts.push('Dry Day Permit');
