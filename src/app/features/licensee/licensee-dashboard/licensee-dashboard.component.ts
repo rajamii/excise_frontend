@@ -127,7 +127,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // this.loadDashboardData();
+    this.loadDashboardData();
 
     this.routerSubscription = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
@@ -433,6 +433,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
         if (appId.startsWith('RSBM/')) return appId.replace('RSBM/', 'SB/');
         if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CR/1101/');
+        if (appId.startsWith('CCOL/')) return appId.replace('CCOL/', 'CC/1101/');
+        if (appId.startsWith('RCOL/')) return appId.replace('RCOL/', 'CC/1101/');
       }
       return null;
     }
@@ -440,8 +442,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private isValidLicenseId(licenseId: string): boolean {
     if (!licenseId || typeof licenseId !== 'string') return false;
     const trimmed = licenseId.trim();
-    // ✅ ADDED: 'COMP/', 'CREG/' and 'CR/' prefixes for company registration
-    const validPrefixes = ['LA/', 'NA/', 'SB/', 'CR/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
+    // ✅ ADDED: 'COMP/', 'CREG/', 'CR/', 'CC/', 'CCOL/', 'RCOL/' prefixes for company registration/collaboration
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'CR/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/', 'CC/', 'CCOL/', 'RCOL/'];
     const hasValidPrefix = validPrefixes.some(prefix => trimmed.startsWith(prefix));
     if (!hasValidPrefix) return false;
     const parts = trimmed.split('/');
@@ -532,6 +534,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
           renewedIds.add(appId.replace('RCR/', 'CR/'));
         } else if (appId.startsWith('RSBM/')) {
           renewedIds.add(appId.replace('RSBM/', 'SB/'));
+        } else if (appId.startsWith('RCOL/')) {
+          renewedIds.add(appId.replace('RCOL/', 'CC/'));
         }
         
         if (derivedLicenseId && this.isValidLicenseId(derivedLicenseId)) {
@@ -586,6 +590,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       case 'new-license': return 'New License';
       case 'salesman-barman': return 'Salesman/Barman';
       case 'company-registration': return 'Company Registration';
+      case 'company-collaboration': return 'Company Collaboration';
       default: return type;
     }
   }

@@ -555,71 +555,7 @@
         </mat-card>
       </div>
     </div>
-
-    <!-- System Applications Distribution Bar Chart Section (Shown for all users) -->
-    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser">      <mat-card class="chart-card">
-        <div class="chart-header-container">
-          <div class="chart-title-area">
-            <div class="chart-badge">
-              <mat-icon>monitoring</mat-icon>
-              <span>Live System Analytics</span>
-            </div>
-            <h2 class="chart-main-title">System Applications Distribution</h2>
-            <p class="chart-sub-title">Overall status-wise breakdown of applications processed across all excise departments</p>
-          </div>
-          
-          <div class="chart-filter-area">
-            <mat-form-field appearance="outline" class="premium-select">
-              <mat-label>Module</mat-label>
-              <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)" panelClass="module-dropdown-panel">
-                <mat-option *ngFor="let m of availableChartModules" [value]="m.value">
-                  {{ m.label }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="premium-select">
-              <mat-label>Month</mat-label>
-              <mat-select [(value)]="selectedChartMonth" (selectionChange)="onChartDateFilterChange()">
-                <mat-option value="">All Months</mat-option>
-                <mat-option *ngFor="let m of chartMonthOptions" [value]="m.value">{{ m.label }}</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="premium-select">
-              <mat-label>Year</mat-label>
-              <mat-select [(value)]="selectedChartYear" (selectionChange)="onChartDateFilterChange()">
-                <mat-option value="">All Years</mat-option>
-                <mat-option *ngFor="let y of chartYearOptions" [value]="y">{{ y }}</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <button mat-stroked-button class="chart-reset-btn"
-                    title="Reset filters"
-                    matTooltip="Reset filters"
-                    (click)="selectedChartMonth = ''; selectedChartYear = ''; selectedChartModule = 'all'; onChartDateFilterChange()">
-              <mat-icon>restart_alt</mat-icon>
-            </button>
-          </div>
-        </div>
-
-        <mat-card-content class="chart-content-layout">
-          <div class="canvas-holder" [class.chart-loading]="isChartLoading">
-            <div class="chart-loader-overlay" *ngIf="isChartLoading" aria-live="polite">
-              <mat-progress-spinner mode="indeterminate" diameter="34"></mat-progress-spinner>
-              <span>Loading chart...</span>
-            </div>
-            <canvas baseChart
-              [data]="singleWindowChartData"
-              [options]="singleWindowChartOptions"
-              [plugins]="singleWindowChartPlugins"
-              [type]="'bar'">
-            </canvas>
-          </div>
-        </mat-card-content>
-      </mat-card>
-    </div>
-
+ 
     <!-- Renewal Warnings Section (Licensee Only) - shown after stats boxes -->
     <div class="renewal-warnings-container" *ngIf="renewalWarnings && renewalWarnings.length > 0 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
       <div class="renewal-warning-card" *ngFor="let warning of renewalWarnings"
@@ -728,6 +664,70 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- System Applications Distribution Bar Chart Section (Shown for all users) -->
+    <div class="single-window-chart-wrapper" *ngIf="!selectedSupplyChainSection && currentUser">      <mat-card class="chart-card">
+        <div class="chart-header-container">
+          <div class="chart-title-area">
+            <div class="chart-badge">
+              <mat-icon>monitoring</mat-icon>
+              <span>Live System Analytics</span>
+            </div>
+            <h2 class="chart-main-title">System Applications Distribution</h2>
+            <p class="chart-sub-title">Overall status-wise breakdown of applications processed across all excise departments</p>
+          </div>
+          
+          <div class="chart-filter-area">
+            <mat-form-field appearance="outline" class="premium-select">
+              <mat-label>Module</mat-label>
+              <mat-select [value]="selectedChartModule" (selectionChange)="onChartModuleChange($event.value)" panelClass="module-dropdown-panel">
+                <mat-option *ngFor="let m of availableChartModules" [value]="m.value">
+                  {{ m.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="premium-select">
+              <mat-label>Month</mat-label>
+              <mat-select [(value)]="selectedChartMonth" (selectionChange)="onChartDateFilterChange()">
+                <mat-option value="">All Months</mat-option>
+                <mat-option *ngFor="let m of chartMonthOptions" [value]="m.value">{{ m.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="premium-select">
+              <mat-label>Year</mat-label>
+              <mat-select [(value)]="selectedChartYear" (selectionChange)="onChartDateFilterChange()">
+                <mat-option value="">All Years</mat-option>
+                <mat-option *ngFor="let y of chartYearOptions" [value]="y">{{ y }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <button mat-stroked-button class="chart-reset-btn"
+                    title="Reset filters"
+                    matTooltip="Reset filters"
+                    (click)="selectedChartMonth = ''; selectedChartYear = ''; selectedChartModule = 'all'; onChartDateFilterChange()">
+              <mat-icon>restart_alt</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <mat-card-content class="chart-content-layout">
+          <div class="canvas-holder" [class.chart-loading]="isChartLoading">
+            <div class="chart-loader-overlay" *ngIf="isChartLoading" aria-live="polite">
+              <mat-progress-spinner mode="indeterminate" diameter="34"></mat-progress-spinner>
+              <span>Loading chart...</span>
+            </div>
+            <canvas baseChart
+              [data]="singleWindowChartData"
+              [options]="singleWindowChartOptions"
+              [plugins]="singleWindowChartPlugins"
+              [type]="'bar'">
+            </canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
     </div>
 
     <!-- Performance Metrics Section (for admin roles) -->

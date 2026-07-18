@@ -1103,8 +1103,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
 
   private extractValidUpToDate(raw: any): Date | null {
-    const str = raw.valid_up_to || raw.validUpTo || (raw.license && raw.license.valid_up_to) || raw.valid_till || raw.validTill;
+    const strVal = raw.valid_up_to || raw.validUpTo || (raw.license && raw.license.valid_up_to) || raw.valid_till || raw.validTill;
+    if (!strVal) return null;
+    const str = String(strVal).trim();
     if (!str) return null;
+    const dmY = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+    if (dmY) {
+      const dt = new Date(Number(dmY[3]), Number(dmY[2]) - 1, Number(dmY[1]), 23, 59, 59);
+      return Number.isFinite(dt.getTime()) ? dt : null;
+    }
     const dt = new Date(str);
     return Number.isFinite(dt.getTime()) ? dt : null;
   }
@@ -1123,12 +1130,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'NA/');
     if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
     if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/');
+    if (appId.startsWith('CCOL/')) return appId.replace('CCOL/', 'CC/1101/');
+    if (appId.startsWith('RCOL/')) return appId.replace('RCOL/', 'CC/1101/');
     return null;
   }
 
   private isValidLicenseIdForWarning(licenseId: string): boolean {
     if (!licenseId || typeof licenseId !== 'string') return false;
-    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/', 'CC/', 'CCOL/', 'RCOL/'];
     return validPrefixes.some(prefix => licenseId.trim().startsWith(prefix));
   }
 
@@ -1201,8 +1210,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         } else if (appId.startsWith('LRA/')) {
           renewedIds.add(appId.replace('LRA/', 'LA/'));
           renewedIds.add(appId.replace('LRA/', 'NA/'));
+          renewedIds.add(appId.replace('LRA/', 'CC/1101/'));
         } else if (appId.startsWith('RSBM/')) {
           renewedIds.add(appId.replace('RSBM/', 'SB/'));
+        } else if (appId.startsWith('RCOL/')) {
+          renewedIds.add(appId.replace('RCOL/', 'CC/1101/'));
         }
         
         if (derivedLicenseId && this.isValidLicenseIdForWarning(derivedLicenseId)) {
@@ -2462,7 +2474,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const approvedWithRenewal: UnifiedApplication[] = [];
           filteredApplications.approved.forEach((app: UnifiedApplication) => {
             const licenseId = this.extractLicenseId(app);
-            const isRenewed = app.type === 'new-license' && licenseId && renewedLicenseIds.has(licenseId);
+            const isRenewed = (app.type === 'new-license' || app.type === 'salesman-barman' || app.type === 'company-collaboration') && licenseId && renewedLicenseIds.has(licenseId);
             if (isRenewed) {
               approvedWithRenewal.push(app);
             } else {
@@ -2605,7 +2617,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const approvedWithRenewal: UnifiedApplication[] = [];
           filteredApplications.approved.forEach((app: UnifiedApplication) => {
             const licenseId = this.extractLicenseId(app);
-            const isRenewed = app.type === 'new-license' && licenseId && renewedLicenseIds.has(licenseId);
+            const isRenewed = (app.type === 'new-license' || app.type === 'salesman-barman' || app.type === 'company-collaboration') && licenseId && renewedLicenseIds.has(licenseId);
             if (isRenewed) {
               approvedWithRenewal.push(app);
             } else {
