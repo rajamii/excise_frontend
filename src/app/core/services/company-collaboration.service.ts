@@ -214,6 +214,19 @@ export class CompanyCollaborationService {
   }
 
 
+  // ── Workflow actions ───────────────────────────────────────────────────────
+
+  performWorkflowAction(applicationId: string, action: string, remarks: string = ''): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/workflow-action/${encodedId}/`, { action, remarks });
+  }
+
+  // Pay collaboration fee via license_fee wallet
+  payCollaborationFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/pay-fee/${encodedId}/`, {});
+  }
+
   // ── Selected brands state ──────────────────────────────────────────────────
 
   setSelectedBrands(brands: CompanyCollaborationBrand[]): void { this.selectedBrands = [...brands]; }

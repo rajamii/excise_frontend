@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, DoCheck, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
@@ -15,7 +15,7 @@ import {
   templateUrl: './brand-confirmation.component.html',
   styleUrl: './brand-confirmation.component.scss'
 })
-export class BrandConfirmationComponent implements OnInit {
+export class BrandConfirmationComponent implements OnInit, DoCheck {
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
@@ -23,10 +23,24 @@ export class BrandConfirmationComponent implements OnInit {
   feeStructure: CompanyCollaborationFeeStructure | null = null;
   isLoadingFee = false;
 
+  private lastDataCheck = '';
+
   constructor(private collaborationService: CompanyCollaborationService) {}
 
   ngOnInit(): void {
     this.loadData();
+  }
+
+  ngDoCheck(): void {
+    const currentData = JSON.stringify({
+      brands: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands),
+      fees: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure)
+    });
+
+    if (currentData !== this.lastDataCheck) {
+      this.loadData();
+      this.lastDataCheck = currentData;
+    }
   }
 
   private loadData(): void {

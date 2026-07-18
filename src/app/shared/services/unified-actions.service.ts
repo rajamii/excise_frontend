@@ -644,6 +644,60 @@ export class UnifiedActionsService {
         });
       }
 
+      case 'company-registration': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const fee = Number(
+          item?.payment_amount ?? item?.paymentAmount ?? item?.amount ?? 0
+        );
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'company-registration',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(fee) && fee > 0 ? fee : undefined,
+            action: 'pay',
+            source: 'company-registration'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
+      }
+
+      case 'company-collaboration': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const feeStructure = item?.fee_structure ?? item?.feeStructure ?? {};
+        const collabFee = Number(
+          feeStructure?.collaborationFee ??
+          feeStructure?.collaboration_fee ??
+          feeStructure?.collaborationFees ??
+          item?.amount ??
+          item?.brAmount ??
+          0
+        );
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'company-collaboration',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(collabFee) && collabFee > 0 ? collabFee : undefined,
+            action: 'pay',
+            source: 'company-collaboration'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
+      }
+
       default:
         const walletTab = this.mapWalletTabForItemType(itemType);
         this.navigateToWalletForPayment(item, itemType, walletTab);

@@ -1475,16 +1475,8 @@
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light detail-label-cell">Application Fee</td>
-                                    <td>Rs {{ applicationData['fee_structure']?.applicationFee || applicationData['fee_structure']?.application_fee || 0 }}</td>
-                                </tr>
-                                <tr>
                                     <td class="fw-semibold bg-light">Collaboration Fee</td>
                                     <td>Rs {{ applicationData['fee_structure']?.collaborationFee || applicationData['fee_structure']?.collaboration_fee || applicationData['fee_structure']?.collaborationFees || applicationData['fee_structure']?.collaboration_fees || 0 }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Security Deposit</td>
-                                    <td>Rs {{ applicationData['fee_structure']?.securityDeposit || applicationData['fee_structure']?.security_deposit || 0 }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Selected Brands</td>
@@ -1492,7 +1484,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Total Amount</td>
-                                    <td class="text-success fw-bold">Rs {{ applicationData['overview_summary']?.totalAmount || applicationData['overview_summary']?.total_amount || applicationData.brAmount || 0 }}</td>
+                                    <td class="text-success fw-bold">Rs {{ applicationData['fee_structure']?.collaborationFee || applicationData['fee_structure']?.collaboration_fee || applicationData['fee_structure']?.collaborationFees || applicationData['overview_summary']?.totalAmount || applicationData['overview_summary']?.total_amount || applicationData.brAmount || 0 }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Undertaking</td>

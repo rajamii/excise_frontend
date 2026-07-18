@@ -3804,6 +3804,25 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     printApplication(): void {
+        const stage = String(this.applicationData?.currentStageName || (this.applicationData as any)?.current_stage_name || '').toLowerCase();
+        const status = String(this.applicationData?.status || '').toLowerCase();
+        const isApproved = status.includes('approved') || stage.includes('approved');
+
+        if (this.applicationType === 'company-collaboration' && isApproved) {
+            Swal.fire({
+                title: 'Application Completed',
+                text: 'Your brand owner collaboration application has been approved and completed.',
+                icon: 'success',
+                confirmButtonColor: '#1C2B78'
+            }).then(() => {
+                this.executePrint();
+            });
+        } else {
+            this.executePrint();
+        }
+    }
+
+    private executePrint(): void {
         const printSection = document.getElementById('applicationPrintSection');
         if (!printSection) {
             console.error('Print section not found');
