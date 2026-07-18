@@ -1,0 +1,595 @@
+<div class="dp-shell">
+  <div class="dp-alert dp-alert--error" *ngIf="loadError">
+    <mat-icon>warning</mat-icon>
+    <span>{{ loadError }}</span>
+  </div>
+
+  <div class="dp-loading" *ngIf="isLoading">
+    <mat-progress-spinner mode="indeterminate" diameter="34"></mat-progress-spinner>
+    <span>Loading permit details...</span>
+  </div>
+
+  <ng-container *ngIf="!isLoading">
+    <section class="registration-management-container" *ngIf="!isFormView">
+      <div class="new-license-register-header">
+        <div class="row g-3 mb-4 stats-row">
+          <div class="col-xl col-lg-6 col-md-6">
+            <div
+              class="summary-card total-application-requests summary-card-clickable"
+              role="button"
+              tabindex="0"
+              (click)="onCardFilterClick('all')"
+              (keydown.enter)="onCardFilterClick('all')"
+              (keydown.space)="onCardFilterClick('all')"
+              [class.active]="activeCardFilter === 'all'"
+            >
+              <div class="card-icon"><i class="bi bi-list-ul"></i></div>
+              <div class="card-content">
+                <h3 class="card-value">{{ counts.total }}</h3>
+                <p class="card-label">Total Applications</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl col-lg-6 col-md-6">
+            <div
+              class="summary-card approved-requests summary-card-clickable"
+              role="button"
+              tabindex="0"
+              (click)="onCardFilterClick('approved')"
+              (keydown.enter)="onCardFilterClick('approved')"
+              (keydown.space)="onCardFilterClick('approved')"
+              [class.active]="activeCardFilter === 'approved'"
+            >
+              <div class="card-icon"><i class="bi bi-check-circle"></i></div>
+              <div class="card-content">
+                <h3 class="card-value">{{ counts.approved }}</h3>
+                <p class="card-label">Approved</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl col-lg-6 col-md-6">
+            <div
+              class="summary-card pending-requests summary-card-clickable"
+              role="button"
+              tabindex="0"
+              (click)="onCardFilterClick('pending')"
+              (keydown.enter)="onCardFilterClick('pending')"
+              (keydown.space)="onCardFilterClick('pending')"
+              [class.active]="activeCardFilter === 'pending'"
+            >
+              <div class="card-icon"><i class="bi bi-clock-history"></i></div>
+              <div class="card-content">
+                <h3 class="card-value">{{ counts.pending }}</h3>
+                <p class="card-label">Pending</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl col-lg-6 col-md-6">
+            <div
+              class="summary-card objection-requests summary-card-clickable"
+              role="button"
+              tabindex="0"
+              (click)="onCardFilterClick('objection')"
+              (keydown.enter)="onCardFilterClick('objection')"
+              (keydown.space)="onCardFilterClick('objection')"
+              [class.active]="activeCardFilter === 'objection'"
+            >
+              <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
+              <div class="card-content">
+                <h3 class="card-value">{{ counts.objection }}</h3>
+                <p class="card-label">Objection</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl col-lg-6 col-md-6">
+            <div
+              class="summary-card rejected-requests summary-card-clickable"
+              role="button"
+              tabindex="0"
+              (click)="onCardFilterClick('rejected')"
+              (keydown.enter)="onCardFilterClick('rejected')"
+              (keydown.space)="onCardFilterClick('rejected')"
+              [class.active]="activeCardFilter === 'rejected'"
+            >
+              <div class="card-icon"><i class="bi bi-x-circle"></i></div>
+              <div class="card-content">
+                <h3 class="card-value">{{ counts.rejected }}</h3>
+                <p class="card-label">Rejected</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compact-filter-section mb-3">
+        <div class="filter-row">
+          <span class="filter-label-text">
+            <i class="bi bi-funnel me-1"></i>
+            <small class="text-muted">Filters:</small>
+          </span>
+
+          <input
+            type="text"
+            class="form-control form-control-sm filter-input filter-input--search"
+            placeholder="Search by ID / Applicant / Supplier"
+            [(ngModel)]="searchFilter"
+            (ngModelChange)="applyFilters()"
+            aria-label="Search by ID / Applicant / Supplier"
+            title="Search by ID / Applicant / Supplier"
+          />
+
+          <div class="filter-date-group">
+            <label class="filter-date-label">From</label>
+            <input
+              type="date"
+              class="form-control form-control-sm filter-input filter-input--date"
+              [(ngModel)]="dateFromFilter"
+              (ngModelChange)="applyFilters()"
+              title="Filter from date"
+              aria-label="Filter from date"
+            />
+          </div>
+
+          <div class="filter-date-group">
+            <label class="filter-date-label">To</label>
+            <input
+              type="date"
+              class="form-control form-control-sm filter-input filter-input--date"
+              [(ngModel)]="dateToFilter"
+              (ngModelChange)="applyFilters()"
+              title="Filter to date"
+              aria-label="Filter to date"
+            />
+          </div>
+
+          <button
+            class="btn btn-outline-danger btn-sm filter-clear-btn"
+            type="button"
+            (click)="clearFilters()"
+            *ngIf="searchFilter || dateFromFilter || dateToFilter || activeCardFilter !== 'all'"
+          >
+            <i class="bi bi-x-circle"></i> Clear
+          </button>
+        </div>
+      </div>
+
+      <div class="register-table">
+        <div class="register-container">
+          <div class="register-header-bar">
+            <h5 class="register-table-title">
+              <i class="bi bi-grid-3x3-gap me-2"></i>
+              Import Permit Application Entries
+            </h5>
+            <div class="register-info">
+              <span class="entries-count">{{ filteredRows.length }} Entries</span>
+            </div>
+          </div>
+
+          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Sl. No.</th>
+                  <th>Application ID</th>
+                  <th>Submitted On</th>
+                  <th>Payment</th>
+                  <th>Applicant</th>
+                  <th>Supplier/Establishment</th>
+                  <th>Current Stage</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of pagedRows; let i = index">
+                  <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
+                  <td class="fw-semibold">{{ row.applicationId }}</td>
+                  <td>{{ row.submittedOn }}</td>
+                  <td>
+                    <span class="payment-badge payment-badge--pending">
+                      {{ row.paymentStatus }}
+                    </span>
+                  </td>
+                  <td>{{ row.applicantName }}</td>
+                  <td>{{ row.supplierName }}</td>
+                  <td>
+                    <span class="status-badge status-badge--{{ row.statusGroup }}">
+                      {{ row.currentStage }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      class="btn btn-link p-0 action-eye"
+                      type="button"
+                      title="View Details"
+                      (click)="selectApplication(row.application)"
+                    >
+                      <i class="bi bi-eye-fill"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="pagination-bar" *ngIf="filteredRows.length > 0">
+              <div class="page-summary">
+                Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }}
+              </div>
+
+              <div class="page-controls">
+                <div class="page-size">
+                  <span class="page-size-label">Page size</span>
+                  <select
+                    class="form-select form-select-sm page-size-select"
+                    [(ngModel)]="pageSize"
+                    (ngModelChange)="onPageSizeChange()"
+                    title="Page size"
+                    aria-label="Page size"
+                  >
+                    <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+                  </select>
+                </div>
+
+                <button class="btn btn-outline-secondary btn-sm" type="button" (click)="prevPage()" [disabled]="pageIndex === 0">
+                  Prev
+                </button>
+                <span class="page-indicator" *ngIf="totalPages > 0">
+                  Page {{ pageIndex + 1 }} / {{ totalPages }}
+                </span>
+                <button
+                  class="btn btn-outline-secondary btn-sm"
+                  type="button"
+                  (click)="nextPage()"
+                  [disabled]="totalPages === 0 || pageIndex >= totalPages - 1"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="error-state" *ngIf="error">{{ error }}</div>
+          <div class="empty-state" *ngIf="!error && filteredRows.length === 0">
+            <i class="bi bi-inbox"></i>
+            <div>No Applications</div>
+            <small>No entries found.</small>
+          </div>
+        </div>
+      </div>
+
+      <section class="dp-detail" *ngIf="selectedApplication">
+        <div class="dp-detail__header">
+          <div>
+            <div class="dp-section-title">{{ selectedApplication.referenceNo }}</div>
+            <div class="dp-muted">{{ selectedApplication.status }}</div>
+          </div>
+          <button mat-icon-button type="button" (click)="clearSelectedApplication()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <p>{{ selectedApplication.officerRemarks || 'No officer remarks recorded.' }}</p>
+        <div class="dp-table-wrap">
+          <table class="dp-table dp-table--compact">
+            <thead>
+              <tr>
+                <th>Brand</th>
+                <th>Size</th>
+                <th>Cases</th>
+                <th>Total Import</th>
+                <th>BL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of selectedApplication.lineItems">
+                <td>{{ item.brandName || item.brand_name || '-' }}</td>
+                <td>{{ (item.sizeMl || item.size_ml || 0) }} ml</td>
+                <td>{{ item.cases }}</td>
+                <td>{{ (item.totalImport || item.total_import || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td>{{ (item.bulkLitres || item.bulk_litres || 0) | number:'1.3-3' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="dp-form-view" *ngIf="isFormView">
+      <div class="dp-form-toolbar">
+        <button mat-stroked-button type="button" (click)="showList()">
+          <mat-icon>arrow_back</mat-icon>
+          Back to Applications
+        </button>
+      </div>
+
+      <mat-horizontal-stepper linear class="dp-stepper">
+        <mat-step [stepControl]="applicantForm">
+          <ng-template matStepLabel>Applicant Details</ng-template>
+          <form [formGroup]="applicantForm" class="dp-form-grid dp-form-grid--card">
+            <mat-form-field appearance="outline">
+              <mat-label>Applicant Company Name</mat-label>
+              <input matInput formControlName="applicantCompanyName" aria-label="Applicant Company Name" title="Applicant Company Name">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Authorized Signatory</mat-label>
+              <input matInput formControlName="authorizedSignatory" aria-label="Authorized Signatory" title="Authorized Signatory">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Application Date</mat-label>
+              <input matInput type="date" formControlName="applicationDate" aria-label="Application Date" title="Application Date">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Addressed To</mat-label>
+              <input matInput formControlName="addressedTo" aria-label="Addressed To" title="Addressed To">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="dp-col-span">
+              <mat-label>Applicant Address</mat-label>
+              <textarea matInput rows="3" formControlName="applicantAddress" aria-label="Applicant Address" title="Applicant Address"></textarea>
+            </mat-form-field>
+          </form>
+
+          <div class="dp-form-actions">
+            <button mat-stroked-button matStepperNext type="button">Continue</button>
+          </div>
+        </mat-step>
+
+        <mat-step [stepControl]="supplierForm">
+          <ng-template matStepLabel>Source / Supplier Details</ng-template>
+          <form [formGroup]="supplierForm" class="dp-form-grid dp-form-grid--card">
+            <mat-form-field appearance="outline" class="dp-col-span">
+              <mat-label>Supplier Master</mat-label>
+              <mat-select formControlName="selectedSupplierId" panelClass="dp-select-panel">
+                <mat-option value="">Select supplier</mat-option>
+                <mat-option *ngFor="let supplier of suppliers" [value]="supplier.id">
+                  {{ getSupplierLabel(supplier) }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Supplier Company Name</mat-label>
+              <input matInput formControlName="supplierCompanyName" aria-label="Supplier Company Name" title="Supplier Company Name">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>C/O Logistics Partner</mat-label>
+              <input matInput formControlName="logisticsPartner" aria-label="C/O Logistics Partner" title="C/O Logistics Partner">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="dp-col-span">
+              <mat-label>Full Source Address</mat-label>
+              <textarea matInput rows="3" formControlName="sourceAddress" aria-label="Full Source Address" title="Full Source Address"></textarea>
+            </mat-form-field>
+          </form>
+
+          <div class="dp-form-actions">
+            <button mat-stroked-button matStepperPrevious type="button">Back</button>
+            <button mat-raised-button color="primary" matStepperNext type="button">Continue</button>
+          </div>
+        </mat-step>
+
+        <mat-step [stepControl]="brandStepForm">
+          <ng-template matStepLabel>Brand Details</ng-template>
+
+          <div class="dp-section-note">
+            Select a brand and size for each row. Rates and duty columns are read-only and pulled from the master tables.
+          </div>
+
+          <div class="dp-table-wrap">
+            <table class="dp-table dp-table--brands">
+              <thead>
+                <tr>
+                  <th>Brand / Size</th>
+                  <th>Cases</th>
+                  <th>EDP</th>
+                  <th>Import Pass Fee</th>
+                  <th>Total Import</th>
+                  <th>Edu Cess</th>
+                  <th>MRP</th>
+                  <th>BL</th>
+                  <th>Add. ED / Case</th>
+                  <th>Total Add. ED</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" [formGroup]="$any(row)">
+                  <td>
+                    <mat-form-field appearance="outline" class="dp-brand-field">
+                      <mat-label>Brand</mat-label>
+                      <mat-select formControlName="brandKey" (selectionChange)="onBrandChange(i)">
+                        <mat-option *ngFor="let brand of brandMaster" [value]="getBrandKey(brand)">
+                          {{ getBrandLabel(brand) }}
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </td>
+                  <td>
+                    <mat-form-field appearance="outline" class="dp-cases-field">
+                      <mat-label>Cases</mat-label>
+                      <input matInput type="number" min="1" formControlName="cases" aria-label="Cases" title="Cases">
+                    </mat-form-field>
+                  </td>
+                  <td>{{ getLineEdp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineImportFee(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineCessPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineMrp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineBulkLitres(i) | number:'1.3-3' }}</td>
+                  <td>{{ getLineAdditionalEdPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineTotalAddEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>
+                    <button mat-icon-button type="button" (click)="removeLineItem(i)" [disabled]="lineItems.length === 1" title="Remove row">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="dp-row-actions">
+            <button mat-stroked-button type="button" (click)="addLineItem()">
+              <mat-icon>add</mat-icon>
+              Add Brand
+            </button>
+          </div>
+
+          <div class="dp-summary">
+            <span>Total Cases <strong>{{ totalCases }}</strong></span>
+            <span>Total Import <strong>{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+            <span>Total Edu Cess <strong>{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+            <span>Total Add. ED <strong>{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+          </div>
+
+          <div class="dp-form-actions">
+            <button mat-stroked-button matStepperPrevious type="button">Back</button>
+            <button mat-raised-button color="primary" matStepperNext type="button" [disabled]="brandStepForm.invalid">Continue</button>
+          </div>
+        </mat-step>
+
+        <mat-step [stepControl]="routeForm">
+          <ng-template matStepLabel>Route & Logistics</ng-template>
+          <form [formGroup]="routeForm" class="dp-form-grid dp-form-grid--card">
+            <mat-form-field appearance="outline">
+              <mat-label>Origin</mat-label>
+              <textarea matInput rows="3" formControlName="origin" aria-label="Origin" title="Origin"></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Destination</mat-label>
+              <textarea matInput rows="3" formControlName="destination" aria-label="Destination" title="Destination"></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Mode of Transport</mat-label>
+              <mat-select formControlName="transportMode">
+                <mat-option value="Road">Road</mat-option>
+                <mat-option value="Rail">Rail</mat-option>
+                <mat-option value="Air">Air</mat-option>
+                <mat-option value="Sea">Sea</mat-option>
+                <mat-option value="Other">Other</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Vehicle / Container Number</mat-label>
+              <input matInput formControlName="vehicleNumber" aria-label="Vehicle / Container Number" title="Vehicle / Container Number">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="dp-col-span">
+              <mat-label>Route of Import</mat-label>
+              <textarea matInput rows="3" formControlName="routeDetails" aria-label="Route of Import" title="Route of Import"></textarea>
+            </mat-form-field>
+          </form>
+
+          <div class="dp-form-actions">
+            <button mat-stroked-button matStepperPrevious type="button">Back</button>
+            <button mat-raised-button color="primary" matStepperNext type="button">Review</button>
+          </div>
+        </mat-step>
+
+        <mat-step [stepControl]="reviewForm">
+          <ng-template matStepLabel>Review & Submit</ng-template>
+
+          <div class="dp-review">
+            <section class="dp-review-panel">
+              <h3>Applicant</h3>
+              <div class="dp-review-grid">
+                <div *ngFor="let row of applicantSummaryRows">
+                  <span>{{ row.label }}</span>
+                  <strong>{{ row.value }}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="dp-review-panel">
+              <h3>Supplier</h3>
+              <div class="dp-review-grid">
+                <div *ngFor="let row of supplierSummaryRows">
+                  <span>{{ row.label }}</span>
+                  <strong>{{ row.value }}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="dp-review-panel dp-review-panel--wide">
+              <h3>Route</h3>
+              <div class="dp-review-grid dp-review-grid--route">
+                <div *ngFor="let row of routeSummaryRows">
+                  <span>{{ row.label }}</span>
+                  <strong>{{ row.value }}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="dp-review-panel dp-review-panel--wide">
+              <h3>Brand Summary</h3>
+              <div class="dp-table-wrap">
+                <table class="dp-table dp-table--review">
+                  <thead>
+                    <tr>
+                      <th>Brand</th>
+                      <th>Size</th>
+                      <th>Cases</th>
+                      <th>EDP</th>
+                      <th>Import Fee</th>
+                      <th>Total Import</th>
+                      <th>Edu Cess</th>
+                      <th>MRP</th>
+                      <th>BL</th>
+                      <th>Add. ED / Case</th>
+                      <th>Total Add. ED</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of getBrandReviewRows()">
+                      <td>{{ item.brand }}</td>
+                      <td>{{ item.size }}</td>
+                      <td>{{ item.cases }}</td>
+                      <td>{{ item.edp | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.importFee | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.cess | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.mrp | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.bl | number:'1.3-3' }}</td>
+                      <td>{{ item.addEdPerCase | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <form [formGroup]="reviewForm" class="dp-declaration">
+            <mat-checkbox formControlName="declarationAccepted">
+              I declare that the details furnished in this application are true and complete.
+            </mat-checkbox>
+          </form>
+
+          <div class="dp-summary dp-summary--review">
+            <span>Total Cases <strong>{{ totalCases }}</strong></span>
+            <span>Total Import <strong>{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+            <span>Total Edu Cess <strong>{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+            <span>Total Add. ED <strong>{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+          </div>
+
+          <div class="dp-form-actions">
+            <button mat-stroked-button matStepperPrevious type="button">Back</button>
+            <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="isSubmitting">
+              <mat-icon>send</mat-icon>
+              Submit Application
+            </button>
+          </div>
+        </mat-step>
+      </mat-horizontal-stepper>
+    </section>
+  </ng-container>
+</div>
