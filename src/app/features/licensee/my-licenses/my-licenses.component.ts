@@ -993,7 +993,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
   private resolveApplicationType(application: UnifiedApplication): UnifiedApplication['type'] {
     const explicit = (application as any)?.type;
-    if (explicit === 'license-renewal' || explicit === 'new-license' || explicit === 'salesman-barman' || explicit === 'company-registration') {
+    if (explicit === 'license-renewal' || explicit === 'new-license' || explicit === 'salesman-barman' || explicit === 'company-registration' || explicit === 'company-collaboration') {
       return explicit;
     }
 
@@ -1003,7 +1003,9 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     if (id.startsWith('LRA/')) return 'license-renewal';
     if (id.startsWith('RCR/')) return 'license-renewal';
     if (id.startsWith('RSBM/')) return 'license-renewal';
+    if (id.startsWith('RCOL/')) return 'license-renewal';
     if (id.startsWith('SBM/')) return 'salesman-barman';
+    if (id.startsWith('CCOL/')) return 'company-collaboration';
     return 'new-license';
   }
 
@@ -1147,16 +1149,25 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  getTypeLabel(application: UnifiedApplication): string {
-    const raw = application.raw || {};
-    if (application.type === 'salesman-barman') {
+  getTypeLabel(application: any): string {
+    const type = typeof application === 'string' ? application : (application?.type || '');
+    const raw = (typeof application === 'object' && application !== null) ? (application.raw || {}) : {};
+    
+    if (type === 'salesman-barman') {
       return raw.role || 'Salesman/Barman';
     }
-    return application.licenseCategoryName || raw.license_category_name || 'License';
+    if (type === 'company-collaboration') {
+      return 'Company Collaboration';
+    }
+    if (type === 'company-registration') {
+      return 'Company Registration';
+    }
+    return (application?.licenseCategoryName || raw.license_category_name || 'License');
   }
 
   getDisplayName(application: UnifiedApplication): string {
-    return application.establishmentName || application.applicantFullName || 'N/A';
+    const raw = application.raw || {};
+    return application.establishmentName || raw.brand_owner_name || raw.brandOwnerName || application.applicantFullName || 'N/A';
   }
 
   viewApplication(application: UnifiedApplication): void {
@@ -1353,6 +1364,19 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       }
     }
 
+    // STRATEGY 0.1: Check for any field containing 'CC/' or 'CCOL/' directly for company collaboration
+    if (application.type === 'company-collaboration') {
+      for (const key of ['license_id', 'licenseId', 'license', 'renewalOf', 'renewal_of', 'renewalOfLicenseId', 'renewal_of_license_id']) {
+        if (raw[key]) {
+          const val = String(typeof raw[key] === 'object' ? (raw[key].license_id || raw[key].id || '') : raw[key]).trim();
+          if (val.startsWith('CC/') || val.startsWith('CCOL/')) {
+            console.log(`  ✅ Found company collaboration license ID in key "${key}":`, val);
+            return val;
+          }
+        }
+      }
+    }
+
     // STRATEGY 1: Check for 'license' field (most common)
     if (raw.license) {
       const licenseValue = raw.license;
@@ -1432,6 +1456,9 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       } else if (appId.startsWith('COMP/')) {
         // District code for CR in database is 1101
         derivedLicenseId = appId.replace('COMP/', 'CR/1101/');
+      } else if (appId.startsWith('CCOL/')) {
+        // District code for CC in database is 1101
+        derivedLicenseId = appId.replace('CCOL/', 'CC/1101/');
       }
       
       if (derivedLicenseId) {
@@ -1458,6 +1485,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         return 'SB/';
       case 'company-registration':
         return 'CR/';
+      case 'company-collaboration':
+        return 'CC/';
       default:
         return '';
     }
@@ -1479,7 +1508,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     } else if (type === 'license-renewal') {
       console.log('🔄 Using License Renewal (old) endpoint');
       renewalObservable = this.licenseApplicationService.renewLicense(renewalId);
-    } else if (type === 'new-license' || type === 'company-registration') {
+    } else if (type === 'new-license' || type === 'company-registration' || type === 'company-collaboration') {
       console.log('🔄 Using License Renewal Application (LRA) endpoint');
       renewalObservable = this.licenseApplicationService.initiateLicenseRenewalApplication(renewalId, options);
     } else {
