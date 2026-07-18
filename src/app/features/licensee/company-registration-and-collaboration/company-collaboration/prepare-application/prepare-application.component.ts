@@ -3,6 +3,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { BottlerDetailsComponent } from './steps/bottler-details/bottler-details.component';
 import { CompanyDetailsComponent } from './steps/company-details/company-details.component';
 import { SelectBrandsComponent } from './steps/select-brands/select-brands.component';
+import { BrandConfirmationComponent } from './steps/brand-confirmation/brand-confirmation.component';
 import { SubmitApplicationComponent } from './steps/submit-application/submit-application.component';
 import { AccountService } from '../../../../../core/services/account.service';
 
@@ -14,6 +15,7 @@ import { AccountService } from '../../../../../core/services/account.service';
     BottlerDetailsComponent,
     CompanyDetailsComponent,
     SelectBrandsComponent,
+    BrandConfirmationComponent,
     SubmitApplicationComponent
   ],
   templateUrl: './prepare-application.component.html',

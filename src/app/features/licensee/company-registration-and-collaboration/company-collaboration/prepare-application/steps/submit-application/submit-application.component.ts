@@ -315,6 +315,27 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     this.refreshFeeStructure();
   }
 
+  removeBrandSize(brandId: string | number, sizeLabel: string): void {
+    // Remove the specific size from selected brand
+    this.selectedBrands = this.selectedBrands.map((b) => {
+      if (String(b.id) === String(brandId)) {
+        if (b.selected_sizes) {
+          b.selected_sizes = b.selected_sizes.filter(s => s !== sizeLabel);
+        }
+      }
+      return b;
+    }).filter((b) => b.selected_sizes && b.selected_sizes.length > 0);
+
+    // Update session storage
+    const selectedBrandIds = this.selectedBrands.map((b) => String(b.id));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(this.selectedBrands));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedBrandIds));
+    this.collaborationService.setSelectedBrands(this.selectedBrands);
+
+    // Refresh the fee structure
+    this.refreshFeeStructure();
+  }
+
   private refreshFeeStructure(): void {
     if (this.selectedBrands.length === 0) {
       this.feeStructure = null;

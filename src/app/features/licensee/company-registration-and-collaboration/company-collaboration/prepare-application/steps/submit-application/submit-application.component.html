@@ -148,7 +148,12 @@
                     <td class="col-sizes">
                       <div class="sizes-badges">
                         @for (size of brand.selected_sizes; track size) {
-                          <span class="size-badge">{{ size }}</span>
+                          <span class="size-badge">
+                            {{ size }}
+                            <button class="remove-size-btn" type="button" (click)="removeBrandSize(brand.id, size)" title="Remove size">
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          </span>
                         } @empty {
                           <span class="no-sizes-badge">No sizes selected</span>
                         }

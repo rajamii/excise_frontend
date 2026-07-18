@@ -1,0 +1,119 @@
+<mat-card>
+  <mat-card-header>
+    <div class="heading">Brand Confirmation</div>
+    <div class="validation">
+      Review and confirm your selected brands and pack sizes before proceeding to the final application step.
+    </div>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (selectedBrands.length > 0) {
+      <div class="confirmation-section">
+        <div class="section-header">
+          <mat-icon>inventory</mat-icon>
+          <h3>Selected Brands ({{ selectedBrands.length }})</h3>
+        </div>
+
+        <div class="brands-confirmation-table-wrapper">
+          <table class="brands-confirmation-table mat-elevation-z1">
+            <thead>
+              <tr>
+                <th class="col-sl">Sl. No</th>
+                <th class="col-brand">Brand Name</th>
+                <th class="col-sizes">Selected Sizes</th>
+                <th class="col-cat">Category</th>
+                <th class="col-kind">Kind</th>
+                <th class="col-type">Type</th>
+                <th class="col-action">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (brand of selectedBrands; track brand.id; let i = $index) {
+                <tr>
+                  <td class="col-sl">{{ i + 1 }}</td>
+                  <td class="col-brand">
+                    <div class="brand-name">{{ brand.brand_name }}</div>
+                    <div class="brand-code">{{ brand.brand_code }}</div>
+                  </td>
+                  <td class="col-sizes">
+                    <div class="sizes-badges">
+                      @for (size of brand.selected_sizes; track size) {
+                        <span class="size-badge">
+                          {{ size }}
+                          <button class="remove-size-btn" type="button" (click)="removeBrandSize(brand.id, size)" title="Remove size">
+                            <mat-icon>close</mat-icon>
+                          </button>
+                        </span>
+                      } @empty {
+                        <span class="no-sizes-badge">No sizes selected</span>
+                      }
+                    </div>
+                  </td>
+                  <td class="col-cat">{{ brand.category }}</td>
+                  <td class="col-kind">{{ brand.kind }}</td>
+                  <td class="col-type">{{ brand.type }}</td>
+                  <td class="col-action">
+                    <button mat-icon-button color="warn" type="button"
+                      (click)="removeBrand(brand.id)"
+                      [attr.aria-label]="'Remove ' + brand.brand_name"
+                      title="Remove brand">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      @if (isLoadingFee) {
+        <div class="loading-fee-container">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Recalculating fee breakdown...</p>
+        </div>
+      } @else if (feeStructure) {
+        <div class="fee-section">
+          <div class="section-header">
+            <mat-icon>receipt</mat-icon>
+            <h3>Fee Breakdown</h3>
+          </div>
+          <div class="fee-breakdown">
+            <div class="fee-grid">
+              <div class="fee-item">
+                <div class="fee-label">Application Fee:</div>
+                <div class="fee-value">&#8377;{{ feeStructure.applicationFee | number:'1.2-2' }}</div>
+              </div>
+              <div class="fee-item">
+                <div class="fee-label">Collaboration Fee:</div>
+                <div class="fee-value">&#8377;{{ feeStructure.collaborationFee | number:'1.2-2' }}</div>
+              </div>
+              <div class="fee-item">
+                <div class="fee-label">Security Deposit:</div>
+                <div class="fee-value">&#8377;{{ feeStructure.securityDeposit | number:'1.2-2' }}</div>
+              </div>
+              <div class="fee-item highlight">
+                <div class="fee-label">Total Amount:</div>
+                <div class="fee-value">&#8377;{{ getTotalAmount() | number:'1.2-2' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    } @else {
+      <div class="empty-state">
+        <mat-icon>warning</mat-icon>
+        <p>No brands selected. Please go back and select at least one brand.</p>
+      </div>
+    }
+  </mat-card-content>
+
+  <mat-card-actions>
+    <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+    <button mat-flat-button color="primary" type="button"
+      [disabled]="selectedBrands.length === 0 || isLoadingFee"
+      (click)="proceed()">
+      Confirm & Proceed
+    </button>
+  </mat-card-actions>
+</mat-card>
