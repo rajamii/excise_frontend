@@ -136,50 +136,67 @@ mat-card {
         }
       }
 
-      .brands-summary {
-        .brand-item {
-          display: flex;
-          gap: 16px;
-          padding: 12px;
-          background: white;
-          border-radius: 8px;
-          margin-bottom: 12px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      .brands-review-container {
+        overflow-x: auto;
+        margin-top: 10px;
 
-          .brand-number {
-            background: #1C2B78;
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .brands-review-table {
+          width: 100%;
+          border-collapse: collapse;
+          background-color: #ffffff;
+
+          th {
+            background-color: #1C2B78;
+            color: #ffffff;
             font-weight: 600;
-            font-size: 14px;
-            flex-shrink: 0;
+            font-size: 13px;
+            padding: 10px 12px;
+            text-align: left;
           }
 
-          .brand-details {
-            flex: 1;
+          td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+            color: #333;
+            vertical-align: middle;
+          }
 
-            .brand-name {
-              font-weight: 600;
-              color: #1C2B78;
-              font-size: 16px;
-              margin-bottom: 4px;
+          .brand-name {
+            font-weight: 600;
+            color: #1C2B78;
+          }
+
+          .brand-code {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+          }
+
+          .sizes-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+
+            .size-badge {
+              background-color: #e3f2fd;
+              color: #1976d2;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 500;
             }
 
-            .brand-meta {
-              color: #666;
-              font-size: 13px;
-              margin-bottom: 4px;
-            }
-
-            .brand-sizes {
-              color: #888;
+            .no-sizes-badge {
+              font-style: italic;
+              color: #999;
               font-size: 12px;
             }
+          }
+
+          .col-sl, .col-action {
+            text-align: center;
+            width: 60px;
           }
         }
       }

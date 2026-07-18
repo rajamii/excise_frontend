@@ -301,6 +301,50 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     this.back.emit();
   }
 
+  removeBrand(brandId: string | number): void {
+    // Filter out the brand from selectedBrands
+    this.selectedBrands = this.selectedBrands.filter((b) => String(b.id) !== String(brandId));
+    
+    // Update selected brand IDs in session storage
+    const selectedBrandIds = this.selectedBrands.map((b) => String(b.id));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(this.selectedBrands));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedBrandIds));
+    this.collaborationService.setSelectedBrands(this.selectedBrands);
+
+    // Refresh the fee structure
+    this.refreshFeeStructure();
+  }
+
+  private refreshFeeStructure(): void {
+    if (this.selectedBrands.length === 0) {
+      this.feeStructure = null;
+      sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
+      sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
+      return;
+    }
+
+    this.collaborationService.getFeeStructure().subscribe({
+      next: (fee) => {
+        this.feeStructure = fee;
+        sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure, JSON.stringify(fee));
+        
+        // Update overview summary in session storage
+        sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary, JSON.stringify({
+          totalBrands:     this.selectedBrands.length,
+          totalAmount:     this.getTotalAmount(),
+          applicationDate: this.getCurrentDate(),
+          selectedBrands:  this.selectedBrands
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to load fee structure:', err);
+        this.feeStructure = null;
+        sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
+      }
+    });
+  }
+
+
   private clearApplicationData(): void {
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);

@@ -36,6 +36,8 @@ export interface CompanyCollaborationBrand {
   liquorCatCode?: number;
   liquorKindId?: number;
   liquorTypeId?: number;
+  pack_sizes?: { product_id: number; value: number; unit: string; label: string }[];
+  selected_sizes?: string[]; // E.g., ['750 Ml', '375 Ml']
 }
 
 export interface CompanyCollaborationBottlerDetails {

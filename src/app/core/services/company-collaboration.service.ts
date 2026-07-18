@@ -79,6 +79,7 @@ function normalizeBrand(raw: any): CompanyCollaborationBrand {
     liquorCatCode:    raw.liquorCat        ?? raw.liquor_cat         ?? undefined,
     liquorKindId:     raw.liquorKind       ?? raw.liquor_kind        ?? undefined,
     liquorTypeId:     raw.liquorType       ?? raw.liquor_type        ?? undefined,
+    pack_sizes:       raw.pack_sizes       ?? raw.packSizes          ?? [],
   };
 }
 

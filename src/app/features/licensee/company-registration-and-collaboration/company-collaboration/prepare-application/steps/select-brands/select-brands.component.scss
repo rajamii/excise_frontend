@@ -56,23 +56,25 @@ mat-card {
       overflow-x: auto;
       overflow-y: hidden;
 
-      .table-header {
-        padding: 15px;
-        background-color: #1C2B78;
-        color: white;
-        border-radius: 8px 8px 0 0;
+      .table-header-info {
+        padding: 12px 16px;
+        background-color: #f1f3f9;
+        border-bottom: 1px solid #e0e0e0;
         display: flex;
+        justify-content: flex-end;
         align-items: center;
 
-        mat-checkbox {
-          ::ng-deep .mat-checkbox-label {
-            color: white;
-          }
-
-          ::ng-deep .mdc-label {
-            color: white;
-          }
+        .selected-count {
+          font-size: 13px;
+          color: #1C2B78;
         }
+      }
+
+      .sizes-checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
       }
 
       .brands-selection-table {

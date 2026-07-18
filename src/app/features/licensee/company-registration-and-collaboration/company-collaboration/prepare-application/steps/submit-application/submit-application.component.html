@@ -1,4 +1,4 @@
-﻿<mat-card>
+<mat-card>
   <mat-card-header>
     <div class="heading">Submit Application</div>
     @if (!applicationId) {
@@ -124,20 +124,51 @@
             <mat-icon>inventory</mat-icon>
             <h3>Selected Brands ({{ selectedBrands.length }})</h3>
           </div>
-          <div class="brands-summary">
-            @for (brand of selectedBrands; track brand.id; let i = $index) {
-              <div class="brand-item">
-                <div class="brand-number">{{ i + 1 }}</div>
-                <div class="brand-details">
-                  <div class="brand-name">{{ brand.brand_name }}</div>
-                  <div class="brand-meta">
-                    <span>{{ brand.brand_code }}</span> |
-                    <span>{{ brand.category }}</span> |
-                    <span>{{ brand.type }}</span>
-                  </div>
-                </div>
-              </div>
-            }
+          <div class="brands-review-container">
+            <table class="brands-review-table mat-elevation-z1">
+              <thead>
+                <tr>
+                  <th class="col-sl">Sl. No</th>
+                  <th class="col-brand">Brand Name</th>
+                  <th class="col-sizes">Selected Sizes</th>
+                  <th class="col-cat">Category</th>
+                  <th class="col-kind">Kind</th>
+                  <th class="col-type">Type</th>
+                  <th class="col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (brand of selectedBrands; track brand.id; let i = $index) {
+                  <tr>
+                    <td class="col-sl">{{ i + 1 }}</td>
+                    <td class="col-brand">
+                      <div class="brand-name">{{ brand.brand_name }}</div>
+                      <div class="brand-code">{{ brand.brand_code }}</div>
+                    </td>
+                    <td class="col-sizes">
+                      <div class="sizes-badges">
+                        @for (size of brand.selected_sizes; track size) {
+                          <span class="size-badge">{{ size }}</span>
+                        } @empty {
+                          <span class="no-sizes-badge">No sizes selected</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="col-cat">{{ brand.category }}</td>
+                    <td class="col-kind">{{ brand.kind }}</td>
+                    <td class="col-type">{{ brand.type }}</td>
+                    <td class="col-action">
+                      <button mat-icon-button color="warn" type="button"
+                        (click)="removeBrand(brand.id)"
+                        [attr.aria-label]="'Remove ' + brand.brand_name"
+                        title="Remove brand">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         </div>
       }

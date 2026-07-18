@@ -31,6 +31,11 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   feeStructure: CompanyCollaborationFeeStructure | null = null;
   displayedColumns: string[] = ['serialNo', 'brandCode', 'brandName', 'category', 'kind', 'type', 'action'];
 
+  // Pagination state
+  pageSize = 10;
+  pageIndex = 0;
+  pageSizeOptions = [10, 15, 20];
+
   // ── Master dropdown data ───────────────────────────────────────────────────
   allCategories: LiquorCategory[] = [];
   allKinds: LiquorKind[] = [];
@@ -145,11 +150,8 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Brand filtering
-  // ---------------------------------------------------------------------------
-
   filterBrands(): void {
+    this.pageIndex = 0; // Reset page index on filter change
     this.filteredBrands = this.allBrands.filter((brand) => {
       const catMatch  = !this.selectedCatCode || brand.liquorCatCode === this.selectedCatCode;
       const kindMatch = !this.selectedKindId  || brand.liquorKindId  === this.selectedKindId;
@@ -162,60 +164,58 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   }
 
   // ---------------------------------------------------------------------------
+  // Pagination helpers
+  // ---------------------------------------------------------------------------
+
+  onPageChange(event: any): void {
+    this.pageSize = event.pageSize;
+    this.pageIndex = event.pageIndex;
+  }
+
+  getPagedBrands(): CompanyCollaborationBrand[] {
+    const start = this.pageIndex * this.pageSize;
+    const end = start + this.pageSize;
+    return this.filteredBrands.slice(start, end);
+  }
+
+  // ---------------------------------------------------------------------------
   // Selection helpers
   // ---------------------------------------------------------------------------
+
+  isSizeSelected(brand: CompanyCollaborationBrand, sizeLabel: string): boolean {
+    return brand.selected_sizes ? brand.selected_sizes.includes(sizeLabel) : false;
+  }
+
+  toggleBrandSize(brand: CompanyCollaborationBrand, sizeLabel: string): void {
+    if (!brand.selected_sizes) {
+      brand.selected_sizes = [];
+    }
+    const idx = brand.selected_sizes.indexOf(sizeLabel);
+    if (idx > -1) {
+      brand.selected_sizes.splice(idx, 1);
+    } else {
+      brand.selected_sizes.push(sizeLabel);
+    }
+
+    const key = String(brand.id);
+    if (brand.selected_sizes.length > 0) {
+      this.selectedBrandIds.add(key);
+    } else {
+      this.selectedBrandIds.delete(key);
+    }
+
+    this.updateSelectedBrands();
+    this.saveSelection();
+    this.refreshFeeStructure();
+  }
 
   isSelected(brandId: string | number): boolean {
     return this.selectedBrandIds.has(String(brandId));
   }
 
-  toggleBrand(brand: CompanyCollaborationBrand): void {
-    const key = String(brand.id);
-    const updated = new Set(this.selectedBrandIds);
-    if (updated.has(key)) {
-      updated.delete(key);
-    } else {
-      updated.add(key);
-    }
-    this.selectedBrandIds = updated;
-    this.updateSelectedBrands();
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
+  getSelectedBrandCount(): number {
+    return this.selectedBrandIds.size;
   }
-
-  isAllSelected(): boolean {
-    return this.filteredBrands.length > 0 &&
-      this.filteredBrands.every((b) => this.isSelected(b.id));
-  }
-
-  isIndeterminate(): boolean {
-    const n = this.filteredBrands.filter((b) => this.isSelected(b.id)).length;
-    return n > 0 && n < this.filteredBrands.length;
-  }
-
-  masterToggle(): void {
-    const updated = new Set(this.selectedBrandIds);
-    if (this.isAllSelected()) {
-      this.filteredBrands.forEach((b) => updated.delete(String(b.id)));
-    } else {
-      this.filteredBrands.forEach((b) => updated.add(String(b.id)));
-    }
-    this.selectedBrandIds = updated;
-    this.updateSelectedBrands();
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  removeBrand(brandId: string | number): void {
-    const updated = new Set(this.selectedBrandIds);
-    updated.delete(String(brandId));
-    this.selectedBrandIds = updated;
-    this.updateSelectedBrands();
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  getSelectedBrandCount(): number { return this.selectedBrandIds.size; }
 
   resetSelection(): void {
     this.selectedBrandIds = new Set();
@@ -226,6 +226,8 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.selectedBrands = [];
     this.feeStructure = null;
     this.showOverview = false;
+    this.pageIndex = 0;
+    this.allBrands.forEach(b => b.selected_sizes = []);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
@@ -240,13 +242,30 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   // ---------------------------------------------------------------------------
 
   private loadSavedSelection(): void {
-    const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved) as string[];
-      this.selectedBrandIds = new Set(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      this.selectedBrandIds = new Set();
+    const savedIds = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
+    const savedBrands = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
+    if (savedIds) {
+      try {
+        const parsed = JSON.parse(savedIds) as string[];
+        this.selectedBrandIds = new Set(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        this.selectedBrandIds = new Set();
+      }
+    }
+    if (savedBrands) {
+      try {
+        const parsedBrands = JSON.parse(savedBrands) as CompanyCollaborationBrand[];
+        if (Array.isArray(parsedBrands)) {
+          parsedBrands.forEach((sb) => {
+            const match = this.allBrands.find((b) => String(b.id) === String(sb.id));
+            if (match) {
+              match.selected_sizes = sb.selected_sizes;
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to parse saved brands:', e);
+      }
     }
   }
 
@@ -270,20 +289,14 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   // Navigation
   // ---------------------------------------------------------------------------
 
-  goBack(): void { this.saveSelection(); this.back.emit(); }
+  goBack(): void {
+    this.saveSelection();
+    this.back.emit();
+  }
 
   addSelectedBrands(): void {
     this.saveSelection();
     if (this.selectedBrandIds.size === 0) return;
-    this.showOverview = true;
-    this.refreshFeeStructure();
-  }
-
-  addMoreProduct(): void { this.showOverview = false; }
-
-  proceedToSubmit(): void {
-    this.saveSelection();
-    if (this.selectedBrands.length === 0 || !this.feeStructure) return;
     this.saveOverviewSummary();
     this.next.emit();
   }
