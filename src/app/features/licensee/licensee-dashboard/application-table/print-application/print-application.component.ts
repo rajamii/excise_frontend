@@ -142,7 +142,8 @@ export class PrintApplicationComponent {
   }
 
   canPrint(): boolean {
-    if (this.getApplicationType() === 'salesman-barman' || this.getApplicationType() === 'company-registration') {
+    const type = this.getApplicationType();
+    if (type === 'salesman-barman' || type === 'company-registration' || type === 'company-collaboration') {
       return true;
     }
     const count = this.getPrintCount();
@@ -151,7 +152,8 @@ export class PrintApplicationComponent {
   }
 
   needsPayment(): boolean {
-    if (this.getApplicationType() === 'salesman-barman' || this.getApplicationType() === 'company-registration') {
+    const type = this.getApplicationType();
+    if (type === 'salesman-barman' || type === 'company-registration' || type === 'company-collaboration') {
       return false;
     }
     return this.getPrintCount() >= 5 && !this.getIsPrintFeePaid();
@@ -186,14 +188,14 @@ export class PrintApplicationComponent {
     if (this.printing) return;
 
     if (!this.canPrint()) {
-      Swal.fire('Payment Required', 'You have reached the free print limit. Please pay â‚¹500 to print a duplicate copy.', 'warning');
+      Swal.fire('Payment Required', 'You have reached the free print limit. Please pay ₹500 to print a duplicate copy.', 'warning');
       return;
     }
 
     const finalLicenseId = this.getFinalLicenseId();
     const appType = this.getApplicationType();
 
-    if (appType === 'company-registration') {
+    if (appType === 'company-registration' || appType === 'company-collaboration') {
       this.dialogRef.close(true);
       void this.router.navigate(['/final-license'], {
         queryParams: {

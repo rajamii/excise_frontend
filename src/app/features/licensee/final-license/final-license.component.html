@@ -39,7 +39,7 @@
 
   <aside
     class="print-warning-sidebar no-print"
-    *ngIf="!loading() && (paymentRequired() || printCount() < freePrintLimit)"
+    *ngIf="!loading() && !isCompanyCollaboration && (paymentRequired() || printCount() < freePrintLimit)"
     aria-live="polite"
   >
     <div class="print-warning-card" [class.danger]="paymentRequired()">
@@ -116,6 +116,97 @@
       </div>
     </ng-template>
 
+    <!-- Company Collaboration (Form D-11) Certificate -->
+    <section class="page company-registration-certificate collab-certificate" *ngIf="isCompanyCollaboration">
+      <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
+
+      <header class="header company-header">
+        <div class="header-left"></div>
+        <div class="header-center">
+          <img class="emblem-img" src="assets/emblem_2.jpg" alt="Emblem" />
+          <div class="dept">EXCISE DEPARTMENT</div>
+          <div class="govt">GOVERNMENT OF SIKKIM</div>
+          <div class="collab-form-title">FORM D-11</div>
+          <div class="collab-form-subtitle">(See Rule 33)</div>
+        </div>
+        <div class="header-right">
+          <ng-container *ngIf="qrCodeUrl(); else qrPlaceholderCollab">
+            <img class="qr-img" [src]="qrCodeUrl()" alt="QR code" />
+          </ng-container>
+          <ng-template #qrPlaceholderCollab>
+            <div class="qr" aria-label="QR code placeholder"></div>
+          </ng-template>
+        </div>
+      </header>
+
+      <div class="cert-meta-row" style="display: flex; justify-content: space-between; font-size: 14px; font-family: serif; margin: 18px 0 14px 0; padding: 0 4px;">
+        <div><strong>Collaboration Registration Id:</strong>&nbsp;{{ templateData().licenseNumber || '-' }}</div>
+        <div><strong>Date:</strong>&nbsp;{{ templateData().generatedOn || '-' }}</div>
+      </div>
+
+      <div class="cert-body-content collab-body" style="padding: 0 4px; margin-bottom: 16px;">
+        <p style="font-size: 14px; line-height: 1.9; font-family: serif; text-align: justify;">
+          This is to certify that M/s <strong>{{ templateData().brandOwnerName || '-' }}</strong>
+          is hereby granted permission to bottle the following brands at the factory premises of
+          M/s <strong>{{ templateData().licenseeName || '-' }}</strong>
+          located at <strong>{{ templateData().licenseeAddress || '-' }}</strong>
+          on payment of Collaboration fee of
+          Rs <strong>{{ templateData().collaborationFee || '-' }}</strong>
+          Vide Wallet Transaction Id <strong>{{ templateData().transactionRef || '-' }}</strong>
+          dated <strong>{{ templateData().transactionDate || '-' }}</strong>
+          <ng-container *ngIf="templateData().securityDeposit && templateData().securityDeposit !== '0.00'">
+            and Security Deposit of Rs <strong>{{ templateData().securityDeposit }}</strong>
+            <ng-container *ngIf="templateData().securityDepositRef">
+              Vide Transaction Reference Number <strong>{{ templateData().securityDepositRef }}</strong>
+              dated <strong>{{ templateData().securityDepositDate || templateData().transactionDate || '-' }}</strong>
+            </ng-container>
+          </ng-container>
+          annually.
+        </p>
+      </div>
+
+      <!-- Brands Table — all rows in one table, browser handles page breaks -->
+      <div class="collab-brands-wrapper">
+        <table class="collab-brands-table">
+          <thead>
+            <tr>
+              <th class="col-slno">Sl No</th>
+              <th class="col-brand">Brand Name</th>
+              <th class="col-size">Pack Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of (templateData().brandsTable || [])">
+              <td class="col-slno">{{ row.sl_no }}</td>
+              <td class="col-brand">{{ row.brand_name }}</td>
+              <td class="col-size">{{ row.pack_size }}</td>
+            </tr>
+            <tr *ngIf="(templateData().brandsTable || []).length === 0">
+              <td colspan="3" style="text-align:center; font-style:italic; color:#888; padding: 12px;">
+                No brands registered.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="footer company-footer collab-footer" style="margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div class="left">
+          <div class="validation-edge" *ngIf="validationPdfUrl()">
+            <span class="validation-text" style="font-size: 10px; color: #777;">{{ validationPdfUrl() }}</span>
+          </div>
+        </div>
+        <div class="right" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+          <div class="sign-frame" aria-label="Commissioner signature" style="height: 55px; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+            <img class="sign-img static" src="assets/EC_Sign_1.png" alt="" aria-hidden="true" style="max-height: 100%; object-fit: contain;" />
+          </div>
+          <div class="signatory" style="font-family: serif; font-size: 13px; line-height: 1.3;">
+            <div class="sig-title" style="font-weight: bold;">Commissioner Excise</div>
+          </div>
+        </div>
+      </footer>
+    </section>
+
     <!-- Company Registration Certificate Page -->
     <section class="page company-registration-certificate" *ngIf="isCompanyRegistration">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
@@ -178,7 +269,7 @@
     </section>
 
     <!-- Page 1 -->
-    <section class="page" *ngIf="!isCompanyRegistration" [class.salesman-certificate]="isSalesmanBarman">
+    <section class="page" *ngIf="!isCompanyRegistration && !isCompanyCollaboration" [class.salesman-certificate]="isSalesmanBarman">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
 
       <header class="header">
@@ -270,7 +361,7 @@
     </section>
 
     <!-- Page 2 -->
-    <section class="page terms-page" *ngIf="!isSalesmanBarman && !isCompanyRegistration">
+    <section class="page terms-page" *ngIf="!isSalesmanBarman && !isCompanyRegistration && !isCompanyCollaboration">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
 
       <header class="header compact">
@@ -320,7 +411,7 @@
       </footer>
     </section>
 
-    <section class="page terms-page" *ngFor="let p of (isSalesmanBarman || isCompanyRegistration) ? [] : termsPages().slice(1); let i = index">
+    <section class="page terms-page" *ngFor="let p of (isSalesmanBarman || isCompanyRegistration || isCompanyCollaboration) ? [] : termsPages().slice(1); let i = index">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
 
       <div class="content">

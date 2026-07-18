@@ -636,3 +636,85 @@ body.print-prep {
     height: 25mm !important;
   }
 }
+
+// ── Company Collaboration Certificate (Form D-11) ──────────────────────────
+
+.collab-certificate {
+  .collab-form-title {
+    font-size: 16px;
+    font-weight: bold;
+    font-family: serif;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .collab-form-subtitle {
+    font-size: 13px;
+    font-family: serif;
+    font-style: italic;
+  }
+}
+
+.collab-brands-wrapper {
+  width: 100%;
+  margin: 8px 0 0;
+  overflow: hidden;
+}
+
+.collab-brands-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: serif;
+  font-size: 13px;
+
+  th, td {
+    border: 1px solid #555;
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  thead tr {
+    background: #f0f0f0;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  thead th {
+    text-align: center;
+    font-weight: 600;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #fafafa;
+  }
+
+  .col-slno {
+    width: 10%;
+    text-align: center;
+  }
+
+  .col-brand {
+    width: 65%;
+  }
+
+  .col-size {
+    width: 25%;
+    text-align: center;
+  }
+}
+
+@media print {
+  .collab-brands-table {
+    page-break-inside: auto;
+    font-size: 11px;
+
+    th, td {
+      padding: 4px 6px;
+    }
+  }
+
+  .collab-brands-wrapper {
+    page-break-inside: avoid;
+  }
+}

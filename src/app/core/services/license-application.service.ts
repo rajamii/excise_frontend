@@ -12,6 +12,7 @@ export class LicenseApplicationService {
   private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
   private readonly salesmanBarmanUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`;
   private readonly companyRegistrationUrl = `${environment.apiBaseUrl}/transactional/company-registration`;
+  private readonly companyCollaborationUrl = `${environment.apiBaseUrl}/transactional/company-collaboration`;
   private readonly renewalLicenseUrl = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
   private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
   private readonly workflowUrl = `${environment.apiBaseUrl}/auth`;
@@ -945,6 +946,16 @@ export class LicenseApplicationService {
   getCompanyRegistrationFinalLicenseQrCode(applicationId: string): Observable<Blob> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.companyRegistrationUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
+  }
+
+  getCompanyCollaborationFinalLicenseData(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.companyCollaborationUrl}/final-license/${encodedId}/`);
+  }
+
+  getCompanyCollaborationFinalLicenseQrCode(applicationId: string): Observable<Blob> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get(`${this.companyCollaborationUrl}/final-license/${encodedId}/qr-code/`, { responseType: 'blob' });
   }
 
   getNewLicenseObjections(applicationId: string): Observable<any> {
