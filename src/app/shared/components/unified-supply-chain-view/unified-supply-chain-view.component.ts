@@ -3401,6 +3401,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const oldLicenseSourceType = String(data.old_license_source_type || data.oldLicenseSourceType || '').toLowerCase();
         return this.applicationType === 'license-renewal' && oldLicenseSourceType === 'company_registration';
     }
+    isCompanyCollaborationRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const data: any = this.applicationData as any;
+        const oldLicenseSourceType = String(data.old_license_source_type || data.oldLicenseSourceType || '').toLowerCase();
+        const id = String(data.referenceNo || data.id || '').toUpperCase();
+        return this.applicationType === 'license-renewal' && (oldLicenseSourceType === 'company_collaboration' || id.startsWith('RCOL/'));
+    }
     isCompanyType(): boolean {
         if (!this.applicationData) return false;
         const data: any = this.applicationData as any;

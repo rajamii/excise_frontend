@@ -1051,6 +1051,9 @@ private initializeWalletContextAndLoadData(): void {
     // Prefer explicit wallet type when available (fixes license/security utilization rows
     // incorrectly showing "Wallet Recharge" in those tabs).
     if (walletType === 'license_fee') {
+      if (reference.startsWith('RCOL/') || reference.startsWith('CC/1101/')) {
+        return 'com coll renewal fee';
+      }
       return 'Licensee Fee Paid';
     }
     if (walletType === 'security_deposit') {
@@ -2066,7 +2069,7 @@ private initializeWalletContextAndLoadData(): void {
     if (!refNo) return false;
 
     const refNoUpper = String(refNo).trim().toUpperCase();
-    const isNewLicense = !refNoUpper.startsWith('LRA/') && !refNoUpper.startsWith('RCR/');
+    const isNewLicense = !refNoUpper.startsWith('LRA/') && !refNoUpper.startsWith('RCR/') && !refNoUpper.startsWith('RCOL/') && !refNoUpper.startsWith('RSBM/');
     if (!isNewLicense) return false;
 
     const type = this.pendingWalletPaymentContext?.itemType || 'new-license';
@@ -2110,6 +2113,10 @@ private initializeWalletContextAndLoadData(): void {
   getPendingPaymentModuleLabel(): string {
     const tab = this.pendingWalletPaymentContext?.tab;
     if (!tab) return '-';
+    const refNo = String(this.pendingWalletPaymentContext?.referenceNo || '').toUpperCase();
+    if (tab === 'license_fee' && refNo.startsWith('RCOL/')) {
+      return 'com coll renewal fee';
+    }
     return this.getModuleLabelForTab(tab);
   }
 

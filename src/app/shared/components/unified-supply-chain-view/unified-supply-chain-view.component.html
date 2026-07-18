@@ -756,7 +756,7 @@
                         </div>
                     </ng-template>
                 </div>
-                @if (isNewLicenseOrRenewal() && !isCompanyRegistrationRenewal()) {
+                @if (isNewLicenseOrRenewal() && !isCompanyRegistrationRenewal() && !isCompanyCollaborationRenewal()) {
                 <div class="section-card mb-4" *ngIf="!isCompanyType()">
                     <h5 class="section-title">Applicant Information</h5>
                     <div class="table-responsive">
@@ -1334,7 +1334,7 @@
 
                 }
 
-                @if (isCompanyCollaboration()) {
+                @if (isCompanyCollaboration() || isCompanyCollaborationRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Company Collaboration Details</h5>
                     <div class="table-responsive">
@@ -1569,7 +1569,7 @@
                     </div>
                 </div>
 
-                @if (isNewLicenseRenewal() && !isCompanyRegistrationRenewal()) {
+                @if (isNewLicenseRenewal() && !isCompanyRegistrationRenewal() && !isCompanyCollaborationRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Applicant & Establishment Details</h5>
                     <div class="table-responsive">
@@ -1601,7 +1601,7 @@
                 </div>
                 }
 
-                @if (isNewLicenseRenewal() && !isCompanyRegistrationRenewal()) {
+                @if (isNewLicenseRenewal() && !isCompanyRegistrationRenewal() && !isCompanyCollaborationRenewal()) {
                 <div class="section-card mb-4">
                     <h5 class="section-title">Site Details</h5>
                     <div class="table-responsive">
@@ -1653,7 +1653,7 @@
                 </div>
                 }
 
-                <div class="section-card mb-4" *ngIf="!isCompanyRegistrationRenewal()">
+                <div class="section-card mb-4" *ngIf="!isCompanyRegistrationRenewal() && !isCompanyCollaborationRenewal()">
                     <h5 class="section-title">Renewal Fee & Payment Status</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
