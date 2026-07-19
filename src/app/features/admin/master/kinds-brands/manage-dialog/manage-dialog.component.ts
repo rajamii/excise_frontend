@@ -56,7 +56,12 @@ export class ManageDialogComponent implements OnInit {
   }
 
   initDefaultModel(): void {
-    if (this.type === 'category') {
+    if (this.type === 'brandOwnerType') {
+      this.model = {
+        brandOwnerTypeCode: null,
+        brandOwnerTypeDesc: ''
+      };
+    } else if (this.type === 'category') {
       this.model = {
         liquorCatCode: null,
         liquorCatDesc: '',
@@ -176,7 +181,16 @@ export class ManageDialogComponent implements OnInit {
 
       let request: any;
 
-      if (this.type === 'category') {
+      if (this.type === 'brandOwnerType') {
+        const payload = {
+          brand_owner_type_code: this.model.brandOwnerTypeCode,
+          brand_owner_type_desc: this.model.brandOwnerTypeDesc
+        };
+        request = this.isEditMode
+          ? this.companyCollabService.updateBrandOwnerType(this.model.brandOwnerTypeCode, payload)
+          : this.companyCollabService.createBrandOwnerType(payload);
+
+      } else if (this.type === 'category') {
         const payload = {
           liquor_cat_code: this.model.liquorCatCode,
           liquor_cat_desc: this.model.liquorCatDesc,

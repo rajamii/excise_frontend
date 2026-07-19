@@ -6,6 +6,26 @@
   <form #form="ngForm">
     <mat-dialog-content>
 
+      <!-- ── Brand Owner Type Fields ── -->
+      <ng-container *ngIf="type === 'brandOwnerType'">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Type Code</mat-label>
+          <input matInput type="number" name="brand_owner_type_code" required
+            [disabled]="isEditMode"
+            [(ngModel)]="model.brandOwnerTypeCode"
+            #botCodeModel="ngModel" />
+          <mat-error *ngIf="botCodeModel.errors?.['required']">Type Code is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Type Description</mat-label>
+          <input matInput name="brand_owner_type_desc" required
+            [(ngModel)]="model.brandOwnerTypeDesc"
+            #botDescModel="ngModel" />
+          <mat-error *ngIf="botDescModel.errors?.['required']">Description is required</mat-error>
+        </mat-form-field>
+      </ng-container>
+
       <!-- ── Category Fields ── -->
       <ng-container *ngIf="type === 'category'">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">

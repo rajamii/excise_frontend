@@ -171,6 +171,18 @@ export class CompanyCollaborationService {
     return this.http.get<any[]>(`${this.mastersUrl}/brand-owner-types/`);
   }
 
+  createBrandOwnerType(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/brand-owner-types/create/`, data);
+  }
+
+  updateBrandOwnerType(pk: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/brand-owner-types/${pk}/update/`, data);
+  }
+
+  deleteBrandOwnerType(pk: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/brand-owner-types/${pk}/delete/`);
+  }
+
   // Categories CRUD
   getCategoriesCrudList(): Observable<any[]> {
     return this.http.get<any[]>(`${this.mastersUrl}/liquor-categories-crud/`);

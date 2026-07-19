@@ -178,7 +178,50 @@
           </div>
         </mat-tab>
 
-        <!-- ── TAB 4: Super Brands ── -->
+        <!-- ── TAB 4: Brand Owner Type ── -->
+        <mat-tab label="Brand Owner Type">
+          <div class="tab-action-row">
+            <span class="tab-count">{{ brandOwnerTypes.length }} record(s)</span>
+            <button mat-flat-button class="add-btn" (click)="onAddBrandOwnerType()">
+              <mat-icon>add</mat-icon> Add Brand Owner Type
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="brandOwnerTypes">
+              <ng-container matColumnDef="typeCode">
+                <mat-header-cell *matHeaderCellDef>Type Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="code-badge">{{ element.brand_owner_type_code }}</span>
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="typeDesc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.brand_owner_type_desc }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="action-btns">
+                    <button mat-icon-button class="edit-btn" (click)="onEditBrandOwnerType(element)" matTooltip="Edit">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="delete-btn" (click)="onDeleteBrandOwnerType(element)" matTooltip="Delete">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="brandOwnerTypeColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: brandOwnerTypeColumns;"></mat-row>
+            </mat-table>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 5: Super Brands ── -->
         <mat-tab label="Super Brands">
 
           <div class="search-brands-row">

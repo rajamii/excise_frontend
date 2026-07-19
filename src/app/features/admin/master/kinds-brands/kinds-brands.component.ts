@@ -21,12 +21,14 @@ export class KindsBrandsComponent implements OnInit {
   kinds: any[] = [];
   types: any[] = [];
   brands: any[] = [];
+  brandOwnerTypes: any[] = [];
 
   // Table Columns
   categoryColumns: string[] = ['code', 'desc', 'abbr', 'actions'];
   kindColumns: string[] = ['cat', 'code', 'desc', 'abbr', 'actions'];
   typeColumns: string[] = ['cat', 'kind', 'code', 'desc', 'oldCode', 'actions'];
   brandColumns: string[] = ['code', 'desc', 'alias', 'cat', 'kind', 'type', 'ml', 'actions'];
+  brandOwnerTypeColumns: string[] = ['typeCode', 'typeDesc', 'actions'];
 
   // Brand Search
   brandSearchQuery = '';
@@ -52,6 +54,7 @@ export class KindsBrandsComponent implements OnInit {
     this.loadKinds();
     this.loadTypes();
     this.loadMasterDropdowns();
+    this.loadBrandOwnerTypes();
   }
 
   // ── Master dropdowns for Super Brands filter ──────────────────────────────
@@ -116,6 +119,55 @@ export class KindsBrandsComponent implements OnInit {
     this.brands           = [];
     this.filteredKinds    = [...this.allKinds];
     this.filteredTypes    = [...this.allTypes];
+  }
+
+  // ── Brand Owner Types ─────────────────────────────────────────────────────
+  loadBrandOwnerTypes(): void {
+    this.companyCollabService.getBrandOwnerTypes().subscribe({
+      next: (data) => this.brandOwnerTypes = Array.isArray(data) ? data : [],
+      error: () => Swal.fire('Error', 'Failed to load brand owner types.', 'error')
+    });
+  }
+
+  onAddBrandOwnerType(): void {
+    const dialogRef = this.dialog.open(ManageDialogComponent, {
+      width: '480px',
+      data: { type: 'brandOwnerType' }
+    });
+    dialogRef.afterClosed().subscribe(res => { if (res) this.loadBrandOwnerTypes(); });
+  }
+
+  onEditBrandOwnerType(element: any): void {
+    const dialogRef = this.dialog.open(ManageDialogComponent, {
+      width: '480px',
+      data: {
+        type: 'brandOwnerType',
+        element: {
+          brandOwnerTypeCode: element.brand_owner_type_code,
+          brandOwnerTypeDesc: element.brand_owner_type_desc
+        }
+      }
+    });
+    dialogRef.afterClosed().subscribe(res => { if (res) this.loadBrandOwnerTypes(); });
+  }
+
+  onDeleteBrandOwnerType(element: any): void {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete Brand Owner Type "${element.brand_owner_type_desc}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.companyCollabService.deleteBrandOwnerType(element.brand_owner_type_code).subscribe({
+        next: () => {
+          Swal.fire('Deleted!', 'Brand owner type deleted.', 'success');
+          this.loadBrandOwnerTypes();
+        },
+        error: () => Swal.fire('Error', 'Failed to delete brand owner type.', 'error')
+      });
+    });
   }
 
   // ── Categories ─────────────────────────────────────────────────────────────
