@@ -235,7 +235,9 @@ export class CompanyCollaborationService {
   }
   addBrandPackSize(brandCode: string, measureValue: number): Observable<any> {
     const encoded = encodeURIComponent(brandCode);
-    return this.http.post(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${encoded}/add/`, { measureValue });
+    // POST to the same pack-sizes URL — the backend differentiates GET vs POST by HTTP method
+    // (Avoids URL routing conflict with <path:brand_code> greedily capturing /add/)
+    return this.http.post(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${encoded}/`, { measureValue });
   }
   deleteBrandPackSize(sizeId: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${sizeId}/delete/`);
