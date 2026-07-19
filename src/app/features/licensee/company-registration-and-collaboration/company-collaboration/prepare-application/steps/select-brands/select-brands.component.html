@@ -56,7 +56,7 @@
         </div>
 
         <!-- Search field — only visible after brands are loaded -->
-        @if (filteredBrands.length > 0) {
+        @if (allBrands.length > 0) {
           <div class="brand-search-row">
             <div class="brand-search-field">
               <mat-icon class="search-icon">manage_search</mat-icon>
@@ -79,10 +79,25 @@
       <!-- ── Brands Table ────────────────────────────────────────────────── -->
       @if (isLoadingBrands || isSearchingBrands) {
         <div class="no-brands">
-          <mat-icon>hourglass_empty</mat-icon>
+          <mat-icon class="spin">hourglass_empty</mat-icon>
           <p>Loading brands...</p>
         </div>
-      } @else if (filteredBrands.length > 0) {
+      } @else if (allBrands.length > 0) {
+        <!-- Alphabet Filtering Row -->
+        <div class="alphabet-filter-row notranslate" translate="no">
+          <span class="alphabet-label">Filter by Alphabet:</span>
+          <div class="alphabet-bar">
+            @for (letter of alphabets; track letter) {
+              <button type="button"
+                class="alphabet-btn"
+                [class.alphabet-btn--active]="selectedAlphabet === letter"
+                (click)="selectAlphabet(letter)">
+                {{ letter }}
+              </button>
+            }
+          </div>
+        </div>
+
         <div class="brands-table">
           <div class="table-header-info">
             <span class="selected-count">
@@ -90,52 +105,59 @@
             </span>
           </div>
 
-          <table class="brands-selection-table mat-elevation-z2">
-            <thead>
-              <tr>
-                <th class="col-sl">#</th>
-                <th class="col-brand">Brand Name</th>
-                <th class="col-size">Pack Size</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (brand of getPagedBrands(); track brand.id; let i = $index) {
-                <tr [class.row-selected]="isSelected(brand.id)">
-                  <td class="col-sl">{{ pageIndex * pageSize + i + 1 }}</td>
-                  <td class="col-brand">
-                    <div class="brand-pill">
-                      <span class="brand-initial">{{ brand.brand_name.charAt(0) }}</span>
-                      <span class="brand-name">{{ brand.brand_name }}</span>
-                    </div>
-                  </td>
-                  <td class="col-size">
-                    <div class="sizes-checkbox-group">
-                      @for (size of brand.pack_sizes; track size.product_id) {
-                        <label class="size-chip" [class.size-chip--selected]="isSizeSelected(brand, size.label)">
-                          <input type="checkbox"
-                            [checked]="isSizeSelected(brand, size.label)"
-                            (change)="toggleBrandSize(brand, size.label)"
-                            class="size-checkbox-input" />
-                          {{ size.label }}
-                        </label>
-                      } @empty {
-                        <span class="no-sizes-label">No sizes available</span>
-                      }
-                    </div>
-                  </td>
+          @if (filteredBrands.length > 0) {
+            <table class="brands-selection-table mat-elevation-z2">
+              <thead>
+                <tr>
+                  <th class="col-sl">#</th>
+                  <th class="col-brand">Brand Name</th>
+                  <th class="col-size">Pack Size</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (brand of getPagedBrands(); track brand.id; let i = $index) {
+                  <tr [class.row-selected]="isSelected(brand.id)">
+                    <td class="col-sl">{{ pageIndex * pageSize + i + 1 }}</td>
+                    <td class="col-brand">
+                      <div class="brand-pill">
+                        <span class="brand-initial">{{ brand.brand_name.charAt(0) }}</span>
+                        <span class="brand-name">{{ brand.brand_name }}</span>
+                      </div>
+                    </td>
+                    <td class="col-size">
+                      <div class="sizes-checkbox-group">
+                        @for (size of brand.pack_sizes; track size.product_id) {
+                          <label class="size-chip" [class.size-chip--selected]="isSizeSelected(brand, size.label)">
+                            <input type="checkbox"
+                              [checked]="isSizeSelected(brand, size.label)"
+                              (change)="toggleBrandSize(brand, size.label)"
+                              class="size-checkbox-input" />
+                            {{ size.label }}
+                          </label>
+                        } @empty {
+                          <span class="no-sizes-label">No sizes available</span>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
 
-          <mat-paginator
-            [length]="filteredBrands.length"
-            [pageSize]="pageSize"
-            [pageSizeOptions]="pageSizeOptions"
-            [pageIndex]="pageIndex"
-            (page)="onPageChange($event)"
-            aria-label="Select page of brands">
-          </mat-paginator>
+            <mat-paginator
+              [length]="filteredBrands.length"
+              [pageSize]="pageSize"
+              [pageSizeOptions]="pageSizeOptions"
+              [pageIndex]="pageIndex"
+              (page)="onPageChange($event)"
+              aria-label="Select page of brands">
+            </mat-paginator>
+          } @else {
+            <div class="no-filtered-brands">
+              <mat-icon>search_off</mat-icon>
+              <p>No brands start with letter "{{ selectedAlphabet }}" or match search query.</p>
+            </div>
+          }
         </div>
       } @else if (hasSearched && allBrands.length === 0) {
         <!-- Searched but no results -->

@@ -58,6 +58,10 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   selectedBrandIds = new Set<string>();
   selectedBrands: CompanyCollaborationBrand[] = [];
 
+  // Alphabet sorting/filtering bar
+  selectedAlphabet = 'ALL';
+  alphabets: string[] = ['ALL', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
   constructor(private svc: CompanyCollaborationService) {}
 
   ngOnInit(): void { this.loadMasterData(); }
@@ -193,8 +197,17 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
       const search = !this.searchTerm ||
         brand.brand_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         brand.brand_code.toLowerCase().includes(this.searchTerm.toLowerCase());
-      return search;
+
+      const alphabetMatch = this.selectedAlphabet === 'ALL' ||
+        brand.brand_name.trim().toUpperCase().startsWith(this.selectedAlphabet);
+
+      return search && alphabetMatch;
     });
+  }
+
+  selectAlphabet(letter: string): void {
+    this.selectedAlphabet = letter;
+    this.filterBrands();
   }
 
   // ---------------------------------------------------------------------------
@@ -257,6 +270,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.selectedKindId  = null;
     this.selectedTypeId  = null;
     this.searchTerm = '';
+    this.selectedAlphabet = 'ALL';
     this.selectedBrands = [];
     this.filteredBrands = [];
     this.allBrands = [];

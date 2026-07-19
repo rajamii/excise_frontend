@@ -430,3 +430,91 @@ mat-card {
     }
   }
 }
+
+// ── Alphabet Filter Bar Styles ──────────────────────────────────────────────
+.alphabet-filter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e4e8f2;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(28, 43, 120, 0.04);
+
+  .alphabet-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+  }
+
+  .alphabet-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .alphabet-btn {
+    height: 32px;
+    min-width: 32px;
+    padding: 0 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease-in-out;
+    user-select: none;
+
+    &:hover {
+      background: #f0fdfa;
+      color: #0d9488;
+      border-color: #99f6e4;
+    }
+
+    &--active {
+      background: #0d9488;
+      border-color: #0d9488;
+      color: #ffffff !important;
+      box-shadow: 0 3px 8px rgba(13, 148, 136, 0.25);
+    }
+  }
+}
+
+.no-filtered-brands {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #94a3b8;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  text-align: center;
+  margin-top: 10px;
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+    color: #cbd5e1;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+  }
+}
+
