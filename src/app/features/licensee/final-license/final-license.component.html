@@ -161,7 +161,8 @@
               dated <strong>{{ templateData().securityDepositDate || templateData().transactionDate || '-' }}</strong>
             </ng-container>
           </ng-container>
-          annually.
+          annually for the year <strong>{{ templateData().applicationYear || templateData().financialYear || '-' }}</strong>
+          valid up to <strong>{{ templateData().validTo || '-' }}</strong>.
         </p>
       </div>
 

@@ -29,6 +29,7 @@ type FinalLicenseTemplateData = {
   generatedOn: string;
   applicationDateTime?: string;
   applicationYear?: string;
+  financialYear?: string;
   licenseSubTitle?: string;
   // Company Collaboration specific
   brandOwnerName?: string;
@@ -164,6 +165,8 @@ export class FinalLicenseComponent implements OnDestroy {
     if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('COMP/')) return 'company-registration';
     if (id.startsWith('CCOL/')) return 'company-collaboration';
+    if (id.startsWith('RCOL/')) return 'company-collaboration';
+    if (id.startsWith('CC/')) return 'company-collaboration';
 
     // License-id prefixes (sometimes used by mistake in the query param)
     if (id.startsWith('NA/')) return 'new-license';
@@ -304,6 +307,7 @@ export class FinalLicenseComponent implements OnDestroy {
           generatedOn: String(data?.generatedOn || current.generatedOn || ''),
           applicationDateTime: String(data?.applicationDateTime || data?.application_date_time || current.applicationDateTime || ''),
           applicationYear: String(data?.applicationYear || data?.application_year || current.applicationYear || ''),
+          financialYear: String(data?.financialYear || data?.financial_year || current.financialYear || ''),
           licenseSubTitle: String(data?.licenseSubTitle || data?.license_sub_title || ''),
           // Company Collaboration specific
           brandOwnerName: String(data?.brandOwnerName || data?.brand_owner_name || current.brandOwnerName || ''),
