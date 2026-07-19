@@ -352,6 +352,37 @@ mat-card {
         font-size: 13px;
       }
     }
+
+    // ── Brand Owner Type description cell ──────────────────────────────────
+    .bot-desc-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+
+      .bot-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #1C2B78, #3a52b4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        mat-icon {
+          color: #fff;
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      .bot-label {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 13.5px;
+      }
+    }
   }
 }
 

@@ -189,16 +189,28 @@
 
           <div class="table-container">
             <mat-table [dataSource]="brandOwnerTypes">
+
               <ng-container matColumnDef="typeCode">
                 <mat-header-cell *matHeaderCellDef>Type Code</mat-header-cell>
                 <mat-cell *matCellDef="let element">
-                  <span class="code-badge">{{ element.brand_owner_type_code }}</span>
+                  <span class="code-badge">
+                    {{ element.brandOwnerTypeCode ?? element.brand_owner_type_code }}
+                  </span>
                 </mat-cell>
               </ng-container>
 
               <ng-container matColumnDef="typeDesc">
                 <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
-                <mat-cell *matCellDef="let element">{{ element.brand_owner_type_desc }}</mat-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="bot-desc-cell">
+                    <span class="bot-icon">
+                      <mat-icon>business</mat-icon>
+                    </span>
+                    <span class="bot-label">
+                      {{ element.brandOwnerTypeDesc ?? element.brand_owner_type_desc }}
+                    </span>
+                  </div>
+                </mat-cell>
               </ng-container>
 
               <ng-container matColumnDef="actions">

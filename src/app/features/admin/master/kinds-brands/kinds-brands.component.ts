@@ -138,13 +138,15 @@ export class KindsBrandsComponent implements OnInit {
   }
 
   onEditBrandOwnerType(element: any): void {
+    const code = element.brand_owner_type_code ?? element.brandOwnerTypeCode;
+    const desc = element.brand_owner_type_desc ?? element.brandOwnerTypeDesc;
     const dialogRef = this.dialog.open(ManageDialogComponent, {
       width: '480px',
       data: {
         type: 'brandOwnerType',
         element: {
-          brandOwnerTypeCode: element.brand_owner_type_code,
-          brandOwnerTypeDesc: element.brand_owner_type_desc
+          brandOwnerTypeCode: code,
+          brandOwnerTypeDesc: desc
         }
       }
     });
@@ -152,15 +154,17 @@ export class KindsBrandsComponent implements OnInit {
   }
 
   onDeleteBrandOwnerType(element: any): void {
+    const code = element.brand_owner_type_code ?? element.brandOwnerTypeCode;
+    const desc = element.brand_owner_type_desc ?? element.brandOwnerTypeDesc;
     Swal.fire({
       title: 'Are you sure?',
-      text: `Delete Brand Owner Type "${element.brand_owner_type_desc}"?`,
+      text: `Delete Brand Owner Type "${desc}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Delete'
     }).then(result => {
       if (!result.isConfirmed) return;
-      this.companyCollabService.deleteBrandOwnerType(element.brand_owner_type_code).subscribe({
+      this.companyCollabService.deleteBrandOwnerType(code).subscribe({
         next: () => {
           Swal.fire('Deleted!', 'Brand owner type deleted.', 'success');
           this.loadBrandOwnerTypes();
