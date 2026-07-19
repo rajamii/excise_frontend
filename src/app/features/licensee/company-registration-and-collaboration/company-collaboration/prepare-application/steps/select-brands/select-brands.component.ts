@@ -200,7 +200,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
         brand.brand_code.toLowerCase().includes(this.searchTerm.toLowerCase());
 
       const alphabetMatch = this.selectedAlphabet === 'ALL' ||
-        brand.brand_name.trim().toUpperCase().startsWith(this.selectedAlphabet);
+        brand.brand_name.trim().toUpperCase().startsWith(this.selectedAlphabet.toUpperCase());
 
       return search && alphabetMatch;
     });
