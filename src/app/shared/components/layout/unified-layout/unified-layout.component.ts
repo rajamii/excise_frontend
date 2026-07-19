@@ -935,7 +935,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     
     // Brand Master Details II
-    if (normalized.includes('/admin/brand-owners') || normalized.includes('/admin/company-details')) {
+    if (normalized.includes('/admin/brand-owners') || normalized.includes('/admin/company-details') || normalized.includes('/admin/kinds-brands')) {
       this.adminBrandMasterDetailsIIExpanded = true;
     }
     

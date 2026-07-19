@@ -171,6 +171,76 @@ export class CompanyCollaborationService {
     return this.http.get<any[]>(`${this.mastersUrl}/brand-owner-types/`);
   }
 
+  // Categories CRUD
+  getCategoriesCrudList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-categories-crud/`);
+  }
+  createCategoryCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-categories-crud/create/`, data);
+  }
+  updateCategoryCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-categories-crud/${pk}/update/`, data);
+  }
+  deleteCategoryCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-categories-crud/${pk}/delete/`);
+  }
+
+  // Kinds CRUD
+  getKindsCrudList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-kinds-crud/`);
+  }
+  createKindCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-kinds-crud/create/`, data);
+  }
+  updateKindCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-kinds-crud/${pk}/update/`, data);
+  }
+  deleteKindCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-kinds-crud/${pk}/delete/`);
+  }
+
+  // Types CRUD
+  getTypesCrudList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-types-crud/`);
+  }
+  createTypeCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-types-crud/create/`, data);
+  }
+  updateTypeCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-types-crud/${pk}/update/`, data);
+  }
+  deleteTypeCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-types-crud/${pk}/delete/`);
+  }
+
+  // Brands CRUD (with search)
+  getBrandsCrudList(search: string): Observable<any[]> {
+    let params = new HttpParams().set('search', search);
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-brands-crud/`, { params });
+  }
+  createBrandCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-brands-crud/create/`, data);
+  }
+  updateBrandCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-brands-crud/${pk}/update/`, data);
+  }
+  deleteBrandCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-brands-crud/${pk}/delete/`);
+  }
+
+  // Brand Pack Sizes (from master_liquor_product)
+  getBrandPackSizes(brandCode: string): Observable<any[]> {
+    const encoded = encodeURIComponent(brandCode);
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${encoded}/`);
+  }
+  addBrandPackSize(brandCode: string, measureValue: number): Observable<any> {
+    const encoded = encodeURIComponent(brandCode);
+    return this.http.post(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${encoded}/add/`, { measureValue });
+  }
+  deleteBrandPackSize(sizeId: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${sizeId}/delete/`);
+  }
+
   /**
    * GET /masters/company-collaboration/liquor-brands/
    * Returns all active brands. Optionally filtered by cat/kind/type IDs.

@@ -300,6 +300,15 @@ const routes: Routes = [
             data: { authorities: ['site_admin'] },
           },
           {
+            path: 'kinds-brands',
+            loadComponent: () =>
+              import('./master/kinds-brands/kinds-brands.component').then(
+                (m) => m.KindsBrandsComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'about-us',
             redirectTo: 'about-us/heads-of-organisations',
             pathMatch: 'full'

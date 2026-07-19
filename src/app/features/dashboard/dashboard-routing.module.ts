@@ -209,6 +209,13 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/kinds-brands',
+        loadComponent: () =>
+          import('../admin/master/kinds-brands/kinds-brands.component').then((m) => m.KindsBrandsComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/hologram',
         redirectTo: 'admin/hologram/transit-permit-distributor-data',
         pathMatch: 'full'

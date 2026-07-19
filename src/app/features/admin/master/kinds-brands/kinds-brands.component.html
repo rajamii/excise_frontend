@@ -1,0 +1,260 @@
+<div class="container-fluid">
+  <mat-card>
+    <mat-card-header class="page-card-header">
+      <div class="page-title">Liquor Hierarchy & Brands Management</div>
+    </mat-card-header>
+
+    <mat-card-content class="page-card-content">
+      <mat-tab-group animationDuration="300ms">
+
+        <!-- ── TAB 1: Categories ── -->
+        <mat-tab label="Categories">
+          <div class="tab-action-row">
+            <button matButton="filled" (click)="onAddCategory()">
+              <mat-icon>add</mat-icon> Add Category
+            </button>
+          </div>
+          
+          <div class="table-container">
+            <mat-table [dataSource]="categories">
+              <!-- Code -->
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorCatCode }}</mat-cell>
+              </ng-container>
+
+              <!-- Description -->
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorCatDesc }}</mat-cell>
+              </ng-container>
+
+              <!-- Abbreviation -->
+              <ng-container matColumnDef="abbr">
+                <mat-header-cell *matHeaderCellDef>Abbreviation</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorCatAbbr }}</mat-cell>
+              </ng-container>
+
+              <!-- Actions -->
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <button matIconButton color="primary" (click)="onEditCategory(element)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDeleteCategory(element)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="categoryColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: categoryColumns;"></mat-row>
+            </mat-table>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 2: Kinds ── -->
+        <mat-tab label="Kinds">
+          <div class="tab-action-row">
+            <button matButton="filled" (click)="onAddKind()">
+              <mat-icon>add</mat-icon> Add Kind
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="kinds">
+              <!-- Category -->
+              <ng-container matColumnDef="cat">
+                <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorCatDesc || element.liquorCat }}</mat-cell>
+              </ng-container>
+
+              <!-- Code -->
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Kind Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorKindCode }}</mat-cell>
+              </ng-container>
+
+              <!-- Description -->
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorKindDesc }}</mat-cell>
+              </ng-container>
+
+              <!-- Abbreviation -->
+              <ng-container matColumnDef="abbr">
+                <mat-header-cell *matHeaderCellDef>Abbreviation</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorKindAbbr }}</mat-cell>
+              </ng-container>
+
+              <!-- Actions -->
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <button matIconButton color="primary" (click)="onEditKind(element)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDeleteKind(element)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="kindColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: kindColumns;"></mat-row>
+            </mat-table>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 3: Types ── -->
+        <mat-tab label="Types">
+          <div class="tab-action-row">
+            <button matButton="filled" (click)="onAddType()">
+              <mat-icon>add</mat-icon> Add Type
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="types">
+              <!-- Category -->
+              <ng-container matColumnDef="cat">
+                <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorCatDesc || element.liquorCat }}</mat-cell>
+              </ng-container>
+
+              <!-- Kind -->
+              <ng-container matColumnDef="kind">
+                <mat-header-cell *matHeaderCellDef>Kind</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorKindDesc || element.liquorKind }}</mat-cell>
+              </ng-container>
+
+              <!-- Code -->
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Type Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorTypeCode }}</mat-cell>
+              </ng-container>
+
+              <!-- Description -->
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorTypeDesc }}</mat-cell>
+              </ng-container>
+
+              <!-- Old Code -->
+              <ng-container matColumnDef="oldCode">
+                <mat-header-cell *matHeaderCellDef>Old Type Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorTypeCodeOld || '-' }}</mat-cell>
+              </ng-container>
+
+              <!-- Actions -->
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <button matIconButton color="primary" (click)="onEditType(element)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDeleteType(element)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="typeColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: typeColumns;"></mat-row>
+            </mat-table>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 4: Super Brands (Search-based CRUD) ── -->
+        <mat-tab label="Super Brands">
+          <div class="search-brands-row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Search Brands (Code or Name)</mat-label>
+              <input
+                matInput
+                [(ngModel)]="brandSearchQuery"
+                (keydown.enter)="onSearchBrands()"
+                placeholder="Type brand name/code and press Enter..."
+              />
+              <button matSuffix mat-icon-button (click)="onSearchBrands()">
+                <mat-icon>search</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <button matButton="filled" (click)="onAddBrand()">
+              <mat-icon>add</mat-icon> Add Brand
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="brands">
+              <!-- Code -->
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Brand Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorBrandCode }}</mat-cell>
+              </ng-container>
+
+              <!-- Description -->
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Brand Name</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorBrandDesc }}</mat-cell>
+              </ng-container>
+
+              <!-- Alias -->
+              <ng-container matColumnDef="alias">
+                <mat-header-cell *matHeaderCellDef>Alias</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.brandNameAlias || '-' }}</mat-cell>
+              </ng-container>
+
+              <!-- Old Code -->
+              <ng-container matColumnDef="oldCode">
+                <mat-header-cell *matHeaderCellDef>Old Type Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorTypeCodeOld || '-' }}</mat-cell>
+              </ng-container>
+
+              <!-- Category -->
+              <ng-container matColumnDef="cat">
+                <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorCatDesc || element.liquorCat }}</mat-cell>
+              </ng-container>
+
+              <!-- Kind -->
+              <ng-container matColumnDef="kind">
+                <mat-header-cell *matHeaderCellDef>Kind</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorKindDesc || element.liquorKind }}</mat-cell>
+              </ng-container>
+
+              <!-- Type -->
+              <ng-container matColumnDef="type">
+                <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorTypeDesc || element.liquorType }}</mat-cell>
+              </ng-container>
+
+              <!-- Actions -->
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <button matIconButton color="primary" (click)="onEditBrand(element)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDeleteBrand(element)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="brandColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: brandColumns;"></mat-row>
+            </mat-table>
+
+            <div class="search-placeholder-text" *ngIf="brands.length === 0 && !brandSearchQuery">
+              <mat-icon>search</mat-icon> Search brands to display results here.
+            </div>
+          </div>
+        </mat-tab>
+
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>
