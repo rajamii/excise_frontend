@@ -1748,7 +1748,6 @@ mat-card-content {
 .dashboard-container ::ng-deep {
     // Target SVG bars or rectangular chart elements
     .chart-bar,
-    [class*="bar"],
     rect[fill*="#"],
     .highcharts-point,
     .apexcharts-bar-area {
@@ -1778,8 +1777,8 @@ mat-card-content {
     
     // Alternative approach for canvas-based charts
     .chart-container,
-    [class*="revenue"],
-    [class*="chart"] {
+    [class*="revenue-chart"],
+    [class*="chart-widget"] {
         canvas + div,
         .bar-wrapper {
             position: relative;
