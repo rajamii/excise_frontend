@@ -137,15 +137,17 @@
             aria-label="Select page of brands">
           </mat-paginator>
         </div>
-      } @else if (allBrands.length === 0 && (selectedCatCode && selectedKindId && selectedTypeId)) {
+      } @else if (hasSearched && allBrands.length === 0) {
+        <!-- Searched but no results -->
         <div class="no-brands">
           <mat-icon>search_off</mat-icon>
           <p>No brands found. Please adjust your filters.</p>
         </div>
-      } @else if (!selectedCatCode || !selectedKindId || !selectedTypeId) {
+      } @else if (!hasSearched) {
+        <!-- Filters filled but search not yet clicked -->
         <div class="no-brands hint">
-          <mat-icon>tune</mat-icon>
-          <p>Select Category, Kind and Type, then click <strong>Search</strong>.</p>
+          <mat-icon>manage_search</mat-icon>
+          <p>Select filters above and click <strong>Search</strong> to find brands.</p>
         </div>
       }
     }

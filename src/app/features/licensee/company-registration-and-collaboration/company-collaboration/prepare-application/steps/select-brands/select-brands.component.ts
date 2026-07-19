@@ -37,6 +37,9 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   pageIndex = 0;
   pageSizeOptions = [10, 15, 20];
 
+  /** True only after the user has clicked Search at least once for the current filters */
+  hasSearched = false;
+
   // ── Master dropdown data ───────────────────────────────────────────────────
   allCategories: LiquorCategory[] = [];
   allKinds: LiquorKind[] = [];
@@ -117,6 +120,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.rebuildKinds();
     this.allBrands = [];
     this.filteredBrands = [];
+    this.hasSearched = false;
   }
 
   onKindChange(): void {
@@ -124,11 +128,13 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.rebuildTypes();
     this.allBrands = [];
     this.filteredBrands = [];
+    this.hasSearched = false;
   }
 
   onTypeChange(): void {
     this.allBrands = [];
     this.filteredBrands = [];
+    this.hasSearched = false;
   }
 
   private rebuildKinds(): void {
@@ -156,6 +162,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
       return;
     }
     this.isSearchingBrands = true;
+    this.hasSearched = true;
     this.svc.getBrands(this.selectedCatCode, this.selectedKindId, this.selectedTypeId).subscribe({
       next: (brands) => {
         this.allBrands = brands;
