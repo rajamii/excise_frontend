@@ -456,6 +456,8 @@ mat-card {
     flex-wrap: wrap;
     gap: 5px;
     align-items: center;
+    position: relative;
+    isolation: isolate;
   }
 
   .alphabet-btn {
@@ -476,12 +478,26 @@ mat-card {
     user-select: none;
     text-transform: uppercase;
     line-height: 1;
+    font-family: Arial, Helvetica, sans-serif;
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "calt" 0;
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    z-index: 1;
+
+    &::before,
+    &::after {
+      content: none !important;
+      display: none !important;
+    }
 
     // Normal hover — subtle blue tint, NOT teal (teal is reserved for active)
     &:hover:not(.alphabet-btn--active) {
-      background: #eef1fb;
-      border-color: #a5b4fc;
-      color: #1C2B78;
+      background: #f8fafc;
+      border-color: #e2e8f0;
+      color: #475569;
+      box-shadow: none;
     }
 
     // Active / selected — solid teal
